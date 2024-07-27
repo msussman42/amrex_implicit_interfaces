@@ -8115,7 +8115,7 @@ stop
        else if (LS.le.zero) then
         ! do nothing
        else
-        print *,"LS bust"
+        print *,"LS bust in fort_copy_vel_on_sign ",LS
         stop
        endif
 

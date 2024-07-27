@@ -17,7 +17,7 @@ stop_time=10000.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
 geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  3.0 6.0  #CGS
+geometry.prob_hi   =  6.0 12.0  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -50,7 +50,7 @@ ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
 ns.MOFITERMAX=30
 amr.n_cell=32 64 
-amr.max_level=0 
+amr.max_level=1 
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
@@ -122,17 +122,17 @@ ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
-ns.advbot=1.0 # cm/s
+ns.advbot=34.3 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
-ns.yblob=2.5
-ns.zblob=2.5  
+ns.yblob=7.2
+ns.zblob=7.2  
 ns.xblob2=0.0  #center of plate
-ns.yblob2=1.0
+ns.yblob2=5.8
 ns.radblob2=1.5 # radius in "x" direction of plate
-ns.radblob3=0.25 # radius in "y" direction of plate
-ns.radblob=1.0 
+ns.radblob3=0.2 # radius in "y" direction of plate
+ns.radblob=0.6 
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
@@ -149,7 +149,7 @@ ns.material_type=0 0 0 # Eulerian FSI
 #ns.FSI_flag=0 0 4 #CTML
 ns.FSI_flag=0 0 8 #Eulerian FSI
 ns.heatviscconst=0.0 0.0 0.0
-ns.elastic_viscosity=0.0 0.0 1.0
+ns.elastic_viscosity=0.0 0.0 4.0e+6
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.polymer_factor=0.0 0.0 0.0 #1/L
 #0=FENE-CR
@@ -158,9 +158,9 @@ ns.polymer_factor=0.0 0.0 0.0 #1/L
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 0
+ns.viscoelastic_model=0 0 7
 ns.viscconst=0.01 0.000181 1.0 #CGS
-ns.denconst=1.0 0.001225 1.0 
+ns.denconst=1.0 0.001225 1.5
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
@@ -173,9 +173,6 @@ ns.hi_bc          = 3 2
 # 0 = Interior           3 = Symmetry
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWall
-
-# turn any of these on to generate run-time timing stats
-
 
 # select single or double precision of FAB output data
 #        default is whatever precision code is compiled with.

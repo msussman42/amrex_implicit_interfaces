@@ -121,7 +121,21 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  LS(2)=-LS(1)
 
  call flexible_substrateLS(x,LS(3))
-
+ if (FSI_flag(3).eq.FSI_SHOELE_CTML) then
+  !do nothing
+ else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
+  if (LS(3).ge.zero) then
+   LS(2)=-LS(3)
+  else if (LS(3).le.zero) then
+   LS(2)=min(LS(2),-LS(3))
+  else
+   print *,"LS(3) invalid"
+   stop
+  endif
+ else
+  print *,"FSI_flag(3) invalid"
+  stop
+ endif
 else
  print *,"num_materials or probtype invalid"
  stop
@@ -323,8 +337,14 @@ if (adv_dir.eq.SDIM) then
     VEL(dir)=zero
    enddo
 
+  else if (LS(3).ge.zero) then ! material 3 is the plate
+
+   do dir=1,SDIM
+    VEL(dir)=zero
+   enddo
+
   else
-   print *,"LS bust"
+   print *,"LS bust in flexible_plate_impact_VEL"
    stop
   endif
 
@@ -869,5 +889,84 @@ return
 end subroutine flexible_plate_impact_ASSIMILATE
 
 
+subroutine flexible_plate_impact_OVERRIDE_TAGFLAG( &
+  i,j,k, &
+  level,max_level, &
+  snew_ptr,lsnew_ptr, &
+  xsten,nhalf,time, &
+  rflag,tagflag)
+use amrex_fort_module, only : amrex_real
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: level,max_level
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
+real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), dimension(3) :: local_x
+real(amrex_real), dimension(SDIM) :: local_delta
+real(amrex_real) :: F_LIQUID,LS_LIQUID
+real(amrex_real) :: F_PLATE,LS_PLATE
+integer :: dir
+integer :: vofcomp
+
+if (nhalf.lt.3) then
+ print *,"nhalf invalid flexible plate tagflag"
+ stop
+endif
+if ((level.ge.0).and.(level.lt.max_level)) then
+ ! do nothing
+else
+ print *,"level and/or max_level invalid"
+ print *,"level=",level
+ print *,"max_level=",max_level
+ stop
+endif
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_delta(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_delta invalid flexible_plate_impact_override_tagflag"
+  stop
+ endif
+enddo !dir=1..sdim
+
+if ((num_materials.ge.3).and. &
+    (probtype.eq.2000)) then
+
+ rflag=0.0d0
+ tagflag=0
+ LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
+ vofcomp=1
+ F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+vofcomp)
+ LS_PLATE=lsnew_ptr(D_DECL(i,j,k),3)
+ vofcomp=2*ngeom_raw+1
+ F_PLATE=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+vofcomp)
+ if ((LS_LIQUID.ge.zero).or. &
+     (F_LIQUID.ge.0.1d0).or. &
+     (LS_PLATE.ge.zero).or. &
+     (F_PLATE.ge.0.1d0)) then
+  rflag=1.0d0
+  tagflag=1
+ endif
+
+else
+ print *,"num_materials or probtype invalid"
+ print *,"num_materials: ",num_materials
+ print *,"probtype: ",probtype
+ stop
+endif
+
+end subroutine flexible_plate_impact_OVERRIDE_TAGFLAG
 
 end module flexible_plate_impact_module

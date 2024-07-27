@@ -8519,7 +8519,7 @@ end subroutine print_visual_descriptor
       else if (LS.ge.zero) then
        sign_funct=1
       else
-       print *,"LS bust LS=",LS
+       print *,"LS bust in sign_funct  LS=",LS
        stop
       endif
 
@@ -15834,7 +15834,7 @@ end subroutine print_visual_descriptor
       else if (LS(im).eq.LS(im_opp)) then
        LS_extend=zero
       else
-       print *,"LS bust"
+       print *,"LS bust in get_LS_extend"
        print *,"im,im_opp,LS(im),LS(im_opp) ", &
          im,im_opp,LS(im),LS(im_opp)
        print *,"is_rigid(im) ",is_rigid(im)
@@ -15875,7 +15875,7 @@ end subroutine print_visual_descriptor
                NRM(SDIM*(im_opp-1)+dir))
        enddo ! dir=1..sdim
       else
-       print *,"LS bust: ",im,im_opp,LS(im),LS(im_opp)
+       print *,"LS bust in get_LSNRM_extend: ",im,im_opp,LS(im),LS(im_opp)
        stop
       endif
       
@@ -27607,7 +27607,7 @@ do im=1,num_materials
   else if (LS(im).le.zero) then
    ! do nothing
   else
-   print *,"LS bust: ",im,LS(im)
+   print *,"LS bust in get_primary_material: ",im,LS(im)
    stop
   endif
  else if (is_rigid_local(im).eq.0) then
@@ -27629,7 +27629,8 @@ if (im_primary.eq.0) then
     else if (LS(im).le.LS(im_primary)) then
      ! do nothing
     else
-     print *,"LS bust: ",im,im_primary,LS(im),LS(im_primary)
+     print *,"LS bust in get_primary_material(2): ", &
+             im,im_primary,LS(im),LS(im_primary)
      stop
     endif
    else

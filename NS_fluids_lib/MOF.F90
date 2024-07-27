@@ -25801,7 +25801,7 @@ contains
         else if (LS(im).le.LS(im_secondary)) then
          ! do nothing
         else
-         print *,"LS bust"
+         print *,"LS bust in get_secondary_material: ",LS(im)
          stop
         endif
        else if (im.eq.im_primary) then
