@@ -92,7 +92,7 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
 ns.gravity        = -980.0e-5
-ns.incremental_gravity_flag=1
+ns.incremental_gravity_flag=0
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -100,9 +100,9 @@ ns.incremental_gravity_flag=1
 # sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_initial)
 #    let sigma_{SG}=sigma_{LG} =>
 # 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
-# sigma_SL = sigma_LG * (1-cos(theta_L))
+# sigma_SL = sigma_LG * (1-cos(theta_L))=75.7e-5 * (1-cos(68))=47.3e-5
 #
-#contact line: theta_L_initial=60 degrees
+#contact line: theta_L_initial=68 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
 #thermal effects only
 #surface tension algorithm treats liquid and ice as just one liquid:
@@ -118,10 +118,10 @@ ns.incremental_gravity_flag=1
 #ns.tension=      75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=90
 #ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 
-#sigma_IL+sigma_LG cos(45)=sigma_IG  sigma_IG=sigma_LG
-#sigma_IL=sigma_LG(1-cos(45))=22.2
-ns.tension=      75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=45
-ns.tension_init= 75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0
+#sigma_IL+sigma_LG cos(50)=sigma_IG  sigma_IG=sigma_LG
+#sigma_IL=sigma_LG(1-cos(50))=27.0
+ns.tension=      75.7e-5 27.0e-5 47.3e-5 75.7e-5 75.7e-5 0.0 #theta_L=50
+ns.tension_init= 75.7e-5 27.0e-5 47.3e-5 75.7e-5 75.7e-5 0.0
 
 #sigma_IL+sigma_LG cos(135)=sigma_IG  sigma_IL=sigma_LG
 #sigma_LG(1+cos(135))=sigma_IG=22.2
@@ -183,14 +183,11 @@ ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 # 1 Pa = 10 CGS
-ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
+#ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=1.79 1.724e-2 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
 #ns.uncoupled_viscosity=1
-#ns.viscconst=100.0 100.0 100.0 100.0
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
-#ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
-#rnew(0.00681)+0.00116 = rold*0.008  rold=1/0.917 rnew=1/0.9
-ns.denconst=1.0 0.001292 0.900 10.0 #make up for the seeded underside
-#ns.denconst=1.0 0.00129 0.850 10.0 
+ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
@@ -198,8 +195,8 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
 #instead of T=271.0 (-2 test plate), try -3,-4,-5,-6
-ns.tempconst=          273.0 298.0 273.0 263
-ns.initial_temperature=273.0 298.0 273.0 263
+ns.tempconst=          273.0 293.0 273.0 265.0
+ns.initial_temperature=273.0 293.0 273.0 265.0
 #ns.xblob3=298.0 #force ambient temperature condition on all walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
@@ -214,12 +211,14 @@ ns.radblob2=0.0 # zero degrees incline (radians)
 ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # (1/2) (4/3) pi (0.15631)^3=0.007999
+# (1/2) (4/3) pi (0.142)^3=0.006
 #ns.zblob4=0.00625
 #transitional substrate temperature
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
-ns.radblob=0.15631 # centimeters
+#ns.radblob=0.15631 # centimeters
+ns.radblob=0.142 # centimeters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
