@@ -6117,6 +6117,24 @@ NavierStokes::read_params ()
     } else
      amrex::Error("compressible flag bust");
 
+    Vector<int> ns_space_blocking_factor;
+    ns_space_blocking_factor.resize(ns_max_level+1);
+    for (int lev=0;lev<=ns_max_level;lev++)
+     ns_space_blocking_factor[lev]=1;
+    ppamr.queryAdd("space_blocking_factor",
+       ns_space_blocking_factor,ns_max_level+1);
+
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=num_materials)) {
+     if (ns_space_blocking_factor[ns_max_level]==1) {
+      //do nothing
+     } else
+      amrex::Error("expecting space_blocking_factor[max_level]==1");
+    } else if (num_materials_viscoelastic==0) {
+     //do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
+
     setup_integrated_quantities();
 
 } // end subroutine read_params()
@@ -11354,6 +11372,19 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
   amrex::Error("VISCOTEN_MF should not be allocated");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
+
+  if ((ilev>=level)&&(ilev<finest_level)) {
+   //check nothing
+  } else if (ilev==finest_level) {
+   int bfact=parent->Space_blockingFactor(ilev);
+   if (bfact==1) {
+    //do nothing
+   } else
+    amrex::Error("expecting bfact(finest)=1 if num_materials_viscoelastic>=1");
+  } else {
+   amrex::Error("expecting 0<=ilev<=finest_level");
+  } 
+
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.make_viscoelastic_tensor(im);
  }
@@ -12610,6 +12641,18 @@ void NavierStokes::tensor_advection_update() {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid:tensor_advection_update");
+
+ if ((level>=0)&&(level<finest_level)) {
+  //do nothing
+ } else if (level==finest_level) {
+  int bfact_test=parent->Space_blockingFactor(level);
+  if (bfact_test==1) {
+   //do nothing
+  } else
+   amrex::Error("need bfact_test(finest)=1 if num_materials_viscoelastic>=1");
+ } else {
+  amrex::Error("expecting 0<=level<=finest_level");
+ }
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -24961,8 +25004,22 @@ MultiFab* NavierStokes::getStateTensor (
   int ncomp, Real time) {
 
 
+ int finest_level=parent->finestLevel();
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
+
+  if ((level>=0)&&(level<finest_level)) {
+   //check nothing
+  } else if (level==finest_level) {
+   int bfact=parent->Space_blockingFactor(level);
+   if (bfact==1) {
+    //do nothing
+   } else
+    amrex::Error("expecting bfact(finest)=1 if num_materials_viscoelastic>=1");
+  } else {
+   amrex::Error("expecting 0<=level<=finest_level");
+  } 
 
    // 0<=im_viscoelastic_map[i]<num_materials
   int nparts=im_viscoelastic_map.size();

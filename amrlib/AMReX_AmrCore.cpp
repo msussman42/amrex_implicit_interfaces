@@ -722,13 +722,20 @@ AmrCore::AMR_checkInput ()
      if (i<max_level) {
       if (k<8) {
        std::cout << "must have at least 4 proper nesting cells" << '\n';
+       std::cout << "k= " << k << '\n';
+       std::cout << "i= " << i << '\n';
+       std::cout << "max_level= " << max_level << '\n';
        amrex::Error("must have blocking_factor>=8 if lev<max_level");
       }
       if (k<Old_blockingFactor(i+1))
        amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
      }
-     if (k<4)
+     if (k<4) {
+      std::cout << "k= " << k << '\n';
+      std::cout << "i= " << i << '\n';
+      std::cout << "max_level= " << max_level << '\n';
       amrex::Error("blocking factor must be 4 or larger on max_level");
+     }
 
      while ( k > 0 && (k%2 == 0) )
          k /= 2;
@@ -742,8 +749,12 @@ AmrCore::AMR_checkInput ()
         if (k>Old_blockingFactor(i))
          amrex::Error("space_blocking_factor[i]>Old_blockingFactor(i)");
 	if (i<max_level) {
-	 if (k<space_blocking_factor[i+1])
+	 if (k<space_blocking_factor[i+1]) {
+          std::cout << "k= " << k << '\n';
+          std::cout << "i= " << i << '\n';
+          std::cout << "max_level= " << max_level << '\n';
 	  amrex::Error("space_blocking_factor[i]<space_blocking_factor[i+1]");
+	 }
 	}
 
          // the number of coarse grid proper nesting cells for level i+1

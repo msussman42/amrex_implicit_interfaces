@@ -8939,7 +8939,7 @@ end subroutine print_visual_descriptor
          bfact*dx*(cache_gauss(bfact,inodes-1,SPTYPE)+one)/two
        enddo
       else
-       print *,"bfact invalid20"
+       print *,"bfact invalid20 (element_nodes1D): ",bfact
        stop
       endif
 
