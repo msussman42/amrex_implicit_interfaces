@@ -813,7 +813,7 @@ if ((num_materials.ge.2).and. &
    stop
   endif
 
-  mag=(local_x(1)-xblob)**2+(local_x(2)-yblob)**2
+  mag=(local_x(2)-yblob)**2
   if (AMREX_SPACEDIM.eq.3) then
    mag=mag+(local_x(SDIM)-zblob)**2
   endif
