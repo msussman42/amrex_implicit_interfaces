@@ -1,17 +1,18 @@
 #Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
 #(shock moves in the x-direction)
+#This inputs file: shock moves in the z-direction
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  5.0e-3  # maximum problem time
 
 # 32x24x8 mm^3 -> 24x8x32
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  2.4 3.2
-#geometry.prob_lo   =  0.0 0.0 0.0
-#geometry.prob_hi   =  2.4 0.8 3.2
-geometry.is_periodic = 1 0
-#geometry.is_periodic = 1 0 0
+#geometry.prob_lo   =  0.0 0.0
+#geometry.prob_hi   =  2.4 3.2
+geometry.prob_lo   =  0.0 0.0 0.0
+geometry.prob_hi   =  2.4 0.8 3.2
+#geometry.is_periodic = 1 0
+geometry.is_periodic = 1 0 0
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
@@ -46,11 +47,12 @@ ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-#amr.n_cell    = 144 48 192
-amr.n_cell    = 144 192
+amr.n_cell    = 144 48 192
+#amr.n_cell    = 144 192
 #amr.max_level =  4 # about 80 points in the cylinder diameter
-amr.max_level =  3 # about 40 points in the cylinder diameter
-#amr.max_level =  2 # about 20 points in the cylinder diameter
+#amr.max_level =  3 # about 40 points in the cylinder diameter
+amr.max_level =  2 # about 20 points in the cylinder diameter
+#amr.max_level =  1 # about 10 points in the cylinder diameter
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
@@ -159,10 +161,10 @@ ns.density_ceiling=10.0 1.0
 ns.density_floor=0.1 0.0001
 # reduce numerical dissipation
 ns.xblob=0.0
-ns.yblob=1.2
-ns.zblob=0.0
-#ns.yblob=0.0
-#ns.zblob=1.2
+#ns.yblob=1.2
+#ns.zblob=0.0
+ns.yblob=0.0
+ns.zblob=1.2
 # zblob2 is the initial position of the shock.
 ns.zblob2=1.0
 ns.radblob=0.042 #0.84 mm diameter
@@ -180,10 +182,10 @@ ns.v = 1
 prescribe_temperature_outflow=1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 0 2
-ns.hi_bc          = 0 2
-#ns.lo_bc          = 0 3 2
-#ns.hi_bc          = 0 3 2
+#ns.lo_bc          = 0 2
+#ns.hi_bc          = 0 2
+ns.lo_bc          = 0 3 2
+ns.hi_bc          = 0 3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
