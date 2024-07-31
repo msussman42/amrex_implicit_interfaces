@@ -574,8 +574,6 @@ protected:
 
     static void set_tensor_extrap_components(
       int coord,std::string postfix,int indx,int ibase_tensor);
-    static void set_tensor_extrap_components_main(
-      int coord,std::string postfix,int indx);
 
     void sum_integrated_quantities (
      const std::string& caller_string,
@@ -682,13 +680,6 @@ protected:
 
     void make_viscoelastic_tensor(int im);
     void make_viscoelastic_tensorALL(int im);
-
-    void make_viscoelastic_tensorMAC(int im,
-	int flux_mf,int flux_grid_type,int fill_state_idx);
-    void make_viscoelastic_tensorMACALL(int im,
-        int flux_mf,int flux_grid_type,
-        int fill_state_idx);
-
     void make_viscoelastic_heating(int im,int idx);
 
     // VAHAB HEAT SOURCE
@@ -1674,9 +1665,6 @@ protected:
     static int DIV_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
-    static int TensorX_Type;
-    static int TensorY_Type;
-    static int TensorZ_Type;
     static int Refine_Density_Type;
     static int NUM_STATE_TYPE;
 
