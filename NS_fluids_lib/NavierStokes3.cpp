@@ -11615,7 +11615,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
          parent->levelSteps(0)); 
        }
 
-       if (localMF[VISCOTEN_MF]->nComp()==ENUM_NUM_TENSOR_TYPE) {
+       if (localMF[VISCOTEN_MF]->nComp()==
+           ENUM_NUM_TENSOR_TYPE*EXTRAP_NCOMP_REFINE_DENSITY) {
         // do nothing
        } else
         amrex::Error("localMF[VISCOTEN_MF]->nComp() invalid");
@@ -11624,28 +11625,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         // do nothing
        } else
         amrex::Error("localMF[VISCOTEN_MF]->nGrow() invalid");
-
-        //interpolate Q to X,Y,Z locations.
-        // NavierStokes::make_viscoelastic_tensorMACALL is declared in
-	//   NavierStokes.cpp
-	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
-	// -> fort_maketensor_mac (GODUNOV_3D.F90)
-
-       int flux_grid_type=0;
-       make_viscoelastic_tensorMACALL(im,
-         MAC_ELASTIC_FLUX_X_MF,flux_grid_type,TensorX_Type);
-       flux_grid_type=1;
-       make_viscoelastic_tensorMACALL(im,
-         MAC_ELASTIC_FLUX_Y_MF,flux_grid_type,TensorY_Type);
-
-       if (AMREX_SPACEDIM==2) {
-        // do nothing
-       } else if (AMREX_SPACEDIM==3) {
-	flux_grid_type=AMREX_SPACEDIM-1;
-        make_viscoelastic_tensorMACALL(im,
-	  MAC_ELASTIC_FLUX_Z_MF,flux_grid_type,TensorZ_Type);
-       } else
-        amrex::Error("dimension bust");
 
        int is_rigid_CL_flag=0;
        int imp1=im+1;
@@ -11695,16 +11674,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         amrex::Error("FSI_outer_sweeps or is_rigid_CL_flag invalid");
 
        delete_array(VISCOTEN_MF);
-
-       delete_array(MAC_ELASTIC_FLUX_X_MF);
-       delete_array(MAC_ELASTIC_FLUX_Y_MF);
-
-       if (AMREX_SPACEDIM==2) {
-        // do nothing
-       } else if (AMREX_SPACEDIM==3) {
-        delete_array(MAC_ELASTIC_FLUX_Z_MF);
-       } else
-        amrex::Error("dimension bust");
 
        override_enable_spectral(push_enable_spectral);
 

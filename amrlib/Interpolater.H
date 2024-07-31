@@ -199,6 +199,33 @@ public:
 
 
 
+class RefineElasticInterp
+    :
+    public Interpolater
+{
+public:
+
+    virtual ~RefineElasticInterp ();
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,
+       int grid_type);
+    virtual void interp (
+     Real time,
+     const FArrayBox& crse,
+     int              crse_comp,
+     FArrayBox&       fine,
+     int              fine_comp,
+     int              ncomp,
+     const Box&       fine_region,
+     const Geometry&  crse_geom,
+     const Geometry&  fine_geom,
+     Vector<BCRec>&    bcr,
+     int levelc,int levelf,
+     int bfactc,int bfactf,
+     int grid_type);
+};
+
+
+
 class multiMOFInterp
     :
     public Interpolater
@@ -324,15 +351,13 @@ extern SEMInterp                 sem_interp_LOW_PARM;
 extern SEMInterp                 sem_interp_HIGH_PARM;
 extern PCInterpNull              pc_interp_null;
 extern RefineDensityInterp       refine_density_pc_interp;
+extern RefineElasticInterp       refine_elastic_pc_interp;
 extern multiMOFInterp            multi_mof_interp;
 extern multiEXTMOFInterp         multi_extmof_interp;
 extern BurnVelInterp             burnvel_interp;
 extern BurnVelInterp             tsat_interp;
 extern BurnVelInterp             drag_interp;
 extern UMACInterp                umac_interp;
-extern UMACInterp                xd_mac_interp;
-extern UMACInterp                xd_mac_lo_interp;
-extern PCInterp                  tensor_pc_interp;
 extern maskSEMInterp             mask_sem_interp;
 
 //class BoxConverter is declared in: AMReX_Box.H

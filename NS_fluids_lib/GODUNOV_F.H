@@ -231,27 +231,6 @@ extern "C"
     Real* polymer_factor,
     int* irz);
 
-   void fort_maketensor_mac(
-    int* flux_grid_type,
-    int* partid,
-    int* level,
-    int* finest_level,
-    int* ncomp_visc,
-    int* im,
-    const Real* xlo,const Real* dx,
-    Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
-    Real* tensor,AMREX_ARLIM_P(tlo),AMREX_ARLIM_P(thi),
-    Real* tensorMAC,AMREX_ARLIM_P(tMAClo),AMREX_ARLIM_P(tMAChi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    Real* elastic_viscosity,
-    Real* etaS,
-    Real* elastic_time,
-    int* viscoelastic_model,
-    Real* polymer_factor,
-    int* irz);
-
    void fort_copy_vel_on_sign(
     int* im_part,
     int* nparts,
