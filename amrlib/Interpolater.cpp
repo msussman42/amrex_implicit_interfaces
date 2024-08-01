@@ -231,37 +231,42 @@ RefineElasticInterp::interp (Real time,
  } else
   amrex::Error("grid_type invalid");
 
- //
- // Set up to call FORTRAN.
- //
- const int* clo = crse.box().loVect();
- const int* chi = crse.box().hiVect();
- const int* flo = fine.loVect();
- const int* fhi = fine.hiVect();
- const int* lo  = fine_region.loVect();
- const int* hi  = fine_region.hiVect();
-
- const Real* cdat  = crse.dataPtr(crse_comp);
- Real*       fdat  = fine.dataPtr(fine_comp);
-
- const Real* prob_lo=fine_geom.ProbLo();
- const Real* dxf = fine_geom.CellSize();
- const Real* dxc = crse_geom.CellSize();
-
- if (ncomp!=4*(AMREX_SPACEDIM-1)) {
+ int increment=4*(AMREX_SPACEDIM-1);
+ int nsections=ncomp/increment;
+ if (nsections*increment==ncomp) {
+  //do nothing
+ } else {
   std::cout << "ncomp " << ncomp << '\n';
-  amrex::Error("must interpolate all RefineElastic data at once");
+  amrex::Error("must interpolate RefineElastic in sections");
  }
 
- fort_refine_density_interp(
-  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
-  clo,chi,
-  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
-  lo,hi,
-  prob_lo,dxf,dxc,
-  &ncomp,
-  &levelc,&levelf,
-  &bfactc,&bfactf);
+ for (int isec=0;isec<nsections;isec++) {
+
+  const int* clo = crse.box().loVect();
+  const int* chi = crse.box().hiVect();
+  const int* flo = fine.loVect();
+  const int* fhi = fine.hiVect();
+  const int* lo  = fine_region.loVect();
+  const int* hi  = fine_region.hiVect();
+
+  const Real* cdat  = crse.dataPtr(crse_comp+isec*increment);
+  Real*       fdat  = fine.dataPtr(fine_comp+isec*increment);
+
+  const Real* prob_lo=fine_geom.ProbLo();
+  const Real* dxf = fine_geom.CellSize();
+  const Real* dxc = crse_geom.CellSize();
+
+  fort_refine_density_interp(
+   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+   clo,chi,
+   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+   lo,hi,
+   prob_lo,dxf,dxc,
+   &increment,
+   &levelc,&levelf,
+   &bfactc,&bfactf);
+
+ } //isec=0 ... nsections-1
 
 }
 

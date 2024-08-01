@@ -175,15 +175,6 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void fort_tensorfill(
-      int* grid_type,
-      int* level,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
-      const int* dom_lo, const int* dom_hi,
-      const Real* dx, const Real* grd_lo,
-      const Real* time, const int* bc,
-      const int* scomp,int* ncomp,int* bfact);
-
      void fort_pressurefill(
       int* grid_type,
       int* level,
