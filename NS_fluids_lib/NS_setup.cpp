@@ -464,7 +464,8 @@ NavierStokes::set_tensor_extrap_components(
  int increment=1;
  int ijk_index=0;
  Interpolater* local_interp=&pc_interp;
- const StateDescriptor::BndryFunc& local_fill=fort_extrapfill;
+ const StateDescriptor::BndryFunc& local_fill=
+   ((indx==State_Type) ? fort_extrapfill : fort_group_tensorfill);
 
  if (indx==State_Type) {
   //do nothing
@@ -1023,7 +1024,7 @@ NavierStokes::variableSetUp ()
       }
 
       StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(
-       fort_tensorfill,
+       fort_group_tensorfill,
        fort_group_tensorfill);
 
       desc_lst.setComponent(Tensor_Type,

@@ -807,22 +807,32 @@ stop
 #endif
       integer irefine,jrefine,krefine,nrefine_dest
       integer isrc,jsrc,ksrc,nrefine_src
+      integer increment
+
+      increment=4*(AMREX_SPACEDIM-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid710"
        stop
       endif
 
-      if (scomp.eq.1) then
+      if ((((scomp-1)/increment)*increment).eq.scomp-1) then
        !do nothing
       else
-       print *,"scomp invalid local_filcc4D_refine"
+       print *,"scomp invalid: ",scomp
        stop
       endif
-      if (ncomp.eq.4*(SDIM-1)) then
+
+      if (scomp.ge.1) then
        !do nothing
       else
-       print *,"ncomp invalid local_filcc4D_refine"
+       print *,"scomp invalid local_filcc4D_refine: ",scomp
+       stop
+      endif
+      if (ncomp.ge.4*(SDIM-1)) then
+       !do nothing
+      else
+       print *,"ncomp invalid local_filcc4D_refine: ",ncomp
        stop
       endif
 
@@ -867,7 +877,8 @@ stop
             isrc=irefine
             isrc=0
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(ilo-i,j,k),nrefine_dest)=q(D_DECL(ilo,j,k),nrefine_src)
+            q(D_DECL(ilo-i,j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(ilo,j,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -900,7 +911,8 @@ stop
             isrc=irefine
             isrc=1-irefine
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(ilo-i,j,k),nrefine_dest)=q(D_DECL(ilo+i-1,j,k),nrefine_src)
+            q(D_DECL(ilo-i,j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(ilo+i-1,j,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -945,7 +957,8 @@ stop
             isrc=irefine
             isrc=1
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(ihi+i,j,k),nrefine_dest)=q(D_DECL(ihi,j,k),nrefine_src)
+            q(D_DECL(ihi+i,j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(ihi,j,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -979,7 +992,8 @@ stop
             isrc=irefine
             isrc=1-irefine
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(ihi+i,j,k),nrefine_dest)=q(D_DECL(ihi-i+1,j,k),nrefine_src)
+            q(D_DECL(ihi+i,j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(ihi-i+1,j,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -1026,7 +1040,8 @@ stop
             isrc=irefine
             jsrc=0
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(i,jlo-j,k),nrefine_dest)=q(D_DECL(i,jlo,k),nrefine_src)
+            q(D_DECL(i,jlo-j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(i,jlo,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -1060,7 +1075,8 @@ stop
             isrc=irefine
             jsrc=1-jrefine
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(i,jlo-j,k),nrefine_dest)=q(D_DECL(i,jlo+j-1,k),nrefine_src)
+            q(D_DECL(i,jlo-j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(i,jlo+j-1,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -1107,7 +1123,8 @@ stop
             isrc=irefine
             jsrc=1
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(i,jhi+j,k),nrefine_dest)=q(D_DECL(i,jhi,k),nrefine_src)
+            q(D_DECL(i,jhi+j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(i,jhi,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -1141,7 +1158,8 @@ stop
             isrc=irefine
             jsrc=1-jrefine
             nrefine_src=4*ksrc+2*jsrc+isrc+1
-            q(D_DECL(i,jhi+j,k),nrefine_dest)=q(D_DECL(i,jhi-j+1,k),nrefine_src)
+            q(D_DECL(i,jhi+j,k),scomp-1+nrefine_dest)= &
+              q(D_DECL(i,jhi-j+1,k),scomp-1+nrefine_src)
            enddo !irefine
            enddo !jrefine
 #if (AMREX_SPACEDIM==3)
@@ -1184,7 +1202,8 @@ stop
           isrc=irefine
           ksrc=0
           nrefine_src=4*ksrc+2*jsrc+isrc+1
-          q(i,j,klo-k,nrefine_dest)=q(i,j,klo,nrefine_src)
+          q(i,j,klo-k,scomp-1+nrefine_dest)= &
+            q(i,j,klo,scomp-1+nrefine_src)
          enddo !irefine
          enddo !jrefine
          enddo !krefine
@@ -1209,7 +1228,8 @@ stop
           isrc=irefine
           ksrc=1-krefine
           nrefine_src=4*ksrc+2*jsrc+isrc+1
-          q(i,j,klo-k,nrefine_dest)=q(i,j,klo+k-1,nrefine_src)
+          q(i,j,klo-k,scomp-1+nrefine_dest)= &
+            q(i,j,klo+k-1,scomp-1+nrefine_src)
          enddo !irefine
          enddo !jrefine
          enddo !krefine
@@ -1246,7 +1266,8 @@ stop
           isrc=irefine
           ksrc=1
           nrefine_src=4*ksrc+2*jsrc+isrc+1
-          q(i,j,khi+k,nrefine_dest)=q(i,j,khi,nrefine_src)
+          q(i,j,khi+k,scomp-1+nrefine_dest)= &
+            q(i,j,khi,scomp-1+nrefine_src)
          enddo !irefine
          enddo !jrefine
          enddo !krefine
@@ -1272,7 +1293,8 @@ stop
           isrc=irefine
           ksrc=1-krefine
           nrefine_src=4*ksrc+2*jsrc+isrc+1
-          q(i,j,khi+k,nrefine_dest)=q(i,j,khi-k+1,nrefine_src)
+          q(i,j,khi+k,scomp-1+nrefine_dest)= &
+            q(i,j,khi-k+1,scomp-1+nrefine_src)
          enddo !irefine
          enddo !jrefine
          enddo !krefine
