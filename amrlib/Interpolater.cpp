@@ -237,6 +237,7 @@ RefineElasticInterp::interp (Real time,
   //do nothing
  } else {
   std::cout << "ncomp " << ncomp << '\n';
+  std::cout << "increment " << increment << '\n';
   amrex::Error("must interpolate RefineElastic in sections");
  }
 

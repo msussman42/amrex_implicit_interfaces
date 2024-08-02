@@ -29457,7 +29457,7 @@ end subroutine initialize2d
 #endif
 
       if (4*(SDIM-1).ne.ncomp) then
-       print *,"ncomp invalid group_refine_densityfill"
+       print *,"ncomp invalid group_refine_densityfill: ",ncomp
        stop
       endif
 
@@ -31004,10 +31004,13 @@ end subroutine initialize2d
 
        do iparts_local=scomp+1,scomp+ncomp,increment
 
-        ipart=(iparts_local-1)/increment
-        ipart=ipart/ENUM_NUM_TENSOR_TYPE+1
-        istate=(iparts_local-1)/increment
+        ipart=(iparts_local-1)/increment !0<=ipart<nvisco*nten
+        ipart=ipart/ENUM_NUM_TENSOR_TYPE+1 !1<=ipart<=nvisco
+        istate=(iparts_local-1)/increment !0<=istate<nvisco*nten
+         !0<=ipart-1<nvisco
+         !0<=(ipart-1)*nten<nvisco*nten
         istate=istate-(ipart-1)*ENUM_NUM_TENSOR_TYPE+1
+         !1<=ipart_bc<=nvisco*nten
         ipart_bc=(iparts_local-1)/increment+1
 
         if ((ipart_bc.ge.1).and. &
@@ -31032,6 +31035,12 @@ end subroutine initialize2d
         endif
 
         im=fort_im_viscoelastic_map(ipart)+1
+        if ((im.ge.1).and.(im.le.num_materials)) then
+         !do nothing
+        else
+         print *,"im invalid: ",im
+         stop
+        endif
 
         borderlo(3)=0
         borderhi(3)=0
