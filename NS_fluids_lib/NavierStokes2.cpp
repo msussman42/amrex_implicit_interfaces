@@ -7697,6 +7697,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf) {
 
 //plot_grid_type==0 data interpolated to nodes.
 //plot_grid_type==1 data lives at the cells.
+FIX ME
 void NavierStokes::output_zones(
    int plot_grid_type,
    FArrayBox& visual_fab_output,
@@ -7801,7 +7802,7 @@ void NavierStokes::output_zones(
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
- if (elastic_ncomp==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+ if (elastic_ncomp==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
   // do nothing
  } else
   amrex::Error("elastic_ncomp invalid");
@@ -10674,7 +10675,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
      (num_materials_viscoelastic<=num_materials)) {
 
   tensor=getStateTensor(ngrow,0,
-    num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE,cur_time_slab);
+    num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE,cur_time_slab);
 
  } else if (num_materials_viscoelastic==0) {
 	 // do nothing
@@ -10700,8 +10701,9 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
           (partid<im_viscoelastic_map.size())) {
     partid++;
    }
-   if (partid<im_viscoelastic_map.size()) {
-    scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
+FIX ME
+   if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
+    scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
    } else
     amrex::Error("partid could not be found: getStateVISC");
      
@@ -11094,10 +11096,11 @@ void NavierStokes::getState_tracemag(int idx) {
 	   (partid<im_viscoelastic_map.size())) {
      partid++;
     }
-    if (partid<im_viscoelastic_map.size()) {
-     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
+    if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
+     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
       //ngrow=1
-     tensor=getStateTensor(1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
+     tensor=getStateTensor(1,scomp_tensor,
+        ENUM_NUM_TENSOR_TYPE_REFINE,cur_time_slab);
      allocate_tensor=1;
     } else
      amrex::Error("partid could not be found: getState_tracemag");
@@ -11109,7 +11112,7 @@ void NavierStokes::getState_tracemag(int idx) {
    // do nothing
   } else
    amrex::Error("ns_is_rigid(im) invalid");
-
+FIX ME
   int idest=5*im;
   int only_scalar=1;  // sqrt(2 D:D)
   int ngrow_getshear=1;

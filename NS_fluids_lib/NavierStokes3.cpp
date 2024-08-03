@@ -11565,10 +11565,8 @@ void NavierStokes::avgDownALL_TENSOR() {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
 
-  for (int scomp=0;scomp<num_materials_viscoelastic*
-		         ENUM_NUM_TENSOR_TYPE*
-			 EXTRAP_NCOMP_REFINE_DENSITY;
- 		   scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
+  for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
+       scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
 
    for (int i=finest_level-1;i>=level;i--) {
     NavierStokes& ns_level=getLevel(i);
@@ -11626,7 +11624,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        }
 
        if (localMF[VISCOTEN_MF]->nComp()==
-           ENUM_NUM_TENSOR_TYPE*EXTRAP_NCOMP_REFINE_DENSITY) {
+           ENUM_NUM_TENSOR_TYPE_REFINE) {
         // do nothing
        } else
         amrex::Error("localMF[VISCOTEN_MF]->nComp() invalid");
