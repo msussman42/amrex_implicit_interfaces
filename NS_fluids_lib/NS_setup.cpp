@@ -874,7 +874,7 @@ NavierStokes::variableSetUp ()
      desc_lst.addDescriptor(Tensor_Type,
       IndexType::TheCellType(),
       1,
-      NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE,
+      NUM_CELL_ELASTIC_REFINE,
       &refine_elastic_pc_interp,
       state_holds_data);
 
@@ -882,18 +882,13 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.addDescriptor(Tensor_Type,
       IndexType::TheCellType(),
       1,
-      EXTRAP_NCOMP_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE,
+      ENUM_NUM_TENSOR_TYPE_REFINE,
       &refine_elastic_pc_interp,
       null_state_holds_data);
 
-     // setComponent: 0..ENUM_NUM_REFINE_DENSITY_TYPE*ENUM_NUM_TENSOR_TYPE-1
+     // setComponent: 0..ENUM_NUM_TENSOR_TYPE_REFINE-1
      // modifies dest_lstGHOST
      set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
-
-     if (ENUM_NUM_TENSOR_TYPE==EXTRAP_NCOMP_ELASTIC) {
-      // do nothing
-     } else
-      amrex::Error("EXTRAP_NCOMP_ELASTIC invalid");
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
@@ -907,10 +902,10 @@ NavierStokes::variableSetUp ()
       std::string im_string=im_string_stream.str();
 
       Vector<std::string> MOFvelocity_names_tensor;
-      MOFvelocity_names_tensor.resize(ENUM_NUM_TENSOR_TYPE);
+      MOFvelocity_names_tensor.resize(ENUM_NUM_TENSOR_TYPE_REFINE);
 
       Vector<BCRec> MOFvelocity_bcs_tensor;
-      MOFvelocity_bcs_tensor.resize(ENUM_NUM_TENSOR_TYPE);
+      MOFvelocity_bcs_tensor.resize(ENUM_NUM_TENSOR_TYPE_REFINE);
 
       int refine_flag=1;
       int ibase_tensor=0;
@@ -1666,11 +1661,6 @@ NavierStokes::variableSetUp ()
      // modifies dest_lstGHOST
     set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
 		    EXTRAPCOMP_ELASTIC);
-
-    if (ENUM_NUM_TENSOR_TYPE==EXTRAP_NCOMP_ELASTIC) {
-     // do nothing
-    } else
-     amrex::Error("EXTRAP_NCOMP_ELASTIC invalid");
 
     Vector<std::string> DRAG_names;
     DRAG_names.resize(N_DRAG);
