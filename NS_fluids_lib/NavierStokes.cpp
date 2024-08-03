@@ -9907,9 +9907,9 @@ NavierStokes::initData () {
 
   if ((nparts_tensor>=1)&&(nparts_tensor<=num_materials)) {  
    MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
-    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
-   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC,1);
+   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE)
+    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE");
+   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE,1);
   } else if (nparts_tensor==0) {
    amrex::Error("expecting nparts_tensor>0");
   } else 
@@ -10288,9 +10288,9 @@ void NavierStokes::init_boundary() {
    MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
      // ngrow=1 scomp=0
    MultiFab* tensormf=getStateTensor(1,0,
-     NUM_CELL_ELASTIC,cur_time_slab);
+     NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,
-     NUM_CELL_ELASTIC,1);
+     NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE,1);
    delete tensormf;
   } else if ((k==Refine_Density_Type)&&
              (num_materials_compressible>=1)&&
@@ -11035,24 +11035,34 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
  } else
   amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
- if (localMF[VISCOTEN_MF]->nComp()==ENUM_NUM_TENSOR_TYPE) {
+ if (localMF[VISCOTEN_MF]->nComp()==
+     ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE) {
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF has incorrect nComp");
 
   // spectral_override==0 => always low order.
- avgDown_localMF_ALL(VISCOTEN_MF,0,ENUM_NUM_TENSOR_TYPE,LOW_ORDER_AVGDOWN);
- for (int scomp_extrap=0;scomp_extrap<ENUM_NUM_TENSOR_TYPE;scomp_extrap++) {
+ avgDown_tensor_localMF_ALL(VISCOTEN_MF,0,
+   ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE);
+ for (int scomp_extrap=0;
+      scomp_extrap<ENUM_NUM_TENSOR_TYPE;
+      scomp_extrap++) {
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(Tensor_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
    // fort_extrapfill
    // (i.e. the coarse/fine BC and physical BC will be low order)
-  scompBC_map.resize(1);
-  scompBC_map[0]=scomp_extrap;
+  scompBC_map.resize(ENUM_NUM_REFINE_DENSITY_TYPE);
+  for (int increment=0;
+       increment<ENUM_NUM_REFINE_DENSITY_TYPE;
+       increment++) {
+   scompBC_map[increment]=scomp_extrap*ENUM_NUM_REFINE_DENSITY_TYPE+increment;
+  }
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(VISCOTEN_MF,1,scomp_extrap,1,
-	Tensor_Type,scompBC_map);
+  PCINTERP_fill_bordersALL(VISCOTEN_MF,1,
+    scomp_extrap*ENUM_NUM_REFINE_DENSITY_TYPE,
+    ENUM_NUM_REFINE_DENSITY_TYPE,
+    Tensor_Type,scompBC_map);
  } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 
  override_enable_spectral(push_enable_spectral);
@@ -11110,13 +11120,14 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
   if (store_elastic_data[im]==1) {
 
    int partid=0;
-   while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
+   while ((im_viscoelastic_map[partid]!=im)&&
+          (partid<im_viscoelastic_map.size())) {
     partid++;
    }
 
    if (partid<im_viscoelastic_map.size()) {
 
-    int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
+    int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE;
 
     if (ENUM_NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -11127,7 +11138,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      //  or
      // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_force
      //
-    getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,
+    getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,
+     ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE,
      cur_time_slab);
 
     const Real* dx = geom.CellSize();
@@ -11284,8 +11296,9 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
   if (store_elastic_data[im]==1) {
 
    debug_ngrow(VISCOTEN_MF,1,local_caller_string);
-   if (localMF[VISCOTEN_MF]->nComp()!=ENUM_NUM_TENSOR_TYPE)
-    amrex::Error("localMF[VISCOTEN_MF] invalid");
+   if (localMF[VISCOTEN_MF]->nComp()!=
+       ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE)
+    amrex::Error("localMF[VISCOTEN_MF] ncomp <> ntensor * refine_den");
 
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*num_materials) {
@@ -11324,8 +11337,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
-    if (tenfab.nComp()!=ENUM_NUM_TENSOR_TYPE)
-     amrex::Error("tenfab.nComp invalid");
+    if (tenfab.nComp()!=ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE)
+     amrex::Error("tenfab.nComp <> ntensor * nrefine ");
 
     FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
     if (DeDTinversefab.nComp()!=1)
@@ -12523,15 +12536,18 @@ void NavierStokes::tensor_extrapolation() {
 
     partid_test++;
 
-    if (partid<im_viscoelastic_map.size()) {
+    if ((partid>=0)&&
+        (partid<im_viscoelastic_map.size())) {
 
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
       	                             &viscoelastic_model[im])==1) {
 
-      int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
+      int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE;
 
       MultiFab* tensor_source_mf=
-       getStateTensor(2,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
+       getStateTensor(2,scomp_tensor,
+         ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE,
+         cur_time_slab);
 
       //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
       //called from "make_physics_varsALL" which was called after
