@@ -11090,7 +11090,8 @@ void NavierStokes::getState_tracemag(int idx) {
   if (ns_is_rigid(im)==0) {
    if (elastic_viscosity[im]>0.0) {
     int partid=0;
-    while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
+    while ((im_viscoelastic_map[partid]!=im)&&
+	   (partid<im_viscoelastic_map.size())) {
      partid++;
     }
     if (partid<im_viscoelastic_map.size()) {

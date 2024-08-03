@@ -14082,7 +14082,7 @@ END SUBROUTINE SIMP
       tid=omp_get_thread_num()
 #endif
       if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
+       print *,"tid invalid: ",tid
        stop
       endif 
 
