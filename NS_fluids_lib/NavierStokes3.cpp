@@ -11564,9 +11564,19 @@ void NavierStokes::avgDownALL_TENSOR() {
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-   // spectral_override==1 => order derived from "enable_spectral"
-   // spectral_override==0 => always low order.
-  avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,LOW_ORDER_AVGDOWN);
+
+  for (int scomp=0;scomp<num_materials_viscoelastic*
+		         ENUM_NUM_TENSOR_TYPE*
+			 EXTRAP_NCOMP_REFINE_DENSITY;
+ 		   scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
+
+   for (int i=finest_level-1;i>=level;i--) {
+    NavierStokes& ns_level=getLevel(i);
+    ns_level.avgDown_refine_tensor(scomp);
+   }
+
+  } //scomp
+
  } else
   amrex::Error("num_materials_viscoelastic invalid avgDownALL_TENSOR");
 
