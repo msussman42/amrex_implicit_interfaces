@@ -12519,6 +12519,10 @@ void NavierStokes::tensor_extrapolation() {
   amrex::Error("num_state_base invalid");
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+ if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+  //do nothing
+ } else
+  amrex::Error("Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE violated");
 
  const Real* dx = geom.CellSize();
 
@@ -12594,13 +12598,14 @@ void NavierStokes::tensor_extrapolation() {
 
        if (fort_built_in_elastic_model(&elastic_viscosity[im],
  			            &viscoelastic_model[im])==1) {
-        // declared in: GODUNOV_3D.F90 FIX ME
+        // declared in: GODUNOV_3D.F90 
         fort_extrapolate_tensor(
          &level,
          &finest_level,
          &im,
          dx,xlo,
-         LSfab.dataPtr(),ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+         LSfab.dataPtr(),
+         ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
          tensor_new_fab.dataPtr(scomp_tensor),
          ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
          tensor_source_mf_fab.dataPtr(),
