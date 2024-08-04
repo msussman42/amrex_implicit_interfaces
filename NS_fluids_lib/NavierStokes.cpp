@@ -20805,14 +20805,23 @@ FIX ME
       std::stringstream::out);
      im_string_stream << std::setw(2) << std::setfill('0') << im+1;
      std::string im_string=im_string_stream.str();
-FIX ME
+
      for (int ispec=0;ispec<ENUM_NUM_TENSOR_TYPE;ispec++) {
       std::stringstream ispec_string_stream(std::stringstream::in |
        std::stringstream::out);
       ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
       std::string ispec_string=ispec_string_stream.str();
-      icomp++;
-      varnames[icomp]="CT"+ispec_string+"-"+im_string;
+
+      for (int irefine=0;irefine<ENUM_NUM_REFINE_DENSITY_TYPE;irefine++) {
+       std::stringstream irefine_string_stream(std::stringstream::in |
+          std::stringstream::out);
+       irefine_string_stream << std::setw(2) << std::setfill('0') << irefine+1;
+       std::string irefine_string=irefine_string_stream.str();
+
+       icomp++;
+       varnames[icomp]="CT-ijk-"+irefine_string+"-"+
+	       ispec_string+"-im-"+im_string;
+      } //irefine
      } //ispec
     } else
      amrex::Error("im invalid");

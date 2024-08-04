@@ -17049,11 +17049,15 @@ end subroutine print_visual_descriptor
       character*80 rootname
       character*80 Varname
       character*2 specstr
+      character*2 refinestr
       character*2 matstr
       character*2 matstropp
       integer igrad
       integer im,imls,im_opp
-      integer ih,ih_root,ispec,dir,i
+      integer ih,ih_root
+      integer ispec
+      integer irefine
+      integer dir,i
       integer nparts,nparts_def,partid
       integer plot_sdim_macro
       integer test_nwrite
@@ -17465,21 +17469,47 @@ end subroutine print_visual_descriptor
           endif
          enddo
 
-         ih=1
-         Varname='CT'
-         ih=ih+2
-         do i=1,2
-          Varname(ih:ih)=specstr(i:i)
+         do irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+          write(refinestr,'(I2)') irefine
+          do i=1,2
+           if (refinestr(i:i).eq.' ') then
+            refinestr(i:i)='0'
+           endif
+          enddo
+
+          ih=1
+          Varname='CT-ijk-'
+          ih=ih+7
+
+          do i=1,2
+           Varname(ih:ih)=refinestr(i:i)
+           ih=ih+1
+          enddo
+          Varname(ih:ih)='-'
           ih=ih+1
-         enddo
-         Varname(ih:ih)='-'
-         ih=ih+1
-         do i=1,2
-          Varname(ih:ih)=matstr(i:i)
+
+          do i=1,2
+           Varname(ih:ih)=specstr(i:i)
+           ih=ih+1
+          enddo
+          Varname(ih:ih)='-'
           ih=ih+1
-         enddo
-         call dumpstring(Varname)
-         test_nwrite=test_nwrite+1
+          Varname(ih:ih)='i'
+          ih=ih+1
+          Varname(ih:ih)='m'
+          ih=ih+1
+          Varname(ih:ih)='-'
+          ih=ih+1
+
+          do i=1,2
+           Varname(ih:ih)=matstr(i:i)
+           ih=ih+1
+          enddo
+          call dumpstring(Varname)
+          test_nwrite=test_nwrite+1
+
+         enddo  ! irefine=1..ENUM_NUM_REFINE_DENSITY_TYPE
 
         enddo  ! ispec=1..num_tensor_type
        else
