@@ -405,7 +405,15 @@ stop
            stop
           endif 
          else
-          print *,"mdata invalid"
+          print *,"mdata invalid: ",mdata(D_DECL(i,j,k),dir)
+          print *,"i,j,k,dir,dirtan ",i,j,k,dir,dirtan
+          print *,"ii,jj,kk ",ii,jj,kk
+          print *,"total_mass ",total_mass
+          print *,"tcomp ",tcomp
+          print *,"is,ie,js,je,ks,ke ",is,ie,js,je,ks,ke
+          do im=1,num_materials
+           print *,"im,massfrac ",im,massfrac(im)
+          enddo
           stop
          endif
 
@@ -8469,11 +8477,11 @@ stop
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(out), target :: &
-        tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE)
+        tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
-        told(DIMV(told),ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE)
+        told(DIMV(told),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
 
       integer :: i,j,k
@@ -8678,6 +8686,9 @@ stop
         endif
        else
         print *,"im_local or LS_local invalid"
+        print *,"im_critical: ",im_critical
+        print *,"im_local: ",im_local
+        print *,"LS_local: ",LS_local(im_critical+1)
         stop
        endif
 
