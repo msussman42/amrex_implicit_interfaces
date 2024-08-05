@@ -7697,7 +7697,6 @@ void NavierStokes::check_for_NAN(MultiFab* mf) {
 
 //plot_grid_type==0 data interpolated to nodes.
 //plot_grid_type==1 data lives at the cells.
-FIX ME
 void NavierStokes::output_zones(
    int plot_grid_type,
    FArrayBox& visual_fab_output,
@@ -10701,7 +10700,6 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
           (partid<im_viscoelastic_map.size())) {
     partid++;
    }
-FIX ME
    if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
     scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
    } else
@@ -11112,7 +11110,7 @@ void NavierStokes::getState_tracemag(int idx) {
    // do nothing
   } else
    amrex::Error("ns_is_rigid(im) invalid");
-FIX ME
+
   int idest=5*im;
   int only_scalar=1;  // sqrt(2 D:D)
   int ngrow_getshear=1;

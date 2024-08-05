@@ -715,11 +715,13 @@ stop
       real(amrex_real), INTENT(in), target :: eosdata(DIMV(eosdata), &
               num_materials*num_state_material)
       real(amrex_real), pointer :: eosdata_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(in), target :: &
+         tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k
-      real(amrex_real)    shear,density,temperature,mu
+      integer :: irefine,jrefine,krefine,nrefine
+      real(amrex_real) :: shear,density,temperature,mu
       integer flagcomp
       real(amrex_real) bterm,pterm
       integer numstatetest,ii,jj
@@ -1049,8 +1051,24 @@ stop
           enddo
           do dir_local=1,ENUM_NUM_TENSOR_TYPE
            call stress_index(dir_local,ii,jj)
-           Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
-          enddo
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine=4*krefine+2*jrefine+irefine+1
+            Q(ii,jj)=Q(ii,jj)+ &
+             tensor(D_DECL(i,j,k), &
+              (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+           Q(ii,jj)=Q(ii,jj)/ENUM_NUM_REFINE_DENSITY_TYPE
+          enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
+
           Q(2,1)=Q(1,2)
           Q(3,1)=Q(1,3)
           Q(3,2)=Q(2,3)
@@ -1626,19 +1644,22 @@ stop
       integer, INTENT(in) :: ngrow
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dx(SDIM), xlo(SDIM)
-      real(amrex_real), INTENT(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in), target :: &
+        cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
 
       real(amrex_real), INTENT(inout), target :: dest(DIMV(dest),5)
       real(amrex_real), pointer :: dest_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: den(DIMV(den),ncomp_den)
       real(amrex_real), INTENT(in), target :: &
-              tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
+              tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
 
       integer im  ! im=0..num_materials-1
-      integer i,j,k
+      integer :: i,j,k
+      integer :: dir_tensor
+      integer :: irefine,jrefine,krefine,nrefine
       real(amrex_real) T11,T22,T33,traceA,modtime
       integer nbase
       integer dir,veldir
@@ -1789,35 +1810,57 @@ stop
          stop
         endif
 
-        T11=tensor(D_DECL(i,j,k),1)+one
-        T22=tensor(D_DECL(i,j,k),3)+one
-        T33=tensor(D_DECL(i,j,k),4)+one
-        traceA=T11+T22+T33
+        traceA=zero
 
-        if ((T11.gt.zero).and. &
-            (T22.gt.zero).and. &
-            (T33.gt.zero)) then
-         ! do nothing
-        else if ((T11.le.zero).or. &
-                 (T22.le.zero).or. &
-                 (T33.le.zero)) then
-         if ((fort_viscoelastic_model(im+1).eq.NN_FENE_CR).or. &!FENE-CR
-             (fort_viscoelastic_model(im+1).eq.NN_OLDROYD_B).or. &!Oldroyd-B 
-             (fort_viscoelastic_model(im+1).eq.NN_FENE_P).or. &!FENE-P 
-             (fort_viscoelastic_model(im+1).eq.NN_NEO_HOOKEAN).or. &
-             (fort_viscoelastic_model(im+1).eq.NN_LINEAR_PTT)) then!linear PTT
-          print *,"T11, T22, T33 must be positive"
-          stop
-         else if (fort_viscoelastic_model(im+1).eq.NN_MAIRE_ABGRALL_ETAL) then
-          ! check nothing
+        krefine=0
+#if (AMREX_SPACEDIM==3)
+        do krefine=0,1
+#endif
+        do jrefine=0,1
+        do irefine=0,1
+         nrefine=4*krefine+2*jrefine+irefine+1
+         dir_tensor=1
+         T11=tensor(D_DECL(i,j,k), &
+              (dir_tensor-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)+one
+         dir_tensor=3
+         T22=tensor(D_DECL(i,j,k), &
+              (dir_tensor-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)+one
+         dir_tensor=4
+         T33=tensor(D_DECL(i,j,k), &
+              (dir_tensor-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)+one
+         traceA=traceA+T11+T22+T33
+
+         if ((T11.gt.zero).and. &
+             (T22.gt.zero).and. &
+             (T33.gt.zero)) then
+          ! do nothing
+         else if ((T11.le.zero).or. &
+                  (T22.le.zero).or. &
+                  (T33.le.zero)) then
+          if ((fort_viscoelastic_model(im+1).eq.NN_FENE_CR).or. &!FENE-CR
+              (fort_viscoelastic_model(im+1).eq.NN_OLDROYD_B).or. &!Oldroyd-B 
+              (fort_viscoelastic_model(im+1).eq.NN_FENE_P).or. &!FENE-P 
+              (fort_viscoelastic_model(im+1).eq.NN_NEO_HOOKEAN).or. &
+              (fort_viscoelastic_model(im+1).eq.NN_LINEAR_PTT)) then!linear PTT
+           print *,"T11, T22, T33 must be positive"
+           stop
+          else if (fort_viscoelastic_model(im+1).eq.NN_MAIRE_ABGRALL_ETAL) then
+           ! check nothing
+          else
+           print *,"fort_viscoelastic_model(im+1) invalid"
+           stop
+          endif
          else
-          print *,"fort_viscoelastic_model(im+1) invalid"
+          print *,"T11,T22, or T33 is NaN"
           stop
          endif
-        else
-         print *,"T11,T22, or T33 is NaN"
-         stop
-        endif
+        enddo !irefine
+        enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+        enddo !krefine
+#endif
+        traceA=traceA/ENUM_NUM_REFINE_DENSITY_TYPE
+
         dest(D_DECL(i,j,k),2)=traceA
 
         modtime=visc(D_DECL(i,j,k),2*num_materials+im+1)
@@ -2678,7 +2721,7 @@ stop
                 partid=partid+1
                enddo
                if ((partid.ge.1).and. &
-                   (partid.le.num_materials_viscoelastic) then
+                   (partid.le.num_materials_viscoelastic)) then
                 viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE_REFINE
                 do dir=1,ENUM_NUM_TENSOR_TYPE
                  call stress_index(dir,i1,j1)

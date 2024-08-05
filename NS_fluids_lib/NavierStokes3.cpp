@@ -11562,11 +11562,13 @@ void NavierStokes::avgDownALL_refine_density() {
 
 void NavierStokes::avgDownALL_TENSOR() {
 
+ int finest_level=parent->finestLevel();
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
 
   for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
-       scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
+       scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
 
    for (int i=finest_level-1;i>=level;i--) {
     NavierStokes& ns_level=getLevel(i);

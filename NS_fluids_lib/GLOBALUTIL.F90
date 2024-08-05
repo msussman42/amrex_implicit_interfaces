@@ -1298,7 +1298,7 @@ contains
        i=2
        j=3
       else
-       print *,"one_dim_index invalid"
+       print *,"one_dim_index invalid: ",one_dim_index
        stop
       endif
 
