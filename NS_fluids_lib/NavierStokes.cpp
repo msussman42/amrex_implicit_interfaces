@@ -18350,7 +18350,6 @@ NavierStokes::GetDrag(int isweep) {
    // hoop stress, centripetal force, coriolis effect still not
    // considered.
    // fort_getdrag is declared in: DERIVE_3D.F90
-FIX ME 
   fort_getdrag(
    &tid_current,
    &level,
