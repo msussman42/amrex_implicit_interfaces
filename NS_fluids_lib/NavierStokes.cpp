@@ -11042,7 +11042,7 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
   amrex::Error("VISCOTEN_MF has incorrect nComp");
 
  for (int scomp=0;scomp<ENUM_NUM_TENSOR_TYPE_REFINE;
-      scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
+      scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
 
   for (int i=finest_level-1;i>=level;i--) {
    NavierStokes& ns_level=getLevel(i);
@@ -17780,7 +17780,7 @@ NavierStokes::split_scalar_advection() {
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=num_materials)) {
    for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
-        scomp+=EXTRAP_NCOMP_REFINE_DENSIY) {
+        scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
     avgDown_refine_tensor(scomp);
    }
   } else if (num_materials_viscoelastic==0) {
@@ -19648,7 +19648,6 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-FIX ME
     // declared in: NAVIERSTOKES_3D.F90
    fort_summass(
     &tid_current,
@@ -20349,6 +20348,12 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("NUM_CELL_ELASTIC invalid");
 
+  if (NUM_CELL_ELASTIC_REFINE==
+      num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=num_materials)) {
 
@@ -20385,7 +20390,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    ParallelDescriptor::Barrier();
 
-FIX ME
    //plot_grid_type==0 data interpolated to nodes.
    //plot_grid_type==1 data lives at the cells.
    ns_level.output_zones(
@@ -24630,7 +24634,7 @@ void NavierStokes::avgDown_refine_tensor_localMF(int scomp,
  } // mfi
 } //omp
  ns_reconcile_d_num(LOOP_REFINE_DENSITY_AVGDOWN,"Refine_Density_avgDown");
- S_crse.ParallelCopy(crse_S_fine,0,scomp,
+ S_crse->ParallelCopy(crse_S_fine,0,scomp,
 		 ENUM_NUM_REFINE_DENSITY_TYPE);
  ParallelDescriptor::Barrier();
 

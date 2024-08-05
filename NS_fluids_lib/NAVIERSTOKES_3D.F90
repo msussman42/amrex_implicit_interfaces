@@ -946,7 +946,7 @@ stop
          do ivar_gb=1,num_materials*num_state_material+ &
               num_state_material+ & !plotcomp_scalars_merge
               num_materials+ & !mom_den
-              num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
+              num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -2213,10 +2213,10 @@ END SUBROUTINE SIMP
        stop
       endif
       if (elastic_ncomp.eq. &
-          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) then
        ! do nothing
       else
-       print *,"elastic_ncomp invalid"
+       print *,"elastic_ncomp invalid: ",elastic_ncomp
        stop
       endif
       if (refineden_ncomp.eq. &
@@ -2338,7 +2338,8 @@ END SUBROUTINE SIMP
       else if (num_materials_viscoelastic.eq.0) then
        ! do nothing
       else
-       print *,"num_materials_viscoelastic invalid"
+       print *,"num_materials_viscoelastic invalid: ", &
+         num_materials_viscoelastic
        stop
       endif
 
@@ -7255,7 +7256,7 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: visco(DIMV(visco), &
-         ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) 
+         ENUM_NUM_TENSOR_TYPE_REFINE*num_materials_viscoelastic) 
       real(amrex_real), pointer :: visco_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
@@ -7472,7 +7473,7 @@ END SUBROUTINE SIMP
          ! gradu is actually the Jacobian: (\partial u)/(\partial x)
          ! i.e gradu(i,j)=\partial u_{i}/\partial x_{j}
          ! The gradient of a vector is the TRANSPOSE of the Jacobian.
-         ! (grad * u^{T})_{ij}=\partial u_{j}/\partial x_{i}
+         ! ( grad * (u^{T}) )_{ij}=\partial u_{j}/\partial x_{i}
         do veldir=1,3
         do dir=1,3
          gradu(veldir,dir)=zero
@@ -7774,7 +7775,7 @@ END SUBROUTINE SIMP
             local_result(idest)=local_result(idest)+local_user_out2(im)
            enddo
           else
-           print *,"isweep invalid"
+           print *,"isweep invalid: ",isweep
            stop
           endif
 

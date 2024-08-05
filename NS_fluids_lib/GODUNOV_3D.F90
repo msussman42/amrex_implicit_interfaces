@@ -8583,13 +8583,16 @@ stop
            Q_extrap(dir_local)=zero
           enddo
          
-          dir=1 
-          xcorner(dir)=half*(x_sten(0,dir)+x_sten(2*irefine-1,dir))
-          dir=2 
-          xcorner(dir)=half*(x_sten(0,dir)+x_sten(2*jrefine-1,dir))
+          dir_local=1 
+          xcorner(dir_local)= &
+           half*(x_sten(0,dir_local)+x_sten(2*irefine-1,dir_local))
+          dir_local=2 
+          xcorner(dir_local)= &
+           half*(x_sten(0,dir_local)+x_sten(2*jrefine-1,dir_local))
           if (SDIM.eq.3) then
-           dir=SDIM
-           xcorner(dir)=half*(x_sten(0,dir)+x_sten(2*krefine-1,dir))
+           dir_local=SDIM
+           xcorner(dir_local)= &
+            half*(x_sten(0,dir_local)+x_sten(2*krefine-1,dir_local))
           endif
 
           wtsum=zero
@@ -8613,13 +8616,16 @@ stop
             do irefine2=0,1
              nrefine2=4*krefine2+2*jrefine2+irefine2+1
 
-             dir=1 
-             xcorner2(dir)=half*(x_extrap(0,dir)+x_extrap(2*irefine2-1,dir))
-             dir=2 
-             xcorner2(dir)=half*(x_extrap(0,dir)+x_extrap(2*jrefine2-1,dir))
+             dir_local=1 
+             xcorner2(dir_local)= &
+              half*(x_extrap(0,dir_local)+x_extrap(2*irefine2-1,dir_local))
+             dir_local=2 
+             xcorner2(dir_local)= &
+              half*(x_extrap(0,dir_local)+x_extrap(2*jrefine2-1,dir_local))
              if (SDIM.eq.3) then
-              dir=SDIM
-              xcorner2(dir)=half*(x_extrap(0,dir)+x_extrap(2*krefine2-1,dir))
+              dir_local=SDIM
+              xcorner2(dir_local)= &
+               half*(x_extrap(0,dir_local)+x_extrap(2*krefine2-1,dir_local))
              endif
 
              wt_local=zero
