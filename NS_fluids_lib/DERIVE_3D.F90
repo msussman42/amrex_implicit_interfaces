@@ -1964,17 +1964,22 @@ stop
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(drag)
 
-      real(amrex_real), INTENT(in),target :: tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in),target :: &
+              tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: tdata_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: viscoten(DIMV(viscoten),NUM_CELL_ELASTIC)
+      real(amrex_real), INTENT(in),target :: &
+              viscoten(DIMV(viscoten),NUM_CELL_ELASTIC_REFINE)
       real(amrex_real), pointer :: viscoten_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: den(DIMV(den),num_materials*num_state_material)
+      real(amrex_real), INTENT(in),target :: &
+              den(DIMV(den),num_materials*num_state_material)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in),target :: slrecon(DIMV(slrecon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in),target :: &
+              slrecon(DIMV(slrecon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: slrecon_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: levelpc(DIMV(levelpc),num_materials*(SDIM+1))
+      real(amrex_real), INTENT(in),target :: &
+              levelpc(DIMV(levelpc),num_materials*(SDIM+1))
       real(amrex_real), pointer :: levelpc_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
@@ -1999,14 +2004,18 @@ stop
         ! 1..num_materials viscosity
         ! num_materials+1 ... 2*num_materials viscoelastic coeff.
         ! 2*num_materials+1 ... 3*num_materials modtime
-      real(amrex_real), INTENT(in),target :: c_mat_visc(DIMV(c_mat_visc),3*num_materials)
+      real(amrex_real), INTENT(in),target :: &
+              c_mat_visc(DIMV(c_mat_visc),3*num_materials)
       real(amrex_real), pointer :: c_mat_visc_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solxfab(DIMV(solxfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solyfab(DIMV(solyfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solzfab(DIMV(solzfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in),target :: pres(DIMV(pres))
@@ -2016,6 +2025,8 @@ stop
       real(amrex_real), INTENT(inout), target :: drag(DIMV(drag),N_DRAG)
       real(amrex_real), pointer :: drag_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      integer :: irefine,jrefine,krefine,nrefine
 
       integer ii,jj,kk
       integer imac,jmac,kmac
@@ -2666,17 +2677,34 @@ stop
                          (partid.le.num_materials_viscoelastic))
                 partid=partid+1
                enddo
-               if (partid.le.num_materials_viscoelastic) then
-                viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE
+               if ((partid.ge.1).and. &
+                   (partid.le.num_materials_viscoelastic) then
+                viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE_REFINE
                 do dir=1,ENUM_NUM_TENSOR_TYPE
                  call stress_index(dir,i1,j1)
-                 Q(i1,j1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+dir)
-                enddo
+                 Q(i1,j1)=zero
+                 krefine=0
+#if (AMREX_SPACEDIM==3)
+                 do krefine=0,1
+#endif
+                 do jrefine=0,1
+                 do irefine=0,1
+                  nrefine=4*krefine+2*jrefine+irefine+1
+                  Q(i1,j1)=Q(i1,j1)+ &
+                   viscoten(D_DECL(icell,jcell,kcell), &
+                    viscbase+(dir-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
+                 enddo !irefine
+                 enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+                 enddo !krefine
+#endif
+                 Q(i1,j1)=Q(i1,j1)/ENUM_NUM_REFINE_DENSITY_TYPE
+                enddo ! dir=1,ENUM_NUM_TENSOR_TYPE
                 Q(2,1)=Q(1,2)
                 Q(3,1)=Q(1,3)
                 Q(3,2)=Q(2,3)
                else
-                print *,"partid invalid in fort_getdrag"
+                print *,"partid invalid in fort_getdrag: ",partid
                 stop
                endif
               else if (fort_built_in_elastic_model( &
