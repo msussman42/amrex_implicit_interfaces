@@ -2753,6 +2753,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        advance_MAC_velocity(SOLVETYPE_PRES);
       }
 
+      // TENSOR ADVECTION (non-Newtonian materials)
+      // second half of D^{upside down triangle}/Dt
+      // extrapolates Q at the end.
+      tensor_advection_updateALL();
+
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
@@ -2838,12 +2843,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        }
       }
       debug_memory();
-
-      // 3. TENSOR ADVECTION
-      //  (non-Newtonian materials)
-      // second half of D^{upside down triangle}/Dt
-      // extrapolates Q at the end.
-      tensor_advection_updateALL();
 
       if (is_zalesak()==1) {
 
