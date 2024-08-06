@@ -17267,6 +17267,12 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("NUM_CELL_ELASTIC invalid");
 
+ if (NUM_CELL_ELASTIC_REFINE==
+     num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+  // do nothing
+ } else
+  amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
  if (NUM_CELL_REFINE_DENSITY==
      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
   // do nothing
@@ -17493,10 +17499,16 @@ NavierStokes::split_scalar_advection() {
   } else
    amrex::Error("NUM_CELL_ELASTIC invalid");
 
+  if (NUM_CELL_ELASTIC_REFINE==
+      num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
   if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
    // do nothing
   } else
-   amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC) failed");
+   amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
 
   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
  } else if (num_materials_viscoelastic==0) {
