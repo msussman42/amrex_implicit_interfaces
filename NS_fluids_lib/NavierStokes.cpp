@@ -12411,8 +12411,28 @@ void NavierStokes::tensor_advection_update() {
        FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
        FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
        FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
+
+       int dir=0;
+       FArrayBox& xmacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+       dir=1;
+       FArrayBox& ymacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+       dir=AMREX_SPACEDIM-1;
+       FArrayBox& zmacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+
        FArrayBox& tensor_new_fab=Tensor_new[mfi];
+
+       if (tensor_new_fab.nComp()==NUM_CELL_ELASTIC_REFINE) {
+        //do nothing
+       } else
+        amrex::Error("tensor_new_fab.nComp() invalid");
+
        FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
+
+       if (tensor_source_mf_fab.nComp()==ENUM_NUM_TENSOR_TYPE_REFINE) {
+        //do nothing
+       } else
+        amrex::Error("tensor_source_mf_fab.nComp() invalid");
+
        FArrayBox& tendata=(*tendata_mf)[mfi];
 
        Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -12439,6 +12459,12 @@ void NavierStokes::tensor_advection_update() {
          dx,xlo,
          velfab.dataPtr(),
          ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+         xmacfab.dataPtr(),
+         ARLIM(xmacfab.loVect()),ARLIM(xmacfab.hiVect()),
+         ymacfab.dataPtr(),
+         ARLIM(ymacfab.loVect()),ARLIM(ymacfab.hiVect()),
+         zmacfab.dataPtr(),
+         ARLIM(zmacfab.loVect()),ARLIM(zmacfab.hiVect()),
          tensor_new_fab.dataPtr(scomp_tensor),
          ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
          tensor_source_mf_fab.dataPtr(),

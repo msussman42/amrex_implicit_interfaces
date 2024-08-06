@@ -8249,6 +8249,9 @@ stop
        tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
+       xmac,DIMS(xmac), &
+       ymac,DIMS(ymac), &
+       zmac,DIMS(zmac), &
        tnew,DIMS(tnew), &
        told,DIMS(told), &
        tilelo, tilehi,  &
@@ -8275,6 +8278,9 @@ stop
       integer, INTENT(in) :: DIMDEC(one_over_den)
       integer, INTENT(in) :: DIMDEC(tendata)
       integer, INTENT(in) :: DIMDEC(vel)
+      integer, INTENT(in) :: DIMDEC(xmac)
+      integer, INTENT(in) :: DIMDEC(ymac)
+      integer, INTENT(in) :: DIMDEC(zmac)
       integer, INTENT(in) :: DIMDEC(tnew)
       integer, INTENT(in) :: DIMDEC(told)
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -8298,14 +8304,21 @@ stop
       real(amrex_real), pointer :: tendata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-!FIX ME
+
+      real(amrex_real), INTENT(in), target :: xmac(DIMV(xmac))
+      real(amrex_real), pointer :: xmac_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: ymac(DIMV(xmac))
+      real(amrex_real), pointer :: ymac_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: zmac(DIMV(xmac))
+      real(amrex_real), pointer :: zmac_ptr(D_DECL(:,:,:))
+
       real(amrex_real), INTENT(out), target :: &
-              tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
+              tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_tnew(ENUM_NUM_TENSOR_TYPE)
 
       real(amrex_real), INTENT(in), target :: &
-        told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
+        told(DIMV(told),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
 
@@ -8390,8 +8403,19 @@ stop
       call checkbound_array1(fablo,fabhi,one_over_den_ptr,0,-1)
       tendata_ptr=>tendata
       call checkbound_array(fablo,fabhi,tendata_ptr,0,-1)
+
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
+
+      xmac_ptr=>xmac
+      call checkbound_array1(fablo,fabhi,xmac_ptr,1,0)
+
+      ymac_ptr=>ymac
+      call checkbound_array1(fablo,fabhi,ymac_ptr,1,1)
+
+      zmac_ptr=>zmac
+      call checkbound_array1(fablo,fabhi,zmac_ptr,1,SDIM-1)
+
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1)
 
       told_ptr=>told
