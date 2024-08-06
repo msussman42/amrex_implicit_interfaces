@@ -5640,7 +5640,7 @@ stop
       real(amrex_real), INTENT(inout),target :: vischeat(DIMV(vischeat))
       real(amrex_real), pointer :: vischeat_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in),target :: &
-        tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE*ENUM_NUM_REFINE_DENSITY_TYPE)
+        tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: &
          gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
@@ -7600,7 +7600,7 @@ stop
 
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
-
+!FIX ME
       real(amrex_real), INTENT(inout), target :: tensor(DIMV(tensor), &
               ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
@@ -7692,6 +7692,7 @@ stop
         Q(ii,jj)=zero
        enddo
        enddo
+       !FIX ME
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
@@ -7830,7 +7831,7 @@ stop
              visc(D_DECL(i,j,k),num_materials+im_parm+1)
        enddo
        enddo
-
+!FIX ME
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         tensor(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
@@ -8297,7 +8298,7 @@ stop
       real(amrex_real), pointer :: tendata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-
+!FIX ME
       real(amrex_real), INTENT(out), target :: &
               tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
@@ -8401,7 +8402,7 @@ stop
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
-
+!FIX ME
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
         point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
        enddo
@@ -12421,7 +12422,7 @@ stop
               mom_den(DIMV(mom_den),num_materials)
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
-              tensor(DIMV(tensor),NUM_CELL_ELASTIC)
+           tensor(DIMV(tensor),NUM_CELL_ELASTIC_REFINE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
               refineden(DIMV(refineden),NUM_CELL_REFINE_DENSITY)
@@ -12436,7 +12437,7 @@ stop
       real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),ncomp_state)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
-              tennew(DIMV(tennew),NUM_CELL_ELASTIC)
+              tennew(DIMV(tennew),NUM_CELL_ELASTIC_REFINE)
       real(amrex_real), pointer :: tennew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
               refinedennew(DIMV(refinedennew),NUM_CELL_REFINE_DENSITY)
@@ -12574,11 +12575,12 @@ stop
 
       real(amrex_real) voltotal_target
       real(amrex_real) voltotal_depart
+      real(amrex_real) voltotal_depart_refine(ENUM_NUM_REFINE_DENSITY_TYPE)
       real(amrex_real) LS_voltotal_depart
 
       real(amrex_real) mofdata_grid(recon_ncomp)
       real(amrex_real) snew_hold(ncomp_state)
-      real(amrex_real) tennew_hold(NUM_CELL_ELASTIC)
+      real(amrex_real) tennew_hold(NUM_CELL_ELASTIC_REFINE)
       real(amrex_real) mom_dencore(num_materials)
       real(amrex_real) dencore(num_materials)
       real(amrex_real) oldLS(num_materials)
@@ -12823,6 +12825,14 @@ stop
        print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif
+      if (NUM_CELL_ELASTIC_REFINE.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_ELASTIC_REFINE invalid"
+       stop
+      endif
+
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
@@ -12859,7 +12869,6 @@ stop
        print *,"num_materials_compressible invalid:fort_vfrac_split"
        stop
       endif
-
 
 
       if ((divu_outer_sweeps.ge.0).and. &
@@ -13390,6 +13399,7 @@ stop
 
        voltotal_depart=zero
 
+        !nc_bucket=CISL_NCOMP
        do istate=1,nc_bucket
         veldata(istate)=zero
        enddo
@@ -13436,6 +13446,8 @@ stop
         enddo
 
         nfine=4*kfine+2*jfine+ifine+1
+
+        voltotal_depart_refine(nfine)=zero
 
         call CISBOXFINE(xsten_accept,nhalf, &
          xlo,dx, &
@@ -13739,7 +13751,7 @@ stop
              else if (is_rigid(im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid invalid GODUNOV_3D.F90"
+              print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
               stop
              endif
 
@@ -13764,7 +13776,10 @@ stop
              enddo
              stop
             endif
+
             voltotal_depart=voltotal_depart+LS_voltotal_depart
+            voltotal_depart_refine(nfine)= &
+               voltotal_depart_refine(nfine)+LS_voltotal_depart
 
             im_refine_density=0
 
@@ -13799,13 +13814,14 @@ stop
              if (donate_density.gt.zero) then
               ! do nothing
              else
-              print *,"donate_density must be positive"
+              print *,"donate_density must be positive: ",donate_density
               stop
              endif
              if (donate_mom_density.gt.zero) then
               ! do nothing
              else
-              print *,"donate_mom_density must be positive"
+              print *,"donate_mom_density must be positive: ", &
+                  donate_mom_density
               stop
              endif
              massdepart=donate_density
@@ -13913,21 +13929,24 @@ stop
                 imap=imap+1
                enddo
 
-               if (imap.le.num_materials_viscoelastic) then
+               if ((imap.ge.1).and. &
+                   (imap.le.num_materials_viscoelastic)) then
 
                 do istate=1,ENUM_NUM_TENSOR_TYPE
-                 statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
+                 statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+                    (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
                  ! configuration tensor is stored at the cell centers, not the
                  ! corresponding material centroid.
                  donate_data= &
-                  tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
-                 veldata(CISLCOMP_TENSOR+statecomp_data)= &
-                  veldata(CISLCOMP_TENSOR+statecomp_data)+ &
+                  tensor(D_DECL(idonate,jdonate,kdonate), &
+                    statecomp_data+nfine_stencil)
+                 veldata(CISLCOMP_TENSOR+statecomp_data+nfine)= &
+                  veldata(CISLCOMP_TENSOR+statecomp_data+nfine)+ &
                   LS_voltotal_depart*donate_data 
                 enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
                else 
-                print *,"imap invalid"
+                print *,"imap invalid: ",imap
                 stop
                endif
               else if (fort_store_elastic_data(im).eq.0) then
@@ -14065,7 +14084,58 @@ stop
           print *,"is_compressible_mat(im) invalid"
           stop
          endif
-        enddo ! im=1..num_materials
+        enddo ! im=1..num_materials (updating refine density vars)
+
+        do im=1,num_materials
+
+         if ((num_materials_viscoelastic.ge.1).and. &
+             (num_materials_viscoelastic.le.num_materials)) then
+
+          if (fort_store_elastic_data(im).eq.1) then
+           imap=1
+           do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
+                     (imap.le.num_materials_viscoelastic))
+            imap=imap+1
+           enddo
+
+           if ((imap.ge.1).and. &
+               (imap.le.num_materials_viscoelastic)) then
+
+            do istate=1,ENUM_NUM_TENSOR_TYPE
+             statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+               (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+             if (voltotal_depart_refine(nfine).gt.zero) then
+              tennew_hold(statecomp_data+nfine)= &
+               veldata(CISLCOMP_TENSOR+statecomp_data+nfine)/ &
+               voltotal_depart_refine(nfine)
+             else
+              print *,"voltotal_depart_refine invalid: ",nfine, &
+                      voltotal_depart_refine(nfine)
+              stop
+             endif 
+ 
+            enddo !istate=1..ENUM_NUM_TENSOR_TYPE
+
+           else 
+            print *,"imap invalid: ",imap
+            stop
+           endif
+
+          else if (fort_store_elastic_data(im).eq.0) then
+           ! do nothing
+          else
+           print *,"fort_store_elastic_data(im) invalid"
+           stop
+          endif
+
+         else if (num_materials_viscoelastic.eq.0) then
+          ! do nothing
+         else
+          print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+          stop
+         endif
+ 
+        enddo ! im=1..num_materials (updating viscoelastic vars)
 
        enddo  ! ifine
        enddo  ! jfine
@@ -14098,13 +14168,13 @@ stop
        if (voltotal_depart.gt.zero) then
         ! do nothing
        else
-        print *,"voltotal_depart bust "
+        print *,"voltotal_depart bust: ",voltotal_depart
         stop
        endif
        if (voltotal_target.gt.zero) then
         ! do nothing
        else
-        print *,"voltotal_target bust "
+        print *,"voltotal_target bust: ",voltotal_target
         stop
        endif
 
@@ -14287,56 +14357,11 @@ stop
         if (voltotal_depart.gt.zero) then
          newLS(im)=veldata(CISLCOMP_LS+im)/voltotal_depart
         else
-         print *,"voltotal_depart invalid"
+         print *,"voltotal_depart invalid: ",voltotal_depart
          stop
         endif 
        enddo  ! im=1..num_materials (updating levelset vars)
 
-       do im=1,num_materials
-
-        if ((num_materials_viscoelastic.ge.1).and. &
-            (num_materials_viscoelastic.le.num_materials)) then
-
-         if (fort_store_elastic_data(im).eq.1) then
-          imap=1
-          do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
-                    (imap.le.num_materials_viscoelastic))
-           imap=imap+1
-          enddo
-
-          if (imap.le.num_materials_viscoelastic) then
-
-           do istate=1,ENUM_NUM_TENSOR_TYPE
-            statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
-            if (voltotal_depart.gt.zero) then
-             tennew_hold(statecomp_data)= &
-               veldata(CISLCOMP_TENSOR+statecomp_data)/voltotal_depart
-            else
-             print *,"voltotal_depart invalid"
-             stop
-            endif 
- 
-           enddo !istate=1..ENUM_NUM_TENSOR_TYPE
-
-          else 
-           print *,"imap invalid"
-           stop
-          endif
-         else if (fort_store_elastic_data(im).eq.0) then
-          ! do nothing
-         else
-          print *,"fort_store_elastic_data(im) invalid"
-          stop
-         endif
-
-        else if (num_materials_viscoelastic.eq.0) then
-         ! do nothing
-        else
-         print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
-         stop
-        endif
- 
-       enddo ! im=1..num_materials (updating viscoelastic vars)
 
        ! velocity=mom/mass
        ! fluid materials tessellate the domain.
@@ -14665,16 +14690,20 @@ stop
                     (imap.le.num_materials_viscoelastic))
            imap=imap+1
           enddo
-          if (imap.le.num_materials_viscoelastic) then
+          if ((imap.ge.1).and. &
+              (imap.le.num_materials_viscoelastic)) then
 
            do istate=1,ENUM_NUM_TENSOR_TYPE
-            statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
-            tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-             tennew_hold(statecomp_data)
+            statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+                    (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+            do nfine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+             tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)= &
+              tennew_hold(statecomp_data+nfine)
+            enddo !nfine
            enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
           else 
-           print *,"imap invalid"
+           print *,"imap invalid: ",imap
            stop
           endif
          else if (fort_store_elastic_data(im).eq.0) then
@@ -18743,7 +18772,7 @@ stop
       integer, INTENT(in) :: DIMDEC(levelpc)
       integer, INTENT(in) :: DIMDEC(rhoinvfab)
       integer, INTENT(in) :: DIMDEC(SNEW)
-
+!FIX ME
       real(amrex_real), INTENT(in), target :: MACFLUX_CC( &
              DIMV(MACFLUX_CC), &
              ENUM_NUM_TENSOR_TYPE)
