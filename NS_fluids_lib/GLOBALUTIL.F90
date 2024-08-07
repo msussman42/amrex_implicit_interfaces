@@ -26488,6 +26488,7 @@ end subroutine circleww
   ! vel is the advective velocity
 subroutine point_updatetensor( &
  i,j,k, &
+ irefine,jrefine,krefine, &
  level, &
  finest_level, &
  im_critical, &  ! 0<=im_critical<=num_materials-1
@@ -26497,6 +26498,9 @@ subroutine point_updatetensor( &
  tendata, & !tendata:fort_getshear,only_scalar=0
  dx,xlo, &
  vel, &
+ xmac, &
+ ymac, &
+ zmac, &
  tnew, &
  told, &
  tilelo, tilehi,  &
@@ -26514,6 +26518,7 @@ use probcommon_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: irefine,jrefine,krefine
 integer, INTENT(in) :: level
 integer, INTENT(in) :: finest_level
 integer, INTENT(in) :: im_critical
@@ -26537,6 +26542,9 @@ real(amrex_real), INTENT(in), pointer :: one_over_den(D_DECL(:,:,:))
 !
 real(amrex_real), INTENT(in), pointer :: tendata(D_DECL(:,:,:),:)
 real(amrex_real), INTENT(in), pointer :: vel(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in), pointer :: xmac(D_DECL(:,:,:))
+real(amrex_real), INTENT(in), pointer :: ymac(D_DECL(:,:,:))
+real(amrex_real), INTENT(in), pointer :: zmac(D_DECL(:,:,:))
 
 real(amrex_real), INTENT(out) :: tnew(ENUM_NUM_TENSOR_TYPE)
 real(amrex_real), INTENT(in) :: told(ENUM_NUM_TENSOR_TYPE)
@@ -26549,6 +26557,8 @@ real(amrex_real), INTENT(in) :: elastic_viscosity
 integer, INTENT(in) :: bc(SDIM,2,SDIM)
 integer, INTENT(in) :: irz
 integer ii,jj,kk
+integer iofs,jofs,kofs
+integer iofs2,jofs2,kofs2
 real(amrex_real) visctensor(3,3)
 real(amrex_real) gradV_transpose_FENECR(3,3)
 real(amrex_real) gradV_transpose(3,3) !partial V/partial x
@@ -26565,6 +26575,9 @@ real(amrex_real) modtime,trace_A
 real(amrex_real) equilibrium_diagonal
 real(amrex_real) inverse_tol
 real(amrex_real) inverse_tol_hoop
+real(amrex_real) dui(3,3)
+real(amrex_real) dxj(3,3)
+real(amrex_real) signcoeff
 
 real(amrex_real) xsten(-3:3,SDIM)
 integer nhalf
@@ -26697,6 +26710,9 @@ call checkbound_array(fablo,fabhi,visc,0,-1)
 call checkbound_array1(fablo,fabhi,one_over_den,0,-1)
 call checkbound_array(fablo,fabhi,tendata,0,-1)
 call checkbound_array(fablo,fabhi,vel,1,-1)
+call checkbound_array1(fablo,fabhi,xmac,1,0)
+call checkbound_array1(fablo,fabhi,ymac,1,1)
+call checkbound_array1(fablo,fabhi,zmac,1,SDIM-1)
 
 if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
@@ -26748,7 +26764,125 @@ endif
 
 do ii=1,3
 do jj=1,3
-  !gradV_transpose=(\partial V)/(\partial x)
+
+ dui(ii,jj)=zero
+ dxj(ii,jj)=zero
+
+ do iofs=0,1
+ do jofs=0,1
+ do kofs=0,1
+   
+  if (ii.eq.1) then
+
+   iofs2=iofs
+   jofs2=jofs
+   kofs2=kofs
+   if (jrefine.eq.0) then
+    jofs2=jofs2-1
+   endif
+   if (krefine.eq.0) then
+    kofs2=kofs2-1
+   endif
+   signcoeff=one
+   if (((jj.eq.1).and.(iofs.eq.0)).or. &
+       ((jj.eq.2).and.(jofs.eq.0)).or. &
+       ((jj.eq.3).and.(kofs.eq.0))) then
+    signcoeff=-one
+   endif
+   dui(ii,jj)=dui(ii,jj)+ &
+    signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+   if (jj.eq.1) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2-1,jj)
+   else if (jj.eq.2) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
+   else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+   else if (jj.eq.3) then
+    !do nothing
+   else
+    print *,"jj invalid"
+    stop
+   endif
+
+  else if (ii.eq.2) then
+
+   iofs2=iofs
+   jofs2=jofs
+   kofs2=kofs
+   if (irefine.eq.0) then
+    iofs2=iofs2-1
+   endif
+   if (krefine.eq.0) then
+    kofs2=kofs2-1
+   endif
+   signcoeff=one
+   if (((jj.eq.1).and.(iofs.eq.0)).or. &
+       ((jj.eq.2).and.(jofs.eq.0)).or. &
+       ((jj.eq.3).and.(kofs.eq.0))) then
+    signcoeff=-one
+   endif
+   dui(ii,jj)=dui(ii,jj)+ &
+    signcoeff*ymac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+   if (jj.eq.1) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
+   else if (jj.eq.2) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2-1,jj)
+   else if (jj.eq.SDIM) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+   else if (jj.eq.3) then
+    !do nothing
+   else
+    print *,"jj invalid"
+    stop
+   endif
+
+  else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then
+
+   iofs2=iofs
+   jofs2=jofs
+   kofs2=kofs
+   if (irefine.eq.0) then
+    iofs2=iofs2-1
+   endif
+   if (jrefine.eq.0) then
+    jofs2=jofs2-1
+   endif
+   signcoeff=one
+   if (((jj.eq.1).and.(iofs.eq.0)).or. &
+       ((jj.eq.2).and.(jofs.eq.0)).or. &
+       ((jj.eq.3).and.(kofs.eq.0))) then
+    signcoeff=-one
+   endif
+   dui(ii,jj)=dui(ii,jj)+ &
+    signcoeff*zmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+   if (jj.eq.1) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
+   else if (jj.eq.2) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
+   else if (jj.eq.SDIM) then
+    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2-1,jj)
+   else if (jj.eq.3) then
+    !do nothing
+   else
+    print *,"jj invalid"
+    stop
+   endif
+
+  else if (ii.eq.3) then
+   !do nothing
+  else
+   print *,"ii invalid"
+   stop
+  endif
+
+ enddo !kofs=0,1
+ enddo !jofs=0,1
+ enddo !iofs=0,1
+  
+  !gradV_transpose=(\partial V_{i})/(\partial x_{j})
  gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
  if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
@@ -26767,10 +26901,10 @@ do jj=1,3
  endif
 
  n=n+1
-enddo 
-enddo 
+enddo !jj
+enddo !ii
 
-save_hoop_term=gradV_transpose(3,3)  ! u/r
+save_hoop_term=gradV_transpose(3,3)  ! u/r if RZ
 
 if (abs(save_hoop_term).ge.zero) then
  ! do nothing

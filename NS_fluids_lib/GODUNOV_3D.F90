@@ -8323,6 +8323,7 @@ stop
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
 
       integer :: i,j,k
+      integer :: irefine,jrefine,krefine,nrefine
       real(amrex_real), INTENT(in) :: dt,elastic_time
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
@@ -8349,13 +8350,13 @@ stop
       if (polymer_factor.ge.zero) then !1/L
        ! do nothing
       else
-       print *,"polymer_factor out of range"
+       print *,"polymer_factor out of range: ",polymer_factor
        stop
       endif
       if (elastic_viscosity.gt.zero) then
        ! do nothing
       else
-       print *,"elastic_viscosity invalid"
+       print *,"elastic_viscosity invalid: ",elastic_viscosity
        stop
       endif
 
@@ -8393,7 +8394,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
 
@@ -8426,39 +8427,60 @@ stop
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
-!FIX ME
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
-       enddo
+
+       krefine=0
+#if (AMREX_SPACEDIM==3)
+       do krefine=0,1
+#endif
+       do jrefine=0,1
+       do irefine=0,1
+        nrefine=4*krefine+2*jrefine+irefine+1
+
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         point_told(dir_local)=told(D_DECL(i,j,k), &
+            (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
+        enddo
 
         !point_updatetensor is declared in: GLOBALUTIL.F90
-       call point_updatetensor( &
-        i,j,k, &
-        level, &
-        finest_level, &
-        im_critical, &  ! 0<=im_critical<=num_materials-1
-        ncomp_visc, & 
-        visc_ptr, &
-        one_over_den_ptr, &
-        tendata_ptr, & !tendata:fort_getshear,only_scalar=0
-        dx,xlo, &
-        vel_ptr, &
-        point_tnew, &
-        point_told, &
-        tilelo, tilehi,  &
-        fablo, fabhi, &
-        bfact,  &
-        dt, &
-        elastic_time, &
-        viscoelastic_model, &
-        polymer_factor, &
-        elastic_viscosity, &
-        irz, &
-        bc) 
+        call point_updatetensor( &
+         i,j,k, &
+         irefine,jrefine,krefine, &
+         level, &
+         finest_level, &
+         im_critical, &  ! 0<=im_critical<=num_materials-1
+         ncomp_visc, & 
+         visc_ptr, &
+         one_over_den_ptr, &
+         tendata_ptr, & !tendata:fort_getshear,only_scalar=0
+         dx,xlo, &
+         vel_ptr, &
+         xmac_ptr, &
+         ymac_ptr, &
+         zmac_ptr, &
+         point_tnew, &
+         point_told, &
+         tilelo, tilehi,  &
+         fablo, fabhi, &
+         bfact,  &
+         dt, &
+         elastic_time, &
+         viscoelastic_model, &
+         polymer_factor, &
+         elastic_viscosity, &
+         irz, &
+         bc) 
 
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
-       enddo
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         tnew(D_DECL(i,j,k), &
+          (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)= &
+          point_tnew(dir_local)
+        enddo
+
+       enddo !irefine
+       enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+       enddo !krefine
+#endif
 
       enddo !i
       enddo !j
