@@ -26560,6 +26560,7 @@ integer ii,jj,kk
 integer iofs,jofs,kofs
 integer iofs2,jofs2,kofs2
 real(amrex_real) visctensor(3,3)
+real(amrex_real) gradV_MAC
 real(amrex_real) gradV_transpose_FENECR(3,3)
 real(amrex_real) gradV_transpose(3,3) !partial V/partial x
 real(amrex_real) Q(3,3)
@@ -26579,9 +26580,6 @@ real(amrex_real) dui(3,3)
 real(amrex_real) dxj(3,3)
 real(amrex_real) signcoeff
 
-real(amrex_real) xsten(-3:3,SDIM)
-integer nhalf
-
 integer dir_local
 
 integer dumbbell_model
@@ -26600,8 +26598,8 @@ real(amrex_real) Q_coef
 real(amrex_real) improved_hoop
 real(amrex_real) force_unity_determinant
 integer unity_det
-
-nhalf=3
+integer, parameter :: nhalf=3
+real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
 if (irz.ne.levelrz) then
  print *,"irz invalid"
@@ -26762,114 +26760,165 @@ else
  stop
 endif
 
-do ii=1,3
-do jj=1,3
+do ii=1,3 !veldir
+do jj=1,3 !deriv dir
 
  dui(ii,jj)=zero
  dxj(ii,jj)=zero
 
- do iofs=0,1
- do jofs=0,1
+ kofs=0
+#if (AMREX_SPACEDIM==3)
  do kofs=0,1
+#endif
+ do jofs=0,1
+ do iofs=0,1
    
+  iofs2=iofs
+  jofs2=jofs
+  kofs2=kofs
+
   if (ii.eq.1) then
 
-   iofs2=iofs
-   jofs2=jofs
-   kofs2=kofs
-   if (jrefine.eq.0) then
-    jofs2=jofs2-1
-   endif
-   if (krefine.eq.0) then
-    kofs2=kofs2-1
-   endif
-   signcoeff=one
-   if (((jj.eq.1).and.(iofs.eq.0)).or. &
-       ((jj.eq.2).and.(jofs.eq.0)).or. &
-       ((jj.eq.3).and.(kofs.eq.0))) then
-    signcoeff=-one
-   endif
-   dui(ii,jj)=dui(ii,jj)+ &
-    signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+   if ((jj.ge.1).and.(jj.le.SDIM)) then
 
-   if (jj.eq.1) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2-1,jj)
-   else if (jj.eq.2) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
-   else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
-   else if (jj.eq.3) then
+    if (jrefine.eq.0) then
+     jofs2=jofs2-1
+    else if (jrefine.eq.1) then
+     !do nothing
+    else
+     print *,"jrefine invalid"
+     stop
+    endif
+    if (krefine.eq.0) then
+     kofs2=kofs2-1
+    else if (krefine.eq.1) then
+     !do nothing
+    else
+     print *,"krefine invalid"
+     stop
+    endif
+    signcoeff=one
+    if (((jj.eq.1).and.(iofs.eq.0)).or. &
+        ((jj.eq.2).and.(jofs.eq.0)).or. &
+        ((jj.eq.3).and.(kofs.eq.0))) then
+     signcoeff=-one
+    endif
+    dui(ii,jj)=dui(ii,jj)+ &
+     signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+    if (jj.eq.1) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2-1,jj)
+    else if (jj.eq.2) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
+    else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+    else
+     print *,"jj invalid"
+     stop
+    endif
+
+   else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
     print *,"jj invalid"
     stop
-   endif
+   endif 
 
   else if (ii.eq.2) then
 
-   iofs2=iofs
-   jofs2=jofs
-   kofs2=kofs
-   if (irefine.eq.0) then
-    iofs2=iofs2-1
-   endif
-   if (krefine.eq.0) then
-    kofs2=kofs2-1
-   endif
-   signcoeff=one
-   if (((jj.eq.1).and.(iofs.eq.0)).or. &
-       ((jj.eq.2).and.(jofs.eq.0)).or. &
-       ((jj.eq.3).and.(kofs.eq.0))) then
-    signcoeff=-one
-   endif
-   dui(ii,jj)=dui(ii,jj)+ &
-    signcoeff*ymac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+   if ((jj.ge.1).and.(jj.le.SDIM)) then
 
-   if (jj.eq.1) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
-   else if (jj.eq.2) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2-1,jj)
-   else if (jj.eq.SDIM) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
-   else if (jj.eq.3) then
+    if (irefine.eq.0) then
+     iofs2=iofs2-1
+    else if (irefine.eq.1) then
+     !do nothing
+    else
+     print *,"irefine invalid"
+     stop
+    endif
+    if (krefine.eq.0) then
+     kofs2=kofs2-1
+    else if (krefine.eq.1) then
+     !do nothing
+    else
+     print *,"krefine invalid"
+     stop
+    endif
+    signcoeff=one
+    if (((jj.eq.1).and.(iofs.eq.0)).or. &
+        ((jj.eq.2).and.(jofs.eq.0)).or. &
+        ((jj.eq.3).and.(kofs.eq.0))) then
+     signcoeff=-one
+    endif
+    dui(ii,jj)=dui(ii,jj)+ &
+     signcoeff*ymac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+    if (jj.eq.1) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
+    else if (jj.eq.2) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2-1,jj)
+    else if (jj.eq.SDIM) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+    else
+     print *,"jj invalid"
+     stop
+    endif
+
+   else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
     print *,"jj invalid"
     stop
-   endif
+   endif 
 
   else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then
 
-   iofs2=iofs
-   jofs2=jofs
-   kofs2=kofs
-   if (irefine.eq.0) then
-    iofs2=iofs2-1
-   endif
-   if (jrefine.eq.0) then
-    jofs2=jofs2-1
-   endif
-   signcoeff=one
-   if (((jj.eq.1).and.(iofs.eq.0)).or. &
-       ((jj.eq.2).and.(jofs.eq.0)).or. &
-       ((jj.eq.3).and.(kofs.eq.0))) then
-    signcoeff=-one
-   endif
-   dui(ii,jj)=dui(ii,jj)+ &
-    signcoeff*zmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+   if ((jj.ge.1).and.(jj.le.SDIM)) then
 
-   if (jj.eq.1) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
-   else if (jj.eq.2) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
-   else if (jj.eq.SDIM) then
-    dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2-1,jj)
-   else if (jj.eq.3) then
+    if (irefine.eq.0) then
+     iofs2=iofs2-1
+    else if (irefine.eq.1) then
+     !do nothing
+    else
+     print *,"irefine invalid"
+     stop
+    endif
+    if (jrefine.eq.0) then
+     jofs2=jofs2-1
+    else if (jrefine.eq.1) then
+     !do nothing
+    else
+     print *,"jrefine invalid"
+     stop
+    endif
+    signcoeff=one
+    if (((jj.eq.1).and.(iofs.eq.0)).or. &
+        ((jj.eq.2).and.(jofs.eq.0)).or. &
+        ((jj.eq.3).and.(kofs.eq.0))) then
+     signcoeff=-one
+    endif
+    dui(ii,jj)=dui(ii,jj)+ &
+     signcoeff*zmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
+
+    if (jj.eq.1) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
+    else if (jj.eq.2) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
+    else if (jj.eq.SDIM) then
+     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2-1,jj)
+    else if (jj.eq.3) then
+     !do nothing
+    else
+     print *,"jj invalid"
+     stop
+    endif
+
+   else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
     print *,"jj invalid"
     stop
-   endif
+   endif 
 
   else if (ii.eq.3) then
    !do nothing
@@ -26878,12 +26927,81 @@ do jj=1,3
    stop
   endif
 
- enddo !kofs=0,1
- enddo !jofs=0,1
  enddo !iofs=0,1
-  
+ enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+ enddo !kofs=0,1
+#endif
+ 
+ gradV_MAC=zero
+ if ((ii.ge.1).and.(ii.le.SDIM).and. &
+     (jj.ge.1).and.(jj.le.SDIM)) then
+  if (dxj(ii,jj).gt.zero) then
+   gradV_MAC=dui(ii,jj)/dxj(ii,jj)
+  else
+   print *,"dxj(ii,jj) invalid: ",ii,jj,dxj(ii,jj)
+   stop
+  endif
+
+ else if ((ii.eq.3).or.(jj.eq.3)) then
+  ! do nothing
+ else
+  print *,"ii or jj invalid"
+  stop
+ endif
+
+ r_hoop=xsten(0,1)
+ if (levelrz.eq.COORDSYS_RZ) then
+  if (SDIM.eq.2) then
+   !do nothing
+  else
+   print *,"dimension bust"
+   stop
+  endif
+  if (r_hoop.gt.zero) then
+   !do nothing
+  else
+   print *,"r_hoop invalid"
+   stop
+  endif
+  if ((ii.eq.3).and.(jj.eq.3)) then
+   gradV_MAC=gradV_MAC+half*(xmac(D_DECL(i,j,k))+ &
+     xmac(D_DECL(i+1,j,k)))/r_hoop
+  endif
+ else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+  if (r_hoop.gt.zero) then
+   !do nothing
+  else
+   print *,"r_hoop invalid"
+   stop
+  endif
+  if (jj.eq.2) then
+   if (ii.eq.1) then
+    gradV_MAC=gradV_MAC-half*(ymac(D_DECL(i,j,k))+ &
+     ymac(D_DECL(i,j+1,k)))
+   else if (ii.eq.2) then
+    gradV_MAC=gradV_MAC+half*(xmac(D_DECL(i,j,k))+ &
+     xmac(D_DECL(i+1,j,k)))
+   else if (ii.eq.3) then
+    !do nothing
+   else
+    print *,"ii invalid"
+    stop
+   endif
+   gradV_MAC=gradV_MAC/r_hoop
+  endif
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
+  !do nothing
+ else
+  print *,"levelrz invalid: ",levelrz
+  stop
+ endif
+     
   !gradV_transpose=(\partial V_{i})/(\partial x_{j})
- gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
+! gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
+
+ gradV_transpose(ii,jj)=gradV_MAC !(vel dir,deriv dir)
+
  if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
      (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
