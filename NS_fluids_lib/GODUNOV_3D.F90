@@ -7600,9 +7600,9 @@ stop
 
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
-!FIX ME
+
       real(amrex_real), INTENT(inout), target :: tensor(DIMV(tensor), &
-              ENUM_NUM_TENSOR_TYPE)
+              ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in) :: elastic_viscosity,etaS
@@ -7613,6 +7613,7 @@ stop
       integer ii,jj
       real(amrex_real) Q(3,3),TQ(3,3),Q_plus_I(3,3)
       integer i,j,k
+      integer :: irefine,jrefine,krefine,nrefine
       integer dir_local
       integer im_viscoelastic_p1
       real(amrex_real) xcenter(SDIM)
@@ -7637,7 +7638,7 @@ stop
           (partid.lt.num_materials_viscoelastic)) then
        ! do nothing
       else
-       print *,"partid invalid"
+       print *,"partid invalid: ",partid
        stop
       endif
       if (bfact.lt.1) then
@@ -7687,155 +7688,172 @@ stop
         xcenter(dir_local)=xsten(0,dir_local)
        enddo
 
-       do ii=1,3
-       do jj=1,3
-        Q(ii,jj)=zero
-       enddo
-       enddo
-       !FIX ME
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        call stress_index(dir_local,ii,jj)
-        Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
-       enddo
-       Q(2,1)=Q(1,2)
-       Q(3,1)=Q(1,3)
-       Q(3,2)=Q(2,3)
+       krefine=0
+#if (AMREX_SPACEDIM==3)
+       do krefine=0,1
+#endif
+       do jrefine=0,1
+       do irefine=0,1
+        nrefine=4*krefine+2*jrefine+irefine+1
 
-       if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
-        ! coeff=(visc-etaS)/(modtime+dt)
-        ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-       else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
-        ! coeff=(visc-etaS)/(modtime+dt)
-        ! modtime=elastic_time
-       else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
-        ! coeff=(visc-etaS)/(modtime+dt)
-        ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-       else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
-        ! coeff=(visc-etaS)/(modtime+dt)
-        ! modtime=elastic_time
-       else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then 
-        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-        ! coeff=elastic_viscosity
-       else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental model
-        ! Xia, Lu, Tryggvason 2018
-        ! coeff=elastic_viscosity*|Q+I|^{-5/6}
-       else
-        print *,"viscoelastic_model invalid: ",viscoelastic_model
-        stop
-       endif
+        do ii=1,3
+        do jj=1,3
+         Q(ii,jj)=zero
+        enddo
+        enddo
 
-       trace_A=zero
-       do ii=1,3
-        trace_A=trace_A+Q(ii,ii)+one
-        if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
-            (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
-            (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
-            (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
-         if (Q(ii,ii)+one.gt.zero) then
-          ! do nothing
-         else
-          print *,"A=Q+I should be positive definite"
-          stop
-         endif
-        else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
-         ! do nothing
-        else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! Neo-Hookian 
-         if (Q(ii,ii)+one.gt.zero) then
-          ! do nothing
-         else
-          print *,"A=Q+I should be positive definite"
-          stop
-         endif
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         call stress_index(dir_local,ii,jj)
+         Q(ii,jj)=tensor(D_DECL(i,j,k), &
+          (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
+        enddo
+        Q(2,1)=Q(1,2)
+        Q(3,1)=Q(1,3)
+        Q(3,2)=Q(2,3)
+
+        if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
+         ! coeff=(visc-etaS)/(modtime+dt)
+         ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+        else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
+         ! coeff=(visc-etaS)/(modtime+dt)
+         ! modtime=elastic_time
+        else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
+         ! coeff=(visc-etaS)/(modtime+dt)
+         ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+        else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
+         ! coeff=(visc-etaS)/(modtime+dt)
+         ! modtime=elastic_time
+        else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then 
+         ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         ! coeff=elastic_viscosity
+        else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental model
+         ! Xia, Lu, Tryggvason 2018
+         ! coeff=elastic_viscosity*|Q+I|^{-5/6}
         else
          print *,"viscoelastic_model invalid: ",viscoelastic_model
          stop
         endif
-       enddo ! ii=1,3
 
-       determinant_factor=one
-
-       if (viscoelastic_model.eq.NN_FENE_P) then !FENE-P          
-        if (trace_A.gt.zero) then
-         if (polymer_factor.gt.zero) then !1/L
-             ! (f(A)A-I)/lambda  f(A)=1/(1-trac(A)/L^2)
-             ! ((f(A)(Q+I)-I)/lambda
-             ! (f(A)Q + f(A)I-I)/lambda=
-             ! (f(A)/lambda)(Q+I-I/f(A))=
-             ! (f(A)/lambda)(Q+(f(A)I-I)/f(A))
-             ! (f(A)-1)/f(A)=1-1/f(A)=1-(1-trac(A)/L^2)=trace(A)/L^2
-             ! (f(A)A-I)/lambda = (f(A)/lambda)*(Q+trace(A)I/L^{2})
-             ! 
-          do ii=1,3
-           Q(ii,ii)=Q(ii,ii)+min(trace_A*(polymer_factor**2),one)
-          enddo
+        trace_A=zero
+        do ii=1,3
+         trace_A=trace_A+Q(ii,ii)+one
+         if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
+             (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
+             (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
+             (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
+          if (Q(ii,ii)+one.gt.zero) then
+           ! do nothing
+          else
+           print *,"A=Q+I should be positive definite"
+           stop
+          endif
+         else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
+          ! do nothing
+         else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! Neo-Hookian 
+          if (Q(ii,ii)+one.gt.zero) then
+           ! do nothing
+          else
+           print *,"A=Q+I should be positive definite"
+           stop
+          endif
          else
-          print *,"polymer_factor out of range for FENE-P"
+          print *,"viscoelastic_model invalid: ",viscoelastic_model
           stop
          endif
-        else
-         print *,"trace_A should be positive for FENE-P"
-         stop
-        endif
-       else if (viscoelastic_model.eq.NN_FENE_CR) then !FENE-CR
-        ! do nothing 
-       else if (viscoelastic_model.eq.NN_OLDROYD_B) then !OLDROYD-B
-        ! do nothing 
-       else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
-        ! do nothing
-       else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !Neo-Hookean
-        do ii=1,3
-        do jj=1,3
-         Q_plus_I(ii,jj)=Q(ii,jj)
-        enddo
-        enddo
-        do ii=1,3
-         Q_plus_I(ii,ii)=Q_plus_I(ii,ii)+one
-        enddo
-        call abs_value_determinant(Q_plus_I,3,determinant_factor)
+        enddo ! ii=1,3
 
-        if (determinant_factor.gt.zero) then
-!         determinant_factor=one/(determinant_factor**(five/six))
-         determinant_factor=one  !*incompressible* Neo-Hookean model.
-        else if (determinant_factor.eq.zero) then
-         print *,"determinant_factor must be positive"
+        determinant_factor=one
+
+        if (viscoelastic_model.eq.NN_FENE_P) then !FENE-P          
+         if (trace_A.gt.zero) then
+          if (polymer_factor.gt.zero) then !1/L
+              ! (f(A)A-I)/lambda  f(A)=1/(1-trac(A)/L^2)
+              ! ((f(A)(Q+I)-I)/lambda
+              ! (f(A)Q + f(A)I-I)/lambda=
+              ! (f(A)/lambda)(Q+I-I/f(A))=
+              ! (f(A)/lambda)(Q+(f(A)I-I)/f(A))
+              ! (f(A)-1)/f(A)=1-1/f(A)=1-(1-trac(A)/L^2)=trace(A)/L^2
+              ! (f(A)A-I)/lambda = (f(A)/lambda)*(Q+trace(A)I/L^{2})
+              ! 
+           do ii=1,3
+            Q(ii,ii)=Q(ii,ii)+min(trace_A*(polymer_factor**2),one)
+           enddo
+          else
+           print *,"polymer_factor out of range for FENE-P"
+           stop
+          endif
+         else
+          print *,"trace_A should be positive for FENE-P"
+          stop
+         endif
+        else if (viscoelastic_model.eq.NN_FENE_CR) then !FENE-CR
+         ! do nothing 
+        else if (viscoelastic_model.eq.NN_OLDROYD_B) then !OLDROYD-B
+         ! do nothing 
+        else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
+         ! do nothing
+        else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !Neo-Hookean
          do ii=1,3
          do jj=1,3
-          print *,"ii,jj,Q_plus_I ",ii,jj,Q_plus_I(ii,jj)
+          Q_plus_I(ii,jj)=Q(ii,jj)
          enddo
          enddo
-         print *,"determinant_factor: ",determinant_factor
-         stop
+         do ii=1,3
+          Q_plus_I(ii,ii)=Q_plus_I(ii,ii)+one
+         enddo
+         call abs_value_determinant(Q_plus_I,3,determinant_factor)
+
+         if (determinant_factor.gt.zero) then
+!         determinant_factor=one/(determinant_factor**(five/six))
+          determinant_factor=one  !*incompressible* Neo-Hookean model.
+         else if (determinant_factor.eq.zero) then
+          print *,"determinant_factor must be positive"
+          do ii=1,3
+          do jj=1,3
+           print *,"ii,jj,Q_plus_I ",ii,jj,Q_plus_I(ii,jj)
+          enddo
+          enddo
+          print *,"determinant_factor: ",determinant_factor
+          stop
+         else
+          print *,"determinant_factor invalid"
+          stop
+         endif
+         
+        else if (viscoelastic_model.eq.NN_LINEAR_PTT) then !linearPTT
+         ! do nothing
         else
-         print *,"determinant_factor invalid"
+         print *,"viscoelastic_model invalid: ",viscoelastic_model
          stop
         endif
-        
-       else if (viscoelastic_model.eq.NN_LINEAR_PTT) then !linearPTT
-        ! do nothing
-       else
-        print *,"viscoelastic_model invalid: ",viscoelastic_model
-        stop
-       endif
 
-        ! in fort_derviscosity:
-        !  etaS=etaL-etaP=viscconst-elastic_viscosity 
-        !  viscoelastic_coeff= &
-        !   (visc(D_DECL(i,j,k),im_parm+1)-etaS)/(modtime+dt)
-        !  visc(D_DECL(i,j,k),num_materials+im_parm+1)=
-        !     viscoelastic_coeff*visc_coef
-        !  visc(D_DECL(i,j,k),2*num_materials+im_parm+1)=modtime
-       do ii=1,3
-       do jj=1,3
-         ! FENE-P or FENE-CP visc(num_materials+im+1)=f(A)/lambda
-        TQ(ii,jj)=Q(ii,jj)*determinant_factor* &
-             visc(D_DECL(i,j,k),num_materials+im_parm+1)
-       enddo
-       enddo
-!FIX ME
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        call stress_index(dir_local,ii,jj)
-        tensor(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
-       enddo
+         ! in fort_derviscosity:
+         !  etaS=etaL-etaP=viscconst-elastic_viscosity 
+         !  viscoelastic_coeff= &
+         !   (visc(D_DECL(i,j,k),im_parm+1)-etaS)/(modtime+dt)
+         !  visc(D_DECL(i,j,k),num_materials+im_parm+1)=
+         !     viscoelastic_coeff*visc_coef
+         !  visc(D_DECL(i,j,k),2*num_materials+im_parm+1)=modtime
+        do ii=1,3
+        do jj=1,3
+          ! FENE-P or FENE-CP visc(num_materials+im+1)=f(A)/lambda
+         TQ(ii,jj)=Q(ii,jj)*determinant_factor* &
+              visc(D_DECL(i,j,k),num_materials+im_parm+1)
+        enddo
+        enddo
+
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         call stress_index(dir_local,ii,jj)
+         tensor(D_DECL(i,j,k), &
+          (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)=TQ(ii,jj)
+        enddo
+
+       enddo !irefine
+       enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+       enddo !krefine
+#endif
+
       enddo!i
       enddo!j
       enddo!k
