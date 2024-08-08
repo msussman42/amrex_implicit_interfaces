@@ -864,27 +864,16 @@ extern "C"
      int* homflag);
 
    void fort_elastic_force(
+     int* elastic_force_mac_grid,
      int* im_viscoelastic, // 0..num_materials-1
      int* partid, // 0..num_materials_viscoelastic-1
-     int* dir, //0..sdim-1
+     int* force_dir, //0..sdim-1
      int* ncomp_visc,
      Real* visc_coef, 
      int* velbc,
      Real* dt,
      Real* cur_time,
      const Real* xlo,const Real* dx,
-     int* grid_type_CC,
-     Real* MACFLUX_CC,
-     AMREX_ARLIM_P(MACFLUX_CClo),AMREX_ARLIM_P(MACFLUX_CChi),
-     int* grid_type_X,
-     Real* MACFLUX_X,
-     AMREX_ARLIM_P(MACFLUX_Xlo),AMREX_ARLIM_P(MACFLUX_Xhi),
-     int* grid_type_Y,
-     Real* MACFLUX_Y,
-     AMREX_ARLIM_P(MACFLUX_Ylo),AMREX_ARLIM_P(MACFLUX_Yhi),
-     int* grid_type_Z,
-     Real* MACFLUX_Z,
-     AMREX_ARLIM_P(MACFLUX_Zlo),AMREX_ARLIM_P(MACFLUX_Zhi),
      Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
@@ -892,7 +881,16 @@ extern "C"
      AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
      Real* rhoinverse,
      AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
-     Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
+     Real* tensorfab,
+     AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
+     Real* velnew,
+     AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
+     Real* umacnew,
+     AMREX_ARLIM_P(umacnewlo),AMREX_ARLIM_P(umacnewhi),
+     Real* vmacnew,
+     AMREX_ARLIM_P(vmacnewlo),AMREX_ARLIM_P(vmacnewhi),
+     Real* wmacnew,
+     AMREX_ARLIM_P(wmacnewlo),AMREX_ARLIM_P(wmacnewhi),
      const int* tilelo,const int* tilehi, 
      const int* fablo,const int* fabhi, 
      int* bfact,
