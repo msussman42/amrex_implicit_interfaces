@@ -18757,6 +18757,9 @@ stop
       end subroutine fort_face_gradients
 
 
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
 ! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
 !         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
 !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
@@ -18875,49 +18878,45 @@ stop
       integer, INTENT(in) :: rzflag 
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       integer :: i,j,k
+      integer :: i_LS,j_LS,k_LS
+      integer :: imajor,jmajor,kmajor
+      integer :: icorner,jcorner,kcorner
       integer :: ii,jj,kk
-      integer :: dir_flux,side_flux
+      integer :: iofs,jofs,kofs
+      integer :: irefine2,jrefine2,krefine2,nrefine2,one_dim_index
+      integer :: itan_dir,jtan_dir
+      integer :: local_index(3)
+      integer :: local_sub_index(3)
+      integer :: local_LS_index(3)
+      integer :: irefine(3)
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
-      integer dircomp
-      integer dir_row,dir_column
-      real(amrex_real), target :: x_CELL_control_volume(SDIM)
-      real(amrex_real) DISP_TEN(3,3)
-      real(amrex_real) dxmin
+      real(amrex_real) :: local_xsten(-nhalf:nhalf,SDIM)
       integer im_viscoelastic_p1
       integer im_LS
-
-      integer dir_local
-      real(amrex_real) :: LS_control_volume(num_materials)
-      real(amrex_real) :: LS_outside(num_materials)
-
-      real(amrex_real) xflux_local(0:1,3,3)
-      real(amrex_real) yflux_local(0:1,3,3)
-      real(amrex_real) zflux_local(0:1,3,3)
-      real(amrex_real) center_flux(3,3)
-      real(amrex_real) center_hoop_22
-
-      integer mask_flux_point(2,SDIM)
-      real(amrex_real) x_at_flux_point(2,SDIM,SDIM)
-      real(amrex_real) x_at_flux_point_local(SDIM)
-      real(amrex_real) hx,hy,hz,rplus,rminus,rval
+      integer local_dir,deriv_dir,side
+      integer on_the_wall
+      integer im_primary_left
+      integer im_primary_right
+      integer im_primary_corner
+      real(amrex_real) H_corner
+      real(amrex_real) xsub(SDIM)
+      real(amrex_real) x_left(SDIM)
+      real(amrex_real) x_right(SDIM)
+      real(amrex_real) LS_corner_weight
+      real(amrex_real) LS_corner(num_materials)
+      real(amrex_real) LS_left(num_materials)
+      real(amrex_real) LS_right(num_materials)
       real(amrex_real) LS_clamped
       real(amrex_real) vel_clamped(SDIM)
       real(amrex_real) temperature_clamped
       integer prescribed_flag
-      integer local_mask
-      integer mask_control_volume
-      real(amrex_real) force(SDIM)
-      real(amrex_real) bodyforce
-      real(amrex_real) deninv
-      real(amrex_real) XFORCE_local
-      integer box_type_flux(SDIM)
-      integer grid_type_flux
-      integer grid_type_sanity
-      integer iflux_array(SDIM)
-      integer iflux,jflux,kflux
-      integer itensor
-      real(amrex_real) local_tensor_data(ENUM_NUM_TENSOR_TYPE)
+      integer mask_left,mask_right
+      real(amrex_real) div_term
+      real(amrex_real) d_tensor(SDIM)
+      real(amrex_real) dx_local(SDIM)
+      real(amrex_real) hoop22,hoop12,hoop_weight,local_weight
+      real(amrex_real) r_weight,r_mult,sign_term,dTdx,local_invden
 
       SNEW_ptr=>SNEW
       umacnew_ptr=>umacnew
@@ -18954,14 +18953,6 @@ stop
       call checkbound_array1(fablo,fabhi,rhoinvMACfab_ptr,0,force_dir)
 
       call checkbound_array1(fablo,fabhi,SNEW_ptr,1,-1)
-
-      call get_dxmin(dx,bfact,dxmin)
-      if (dxmin.gt.zero) then
-       ! do nothing
-      else
-       print *,"dxmin invalid"
-       stop
-      endif
 
       if ((im_viscoelastic.ge.0).and. &
           (im_viscoelastic.lt.num_materials)) then
@@ -19002,10 +18993,16 @@ stop
       kk=0
       if (force_dir.eq.0) then
        ii=1
+       itan_dir=1
+       jtan_dir=2
       else if (force_dir.eq.1) then
        jj=1
+       itan_dir=0
+       jtan_dir=2
       else if ((force_dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
+       itan_dir=0
+       jtan_dir=1
       else
        print *,"force_dir invalid: ",force_dir
        stop
@@ -19049,7 +19046,7 @@ stop
          on_the_wall=1
         else if (velbc(force_dir+1,side,force_dir+1).eq.REFLECT_ODD) then
          on_the_wall=1
-        else if (velbc(force_dir+1,side,force_dir+1).eq.LO_EXTRAP) then
+        else if (velbc(force_dir+1,side,force_dir+1).eq.FOEXTRAP) then
          on_the_wall=1
         else
          print *,"velbc invalid"
@@ -19068,10 +19065,10 @@ stop
        call get_primary_material(LS_left,im_primary_left)
        call get_primary_material(LS_right,im_primary_right)
 
-       if ((im_primary_left.ne.im_viscolastic_p1).and. &
+       if ((im_primary_left.ne.im_viscoelastic_p1).and. &
            (im_primary_right.ne.im_viscoelastic_p1)) then
         on_the_wall=1
-       else if ((im_primary_left.eq.im_viscolastic_p1).or. &
+       else if ((im_primary_left.eq.im_viscoelastic_p1).or. &
                 (im_primary_right.eq.im_viscoelastic_p1)) then
         !do nothing
        else
@@ -19090,9 +19087,9 @@ stop
         stop
        endif
 
-       do dir_local=1,SDIM
-        x_left(dir_local)=xsten(0,dir_local)
-        x_right(dir_local)=xsten(0,dir_local)
+       do local_dir=1,SDIM
+        x_left(local_dir)=xsten(0,local_dir)
+        x_right(local_dir)=xsten(0,local_dir)
        enddo
        x_left(force_dir+1)=xsten(-1,force_dir+1)
        x_right(force_dir+1)=xsten(1,force_dir+1)
@@ -19119,109 +19116,257 @@ stop
         stop
        endif
 
+       mask_left=NINT(maskcoef(D_DECL(i-ii,j-jj,k-kk)))
+       mask_right=NINT(maskcoef(D_DECL(i,j,k)))
 
-
-
-       XFORCE_local=zero
-           
-       mask_control_volume=local_mask
-
-        ! im_viscoelastic_p1 dominates the center of the MAC control volume.
-       if (mask_control_volume.eq.1) then
-
-        do itensor=1,ENUM_NUM_TENSOR_TYPE
-         local_tensor_data(itensor)=tensorfab(D_DECL(i,j,k),itensor)
-        enddo
-
-        do ii=1,3
-        do jj=1,3
-         center_flux(ii,jj)=zero
-        enddo
-        enddo
-
-        do itensor=1,ENUM_NUM_TENSOR_TYPE
-         call stress_index(itensor,ii,jj)
-         center_flux(ii,jj)=local_tensor_data(itensor)
-        enddo
-        center_flux(2,1)=center_flux(1,2)
-        center_flux(3,1)=center_flux(1,3)
-        center_flux(3,2)=center_flux(2,3)
-
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-        center_hoop_22=center_flux(3,3)
-
-        do ii=1,3
-        do jj=1,3
-         DISP_TEN(ii,jj)=zero
-        enddo
-        enddo
-
-! grad u=| u_r  u_t/r-v/r  u_z  |
-!        | v_r  v_t/r+u/r  v_z  |
-!        | w_r  w_t/r      w_z  |
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-
-         do im_LS=1,num_materials
-          if (side_flux.eq.0) then
-           LS_outside(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
-          else if (side_flux.eq.1) then
-           LS_outside(im_LS)=levelpc(D_DECL(i+ii,j+jj,k+kk),im_LS)
-          else
-           print *,"side_flux invalid"
-           stop
-          endif
-         enddo !im_LS=1...num_materials
-
-         call get_primary_material(LS_outside,local_mask)
-         if (local_mask.eq.im_viscoelastic_p1) then
-          local_mask=1
-         else if ((local_mask.ge.1).and. &
-                  (local_mask.le.num_materials)) then
-          local_mask=0
-         else
-          print *,"local_mask invalid"
-          stop
-         endif
-         ! LS>0 if clamped
-         call SUB_clamped_LS(x_at_flux_point_local,cur_time,LS_clamped, &
-          vel_clamped,temperature_clamped,prescribed_flag,dx)
-         if (LS_clamped.ge.zero) then
-          local_mask=0
-         else if (LS_clamped.lt.zero) then
-          ! do nothing
-         else
-          print *,"LS_clamped invalid"
-          stop
-         endif
-
-
-         ! divergence of fluxes goes here.
-
-         ! [n dot tau dot n] = - sigma kappa
-         ! [n dot tau dot tj] = 0
-    
-
-! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
-!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
-!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
-           ! -T33/r
-
-          deninv=rhoinvfab(D_DECL(i,j,k))
-
-       else if (mask_control_volume.eq.0) then
-        ! do nothing
+       if ((mask_left.eq.1).or.(mask_right.eq.1)) then
+        !do nothing
+       else if ((mask_left.eq.0).and.(mask_right.eq.0)) then
+        on_the_wall=1
        else
-        print *,"mask_control_volume invalid"
+        print *,"mask_left or mask_right invalid"
         stop
        endif
 
-      enddo ! k
-      enddo ! j
-      enddo ! i
+       if (on_the_wall.eq.0) then
+
+        div_term=zero
+        do deriv_dir=0,SDIM-1
+         d_tensor(deriv_dir+1)=zero
+         dx_local(deriv_dir+1)=zero
+        enddo
+        hoop22=zero
+        hoop12=zero
+        hoop_weight=zero
+
+        kofs=0
+#if (AMREX_SPACEDIM==3)
+        do kofs=0,1
+#endif
+        do jofs=0,1
+        do iofs=0,1
+         local_sub_index(1)=iofs
+         local_sub_index(2)=jofs
+         local_sub_index(3)=kofs
+
+         local_LS_index(1)=i-ii
+         local_LS_index(2)=j-jj
+         local_LS_index(3)=k-kk
+
+         irefine(1)=0
+         irefine(2)=0
+         irefine(3)=0
+
+         if (local_sub_index(force_dir+1).eq.0) then
+          imajor=i-ii
+          jmajor=j-jj
+          kmajor=k-kk
+          irefine(force_dir+1)=1
+          xsub(force_dir+1)= &
+           half*(xsten(-1,force_dir+1)+xsten(0,force_dir+1))
+         else
+          imajor=i
+          jmajor=j
+          kmajor=k
+          irefine(force_dir+1)=0
+          xsub(force_dir+1)= &
+           half*(xsten(1,force_dir+1)+xsten(0,force_dir+1))
+         endif
+         if (local_sub_index(itan_dir+1).eq.0) then
+          irefine(itan_dir+1)=0
+          xsub(itan_dir+1)= &
+           half*(xsten(-1,itan_dir+1)+xsten(0,itan_dir+1))
+
+          local_LS_index(itan_dir+1)=local_index(itan_dir+1)-1
+         else
+          irefine(itan_dir+1)=1
+          xsub(itan_dir+1)= &
+           half*(xsten(1,itan_dir+1)+xsten(0,itan_dir+1))
+
+          local_LS_index(itan_dir+1)=local_index(itan_dir+1)
+         endif
+#if (AMREX_SPACEDIM==3)
+         if (local_sub_index(jtan_dir+1).eq.0) then
+          irefine(jtan_dir+1)=0
+          xsub(jtan_dir+1)= &
+           half*(xsten(-1,jtan_dir+1)+xsten(0,jtan_dir+1))
+
+          local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)-1
+         else
+          irefine(jtan_dir+1)=1
+          xsub(jtan_dir+1)= &
+           half*(xsten(1,jtan_dir+1)+xsten(0,jtan_dir+1))
+
+          local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)
+         endif
+#endif
+
+         icorner=local_LS_index(1)
+         jcorner=local_LS_index(2)
+         kcorner=local_LS_index(3)
+
+         do im_LS=1,num_materials
+          LS_corner(im_LS)=zero
+         enddo
+         LS_corner_weight=zero
+
+         k_LS=0
+#if (AMREX_SPACEDIM==3)
+         do k_LS=kcorner,kcorner+1
+#endif
+         do j_LS=jcorner,jcorner+1
+         do i_LS=icorner,icorner+1
+          call gridsten_level(local_xsten,i_LS,j_LS,k_LS,level,nhalf)
+          local_weight=zero
+          do local_dir=1,SDIM
+           local_weight=local_weight+ &
+             (local_xsten(0,local_dir)-xsub(local_dir))**2
+          enddo
+          if (local_weight.gt.zero) then
+           local_weight=one/local_weight
+          else
+           print *,"local_weight invalid"
+           stop
+          endif          
+          do im_LS=1,num_materials
+           LS_corner(im_LS)=LS_corner(im_LS)+local_weight* &
+             levelpc(D_DECL(i_LS,j_LS,k_LS),im_LS)
+          enddo
+          LS_corner_weight=LS_corner_weight+local_weight
+         enddo !i_LS=icorner,icorner+1
+         enddo !j_LS=jcorner,jcorner+1
+#if (AMREX_SPACEDIM==3)
+         enddo !k_LS=kcorner,kcorner+1
+#endif
+         if (LS_corner_weight.gt.zero) then
+          do im_LS=1,num_materials
+           LS_corner(im_LS)=LS_corner(im_LS)/LS_corner_weight
+          enddo
+         else
+          print *,"LS_corner_weight invalid"
+          stop
+         endif
+         call get_primary_material(LS_corner,im_primary_corner)
+
+         if (im_primary_corner.eq.im_viscoelastic_p1) then
+          H_corner=one
+         else
+          H_corner=zero
+         endif
+
+         irefine2=irefine(1)
+         jrefine2=irefine(2)
+         krefine2=irefine(3)
+         nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          r_weight=one
+         else if (levelrz.eq.COORDSYS_RZ) then
+          r_weight=xsub(1)
+          one_dim_index=4
+          hoop_weight=hoop_weight+H_corner
+          hoop22=hoop22+ &
+           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          r_weight=xsub(1)
+          hoop_weight=hoop_weight+H_corner
+          call inverse_stress_index(one_dim_index,1,2)
+          hoop12=hoop12+ &
+           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+          call inverse_stress_index(one_dim_index,2,2)
+          hoop22=hoop22+ &
+           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+ 
+         do deriv_dir=0,SDIM-1
+          if (deriv_dir.eq.0) then
+           r_mult=r_weight
+          else
+           r_mult=one
+          endif
+          if (local_sub_index(deriv_dir+1).eq.0) then
+           sign_term=-one
+          else       
+           sign_term=one
+          endif
+          dx_local(deriv_dir+1)=dx_local(deriv_dir+1)+ &
+            sign_term*xsub(deriv_dir+1)
+          call inverse_stress_index(one_dim_index,force_dir+1,deriv_dir+1)
+          d_tensor(deriv_dir+1)=d_tensor(deriv_dir+1)+ &
+           r_mult* &
+           sign_term*H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+         enddo !deriv_dir=0 ... sdim-1
+
+        enddo !iofs=0,1
+        enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+        enddo !kofs=0,1
+#endif
+
+        do deriv_dir=0,SDIM-1
+         dTdx=d_tensor(deriv_dir+1)/dx_local(deriv_dir+1)
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          !do nothing
+         else if (levelrz.eq.COORDSYS_RZ) then
+          if (deriv_dir.eq.0) then
+           dTdx=dTdx/xsten(0,1)
+          else if ((deriv_dir.eq.1).and.(force_dir.eq.0)) then
+           if (hoop_weight.gt.zero) then
+            dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
+           endif
+          endif
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          if (deriv_dir.eq.0) then
+           dTdx=dTdx/xsten(0,1)
+          else if (deriv_dir.eq.1) then
+           dTdx=dTdx/xsten(0,1)
+           if (hoop_weight.gt.zero) then
+            if (force_dir.eq.0) then
+             dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
+            else if (force_dir.eq.1) then
+             dTdx=dTdx-hoop12/(hoop_weight*xsten(0,1))
+            endif
+           else if (hoop_weight.eq.zero) then
+            !do nothing
+           else
+            print *,"hoop_weight invalid"
+            stop
+           endif
+          endif
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+         div_term=div_term+dTdx
+        enddo !deriv_dir=0,SDIM-1
+          
+        local_invden=rhoinvMACfab(D_DECL(i,j,k))
+        if (local_invden.ge.zero) then 
+         umacnew(D_DECL(i,j,k))=umacnew(D_DECL(i,j,k))+ &
+          dt*div_term*local_invden
+        else
+         print *,"local_invden invalid"
+         stop
+        endif
+
+       else if (on_the_wall.eq.1) then
+        ! do nothing
+       else
+        print *,"on_the_wall invalid"
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
       
       return 
       end subroutine fort_elastic_force

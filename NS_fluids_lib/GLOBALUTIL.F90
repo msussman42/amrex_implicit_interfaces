@@ -1272,6 +1272,35 @@ real(amrex_real) :: MOF_PI=zero
 
 contains
 
+      subroutine inverse_stress_index(one_dim_index,i,j)
+      implicit none
+
+      integer, INTENT(out) :: one_dim_index
+      integer, INTENT(in) :: i
+      integer, INTENT(in) :: j
+
+      if (((i.eq.2).and.(j.eq.3)).or. &
+          ((i.eq.3).and.(j.eq.2))) then
+       one_dim_index=6
+      else if (((i.eq.1).and.(j.eq.3)).or. &
+               ((i.eq.3).and.(j.eq.1))) then
+       one_dim_index=5
+      else if (((i.eq.1).and.(j.eq.2)).or. &
+               ((i.eq.2).and.(j.eq.1))) then
+       one_dim_index=2
+      else if ((i.eq.3).and.(j.eq.3)) then
+       one_dim_index=4
+      else if ((i.eq.2).and.(j.eq.2)) then
+       one_dim_index=3
+      else if ((i.eq.1).and.(j.eq.1)) then
+       one_dim_index=1
+      else
+       print *,"i or j invalid: ",i,j
+       stop
+      endif
+
+      end subroutine inverse_stress_index
+
       subroutine stress_index(one_dim_index,i,j)
       implicit none
 
