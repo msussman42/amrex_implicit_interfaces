@@ -11667,6 +11667,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         amrex::Error("FSI_outer_sweeps invalid");
 
        if ((FSI_outer_sweeps==0)||
+           (viscoelastic_force_only==1)||
            ((FSI_outer_sweeps>=1)&&
             (is_rigid_CL_flag==0))||
            ((FSI_outer_sweeps>=1)&&
@@ -11684,6 +11685,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         }
 
        } else if ((FSI_outer_sweeps>0)&&
+                  (viscoelastic_force_only==0)&&
                   (is_rigid_CL_flag==1)&&
                   (imp1<=im_cutoff)) {
         //do nothing

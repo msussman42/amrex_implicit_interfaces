@@ -6112,7 +6112,8 @@ stop
       integer growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: bfact_grid
-      real(amrex_real), INTENT(in), target :: ls(DIMV(ls),num_materials*(SDIM+1))
+      real(amrex_real), INTENT(in), target :: &
+        ls(DIMV(ls),num_materials*(SDIM+1))
       real(amrex_real), pointer :: ls_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: rhoinverse(DIMV(rhoinverse))
       real(amrex_real), pointer :: rhoinverse_ptr(D_DECL(:,:,:))
@@ -18782,16 +18783,16 @@ stop
        levelpc,DIMS(levelpc), &
        rhoinvfab, &
        DIMS(rhoinvfab), &
+       rhoinvMACfab, &
+       DIMS(rhoinvMACfab), &
        tensorfab, &
        DIMS(tensorfab), &
        SNEW, &
        DIMS(SNEW), &
        umacnew, &
        DIMS(umacnew), &
-       vmacnew, &
-       DIMS(vmacnew), &
-       wmacnew, &
-       DIMS(wmacnew), &
+       umacold, &
+       DIMS(umacold), &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -18825,11 +18826,11 @@ stop
       integer, INTENT(in) :: DIMDEC(maskcoef)
       integer, INTENT(in) :: DIMDEC(levelpc)
       integer, INTENT(in) :: DIMDEC(rhoinvfab)
+      integer, INTENT(in) :: DIMDEC(rhoinvMACfab)
       integer, INTENT(in) :: DIMDEC(tensorfab)
       integer, INTENT(in) :: DIMDEC(SNEW)
       integer, INTENT(in) :: DIMDEC(umacnew)
-      integer, INTENT(in) :: DIMDEC(vmacnew)
-      integer, INTENT(in) :: DIMDEC(wmacnew)
+      integer, INTENT(in) :: DIMDEC(umacold)
 
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
@@ -18847,6 +18848,10 @@ stop
       real(amrex_real), INTENT(in), target :: rhoinvfab(DIMV(rhoinvfab))
       real(amrex_real), pointer :: rhoinvfab_ptr(D_DECL(:,:,:))
 
+      real(amrex_real), INTENT(in), target :: &
+        rhoinvMACfab(DIMV(rhoinvMACfab))
+      real(amrex_real), pointer :: rhoinvMACfab_ptr(D_DECL(:,:,:))
+
       real(amrex_real), target, INTENT(in) :: &
         tensorfab(DIMV(tensorfab),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tensorfab_ptr(D_DECL(:,:,:),:)
@@ -18856,10 +18861,9 @@ stop
 
       real(amrex_real), INTENT(inout), target :: umacnew(DIMV(umacnew))
       real(amrex_real), pointer :: umacnew_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: vmacnew(DIMV(vmacnew))
-      real(amrex_real), pointer :: vmacnew_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: wmacnew(DIMV(wmacnew))
-      real(amrex_real), pointer :: wmacnew_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(inout), target :: umacold(DIMV(umacold))
+      real(amrex_real), pointer :: umacold_ptr(D_DECL(:,:,:))
 
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -18918,8 +18922,7 @@ stop
 
       SNEW_ptr=>SNEW
       umacnew_ptr=>umacnew
-      vmacnew_ptr=>vmacnew
-      wmacnew_ptr=>wmacnew
+      umacold_ptr=>umacold
 
       im_viscoelastic_p1=im_viscoelastic+1
 
@@ -18933,9 +18936,8 @@ stop
       tensorfab_ptr=>tensorfab
       call checkbound_array(fablo,fabhi,tensorfab_ptr,1,-1)
 
-      call checkbound_array1(fablo,fabhi,umacnew_ptr,0,0)
-      call checkbound_array1(fablo,fabhi,vmacnew_ptr,0,1)
-      call checkbound_array1(fablo,fabhi,wmacnew_ptr,0,SDIM-1)
+      call checkbound_array1(fablo,fabhi,umacnew_ptr,0,force_dir)
+      call checkbound_array1(fablo,fabhi,umacold_ptr,0,force_dir)
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,1,-1)
@@ -18948,6 +18950,9 @@ stop
 
       rhoinvfab_ptr=>rhoinvfab
       call checkbound_array1(fablo,fabhi,rhoinvfab_ptr,0,-1)
+
+      rhoinvMACfab_ptr=>rhoinvMACfab
+      call checkbound_array1(fablo,fabhi,rhoinvMACfab_ptr,0,force_dir)
 
       call checkbound_array1(fablo,fabhi,SNEW_ptr,1,-1)
 
@@ -18989,7 +18994,7 @@ stop
       if ((force_dir.ge.0).and.(force_dir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"force_dir invalid"
+       print *,"force_dir invalid: ",force_dir
        stop
       endif
 
