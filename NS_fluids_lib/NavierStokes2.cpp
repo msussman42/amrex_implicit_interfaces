@@ -1844,11 +1844,11 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
  const Real* dx = geom.CellSize();
 
  int dir=0;
- MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
- dir=1;
- MultiFab& Vmac_new=get_new_data(Umac_Type+dir,slab_step+1);
- dir=AMREX_SPACEDIM-1;
- MultiFab& Wmac_new=get_new_data(Umac_Type+dir,slab_step+1);
+
+ MultiFab* save_mac[AMREX_SPACEDIM];
+ for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+  save_mac[dir]=getStateMAC(0,dir,cur_time_slab);
+ }
 
   // outer loop: each force component u_t = F_elastic/density  u,v,w
  for (int force_dir=0;force_dir<AMREX_SPACEDIM;force_dir++) {
@@ -1883,9 +1883,13 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
     // output
    FArrayBox& SNEWfab=S_new[mfi];
-   FArrayBox& xvel=Umac_new[mfi];
-   FArrayBox& yvel=Vmac_new[mfi];
-   FArrayBox& zvel=Wmac_new[mfi];
+
+   dir=0;
+   FArrayBox& xvel=(*save_mac[dir])[mfi];
+   dir=1;
+   FArrayBox& yvel=(*save_mac[dir])[mfi];
+   dir=AMREX_SPACEDIM-1;
+   FArrayBox& zvel=(*save_mac[dir])[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -1950,6 +1954,22 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 } // omp
   ns_reconcile_d_num(LOOP_ELASTIC_FORCE,"CELL_GRID_ELASTIC_FORCE");
  } // force_dir = 0..sdim-1
+
+ if (elastic_force_mac_grid==1) {
+
+  for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+   MultiFab::Copy(Umac_new,*save_mac[dir],0,0,1,0);
+  }
+
+ } else if (elastic_force_mac_grid==0) {
+  //do nothing
+ } else
+  amrex::Error("elastic_force_mac_grid invalid");
+
+ for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete save_mac[dir];
+ }
 
 } // end subroutine CELL_GRID_ELASTIC_FORCE
 
