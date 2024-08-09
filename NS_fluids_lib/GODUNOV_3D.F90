@@ -18878,8 +18878,7 @@ stop
       integer :: ii,jj,kk
       integer :: dir_flux,side_flux
       integer, PARAMETER :: nhalf=3
-      real(amrex_real) :: xstenCELL(-nhalf:nhalf,SDIM)
-      real(amrex_real) :: xsten_flux(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
       integer dircomp
       integer dir_row,dir_column
       real(amrex_real), target :: x_CELL_control_volume(SDIM)
@@ -18998,66 +18997,130 @@ stop
        stop
       endif
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+      ii=0
+      jj=0
+      kk=0
+      if (force_dir.eq.0) then
+       ii=1
+      else if (force_dir.eq.1) then
+       jj=1
+      else if ((force_dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"force_dir invalid: ",force_dir
+       stop
+      endif
 
-       ! traverse the cell centered grid.
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+              growlo,growhi,0,force_dir)
+
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
-       call gridsten_level(xstenCELL,i,j,k,level,nhalf)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,force_dir)
 
-       do dircomp=1,SDIM
-        x_CELL_control_volume(dircomp)=xstenCELL(0,dircomp)
-       enddo
+       local_index(1)=i
+       local_index(2)=j
+       local_index(3)=k
 
-        !rzflag=0 => volume and area independent of r.
-       if (rzflag.eq.COORDSYS_CARTESIAN) then
-        !volume=dx dy dz
-        rval=one
-       else if ((rzflag.eq.COORDSYS_RZ).or. &
-                (rzflag.eq.COORDSYS_CYLINDRICAL)) then
-        !volume=(dtheta/2)*(r_{2}^2 - r_{1}^{2}) dz=dtheta*dz*dr r
-        rval=x_CELL_control_volume(1)
+       on_the_wall=0
+       side=0
+       if (local_index(force_dir+1).eq.fablo(force_dir+1)) then
+        side=1
+       else if (local_index(force_dir+1).eq.fabhi(force_dir+1)+1) then
+        side=2
+       else if ((local_index(force_dir+1).gt.fablo(force_dir+1)).and. &
+                (local_index(force_dir+1).lt.fabhi(force_dir+1)+1)) then
+        !do nothing
        else
-        print *,"rzflag invalid"
+        print *,"local_index invalid"
         stop
        endif
 
-       if (rval.gt.zero) then
-        ! do nothing
+       if (side.eq.0) then
+        !do nothing
+       else if ((side.eq.1).or.(side.eq.2)) then
+        if (velbc(force_dir+1,side,force_dir+1).eq.INT_DIR) then
+         !do nothing
+        else if (velbc(force_dir+1,side,force_dir+1).eq.EXT_DIR) then
+         on_the_wall=1
+        else if (velbc(force_dir+1,side,force_dir+1).eq.REFLECT_EVEN) then
+         on_the_wall=1
+        else if (velbc(force_dir+1,side,force_dir+1).eq.REFLECT_ODD) then
+         on_the_wall=1
+        else if (velbc(force_dir+1,side,force_dir+1).eq.LO_EXTRAP) then
+         on_the_wall=1
+        else
+         print *,"velbc invalid"
+         stop
+        endif
        else
-        print *,"rval invalid"
+        print *,"side invalid"
         stop
        endif
 
        do im_LS=1,num_materials
-        LS_control_volume(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
+        LS_left(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
+        LS_right(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
        enddo
 
-       call get_primary_material(LS_control_volume,local_mask)
+       call get_primary_material(LS_left,im_primary_left)
+       call get_primary_material(LS_right,im_primary_right)
 
-       if (local_mask.eq.im_viscoelastic_p1) then
-        local_mask=1
-       else if ((local_mask.ge.1).and. &
-                (local_mask.le.num_materials)) then
-        local_mask=0
+       if ((im_primary_left.ne.im_viscolastic_p1).and. &
+           (im_primary_right.ne.im_viscoelastic_p1)) then
+        on_the_wall=1
+       else if ((im_primary_left.eq.im_viscolastic_p1).or. &
+                (im_primary_right.eq.im_viscoelastic_p1)) then
+        !do nothing
        else
-        print *,"local_mask invalid"
+        print *,"im_primary_left|right invalid"
         stop
        endif
 
+       if ((is_rigid(im_primary_left).eq.1).or. &
+           (is_rigid(im_primary_right).eq.1)) then
+        on_the_wall=1
+       else if ((is_rigid(im_primary_left).eq.0).and. &
+                (is_rigid(im_primary_right).eq.0)) then
+        !do nothing
+       else
+        print *,"is_rigid_left|right invalid"
+        stop
+       endif
+
+       do dir_local=1,SDIM
+        x_left(dir_local)=xsten(0,dir_local)
+        x_right(dir_local)=xsten(0,dir_local)
+       enddo
+       x_left(force_dir+1)=xsten(-1,force_dir+1)
+       x_right(force_dir+1)=xsten(1,force_dir+1)
+
         ! LS>0 if clamped
-       call SUB_clamped_LS(x_CELL_control_volume,cur_time,LS_clamped, &
+       call SUB_clamped_LS(x_left,cur_time,LS_clamped, &
          vel_clamped,temperature_clamped,prescribed_flag,dx)
        if (LS_clamped.ge.zero) then
-        local_mask=0
+        on_the_wall=1
        else if (LS_clamped.lt.zero) then
         ! do nothing
        else
         print *,"LS_clamped invalid"
         stop
        endif
+       call SUB_clamped_LS(x_right,cur_time,LS_clamped, &
+         vel_clamped,temperature_clamped,prescribed_flag,dx)
+       if (LS_clamped.ge.zero) then
+        on_the_wall=1
+       else if (LS_clamped.lt.zero) then
+        ! do nothing
+       else
+        print *,"LS_clamped invalid"
+        stop
+       endif
+
+
+
 
        XFORCE_local=zero
            
