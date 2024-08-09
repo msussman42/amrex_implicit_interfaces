@@ -1845,9 +1845,11 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
  int dir=0;
 
- MultiFab* save_mac[AMREX_SPACEDIM];
+ MultiFab* save_mac_new[AMREX_SPACEDIM];
+ MultiFab* save_mac_old[AMREX_SPACEDIM];
  for (dir=0;dir<AMREX_SPACEDIM;dir++) {
-  save_mac[dir]=getStateMAC(0,dir,cur_time_slab);
+  save_mac_new[dir]=getStateMAC(0,dir,cur_time_slab);
+  save_mac_old[dir]=getStateMAC(0,dir,cur_time_slab);
  }
 
   // outer loop: each force component u_t = F_elastic/density  u,v,w
@@ -1881,15 +1883,14 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
    FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
 
+    //FACECOMP_FACEDEN component has 1/rho
+   FArrayBox& xfacevar=(*localMF[FACE_VAR_MF+force_dir])[mfi];
+
     // output
    FArrayBox& SNEWfab=S_new[mfi];
 
-   dir=0;
-   FArrayBox& xvel=(*save_mac[dir])[mfi];
-   dir=1;
-   FArrayBox& yvel=(*save_mac[dir])[mfi];
-   dir=AMREX_SPACEDIM-1;
-   FArrayBox& zvel=(*save_mac[dir])[mfi];
+   FArrayBox& xvel_new=(*save_mac_new[force_dir])[mfi];
+   FArrayBox& xvel_old=(*save_mac_old[force_dir])[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -1932,16 +1933,16 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      rhoinversefab.dataPtr(),
      ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
+     xfacevar.dataPtr(FACECOMP_FACEDEN), // 1/rho
+     ARLIM(xfacevar.loVect()),ARLIM(xfacevar.hiVect()),
      tensorfab.dataPtr(),
      ARLIM(tensorfab.loVect()),ARLIM(tensorfab.hiVect()),
      SNEWfab.dataPtr(STATECOMP_VEL+force_dir), //force_dir=0 ... sdim-1
      ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()), 
-     xvel.dataPtr(), //Umac_new
-     ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
-     yvel.dataPtr(), //Vmac_new
-     ARLIM(yvel.loVect()),ARLIM(yvel.hiVect()), 
-     zvel.dataPtr(), //Wmac_new
-     ARLIM(zvel.loVect()),ARLIM(zvel.hiVect()), 
+     xvel_new.dataPtr(), 
+     ARLIM(xvel_new.loVect()),ARLIM(xvel_new.hiVect()), 
+     xvel_old.dataPtr(), 
+     ARLIM(xvel_old.loVect()),ARLIM(xvel_old.hiVect()), 
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -1959,7 +1960,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
   for (dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Copy(Umac_new,*save_mac[dir],0,0,1,0);
+   MultiFab::Copy(Umac_new,*save_mac_new[dir],0,0,1,0);
   }
 
  } else if (elastic_force_mac_grid==0) {
@@ -1968,7 +1969,8 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
   amrex::Error("elastic_force_mac_grid invalid");
 
  for (dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete save_mac[dir];
+  delete save_mac_new[dir];
+  delete save_mac_old[dir];
  }
 
 } // end subroutine CELL_GRID_ELASTIC_FORCE
