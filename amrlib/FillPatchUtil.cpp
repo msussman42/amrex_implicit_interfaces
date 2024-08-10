@@ -19,7 +19,7 @@ void FillPatchSingleLevel (
   MultiFab& mf, 
   Real time, 
   const MultiFab& smf, 
-  int scomp, 
+  int scomp, //absolute within the state smf.
   int dcomp, 
   int ncomp,
   const Geometry& geom, 

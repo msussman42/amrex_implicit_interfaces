@@ -6907,7 +6907,7 @@ stop
       if (ncomp.eq.N_DRAG) then
        ! do nothing
       else
-       print *,"ncomp invalid"
+       print *,"ncomp invalid in fort_extend_drag"
        stop
       endif
 

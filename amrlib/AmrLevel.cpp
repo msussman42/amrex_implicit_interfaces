@@ -1230,7 +1230,7 @@ AmrLevel::FillPatch (AmrLevel & old,
                      int       dcomp,
                      Real      time,
                      int       index,
-                     int       scomp,
+                     int       scomp, //absolute within the state.
                      int       ncomp,
 		     int debug_fillpatch)
 {
@@ -1262,10 +1262,19 @@ AmrLevel::FillPatch (AmrLevel & old,
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
+ int ncomp_sanity_check=0;
+
  for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range = ranges[igroup].first;
   const int     ncomp_range = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
+
+  if (scomp_range==ncomp_sanity_check) {
+   //do nothing
+  } else
+   amrex::Error("scomp_range failed sanity check");
+
+  ncomp_sanity_check+=ncomp_range;
 
   Real nudge_time;
   int best_index;
@@ -1309,7 +1318,7 @@ AmrLevel::FillPatch (AmrLevel & old,
     mf,  // data to be filled
     nudge_time,
     fmf, // old data at the current level.
-    scomp_local,
+    scomp_local, //absolute within the state (fmf)
     DComp,
     ncomp_range,
     fgeom,
@@ -1368,6 +1377,11 @@ AmrLevel::FillPatch (AmrLevel & old,
   DComp += ncomp_range;
 
  } // igroup=0..ranges.size()-1
+
+ if (ncomp==ncomp_sanity_check) {
+  //do nothing
+ } else
+  amrex::Error("ncomp sanity check failed");
 
 }   // FillPatch
 
@@ -1445,6 +1459,8 @@ AmrLevel::FillCoarsePatchGHOST (
 
  const Box& pdomain = state[index].getDomain();
 
+ int ncomp_sanity_check=0;
+
  for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
 
   const int     scomp_range  = ranges[igroup].first;
@@ -1454,6 +1470,13 @@ AmrLevel::FillCoarsePatchGHOST (
     amrex::Error("scomp_range!=0");
   }
   Interpolater* mapper = descGHOST.interp(scompBC_map[scomp_range]);
+
+  if (scomp_range==ncomp_sanity_check) {
+   //do nothing
+  } else
+   amrex::Error("scomp_range failed sanity check");
+
+  ncomp_sanity_check+=ncomp_range;
 
   BoxArray crseBA(mf_BA.size());
   for (int j = 0, N_CBA = crseBA.size(); j < N_CBA; ++j) {
@@ -1487,7 +1510,7 @@ AmrLevel::FillCoarsePatchGHOST (
     crseMF, // data to be filled 0..ncomp_range-1
     c_nudge_time,
     cmf_part_mf, // level-1 data; scomp_range..scomp_range+ncomp_range-1
-    scomp_local, // = scomp_range
+    scomp_local, // = scomp_range (absolute within the state cmf_part_mf)
     0, // dstcomp
     ncomp_range,
     cgeom,
@@ -1556,6 +1579,11 @@ AmrLevel::FillCoarsePatchGHOST (
   DComp += ncomp_range;
 
  } // igroup=0..ranges.size()-1
+
+ if (ncomp==ncomp_sanity_check) {
+  //do nothing
+ } else
+  amrex::Error("ncomp sanity check failed");
 
  delete cmf_part;
 
