@@ -18912,6 +18912,7 @@ stop
       real(amrex_real) temperature_clamped
       integer prescribed_flag
       integer mask_left,mask_right
+      real(amrex_real) force_left,force_right
       real(amrex_real) div_term
       real(amrex_real) d_tensor(SDIM)
       real(amrex_real) dx_local(SDIM)
@@ -19022,6 +19023,7 @@ stop
        local_index(3)=k
 
        on_the_wall=0
+
        side=0
        if (local_index(force_dir+1).eq.fablo(force_dir+1)) then
         side=1
@@ -19031,7 +19033,7 @@ stop
                 (local_index(force_dir+1).lt.fabhi(force_dir+1)+1)) then
         !do nothing
        else
-        print *,"local_index invalid"
+        print *,"local_index invalid: ",force_dir,local_index(force_dir+1)
         stop
        endif
 
@@ -19049,11 +19051,12 @@ stop
         else if (velbc(force_dir+1,side,force_dir+1).eq.FOEXTRAP) then
          on_the_wall=1
         else
-         print *,"velbc invalid"
+         print *,"velbc invalid: ",force_dir,side, &
+           velbc(force_dir+1,side,force_dir+1)
          stop
         endif
        else
-        print *,"side invalid"
+        print *,"side invalid: ",side
         stop
        endif
 
@@ -19072,7 +19075,8 @@ stop
                 (im_primary_right.eq.im_viscoelastic_p1)) then
         !do nothing
        else
-        print *,"im_primary_left|right invalid"
+        print *,"im_primary_left|right invalid: ",im_primary_left, &
+         im_primary_right
         stop
        endif
 
@@ -19083,7 +19087,9 @@ stop
                 (is_rigid(im_primary_right).eq.0)) then
         !do nothing
        else
-        print *,"is_rigid_left|right invalid"
+        print *,"is_rigid_left|right invalid: ",im_primary_left, &
+          im_primary_right,is_rigid(im_primary_left), &
+          is_rigid(im_primary_right)
         stop
        endif
 
@@ -19102,9 +19108,10 @@ stop
        else if (LS_clamped.lt.zero) then
         ! do nothing
        else
-        print *,"LS_clamped invalid"
+        print *,"LS_clamped invalid: ",LS_clamped
         stop
        endif
+
        call SUB_clamped_LS(x_right,cur_time,LS_clamped, &
          vel_clamped,temperature_clamped,prescribed_flag,dx)
        if (LS_clamped.ge.zero) then
@@ -19112,7 +19119,7 @@ stop
        else if (LS_clamped.lt.zero) then
         ! do nothing
        else
-        print *,"LS_clamped invalid"
+        print *,"LS_clamped invalid: ",LS_clamped
         stop
        endif
 
@@ -19124,7 +19131,7 @@ stop
        else if ((mask_left.eq.0).and.(mask_right.eq.0)) then
         on_the_wall=1
        else
-        print *,"mask_left or mask_right invalid"
+        print *,"mask_left or mask_right invalid: ",mask_left,mask_right
         stop
        endif
 
@@ -19164,13 +19171,16 @@ stop
           irefine(force_dir+1)=1
           xsub(force_dir+1)= &
            half*(xsten(-1,force_dir+1)+xsten(0,force_dir+1))
-         else
+         else if (local_sub_index(force_dir+1).eq.1) then
           imajor=i
           jmajor=j
           kmajor=k
           irefine(force_dir+1)=0
           xsub(force_dir+1)= &
            half*(xsten(1,force_dir+1)+xsten(0,force_dir+1))
+         else
+          print *,"local_sub_index(force_dir+1) invalid"
+          stop
          endif
          if (local_sub_index(itan_dir+1).eq.0) then
           irefine(itan_dir+1)=0
@@ -19178,13 +19188,17 @@ stop
            half*(xsten(-1,itan_dir+1)+xsten(0,itan_dir+1))
 
           local_LS_index(itan_dir+1)=local_index(itan_dir+1)-1
-         else
+         else if (local_sub_index(itan_dir+1).eq.1) then
           irefine(itan_dir+1)=1
           xsub(itan_dir+1)= &
            half*(xsten(1,itan_dir+1)+xsten(0,itan_dir+1))
 
           local_LS_index(itan_dir+1)=local_index(itan_dir+1)
+         else
+          print *,"local_sub_index(itan_dir+1) invalid"
+          stop
          endif
+ 
 #if (AMREX_SPACEDIM==3)
          if (local_sub_index(jtan_dir+1).eq.0) then
           irefine(jtan_dir+1)=0
@@ -19192,12 +19206,15 @@ stop
            half*(xsten(-1,jtan_dir+1)+xsten(0,jtan_dir+1))
 
           local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)-1
-         else
+         else if (local_sub_index(jtan_dir+1).eq.1) then
           irefine(jtan_dir+1)=1
           xsub(jtan_dir+1)= &
            half*(xsten(1,jtan_dir+1)+xsten(0,jtan_dir+1))
 
           local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)
+         else
+          print *,"local_sub_index(jtan_dir+1) invalid"
+          stop
          endif
 #endif
 
@@ -19225,7 +19242,7 @@ stop
           if (local_weight.gt.zero) then
            local_weight=one/local_weight
           else
-           print *,"local_weight invalid"
+           print *,"local_weight invalid: ",local_weight
            stop
           endif          
           do im_LS=1,num_materials
@@ -19243,7 +19260,7 @@ stop
            LS_corner(im_LS)=LS_corner(im_LS)/LS_corner_weight
           enddo
          else
-          print *,"LS_corner_weight invalid"
+          print *,"LS_corner_weight invalid: ",LS_corner_weight
           stop
          endif
          call get_primary_material(LS_corner,im_primary_corner)
@@ -19280,7 +19297,7 @@ stop
            H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid: ",levelrz
           stop
          endif
  
@@ -19311,18 +19328,45 @@ stop
 #endif
 
         do deriv_dir=0,SDIM-1
-         dTdx=d_tensor(deriv_dir+1)/dx_local(deriv_dir+1)
+         if (dx_local(deriv_dir+1).gt.zero) then
+          dTdx=d_tensor(deriv_dir+1)/dx_local(deriv_dir+1)
+         else
+          print *,"dx_local invalid: ",deriv_dir,dx_local(deriv_dir+1)
+          stop
+         endif
+
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           !do nothing
          else if (levelrz.eq.COORDSYS_RZ) then
+
+          if (xsten(0,1).gt.zero) then
+           !do nothing
+          else 
+           print *,"xsten(0,1) invalid ",xsten(0,1)
+           stop
+          endif
+
           if (deriv_dir.eq.0) then
            dTdx=dTdx/xsten(0,1)
           else if ((deriv_dir.eq.1).and.(force_dir.eq.0)) then
            if (hoop_weight.gt.zero) then
             dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
+           else if (hoop_weight.eq.zero) then
+            !do nothing
+           else
+            print *,"hoop_weight invalid"
+            stop
            endif
           endif
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+
+          if (xsten(0,1).gt.zero) then
+           !do nothing
+          else 
+           print *,"xsten(0,1) invalid ",xsten(0,1)
+           stop
+          endif
+
           if (deriv_dir.eq.0) then
            dTdx=dTdx/xsten(0,1)
           else if (deriv_dir.eq.1) then
@@ -19353,21 +19397,127 @@ stop
          umacnew(D_DECL(i,j,k))=umacnew(D_DECL(i,j,k))+ &
           dt*div_term*local_invden
         else
-         print *,"local_invden invalid"
+         print *,"local_invden invalid: ",local_invden
          stop
         endif
 
        else if (on_the_wall.eq.1) then
         ! do nothing
        else
-        print *,"on_the_wall invalid"
+        print *,"on_the_wall invalid: ",on_the_wall
         stop
        endif
 
       enddo !i
       enddo !j
       enddo !k
-      
+     
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+              growlo,growhi,0)
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       on_the_wall=0
+
+       do im_LS=1,num_materials
+        LS_right(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
+       enddo
+       call get_primary_material(LS_right,im_primary_right)
+
+       if (im_primary_right.ne.im_viscoelastic_p1) then
+        on_the_wall=1
+       else if (im_primary_right.eq.im_viscoelastic_p1) then
+        !do nothing
+       else
+        print *,"im_primary_right invalid: ",im_primary_right
+        stop
+       endif
+ 
+       if (is_rigid(im_primary_right).eq.1) then
+        on_the_wall=1
+       else if (is_rigid(im_primary_right).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid_right invalid: ", &
+          im_primary_right,is_rigid(im_primary_right)
+        stop
+       endif
+       do local_dir=1,SDIM
+        x_right(local_dir)=xsten(0,local_dir)
+       enddo
+
+       call SUB_clamped_LS(x_right,cur_time,LS_clamped, &
+         vel_clamped,temperature_clamped,prescribed_flag,dx)
+       if (LS_clamped.ge.zero) then
+        on_the_wall=1
+       else if (LS_clamped.lt.zero) then
+        ! do nothing
+       else
+        print *,"LS_clamped invalid: ",LS_clamped
+        stop
+       endif
+
+       mask_right=NINT(maskcoef(D_DECL(i,j,k)))
+
+       if (mask_right.eq.1) then
+        !do nothing
+       else if (mask_right.eq.0) then
+        on_the_wall=1
+       else
+        print *,"mask_right invalid: ",mask_right
+        stop
+       endif
+
+       if (on_the_wall.eq.0) then
+
+        force_left=umacnew(D_DECL(i,j,k))-umacold(D_DECL(i,j,k))
+        local_invden=rhoinvMACfab(D_DECL(i,j,k))
+        if (local_invden.gt.zero) then
+         force_left=force_left/local_invden
+        else if (local_invden.eq.zero) then
+         !do nothing
+        else
+         print *,"local_invden invalid: ",local_invden
+         stop
+        endif
+
+        force_right=umacnew(D_DECL(i+ii,j+jj,k+kk))- &
+                    umacold(D_DECL(i+ii,j+jj,k+kk))
+        local_invden=rhoinvMACfab(D_DECL(i+ii,j+jj,k+kk))
+        if (local_invden.gt.zero) then
+         force_right=force_right/local_invden
+        else if (local_invden.eq.zero) then
+         !do nothing
+        else
+         print *,"local_invden invalid: ",local_invden
+         stop
+        endif
+
+        local_invden=rhoinvfab(D_DECL(i,j,k))
+        if (local_invden.ge.zero) then
+         SNEW(D_DECL(i,j,k))=SNEW(D_DECL(i,j,k))+ &
+          half*(force_left+force_right)*local_invden
+        else
+         print *,"local_invden invalid: rhoinvfab(D_DECL(i,j,k)): ", &
+          i,j,k,rhoinvfab(D_DECL(i,j,k))
+         stop
+        endif 
+        
+       else if (on_the_wall.eq.1) then
+        ! do nothing
+       else
+        print *,"on_the_wall invalid: ",on_the_wall
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
+
       return 
       end subroutine fort_elastic_force
 
