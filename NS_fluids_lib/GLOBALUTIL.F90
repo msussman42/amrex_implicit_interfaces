@@ -26627,6 +26627,7 @@ real(amrex_real) Q_coef
 real(amrex_real) improved_hoop
 real(amrex_real) force_unity_determinant
 integer unity_det
+integer, parameter :: preserve_SPD=0
 integer, parameter :: nhalf=3
 real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
@@ -26723,7 +26724,7 @@ if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
  stop
 endif
 if (ncomp_visc.ne.3*num_materials) then
- print *,"ncomp visc invalid"
+ print *,"ncomp visc invalid: ",num_materials,ncomp_visc
  stop
 endif
 if (dt.gt.zero) then
@@ -26806,7 +26807,7 @@ do jj=1,3 !deriv dir
   jofs2=jofs
   kofs2=kofs
 
-  if (ii.eq.1) then
+  if (ii.eq.1) then !veldir (ii)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
@@ -26815,7 +26816,7 @@ do jj=1,3 !deriv dir
     else if (jrefine.eq.1) then
      !do nothing
     else
-     print *,"jrefine invalid"
+     print *,"jrefine invalid: ",jrefine
      stop
     endif
     if (krefine.eq.0) then
@@ -26823,7 +26824,7 @@ do jj=1,3 !deriv dir
     else if (krefine.eq.1) then
      !do nothing
     else
-     print *,"krefine invalid"
+     print *,"krefine invalid: ",krefine
      stop
     endif
     signcoeff=one
@@ -26835,25 +26836,25 @@ do jj=1,3 !deriv dir
     dui(ii,jj)=dui(ii,jj)+ &
      signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
-    if (jj.eq.1) then
+    if (jj.eq.1) then !dx
      dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2-1,jj)
-    else if (jj.eq.2) then
+    else if (jj.eq.2) then !dy
      dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
-    else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then
+    else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then !dz
      dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
     else
-     print *,"jj invalid"
+     print *,"jj invalid(a): ",jj
      stop
     endif
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
-    print *,"jj invalid"
+    print *,"jj invalid(b): ",jj
     stop
    endif 
 
-  else if (ii.eq.2) then
+  else if (ii.eq.2) then !veldir="v" (ii)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
@@ -26862,7 +26863,7 @@ do jj=1,3 !deriv dir
     else if (irefine.eq.1) then
      !do nothing
     else
-     print *,"irefine invalid"
+     print *,"irefine invalid: ",irefine
      stop
     endif
     if (krefine.eq.0) then
@@ -26870,7 +26871,7 @@ do jj=1,3 !deriv dir
     else if (krefine.eq.1) then
      !do nothing
     else
-     print *,"krefine invalid"
+     print *,"krefine invalid: ",krefine
      stop
     endif
     signcoeff=one
@@ -26889,14 +26890,14 @@ do jj=1,3 !deriv dir
     else if (jj.eq.SDIM) then
      dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
     else
-     print *,"jj invalid"
+     print *,"jj invalid(a) ",jj
      stop
     endif
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
-    print *,"jj invalid"
+    print *,"jj invalid(b) ",jj
     stop
    endif 
 
@@ -26909,7 +26910,7 @@ do jj=1,3 !deriv dir
     else if (irefine.eq.1) then
      !do nothing
     else
-     print *,"irefine invalid"
+     print *,"irefine invalid: ",irefine
      stop
     endif
     if (jrefine.eq.0) then
@@ -26917,7 +26918,7 @@ do jj=1,3 !deriv dir
     else if (jrefine.eq.1) then
      !do nothing
     else
-     print *,"jrefine invalid"
+     print *,"jrefine invalid: ",jrefine
      stop
     endif
     signcoeff=one
@@ -26938,21 +26939,21 @@ do jj=1,3 !deriv dir
     else if (jj.eq.3) then
      !do nothing
     else
-     print *,"jj invalid"
+     print *,"jj invalid(a): ",jj
      stop
     endif
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
-    print *,"jj invalid"
+    print *,"jj invalid(b): ",jj
     stop
    endif 
 
   else if (ii.eq.3) then
    !do nothing
   else
-   print *,"ii invalid"
+   print *,"ii invalid: ",ii
    stop
   endif
 
@@ -26975,7 +26976,7 @@ do jj=1,3 !deriv dir
  else if ((ii.eq.3).or.(jj.eq.3)) then
   ! do nothing
  else
-  print *,"ii or jj invalid"
+  print *,"ii or jj invalid: ",ii,jj
   stop
  endif
 
@@ -26990,7 +26991,7 @@ do jj=1,3 !deriv dir
   if (r_hoop.gt.zero) then
    !do nothing
   else
-   print *,"r_hoop invalid"
+   print *,"r_hoop invalid: ",r_hoop
    stop
   endif
   if ((ii.eq.3).and.(jj.eq.3)) then
@@ -27001,7 +27002,7 @@ do jj=1,3 !deriv dir
   if (r_hoop.gt.zero) then
    !do nothing
   else
-   print *,"r_hoop invalid"
+   print *,"r_hoop invalid: ",r_hoop
    stop
   endif
   if (jj.eq.2) then
@@ -27014,7 +27015,7 @@ do jj=1,3 !deriv dir
    else if (ii.eq.3) then
     !do nothing
    else
-    print *,"ii invalid"
+    print *,"ii invalid: ",ii
     stop
    endif
    gradV_MAC=gradV_MAC/r_hoop
@@ -27063,7 +27064,7 @@ endif
 if (n.eq.DERIVE_TENSOR_NCOMP+1) then
  ! do nothing
 else
- print *,"n.eq.DERIVE_TENSOR_NCOMP+1 failed"
+ print *,"n.eq.DERIVE_TENSOR_NCOMP+1 failed: ",n
  stop
 endif
 
@@ -27161,7 +27162,7 @@ do ii=1,3
   endif
 
  else
-  print *,"dumbbell_model invalid"
+  print *,"dumbbell_model invalid: ",dumbbell_model
   stop
  endif
 enddo ! ii=1,3
@@ -27261,17 +27262,19 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) 
     Smult_right(ii,jj)=Smult_left(ii,jj)
    else
-    print *,"dumbbell_model invalid"
+    print *,"dumbbell_model invalid: ",dumbbell_model
     stop
    endif
   else
-   print *,"viscoelastic_model invalid"
+   print *,"viscoelastic_model invalid: ",viscoelastic_model
    stop
   endif
 
   inverse_tol=0.05d0
   inverse_tol_hoop=0.51d0
 
+   !if the CFL condition is satified, then we expect
+   !dt |gradu| <=1
   if (Smult_left(ii,jj).le.-one+inverse_tol) then
    Smult_left(ii,jj)=-one+inverse_tol
   else if (Smult_left(ii,jj).ge.one-inverse_tol) then
@@ -27279,7 +27282,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   else if (abs(Smult_left(ii,jj)).lt.one) then
    ! do nothing
   else
-   print *,"Smult_left(ii,jj) became corrupt"
+   print *,"Smult_left(ii,jj) became corrupt: ",ii,jj, &
+           Smult_left(ii,jj)
    stop
   endif
 
@@ -27290,7 +27294,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   else if (abs(Smult_right(ii,jj)).lt.one) then
    ! do nothing
   else
-   print *,"Smult_right(ii,jj) became corrupt"
+   print *,"Smult_right(ii,jj) became corrupt: ",ii,jj, &
+           Smult_right(ii,jj)
    stop
   endif
 
@@ -27299,8 +27304,15 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
  do ii=1,3
 
-  Smult_left(ii,ii)=Smult_left(ii,ii)+one
-  Smult_right(ii,ii)=Smult_right(ii,ii)+one
+  if (preserve_SPD.eq.1) then
+   Smult_left(ii,ii)=Smult_left(ii,ii)+one
+   Smult_right(ii,ii)=Smult_right(ii,ii)+one
+  else if (preserve_SPD.eq.0) then
+   !do nothing
+  else
+   print *,"preserve_SPD invalid: ",preserve_SPD
+   stop
+  endif
 
    ! Aadvect <-- Q+I
   if (dumbbell_model.eq.1) then
@@ -27400,10 +27412,22 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  do ii=1,3
  do jj=1,3
   SAS(ii,jj)=zero
-  do kk=1,3
-   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
-  enddo
-  Q(ii,jj)=SAS(ii,jj)
+
+  if (preserve_SPD.eq.1) then
+   do kk=1,3
+    SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
+   enddo
+   Q(ii,jj)=SAS(ii,jj)
+  else if (preserve_SPD.eq.0) then
+   do kk=1,3
+    SAS(ii,jj)=SAS(ii,jj)+Aadvect(ii,kk)*Smult_right(jj,kk)
+   enddo
+   Q(ii,jj)=Aadvect(ii,jj)+SA(ii,jj)+SAS(ii,jj)
+  else
+   print *,"preserve_SPD invalid: ",preserve_SPD
+   stop
+  endif
+
  enddo  ! jj=1..3
  enddo  ! ii=1..3
 
@@ -27429,7 +27453,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  else if (force_unity_determinant.eq.0) then
   ! do nothing
  else
-  print *,"force_unity_determinant invalid"
+  print *,"force_unity_determinant invalid: ",force_unity_determinant
   stop
  endif
 
@@ -27559,7 +27583,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    else if (abs(S_hoop).le.half) then
     ! do nothing
    else
-    print *,"S_hoop became corrupt"
+    print *,"S_hoop became corrupt: ",S_hoop
     stop
    endif
    r_hoop=xsten(0,1)
@@ -27576,11 +27600,11 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
        if (improved_hoop.gt.-one) then
         Q(3,3)=improved_hoop
        else
-        print *,"improved_hoop invalid"
+        print *,"improved_hoop invalid: ",improved_hoop
         stop
        endif
       else
-       print *,"expecting Q_coef to be positive"
+       print *,"expecting Q_coef to be positive: ",Q_coef
        stop
       endif
      else
@@ -27595,7 +27619,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      stop
     endif
    else
-    print *,"expecting r_hoop>0"
+    print *,"expecting r_hoop>0: ",r_hoop
     stop
    endif
   else
