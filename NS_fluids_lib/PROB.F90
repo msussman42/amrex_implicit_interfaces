@@ -30952,6 +30952,8 @@ end subroutine initialize2d
       if (nparts*increment.eq.ncomp) then
        !do nothing
       else
+       print *,"put breakpoint here to see the caller"
+       print *,"break PROB.F90:30956"
        print *,"ncomp invalid (fort_group_tensorfill) ",ncomp
        print *,"nparts: ",nparts
        stop
