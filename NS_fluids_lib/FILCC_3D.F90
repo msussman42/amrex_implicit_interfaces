@@ -403,7 +403,8 @@ stop
 
       subroutine local_filcc4D( &
        bfact, &
-       q,scomp, &
+       q, &
+       scomp, &
        domlo,domhi,bc)
       IMPLICIT NONE
 
@@ -785,12 +786,15 @@ stop
       subroutine local_filcc4D_refine( &
        bfact, &
        q, &
-       scomp,ncomp, &
+       scomp, &
+       increment, &
+       ncomp, &
        domlo,domhi, &
        bc)
       IMPLICIT NONE
 
       integer, INTENT(in) :: scomp
+      integer, INTENT(in) :: increment
       integer, INTENT(in) :: ncomp
       integer, INTENT(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
@@ -807,9 +811,16 @@ stop
 #endif
       integer irefine,jrefine,krefine,nrefine_dest
       integer isrc,jsrc,ksrc,nrefine_src
-      integer increment
+      integer increment_test
 
-      increment=4*(AMREX_SPACEDIM-1)
+      increment_test=4*(AMREX_SPACEDIM-1)
+ 
+      if (increment_test.eq.increment) then
+       ! do nothing
+      else
+       print *,"increment invalid: ",increment
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid710: ",bfact
@@ -821,6 +832,13 @@ stop
       else
        print *,"scomp invalid: ",scomp
        print *,"increment: ",increment
+       stop
+      endif
+
+      if (scomp-1+increment.le.ncomp) then
+       ! do nothing
+      else
+       print *,"scomp too big: ",scomp
        stop
       endif
 
@@ -836,6 +854,13 @@ stop
       else
        print *,"ncomp invalid local_filcc4D_refine: ",ncomp
        print *,"increment: ",increment
+       stop
+      endif
+
+      if ((ncomp/increment)*increment.eq.ncomp) then
+       ! do nothing
+      else
+       print *,"ncomp not divisible by increment: ",ncomp
        stop
       endif
 

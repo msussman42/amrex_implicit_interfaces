@@ -23214,7 +23214,8 @@ end subroutine initialize2d
       u_ptr=>u
       do icomp=1,ncomp
        call local_filcc4D(bfact, &
-        u_ptr,icomp, &
+        u_ptr, &
+        icomp, &
         domlo,domhi,bc)
       enddo
 
@@ -28257,13 +28258,13 @@ end subroutine initialize2d
       if ((scomp.ge.0).and.(scomp.lt.SDIM)) then
        ! do nothing
       else
-       print *,"scomp invalid"
+       print *,"scomp invalid: ",scomp
        stop
       endif
       velcomp=scomp+1
 
       if ((velcomp.lt.1).or.(velcomp.gt.SDIM)) then
-       print *,"velcomp invalid"
+       print *,"velcomp invalid: ",velcomp
        stop
       endif
 
@@ -28409,7 +28410,7 @@ end subroutine initialize2d
       if ((scomp.ge.0).and.(scomp.lt.SDIM)) then
        ! do nothing
       else
-       print *,"scomp invalid"
+       print *,"scomp invalid: ",scomp
        stop
       endif
 
@@ -28452,7 +28453,8 @@ end subroutine initialize2d
       u_ptr=>u
       do velcomp=1,SDIM
        call local_filcc4D(bfact, &
-        u_ptr,velcomp, &
+        u_ptr, &
+        velcomp, &
         domlo,domhi, &
         bc)
       enddo ! velcomp
@@ -28819,7 +28821,8 @@ end subroutine initialize2d
       u_ptr=>u
       do velcomp=1,SDIM
        call local_filcc4D(bfact, &
-        u_ptr,velcomp, &
+        u_ptr, &
+        velcomp, &
         domlo,domhi, &
         bc)
       enddo ! velcomp
@@ -29249,7 +29252,8 @@ end subroutine initialize2d
       u_ptr=>u
       do im=1,num_materials*ngeom_raw
        call local_filcc4D(bfact, &
-        u_ptr,im, &
+        u_ptr, &
+        im, &
         domlo,domhi,bc)
       enddo
 
@@ -29491,10 +29495,13 @@ end subroutine initialize2d
        stop
       endif
 
+       ! calling from: fort_group_refine_densityfill
       u_ptr=>u
       call local_filcc4D_refine(bfact, &
        u_ptr, &
-       scomp_data,ncomp, &
+       scomp_data, & !scomp_data=1
+       ncomp, &
+       ncomp, &
        domlo,domhi,bc)
 
       do dir2=1,SDIM
@@ -29737,7 +29744,8 @@ end subroutine initialize2d
       u_ptr=>u
       do im=1,num_materials*ngeom_recon
        call local_filcc4D(bfact, &
-        u_ptr,im, &
+        u_ptr, &
+        im, &
         domlo,domhi,bc)
       enddo
 
@@ -30036,7 +30044,8 @@ end subroutine initialize2d
       do imls=1,ncomp_ho
        call local_filcc4D( &
         bfact, &
-        u_ptr,imls, &
+        u_ptr, &
+        imls, &
         domlo,domhi, &
         bc)
       enddo
@@ -30793,7 +30802,8 @@ end subroutine initialize2d
       u_ptr=>u
       do icomp=1,num_state_material*num_materials
        call local_filcc4D(bfact, &
-        u_ptr,icomp, &
+        u_ptr, &
+        icomp, &
         domlo,domhi,bc)
       enddo
 
@@ -30888,7 +30898,8 @@ end subroutine initialize2d
       u,DIMS(u), &
       domlo,domhi,dx, &
       xlo,time,bc, &
-      scomp,ncomp,bfact) &
+      scomp, &
+      ncomp,bfact) &
       bind(c,name='fort_group_tensorfill')
 
       use filcc_module
@@ -30897,7 +30908,8 @@ end subroutine initialize2d
       IMPLICIT NONE
 
       integer, INTENT(in) :: grid_type
-      integer, INTENT(in) :: scomp,ncomp,bfact,level
+      integer, INTENT(in) :: scomp
+      integer, INTENT(in) :: ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM), xlo(SDIM), time
@@ -30940,7 +30952,7 @@ end subroutine initialize2d
       if (nparts*increment.eq.ncomp) then
        !do nothing
       else
-       print *,"ncomp invalid ",ncomp
+       print *,"ncomp invalid (fort_group_tensorfill) ",ncomp
        print *,"nparts: ",nparts
        stop
       endif
@@ -30980,12 +30992,16 @@ end subroutine initialize2d
       fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
 
+       ! calling from: fort_group_tensorfill
       u_ptr=>u
-      do iparts_local=scomp+1,scomp+ncomp,increment
+      do iparts_local=1,ncomp,increment
        call local_filcc4D_refine(bfact, &
         u_ptr, &
-        iparts_local,increment, &
-        domlo,domhi,bc)
+        iparts_local, &
+        increment, &
+        ncomp, &
+        domlo,domhi, &
+        bc)
       enddo
 
       do dir2=1,SDIM

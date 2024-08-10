@@ -12658,7 +12658,7 @@ end subroutine print_visual_descriptor
       if (data_in%ncomp.ge.1) then
        ! do nothing
       else
-       print *,"ncomp invalid"
+       print *,"ncomp invalid in deriv_from_grid_util"
        stop
       endif
       if (data_in%scomp.ge.1) then
@@ -13203,7 +13203,8 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
  
       type(interp_from_grid_parm_type), INTENT(in) :: data_in 
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: stateptr 
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+          stateptr 
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
       real(amrex_real) :: xsten(-3:3,SDIM)
       real(amrex_real) :: xsten_center(-3:3,SDIM)
@@ -13243,7 +13244,7 @@ end subroutine print_visual_descriptor
       if (data_in%ncomp.ge.1) then
        ! do nothing
       else
-       print *,"ncomp invalid"
+       print *,"ncomp invalid in interp_from_grid_util"
        stop
       endif
       if (data_in%scomp.ge.1) then
@@ -17783,7 +17784,7 @@ end subroutine print_visual_descriptor
       if (ncomp.ge.1) then
        ! do nothing
       else
-       print *,"ncomp invalid"
+       print *,"ncomp invalid in dumpstring_headers_sanity"
        stop
       endif
 
@@ -17955,7 +17956,7 @@ end subroutine print_visual_descriptor
       if (ncomp.ge.1) then
        ! do nothing
       else
-       print *,"ncomp invalid"
+       print *,"ncomp invalid zones_revolve_sanity"
        stop
       endif
 

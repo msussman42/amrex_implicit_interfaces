@@ -24919,7 +24919,7 @@ MultiFab* NavierStokes::getStateSolid (
  if ((nparts<1)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  if (ncomp%AMREX_SPACEDIM!=0)
-  amrex::Error("ncomp invalid");
+  amrex::Error("ncomp invalid in getStateSolid");
  int partid=scomp/AMREX_SPACEDIM;
  if ((partid<0)||(partid>=nparts))
   amrex::Error("partid invalid");
@@ -24946,8 +24946,10 @@ MultiFab* NavierStokes::getStateSolid (
 
 
 MultiFab* NavierStokes::getStateTensor (
-  int ngrow, int  scomp,
-  int ncomp, Real time) {
+  int ngrow, 
+  int scomp, //absolute within the state
+  int ncomp, 
+  Real time) {
 
  if (scomp%ENUM_NUM_TENSOR_TYPE_REFINE==0) {
   //do nothing

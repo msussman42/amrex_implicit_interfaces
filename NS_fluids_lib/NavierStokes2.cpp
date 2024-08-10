@@ -7621,7 +7621,7 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf) {
  int ngrow=mf->nGrow();
 
  if (ncomp!=AMREX_SPACEDIM_SQR)
-  amrex::Error("ncomp invalid");
+  amrex::Error("ncomp invalid in check_for_NAN_TENSOR");
  if (ngrow!=1)
   amrex::Error("ngrow invalid");
 

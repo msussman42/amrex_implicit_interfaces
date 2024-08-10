@@ -708,7 +708,9 @@ StateData::FillBoundary (
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
-                  &time,bcrs.dataPtr(),&sc,&groupsize,&bfact,true);
+                  &time,bcrs.dataPtr(),
+                  &sc,
+                  &groupsize,&bfact,true);
 
                 i += groupsize;
             }
@@ -722,7 +724,9 @@ StateData::FillBoundary (
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
-                  &time,bcr.vect(),&sc,&single_ncomp,&bfact);
+                  &time,bcr.vect(),
+                  &sc,
+                  &single_ncomp,&bfact);
                 i++;
             }
         }
@@ -736,7 +740,9 @@ StateData::FillBoundary (
               &grid_type,
               &level,
               dat,dlo,dhi,plo,phi,dx,xlo,
-              &time,bcr.vect(),&sc,&single_ncomp,&bfact);
+              &time,bcr.vect(),
+              &sc,
+              &single_ncomp,&bfact);
             i++;
         }
     }
@@ -830,7 +836,9 @@ StateData::FillBoundaryGHOST (
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
-                  &time,bcrs.dataPtr(),&sc,&groupsize,&bfact,true);
+                  &time,bcrs.dataPtr(),
+                  &sc,
+                  &groupsize,&bfact,true);
 
                 i += groupsize;
             }
@@ -844,7 +852,9 @@ StateData::FillBoundaryGHOST (
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
-                  &time,bcr.vect(),&sc,&single_ncomp,&bfact);
+                  &time,bcr.vect(),
+                  &sc,
+                  &single_ncomp,&bfact);
                 i++;
             }
         }
