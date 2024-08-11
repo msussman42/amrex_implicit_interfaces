@@ -634,6 +634,20 @@ StateData::FillBoundary (
 
     IndexType local_typ(desc->getType());
 
+    int state_blocking=desc->get_state_blocking();
+
+    if (state_blocking==1) {
+     //do nothing
+    } else if (state_blocking==4*(AMREX_SPACEDIM-1)) {
+     //do nothing
+    } else
+     amrex::Error("state_blocking invalid");
+
+    if (ncomp%state_blocking==0) {
+     //do nothing
+    } else
+     amrex::Error("ncomp%state_blocking==0 failed");
+
     if (dest.box().ixType()==local_typ) {
      // do nothing
     } else
@@ -667,9 +681,16 @@ StateData::FillBoundary (
         const int sc  = scompBC_map[i];
         Real*     dat = dest.dataPtr(dc);
 
-        if (desc->master(sc))
+        if ((desc->master(sc))||(state_blocking>1))
         {
-            int groupsize = desc->groupsize(sc);
+	    int groupsize=0;
+	    if (desc->master(sc)) {
+             groupsize=desc->groupsize(sc);
+	     if ((groupsize+i>ncomp)&&(state_blocking>1))
+              groupsize=std::min(groupsize,state_blocking);
+	    } else {
+	     groupsize=state_blocking;
+	    }
 
             BL_ASSERT(groupsize != 0);
 
@@ -762,6 +783,20 @@ StateData::FillBoundaryGHOST (
 {
     IndexType local_typ(descGHOST->getType());
 
+    int state_blocking=descGHOST->get_state_blocking();
+
+    if (state_blocking==1) {
+     //do nothing
+    } else if (state_blocking==4*(AMREX_SPACEDIM-1)) {
+     //do nothing
+    } else
+     amrex::Error("state_blocking invalid");
+
+    if (ncomp%state_blocking==0) {
+     //do nothing
+    } else
+     amrex::Error("ncomp%state_blocking==0 failed");
+
     if (dest.box().ixType()==local_typ) {
      // do nothing
     } else
@@ -795,9 +830,16 @@ StateData::FillBoundaryGHOST (
         const int sc  = scompBC_map[i];
         Real*     dat = dest.dataPtr(dc);
 
-        if (descGHOST->master(sc))
+        if ((descGHOST->master(sc))||(state_blocking>1))
         {
-            int groupsize = descGHOST->groupsize(sc);
+	    int groupsize=0;
+	    if (descGHOST->master(sc)) {
+             groupsize=descGHOST->groupsize(sc);
+	     if ((groupsize+i>ncomp)&&(state_blocking>1))
+              groupsize=std::min(groupsize,state_blocking);
+	    } else {
+	     groupsize=state_blocking;
+	    }
 
             BL_ASSERT(groupsize != 0);
 

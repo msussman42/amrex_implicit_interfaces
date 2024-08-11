@@ -119,9 +119,6 @@ DescriptorList::reset_bcrecs(int indx,int comp,BCRec bcr) {
  desc[indx]->reset_bcrecs(comp,bcr);
 }   
 
-
-
-
 void
 DescriptorList::resetComponentBCs (int                               indx,
                                    int                               comp,
@@ -174,12 +171,13 @@ DescriptorList::addDescriptor (int indx,
       int                         nextra,
       int                         num_comp, 
       Interpolater*               interp,
-      int                         state_holds_data_in)
+      int                         state_holds_data_in,
+      int                         blocking_in)
 {
     if (indx >= desc.size())
         desc.resize(indx+1);
     desc[indx].reset(new StateDescriptor(typ,indx,nextra,num_comp,
-     interp,state_holds_data_in));
+     interp,state_holds_data_in,blocking_in));
 }  
 
 StateDescriptor::StateDescriptor () noexcept
@@ -188,7 +186,8 @@ StateDescriptor::StateDescriptor () noexcept
     ncomp(0),
     ngrow(0),
     mapper(0),
-    state_holds_data(0)
+    state_holds_data(0),
+    state_blocking(1)
 {}
 
 StateDescriptor::StateDescriptor (IndexType btyp,
@@ -196,14 +195,16 @@ StateDescriptor::StateDescriptor (IndexType btyp,
         int                         nextra, 
         int                         num_comp,
         Interpolater*               interp,
-	int                         state_holds_data_in)
+	int                         state_holds_data_in,
+	int                         blocking_in)
     :
     type(btyp),
     id(ident),
     ncomp(num_comp),
     ngrow(nextra),
     mapper(interp),
-    state_holds_data(state_holds_data_in)
+    state_holds_data(state_holds_data_in),
+    state_blocking(blocking_in)
 {
     BL_ASSERT (num_comp > 0);
    
@@ -320,6 +321,12 @@ StateDescriptor::get_state_holds_data () const noexcept
     return state_holds_data;
 }
 
+int
+StateDescriptor::get_state_blocking () const noexcept
+{
+    return state_blocking;
+}
+
 const StateDescriptor::BndryFunc&
 StateDescriptor::bndryFill (int i) const noexcept
 {
@@ -344,7 +351,8 @@ StateDescriptor::define (IndexType btyp,
       int                         nextra,
       int                         num_comp,
       Interpolater*               interp,
-      int                         state_holds_data_in)
+      int                         state_holds_data_in,
+      int                         blocking_in)
 {
     type     = btyp;
     id       = ident;
@@ -352,6 +360,7 @@ StateDescriptor::define (IndexType btyp,
     ncomp    = num_comp;
     mapper   = interp;
     state_holds_data = state_holds_data_in;
+    state_blocking = blocking_in;
 
     BL_ASSERT (num_comp > 0);
    

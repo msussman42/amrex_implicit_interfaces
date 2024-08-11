@@ -704,6 +704,8 @@ NavierStokes::variableSetUp ()
     
     int null_state_holds_data=0;
     int state_holds_data=1;
+    int default_blocking=1;
+    int refined_blocking=4*(AMREX_SPACEDIM-1);
 
     if ((num_materials<1)||(num_materials>999)) {
      std::cout << "num_materials= " << num_materials << '\n';
@@ -748,9 +750,9 @@ NavierStokes::variableSetUp ()
      // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
     desc_lst.addDescriptor(Umac_Type,TheUMACType,
-       0,1,&umac_interp,state_holds_data);
+       0,1,&umac_interp,state_holds_data,default_blocking);
     desc_lstGHOST.addDescriptor(Umac_Type,TheUMACType,
-       0,1,&umac_interp,null_state_holds_data);
+       0,1,&umac_interp,null_state_holds_data,default_blocking);
     set_x_vel_bc_NS_setup(bc,phys_bc);
 
      // if new parameters added to the FILL routine, then
@@ -769,9 +771,9 @@ NavierStokes::variableSetUp ()
 
      // ngrow=0
     desc_lst.addDescriptor(Vmac_Type,TheVMACType,
-      0,1,&umac_interp,state_holds_data);
+      0,1,&umac_interp,state_holds_data,default_blocking);
     desc_lstGHOST.addDescriptor(Vmac_Type,TheVMACType,
-      0,1,&umac_interp,null_state_holds_data);
+      0,1,&umac_interp,null_state_holds_data,default_blocking);
     set_y_vel_bc_NS_setup(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
@@ -786,9 +788,9 @@ NavierStokes::variableSetUp ()
 
       // ngrow=0
     desc_lst.addDescriptor(Wmac_Type,TheWMACType,
-      0,1,&umac_interp,state_holds_data);
+      0,1,&umac_interp,state_holds_data,default_blocking);
     desc_lstGHOST.addDescriptor(Wmac_Type,TheWMACType,
-      0,1,&umac_interp,null_state_holds_data);
+      0,1,&umac_interp,null_state_holds_data,default_blocking);
     set_z_vel_bc_NS_setup(bc,phys_bc);
 
     std::string w_mac_str="wmac";
@@ -808,10 +810,10 @@ NavierStokes::variableSetUp ()
 // DIV -------------------------------------------
 
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,state_holds_data);
+     1,1,&sem_interp_DEFAULT,state_holds_data,default_blocking);
 
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
-     1,1,&sem_interp_DEFAULT,null_state_holds_data);
+     1,1,&sem_interp_DEFAULT,null_state_holds_data,default_blocking);
 
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
@@ -831,10 +833,10 @@ NavierStokes::variableSetUp ()
     if ((nparts>=1)&&(nparts<num_materials)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,nparts*AMREX_SPACEDIM,&pc_interp,state_holds_data);
+      1,nparts*AMREX_SPACEDIM,&pc_interp,state_holds_data,default_blocking);
 
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,EXTRAP_NCOMP_SOLID,&pc_interp,null_state_holds_data);
+      1,EXTRAP_NCOMP_SOLID,&pc_interp,null_state_holds_data,default_blocking);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -944,7 +946,7 @@ NavierStokes::variableSetUp ()
       1,
       NUM_CELL_ELASTIC_REFINE,
       &refine_elastic_pc_interp,
-      state_holds_data);
+      state_holds_data,refined_blocking);
 
       // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,
@@ -952,7 +954,7 @@ NavierStokes::variableSetUp ()
       1,
       ENUM_NUM_TENSOR_TYPE_REFINE,
       &refine_elastic_pc_interp,
-      null_state_holds_data);
+      null_state_holds_data,refined_blocking);
 
      // setComponent: 0..ENUM_NUM_TENSOR_TYPE_REFINE-1
      // modifies dest_lstGHOST
@@ -1131,14 +1133,14 @@ NavierStokes::variableSetUp ()
       IndexType::TheCellType(),
       1,NUM_CELL_REFINE_DENSITY,
       &refine_density_pc_interp,
-      state_holds_data);
+      state_holds_data,refined_blocking);
 
       // ngrow=1
      desc_lstGHOST.addDescriptor(Refine_Density_Type,
       IndexType::TheCellType(),
       1,EXTRAP_NCOMP_REFINE_DENSITY,
       &refine_density_pc_interp,
-      null_state_holds_data);
+      null_state_holds_data,refined_blocking);
 
      int ibase_refine_density_ghost=0;
 
@@ -1287,7 +1289,7 @@ NavierStokes::variableSetUp ()
     int ncomp_ls=(AMREX_SPACEDIM+1)*num_materials;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_ls,&pc_interp,state_holds_data);
+     1,ncomp_ls,&pc_interp,state_holds_data,default_blocking);
 
      // components 0..num_materials * AMREX_SPACEDIM-1 are for boundary
      // conditions for extrapolated interface normal vectors.
@@ -1299,7 +1301,7 @@ NavierStokes::variableSetUp ()
     int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*num_materials;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
-     1,ncomp_LS_ghost,&pc_interp,null_state_holds_data);
+     1,ncomp_LS_ghost,&pc_interp,null_state_holds_data,default_blocking);
 
     int dcomp=0;
     for (int imls=0;imls<num_materials;imls++) { 
@@ -1472,10 +1474,10 @@ NavierStokes::variableSetUp ()
 // newdata FABS have ncomp=desc->nComp() components.
 //
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,STATE_NCOMP,&pc_interp,state_holds_data);
+     1,STATE_NCOMP,&pc_interp,state_holds_data,default_blocking);
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,EXTRAP_NCOMP,&pc_interp,null_state_holds_data);
+     1,EXTRAP_NCOMP,&pc_interp,null_state_holds_data,default_blocking);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);
