@@ -30947,6 +30947,14 @@ end subroutine initialize2d
        stop
       endif
 
+      if ((ncomp/ENUM_NUM_TENSOR_TYPE_REFINE)*ENUM_NUM_TENSOR_TYPE_REFINE.eq. &
+          ncomp) then
+       !do nothing
+      else
+       print *,"ncomp not divisible by ENUM_NUM_TENSOR_TYPE_REFINE: ",ncomp
+       stop
+      endif
+
       increment=4*(AMREX_SPACEDIM-1)
       nparts=ncomp/increment
       if (nparts*increment.eq.ncomp) then
