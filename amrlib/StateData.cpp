@@ -679,17 +679,30 @@ StateData::FillBoundary (
     {
         const int dc  = dcomp+dc_offset;
         const int sc  = scompBC_map[i];
+
         Real*     dat = dest.dataPtr(dc);
 
         if ((desc->master(sc))||(state_blocking>1))
         {
+            int sc_group=sc;
+
 	    int groupsize=0;
 	    if (desc->master(sc)) {
              groupsize=desc->groupsize(sc);
 	     if ((groupsize+i>ncomp)&&(state_blocking>1))
               groupsize=std::min(groupsize,state_blocking);
-	    } else {
+	    } else if (state_blocking>1) {
+
+  	     sc_group=0;
+	     if (desc->master(sc_group)) {
+	      //do nothing
+	     } else
+	      amrex::Error("expecting desc->master(sc_group)==true");
+
 	     groupsize=state_blocking;
+
+	    } else {
+ 	     amrex::Error("expecting state_blocking>1");
 	    }
 
             BL_ASSERT(groupsize != 0);
@@ -725,7 +738,7 @@ StateData::FillBoundary (
                 //
                 // Use the "group" boundary fill routine.
                 //
-                desc->bndryFill(sc)(
+                desc->bndryFill(sc_group)(
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
@@ -832,13 +845,25 @@ StateData::FillBoundaryGHOST (
 
         if ((descGHOST->master(sc))||(state_blocking>1))
         {
+            int sc_group=sc;
+
 	    int groupsize=0;
 	    if (descGHOST->master(sc)) {
              groupsize=descGHOST->groupsize(sc);
 	     if ((groupsize+i>ncomp)&&(state_blocking>1))
               groupsize=std::min(groupsize,state_blocking);
-	    } else {
+	    } else if (state_blocking>1) {
+
+  	     sc_group=0;
+	     if (descGHOST->master(sc_group)) {
+	      //do nothing
+	     } else
+	      amrex::Error("expecting descGHOST->master(sc_group)==true");
+
 	     groupsize=state_blocking;
+
+	    } else {
+ 	     amrex::Error("expecting state_blocking>1");
 	    }
 
             BL_ASSERT(groupsize != 0);
@@ -874,7 +899,7 @@ StateData::FillBoundaryGHOST (
                 //
                 // Use the "group" boundary fill routine.
                 //
-                descGHOST->bndryFill(sc)(
+                descGHOST->bndryFill(sc_group)(
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,

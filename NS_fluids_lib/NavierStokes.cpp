@@ -11049,28 +11049,21 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
    ns_level.avgDown_refine_tensor_localMF(scomp,VISCOTEN_MF);
   }
 
- } //scomp
+ } //scomp=0 ... ENUM_NUM_TENSOR_TYPE_REFINE-1
 
+ Vector<int> scompBC_map;
+ scompBC_map.resize(ENUM_NUM_TENSOR_TYPE_REFINE);
  for (int scomp_extrap=0;
-      scomp_extrap<ENUM_NUM_TENSOR_TYPE;
+      scomp_extrap<ENUM_NUM_TENSOR_TYPE_REFINE;
       scomp_extrap++) {
-  Vector<int> scompBC_map;
-   // desc_lstGHOST.setComponent(Tensor_Type, ...
-   // "set_tensor_bc", tensor_pc_interp 
-   // fort_extrapfill
-   // (i.e. the coarse/fine BC and physical BC will be low order)
-  scompBC_map.resize(ENUM_NUM_REFINE_DENSITY_TYPE);
-  for (int increment=0;
-       increment<ENUM_NUM_REFINE_DENSITY_TYPE;
-       increment++) {
-   scompBC_map[increment]=scomp_extrap*ENUM_NUM_REFINE_DENSITY_TYPE+increment;
-  }
+  scompBC_map[scomp_extrap]=scomp_extrap;
+ }
+
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(VISCOTEN_MF,1,
-    scomp_extrap*ENUM_NUM_REFINE_DENSITY_TYPE,
-    ENUM_NUM_REFINE_DENSITY_TYPE,
+ PCINTERP_fill_bordersALL(VISCOTEN_MF,1,
+    0,
+    ENUM_NUM_TENSOR_TYPE_REFINE,
     Tensor_Type,scompBC_map);
- } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 
  override_enable_spectral(push_enable_spectral);
 
