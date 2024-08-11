@@ -109,7 +109,8 @@ public:
                      int           nextra,
                      int           num_comp,
                      Interpolater* interp,
-		     int           state_holds_data_in); 
+		     int           state_holds_data_in,
+		     int           blocking_in); 
     //
     // The destructor.
     //
@@ -122,7 +123,8 @@ public:
                  int           nextra,
                  int           num_comp,
                  Interpolater* interp,
-		 int           state_holds_data_in);  
+		 int           state_holds_data_in,
+		 int           blocking_in);  
     //
     // Sets details of comp component.
     //
@@ -227,6 +229,7 @@ public:
       sameInterps (Vector<int> scompBC_map, int ncomp_in) const;
 
     int get_state_holds_data () const noexcept;
+    int get_state_blocking () const noexcept;
 
     bool master (int i) const { return m_master[i]; }
 
@@ -240,6 +243,7 @@ private:
     int                ngrow;    // Grow factor
     Interpolater*      mapper;   // Default interpolator
     int                state_holds_data; //used by "get_state_holds_data()"
+    int                state_blocking;
     Vector<std::string> names;    // Printable names of components
     Vector<BCRec>       bc;       // Array of bndry types for entire level
      //!< Array of pointers to bndry fill functions
@@ -297,7 +301,8 @@ public:
           int                         nextra,
           int                         num_comp,
           Interpolater*               interp,
-	  int                         state_holds_data_in); 
+	  int                         state_holds_data_in,
+	  int                         blocking_in); 
     //
     // Calls resetComponentBCs() on StateDescriptor at index indx.
     //
