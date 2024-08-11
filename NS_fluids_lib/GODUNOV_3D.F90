@@ -8326,9 +8326,9 @@ stop
 
       real(amrex_real), INTENT(in), target :: xmac(DIMV(xmac))
       real(amrex_real), pointer :: xmac_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: ymac(DIMV(xmac))
+      real(amrex_real), INTENT(in), target :: ymac(DIMV(ymac))
       real(amrex_real), pointer :: ymac_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: zmac(DIMV(xmac))
+      real(amrex_real), INTENT(in), target :: zmac(DIMV(zmac))
       real(amrex_real), pointer :: zmac_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(out), target :: &
