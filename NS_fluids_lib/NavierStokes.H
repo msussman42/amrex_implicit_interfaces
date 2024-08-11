@@ -573,7 +573,7 @@ protected:
         int scomp,int ncomp,int enable_spectral_in);
 
     static void set_tensor_extrap_components(
-      int coord,std::string postfix,int indx,int ibase_tensor);
+      int coord,int indx,int ibase_tensor);
 
     void sum_integrated_quantities (
      const std::string& caller_string,

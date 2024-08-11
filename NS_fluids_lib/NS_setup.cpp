@@ -442,16 +442,17 @@ NavierStokes::override_enable_spectralGHOST(
 
 void
 NavierStokes::set_tensor_extrap_components(
-  int coord,std::string postfix,
+  int coord,
   int indx,
   int ibase_tensor) {
 
  BCRec bc;
 
- if (ibase_tensor>=0) {
-  // do nothing
+ if (((ibase_tensor==0)&&(indx==Tensor_Type))||
+     ((ibase_tensor==EXTRAPCOMP_ELASTIC)&&(indx==State_Type))) {
+  //do nothing
  } else
-  amrex::Error("ibase_tensor invalid");
+  amrex::Error("expecting ibase_tensor==0 or EXTRAPCOMP_ELASTIC");
 
  int ibase_tensor_local=ibase_tensor;
 
@@ -463,18 +464,20 @@ NavierStokes::set_tensor_extrap_components(
  int refine_flag=0;
  int increment=1;
  int ijk_index=0;
- Interpolater* local_interp=&pc_interp;
- const StateDescriptor::BndryFunc& local_fill=
-   ((indx==State_Type) ? fort_extrapfill : fort_group_tensorfill);
 
  if (indx==State_Type) {
   //do nothing
  } else if (indx==Tensor_Type) {
   refine_flag=1;
   increment=ENUM_NUM_REFINE_DENSITY_TYPE;
-  local_interp=&refine_elastic_pc_interp;
  } else
   amrex::Error("expecting indx=State_Type or Tensor_Type"); 
+
+ Vector<std::string> tensor_names;
+ tensor_names.resize(ENUM_NUM_TENSOR_TYPE*increment);
+
+ Vector<BCRec> tensor_bcs;
+ tensor_bcs.resize(ENUM_NUM_TENSOR_TYPE*increment);
 
  int k=0;
 #if (AMREX_SPACEDIM==3)
@@ -500,27 +503,51 @@ NavierStokes::set_tensor_extrap_components(
   ibase_tensor_local=ibase_tensor+ijk_index;
 
   // no EXT_DIR BCs
+  set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,0,0);
   set_tensor_bc(bc,phys_bc,0,0);
-  std::string T11_strE="T11extrap"+ijk_str+postfix; 
+  std::string T11_strE="T11extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T11_strE;
+
   // low order extrapolation (if EXT_DIR BCs were present)
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T11_strE,bc,local_fill,local_interp);
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+       T11_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
 
   ibase_tensor_local+=increment;
      
   // no EXT_DIR BCs
+  set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,0,1);
   set_tensor_bc(bc,phys_bc,0,1);
-  std::string T12_strE="T12extrap"+ijk_str+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T12_strE,bc,local_fill,local_interp);
+  std::string T12_strE="T12extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T12_strE;
+
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+     T12_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
 
   ibase_tensor_local+=increment;
      
   // no EXT_DIR BCs
+  set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,1,1);
   set_tensor_bc(bc,phys_bc,1,1);
-  std::string T22_strE="T22extrap"+ijk_str+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T22_strE,bc,local_fill,local_interp);
+  std::string T22_strE="T22extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T22_strE;
+
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+    T22_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
 
   ibase_tensor_local+=increment;
     
@@ -528,48 +555,77 @@ NavierStokes::set_tensor_extrap_components(
    if (coord == COORDSYS_RZ) {
     // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
+    set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else if (coord == COORDSYS_CARTESIAN) {
     // placeholder: Q33 should always be 0
     // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
+    set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else if (coord == COORDSYS_CYLINDRICAL) {
     // placeholder: Q33 should always be 0
     // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
+    set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else
     amrex::Error("coord invalid");
   } else if (AMREX_SPACEDIM==3) {
    if (coord == COORDSYS_CARTESIAN) {
     // no EXT_DIR BCs
     set_tensor_bc(bc,phys_bc,2,2);
+    set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
    } else if (coord == COORDSYS_CYLINDRICAL) {
     // no EXT_DIR BCs
     set_tensor_bc(bc,phys_bc,2,2);
+    set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
    } else
     amrex::Error("coord invalid");
   } else
    amrex::Error("sdim invalid");
  
-  std::string T33_strE="T33extrap"+ijk_str+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T33_strE,bc,local_fill,local_interp);
+  std::string T33_strE="T33extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T33_strE;
+
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+    T33_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
 
 #if (AMREX_SPACEDIM == 3)
   ibase_tensor_local+=increment;
 
    // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,0,2);
-  std::string T13_strE="T13extrap"+ijk_str+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-     T13_strE,bc,local_fill,local_interp);
+  set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,0,2);
+  std::string T13_strE="T13extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T13_strE;
+
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+      T13_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
      
   ibase_tensor_local+=increment;
      
     // no EXT_DIR BCs
   set_tensor_bc(bc,phys_bc,1,2);
-  std::string T23_strE="T23extrap"+ijk_str+postfix; 
-  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-    T23_strE,bc,local_fill,local_interp);
+  set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,1,2);
+  std::string T23_strE="T23extrap"+ijk_str; 
+  tensor_names[ibase_tensor_local-ibase_tensor]=T23_strE;
+
+  if (indx==State_Type) {
+   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
+     T23_strE,bc,fort_extrapfill,&pc_interp);
+  } else if (indx==Tensor_Type) {
+   //do nothing
+  } else
+   amrex::Error("indx invalid");
+
 #endif
 
   ijk_index++;
@@ -587,6 +643,21 @@ NavierStokes::set_tensor_extrap_components(
   std::cout << "ibase_tensor_local=" << ibase_tensor_local << '\n';
   amrex::Error("ibase_tensor_local invalid");
  }
+
+ if (indx==State_Type) {
+  //do nothing
+ } else if (indx==Tensor_Type) {
+  StateDescriptor::BndryFunc tensor_fill_class(
+    fort_group_tensorfill,
+    fort_group_tensorfill);
+  desc_lstGHOST.setComponent(indx,
+   ibase_tensor,
+   tensor_names,
+   tensor_bcs,
+   tensor_fill_class,
+   &refine_elastic_pc_interp);
+ } else
+  amrex::Error("indx invalid");
 
 } // end subroutine set_tensor_extrap_components
 
@@ -638,9 +709,6 @@ NavierStokes::variableSetUp ()
      std::cout << "num_materials= " << num_materials << '\n';
      amrex::Error("num_materials invalid in ns setup variable setup");
     }
-
-
-    std::string CC_postfix_str="CC";
 
     BCRec bc;
 
@@ -888,7 +956,7 @@ NavierStokes::variableSetUp ()
 
      // setComponent: 0..ENUM_NUM_TENSOR_TYPE_REFINE-1
      // modifies dest_lstGHOST
-     set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
+     set_tensor_extrap_components(coord,Tensor_Type,0);
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
@@ -911,7 +979,6 @@ NavierStokes::variableSetUp ()
       int ibase_tensor=0;
       int ijk_index=0;
       int increment=ENUM_NUM_REFINE_DENSITY_TYPE;
-      Interpolater* local_interp=&refine_elastic_pc_interp;
 
       int k=0;
 #if (AMREX_SPACEDIM==3)
@@ -1027,7 +1094,7 @@ NavierStokes::variableSetUp ()
        MOFvelocity_names_tensor,
        MOFvelocity_bcs_tensor,
        MOFvelocity_fill_class_tensor,
-       local_interp);
+       &refine_elastic_pc_interp);
 
      } // partid=0..nparts-1
 
@@ -1659,8 +1726,7 @@ NavierStokes::variableSetUp ()
 
      // setComponent: 0..ENUM_NUM_TENSOR_TYPE-1
      // modifies dest_lstGHOST
-    set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
-		    EXTRAPCOMP_ELASTIC);
+    set_tensor_extrap_components(coord,State_Type,EXTRAPCOMP_ELASTIC);
 
     Vector<std::string> DRAG_names;
     DRAG_names.resize(N_DRAG);
