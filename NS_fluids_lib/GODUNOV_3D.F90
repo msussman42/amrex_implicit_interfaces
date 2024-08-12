@@ -18982,6 +18982,7 @@ stop
        print *,"bfact invalid"
        stop
       endif
+
       if ((force_dir.ge.0).and.(force_dir.lt.SDIM)) then
        ! do nothing
       else
@@ -19167,7 +19168,7 @@ stop
 #endif
         do jofs=0,1
         do iofs=0,1
-         CC_weight=CC_weight+1
+         CC_weight=CC_weight+one
          nrefine2=4*kofs+2*jofs+iofs+1
 
          do side=1,2
@@ -19180,7 +19181,7 @@ stop
            jmajor=j
            kmajor=k
           else
-           print *,"side invalid"
+           print *,"side invalid: ",side
            stop
           endif
           QCC(side)=QCC(side)+ &
@@ -19196,7 +19197,7 @@ stop
          QCC(1)=QCC(1)/CC_weight
          QCC(2)=QCC(2)/CC_weight
         else
-         print *,"CC_weight invalid"
+         print *,"CC_weight invalid: ",CC_weight
          stop
         endif
 
@@ -19213,8 +19214,45 @@ stop
         endif
         QCC(2)=QCC(2)*H_corner 
 
+        rplus=one
+        rminus=one
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         !do nothing
+        else if ((levelrz.eq.COORDSYS_RZ).or. &
+                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         if (force_dir.eq.0) then
+          rplus=xsten(1,force_dir+1)
+          rminus=xsten(-1,force_dir+1)
+         else if ((force_dir.eq.1).or.(force_dir.eq.SDIM-1)) then
+          !do nothing
+         else
+          print *,"force_dir invalid: ",force_dir
+          stop
+         endif
+        else
+         print *,"levelrz invalid: ",levelrz
+         stop
+        endif
+       
+        if ((rplus.gt.zero).and.(rminus.gt.zero)) then
+         QCC(1)=QCC(1)*rminus
+         QCC(2)=QCC(2)*rplus
+        else
+         print *,"rplus or rminus invalid"
+         stop
+        endif
 
 ! ITAN edge centered variable
+
+        if ((itan_dir.ge.0).and.(itan_dir.lt.SDIM).and. &
+            (itan_dir.ne.force_dir).and. &
+            (itan_dir.ne.jtan_dir)) then
+         !do nothing
+        else
+         print *,"itan_dir invalid"
+         stop
+        endif
+
         Q_ITAN(1)=zero
         Q_ITAN(2)=zero
         CC_weight=zero
@@ -19230,15 +19268,15 @@ stop
 #endif
         do jofs=0,1
         do iofs=0,1
-         CC_weight=CC_weight+1
+         CC_weight=CC_weight+one
 
          local_sub_index(1)=iofs
          local_sub_index(2)=jofs
          local_sub_index(3)=kofs
 
-         irefine(1)=0
-         irefine(2)=0
-         irefine(3)=0
+         irefine(1)=iofs
+         irefine(2)=jofs
+         irefine(3)=kofs
 
          do side=1,2
 
@@ -19253,7 +19291,8 @@ stop
            kmajor=k
            irefine(force_dir+1)=0
           else
-           print *,"local_sub_index(force_dir+1) invalid"
+           print *,"local_sub_index(force_dir+1) invalid: ", &
+              force_dir,local_sub_index(force_dir+1)
            stop
           endif
           if (side.eq.1) then
@@ -19265,7 +19304,8 @@ stop
            else if (local_sub_index(itan_dir+1).eq.1) then
             irefine(itan_dir+1)=0
            else
-            print *,"local_sub_index(itan_dir+1) invalid"
+            print *,"local_sub_index(itan_dir+1) invalid: ", &
+              itan_dir,local_sub_index(itan_dir+1)
             stop
            endif
           else if (side.eq.2) then
@@ -19277,20 +19317,32 @@ stop
            else if (local_sub_index(itan_dir+1).eq.0) then
             irefine(itan_dir+1)=1
            else
-            print *,"local_sub_index(itan_dir+1) invalid"
+            print *,"local_sub_index(itan_dir+1) invalid: ", &
+              itan_dir,local_sub_index(itan_dir+1)
             stop
            endif
           else
-           print *,"side invalid"
+           print *,"side invalid: ",side
            stop
           endif
+
+          if (SDIM.eq.2) then
+           if (jtan_dir.eq.2) then
+            !do nothing
+           else
+            print *,"expecting jtan_dir==2"
+            stop
+           endif
+          endif
+
 #if (AMREX_SPACEDIM==3)
           if (local_sub_index(jtan_dir+1).eq.0) then
            irefine(jtan_dir+1)=0
           else if (local_sub_index(jtan_dir+1).eq.1) then
            irefine(jtan_dir+1)=1
           else
-           print *,"local_sub_index(jtan_dir+1) invalid"
+           print *,"local_sub_index(jtan_dir+1) invalid: ", &
+              jtan_dir,local_sub_index(jtan_dir+1)
            stop
           endif
 #endif
@@ -19310,7 +19362,7 @@ stop
             LS_TOP(im_LS)=LS_TOP(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else
-            print *,"side invalid"
+            print *,"side invalid: ",side
             stop
            endif
           enddo !im_LS
@@ -19335,6 +19387,7 @@ stop
          else
           H_corner=zero
          endif
+        
          Q_ITAN(1)=Q_ITAN(1)*H_corner 
          if (im_primary_top.eq.im_viscoelastic_p1) then
           H_corner=one
@@ -19347,9 +19400,46 @@ stop
          stop
         endif
 
+        rplus=one
+        rminus=one
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         !do nothing
+        else if ((levelrz.eq.COORDSYS_RZ).or. &
+                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         if (itan_dir.eq.0) then
+          rplus=xsten(1,itan_dir+1)
+          rminus=xsten(-1,itan_dir+1)
+         else if (itan_dir.eq.1) then
+          !do nothing
+         else
+          print *,"itan_dir invalid: ",itan_dir
+          stop
+         endif
+        else
+         print *,"levelrz invalid: ",levelrz
+         stop
+        endif
+       
+        if ((rplus.gt.zero).and.(rminus.gt.zero)) then
+         Q_ITAN(1)=Q_ITAN(1)*rminus
+         Q_ITAN(2)=Q_ITAN(2)*rplus
+        else
+         print *,"rplus or rminus invalid"
+         stop
+        endif
+
+
 #if (AMREX_SPACEDIM==3)
 
 ! JTAN edge centered variable
+
+        if ((jtan_dir.eq.1).or.(jtan_dir.eq.SDIM-1)) then
+         !do nothing
+        else
+         print *,"jtan_dir invalid: ",jtan_dir
+         stop
+        endif
+
         Q_JTAN(1)=zero
         Q_JTAN(2)=zero
         CC_weight=zero
@@ -19362,15 +19452,15 @@ stop
         do kofs=0,1
         do jofs=0,1
         do iofs=0,1
-         CC_weight=CC_weight+1
+         CC_weight=CC_weight+one
 
          local_sub_index(1)=iofs
          local_sub_index(2)=jofs
          local_sub_index(3)=kofs
 
-         irefine(1)=0
-         irefine(2)=0
-         irefine(3)=0
+         irefine(1)=iofs
+         irefine(2)=jofs
+         irefine(3)=kofs
 
          do side=1,2
 
@@ -19385,7 +19475,8 @@ stop
            kmajor=k
            irefine(force_dir+1)=0
           else
-           print *,"local_sub_index(force_dir+1) invalid"
+           print *,"local_sub_index(force_dir+1) invalid: ", &
+              force_dir,local_sub_index(force_dir+1)
            stop
           endif
           if (side.eq.1) then
@@ -19397,7 +19488,8 @@ stop
            else if (local_sub_index(jtan_dir+1).eq.1) then
             irefine(jtan_dir+1)=0
            else
-            print *,"local_sub_index(jtan_dir+1) invalid"
+            print *,"local_sub_index(jtan_dir+1) invalid: ", &
+              jtan_dir,local_sub_index(jtan_dir+1)
             stop
            endif
           else if (side.eq.2) then
@@ -19409,11 +19501,12 @@ stop
            else if (local_sub_index(jtan_dir+1).eq.0) then
             irefine(jtan_dir+1)=1
            else
-            print *,"local_sub_index(jtan_dir+1) invalid"
+            print *,"local_sub_index(jtan_dir+1) invalid: ", &
+              jtan_dir,local_sub_index(jtan_dir+1)
             stop
            endif
           else
-           print *,"side invalid"
+           print *,"side invalid: ",side
            stop
           endif
           if (local_sub_index(itan_dir+1).eq.0) then
@@ -19421,7 +19514,8 @@ stop
           else if (local_sub_index(itan_dir+1).eq.1) then
            irefine(itan_dir+1)=1
           else
-           print *,"local_sub_index(itan_dir+1) invalid"
+           print *,"local_sub_index(itan_dir+1) invalid: ", &
+              itan_dir,local_sub_index(itan_dir+1)
            stop
           endif
           irefine2=irefine(1)
@@ -19441,10 +19535,11 @@ stop
             LS_TOP(im_LS)=LS_TOP(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else
-            print *,"side invalid"
+            print *,"side invalid: ",side
             stop
            endif
           enddo !im_LS
+
          enddo !side=1,2
         enddo ! iofs
         enddo ! jofs
@@ -19476,14 +19571,18 @@ stop
         Q_JTAN(2)=Q_JTAN(2)*H_corner 
 #endif
 
+        d_tensor(force_dir+1)=QCC(2)-QCC(1)
+        dx_local(force_dir+1)=x_right(force_dir+1)-x_left(force_dir+1)
 
+        d_tensor(itan_dir+1)=Q_ITAN(2)-Q_ITAN(1)
+        dx_local(itan_dir+1)=xsten(1,itan_dir+1)-xsten(-1,itan_dir+1)
 
+#if (AMREX_SPACEDIM==3)
+        d_tensor(jtan_dir+1)=Q_JTAN(2)-Q_JTAN(1)
+        dx_local(jtan_dir+1)=xsten(1,jtan_dir+1)-xsten(-1,jtan_dir+1)
+#endif
 
         div_term=zero
-        do deriv_dir=0,SDIM-1
-         d_tensor(deriv_dir+1)=zero
-         dx_local(deriv_dir+1)=zero
-        enddo
         hoop22=zero
         hoop12=zero
         hoop_weight=zero
@@ -19498,171 +19597,54 @@ stop
          local_sub_index(2)=jofs
          local_sub_index(3)=kofs
 
-         local_LS_index(1)=i-ii
-         local_LS_index(2)=j-jj
-         local_LS_index(3)=k-kk
-
-         irefine(1)=0
-         irefine(2)=0
-         irefine(3)=0
+         irefine(1)=iofs
+         irefine(2)=jofs
+         irefine(3)=kofs
 
          if (local_sub_index(force_dir+1).eq.0) then
           imajor=i-ii
           jmajor=j-jj
           kmajor=k-kk
           irefine(force_dir+1)=1
-          xsub(force_dir+1)= &
-           half*(xsten(-1,force_dir+1)+xsten(0,force_dir+1))
          else if (local_sub_index(force_dir+1).eq.1) then
           imajor=i
           jmajor=j
           kmajor=k
           irefine(force_dir+1)=0
-          xsub(force_dir+1)= &
-           half*(xsten(1,force_dir+1)+xsten(0,force_dir+1))
          else
-          print *,"local_sub_index(force_dir+1) invalid"
-          stop
-         endif
-         if (local_sub_index(itan_dir+1).eq.0) then
-          irefine(itan_dir+1)=0
-          xsub(itan_dir+1)= &
-           half*(xsten(-1,itan_dir+1)+xsten(0,itan_dir+1))
-
-          local_LS_index(itan_dir+1)=local_index(itan_dir+1)-1
-         else if (local_sub_index(itan_dir+1).eq.1) then
-          irefine(itan_dir+1)=1
-          xsub(itan_dir+1)= &
-           half*(xsten(1,itan_dir+1)+xsten(0,itan_dir+1))
-
-          local_LS_index(itan_dir+1)=local_index(itan_dir+1)
-         else
-          print *,"local_sub_index(itan_dir+1) invalid"
+          print *,"local_sub_index(force_dir+1) invalid: ", &
+           force_dir,local_sub_index(force_dir+1)
           stop
          endif
  
-#if (AMREX_SPACEDIM==3)
-         if (local_sub_index(jtan_dir+1).eq.0) then
-          irefine(jtan_dir+1)=0
-          xsub(jtan_dir+1)= &
-           half*(xsten(-1,jtan_dir+1)+xsten(0,jtan_dir+1))
-
-          local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)-1
-         else if (local_sub_index(jtan_dir+1).eq.1) then
-          irefine(jtan_dir+1)=1
-          xsub(jtan_dir+1)= &
-           half*(xsten(1,jtan_dir+1)+xsten(0,jtan_dir+1))
-
-          local_LS_index(jtan_dir+1)=local_index(jtan_dir+1)
-         else
-          print *,"local_sub_index(jtan_dir+1) invalid"
-          stop
-         endif
-#endif
-
-         icorner=local_LS_index(1)
-         jcorner=local_LS_index(2)
-         kcorner=local_LS_index(3)
-
-         do im_LS=1,num_materials
-          LS_corner(im_LS)=zero
-         enddo
-         LS_corner_weight=zero
-
-         k_LS=0
-#if (AMREX_SPACEDIM==3)
-         do k_LS=kcorner,kcorner+1
-#endif
-         do j_LS=jcorner,jcorner+1
-         do i_LS=icorner,icorner+1
-          call gridsten_level(local_xsten,i_LS,j_LS,k_LS,level,nhalf)
-          local_weight=zero
-          do local_dir=1,SDIM
-           local_weight=local_weight+ &
-             (local_xsten(0,local_dir)-xsub(local_dir))**2
-          enddo
-          if (local_weight.gt.zero) then
-           local_weight=one/local_weight
-          else
-           print *,"local_weight invalid: ",local_weight
-           stop
-          endif          
-          do im_LS=1,num_materials
-           LS_corner(im_LS)=LS_corner(im_LS)+local_weight* &
-             levelpc(D_DECL(i_LS,j_LS,k_LS),im_LS)
-          enddo
-          LS_corner_weight=LS_corner_weight+local_weight
-         enddo !i_LS=icorner,icorner+1
-         enddo !j_LS=jcorner,jcorner+1
-#if (AMREX_SPACEDIM==3)
-         enddo !k_LS=kcorner,kcorner+1
-#endif
-         if (LS_corner_weight.gt.zero) then
-          do im_LS=1,num_materials
-           LS_corner(im_LS)=LS_corner(im_LS)/LS_corner_weight
-          enddo
-         else
-          print *,"LS_corner_weight invalid: ",LS_corner_weight
-          stop
-         endif
-         call get_primary_material(LS_corner,im_primary_corner)
-
-         if (im_primary_corner.eq.im_viscoelastic_p1) then
-          H_corner=one
-         else
-          H_corner=zero
-         endif
-
          irefine2=irefine(1)
          jrefine2=irefine(2)
          krefine2=irefine(3)
          nrefine2=4*krefine2+2*jrefine2+irefine2+1
 
          if (levelrz.eq.COORDSYS_CARTESIAN) then
-          r_weight=one
+          !do nothing
          else if (levelrz.eq.COORDSYS_RZ) then
-          r_weight=xsub(1)
           one_dim_index=4
-          hoop_weight=hoop_weight+H_corner
+          hoop_weight=hoop_weight+one
           hoop22=hoop22+ &
-           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          r_weight=xsub(1)
-          hoop_weight=hoop_weight+H_corner
+          hoop_weight=hoop_weight+one
           call inverse_stress_index(one_dim_index,1,2)
           hoop12=hoop12+ &
-           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
           call inverse_stress_index(one_dim_index,2,2)
           hoop22=hoop22+ &
-           H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
          else
           print *,"levelrz invalid: ",levelrz
           stop
          endif
  
-         do deriv_dir=0,SDIM-1
-          if (deriv_dir.eq.0) then
-           r_mult=r_weight
-          else
-           r_mult=one
-          endif
-          if (local_sub_index(deriv_dir+1).eq.0) then
-           sign_term=-one
-          else       
-           sign_term=one
-          endif
-          dx_local(deriv_dir+1)=dx_local(deriv_dir+1)+ &
-            sign_term*xsub(deriv_dir+1)
-          call inverse_stress_index(one_dim_index,force_dir+1,deriv_dir+1)
-          d_tensor(deriv_dir+1)=d_tensor(deriv_dir+1)+ &
-           r_mult* &
-           sign_term*H_corner*tensorfab(D_DECL(imajor,jmajor,kmajor), &
-             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
-         enddo !deriv_dir=0 ... sdim-1
-
         enddo !iofs=0,1
         enddo !jofs=0,1
 #if (AMREX_SPACEDIM==3)
@@ -19693,10 +19675,8 @@ stop
           else if ((deriv_dir.eq.1).and.(force_dir.eq.0)) then
            if (hoop_weight.gt.zero) then
             dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
-           else if (hoop_weight.eq.zero) then
-            !do nothing
            else
-            print *,"hoop_weight invalid"
+            print *,"hoop_weight invalid: ",hoop_weight
             stop
            endif
           endif
@@ -19719,10 +19699,8 @@ stop
             else if (force_dir.eq.1) then
              dTdx=dTdx-hoop12/(hoop_weight*xsten(0,1))
             endif
-           else if (hoop_weight.eq.zero) then
-            !do nothing
            else
-            print *,"hoop_weight invalid"
+            print *,"hoop_weight invalid: ",hoop_weight
             stop
            endif
           endif
