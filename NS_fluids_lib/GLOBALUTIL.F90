@@ -26629,7 +26629,9 @@ real(amrex_real) Q_coef
 real(amrex_real) improved_hoop
 real(amrex_real) force_unity_determinant
 integer unity_det
-integer, parameter :: preserve_SPD=0
+
+integer, parameter :: preserve_SPD=1
+
 integer, parameter :: nhalf=3
 real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
@@ -26809,7 +26811,7 @@ do jj=1,3 !deriv dir
   jofs2=jofs
   kofs2=kofs
 
-  if (ii.eq.1) then !veldir (ii)
+  if (ii.eq.1) then !veldir (ii) xmac (umac)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
@@ -26856,7 +26858,7 @@ do jj=1,3 !deriv dir
     stop
    endif 
 
-  else if (ii.eq.2) then !veldir="v" (ii)
+  else if (ii.eq.2) then !veldir="v" (ii) ymac (vmac)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
@@ -26903,7 +26905,7 @@ do jj=1,3 !deriv dir
     stop
    endif 
 
-  else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then
+  else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then ! zmac (wmac)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
