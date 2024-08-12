@@ -18878,35 +18878,36 @@ stop
       integer, INTENT(in) :: rzflag 
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       integer :: i,j,k
-      integer :: i_LS,j_LS,k_LS
       integer :: imajor,jmajor,kmajor
-      integer :: icorner,jcorner,kcorner
       integer :: ii,jj,kk
+      integer :: ii_itan,jj_itan,kk_itan
+      integer :: ii_jtan,jj_jtan,kk_jtan
       integer :: iofs,jofs,kofs
       integer :: irefine2,jrefine2,krefine2,nrefine2,one_dim_index
       integer :: itan_dir,jtan_dir
       integer :: local_index(3)
       integer :: local_sub_index(3)
-      integer :: local_LS_index(3)
       integer :: irefine(3)
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) :: local_xsten(-nhalf:nhalf,SDIM)
       integer im_viscoelastic_p1
       integer im_LS
-      integer local_dir,deriv_dir,side
+      integer local_dir,deriv_dir
+      integer side
       integer on_the_wall
       integer im_primary_left
       integer im_primary_right
-      integer im_primary_corner
+      integer im_primary_face
+      integer im_primary_top
+      integer im_primary_bottom
       real(amrex_real) H_corner
-      real(amrex_real) xsub(SDIM)
       real(amrex_real) x_left(SDIM)
       real(amrex_real) x_right(SDIM)
-      real(amrex_real) LS_corner_weight
-      real(amrex_real) LS_corner(num_materials)
       real(amrex_real) LS_left(num_materials)
       real(amrex_real) LS_right(num_materials)
+      real(amrex_real) LS_face(num_materials)
+      real(amrex_real) LS_bottom(num_materials)
+      real(amrex_real) LS_top(num_materials)
       real(amrex_real) LS_clamped
       real(amrex_real) vel_clamped(SDIM)
       real(amrex_real) temperature_clamped
@@ -18916,8 +18917,13 @@ stop
       real(amrex_real) div_term
       real(amrex_real) d_tensor(SDIM)
       real(amrex_real) dx_local(SDIM)
-      real(amrex_real) hoop22,hoop12,hoop_weight,local_weight
-      real(amrex_real) r_weight,r_mult,sign_term,dTdx,local_invden
+      real(amrex_real) hoop22,hoop12
+      real(amrex_real) QCC(2)
+      real(amrex_real) Q_ITAN(2)
+      real(amrex_real) Q_JTAN(2)
+      real(amrex_real) CC_weight
+      real(amrex_real) rplus,rminus
+      real(amrex_real) dTdx,local_invden
 
       SNEW_ptr=>SNEW
       umacnew_ptr=>umacnew
@@ -19082,20 +19088,26 @@ stop
        do im_LS=1,num_materials
         LS_left(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
         LS_right(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
+        LS_face(im_LS)=half*(LS_left(im_LS)+LS_right(im_LS))
        enddo
 
        call get_primary_material(LS_left,im_primary_left)
        call get_primary_material(LS_right,im_primary_right)
+       call get_primary_material(LS_face,im_primary_face)
 
        if ((im_primary_left.ne.im_viscoelastic_p1).and. &
            (im_primary_right.ne.im_viscoelastic_p1)) then
         on_the_wall=1
+       else if (im_primary_face.ne.im_viscoelastic_p1) then
+        on_the_wall=1
+       else if (im_primary_face.eq.im_viscoelastic_p1) then
+        !do nothing
        else if ((im_primary_left.eq.im_viscoelastic_p1).or. &
                 (im_primary_right.eq.im_viscoelastic_p1)) then
         !do nothing
        else
-        print *,"im_primary_left|right invalid: ",im_primary_left, &
-         im_primary_right
+        print *,"im_primary_left|right|face invalid: ",im_primary_left, &
+         im_primary_right,im_primary_face
         stop
        endif
 
@@ -19238,18 +19250,19 @@ stop
          QCC(1)=QCC(1)*rminus
          QCC(2)=QCC(2)*rplus
         else
-         print *,"rplus or rminus invalid"
+         print *,"rplus or rminus invalid (QCC): ",rplus,rminus
          stop
         endif
 
 ! ITAN edge centered variable
 
-        if ((itan_dir.ge.0).and.(itan_dir.lt.SDIM).and. &
+        if ((itan_dir.ge.0).and. &
+            (itan_dir.lt.SDIM).and. &
             (itan_dir.ne.force_dir).and. &
             (itan_dir.ne.jtan_dir)) then
          !do nothing
         else
-         print *,"itan_dir invalid"
+         print *,"itan_dir invalid: ",itan_dir
          stop
         endif
 
@@ -19258,8 +19271,8 @@ stop
         CC_weight=zero
         call inverse_stress_index(one_dim_index,force_dir+1,itan_dir+1)
         do im_LS=1,num_materials
-         LS_TOP(im_LS)=zero
-         LS_BOTTOM(im_LS)=zero
+         LS_top(im_LS)=zero
+         LS_bottom(im_LS)=zero
         enddo
 
         kofs=0
@@ -19330,7 +19343,7 @@ stop
            if (jtan_dir.eq.2) then
             !do nothing
            else
-            print *,"expecting jtan_dir==2"
+            print *,"expecting jtan_dir==2: ",jtan_dir
             stop
            endif
           endif
@@ -19356,10 +19369,10 @@ stop
             (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
           do im_LS=1,num_materials
            if (side.eq.1) then
-            LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)+ &
+            LS_bottom(im_LS)=LS_bottom(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else if (side.eq.2) then
-            LS_TOP(im_LS)=LS_TOP(im_LS)+ &
+            LS_top(im_LS)=LS_top(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else
             print *,"side invalid: ",side
@@ -19377,11 +19390,11 @@ stop
          Q_ITAN(1)=Q_ITAN(1)/CC_weight
          Q_ITAN(2)=Q_ITAN(2)/CC_weight
          do im_LS=1,num_materials
-          LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)/CC_weight
-          LS_TOP(im_LS)=LS_TOP(im_LS)/CC_weight
+          LS_bottom(im_LS)=LS_bottom(im_LS)/CC_weight
+          LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
-         call get_primary_material(LS_BOTTOM,im_primary_bottom)
-         call get_primary_material(LS_TOP,im_primary_top)
+         call get_primary_material(LS_bottom,im_primary_bottom)
+         call get_primary_material(LS_top,im_primary_top)
          if (im_primary_bottom.eq.im_viscoelastic_p1) then
           H_corner=one
          else
@@ -19396,7 +19409,7 @@ stop
          endif
          Q_ITAN(2)=Q_ITAN(2)*H_corner 
         else
-         print *,"CC_weight invalid"
+         print *,"CC_weight invalid: ",CC_weight
          stop
         endif
 
@@ -19420,33 +19433,33 @@ stop
          stop
         endif
        
-        if ((rplus.gt.zero).and.(rminus.gt.zero)) then
+        if ((rplus.gt.zero).and.(rminus.ge.zero)) then
          Q_ITAN(1)=Q_ITAN(1)*rminus
          Q_ITAN(2)=Q_ITAN(2)*rplus
         else
-         print *,"rplus or rminus invalid"
-         stop
-        endif
-
-
-#if (AMREX_SPACEDIM==3)
-
-! JTAN edge centered variable
-
-        if ((jtan_dir.eq.1).or.(jtan_dir.eq.SDIM-1)) then
-         !do nothing
-        else
-         print *,"jtan_dir invalid: ",jtan_dir
+         print *,"rplus or rminus invalid (Q_ITAN): ",rminus,rplus
          stop
         endif
 
         Q_JTAN(1)=zero
         Q_JTAN(2)=zero
         CC_weight=zero
+
+        if ((jtan_dir.eq.1).or.(jtan_dir.eq.2)) then
+         !do nothing
+        else
+         print *,"jtan_dir invalid: ",jtan_dir
+         stop
+        endif
+
+#if (AMREX_SPACEDIM==3)
+
+! JTAN edge centered variable
+
         call inverse_stress_index(one_dim_index,force_dir+1,jtan_dir+1)
         do im_LS=1,num_materials
-         LS_TOP(im_LS)=zero
-         LS_BOTTOM(im_LS)=zero
+         LS_top(im_LS)=zero
+         LS_bottom(im_LS)=zero
         enddo
 
         do kofs=0,1
@@ -19529,10 +19542,10 @@ stop
 
           do im_LS=1,num_materials
            if (side.eq.1) then
-            LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)+ &
+            LS_bottom(im_LS)=LS_bottom(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else if (side.eq.2) then
-            LS_TOP(im_LS)=LS_TOP(im_LS)+ &
+            LS_top(im_LS)=LS_top(im_LS)+ &
              levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
            else
             print *,"side invalid: ",side
@@ -19548,11 +19561,11 @@ stop
          Q_JTAN(1)=Q_JTAN(1)/CC_weight
          Q_JTAN(2)=Q_JTAN(2)/CC_weight
          do im_LS=1,num_materials
-          LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)/CC_weight
-          LS_TOP(im_LS)=LS_TOP(im_LS)/CC_weight
+          LS_bottom(im_LS)=LS_bottom(im_LS)/CC_weight
+          LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
-         call get_primary_material(LS_BOTTOM,im_primary_bottom)
-         call get_primary_material(LS_TOP,im_primary_top)
+         call get_primary_material(LS_bottom,im_primary_bottom)
+         call get_primary_material(LS_top,im_primary_top)
          if (im_primary_bottom.eq.im_viscoelastic_p1) then
           H_corner=one
          else
@@ -19585,7 +19598,7 @@ stop
         div_term=zero
         hoop22=zero
         hoop12=zero
-        hoop_weight=zero
+        CC_weight=zero
 
         kofs=0
 #if (AMREX_SPACEDIM==3)
@@ -19626,12 +19639,12 @@ stop
           !do nothing
          else if (levelrz.eq.COORDSYS_RZ) then
           one_dim_index=4
-          hoop_weight=hoop_weight+one
+          CC_weight=CC_weight+one
           hoop22=hoop22+ &
            tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          hoop_weight=hoop_weight+one
+          CC_weight=CC_weight+one
           call inverse_stress_index(one_dim_index,1,2)
           hoop12=hoop12+ &
            tensorfab(D_DECL(imajor,jmajor,kmajor), &
@@ -19673,10 +19686,10 @@ stop
           if (deriv_dir.eq.0) then
            dTdx=dTdx/xsten(0,1)
           else if ((deriv_dir.eq.1).and.(force_dir.eq.0)) then
-           if (hoop_weight.gt.zero) then
-            dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
+           if (CC_weight.gt.zero) then
+            dTdx=dTdx-hoop22/(CC_weight*xsten(0,1))
            else
-            print *,"hoop_weight invalid: ",hoop_weight
+            print *,"CC_weight invalid: ",CC_weight
             stop
            endif
           endif
@@ -19693,14 +19706,14 @@ stop
            dTdx=dTdx/xsten(0,1)
           else if (deriv_dir.eq.1) then
            dTdx=dTdx/xsten(0,1)
-           if (hoop_weight.gt.zero) then
+           if (CC_weight.gt.zero) then
             if (force_dir.eq.0) then
-             dTdx=dTdx-hoop22/(hoop_weight*xsten(0,1))
+             dTdx=dTdx-hoop22/(CC_weight*xsten(0,1))
             else if (force_dir.eq.1) then
-             dTdx=dTdx-hoop12/(hoop_weight*xsten(0,1))
+             dTdx=dTdx-hoop12/(CC_weight*xsten(0,1))
             endif
            else
-            print *,"hoop_weight invalid: ",hoop_weight
+            print *,"CC_weight invalid: ",CC_weight
             stop
            endif
           endif
