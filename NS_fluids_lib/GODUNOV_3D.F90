@@ -18992,18 +18992,36 @@ stop
       ii=0
       jj=0
       kk=0
+
+      ii_itan=0
+      jj_itan=0
+      kk_itan=0
+
+      ii_jtan=0
+      jj_jtan=0
+      kk_jtan=0
+
       if (force_dir.eq.0) then
        ii=1
        itan_dir=1
        jtan_dir=2
+
+       jj_itan=1
+       kk_jtan=1
       else if (force_dir.eq.1) then
        jj=1
        itan_dir=0
        jtan_dir=2
+
+       ii_itan=1
+       kk_jtan=1
       else if ((force_dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
        itan_dir=0
        jtan_dir=1
+
+       ii_itan=1
+       jj_jtan=1
       else
        print *,"force_dir invalid: ",force_dir
        stop
@@ -19136,6 +19154,330 @@ stop
        endif
 
        if (on_the_wall.eq.0) then
+
+!cell centered variable
+        QCC(1)=zero
+        QCC(2)=zero
+        CC_weight=zero
+        call inverse_stress_index(one_dim_index,force_dir+1,force_dir+1)
+
+        kofs=0
+#if (AMREX_SPACEDIM==3)
+        do kofs=0,1
+#endif
+        do jofs=0,1
+        do iofs=0,1
+         CC_weight=CC_weight+1
+         nrefine2=4*kofs+2*jofs+iofs+1
+
+         do side=1,2
+          if (side.eq.1) then
+           imajor=i-ii
+           jmajor=j-jj
+           kmajor=k-kk
+          else if (side.eq.2) then
+           imajor=i
+           jmajor=j
+           kmajor=k
+          else
+           print *,"side invalid"
+           stop
+          endif
+          QCC(side)=QCC(side)+ &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
+            (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+         enddo !side=1,2
+        enddo ! iofs
+        enddo ! jofs
+#if (AMREX_SPACEDIM==3)
+        enddo ! kofs=0,1
+#endif
+        if (CC_weight.gt.zero) then
+         QCC(1)=QCC(1)/CC_weight
+         QCC(2)=QCC(2)/CC_weight
+        else
+         print *,"CC_weight invalid"
+         stop
+        endif
+
+        if (im_primary_left.eq.im_viscoelastic_p1) then
+         H_corner=one
+        else
+         H_corner=zero
+        endif
+        QCC(1)=QCC(1)*H_corner 
+        if (im_primary_right.eq.im_viscoelastic_p1) then
+         H_corner=one
+        else
+         H_corner=zero
+        endif
+        QCC(2)=QCC(2)*H_corner 
+
+
+! ITAN edge centered variable
+        Q_ITAN(1)=zero
+        Q_ITAN(2)=zero
+        CC_weight=zero
+        call inverse_stress_index(one_dim_index,force_dir+1,itan_dir+1)
+        do im_LS=1,num_materials
+         LS_TOP(im_LS)=zero
+         LS_BOTTOM(im_LS)=zero
+        enddo
+
+        kofs=0
+#if (AMREX_SPACEDIM==3)
+        do kofs=0,1
+#endif
+        do jofs=0,1
+        do iofs=0,1
+         CC_weight=CC_weight+1
+
+         local_sub_index(1)=iofs
+         local_sub_index(2)=jofs
+         local_sub_index(3)=kofs
+
+         irefine(1)=0
+         irefine(2)=0
+         irefine(3)=0
+
+         do side=1,2
+
+          if (local_sub_index(force_dir+1).eq.0) then
+           imajor=i-ii
+           jmajor=j-jj
+           kmajor=k-kk
+           irefine(force_dir+1)=1
+          else if (local_sub_index(force_dir+1).eq.1) then
+           imajor=i
+           jmajor=j
+           kmajor=k
+           irefine(force_dir+1)=0
+          else
+           print *,"local_sub_index(force_dir+1) invalid"
+           stop
+          endif
+          if (side.eq.1) then
+           if (local_sub_index(itan_dir+1).eq.0) then
+            imajor=imajor-ii_itan
+            jmajor=jmajor-jj_itan
+            kmajor=kmajor-kk_itan
+            irefine(itan_dir+1)=1
+           else if (local_sub_index(itan_dir+1).eq.1) then
+            irefine(itan_dir+1)=0
+           else
+            print *,"local_sub_index(itan_dir+1) invalid"
+            stop
+           endif
+          else if (side.eq.2) then
+           if (local_sub_index(itan_dir+1).eq.1) then
+            imajor=imajor+ii_itan
+            jmajor=jmajor+jj_itan
+            kmajor=kmajor+kk_itan
+            irefine(itan_dir+1)=0
+           else if (local_sub_index(itan_dir+1).eq.0) then
+            irefine(itan_dir+1)=1
+           else
+            print *,"local_sub_index(itan_dir+1) invalid"
+            stop
+           endif
+          else
+           print *,"side invalid"
+           stop
+          endif
+#if (AMREX_SPACEDIM==3)
+          if (local_sub_index(jtan_dir+1).eq.0) then
+           irefine(jtan_dir+1)=0
+          else if (local_sub_index(jtan_dir+1).eq.1) then
+           irefine(jtan_dir+1)=1
+          else
+           print *,"local_sub_index(jtan_dir+1) invalid"
+           stop
+          endif
+#endif
+          irefine2=irefine(1)
+          jrefine2=irefine(2)
+          krefine2=irefine(3)
+          nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
+          Q_ITAN(side)=Q_ITAN(side)+ &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
+            (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+          do im_LS=1,num_materials
+           if (side.eq.1) then
+            LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)+ &
+             levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
+           else if (side.eq.2) then
+            LS_TOP(im_LS)=LS_TOP(im_LS)+ &
+             levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
+           else
+            print *,"side invalid"
+            stop
+           endif
+          enddo !im_LS
+
+         enddo !side=1,2
+        enddo ! iofs
+        enddo ! jofs
+#if (AMREX_SPACEDIM==3)
+        enddo ! kofs=0,1
+#endif
+        if (CC_weight.gt.zero) then
+         Q_ITAN(1)=Q_ITAN(1)/CC_weight
+         Q_ITAN(2)=Q_ITAN(2)/CC_weight
+         do im_LS=1,num_materials
+          LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)/CC_weight
+          LS_TOP(im_LS)=LS_TOP(im_LS)/CC_weight
+         enddo
+         call get_primary_material(LS_BOTTOM,im_primary_bottom)
+         call get_primary_material(LS_TOP,im_primary_top)
+         if (im_primary_bottom.eq.im_viscoelastic_p1) then
+          H_corner=one
+         else
+          H_corner=zero
+         endif
+         Q_ITAN(1)=Q_ITAN(1)*H_corner 
+         if (im_primary_top.eq.im_viscoelastic_p1) then
+          H_corner=one
+         else
+          H_corner=zero
+         endif
+         Q_ITAN(2)=Q_ITAN(2)*H_corner 
+        else
+         print *,"CC_weight invalid"
+         stop
+        endif
+
+#if (AMREX_SPACEDIM==3)
+
+! JTAN edge centered variable
+        Q_JTAN(1)=zero
+        Q_JTAN(2)=zero
+        CC_weight=zero
+        call inverse_stress_index(one_dim_index,force_dir+1,jtan_dir+1)
+        do im_LS=1,num_materials
+         LS_TOP(im_LS)=zero
+         LS_BOTTOM(im_LS)=zero
+        enddo
+
+        do kofs=0,1
+        do jofs=0,1
+        do iofs=0,1
+         CC_weight=CC_weight+1
+
+         local_sub_index(1)=iofs
+         local_sub_index(2)=jofs
+         local_sub_index(3)=kofs
+
+         irefine(1)=0
+         irefine(2)=0
+         irefine(3)=0
+
+         do side=1,2
+
+          if (local_sub_index(force_dir+1).eq.0) then
+           imajor=i-ii
+           jmajor=j-jj
+           kmajor=k-kk
+           irefine(force_dir+1)=1
+          else if (local_sub_index(force_dir+1).eq.1) then
+           imajor=i
+           jmajor=j
+           kmajor=k
+           irefine(force_dir+1)=0
+          else
+           print *,"local_sub_index(force_dir+1) invalid"
+           stop
+          endif
+          if (side.eq.1) then
+           if (local_sub_index(jtan_dir+1).eq.0) then
+            imajor=imajor-ii_jtan
+            jmajor=jmajor-jj_jtan
+            kmajor=kmajor-kk_jtan
+            irefine(jtan_dir+1)=1
+           else if (local_sub_index(jtan_dir+1).eq.1) then
+            irefine(jtan_dir+1)=0
+           else
+            print *,"local_sub_index(jtan_dir+1) invalid"
+            stop
+           endif
+          else if (side.eq.2) then
+           if (local_sub_index(jtan_dir+1).eq.1) then
+            imajor=imajor+ii_jtan
+            jmajor=jmajor+jj_jtan
+            kmajor=kmajor+kk_jtan
+            irefine(jtan_dir+1)=0
+           else if (local_sub_index(jtan_dir+1).eq.0) then
+            irefine(jtan_dir+1)=1
+           else
+            print *,"local_sub_index(jtan_dir+1) invalid"
+            stop
+           endif
+          else
+           print *,"side invalid"
+           stop
+          endif
+          if (local_sub_index(itan_dir+1).eq.0) then
+           irefine(itan_dir+1)=0
+          else if (local_sub_index(itan_dir+1).eq.1) then
+           irefine(itan_dir+1)=1
+          else
+           print *,"local_sub_index(itan_dir+1) invalid"
+           stop
+          endif
+          irefine2=irefine(1)
+          jrefine2=irefine(2)
+          krefine2=irefine(3)
+          nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
+          Q_JTAN(side)=Q_JTAN(side)+ &
+           tensorfab(D_DECL(imajor,jmajor,kmajor), &
+            (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
+
+          do im_LS=1,num_materials
+           if (side.eq.1) then
+            LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)+ &
+             levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
+           else if (side.eq.2) then
+            LS_TOP(im_LS)=LS_TOP(im_LS)+ &
+             levelpc(D_DECL(imajor,jmajor,kmajor),im_LS)
+           else
+            print *,"side invalid"
+            stop
+           endif
+          enddo !im_LS
+         enddo !side=1,2
+        enddo ! iofs
+        enddo ! jofs
+        enddo ! kofs=0,1
+        if (CC_weight.gt.zero) then
+         Q_JTAN(1)=Q_JTAN(1)/CC_weight
+         Q_JTAN(2)=Q_JTAN(2)/CC_weight
+         do im_LS=1,num_materials
+          LS_BOTTOM(im_LS)=LS_BOTTOM(im_LS)/CC_weight
+          LS_TOP(im_LS)=LS_TOP(im_LS)/CC_weight
+         enddo
+         call get_primary_material(LS_BOTTOM,im_primary_bottom)
+         call get_primary_material(LS_TOP,im_primary_top)
+         if (im_primary_bottom.eq.im_viscoelastic_p1) then
+          H_corner=one
+         else
+          H_corner=zero
+         endif
+        else
+         print *,"CC_weight invalid"
+         stop
+        endif
+        Q_JTAN(1)=Q_JTAN(1)*H_corner 
+        if (im_primary_top.eq.im_viscoelastic_p1) then
+         H_corner=one
+        else
+         H_corner=zero
+        endif
+        Q_JTAN(2)=Q_JTAN(2)*H_corner 
+#endif
+
+
+
 
         div_term=zero
         do deriv_dir=0,SDIM-1
