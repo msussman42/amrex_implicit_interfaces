@@ -18929,8 +18929,6 @@ stop
       integer im_primary_left
       integer im_primary_right
       integer im_primary_face
-      integer im_primary_top
-      integer im_primary_bottom
       real(amrex_real) H_corner
       real(amrex_real) x_left(SDIM)
       real(amrex_real) x_right(SDIM)
@@ -18955,6 +18953,9 @@ stop
       real(amrex_real) CC_weight
       real(amrex_real) rplus,rminus
       real(amrex_real) dTdx,local_invden
+      real(amrex_real) dxmaxLS
+      real(amrex_real) H_radius
+      real(amrex_real) H_offset
 
       SNEW_ptr=>SNEW
       umacnew_ptr=>umacnew
@@ -19017,6 +19018,24 @@ stop
        ! do nothing
       else
        print *,"bfact invalid"
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
+       stop
+      endif
+      H_radius=dxmaxLS
+      if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
+       H_offset=-two*dxmaxLS
+      else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
+       H_offset=zero
+      else
+       print *,"is_FSI_elastic invalid: ",im_viscoelastic_p1, &
+         is_FSI_elastic(im_viscoelastic_p1)
        stop
       endif
 
@@ -19126,32 +19145,19 @@ stop
        call get_primary_material(LS_right,im_primary_right)
        call get_primary_material(LS_face,im_primary_face)
 
-       if ((im_primary_left.ne.im_viscoelastic_p1).and. &
-           (im_primary_right.ne.im_viscoelastic_p1)) then
-        on_the_wall=1
-       else if (im_primary_face.ne.im_viscoelastic_p1) then
-        on_the_wall=1
-       else if (im_primary_face.eq.im_viscoelastic_p1) then
-        !do nothing
-       else if ((im_primary_left.eq.im_viscoelastic_p1).or. &
-                (im_primary_right.eq.im_viscoelastic_p1)) then
-        !do nothing
-       else
-        print *,"im_primary_left|right|face invalid: ",im_primary_left, &
-         im_primary_right,im_primary_face
-        stop
-       endif
-
        if ((is_rigid(im_primary_left).eq.1).or. &
            (is_rigid(im_primary_right).eq.1)) then
         on_the_wall=1
+       else if (is_rigid(im_primary_face).eq.1) then
+        on_the_wall=1
+       else if (is_rigid(im_primary_face).eq.0) then
+        !do nothing
        else if ((is_rigid(im_primary_left).eq.0).and. &
                 (is_rigid(im_primary_right).eq.0)) then
         !do nothing
        else
-        print *,"is_rigid_left|right invalid: ",im_primary_left, &
-          im_primary_right,is_rigid(im_primary_left), &
-          is_rigid(im_primary_right)
+        print *,"im_primary_left|right|face invalid: ",im_primary_left, &
+         im_primary_right,im_primary_face
         stop
        endif
 
@@ -19244,17 +19250,9 @@ stop
          stop
         endif
 
-        if (im_primary_left.eq.im_viscoelastic_p1) then
-         H_corner=one
-        else
-         H_corner=zero
-        endif
+        H_corner=hs(LS_left(im_viscoelastic_p1)-H_offset,H_radius)
         QCC(1)=QCC(1)*H_corner 
-        if (im_primary_right.eq.im_viscoelastic_p1) then
-         H_corner=one
-        else
-         H_corner=zero
-        endif
+        H_corner=hs(LS_right(im_viscoelastic_p1)-H_offset,H_radius)
         QCC(2)=QCC(2)*H_corner 
 
         rplus=one
@@ -19424,20 +19422,10 @@ stop
           LS_bottom(im_LS)=LS_bottom(im_LS)/CC_weight
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
-         call get_primary_material(LS_bottom,im_primary_bottom)
-         call get_primary_material(LS_top,im_primary_top)
-         if (im_primary_bottom.eq.im_viscoelastic_p1) then
-          H_corner=one
-         else
-          H_corner=zero
-         endif
         
+         H_corner=hs(LS_bottom(im_viscoelastic_p1)-H_offset,H_radius)
          Q_ITAN(1)=Q_ITAN(1)*H_corner 
-         if (im_primary_top.eq.im_viscoelastic_p1) then
-          H_corner=one
-         else
-          H_corner=zero
-         endif
+         H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
          Q_ITAN(2)=Q_ITAN(2)*H_corner 
         else
          print *,"CC_weight invalid: ",CC_weight
@@ -19595,24 +19583,15 @@ stop
           LS_bottom(im_LS)=LS_bottom(im_LS)/CC_weight
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
-         call get_primary_material(LS_bottom,im_primary_bottom)
-         call get_primary_material(LS_top,im_primary_top)
-         if (im_primary_bottom.eq.im_viscoelastic_p1) then
-          H_corner=one
-         else
-          H_corner=zero
-         endif
+
+         H_corner=hs(LS_bottom(im_viscoelastic_p1)-H_offset,H_radius)
+         Q_JTAN(1)=Q_JTAN(1)*H_corner 
+         H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
+         Q_JTAN(2)=Q_JTAN(2)*H_corner 
         else
-         print *,"CC_weight invalid"
+         print *,"CC_weight invalid: ",CC_weight
          stop
         endif
-        Q_JTAN(1)=Q_JTAN(1)*H_corner 
-        if (im_primary_top.eq.im_viscoelastic_p1) then
-         H_corner=one
-        else
-         H_corner=zero
-        endif
-        Q_JTAN(2)=Q_JTAN(2)*H_corner 
 #endif
 
         d_tensor(force_dir+1)=QCC(2)-QCC(1)
@@ -19694,6 +19673,10 @@ stop
 #if (AMREX_SPACEDIM==3)
         enddo !kofs=0,1
 #endif
+
+        H_corner=hs(LS_face(im_viscoelastic_p1)-H_offset,H_radius)
+        hoop12=hoop12*H_corner
+        hoop22=hoop22*H_corner
 
         do deriv_dir=0,SDIM-1
          if (dx_local(deriv_dir+1).gt.zero) then
