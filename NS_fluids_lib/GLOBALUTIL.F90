@@ -8602,7 +8602,7 @@ end subroutine print_visual_descriptor
       else
         hs=phi/(two*cutoff)+sin(Pi*phi/cutoff)/(two*Pi)+half
         if ((hs.lt.-EPS_3_2).or.(hs.gt.one+EPS_3_2)) then
-         print *,"hs sanity check failed"
+         print *,"hs sanity check failed: ",hs
          stop
         else if (hs.lt.zero) then
          hs=zero
@@ -8611,7 +8611,7 @@ end subroutine print_visual_descriptor
         else if ((hs.ge.zero).and.(hs.le.one)) then
          ! do nothing
         else
-         print *,"hs() is NaN"
+         print *,"hs() is NaN: ",hs
          stop
         endif
       endif
