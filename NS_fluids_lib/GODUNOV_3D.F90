@@ -408,12 +408,16 @@ stop
           print *,"mdata invalid: ",mdata(D_DECL(i,j,k),dir)
           print *,"i,j,k,dir,dirtan ",i,j,k,dir,dirtan
           print *,"ii,jj,kk ",ii,jj,kk
+          print *,"im1,jm1,km1 ",im1,jm1,km1
           print *,"total_mass ",total_mass
           print *,"tcomp ",tcomp
           print *,"is,ie,js,je,ks,ke ",is,ie,js,je,ks,ke
           do im=1,num_materials
            print *,"im,massfrac ",im,massfrac(im)
+           print *,"im,LSLEFT ",im,LSLEFT(im)
+           print *,"im,LSRIGHT ",im,LSRIGHT(im)
           enddo
+          print *,"imL,imR,im_primary ",imL,imR,im_primary
           stop
          endif
 
@@ -1005,7 +1009,7 @@ stop
        kk=1
        nbase=TENSOR_TRANSPOSE_UZ-1
       else
-       print *,"dir invalid crossterm"
+       print *,"dir invalid crossterm: ",dir
        stop
       endif
 
@@ -1025,7 +1029,7 @@ stop
        dirtan(1)=1
        dirtan(2)=2
       else
-       print *,"dir invalid crossterm 2"
+       print *,"dir invalid crossterm 2: ",dir
        stop
       endif
 
@@ -1127,7 +1131,7 @@ stop
          else if (total_mass.eq.zero) then
           ! do nothing
          else
-          print *,"total_mass invalid"
+          print *,"total_mass invalid: ",total_mass
           stop
          endif
 
@@ -1242,7 +1246,34 @@ stop
           else
            print *,"tdata overflow: i,j,k,nbase,nc,tdata ", &
             i,j,k,nbase,nc,local_flux_val
+           print *,"tcomp ",tcomp
            print *,"dt,cur_time,level ",dt,cur_time,level
+           print *,"dir,ii,jj,kk ",dir,ii,jj,kk
+           print *,"coupling(1) ",coupling(1)
+           print *,"coupling(2) ",coupling(2)
+           print *,"dirtan(1) ",dirtan(1)
+           print *,"dirtan(2) ",dirtan(2)
+           print *,"dx ",dx
+           print *,"dxmaxLS ",dxmaxLS
+           print *,"bfact ",bfact
+           print *,"tileloop ",tileloop
+           print *,"spectral_loop ",spectral_loop
+           print *,"alpha ",alpha
+           print *,"xstenMAC ",xstenMAC
+           print *,"level,nhalf ",level,nhalf
+           print *,"inorm= ",inorm
+           print *,"side_face ",side_face
+           print *,"fablo ",fablo
+           print *,"fabhi ",fabhi
+           print *,"ilo,ihi ",ilo,ihi
+           print *,"jlo,jhi ",jlo,jhi
+           print *,"klo,khi ",klo,khi
+           print *,"massF ",massF
+           print *,"massfrac ",massfrac
+           print *,"total_mass ",total_mass
+           print *,"uncoupled_viscosity ",uncoupled_viscosity
+           print *,"uncoupled_viscosity_override ", &
+                   uncoupled_viscosity_override
            stop
           endif
 
