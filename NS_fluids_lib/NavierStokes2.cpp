@@ -5707,10 +5707,18 @@ void NavierStokes::make_physics_vars(int project_option,
  MultiFab::Copy(*localMF[CELL_VISC_HOLD_MF],*localMF[CELL_VISC_MF],0,0,1,1);
  MultiFab::Copy(*localMF[CELL_DEN_HOLD_MF],*localMF[CELL_DEN_MF],0,0,1,1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  MultiFab::Copy(*localMF[FACE_DEN_HOLD_MF+dir],
-    *localMF[FACE_VAR_MF+dir],FACECOMP_FACEDEN,0,1,0);
-  MultiFab::Copy(*localMF[FACE_VISC_HOLD_MF+dir],
-    *localMF[FACE_VAR_MF+dir],FACECOMP_FACEVISC,0,1,0);
+  MultiFab::Copy(
+    *localMF[FACE_DEN_HOLD_MF+dir],
+    *localMF[FACE_VAR_MF+dir],
+    FACECOMP_FACEDEN,
+    0,
+    1,0);
+  MultiFab::Copy(
+   *localMF[FACE_VISC_HOLD_MF+dir],
+   *localMF[FACE_VAR_MF+dir],
+   FACECOMP_FACEVISC,
+   0,
+   1,0);
  }
 
  delete vofC;

@@ -15786,6 +15786,27 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
+ MultiFab::Copy(*localMF[CELL_VISC_MF],*localMF[CELL_VISC_HOLD_MF],0,0,1,1);
+ MultiFab::Copy(*localMF[CELL_DEN_MF],*localMF[CELL_DEN_HOLD_MF],0,0,1,1);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+  MultiFab::Copy(
+    *localMF[FACE_VAR_MF+dir],
+    *localMF[FACE_DEN_HOLD_MF+dir],
+    0,
+    FACECOMP_FACEDEN,
+    1,0);
+
+  MultiFab::Copy(
+    *localMF[FACE_VAR_MF+dir],
+    *localMF[FACE_VISC_HOLD_MF+dir],
+    0,
+    FACECOMP_FACEVISC,
+    1,0);
+
+ }
+
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  getStateDist_localMF(LSNEW_MF,1,cur_time_slab,local_caller_string);
@@ -15829,6 +15850,9 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
    FArrayBox& denstatefab=(*state_var_mf)[mfi];
 
+   FArrayBox& cell_den_fab=(*localMF[CELL_DEN_MF])[mfi];
+   FArrayBox& cell_visc_fab=(*localMF[CELL_VISC_MF])[mfi];
+
    int bfact=parent->Space_blockingFactor(level);
 
    int tid_current=ns_thread();
@@ -15859,9 +15883,14 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
     denstatefab.dataPtr(),
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
+    cell_den_fab.dataPtr(),
+    ARLIM(cell_den_fab.loVect()),ARLIM(cell_den_fab.hiVect()),
+    cell_visc_fab.dataPtr(),
+    ARLIM(cell_visc_fab.loVect()),ARLIM(cell_visc_fab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
+    reconfab.dataPtr(),
+    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
 
   } // mfi
 } // omp

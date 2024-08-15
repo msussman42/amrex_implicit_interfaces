@@ -4715,6 +4715,110 @@ stop
       return
       end subroutine fort_initjumpterm
 
+      subroutine check_added_mass( &
+       local_faceden, &
+       local_facevisc, &
+       im_elastic_map, &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
+       LSright, &
+       LSleft, &
+       dx, &
+       bfact)
+      use global_utility_module
+      IMPLICIT NONE
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
+      real(amrex_real), INTENT(in) :: LSleft(num_materials)
+      real(amrex_real), INTENT(in) :: LSright(num_materials)
+      real(amrex_real), INTENT(inout) :: local_faceden
+      real(amrex_real), INTENT(inout) :: local_facevisc
+      real(amrex_real) :: dxmaxLS
+      real(amrex_real) :: LS_shift
+      real(amrex_real) :: elastic_density
+      real(amrex_real) :: elastic_viscosity
+      integer :: ipart
+      integer :: im_local
+
+      if ((FSI_outer_sweeps.ge.0).and. &
+          (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+       !do nothing
+      else
+       print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+       stop
+      endif
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
+       stop
+      endif
+
+      LS_shift=two*dxmaxLS
+
+      do ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
+       im_local=im_elastic_map(ipart+1)+1
+       if ((im_local.ge.1).and.(im_local.le.num_materials)) then
+        !do nothing
+       else
+        print *,"im_local invalid: ",im_local
+        stop
+       endif
+
+       if (is_rigid_CL(im_local).eq.1) then
+        !do nothing
+       else
+        print *,"im_local invalid(2): ",im_local
+        stop
+       endif
+       if ((LSleft(im_local).ge.-LS_shift).or. &
+           (LSright(im_local).ge.-LS_shift)) then
+        if (local_faceden.eq.zero) then
+         ! do nothing
+        else if (local_faceden.gt.zero) then
+         elastic_density=fort_denconst(im_local)
+         elastic_viscosity=fort_viscconst(im_local)
+         if (elastic_density.gt.one/local_faceden) then
+          local_faceden=one/elastic_density
+          if (elastic_viscosity.gt.zero) then
+           if (local_facevisc.ge.zero) then
+            local_facevisc=elastic_viscosity
+           else
+            print *,"local_facevisc invalid: ",local_facevisc
+            stop
+           endif
+          else
+           print *,"elastic_viscosity invalid: ",elastic_viscosity
+           stop
+          endif
+         else if ((elastic_density.le.one/local_faceden).and. &
+                  (elastic_density.gt.zero)) then
+          !do nothing
+         else
+          print *,"elastic_density invalid: ",elastic_density
+          print *,"local_faceden: ",local_faceden
+          stop
+         endif
+        else
+         print *,"local_faceden invalid: ",local_faceden
+         stop
+        endif
+       else if ((LSleft(im_local).le.-LS_shift).and. &
+                (LSright(im_local).le.-LS_shift)) then
+        !do nothing
+       else
+        print *,"LS_left or LSright invalid"
+        stop
+       endif 
+      enddo !ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
+
+      return
+      end subroutine check_added_mass
+
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
@@ -4745,6 +4849,8 @@ stop
        yface,DIMS(yface), &
        zface,DIMS(zface), &
        denstate,DIMS(denstate), &
+       cell_den,DIMS(cell_den), &
+       cell_visc,DIMS(cell_visc), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon) ) &
       bind(c,name='fort_init_elasticmask_and_elasticmaskpart')
@@ -4766,6 +4872,7 @@ stop
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer :: growloMAC(3),growhiMAC(3)
+      integer :: growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
@@ -4775,6 +4882,8 @@ stop
       integer, INTENT(in) :: DIMDEC(yface)
       integer, INTENT(in) :: DIMDEC(zface)
       integer, INTENT(in) :: DIMDEC(denstate)
+      integer, INTENT(in) :: DIMDEC(cell_den)
+      integer, INTENT(in) :: DIMDEC(cell_visc)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(recon)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
@@ -4790,6 +4899,10 @@ stop
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: cell_den(DIMV(cell_den))
+      real(amrex_real), pointer :: cell_den_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(inout), target :: cell_visc(DIMV(cell_visc))
+      real(amrex_real), pointer :: cell_visc_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
@@ -4829,12 +4942,16 @@ stop
       real(amrex_real) xmac(SDIM)
       integer local_mask_right
       integer local_mask_left
+      real(amrex_real) local_faceden
+      real(amrex_real) local_facevisc
 
       maskcov_ptr=>maskcov
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
       denstate_ptr=>denstate
+      cell_den_ptr=>cell_den
+      cell_visc_ptr=>cell_visc
       LSnew_ptr=>LSnew
       recon_ptr=>recon
 
@@ -4862,7 +4979,7 @@ stop
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
-       print *,"nden invalid"
+       print *,"nden invalid: ",nden
        stop
       endif
 
@@ -4902,6 +5019,8 @@ stop
       call checkbound_array(fablo,fabhi,yface_ptr,0,1)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cell_den_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cell_visc_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
  
@@ -5018,14 +5137,46 @@ stop
          endif
 
          if (dir.eq.0) then
+          local_faceden=xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
+          local_facevisc=xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
+         else if (dir.eq.1) then
+          local_faceden=yface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
+          local_facevisc=yface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
+         else if ((dir.eq.2).and.(SDIM.eq.3)) then
+          local_faceden=zface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
+          local_facevisc=zface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
+         else
+          print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart:", &
+           dir
+          stop
+         endif
+
+         call check_added_mass( &
+          local_faceden, &
+          local_facevisc, &
+          im_elastic_map, &
+          num_FSI_outer_sweeps, &
+          FSI_outer_sweeps, &
+          LSright, &
+          LSleft, &
+          dx, &
+          bfact)
+
+         if (dir.eq.0) then
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
+          xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
+          xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else if (dir.eq.1) then
           yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
+          yface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
+          yface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
+          zface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
+          zface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else
           print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart 3:", &
            dir
@@ -5036,7 +5187,8 @@ stop
                  (local_mask_left.eq.0)) then
          ! do nothing
         else
-         print *,"local_mask_right or local_mask_left invalid"
+         print *,"local_mask_right or local_mask_left invalid: ", &
+           local_mask_right,local_mask_left
          stop
         endif
 
@@ -5044,6 +5196,49 @@ stop
        enddo !j
        enddo !k
       enddo ! dir=0..sdim-1
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0) 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+        local_mask_right=NINT(maskcov(D_DECL(i,j,k))) 
+
+         ! check if this is an uncovered face.
+        if (local_mask_right.eq.1) then
+         
+         do im=1,num_materials
+          LSright(im)=LSnew(D_DECL(i,j,k),im)
+         enddo
+
+         local_faceden=cell_den(D_DECL(i,j,k))
+         local_facevisc=cell_visc(D_DECL(i,j,k))
+
+         call check_added_mass( &
+          local_faceden, &
+          local_facevisc, &
+          im_elastic_map, &
+          num_FSI_outer_sweeps, &
+          FSI_outer_sweeps, &
+          LSright, &
+          LSright, &
+          dx, &
+          bfact)
+
+         cell_den(D_DECL(i,j,k))=local_faceden
+         cell_visc(D_DECL(i,j,k))=local_facevisc
+
+        else if (local_mask_right.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask_right invalid: ",local_mask_right
+         stop
+        endif
+
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_init_elasticmask_and_elasticmaskpart

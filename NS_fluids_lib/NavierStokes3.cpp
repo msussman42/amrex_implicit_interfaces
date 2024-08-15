@@ -2909,7 +2909,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         } else if ((num_FSI_outer_sweeps>=2)&&
                    (num_FSI_outer_sweeps<=num_materials)) {
 
-		//FIX ME
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
           ns_level.level_init_elasticmask_and_elasticmaskpart();
@@ -2917,6 +2916,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASK,1,0,
            AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
           ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASKPART,1,0,
+           AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+
+          ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
+ 	   AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+          ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEVISC,1,0,
            AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 
           ns_level.manage_FSI_data(); 
