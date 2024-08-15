@@ -5187,6 +5187,8 @@ void NavierStokes::allocate_physics_vars() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF_if_not_exist(FACE_VAR_MF+dir,FACECOMP_NCOMP,0,dir);
+  new_localMF_if_not_exist(FACE_DEN_HOLD_MF+dir,1,0,dir);
+  new_localMF_if_not_exist(FACE_VISC_HOLD_MF+dir,1,0,dir);
  }
 
   // ncomp,ngrow,dir
@@ -5206,6 +5208,7 @@ void NavierStokes::allocate_physics_vars() {
 
   //CELL_DEN_MF contains 1/rho
  new_localMF_if_not_exist(CELL_DEN_MF,1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_DEN_HOLD_MF,1,1,-1); // ncomp,ngrow,dir
 
   // coeff_avg,padvect_avg 
  new_localMF_if_not_exist(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir
@@ -5213,6 +5216,7 @@ void NavierStokes::allocate_physics_vars() {
   // tessellating volume fractions.
  new_localMF_if_not_exist(CELL_VOF_MF,num_materials,1,-1); // ncomp,ngrow,dir
  new_localMF_if_not_exist(CELL_VISC_MF,1,1,-1); // ncomp,ngrow,dir
+ new_localMF_if_not_exist(CELL_VISC_HOLD_MF,1,1,-1); // ncomp,ngrow,dir
 
 } // allocate_physics_vars
 
@@ -5699,6 +5703,15 @@ void NavierStokes::make_physics_vars(int project_option,
    } // dir=0..sdim-1
 
  } // ((fab_verbose==1)||(fab_verbose==3))
+
+ MultiFab::Copy(*localMF[CELL_VISC_HOLD_MF],*localMF[CELL_VISC_MF],0,0,1,1);
+ MultiFab::Copy(*localMF[CELL_DEN_HOLD_MF],*localMF[CELL_DEN_MF],0,0,1,1);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  MultiFab::Copy(*localMF[FACE_DEN_HOLD_MF],
+    *localMF[FACE_VAR_MF],FACECOMP_FACEDEN,0,1,0);
+  MultiFab::Copy(*localMF[FACE_VISC_HOLD_MF],
+    *localMF[FACE_VAR_MF],FACECOMP_FACEVISC,0,1,0);
+ }
 
  delete vofC;
  delete vofF;
