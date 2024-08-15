@@ -563,8 +563,14 @@ extern "C"
     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
     Real* denstate,
     AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
-    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
+    Real* cell_den,
+    AMREX_ARLIM_P(cell_denlo),AMREX_ARLIM_P(cell_denhi),
+    Real* cell_visc,
+    AMREX_ARLIM_P(cell_visclo),AMREX_ARLIM_P(cell_vischi),
+    Real* LSnew,
+    AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
+    Real* recon,
+    AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
     int* im_elastic_map,
