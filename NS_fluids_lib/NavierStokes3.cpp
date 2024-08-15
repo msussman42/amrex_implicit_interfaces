@@ -2909,6 +2909,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         } else if ((num_FSI_outer_sweeps>=2)&&
                    (num_FSI_outer_sweeps<=num_materials)) {
 
+		//FIX ME
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
           ns_level.level_init_elasticmask_and_elasticmaskpart();

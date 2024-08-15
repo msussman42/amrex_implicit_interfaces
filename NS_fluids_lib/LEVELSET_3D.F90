@@ -9301,7 +9301,8 @@ stop
             facevisc_local=theta/visc1+(one-theta)/visc2
             facevisc_local=one/facevisc_local
            else
-            print *,"LSIDE bust"
+            print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
+            print *,"visc1,visc2 ",visc1,visc2
             stop
            endif
 
@@ -9335,7 +9336,8 @@ stop
             faceheat_local=theta/heat1+(one-theta)/heat2
             faceheat_local=one/faceheat_local
            else
-            print *,"LSIDE bust"
+            print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
+            print *,"heat1,heat2 ",heat1,heat2
             stop
            endif
 
@@ -9386,7 +9388,8 @@ stop
                theta/spec1(imspec)+(one-theta)/spec2(imspec)
              facespecies_local(imspec)=one/facespecies_local(imspec)
             else
-             print *,"LSIDE bust"
+             print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
+             print *,"spec1,spec2 ",imspec,spec1(imspec),spec2(imspec)
              stop
             endif
 
