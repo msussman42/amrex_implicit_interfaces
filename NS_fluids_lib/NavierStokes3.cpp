@@ -396,11 +396,14 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   amrex::Error("normdir_here invalid (prior to loop)");
 
  // delete_advect_vars() called in NavierStokes::do_the_advance
+ // delete_transport_vars() called in NavierStokes::do_the_advance
  // right after increment_face_velocityALL. 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
   ns_level.prepare_advect_vars(prev_time_slab);
+  // initialize TRANSPORT_REGISTER_FACE_MF
+  ns_level.prepare_transport_vars(vel_time_slab);
  }
 
 #ifdef AMREX_PARTICLES
@@ -2762,6 +2765,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        NavierStokes& ns_level=getLevel(ilev);
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
+       ns_level.delete_transport_vars();
        // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        // delete_advect_vars() called twice in NavierStokes::do_the_advance
        ns_level.prepare_advect_vars(cur_time_slab);
@@ -12681,6 +12685,12 @@ void NavierStokes::delete_advect_vars() {
 
 } // subroutine delete_advect_vars()
 
+void NavierStokes::delete_transport_vars() {
+
+ delete_localMF(TRANSPORT_REGISTER_FACE_MF,AMREX_SPACEDIM);
+
+} // subroutine delete_transport_vars()
+
 void NavierStokes::exit_viscous_solver() {
 
  delete_localMF(CONSERVE_FLUXES_MF,AMREX_SPACEDIM);
@@ -13131,6 +13141,26 @@ void NavierStokes::prepare_advect_vars(Real time) {
   amrex::Error("localMF[ADVECT_REGISTER_MF]->nComp()!=sdim");
 
 } // end subroutine prepare_advect_vars(Real time)
+
+
+void NavierStokes::prepare_transport_vars(Real time) {
+
+ if (time>=0.0) {
+  //do nothing
+ } else
+  amrex::Error("time invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  //ngrow=1
+  //Umac_Type+dir
+  //getStateMAC_localMF is declared in NavierStokes2.cpp
+  //localMF[TRANSPORT_REGISTER_FACE_MF+dir allocated in getStateMAC_localMF.
+  getStateMAC_localMF(TRANSPORT_REGISTER_FACE_MF+dir,1,dir,time);
+ } // dir
+
+} // end subroutine prepare_transport_vars(Real time)
+
+
 
 void NavierStokes::alloc_DTDtALL(int alloc_flag) {
 
