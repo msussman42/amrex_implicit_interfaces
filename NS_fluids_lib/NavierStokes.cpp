@@ -12406,11 +12406,11 @@ void NavierStokes::tensor_advection_update() {
        FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
 
        int dir=0;
-       FArrayBox& xmacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+       FArrayBox& xmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
        dir=1;
-       FArrayBox& ymacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+       FArrayBox& ymacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
        dir=AMREX_SPACEDIM-1;
-       FArrayBox& zmacfab=(*localMF[ADVECT_REGISTER_FACE_MF+dir])[mfi];
+       FArrayBox& zmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
 
        FArrayBox& tensor_new_fab=Tensor_new[mfi];
 

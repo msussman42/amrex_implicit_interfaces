@@ -299,6 +299,9 @@ public:
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
 
+    void prepare_transport_vars(Real time);
+    void delete_transport_vars();
+
     void exit_viscous_solver();
 
     void diffusion_heatingALL(int source_idx,int idx_heat);
