@@ -405,6 +405,15 @@ stop
        stop
       endif
 
+       !if SOLVETYPE_INITPROJ then
+       ! cc_group=cc*cc_elasticmask
+       !if SOLVETYPE_PRES then
+       ! if (num_FSI_outer_sweeps.eq.1) then
+       !  cc_group=cc*cc_elasticmask
+       ! else if (FSI_outer_sweeps>=1)
+       !  cc_group=cc*cc_elasticmaskpart
+       ! else if (FSI_outer_sweeps==0)
+       !  cc_group=cc
       if (im_FSI_rigid.eq.im_primary) then
 
        ireverse=-1
