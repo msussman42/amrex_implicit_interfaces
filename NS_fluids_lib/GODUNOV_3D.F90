@@ -19225,7 +19225,7 @@ stop
       endif
       H_radius=dxmaxLS
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
-       H_offset=-two*dxmaxLS
+       H_offset=-dxmaxLS
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
        H_offset=zero
       else
