@@ -16676,6 +16676,9 @@ stop
       levelPC_ptr=>levelPC
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
+       ! see also:
+       ! H_offset and H_radius in subroutine fort_elastic_force
+       ! LS_shift in subroutine check_added_mass
       extend_offset=two*dxmaxLS
 
       if (extend_solid_velocity.eq.0) then
