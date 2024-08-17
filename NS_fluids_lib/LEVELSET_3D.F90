@@ -16555,6 +16555,7 @@ stop
 
 
       subroutine fort_manage_elastic_velocity( &
+       extend_solid_velocity, &
        im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
@@ -16583,6 +16584,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: extend_solid_velocity
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
@@ -16649,6 +16651,10 @@ stop
       real(amrex_real) xclamped_minus_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) xclamped_plus_sten(-nhalf:nhalf,SDIM)
       integer im_rigid_CL
+      integer im_critical
+      integer ipart
+      integer extend_offset
+      real(amrex_real) dxmaxLS
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -16657,26 +16663,56 @@ stop
       maskcoef_ptr=>maskcoef
       levelPC_ptr=>levelPC
 
-      if ((FSI_outer_sweeps.ge.1).and. &
-          (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
-       !do nothing
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      extend_offset=two*dxmaxLS
+
+      if (extend_solid_velocity.eq.0) then
+
+       if ((FSI_outer_sweeps.ge.1).and. &
+           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+        !do nothing
+       else
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        stop
+       endif
+
+       im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+       if (is_rigid_CL(im_rigid_CL).eq.1) then
+        !do nothing
+       else
+        print *,"im_rigid_CL invalid: ",im_rigid_CL
+        stop
+       endif
+
+      else if (extend_solid_velocity.eq.1) then
+
+       if ((FSI_outer_sweeps.ge.0).and. &
+           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps-1)) then
+        !do nothing
+       else
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        stop
+       endif
+
+       im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
+       if (is_rigid_CL(im_rigid_CL).eq.1) then
+        !do nothing
+       else
+        print *,"im_rigid_CL invalid: ",im_rigid_CL
+        stop
+       endif
+
       else
-       print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+       print *,"extend_solid_velocity invalid: ",extend_solid_velocity
        stop
       endif
 
-      im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
-      if (is_rigid_CL(im_rigid_CL).eq.1) then
-       !do nothing
-      else
-       print *,"im_rigid_CL invalid: ",im_rigid_CL
-       stop
-      endif
 
       if (bfact.lt.1) then
        print *,"bfact too small"
        stop
       endif
+
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid fort_manage_elastic_velocity"
        stop
@@ -16705,10 +16741,10 @@ stop
 
       call checkbound_array1(fablo,fabhi,velMAC_ptr,0,dir)
       call checkbound_array1(fablo,fabhi,velCELL_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,FSIvelMAC_ptr,0,dir)
+      call checkbound_array1(fablo,fabhi,FSIvelMAC_ptr,2,dir)
       call checkbound_array1(fablo,fabhi,FSIvelCELL_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,3,-1)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
 
       do im=1,num_materials
@@ -16823,20 +16859,43 @@ stop
          if ((is_rigid(im_left).eq.1).or. &
              (is_rigid(im_right).eq.1)) then
           !do nothing
-         else if (((is_rigid_CL(im_left).eq.1).and. &
-                   (im_left.le.im_rigid_CL)).or. &
-                  ((is_rigid_CL(im_right).eq.1).and. &
-                   (im_right.le.im_rigid_CL))) then
-          !do nothing
-         else if (((is_rigid_CL(im_left).eq.0).or. &
-                   (im_left.gt.im_rigid_CL)).and. &
-                  ((is_rigid_CL(im_right).eq.0).or. &
-                   (im_right.gt.im_rigid_CL))) then
-          velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
+         else if ((is_rigid(im_left).eq.0).and. &
+                  (is_rigid(im_right).eq.0)) then
+
+          if (extend_solid_velocity.eq.0) then
+
+           !im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+           !FSI_outer_sweeps>=1
+           if (((is_rigid_CL(im_left).eq.1).and. &
+                (im_left.le.im_rigid_CL)).or. &
+               ((is_rigid_CL(im_right).eq.1).and. &
+                (im_right.le.im_rigid_CL))) then
+            !do nothing
+           else if (((is_rigid_CL(im_left).eq.0).or. &
+                     (im_left.gt.im_rigid_CL)).and. &
+                    ((is_rigid_CL(im_right).eq.0).or. &
+                     (im_right.gt.im_rigid_CL))) then
+            velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
+           else
+            print *,"is_rigid_CL bust: ",im_left,im_right, &
+             is_rigid_CL(im_left),is_rigid_CL(im_right)
+            print *,"im_rigid_CL: ",im_rigid_CL
+            stop
+           endif
+
+          else if (extend_solid_velocity.eq.1) then
+           !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
+           !FSI_outer_sweeps>=0
+
+          else
+           print *,"extend_solid_velocity invalid: ",extend_solid_velocity
+           stop
+          endif
+
          else
-          print *,"is_rigid_CL bust: ",im_left,im_right, &
-           is_rigid_CL(im_left),is_rigid_CL(im_right)
-          print *,"im_rigid_CL: ",im_rigid_CL
+          print *,"is_rigid invalid"
+          print *,"im_left is_rigid(im_left): ",im_left,is_rigid(im_left)
+          print *,"im_right is_rigid(im_right): ",im_right,is_rigid(im_right)
           stop
          endif
 
@@ -16899,14 +16958,58 @@ stop
 
         if (is_rigid(im_left).eq.1) then
          !do nothing
-        else if ((is_rigid_CL(im_left).eq.1).and. &
-                 (im_left.le.im_rigid_CL)) then
-         !do nothing
-        else if ((is_rigid_CL(im_left).eq.0).or. &
-                 (im_left.gt.im_rigid_CL)) then
-         velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
+        else if (is_rigid(im_left).eq.0) then
+
+         if (extend_solid_velocity.eq.0) then
+
+          !im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+          !FSI_outer_sweeps>=1
+          if ((is_rigid_CL(im_left).eq.1).and. &
+              (im_left.le.im_rigid_CL)) then
+           !do nothing
+          else if ((is_rigid_CL(im_left).eq.0).or. &
+                   (im_left.gt.im_rigid_CL)) then
+           velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
+          else
+           print *,"is_rigid_CL bust: ",im_left,is_rigid_CL(im_left)
+           stop
+          endif
+
+         else if (extend_solid_velocity.eq.1) then
+
+          !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
+          !FSI_outer_sweeps>=0
+          do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
+           im_critical=im_elastic_map(ipart)+1
+           if (is_rigid_CL(im_critical).eq.1) then
+            if (localLS(im_critical).ge.-extend_offset) then
+             velCELL(D_DECL(i,j,k))=half*( &
+                velMAC(D_DECL(i,j,k))+ &
+                velMAC(D_DECL(i+ii,j+jj,k+kk)))
+            else if (localLS(im_critical).le.-extend_offset) then
+             !do nothing
+            else
+             print *,"localLS(im_critical) invalid: ", &
+              im_critical,localLS(im_critical)
+             stop
+            endif
+
+           else
+            print *,"is_rigid_CL(im_critical) invalid: ", &
+             im_critical,is_rigid_CL(im_critical)
+            stop
+           endif
+
+          enddo !ipart
+
+         else
+          print *,"extend_solid_velocity invalid: ",extend_solid_velocity
+          stop
+         endif
+
         else
-         print *,"is_rigid_CL bust: ",im_left,is_rigid_CL(im_left)
+         print *,"is_rigid invalid"
+         print *,"im_left is_rigid(im_left): ",im_left,is_rigid(im_left)
          stop
         endif
         

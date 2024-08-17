@@ -12951,7 +12951,7 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 }  // SET_STOKES_MARK
 
 
-//allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
+//allocates, saves, and extends FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
 //sweeps<num_FSI_outer_sweeps-1
 //copies fluid velocity and deletes if sweeps>=1 and 
 //sweeps<=num_FSI_outer_sweeps
@@ -12964,27 +12964,27 @@ void NavierStokes::manage_FSI_data() {
  if ((num_FSI_outer_sweeps>=2)&&
      (num_FSI_outer_sweeps<=num_materials)) {
 
+  bool use_tiling=ns_tiling;
+
+  if (num_state_base!=2)
+   amrex::Error("num_state_base invalid");
+
+  resize_levelset(3,LEVELPC_MF);
+  debug_ngrow(LEVELPC_MF,3,local_caller_string);
+
+  resize_maskfiner(1,MASKCOEF_MF);
+  resize_mask_nbr(1);
+
+  const Real* dx = geom.CellSize();
+
+  const Box& domain = geom.Domain();
+  const int* domlo = domain.loVect();
+  const int* domhi = domain.hiVect();
+
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
   if ((FSI_outer_sweeps>=1)&&
       (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
-
-   bool use_tiling=ns_tiling;
-
-   if (num_state_base!=2)
-    amrex::Error("num_state_base invalid");
-
-   resize_levelset(2,LEVELPC_MF);
-   debug_ngrow(LEVELPC_MF,2,local_caller_string);
-
-   resize_maskfiner(1,MASKCOEF_MF);
-   resize_mask_nbr(1);
-
-   const Real* dx = geom.CellSize();
-
-   const Box& domain = geom.Domain();
-   const int* domlo = domain.loVect();
-   const int* domhi = domain.hiVect();
-
-   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -13028,6 +13028,8 @@ void NavierStokes::manage_FSI_data() {
      Vector<int> velbc=getBCArray(State_Type,gridno,
        STATECOMP_VEL,STATE_NCOMP_VEL);
 
+     int extend_solid_velocity=0;
+
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
@@ -13035,6 +13037,7 @@ void NavierStokes::manage_FSI_data() {
 
       // fort_manage_elastic_velocity is declared in: LEVELSET_3D.F90
      fort_manage_elastic_velocity(
+      &extend_solid_velocity,
       im_elastic_map.dataPtr(),
       &num_FSI_outer_sweeps,
       &FSI_outer_sweeps,
@@ -13080,11 +13083,11 @@ void NavierStokes::manage_FSI_data() {
 
    new_localMF(FSI_CELL_VELOCITY_MF,AMREX_SPACEDIM,1,-1);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow=1
+    //ngrow=2
     //Umac_Type+dir
     //getStateMAC_localMF is declared in NavierStokes2.cpp
     //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
-    getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,0,dir,cur_time_slab);
+    getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,2,dir,cur_time_slab);
    } // dir=0 ... sdim-1
 
    // advect_register has 1 ghost initialized.
@@ -13099,6 +13102,91 @@ void NavierStokes::manage_FSI_data() {
     //do nothing
    } else
     amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nComp()!=sdim");
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+    for (MFIter mfi(S_new,use_tiling);mfi.isValid(); ++mfi) {
+     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     int gridno=mfi.index();
+     const Box& tilegrid = mfi.tilebox();
+     const Box& fabgrid = grids[gridno];
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     int bfact=parent->Space_blockingFactor(level);
+     const Real* xlo = grid_loc[gridno].lo();
+    
+     FArrayBox& velMAC=Umac_new[mfi];
+     FArrayBox& velCELL=S_new[mfi];
+
+     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+
+     FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
+     if (FSIvelMAC.nComp()!=1)
+      amrex::Error("FSIvelMAC.nComp() invalid");
+     FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
+     if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
+      amrex::Error("FSIvelCELL.nComp() invalid");
+
+     // mask=tag if not covered by level+1 or outside the domain.
+     FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
+
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+       STATECOMP_VEL,STATE_NCOMP_VEL);
+
+     int extend_solid_velocity=1;
+
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+      // fort_manage_elastic_velocity is declared in: LEVELSET_3D.F90
+     fort_manage_elastic_velocity(
+      &extend_solid_velocity,
+      im_elastic_map.dataPtr(),
+      &num_FSI_outer_sweeps,
+      &FSI_outer_sweeps,
+      &dir, //dir=0,1,2
+      velbc.dataPtr(),  
+      &slab_step,
+      &cur_time_slab, 
+      xlo,dx,
+      // mask=tag if not covered by level+1 or outside the domain.
+      maskcoeffab.dataPtr(),
+      ARLIM(maskcoeffab.loVect()),ARLIM(maskcoeffab.hiVect()),
+      lsfab.dataPtr(),
+      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+      velMAC.dataPtr(),
+      ARLIM(velMAC.loVect()),ARLIM(velMAC.hiVect()), 
+      velCELL.dataPtr(STATECOMP_VEL+dir),
+      ARLIM(velCELL.loVect()),ARLIM(velCELL.hiVect()),
+      FSIvelMAC.dataPtr(),
+      ARLIM(FSIvelMAC.loVect()),ARLIM(FSIvelMAC.hiVect()), 
+      FSIvelCELL.dataPtr(dir),
+      ARLIM(FSIvelCELL.loVect()),ARLIM(FSIvelCELL.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &level,&finest_level,
+      &NS_geometry_coord,
+      domlo,domhi);
+    } // mfi
+} // omp
+    ns_reconcile_d_num(LOOP_MANAGE_VEL,"fort_manage_elastic_velcity");
+
+   } // dir=0..sdim-1
 
   } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
    //do nothing
