@@ -303,6 +303,7 @@ namespace amrex{
 
 
       void fort_manage_elastic_velocity(
+        int* extend_solid_velocity,
         int* im_elastic_map,
         int* num_FSI_outer_sweeps,
         int* FSI_outer_sweeps,
