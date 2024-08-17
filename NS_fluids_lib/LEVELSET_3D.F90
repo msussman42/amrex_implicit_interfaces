@@ -16662,7 +16662,7 @@ stop
       integer im_rigid_CL
       integer im_critical
       integer ipart
-      integer extend_offset
+      real(amrex_real) extend_offset
       real(amrex_real) dxmaxLS
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
