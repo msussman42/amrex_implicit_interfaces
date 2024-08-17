@@ -16629,16 +16629,23 @@ stop
       integer im1,jm1,km1
       integer im
       integer im_left,im_right
+      integer loc_im_left,loc_im_right
       integer dir2
       integer, parameter :: nhalf=3
       real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
+      real(amrex_real) local_xstenMAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenMAC_center(SDIM)
+      real(amrex_real) local_xstenMAC_center(SDIM)
       integer at_RZ_face
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
+      real(amrex_real) local_LSleft(num_materials)
+      real(amrex_real) local_LSright(num_materials)
       real(amrex_real) localLS(num_materials)
       real(amrex_real) xclamped_minus(SDIM)
       real(amrex_real) xclamped_plus(SDIM)
+      real(amrex_real) loc_xclamped_minus(SDIM)
+      real(amrex_real) loc_xclamped_plus(SDIM)
       real(amrex_real) LS_clamped_plus
       real(amrex_real) LS_clamped_minus
       real(amrex_real) vel_clamped_plus(SDIM)
@@ -16650,11 +16657,16 @@ stop
       real(amrex_real) temperature_clamped
       real(amrex_real) xclamped_minus_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) xclamped_plus_sten(-nhalf:nhalf,SDIM)
+      real(amrex_real) loc_xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      real(amrex_real) loc_xclamped_plus_sten(-nhalf:nhalf,SDIM)
       integer im_rigid_CL
       integer im_critical
       integer ipart
       integer extend_offset
       real(amrex_real) dxmaxLS
+      real(amrex_real) vel_sum,wtsum
+      real(amrex_real) local_vel,local_wt
+      integer i1,j1,k1,k1low,k1high
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -16676,6 +16688,9 @@ stop
         stop
        endif
 
+        !is_rigid_CL(im_test).eq.1 and
+        !im_test.le.im_rigid_CL then
+        !we treat "im_test" as a rigid solid.
        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
        if (is_rigid_CL(im_rigid_CL).eq.1) then
         !do nothing
@@ -16694,6 +16709,10 @@ stop
         stop
        endif
 
+        !is_rigid_CL(im_test).eq.1 and
+        !im_test.ge.im_rigid_CL then
+        !we extrapolate the "rigid" velocity into the
+        !exterior narrow band of "im_test"
        im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
        if (is_rigid_CL(im_rigid_CL).eq.1) then
         !do nothing
@@ -16762,6 +16781,18 @@ stop
        endif
 
       enddo  ! im=1..num_materials
+
+      k1low=0
+      k1high=0
+      if (SDIM.eq.3) then
+       k1low=-2
+       k1high=2
+      else if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
 
       ii=0
       jj=0
@@ -16884,8 +16915,181 @@ stop
            endif
 
           else if (extend_solid_velocity.eq.1) then
+
            !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
            !FSI_outer_sweeps>=0
+           do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
+            im_critical=im_elastic_map(ipart)+1
+
+            if (im_critical.ge.im_rigid_CL) then
+             !do nothing
+            else
+             print *,"expecting im_critical.ge.im_rigid_CL: ", &
+              im_critical,im_rigid_CL
+             stop
+            endif
+
+            if (is_rigid_CL(im_critical).eq.1) then
+
+             if ((LSleft(im_critical).ge.-extend_offset).and. &
+                 (LSleft(im_critical).le.zero).and. &
+                 (LSright(im_critical).ge.-extend_offset).and. &
+                 (LSright(im_critical).le.zero)) then
+
+              vel_sum=zero
+              wtsum=zero
+
+              do k1=k1low,k1high
+              do j1=-2,2
+              do i1=-2,2
+
+               local_wt=zero
+               local_vel=zero
+
+               ! dir=0..sdim-1
+               call gridstenMAC_level(local_xstenMAC, &
+                 i+i1,j+j1,k+k1,level,nhalf,dir)
+               do dir2=1,SDIM
+                local_xstenMAC_center(dir2)=local_xstenMAC(0,dir2)
+               enddo
+
+               do im=1,num_materials
+                local_LSleft(im)=levelPC(D_DECL(im1+i1,jm1+j1,km1+k1),im)
+                local_LSright(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
+               enddo
+               call get_primary_material(local_LSleft,loc_im_left)
+               call get_primary_material(local_LSright,loc_im_right)
+
+               call gridsten_level(loc_xclamped_minus_sten, &
+                 im1+i1,jm1+j1,km1+k1,level,nhalf)
+               call gridsten_level(loc_xclamped_plus_sten, &
+                 i+i1,j+j1,k+k1,level,nhalf)
+               do dir2=1,SDIM
+                loc_xclamped_minus(dir2)=loc_xclamped_minus_sten(0,dir2)
+                loc_xclamped_plus(dir2)=loc_xclamped_plus_sten(0,dir2)
+               enddo
+               call SUB_clamped_LS(loc_xclamped_minus,time,LS_clamped_minus, &
+                vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+               call SUB_clamped_LS(loc_xclamped_plus,time,LS_clamped_plus, &
+                vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
+               if (LS_clamped_plus.ge.zero) then
+                local_wt=one
+                local_vel=vel_clamped_plus(dir+1)
+               else if (LS_clamped_minus.ge.zero) then
+                local_wt=one
+                local_vel=vel_clamped_minus(dir+1)
+               else if ((LS_clamped_plus.lt.zero).and. &
+                        (LS_clamped_minus.lt.zero)) then
+
+                at_RZ_face=0
+                if (levelrz.eq.COORDSYS_CARTESIAN) then
+                 ! do nothing
+                else if (levelrz.eq.COORDSYS_RZ) then
+                 if (SDIM.ne.2) then
+                  print *,"dimension bust"
+                  stop
+                 endif
+                 if ((dir.eq.0).and. &
+                     (local_xstenMAC_center(1).le.EPS2*dx(1))) then
+                  at_RZ_face=1
+                 endif
+                else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+                 if ((dir.eq.0).and. &
+                     (local_xstenMAC_center(1).le.EPS2*dx(1))) then
+                  at_RZ_face=1
+                 endif
+                else
+                 print *,"levelrz invalid fort_manage_elastic_velocity: ", &
+                   levelrz
+                 stop
+                endif 
+
+                if (at_RZ_face.eq.1) then
+                 local_wt=one
+                 local_vel=zero
+                else if (at_RZ_face.eq.0) then
+
+                 if ((is_rigid(loc_im_left).eq.1).or. &
+                     (is_rigid_CL(loc_im_left).eq.1).or. &
+                     (is_rigid(loc_im_right).eq.1).or. &
+                     (is_rigid_CL(loc_im_right).eq.1)) then
+                  local_wt=one
+                  local_vel=FSIvelMAC(D_DECL(i+i1,j+j1,k+k1))
+                 else if ((is_rigid(loc_im_left).eq.0).and. &
+                          (is_rigid_CL(loc_im_left).eq.0).and. &
+                          (is_rigid(loc_im_right).eq.0).and. &
+                          (is_rigid_CL(loc_im_right).eq.0)) then
+                  !do nothing
+                 else
+                  print *,"is_rigid(s) invalid"
+                  print *,"loc_im_left ",loc_im_left
+                  print *,"loc_im_right ",loc_im_right
+                  stop
+                 endif
+                else
+                 print *,"at_RZ_face invalid"
+                 stop
+                endif
+               else
+                print *,"LS_clamped_plus? ",LS_clamped_plus
+                print *,"LS_clamped_minus? ",LS_clamped_minus
+                stop
+               endif
+
+               if (local_wt.eq.one) then
+                local_wt=dxmaxLS**2
+                do dir2=1,SDIM
+                 local_wt=local_wt+(local_xstenMAC_center(dir2)- &
+                   xstenMAC_center(dir2))**2
+                enddo
+                local_wt=one/local_wt
+                wtsum=wtsum+local_wt
+                vel_sum=vel_sum+local_wt*local_vel
+               else if (local_wt.eq.zero) then
+                !do nothing
+               else
+                print *,"local_wt invalid: ",local_wt
+                stop
+               endif
+
+              enddo !i1
+              enddo !j1
+              enddo !k1
+
+              if (wtsum.gt.zero) then
+               vel_sum=vel_sum/wtsum
+              else if (wtsum.eq.zero) then
+               !do nothing
+              else
+               print *,"wtsum invalid: ",wtsum
+               stop
+              endif
+              if (abs(vel_sum).ge.zero) then
+               velMAC(D_DECL(i,j,k))=vel_sum
+              else
+               print *,"vel_sum corrupt: ",vel_sum
+               stop
+              endif
+
+             else if ((LSleft(im_critical).le.-extend_offset).or. &
+                      (LSleft(im_critical).ge.zero).or. &
+                      (LSright(im_critical).le.-extend_offset).or. &
+                      (LSright(im_critical).ge.zero)) then
+              !do nothing
+             else
+              print *,"LSleft(im_critical) invalid? ", &
+               im_critical,LSleft(im_critical)
+              print *,"LSright(im_critical) invalid? ", &
+               im_critical,LSright(im_critical)
+              stop
+             endif
+            else
+             print *,"is_rigid_CL(im_critical) invalid: ", &
+              im_critical,is_rigid_CL(im_critical)
+             stop
+            endif
+
+           enddo !ipart
 
           else
            print *,"extend_solid_velocity invalid: ",extend_solid_velocity
@@ -16981,12 +17185,24 @@ stop
           !FSI_outer_sweeps>=0
           do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
            im_critical=im_elastic_map(ipart)+1
+
+           if (im_critical.ge.im_rigid_CL) then
+            !do nothing
+           else
+            print *,"expecting im_critical.ge.im_rigid_CL: ", &
+             im_critical,im_rigid_CL
+            stop
+           endif
+
            if (is_rigid_CL(im_critical).eq.1) then
-            if (localLS(im_critical).ge.-extend_offset) then
+
+            if ((localLS(im_critical).ge.-extend_offset).and. &
+                (localLS(im_critical).le.zero)) then
              velCELL(D_DECL(i,j,k))=half*( &
                 velMAC(D_DECL(i,j,k))+ &
                 velMAC(D_DECL(i+ii,j+jj,k+kk)))
-            else if (localLS(im_critical).le.-extend_offset) then
+            else if ((localLS(im_critical).le.-extend_offset).or. &
+                     (localLS(im_critical).ge.zero)) then
              !do nothing
             else
              print *,"localLS(im_critical) invalid: ", &
