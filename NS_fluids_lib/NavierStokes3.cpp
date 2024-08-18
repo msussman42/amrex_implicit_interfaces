@@ -11369,6 +11369,7 @@ void NavierStokes::multiphase_project(int project_option) {
        ((num_FSI_outer_sweeps>1)&&
         (FSI_outer_sweeps==num_FSI_outer_sweeps-1))) {
 
+    //calculate the vorticity needed by "init_pressure_error_indicator"
     int do_alloc=1;
     int simple_AMR_BC_flag_viscosity=1;
     init_gradu_tensorALL(

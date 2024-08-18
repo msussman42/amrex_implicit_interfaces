@@ -1403,6 +1403,8 @@ subroutine STUB_MDOT( &
   kdst_derived, &
   ksrc_physical, &
   kdst_physical, &
+  interp_valid_flag_src, &
+  interp_valid_flag_dst, &
   T_probe_src, &
   T_probe_dst, &
   TI, &
@@ -1428,6 +1430,8 @@ real(amrex_real), INTENT(in) :: ksrc_derived
 real(amrex_real), INTENT(in) :: kdst_derived
 real(amrex_real), INTENT(in) :: ksrc_physical
 real(amrex_real), INTENT(in) :: kdst_physical
+integer, INTENT(in) :: interp_valid_flag_src
+integer, INTENT(in) :: interp_valid_flag_dst
 real(amrex_real), INTENT(in) :: T_probe_src
 real(amrex_real), INTENT(in) :: T_probe_dst
 real(amrex_real), INTENT(in) :: LL
@@ -1441,8 +1445,22 @@ if (interface_mass_transfer_model.eq.0) then
  ! do nothing
 else if (interface_mass_transfer_model.eq.999) then
  mdot_override=1
- DTsrc=T_probe_src-TI
- DTdst=T_probe_dst-TI
+ if (interp_valid_flag_src.eq.1) then
+  DTsrc=T_probe_src-TI
+ else if (interp_valid_flag_src.eq.0) then
+  DTsrc=zero
+ else
+  print *,"interp_valid_flag_src invalid"
+  stop
+ endif
+ if (interp_valid_flag_dst.eq.1) then
+  DTdst=T_probe_dst-TI
+ else if (interp_valid_flag_dst.eq.0) then
+  DTdst=zero
+ else
+  print *,"interp_valid_flag_dst invalid"
+  stop
+ endif
 
  mdotsrc=ksrc_derived*DTsrc/(LL*dxprobe_src)
  mdotdst=kdst_derived*DTdst/(LL*dxprobe_dst)

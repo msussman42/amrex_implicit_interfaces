@@ -2567,6 +2567,7 @@ stop
       real(amrex_real) LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
       real(amrex_real) VOFsrc,VOFdst
       real(amrex_real) LL
+      integer, parameter :: interp_valid_flag=1
       integer velcomp
       integer dcompsrc,dcompdst
       integer tcompsrc,tcompdst
@@ -3425,6 +3426,8 @@ stop
               kdest_predict, &
               ksource_physical, &
               kdest_physical, &
+              interp_valid_flag, &
+              interp_valid_flag, &
               Tsrc,Tdst, &
               TSAT, &
               Tsrcalt,Tdstalt, &
