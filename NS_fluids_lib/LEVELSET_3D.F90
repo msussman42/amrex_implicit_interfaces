@@ -16843,7 +16843,6 @@ stop
        do im=1,num_materials
         LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
         LSright(im)=levelPC(D_DECL(i,j,k),im)
-        localLS(im)=half*(LSright(im)+LSleft(im))
        enddo
        call get_primary_material(LSleft,im_left)
        call get_primary_material(LSright,im_right)
@@ -16872,17 +16871,31 @@ stop
           print *,"dimension bust"
           stop
          endif
+
+         if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
+          !do nothing
+         else
+          print *,"xstenMAC_center(1) invalid: ",xstenMAC_center(1)
+          stop
+         endif
+
          if ((dir.eq.0).and. &
-             (xstenMAC_center(1).le.EPS2*dx(1))) then
+             (abs(xstenMAC_center(1)).le.EPS2*dx(1))) then
           at_RZ_face=1
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+         if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
+          !do nothing
+         else
+          print *,"xstenMAC_center(1) invalid: ",xstenMAC_center(1)
+          stop
+         endif
          if ((dir.eq.0).and. &
-             (xstenMAC_center(1).le.EPS2*dx(1))) then
+             (abs(xstenMAC_center(1)).le.EPS2*dx(1))) then
           at_RZ_face=1
          endif
         else
-         print *,"levelrz invalid fort_manage_elastic_velocity"
+         print *,"levelrz invalid fort_manage_elastic_velocity: ",levelrz
          stop
         endif 
 
@@ -16975,7 +16988,12 @@ stop
                 vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
                call SUB_clamped_LS(loc_xclamped_plus,time,LS_clamped_plus, &
                 vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
-               if (LS_clamped_plus.ge.zero) then
+               if ((LS_clamped_plus.ge.zero).and. &
+                   (LS_clamped_minus.ge.zero)) then
+                local_wt=one
+                local_vel=half*(vel_clamped_plus(dir+1)+ &
+                                vel_clamped_minus(dir+1))
+               else if (LS_clamped_plus.ge.zero) then
                 local_wt=one
                 local_vel=vel_clamped_plus(dir+1)
                else if (LS_clamped_minus.ge.zero) then
@@ -16993,12 +17011,12 @@ stop
                   stop
                  endif
                  if ((dir.eq.0).and. &
-                     (local_xstenMAC_center(1).le.EPS2*dx(1))) then
+                     (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
                   at_RZ_face=1
                  endif
                 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
                  if ((dir.eq.0).and. &
-                     (local_xstenMAC_center(1).le.EPS2*dx(1))) then
+                     (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
                   at_RZ_face=1
                  endif
                 else
@@ -17030,7 +17048,7 @@ stop
                   stop
                  endif
                 else
-                 print *,"at_RZ_face invalid"
+                 print *,"at_RZ_face invalid: ",at_RZ_face
                  stop
                 endif
                else
@@ -17062,7 +17080,12 @@ stop
               if (wtsum.gt.zero) then
                vel_sum=vel_sum/wtsum
               else if (wtsum.eq.zero) then
-               !do nothing
+               if (vel_sum.eq.zero) then
+                !do nothing
+               else
+                print *,"vel_sum invalid: ",vel_sum
+                stop
+               endif
               else
                print *,"wtsum invalid: ",wtsum
                stop

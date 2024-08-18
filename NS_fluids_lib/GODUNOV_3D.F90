@@ -19647,7 +19647,8 @@ stop
          stop
         endif
        
-        if ((rplus.gt.zero).and.(rminus.ge.zero)) then
+        if ((rplus.gt.zero).and. &
+            (rminus.gt.-EPS2*dxmaxLS)) then
          Q_ITAN(1)=Q_ITAN(1)*rminus
          Q_ITAN(2)=Q_ITAN(2)*rplus
         else
