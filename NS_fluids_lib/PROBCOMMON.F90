@@ -816,6 +816,8 @@ implicit none
         kdst_derived, &
         ksrc_physical, &
         kdst_physical, &
+        interp_valid_flag_src, &
+        interp_valid_flag_dst, &
         T_probe_src, &
         T_probe_dst, &
         TI, &
@@ -839,6 +841,8 @@ implicit none
       real(amrex_real), INTENT(in) :: kdst_derived
       real(amrex_real), INTENT(in) :: ksrc_physical
       real(amrex_real), INTENT(in) :: kdst_physical
+      integer, INTENT(in) :: interp_valid_flag_src
+      integer, INTENT(in) :: interp_valid_flag_dst
       real(amrex_real), INTENT(in) :: T_probe_src
       real(amrex_real), INTENT(in) :: T_probe_dst
       real(amrex_real), INTENT(in) :: LL

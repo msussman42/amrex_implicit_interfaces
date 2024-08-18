@@ -20332,6 +20332,8 @@ end subroutine RatePhaseChange
        kdst_derived, &
        ksrc_physical, &
        kdst_physical, &
+       interp_valid_flag_src, &
+       interp_valid_flag_dst, &
        Tsrc_probe, &
        Tdst_probe, &
        Tsat, &
@@ -20385,6 +20387,8 @@ end subroutine RatePhaseChange
       real(amrex_real), INTENT(in) :: expansion_fact
       real(amrex_real), INTENT(in) :: ksrc_derived,kdst_derived
       real(amrex_real), INTENT(in) :: ksrc_physical,kdst_physical
+      integer, INTENT(in) :: interp_valid_flag_src
+      integer, INTENT(in) :: interp_valid_flag_dst
       real(amrex_real), INTENT(in) :: Tsrc_probe
       real(amrex_real), INTENT(in) :: Tdst_probe
       real(amrex_real), INTENT(in) :: Tsat
@@ -20392,9 +20396,12 @@ end subroutine RatePhaseChange
       real(amrex_real), INTENT(in) :: source_perim_factor,dest_perim_factor
       integer, INTENT(in) :: microlayer_substrate_source
       integer, INTENT(in) :: microlayer_substrate_dest
-      real(amrex_real), INTENT(in) :: microlayer_angle_source,microlayer_angle_dest
-      real(amrex_real), INTENT(in) :: microlayer_size_source,microlayer_size_dest
-      real(amrex_real), INTENT(in) :: macrolayer_size_source,macrolayer_size_dest
+      real(amrex_real), INTENT(in) ::  &
+              microlayer_angle_source,microlayer_angle_dest
+      real(amrex_real), INTENT(in) :: &
+              microlayer_size_source,microlayer_size_dest
+      real(amrex_real), INTENT(in) :: &
+              macrolayer_size_source,macrolayer_size_dest
       real(amrex_real), INTENT(in) :: dxprobe_source
       real(amrex_real), INTENT(in) :: dxprobe_dest
       real(amrex_real), INTENT(in) :: Tsrc_INT,Tdst_INT
@@ -20459,7 +20466,7 @@ end subroutine RatePhaseChange
        if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
         ! do nothing
        else
-        print *,"ispec invalid"
+        print *,"ispec invalid:",ispec
         stop
        endif
       else if (is_multi_component_evapF(local_freezing_model, &
@@ -20467,7 +20474,7 @@ end subroutine RatePhaseChange
        if (ispec.eq.0) then
         ! do nothing
        else
-        print *,"ispec invalid"
+        print *,"ispec invalid: ",ispec
         stop
        endif
       else
@@ -20485,8 +20492,10 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((Tsrc_probe.ge.zero).and.(Tdst_probe.ge.zero).and. &
-          (Tsat.ge.zero).and.(Tsrc_INT.ge.zero).and. &
+      if ((Tsrc_probe.ge.zero).and. &
+          (Tdst_probe.ge.zero).and. &
+          (Tsat.ge.zero).and. &
+          (Tsrc_INT.ge.zero).and. &
           (Tdst_INT.ge.zero)) then
        ! do nothing
       else
@@ -20499,13 +20508,13 @@ end subroutine RatePhaseChange
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid: ",time
        stop
       endif
       if (alpha.ge.zero) then
@@ -20575,10 +20584,24 @@ end subroutine RatePhaseChange
          !  velsrc<0 => then the "rate of mass transfer is negative" which
          ! is disallowed; i.e. no evaporation occurs.
         ! Tsrc_probe is the probe temperature in the source
-        DTsrc=Tsrc_probe-Tsat 
-    
+        if (interp_valid_flag_src.eq.1) then
+         DTsrc=Tsrc_probe-Tsat 
+        else if (interp_valid_flag_src.eq.0) then
+         DTsrc=zero
+        else 
+         print *,"interp_valid_flag_src invalid"
+         stop
+        endif
+
         ! Tdst_probe is the probe temperature in the destination
-        DTdst=Tdst_probe-Tsat  
+        if (interp_valid_flag_dst.eq.1) then
+         DTdst=Tdst_probe-Tsat  
+        else if (interp_valid_flag_dst.eq.0) then
+         DTdst=zero
+        else 
+         print *,"interp_valid_flag_dst invalid"
+         stop
+        endif
 
         velsrc=ksrc_derived*DTsrc/(LL*dxprobe_source)
         veldst=kdst_derived*DTdst/(LL*dxprobe_dest)
@@ -20826,6 +20849,8 @@ end subroutine RatePhaseChange
         kdst_derived, &
         ksrc_physical, &
         kdst_physical, &
+        interp_valid_flag_src, &
+        interp_valid_flag_dst, &
         Tsrc_probe, &
         Tdst_probe, &
         Tsat, &

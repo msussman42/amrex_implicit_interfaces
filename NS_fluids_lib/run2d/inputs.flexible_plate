@@ -11,7 +11,7 @@
 # 0.5 (980)t^2 = .6  t=sqrt(1.2/980)=0.035
 # impact velocity=980 * 0.035=34.3 cm/s
 # scale the elastic tensor: det(B)=I
-max_step  =  99999   # maximum timestep 
+max_step  = 999999   # maximum timestep 
 stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -39,7 +39,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
-ns.num_divu_outer_sweeps=1
+ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)

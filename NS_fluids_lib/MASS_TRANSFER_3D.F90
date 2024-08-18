@@ -2006,7 +2006,7 @@ stop
         dencomp_probe(iprobe)=PROBE_PARMS%dencomp_dest
         POUT%dxprobe_target(iprobe)=PROBE_PARMS%dxprobe_dest
        else
-        print *,"iprobe invalid"
+        print *,"iprobe invalid: ",iprobe
         stop
        endif
   
@@ -2046,7 +2046,7 @@ stop
          POUT%den_probe(iprobe))
 
        else
-        print *,"mtype invalid"
+        print *,"mtype invalid: ",mtype
         stop
        endif
 
@@ -2265,7 +2265,8 @@ stop
         POUT%interp_valid_flag(iprobe)=0
 
        else
-        print *,"im_primary_probe or im_target_probe invalid"
+        print *,"im_primary_probe or im_target_probe invalid: ", &
+           iprobe,im_primary_probe(iprobe),im_target_probe(iprobe)
         stop
        endif
 
@@ -7441,7 +7442,8 @@ stop
       integer :: local_probe_constrain
       integer :: user_override_TI_YI
 
-      real(amrex_real), target :: TI_YI(MAX_TI_YI_logfile+1,4) !T,Y,VEL,mdot_diff
+      real(amrex_real), target :: &
+           TI_YI(MAX_TI_YI_logfile+1,4) !T,Y,VEL,mdot_diff
       real(amrex_real), pointer :: TI_YI_ptr(:,:)
       integer :: TI_YI_counter
       integer :: TI_YI_best_guess_index
@@ -7548,9 +7550,11 @@ stop
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  
-      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1)) 
+      real(amrex_real), target, INTENT(in) :: &
+              LS(DIMV(LS),num_materials*(SDIM+1)) 
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(inout) :: LSnew(DIMV(LSnew),num_materials*(SDIM+1))
+      real(amrex_real), target, INTENT(inout) :: &
+              LSnew(DIMV(LSnew),num_materials*(SDIM+1))
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(inout) :: Snew(DIMV(Snew),nstate)
       real(amrex_real), pointer :: Snew_ptr(D_DECL(:,:,:),:)
@@ -7977,7 +7981,7 @@ stop
             vel_phasechange(1)=zero
 
             if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
-             print *,"im or im_opp bust 9"
+             print *,"im or im_opp bust 9: ",im,im_opp
              stop
             endif
             call get_iten(im,im_opp,iten)
@@ -8108,7 +8112,7 @@ stop
               local_probe_constrain=1
               normal_probe_factor=half
              else
-              print *,"local_freezing_model invalid"
+              print *,"local_freezing_model invalid: ",local_freezing_model
               stop
              endif
 
@@ -8119,7 +8123,8 @@ stop
               else if (im_dest.gt.im_source) then
                LSSIGN=-one
               else
-               print *,"im_dest<>im_source not satisfied"
+               print *,"im_dest<>im_source not satisfied: ", &
+                 im_dest,im_source
                stop
               endif
 
@@ -8193,6 +8198,7 @@ stop
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
 
                     ! normal_probe_factor=1/2 or 1
+                    ! microscale_probe_size=EPS2
                    xdst(dir)=xI(dir)- &
                     normal_probe_factor*dxmin*nrmCP(dir) 
                    xsrc(dir)=xI(dir)+ &
@@ -8581,7 +8587,7 @@ stop
                    else if (interp_status.eq.0) then
                     delta_Tsat=zero
                    else
-                    print *,"interp_status invalid"
+                    print *,"interp_status invalid: ",interp_status
                     stop
                    endif
 
@@ -8633,7 +8639,7 @@ stop
                     Y_predict, & !intent(in)
                     POUT) !intent(out)
                   else
-                   print *,"probe_ok invalid"
+                   print *,"probe_ok invalid: ",probe_ok
                    stop
                   endif
 
@@ -8642,7 +8648,8 @@ stop
                   else if (local_probe_constrain.eq.1) then
                    probe_ok=0 ! probes depend on TI, so they must be recalc.
                   else
-                   print *,"local_probe_constrain invalid"
+                   print *,"local_probe_constrain invalid: ", &
+                     local_probe_constrain
                    stop
                   endif
 
@@ -8659,6 +8666,10 @@ stop
                    interface_resolved=0
                   else
                    print *,"interp_valid_flag_initial invalid"
+                   print *,"interp_valid_flag_initial(1) ", &
+                           interp_valid_flag_initial(1)
+                   print *,"interp_valid_flag_initial(2) ", &
+                           interp_valid_flag_initial(2)
                    stop
                   endif
 
@@ -8706,6 +8717,7 @@ stop
 
                   trial_and_error=0
 
+                   !Kassemi or Palmore and Desjardins
                   if (local_probe_constrain.eq.0) then
                    if ((interface_resolved.eq.1).and. & ! valid probe
                        (interp_status.eq.1)) then ! valid curvature
@@ -8752,7 +8764,8 @@ stop
                      stop
                     endif
                    else
-                    print *,"interface_resolved or interp_status invalid"
+                    print *,"interface_resolved or interp_status invalid:", &
+                      interface_resolved,interp_status
                     stop
                    endif
   
@@ -8847,8 +8860,33 @@ stop
                      TSAT_predict, &
                      Y_predict, &
                      POUT)
+
+                    if (interp_valid_flag_initial(1).eq. &
+                        POUT%interp_valid_flag(1)) then
+                     !do nothing
+                    else 
+                     print *,"interp_valid_flag(1) invalid "
+                     print *,"interp_valid_flag_initial(1): ", &
+                         interp_valid_flag_initial(1)
+                     print *,"POUT%interp_valid_flag(1): ", &
+                         POUT%interp_valid_flag(1)
+                     stop
+                    endif
+
+                    if (interp_valid_flag_initial(2).eq. &
+                        POUT%interp_valid_flag(2)) then
+                     !do nothing
+                    else 
+                     print *,"interp_valid_flag(2) invalid "
+                     print *,"interp_valid_flag_initial(2): ", &
+                         interp_valid_flag_initial(2)
+                     print *,"POUT%interp_valid_flag(2): ", &
+                         POUT%interp_valid_flag(2)
+                     stop
+                    endif
+
                    else
-                    print *,"probe_ok invalid"
+                    print *,"probe_ok invalid: ",probe_ok
                     stop
                    endif
 
@@ -9245,6 +9283,8 @@ stop
                      thermal_k_model_correct(2), & ! ksrc,kdst
                      thermal_k_physical_base(1), &
                      thermal_k_physical_base(2), & ! ksrc,kdst
+                     interp_valid_flag_initial(1), & !source
+                     interp_valid_flag_initial(2), & !dest
                      POUT%T_probe(1), & ! source
                      POUT%T_probe(2), & ! dest
                      TSAT_predict, &
@@ -9279,7 +9319,7 @@ stop
                    else if (VEL_correct.lt.zero) then
                     VEL_correct=zero
                    else
-                    print *,"VEL_correct bust"
+                    print *,"VEL_correct bust: ",VEL_correct
                     stop
                    endif
 
@@ -9454,7 +9494,8 @@ stop
                      mdotY_debug=zero
 
                     else
-                     print *,"local_freezing_model invalid 7"
+                     print *,"local_freezing_model invalid 7: ", &
+                             local_freezing_model
                      stop
                     endif
 
@@ -9482,7 +9523,8 @@ stop
                               (interp_status.eq.0)) then
                       delta_Tsat=zero
                      else
-                      print *,"interface_resolved or interp_status invalid"
+                      print *,"interface_resolved or interp_status invalid:",&
+                        interface_resolved,interp_status
                       stop
                      endif
 
