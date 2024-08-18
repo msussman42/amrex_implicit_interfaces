@@ -26723,7 +26723,8 @@ else
  stop
 endif
 
-if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
+if ((im_critical.lt.0).or. &
+    (im_critical.ge.num_materials)) then
  print *,"im_critical invalid27: ",im_critical
  stop
 endif
@@ -26777,6 +26778,9 @@ call gridsten_level(xsten,i,j,k,level,nhalf)
  ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)   
  ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
  ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+ ! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+ !         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+ !         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
 shear=tendata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1) ! sqrt(2 D:D)
 n=DERIVE_TENSOR_RATE_DEFORM+1
 do ii=1,3
@@ -26905,7 +26909,7 @@ do jj=1,3 !deriv dir
     stop
    endif 
 
-  else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then ! zmac (wmac)
+  else if ((ii.eq.SDIM).and.(SDIM.eq.3)) then ! zmac (wmac) (ii)
 
    if ((jj.ge.1).and.(jj.le.SDIM)) then
 
@@ -27053,8 +27057,8 @@ do jj=1,3 !deriv dir
  endif
 
  n=n+1
-enddo !jj
-enddo !ii
+enddo !jj=1,3
+enddo !ii=1,3
 
 save_hoop_term=gradV_transpose(3,3)  ! u/r if RZ
 
@@ -27135,7 +27139,7 @@ do ii=1,3
   if (Q_hoop_old.gt.-one) then
    ! do nothing
   else
-   print *,"Q_hoop_old invalid"
+   print *,"Q_hoop_old invalid: ",Q_hoop_old
    stop
   endif
  else if (dumbbell_model.eq.0) then ! e.g. incremental model
@@ -27515,8 +27519,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    print *,"ii or jj invalid"
    stop
   endif
- enddo
- enddo
+ enddo !jj=1,3
+ enddo !ii=1,3
 
  do ii=1,3
  do jj=1,3
@@ -27580,6 +27584,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
    S_hoop=dt*save_hoop_term ! dt u/r
 
+    !CFL condition implied u dt/r <= 1
    if (S_hoop.le.-one+inverse_tol_hoop) then
     S_hoop=-one+inverse_tol_hoop
    else if (S_hoop.ge.one-inverse_tol_hoop) then
@@ -27590,6 +27595,21 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     print *,"S_hoop became corrupt: ",S_hoop
     stop
    endif
+    ! S_hoop=dt u/r
+    ! Q33^new = (1+2 dt u/r) (Q33^old+1) - 1=
+    !   Q33^old (1+2dt u/r)+2dt u/r=Q33^old+u_coef u
+    ! u=uold - dt (mu/(rho*r)) *  (Q33^old + u_coef u)=
+    !   uold - Q_coef * (Q33^old + u_coef u)
+    ! UC=1+Q_coef * u_coef
+    ! UC * u = uold - Q_coef * Q33^old
+    ! u = (1/UC)(uold-Q_coef * Q33^old)
+    ! Q33^new=Q33^old + u_coef u =
+    ! (Q33^old UC + u_coef * (uold-Q_coef*Q33^old))/UC=
+    ! (Q33^old(1+Q_coef u_coef)+u_coef(uold-Q_coef*Q33^old))/UC=
+    ! (Q33^old+u_coef uold)/UC
+    ! Q33^old + u_coef uold=
+    ! Q33^old + (Q33^old+1)2 dt uold/r=
+    ! Q33^old (1+2 S_hoop)+2 S_hoop=explicit_hoop
    r_hoop=xsten(0,1)
    if (r_hoop.gt.zero) then
     explicit_hoop=Q_hoop_old*(one+two*S_hoop)+two*S_hoop
