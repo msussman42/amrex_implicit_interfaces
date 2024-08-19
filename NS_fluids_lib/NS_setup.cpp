@@ -35,17 +35,13 @@ static int tang_vel_bc[] =
 static int tang_vel_extrap_bc[] =
 { INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
 
-// Components are  Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
-static int grad_dot_n_norm_vel_bc[] =
-{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
-static int grad_dot_t_norm_vel_bc[] =
-{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_ODD, FOEXTRAP, FOEXTRAP };
-
-static int grad_dot_n_tang_vel_bc[] =
-{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_ODD, FOEXTRAP, FOEXTRAP };
-static int grad_dot_t_tang_vel_bc[] =
-{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
-
+//Interior, Inflow,  Outflow,  Symmetry,    SlipWall, NoSlipWall.
+// e.g. u_x, v_y, w_x (y face), w_y (x face), hoop, etc 
+static int Q11_bc[] =
+{ INT_DIR, EXT_DIR, EXT_DIR, REFLECT_EVEN, EXT_DIR, EXT_DIR };
+//e.g. u_y (x face), v_x (x face)
+static int Q12_bc[] =
+{ INT_DIR, EXT_DIR, EXT_DIR, REFLECT_ODD, EXT_DIR, EXT_DIR };
 
 // Interior, Inflow, Outflow, Symmetry, SlipWall, NoSlipWall.
 static int scalar_bc[] =
@@ -83,47 +79,6 @@ set_tensor_bc (BCRec&       bc,
     const int* lo_bc = phys_bc.lo();
     const int* hi_bc = phys_bc.hi();
    
-     // if s=REFLECT EVEN => grad s dot n=REFLECT ODD
-     //                      grad s dot t=REFLECT EVEN
-     // if s=FOEXTRAP     => grad s dot n=FOEXTRAP
-     //                      grad s dot t=FOEXTRAP
-     // if s=REFLECT ODD  => grad s dot n=REFLECT EVEN
-     //                      grad s dot t=REFLECT_ODD
-     // if s=EXT_DIR => grad s dot n=FOEXTRAP
-     //                 grad s dot t=FOEXTRAP
-     // inflow:     u dot n=EXT_DIR,     u dot t=EXT_DIR
-     // outflow:    u dot n=FOEXTRAP,    u dot t=FOEXTRAP
-     // symmetry:   u dot n=REFLECT_ODD, u dot t=REFLECT_EVEN
-     // SlipWall:   u dot n=EXT_DIR,     u dot t=FOEXTRAP
-     // NoSlipWall: u dot n=EXT_DIR,     u dot t=EXT_DIR
-     //
-     // grad dot n:
-     // inflow:     u dot n=EXT_DIR      -> FOEXTRAP
-     // outflow:    u dot n=FOEXTRAP,    -> FOEXTRAP
-     // symmetry:   u dot n=REFLECT_ODD, -> REFLECT_EVEN
-     // SlipWall:   u dot n=EXT_DIR,     -> FOEXTRAP
-     // NoSlipWall: u dot n=EXT_DIR,     -> FOEXTRAP
-     // grad dot t:
-     // inflow:     u dot n=EXT_DIR      -> FOEXTRAP
-     // outflow:    u dot n=FOEXTRAP,    -> FOEXTRAP
-     // symmetry:   u dot n=REFLECT_ODD, -> REFLECT_ODD
-     // SlipWall:   u dot n=EXT_DIR,     -> FOEXTRAP
-     // NoSlipWall: u dot n=EXT_DIR,     -> FOEXTRAP
-
-     //
-     // grad dot n:
-     // inflow:     u dot t=EXT_DIR      -> FOEXTRAP
-     // outflow:    u dot t=FOEXTRAP,    -> FOEXTRAP
-     // symmetry:   u dot t=REFLECT_EVEN -> REFLECT_ODD
-     // SlipWall:   u dot t=FOEXTRAP,    -> FOEXTRAP
-     // NoSlipWall: u dot t=EXT_DIR,     -> FOEXTRAP
-     // grad dot t:
-     // inflow:     u dot t=EXT_DIR      -> FOEXTRAP
-     // outflow:    u dot t=FOEXTRAP,    -> FOEXTRAP
-     // symmetry:   u dot t=REFLECT_EVEN -> REFLECT_EVEN
-     // SlipWall:   u dot t=FOEXTRAP,    -> FOEXTRAP
-     // NoSlipWall: u dot t=EXT_DIR,     -> FOEXTRAP
-
     if ((dir1>=0)&&(dir1<AMREX_SPACEDIM)) {
      // do nothing
     } else
@@ -135,21 +90,21 @@ set_tensor_bc (BCRec&       bc,
      amrex::Error("dir2 invalid");
 
     for (int dir3=0;dir3<AMREX_SPACEDIM;dir3++) {
-
-     if ((dir1==dir3)&&(dir2!=dir3)) {
-      bc.setLo(dir3,grad_dot_t_norm_vel_bc[lo_bc[dir3]]);
-      bc.setHi(dir3,grad_dot_t_norm_vel_bc[hi_bc[dir3]]);
-     } else if ((dir1!=dir3)&&(dir2==dir3)) {
-      bc.setLo(dir3,grad_dot_n_tang_vel_bc[lo_bc[dir3]]);
-      bc.setHi(dir3,grad_dot_n_tang_vel_bc[hi_bc[dir3]]);
-     } else if ((dir1!=dir3)&&(dir2!=dir3)) {
-      bc.setLo(dir3,grad_dot_t_tang_vel_bc[lo_bc[dir3]]);
-      bc.setHi(dir3,grad_dot_t_tang_vel_bc[hi_bc[dir3]]);
-     } else if ((dir1==dir3)&&(dir2==dir3)) {
-      bc.setLo(dir3,grad_dot_n_norm_vel_bc[lo_bc[dir3]]);
-      bc.setHi(dir3,grad_dot_n_norm_vel_bc[hi_bc[dir3]]);
+ 
+     if (dir1==dir2) {
+      bc.setLo(dir3,Q11_bc[lo_bc[dir3]]);
+      bc.setHi(dir3,Q11_bc[hi_bc[dir3]]);
+     } else if (dir1!=dir2) {
+      if ((dir1==dir3)||(dir2==dir3)) {
+       bc.setLo(dir3,Q12_bc[lo_bc[dir3]]);
+       bc.setHi(dir3,Q12_bc[hi_bc[dir3]]);
+      } else if ((dir1!=dir3)&&(dir2!=dir3)) {
+       bc.setLo(dir3,Q11_bc[lo_bc[dir3]]);
+       bc.setHi(dir3,Q11_bc[hi_bc[dir3]]);
+      } else
+       amrex::Error("dir1,dir2, or dir3 invalid");
      } else
-      amrex::Error("dir1,dir2,dir3 bust");
+      amrex::Error("dir1 or dir2 invalid");
 
     } // dir3=0..sdim-1
 
@@ -166,12 +121,11 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
 
   const int* lo_bc = phys_bc.lo();
   const int* hi_bc = phys_bc.hi();
-    //dir1="theta"  dir2="theta"  dir3="r" 
-  bc.setLo(0,grad_dot_t_tang_vel_bc[lo_bc[0]]); //REFLECT_EVEN if symmetric
-  bc.setHi(0,grad_dot_t_tang_vel_bc[hi_bc[0]]);
-    //dir1="theta"  dir2="theta"  dir3="z" 
-  bc.setLo(1,grad_dot_t_tang_vel_bc[lo_bc[1]]); //REFLECT_EVEN if symmetric
-  bc.setHi(1,grad_dot_t_tang_vel_bc[hi_bc[1]]);
+
+  for (int dir3=0;dir3<AMREX_SPACEDIM;dir3++) {
+   bc.setLo(dir3,Q11_bc[lo_bc[dir3]]);
+   bc.setHi(dir3,Q11_bc[hi_bc[dir3]]);
+  }
 
  } else
   amrex::Error("bl_spacedim invalid");
@@ -502,7 +456,6 @@ NavierStokes::set_tensor_extrap_components(
 
   ibase_tensor_local=ibase_tensor+ijk_index;
 
-  // no EXT_DIR BCs
   set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,0,0);
   set_tensor_bc(bc,phys_bc,0,0);
   std::string T11_strE="T11extrap"+ijk_str; 
@@ -553,28 +506,21 @@ NavierStokes::set_tensor_extrap_components(
     
   if (AMREX_SPACEDIM==2) {
    if (coord == COORDSYS_RZ) {
-    // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
     set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else if (coord == COORDSYS_CARTESIAN) {
-    // placeholder: Q33 should always be 0
-    // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
     set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else if (coord == COORDSYS_CYLINDRICAL) {
-    // placeholder: Q33 should always be 0
-    // no EXT_DIR BCs
     set_hoop_bc(bc,phys_bc);
     set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else
     amrex::Error("coord invalid");
   } else if (AMREX_SPACEDIM==3) {
    if (coord == COORDSYS_CARTESIAN) {
-    // no EXT_DIR BCs
     set_tensor_bc(bc,phys_bc,2,2);
     set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
    } else if (coord == COORDSYS_CYLINDRICAL) {
-    // no EXT_DIR BCs
     set_tensor_bc(bc,phys_bc,2,2);
     set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
    } else
@@ -1039,10 +985,8 @@ NavierStokes::variableSetUp ()
         if (coord == COORDSYS_RZ) {
          set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
         } else if (coord == COORDSYS_CARTESIAN) {
-	   // placeholder: Q33 should always be 0
          set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
         } else if (coord == COORDSYS_CYLINDRICAL) {
-	   // placeholder: Q33 should always be 0
          set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
         } else
          amrex::Error("coord invalid");
