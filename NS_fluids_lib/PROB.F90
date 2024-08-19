@@ -30965,7 +30965,13 @@ end subroutine initialize2d
       integer ipart_bc
       integer istate
       integer im
+      integer ipart_start
       integer inside_index
+      integer i,j,k
+      integer ifine,jfine,kfine
+      integer nfine
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
       
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
@@ -31059,34 +31065,80 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+      ipart_start=scomp/increment
+      if (ipart_start*increment.eq.scomp) then
+       !do nothing
+      else
+       print *,"scomp invalid: ",scomp
+       stop
+      endif
+      ipart_start=ipart_start/ENUM_NUM_TENSOR_TYPE
+      if (ipart_start*ENUM_NUM_TENSOR_TYPE_REFINE.eq.scomp) then
+       !do nothing
+      else
+       print *,"scomp invalid: ",scomp
+       stop
+      endif
+      ipart_start=ipart_start+1
+
+      if ((ipart_start.ge.1).and. &
+          (ipart_start.le.num_materials_viscoelastic)) then
+       !do nothing
+      else
+       print *,"ipart_start invalid: ",ipart_start
+       stop
+      endif
+
       do dir2=1,SDIM
       do side=1,2
 
        do iparts_local=scomp+1,scomp+ncomp,increment
 
-        ipart=(iparts_local-1)/increment !0<=ipart<nvisco*nten
-        ipart=ipart/ENUM_NUM_TENSOR_TYPE+1 !1<=ipart<=nvisco
-        istate=(iparts_local-1)/increment !0<=istate<nvisco*nten
-         !0<=ipart-1<nvisco
-         !0<=(ipart-1)*nten<nvisco*nten
-        istate=istate-(ipart-1)*ENUM_NUM_TENSOR_TYPE+1
-         !1<=ipart_bc<=nvisco*nten
-        ipart_bc=(iparts_local-1)/increment+1
+        ipart=(iparts_local-1)/increment !0<=ipart<nvisco*ntensor
 
+        if ((ipart.ge.(ipart_start-1)*ENUM_NUM_TENSOR_TYPE).and. &
+            (ipart.lt.num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)) then
+         !do nothing
+        else
+         print *,"ipart invalid: ",ipart
+         stop
+        endif
+
+        ipart=ipart/ENUM_NUM_TENSOR_TYPE+1 !1<=ipart<=nvisco
+
+        if ((ipart.ge.ipart_start).and. &
+            (ipart.le.num_materials_viscoelastic)) then
+         !do nothing
+        else
+         print *,"ipart invalid: ",ipart
+         stop
+        endif
+
+        istate=(iparts_local-1)/increment !0<=istate<nvisco*ntensor
+
+        if ((istate.ge.(ipart_start-1)*ENUM_NUM_TENSOR_TYPE).and. &
+            (istate.lt.num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)) then
+         !do nothing
+        else
+         print *,"istate invalid: ",istate
+         stop
+        endif
+
+         !0<=ipart-1<nvisco
+         !0<=(ipart-1)*ntensor<nvisco*ntensor
+        istate=istate-(ipart-1)*ENUM_NUM_TENSOR_TYPE+1
+         !1<=ipart_bc<=nvisco*ntensor
+
+        ipart_bc=(istate-1)*increment+1
+        
         if ((ipart_bc.ge.1).and. &
-            (ipart_bc.le.ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic)) then
+            (ipart_bc.le.ENUM_NUM_TENSOR_TYPE*increment)) then
          !do nothing
         else
          print *,"ipart_bc invalid: ",ipart_bc
          stop
         endif
         
-        if ((ipart.ge.1).and.(ipart.le.num_materials_viscoelastic)) then
-         !do nothing
-        else
-         print *,"ipart invalid: ",ipart
-         stop
-        endif
         if ((istate.ge.1).and.(istate.le.ENUM_NUM_TENSOR_TYPE)) then
          !do nothing
         else
@@ -31127,9 +31179,10 @@ end subroutine initialize2d
            inside_index=domhi(dir2)
           endif
          else
-          print *,"side invalid group_tensorfill"
+          print *,"side invalid group_tensorfill: ",side
           stop
          endif
+
         else if ((test_bc.eq.FOEXTRAP).or. &
                  (test_bc.eq.HOEXTRAP).or. &
                  (test_bc.eq.REFLECT_EVEN).or. &
@@ -31141,17 +31194,53 @@ end subroutine initialize2d
          stop
         endif  
 
+        if ((ipart_start-1)*ENUM_NUM_TENSOR_TYPE_REFINE.eq.scomp) then
+         !do nothing
+        else
+         print *,"ipart_start or scomp invalid: ",ipart_start,scomp
+         stop
+        endif
+
+        if ((ipart-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+            (istate-1)*increment.eq.iparts_local-1) then
+         !do nothing
+        else
+         print *,"ipart,istate, or iparts_local invalid"
+         print *,"ipart=",ipart
+         print *,"istate=",istate
+         print *,"iparts_local=",iparts_local
+         stop
+        endif
+
         if (ext_dir_flag.eq.1) then
 
-         print *,"in: fort_group_tensorfill:"
-         print *,"expecting all BCs to be reflect even or odd"
+         do k=borderlo(3),borderhi(3)
+         do j=borderlo(2),borderhi(2)
+         do i=borderlo(1),borderhi(1)
 
-         stop
+          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+          kfine=0
+#if (AMREX_SPACEDIM==3)
+          do kfine=0,1
+#endif
+          do jfine=0,1
+          do ifine=0,1
+           nfine=4*kfine+2*jfine+ifine+1
+           u(D_DECL(i,j,k),iparts_local-1+nfine)=zero
+          enddo !ifine
+          enddo !jfine
+#if (AMREX_SPACEDIM==3)
+          enddo !kfine
+#endif
+         enddo !i
+         enddo !j
+         enddo !k
 
         else if (ext_dir_flag.eq.0) then
          ! do nothing
         else
-         print *,"ext_dir_flag invalid"
+         print *,"ext_dir_flag invalid: ",ext_dir_flag
          stop
         endif  
 
