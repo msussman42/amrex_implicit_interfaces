@@ -23281,10 +23281,6 @@ end subroutine initialize2d
 
        if (test_bc.eq.EXT_DIR) then
 
-        print *,"exterior dirichlet BC not allowed in fort_group_extrapfill"
-        print *,"test_bc=",test_bc
-        stop
-
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -23445,10 +23441,6 @@ end subroutine initialize2d
        test_bc=bc(dir2,side)
 
        if (test_bc.eq.EXT_DIR) then
-
-        print *,"exterior dirichlet BC not allowed in fort_extrapfill"
-        print *,"test_bc=",test_bc
-        stop
 
         if (box_type(dir2).eq.1) then
 
