@@ -4774,6 +4774,20 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_CTML() invalid");
 
+    if (num_materials_viscoelastic>=1) {
+     num_divu_outer_sweeps=2;
+    } else if (num_materials_viscoelastic==0) {
+     //do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
+
+    if (num_FSI_outer_sweeps>=2) {
+     num_divu_outer_sweeps=2;
+    } else if (num_FSI_outer_sweeps==1) {
+     //do nothing
+    } else
+     amrex::Error("num_FSI_outer_sweeps invalid");
+
     pp.queryAdd("num_divu_outer_sweeps",num_divu_outer_sweeps);
 
     if (some_materials_compressible()==1) {
@@ -4792,6 +4806,22 @@ NavierStokes::read_params ()
      // do nothing
     } else
      amrex::Error("FSI_material_exists_CTML() invalid");
+
+    if (num_materials_viscoelastic>=1) {
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("num_divu_outer_sweeps must be >1 (viscoelastic)");
+    } else if (num_materials_viscoelastic==0) {
+     //do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
+
+    if (num_FSI_outer_sweeps>=2) {
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("num_divu_outer_sweeps must be >1 (num_FSI_outer_sweeps)");
+    } else if (num_FSI_outer_sweeps==1) {
+     //do nothing
+    } else
+     amrex::Error("num_FSI_outer_sweeps invalid");
      
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))

@@ -5656,10 +5656,10 @@ else
  stop
 endif
 
-if (n.ge.2) then
+if (n.eq.3) then
  ! do nothing
 else
- print *,"expecting n>=2"
+ print *,"expecting n==3"
  stop
 endif
 
@@ -5787,15 +5787,16 @@ integer, INTENT(in) :: unity_det
 integer A_dim
 integer i,j
 real(amrex_real) min_eval
+real(amrex_real) local_diag,local_det
 real(amrex_real), dimension(:,:), allocatable :: A_local
 
 if (SDIM.eq.2) then
  if (levelrz.eq.COORDSYS_RZ) then
-  A_dim=2
+  A_dim=3
  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   A_dim=3
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
-  A_dim=2
+  A_dim=3
  else
   print *,"levelrz invalid"
   stop
@@ -5818,38 +5819,6 @@ allocate(A_local(A_dim,A_dim))
 
 if (A_dim.eq.3) then
  ! do nothing
-else if (A_dim.eq.2) then
- do j=1,3
- do i=1,3
-  if ((i.eq.3).or.(j.eq.3)) then
-   if (i.eq.j) then
-    if (A(i,j).ge.zero) then
-     ! do nothing
-    else
-     print *,"A(i,j) failed sanity check"
-     print *,"i,j,A(i,j) ",i,j,A(i,j)
-     stop
-    endif
-   else if (i.ne.j) then
-    if (A(i,j).eq.zero) then
-     ! do nothing
-    else
-     print *,"A(i,j) failed sanity check"
-     print *,"i,j,A(i,j) ",i,j,A(i,j)
-     stop
-    endif
-   else
-    print *,"i,j invalid"
-    stop
-   endif
-  else if ((i.ne.3).and.(j.ne.3)) then
-   ! do nothing
-  else
-   print *,"i,j bust"
-   stop
-  endif
- enddo !i=1,3
- enddo !j=1,3
 else
  print *,"A_dim invalid"
  stop
@@ -5905,9 +5874,54 @@ else
  stop
 endif
 
+local_det=abs(A_local(1,1)*A_local(2,2)-A_local(1,2)*A_local(2,1))
+local_diag=A_local(3,3)
+
 do j=1,A_dim
 do i=1,A_dim
  A(i,j)=A_local(i,j)
+ if (AMREX_SPACEDIM.eq.3) then
+  !do nothing
+ else if (AMREX_SPACEDIM.eq.2) then
+  if ((i.eq.3).and.(j.eq.3)) then
+   if (levelrz.eq.COORDSYS_CARTESIAN) then
+    A(i,j)=one
+   else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+    !do nothing 
+   else if (levelrz.eq.COORDSYS_RZ) then
+    !do nothing 
+   else
+    print *,"levelrz invalid"
+    stop
+   endif
+  else if (((i.eq.3).or.(j.eq.3)).and. &
+           (i.ne.j)) then
+   A(i,j)=zero
+  else if (((i.eq.1).or.(i.eq.2)).and. &
+           ((j.eq.1).or.(j.eq.2))) then
+   if (levelrz.eq.COORDSYS_CARTESIAN) then
+    if (local_diag.gt.zero) then
+     A(i,j)=A(i,j)*sqrt(local_diag)
+    else
+     print *,"expecting local_diag>0: ",local_diag
+     stop
+    endif
+   else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+    !do nothing 
+   else if (levelrz.eq.COORDSYS_RZ) then
+    !do nothing 
+   else
+    print *,"levelrz invalid"
+    stop
+   endif
+  else
+   print *,"i or j invalid: ",i,j
+   stop
+  endif
+ else
+  print *,"AMREX_SPACEDIM invalid"
+  stop
+ endif  
 enddo
 enddo
 
@@ -26606,7 +26620,6 @@ real(amrex_real) shear
 real(amrex_real) modtime,trace_A
 real(amrex_real) equilibrium_diagonal
 real(amrex_real) inverse_tol
-real(amrex_real) inverse_tol_hoop
 real(amrex_real) dui(3,3)
 real(amrex_real) dxj(3,3)
 real(amrex_real) signcoeff
@@ -26616,21 +26629,11 @@ integer dir_local
 integer dumbbell_model
 real(amrex_real) magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
 real(amrex_real) gamma_not
-integer implicit_hoop
-real(amrex_real) save_hoop_term
-real(amrex_real) Q_hoop_old
 real(amrex_real) force_coef
 real(amrex_real) one_over_den_local
-real(amrex_real) S_hoop
 real(amrex_real) r_hoop
-real(amrex_real) explicit_hoop
-real(amrex_real) u_coef
-real(amrex_real) Q_coef
-real(amrex_real) improved_hoop
 real(amrex_real) force_unity_determinant
 integer unity_det
-
-integer, parameter :: preserve_SPD=1
 
 integer, parameter :: nhalf=3
 real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -26678,48 +26681,40 @@ else
  stop
 endif
 
-implicit_hoop=0
-
 if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
- implicit_hoop=1
 else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
- implicit_hoop=1
 else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
- implicit_hoop=0
  force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
- implicit_hoop=0
  force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! coeff=elastic_viscosity
- implicit_hoop=0
  force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
  ! Xia, Lu, Tryggvason 2018
  ! coeff=elastic_viscosity
- implicit_hoop=1
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
 if (levelrz.eq.COORDSYS_CARTESIAN) then
- implicit_hoop=0
+ !do nothing
 else if (levelrz.eq.COORDSYS_RZ) then
  !do nothing
 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- implicit_hoop=0
+ !do nothing
 else
- print *,"levelrz invalid"
+ print *,"levelrz invalid: ",levelrz
  stop
 endif
 
@@ -27060,15 +27055,6 @@ do jj=1,3 !deriv dir
 enddo !jj=1,3
 enddo !ii=1,3
 
-save_hoop_term=gradV_transpose(3,3)  ! u/r if RZ
-
-if (abs(save_hoop_term).ge.zero) then
- ! do nothing
-else
- print *,"save_hoop_term corruption: ",save_hoop_term
- stop
-endif
-
 if (n.eq.DERIVE_TENSOR_NCOMP+1) then
  ! do nothing
 else
@@ -27095,8 +27081,6 @@ enddo
 Q(2,1)=Q(1,2)
 Q(3,1)=Q(1,3)
 Q(3,2)=Q(2,3)
-
-Q_hoop_old=Q(3,3)
 
  ! modtime=lambda/f(A)
 modtime=visc(D_DECL(i,j,k),2*num_materials+im_critical+1)
@@ -27136,10 +27120,10 @@ do ii=1,3
    print *,"A=Q+I should be positive definite"
    stop
   endif
-  if (Q_hoop_old.gt.-one) then
+  if (Q(3,3).gt.-one) then !hoop term
    ! do nothing
   else
-   print *,"Q_hoop_old invalid: ",Q_hoop_old
+   print *,"Q(3,3) invalid (hoop): ",Q(3,3)
    stop
   endif
  else if (dumbbell_model.eq.0) then ! e.g. incremental model
@@ -27158,10 +27142,10 @@ do ii=1,3
     print *,"A=Q+I should be positive definite"
     stop
    endif
-   if (Q_hoop_old.gt.-one) then
+   if (Q(3,3).gt.-one) then !hoop term
     ! do nothing
    else
-    print *,"Q_hoop_old invalid: ",Q_hoop_old
+    print *,"Q(3,3) invalid (hoop): ",Q(3,3)
     stop
    endif
   else
@@ -27219,7 +27203,7 @@ else if (viscoelastic_model.eq.NN_LINEAR_PTT) then !linearPTT
    stop
   endif
  else
-  print *,"trace_A invalid"
+  print *,"trace_A invalid: ",trace_A
   stop
  endif
 else
@@ -27279,7 +27263,6 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   endif
 
   inverse_tol=0.05d0
-  inverse_tol_hoop=0.51d0
 
    !if the CFL condition is satified, then we expect
    !dt |gradu| <=1
@@ -27312,15 +27295,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
  do ii=1,3
 
-  if (preserve_SPD.eq.1) then
-   Smult_left(ii,ii)=Smult_left(ii,ii)+one
-   Smult_right(ii,ii)=Smult_right(ii,ii)+one
-  else if (preserve_SPD.eq.0) then
-   !do nothing
-  else
-   print *,"preserve_SPD invalid: ",preserve_SPD
-   stop
-  endif
+  Smult_left(ii,ii)=Smult_left(ii,ii)+one
+  Smult_right(ii,ii)=Smult_right(ii,ii)+one
 
    ! Aadvect <-- Q+I
   if (dumbbell_model.eq.1) then
@@ -27421,20 +27397,10 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  do jj=1,3
   SAS(ii,jj)=zero
 
-  if (preserve_SPD.eq.1) then
-   do kk=1,3
-    SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
-   enddo
-   Q(ii,jj)=SAS(ii,jj)
-  else if (preserve_SPD.eq.0) then
-   do kk=1,3
-    SAS(ii,jj)=SAS(ii,jj)+Aadvect(ii,kk)*Smult_right(jj,kk)
-   enddo
-   Q(ii,jj)=Aadvect(ii,jj)+SA(ii,jj)+SAS(ii,jj)
-  else
-   print *,"preserve_SPD invalid: ",preserve_SPD
-   stop
-  endif
+  do kk=1,3
+   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
+  enddo
+  Q(ii,jj)=SAS(ii,jj)
 
  enddo  ! jj=1..3
  enddo  ! ii=1..3
@@ -27577,83 +27543,6 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    stop
   endif
  enddo
-
- if (implicit_hoop.eq.0) then
-  ! do nothing
- else if (implicit_hoop.eq.1) then
-  if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
-   S_hoop=dt*save_hoop_term ! dt u/r
-
-    !CFL condition implied u dt/r <= 1
-   if (S_hoop.le.-one+inverse_tol_hoop) then
-    S_hoop=-one+inverse_tol_hoop
-   else if (S_hoop.ge.one-inverse_tol_hoop) then
-    S_hoop=one-inverse_tol_hoop
-   else if (abs(S_hoop).le.half) then
-    ! do nothing
-   else
-    print *,"S_hoop became corrupt: ",S_hoop
-    stop
-   endif
-    ! S_hoop=dt u/r
-    ! Q33^new = (1+2 dt u/r) (Q33^old+1) - 1=
-    !   Q33^old (1+2dt u/r)+2dt u/r=Q33^old+u_coef u
-    ! u=uold - dt (mu/(rho*r)) *  (Q33^old + u_coef u)=
-    !   uold - Q_coef * (Q33^old + u_coef u)
-    ! UC=1+Q_coef * u_coef
-    ! UC * u = uold - Q_coef * Q33^old
-    ! u = (1/UC)(uold-Q_coef * Q33^old)
-    ! Q33^new=Q33^old + u_coef u =
-    ! (Q33^old UC + u_coef * (uold-Q_coef*Q33^old))/UC=
-    ! (Q33^old(1+Q_coef u_coef)+u_coef(uold-Q_coef*Q33^old))/UC=
-    ! (Q33^old+u_coef uold)/UC
-    ! Q33^old + u_coef uold=
-    ! Q33^old + (Q33^old+1)2 dt uold/r=
-    ! Q33^old (1+2 S_hoop)+2 S_hoop=explicit_hoop
-   r_hoop=xsten(0,1)
-   if (r_hoop.gt.zero) then
-    explicit_hoop=Q_hoop_old*(one+two*S_hoop)+two*S_hoop
-    explicit_hoop=modtime*explicit_hoop/(modtime+dt)
-    if (explicit_hoop.gt.-one) then
-     u_coef=(Q_hoop_old+one)*two*dt/r_hoop
-     u_coef=modtime*u_coef/(modtime+dt)
-     if (u_coef.ge.zero) then
-      Q_coef=force_coef*one_over_den_local*dt/r_hoop
-      if (Q_coef.gt.zero) then
-       improved_hoop=explicit_hoop/(one+Q_coef*u_coef)
-       if (improved_hoop.gt.-one) then
-        Q(3,3)=improved_hoop
-       else
-        print *,"improved_hoop invalid: ",improved_hoop
-        stop
-       endif
-      else
-       print *,"expecting Q_coef to be positive: ",Q_coef
-       stop
-      endif
-     else
-      print *,"expecting u_coef to be non negative"
-      print *,"u_coef= ",u_coef
-      print *,"modtime= ",modtime
-      print *,"dt= ",dt
-      stop
-     endif
-    else
-     print *,"explicit_hoop invalid"
-     stop
-    endif
-   else
-    print *,"expecting r_hoop>0: ",r_hoop
-    stop
-   endif
-  else
-   print *,"levelrz or sdim invalid"
-   stop
-  endif
- else
-  print *,"implicit_hoop invalid"
-  stop
- endif
 
 else 
  print *,"viscoelastic_model invalid: ",viscoelastic_model
