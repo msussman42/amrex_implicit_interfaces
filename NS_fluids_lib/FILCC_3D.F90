@@ -839,6 +839,8 @@ stop
        ! do nothing
       else
        print *,"scomp too big: ",scomp
+       print *,"increment: ",increment
+       print *,"ncomp: ",ncomp
        stop
       endif
 
