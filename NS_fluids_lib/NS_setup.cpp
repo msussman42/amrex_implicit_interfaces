@@ -761,6 +761,8 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
      1,1,&sem_interp_DEFAULT,null_state_holds_data,default_blocking);
 
+//static int extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
     desc_lstGHOST.setComponent(DIV_Type,0,
@@ -1540,6 +1542,9 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_MOF,EXTMOF_names,
      EXTMOF_bcs,EXTMOF_fill_class,&multi_extmof_interp);
 
+//static int extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
+     
     set_extrap_bc(bc,phys_bc);
     std::string maskextrap_str="maskSEMextrap"; 
 
@@ -1562,6 +1567,8 @@ NavierStokes::variableSetUp ()
      std::string status_str="burnstat"; 
      status_str+=im_string; 
      BURNVEL_names[im]=status_str;
+//static int extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
      set_extrap_bc(BURNVEL_bcs[im],phys_bc);
 
     }  // im=0..num_interfaces-1  (status for burning velocity)
@@ -1579,6 +1586,10 @@ NavierStokes::variableSetUp ()
      std::string burnxvel_str="burnxvel"; 
      burnxvel_str+=im_string; 
      BURNVEL_names[ibase_burnvel]=burnxvel_str;
+//static int norm_vel_extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_ODD, FOEXTRAP, FOEXTRAP };
+//static int tang_vel_extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
      set_x_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 
      ibase_burnvel++;
@@ -1651,6 +1662,8 @@ NavierStokes::variableSetUp ()
      std::string massfrac_str="massfracI"; 
      massfrac_str+=im_string; 
      TSAT_names[ibase_tsat]=massfrac_str;
+//static int extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
      set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
 
      if (ibase_tsat!=num_interfaces+(im+1)*EXTRAP_PER_TSAT-1)
