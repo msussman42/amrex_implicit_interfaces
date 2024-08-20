@@ -5628,11 +5628,11 @@ end subroutine project_to_traceless
 
 
 
-subroutine project_to_positive_definite(S,n,min_eval,unity_det)
+subroutine project_to_positive_definite(S,n,max_condition_number,unity_det)
 use probcommon_module
 IMPLICIT NONE
 
-real(amrex_real), INTENT(in)    :: min_eval
+real(amrex_real), INTENT(in)    :: max_condition_number
 integer, INTENT(in) :: unity_det
 integer, INTENT(in) :: n
 real(amrex_real), INTENT(inout) :: S(n,n)
@@ -5646,20 +5646,21 @@ real(amrex_real) :: evecs_S(n,n)
 real(amrex_real) :: evals_STS(n)
 real(amrex_real) :: evecs_STS(n,n)
 integer :: i,j,k
+real(amrex_real) :: min_eval
 real(amrex_real) :: max_eval_sqr
 real(amrex_real) :: product_evals
 
-if (min_eval.gt.zero) then
+if (max_condition_number.gt.one) then
  ! do nothing
 else
- print *,"min_eval invalid: ",min_eval
+ print *,"max_condition_number invalid: ",max_condition_number
  stop
 endif
 
-if (n.eq.3) then
+if ((n.eq.2).or.(n.eq.3)) then
  ! do nothing
 else
- print *,"expecting n==3"
+ print *,"expecting n==2 or 3"
  stop
 endif
 
@@ -5683,7 +5684,8 @@ do i=1,n
  else if (evals_STS(i).le.max_eval_sqr) then
   ! do nothing
  else
-  print *,"evals_STS or max_eval_sqr invalid"
+  print *,"evals_STS or max_eval_sqr invalid: ", &
+    evals_STS(i),max_eval_sqr
   stop
  endif
 
@@ -5693,26 +5695,24 @@ do i=1,n
  else if (evals_STS(i).ge.zero) then
   ! do nothing
  else
-  print *,"evals_STS(i) is NaN"
+  print *,"evals_STS(i) is NaN: ",evals_STS(i)
   stop
  endif
 
-enddo
+enddo !i=1,n
 
 if (max_eval_sqr.lt.zero) then
- print *,"max_eval_sqr cannot be negative"
+ print *,"max_eval_sqr cannot be negative: ",max_eval_sqr
  stop
 else if (max_eval_sqr.ge.zero) then
  ! do nothing
 else
- print *,"max_eval_sqr is NaN"
+ print *,"max_eval_sqr is NaN: ",max_eval_sqr
  stop
 endif
 
-max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS_8_4*max_eval_sqr).or. &
-     (1.eq.1)) then
+ if (abs(evals_S(i)**2-evals_STS(i)).le.max_eval_sqr) then
   ! do nothing
  else
   print *,"evals_S and evals_STS inconsistent"
@@ -5722,8 +5722,10 @@ do i=1,n
   print *,"evals_STS(i)= ",evals_STS(i)
   stop
  endif
-enddo
+enddo !i=1,n
+
 product_evals=one
+min_eval=sqrt(max_eval_sqr)/max_condition_number
 do i=1,n
  evals_project(i)=max(min_eval,evals_S(i))
  product_evals=product_evals*evals_project(i)
@@ -5775,6 +5777,7 @@ end subroutine project_to_positive_definite
  ! point_updatetensor called from fort_updatetensor 
  ! which is declared in GODUNOV_3D.F90.
  ! A=Q+I must be symmetric and positive definite.
+ ! polymer_factor = 1/L
 subroutine project_A_to_positive_definite_or_traceless(A, &
    viscoelastic_model,polymer_factor,unity_det)
 use probcommon_module
@@ -5786,19 +5789,27 @@ real(amrex_real), INTENT(in) :: polymer_factor
 integer, INTENT(in) :: unity_det
 integer A_dim
 integer i,j
-real(amrex_real) min_eval
-real(amrex_real) local_diag,local_det
+real(amrex_real), parameter :: max_condition_number=1000.0
+real(amrex_real) local_diag
 real(amrex_real), dimension(:,:), allocatable :: A_local
+
+if ((polymer_factor.ge.zero).and. &
+    (polymer_factor.lt.one)) then
+ !do nothing
+else
+ print *,"polymer_factor invalid: ",polymer_factor
+ stop
+endif
 
 if (SDIM.eq.2) then
  if (levelrz.eq.COORDSYS_RZ) then
-  A_dim=3
+  A_dim=2
  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   A_dim=3
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
-  A_dim=3
+  A_dim=2
  else
-  print *,"levelrz invalid"
+  print *,"levelrz invalid: ",levelrz
   stop
  endif
 else if (SDIM.eq.3) then
@@ -5807,7 +5818,7 @@ else if (SDIM.eq.3) then
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
   A_dim=3
  else
-  print *,"levelrz invalid"
+  print *,"levelrz invalid: ",levelrz
   stop
  endif
 else
@@ -5819,6 +5830,39 @@ allocate(A_local(A_dim,A_dim))
 
 if (A_dim.eq.3) then
  ! do nothing
+else if (A_dim.eq.2) then
+ do j=1,3
+ do i=1,3
+  if ((i.eq.3).or.(j.eq.3)) then
+   if (i.eq.j) then
+    if (A(i,j).gt.zero) then
+     ! do nothing
+    else
+     print *,"A(i,j) failed sanity check"
+     print *,"i,j,A(i,j) ",i,j,A(i,j)
+     stop
+    endif
+   else if (i.ne.j) then
+    if (A(i,j).eq.zero) then
+     ! do nothing
+    else
+     print *,"A(i,j) failed sanity check"
+     print *,"i,j,A(i,j) ",i,j,A(i,j)
+     stop
+    endif
+   else
+    print *,"i,j invalid: ",i,j
+    stop
+   endif
+  else if ((i.ne.3).and.(j.ne.3)) then
+   ! do nothing
+  else
+   print *,"i,j bust"
+   stop
+  endif
+ enddo !i=1,3
+ enddo !j=1,3
+
 else
  print *,"A_dim invalid"
  stop
@@ -5835,8 +5879,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
     (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
 
- min_eval=0.01D0*(polymer_factor**2)
- call project_to_positive_definite(A_local,A_dim,min_eval,unity_det)
+ call project_to_positive_definite(A_local,A_dim,max_condition_number,unity_det)
 
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
@@ -5847,6 +5890,7 @@ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  call project_to_traceless(A_local,A_dim)
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018 Rapid Prototyping Journal
+ ! Seungwon Shin, Jalel Chergui, Damir Juric
  ! f=dX/dx=F^{-1}  (dx/dX)_ij = (x_{i})_{j}
  ! F=dx/dX
  ! D X/Dt = 0
@@ -5867,63 +5911,57 @@ else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental Neo-Hookean
  ! discretely, B should maintain as positive definite:
  ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
  !
- min_eval=0.01D0
- call project_to_positive_definite(A_local,A_dim,min_eval,unity_det)
+ call project_to_positive_definite(A_local,A_dim,max_condition_number,unity_det)
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
-local_det=abs(A_local(1,1)*A_local(2,2)-A_local(1,2)*A_local(2,1))
-local_diag=A_local(3,3)
-
 do j=1,A_dim
 do i=1,A_dim
  A(i,j)=A_local(i,j)
- if (AMREX_SPACEDIM.eq.3) then
-  !do nothing
- else if (AMREX_SPACEDIM.eq.2) then
-  if ((i.eq.3).and.(j.eq.3)) then
-   if (levelrz.eq.COORDSYS_CARTESIAN) then
-    A(i,j)=one
-   else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-    !do nothing 
-   else if (levelrz.eq.COORDSYS_RZ) then
-    !do nothing 
-   else
-    print *,"levelrz invalid"
-    stop
-   endif
-  else if (((i.eq.3).or.(j.eq.3)).and. &
-           (i.ne.j)) then
-   A(i,j)=zero
-  else if (((i.eq.1).or.(i.eq.2)).and. &
-           ((j.eq.1).or.(j.eq.2))) then
-   if (levelrz.eq.COORDSYS_CARTESIAN) then
-    if (local_diag.gt.zero) then
-     A(i,j)=A(i,j)*sqrt(local_diag)
+enddo
+enddo
+
+if (A_dim.eq.2) then
+
+ if (unity_det.eq.1) then
+  local_diag=A(3,3)
+  if (local_diag.gt.zero) then
+   if (levelrz.eq.COORDSYS_RZ) then
+    do j=1,A_dim
+    do i=1,A_dim
+     A(i,j)=A(i,j)/sqrt(local_diag)
+    enddo
+    enddo
+   else if (levelrz.eq.COORDSYS_CARTESIAN) then
+    if (local_diag.eq.one) then
+     ! do nothing
     else
-     print *,"expecting local_diag>0: ",local_diag
+     print *,"local_diag invalid: ",local_diag
      stop
     endif
-   else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-    !do nothing 
-   else if (levelrz.eq.COORDSYS_RZ) then
-    !do nothing 
    else
-    print *,"levelrz invalid"
+    print *,"levelrz invalid: ",levelrz
     stop
    endif
   else
-   print *,"i or j invalid: ",i,j
+   print *,"local_diag invalid: ",local_diag
    stop
   endif
+ else if (unity_det.eq.0) then
+  ! do nothing
  else
-  print *,"AMREX_SPACEDIM invalid"
+  print *,"unity_det invalid: ",unity_det
   stop
- endif  
-enddo
-enddo
+ endif
+
+else if (A_dim.eq.3) then
+ !do nothing
+else
+ print *,"A_dim invalid: ",A_dim
+ stop
+endif
 
 deallocate(A_local)
 
@@ -26752,6 +26790,7 @@ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
  dumbbell_model=0
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
  ! Xia, Lu, Tryggvason 2018
+ ! Seungwon Shin, Jalel Chergui, Damir Juric
  dumbbell_model=0
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
@@ -27237,6 +27276,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    endif
   else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental Neo-Hookean
    ! Xia, Lu, Tryggvason 2018
+   ! Seungwon Shin, Jalel Chergui, Damir Juric
    ! (grad U)^T_{ki}=(partial u_k)/(partial x_i)
    ! Df/Dt + f (grad U)^T=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
    ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
@@ -27307,13 +27347,14 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     ! do nothing
    else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
     ! Xia, Lu, Tryggvason 2018
+    ! Seungwon Shin, Jalel Chergui, Damir Juric
     Aadvect(ii,ii)=Aadvect(ii,ii)+one
    else
     print *,"viscoelastic_model invalid: ",viscoelastic_model
     stop
    endif
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
  enddo  ! ii=1,3
@@ -27441,6 +27482,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     ! do nothing
    else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
     ! Xia, Lu, Tryggvason (2018)
+    ! Seungwon Shin, Jalel Chergui, Damir Juric
     Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
    else
     print *,"viscoelastic_model invalid: ",viscoelastic_model
@@ -27503,6 +27545,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     ! do nothing
    else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental
     ! Xia, Lu, Tryggvason 2018
+    ! Seungwon Shin, Jalel Chergui, Damir Juric
     Aadvect(ii,ii)=Aadvect(ii,ii)+one
    else
     print *,"viscoelastic_model invalid: ",viscoelastic_model
@@ -27533,6 +27576,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     ! do nothing
    else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental
     ! Xia, Lu, Tryggvason (2018)
+    ! Seungwon Shin, Jalel Chergui, Damir Juric
     Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
    else
     print *,"viscoelastic_model invalid: ",viscoelastic_model
