@@ -17101,16 +17101,20 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine scalarBC
 
        ! sets all the physical BCs to the interior value.
-      subroutine extrapBC(time,dir,side,ADV,ADVwall, &
+      subroutine extrapBC( &
+       homogeneous_flag, &
+       time,dir,side,ADV,ADVwall, &
        xsten,nhalf,dx,bfact)
       IMPLICIT NONE
 
+      integer, INTENT(in) :: homogeneous_flag
       integer, INTENT(in) :: dir,side,nhalf,bfact
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: ADV
       real(amrex_real) :: xwall
       real(amrex_real), INTENT(inout) :: ADVwall
+      real(amrex_real) :: local_ADVwall
       real(amrex_real) :: x,y,z
       real(amrex_real), INTENT(in) :: dx(SDIM)
 
@@ -17158,6 +17162,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
+      if (homogeneous_flag.eq.0) then
+       local_ADVwall=ADVwall
+      else if (homogeneous_flag.eq.1) then
+       local_ADVwall=zero
+      else
+       print *,"homogeneous_flag invalid"
+       stop
+      endif
+
       if ((dir.eq.1).and.(side.eq.1)) then
        if (xwall+dx(dir)*VOFTOL.ge.x) then
         ! do nothing
@@ -17165,7 +17178,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,x invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else if ((dir.eq.1).and.(side.eq.2)) then
        if (xwall-dx(dir)*VOFTOL.le.x) then
         ! do nothing
@@ -17173,7 +17186,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,x invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.1)) then
        if (xwall+dx(dir)*VOFTOL.ge.y) then
         ! do nothing
@@ -17181,7 +17194,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,y invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.2)) then
        if (xwall-dx(dir)*VOFTOL.le.y) then
         ! do nothing
@@ -17189,7 +17202,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,y invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
        if (xwall+dx(dir)*VOFTOL.ge.z) then
         ! do nothing
@@ -17197,7 +17210,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,z invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
        if (xwall-dx(dir)*VOFTOL.le.z) then
         ! do nothing
@@ -17205,7 +17218,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"xwall,z invalid"
         stop
        endif
-       ADV=ADVwall
+       ADV=local_ADVwall
       else
        print *,"dir side invalid"
        stop
@@ -23181,6 +23194,7 @@ end subroutine initialize2d
       integer ncomp_per_burning
       integer ncomp_per_tsat
       integer ncomp_expect
+      integer, parameter :: homogeneous_flag=1
 
       if (grid_type.eq.-1) then
        ! do nothing
@@ -23320,7 +23334,9 @@ end subroutine initialize2d
          IWALL(dir2)=inside_index
 
           ! low order extrap
-         call extrapBC(time,dir2,side, &
+         call extrapBC( &
+           homogeneous_flag, &
+           time,dir2,side, &
            u(D_DECL(i,j,k),icomp), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
            xsten,nhalf,dx,bfact)
@@ -23368,6 +23384,7 @@ end subroutine initialize2d
       integer borderhi(3)
       integer IWALL(3)
       integer box_type(SDIM)
+      integer, parameter :: homogeneous_flag=1
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
@@ -23509,7 +23526,9 @@ end subroutine initialize2d
          IWALL(dir2)=inside_index
 
           ! sets all the physical BCs to the interior value.
-         call extrapBC(time,dir2,side, &
+         call extrapBC( &
+           homogeneous_flag, &
+           time,dir2,side, &
            u(D_DECL(i,j,k)), &
            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
            xsten,nhalf,dx,bfact)
@@ -30021,6 +30040,7 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       integer ncomp_ho,icomp
+      integer, parameter :: homogeneous_flag=0
 
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 10"
@@ -30214,10 +30234,12 @@ end subroutine initialize2d
           IWALL(3)=k
           IWALL(dir2)=inside_index
 
-          call extrapBC(time,dir2,side, &
-            u(D_DECL(i,j,k),icomp), &
-            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-            xsten,nhalf,dx,bfact)
+          call extrapBC( &
+           homogeneous_flag, &
+           time,dir2,side, &
+           u(D_DECL(i,j,k),icomp), &
+           u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
+           xsten,nhalf,dx,bfact)
          enddo
          enddo
          enddo
