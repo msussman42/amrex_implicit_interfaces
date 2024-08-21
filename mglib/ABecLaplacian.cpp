@@ -400,7 +400,12 @@ ABecLaplacian::LPnorm(MultiFab &in, int level) const
  Real mf_norm=0.0;
  for (int n=0;n<nc;n++) {
   Real test_norm=in.norm2(n);
-  test_norm*=test_norm;
+  if (test_norm>=0.0) {
+   test_norm*=test_norm;
+  } else {
+   std::cout << "test_norm= " << test_norm << '\n';
+   amrex::Error("test_norm invalid (LPnorm)");
+  }
   mf_norm+=test_norm;
  }
 
@@ -2659,7 +2664,8 @@ ABecLaplacian::CG_solve(
  if (rnorm>=0.0) {
   rnorm=std::sqrt(rnorm);
  } else {
-  amrex::Error("rnorm invalid");
+  std::cout << "rnorm= " << rnorm << '\n';
+  amrex::Error("rnorm invalid (CG_solve)");
  }
 	 
  Real rnorm_init=rnorm;

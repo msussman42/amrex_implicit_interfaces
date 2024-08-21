@@ -15869,36 +15869,81 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              if (local_POLD.eq.local_POLD_DUAL) then
               RHS=local_POLD*CC
              else
-              print *,"local_POLD invalid"
+
+              print *,"expecting local_POLD==local_POLD_DUAL"
+              print *,"local_POLD: ",local_POLD
+              print *,"local_POLD_DUAL: ",local_POLD_DUAL
+              print *,"ic,jc,kc,nc ",ic,jc,kc,nc
+              print *,"CC: ",CC
+              print *,"local_div_val,divu,VOLTERM: ", &
+                   local_div_val,divu,VOLTERM
+              print *,"homflag= ",homflag
               stop
+
              endif
             else if (homflag.eq.1) then
              if (local_POLD.eq.local_POLD_DUAL) then
               RHS=local_POLD*CC
              else
-              print *,"local_POLD invalid"
+
+              print *,"expecting local_POLD==local_POLD_DUAL"
+              print *,"local_POLD: ",local_POLD
+              print *,"local_POLD_DUAL: ",local_POLD_DUAL
+              print *,"ic,jc,kc,nc ",ic,jc,kc,nc
+              print *,"CC: ",CC
+              print *,"local_div_val,divu,VOLTERM: ", &
+                   local_div_val,divu,VOLTERM
+              print *,"homflag= ",homflag
               stop
+
              endif
             else if (homflag.eq.2) then
              if (local_POLD.eq.local_POLD_DUAL) then
               RHS=-local_POLD*CC
              else
-              print *,"local_POLD invalid"
+
+              print *,"expecting local_POLD==local_POLD_DUAL"
+              print *,"local_POLD: ",local_POLD
+              print *,"local_POLD_DUAL: ",local_POLD_DUAL
+              print *,"ic,jc,kc,nc ",ic,jc,kc,nc
+              print *,"CC: ",CC
+              print *,"local_div_val,divu,VOLTERM: ", &
+                   local_div_val,divu,VOLTERM
+              print *,"homflag= ",homflag
               stop
+
              endif
             else if (homflag.eq.3) then
              if ((local_POLD.eq.zero).and.(local_POLD_DUAL.eq.zero)) then
               RHS=zero
              else
-              print *,"local_POLD or local_POLD_DUAL invalid"
+
+              print *,"expecting local_POLD==local_POLD_DUAL==0"
+              print *,"local_POLD: ",local_POLD
+              print *,"local_POLD_DUAL: ",local_POLD_DUAL
+              print *,"ic,jc,kc,nc ",ic,jc,kc,nc
+              print *,"CC: ",CC
+              print *,"local_div_val,divu,VOLTERM: ", &
+                   local_div_val,divu,VOLTERM
+              print *,"homflag= ",homflag
               stop
+
              endif
             else if (homflag.eq.4) then
              if (local_POLD.eq.local_POLD_DUAL) then
               RHS=zero
              else
-              print *,"local_POLD invalid"
+
+              print *,"expecting local_POLD==local_POLD_DUAL"
+              print *,"local_POLD: ",local_POLD
+              print *,"local_POLD_DUAL: ",local_POLD_DUAL
+              print *,"ic,jc,kc,nc ",ic,jc,kc,nc
+              print *,"CC: ",CC
+              print *,"local_div_val,divu,VOLTERM: ", &
+                   local_div_val,divu,VOLTERM
+              print *,"homflag= ",homflag
               stop
+
              endif
             else
              print *,"homflag invalid 10"
