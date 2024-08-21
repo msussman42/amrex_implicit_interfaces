@@ -19639,6 +19639,14 @@ stop
          if (itan_dir.eq.0) then
           rplus=xsten(1,itan_dir+1)
           rminus=xsten(-1,itan_dir+1)
+          if (abs(rminus).le.EPS2*dxmaxLS) then
+           rminus=zero
+          else if (rminus.gt.zero) then
+           !do nothing
+          else
+           print *,"rminus invalid: ",rminus
+           stop
+          endif
          else if (itan_dir.eq.1) then
           !do nothing
          else
@@ -19651,7 +19659,7 @@ stop
         endif
        
         if ((rplus.gt.zero).and. &
-            (rminus.gt.-EPS2*dxmaxLS)) then
+            (rminus.ge.zero)) then
          Q_ITAN(1)=Q_ITAN(1)*rminus
          Q_ITAN(2)=Q_ITAN(2)*rplus
         else
