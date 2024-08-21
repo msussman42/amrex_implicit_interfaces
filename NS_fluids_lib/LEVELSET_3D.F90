@@ -12033,29 +12033,65 @@ stop
            if (local_POLD.eq.local_POLD_DUAL) then
             rhs(D_DECL(i,j,k),veldir)=local_POLD*CC
            else
-            print *,"local_POLD invalid"
+
+            print *,"expecting local_POLD==local_POLD_DUAL"
+            print *,"local_POLD: ",local_POLD
+            print *,"local_POLD_DUAL: ",local_POLD_DUAL
+            print *,"i,j,k,veldir ",i,j,k,veldir
+            print *,"CC: ",CC
+            print *,"divu,VOLTERM: ", &
+                 divu,VOLTERM
+            print *,"homflag= ",homflag
             stop
+
            endif
           else if (homflag.eq.2) then
            if (local_POLD.eq.local_POLD_DUAL) then
             rhs(D_DECL(i,j,k),veldir)=-local_POLD*CC
            else
-            print *,"local_POLD invalid"
+
+            print *,"expecting local_POLD==local_POLD_DUAL"
+            print *,"local_POLD: ",local_POLD
+            print *,"local_POLD_DUAL: ",local_POLD_DUAL
+            print *,"i,j,k,veldir ",i,j,k,veldir
+            print *,"CC: ",CC
+            print *,"divu,VOLTERM: ", &
+                 divu,VOLTERM
+            print *,"homflag= ",homflag
             stop
+
            endif
           else if (homflag.eq.3) then
            if ((local_POLD.eq.zero).and.(local_POLD_DUAL.eq.zero)) then
             rhs(D_DECL(i,j,k),veldir)=zero
            else
-            print *,"local_POLD or local_POLD_DUAL invalid"
+
+            print *,"expecting local_POLD==local_POLD_DUAL==0"
+            print *,"local_POLD: ",local_POLD
+            print *,"local_POLD_DUAL: ",local_POLD_DUAL
+            print *,"i,j,k,veldir ",i,j,k,veldir
+            print *,"CC: ",CC
+            print *,"divu,VOLTERM: ", &
+                 divu,VOLTERM
+            print *,"homflag= ",homflag
             stop
+
            endif
           else if (homflag.eq.4) then
            if (local_POLD.eq.local_POLD_DUAL) then
             rhs(D_DECL(i,j,k),veldir)=zero
            else
-            print *,"local_POLD invalid"
+
+            print *,"expecting local_POLD==local_POLD_DUAL"
+            print *,"local_POLD: ",local_POLD
+            print *,"local_POLD_DUAL: ",local_POLD_DUAL
+            print *,"i,j,k,veldir ",i,j,k,veldir
+            print *,"CC: ",CC
+            print *,"divu,VOLTERM: ", &
+                 divu,VOLTERM
+            print *,"homflag= ",homflag
             stop
+
            endif
           else
            print *,"homflag invalid"

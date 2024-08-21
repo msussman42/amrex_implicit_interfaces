@@ -13366,6 +13366,8 @@ end subroutine print_visual_descriptor
 
         else
          print *,"local_data(im) overflow"
+         print *,"isten,jsten,ksten ",isten,jsten,ksten
+         print *,"stateptr ",stateptr
          print *,"im,local_data(im) ",im,local_data(im)
          stop
         endif
