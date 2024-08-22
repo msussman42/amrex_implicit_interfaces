@@ -5925,8 +5925,16 @@ enddo
 
 if (A_dim.eq.2) then
 
+ local_diag=A(3,3)
+
+ if (local_diag.gt.zero) then
+  !do nothing
+ else
+  print *,"local_diag must be positive: ",local_diag
+  stop
+ endif
+
  if (unity_det.eq.1) then
-  local_diag=A(3,3)
   if (local_diag.gt.zero) then
    if (levelrz.eq.COORDSYS_RZ) then
     do j=1,A_dim
@@ -26728,6 +26736,7 @@ if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
 else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
