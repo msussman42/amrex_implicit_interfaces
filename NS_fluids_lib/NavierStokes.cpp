@@ -4931,15 +4931,15 @@ NavierStokes::read_params ()
       if (fort_built_in_elastic_model(&elastic_viscosity[i],
                                       &viscoelastic_model[i])==1) {
        if (viscoelastic_model[i]==NN_MAIRE_ABGRALL_ETAL) { // incremental 
-        if (elastic_time[i]>=1.0e+8) {
+        if (elastic_time[i]>=1.0e+30) {
          // do nothing
         } else
-         amrex::Error("elastic time inconsistent with model");
+         amrex::Error("NN_MAIRE_ABGRALL_ETAL elastic_time>=1e+30 required");
        } else if (viscoelastic_model[i]==NN_NEO_HOOKEAN) { // incremental
-        if (elastic_time[i]>=1.0e+8) {
+        if (elastic_time[i]>=1.0e+30) {
          // do nothing
         } else
-         amrex::Error("elastic time inconsistent with model");
+         amrex::Error("NN_NEO_HOOKEAN elastic_time>=1e+30 required");
        } else if (fort_built_in_elastic_model(&elastic_viscosity[i],
 	     		                    &viscoelastic_model[i])==1) {
         // do nothing
