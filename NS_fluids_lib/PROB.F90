@@ -20486,13 +20486,14 @@ end subroutine RatePhaseChange
       if ((densrc_I.gt.zero).and.(dendst_I.gt.zero)) then
        ! do nothing
       else
-       print *,"density I must be positive"
+       print *,"density I must be positive: ",densrc_I, &
+        dendst_I
        stop
       endif
       if ((densrc_probe.gt.zero).and.(dendst_probe.gt.zero)) then
        ! do nothing
       else
-       print *,"density probe be positive"
+       print *,"density probe be positive: ",densrc_probe,dendst_probe
        stop
       endif
       if ((distribute_from_target.ne.0).and. &
@@ -20647,7 +20648,7 @@ end subroutine RatePhaseChange
         else if (interp_valid_flag_src.eq.0) then
          DTsrc=zero
         else 
-         print *,"interp_valid_flag_src invalid"
+         print *,"interp_valid_flag_src invalid: ",interp_valid_flag_src
          stop
         endif
 
@@ -20657,7 +20658,7 @@ end subroutine RatePhaseChange
         else if (interp_valid_flag_dst.eq.0) then
          DTdst=zero
         else 
-         print *,"interp_valid_flag_dst invalid"
+         print *,"interp_valid_flag_dst invalid: ",interp_valid_flag_dst
          stop
         endif
 
