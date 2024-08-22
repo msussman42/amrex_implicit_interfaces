@@ -26672,7 +26672,7 @@ real(amrex_real) gamma_not
 real(amrex_real) force_coef
 real(amrex_real) one_over_den_local
 real(amrex_real) r_hoop
-real(amrex_real) force_unity_determinant
+integer force_unity_determinant
 integer unity_det
 
 integer, parameter :: nhalf=3
@@ -26724,6 +26724,7 @@ endif
 if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
