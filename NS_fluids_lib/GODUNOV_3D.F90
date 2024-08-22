@@ -12513,8 +12513,8 @@ stop
 
       mf_ptr=>mf
 
-      critical_cutoff_low=-1.0D+30
-      critical_cutoff_high=1.0D+30
+      critical_cutoff_low=-1.0D+32
+      critical_cutoff_high=1.0D+32
 
       if (bfact.lt.1) then
        print *,"bfact invalid69"
