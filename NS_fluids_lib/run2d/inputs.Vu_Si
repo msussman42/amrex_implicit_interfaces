@@ -72,8 +72,8 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-#amr.n_cell=128 128
-amr.n_cell=64 64
+amr.n_cell=128 128
+#amr.n_cell=64 64
 amr.max_level = 0
 ns.particle_nsubdivide=4
 ns.particle_max_per_nsubdivide=2
@@ -111,7 +111,7 @@ mac.visc_abs_tol  = 1.0e-10
 #test problem.
 #Vu et al did the same thing by using the realistic Bond number, and increasing
 #the Weber number by a factor of 10.
-ns.gravity        = -980.0e-1
+ns.gravity        = -980.0e-3
 ns.incremental_gravity_flag=0
 
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
@@ -131,11 +131,11 @@ ns.incremental_gravity_flag=0
 # theta_L=44 degrees sigma_SL=sigma_LG * (1-cos(44))=488.3
 #
 # sigma_IG-sigma_IL=sigma_LG cos(25)
-# sigma_IG=sigma_LG=1740e-1
+# sigma_IG=sigma_LG=1740e-3
 # sigma_IL=sigma_LG(1-cos(25))=163.0
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-1 163.0e-1 280.7e-1 1740.0e-1 1740.0e-1  0.0
-ns.tension_init= 1740.0e-1 163.0e-1 280.7e-1 1740.0e-1 1740.0e-1  0.0
+ns.tension=      1740.0e-3 163.0e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
+ns.tension_init= 1740.0e-3 163.0e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
