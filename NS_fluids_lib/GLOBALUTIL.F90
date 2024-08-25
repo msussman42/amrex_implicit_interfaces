@@ -26877,6 +26877,7 @@ do jj=1,3 !deriv dir
      print *,"jrefine invalid: ",jrefine
      stop
     endif
+#if (AMREX_SPACEDIM==3)
     if (krefine.eq.0) then
      kofs2=kofs2-1
     else if (krefine.eq.1) then
@@ -26885,6 +26886,7 @@ do jj=1,3 !deriv dir
      print *,"krefine invalid: ",krefine
      stop
     endif
+#endif
 
     signcoeff=one
     weightcoeff=one
@@ -26899,16 +26901,16 @@ do jj=1,3 !deriv dir
       print *,"jofs2 invalid"
       stop
      endif
-     if (SDIM.eq.3) then
-      if (kofs2.eq.0) then
-       weightcoeff=weightcoeff*0.75d0
-      else if (abs(kofs2).eq.1) then
-       weightcoeff=weightcoeff*0.25d0
-      else
-       print *,"kofs2 invalid"
-       stop
-      endif
+#if (AMREX_SPACEDIM==3)
+     if (kofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(kofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
      endif
+#endif
      if (iofs.eq.0) then
       signcoeff=-one
       total_weight=total_weight+weightcoeff
@@ -26930,16 +26932,16 @@ do jj=1,3 !deriv dir
       print *,"iofs2 invalid"
       stop
      endif
-     if (SDIM.eq.3) then
-      if (kofs2.eq.0) then
-       weightcoeff=weightcoeff*0.75d0
-      else if (abs(kofs2).eq.1) then
-       weightcoeff=weightcoeff*0.25d0
-      else
-       print *,"kofs2 invalid"
-       stop
-      endif
+#if (AMREX_SPACEDIM==3)
+     if (kofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(kofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
      endif
+#endif
      if (jofs.eq.0) then
       signcoeff=-one
       total_weight=total_weight+weightcoeff
@@ -27007,6 +27009,7 @@ do jj=1,3 !deriv dir
      print *,"irefine invalid: ",irefine
      stop
     endif
+#if (AMREX_SPACEDIM==3)
     if (krefine.eq.0) then
      kofs2=kofs2-1
     else if (krefine.eq.1) then
@@ -27015,6 +27018,7 @@ do jj=1,3 !deriv dir
      print *,"krefine invalid: ",krefine
      stop
     endif
+#endif
 
     signcoeff=one
     weightcoeff=one
@@ -27029,16 +27033,16 @@ do jj=1,3 !deriv dir
       print *,"jofs2 invalid"
       stop
      endif
-     if (SDIM.eq.3) then
-      if (kofs2.eq.0) then
-       weightcoeff=weightcoeff*0.75d0
-      else if (abs(kofs2).eq.1) then
-       weightcoeff=weightcoeff*0.25d0
-      else
-       print *,"kofs2 invalid"
-       stop
-      endif
+#if (AMREX_SPACEDIM==3)
+     if (kofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(kofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
      endif
+#endif
      if (iofs.eq.0) then
       signcoeff=-one
       total_weight=total_weight+weightcoeff
@@ -27060,16 +27064,16 @@ do jj=1,3 !deriv dir
       print *,"iofs2 invalid"
       stop
      endif
-     if (SDIM.eq.3) then
-      if (kofs2.eq.0) then
-       weightcoeff=weightcoeff*0.75d0
-      else if (abs(kofs2).eq.1) then
-       weightcoeff=weightcoeff*0.25d0
-      else
-       print *,"kofs2 invalid"
-       stop
-      endif
+#if (AMREX_SPACEDIM==3)
+     if (kofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(kofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
      endif
+#endif
      if (jofs.eq.0) then
       signcoeff=-one
       total_weight=total_weight+weightcoeff
