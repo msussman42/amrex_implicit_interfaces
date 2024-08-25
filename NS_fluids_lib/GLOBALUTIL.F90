@@ -26671,6 +26671,8 @@ real(amrex_real) inverse_tol
 real(amrex_real) dui(3,3)
 real(amrex_real) dxj(3,3)
 real(amrex_real) signcoeff
+real(amrex_real) weightcoeff
+real(amrex_real) total_weight
 
 integer dir_local
 
@@ -26850,6 +26852,8 @@ do jj=1,3 !deriv dir
  dui(ii,jj)=zero
  dxj(ii,jj)=zero
 
+ total_weight=zero
+
  kofs=0
 #if (AMREX_SPACEDIM==3)
  do kofs=0,1
@@ -26881,25 +26885,108 @@ do jj=1,3 !deriv dir
      print *,"krefine invalid: ",krefine
      stop
     endif
-    signcoeff=one
-    if (((jj.eq.1).and.(iofs.eq.0)).or. &
-        ((jj.eq.2).and.(jofs.eq.0)).or. &
-        ((jj.eq.3).and.(kofs.eq.0))) then
-     signcoeff=-one
-    endif
-    dui(ii,jj)=dui(ii,jj)+ &
-     signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
-    if (jj.eq.1) then !dx
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2-1,jj)
-    else if (jj.eq.2) then !dy
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
-    else if ((jj.eq.SDIM).and.(SDIM.eq.3)) then !dz
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+    signcoeff=one
+    weightcoeff=one
+
+    if (jj.eq.1) then !du/dx
+
+     if (jofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(jofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (SDIM.eq.3) then
+      if (kofs2.eq.0) then
+       weightcoeff=weightcoeff*0.75d0
+      else if (abs(kofs2).eq.1) then
+       weightcoeff=weightcoeff*0.25d0
+      else
+       print *,"kofs2 invalid"
+       stop
+      endif
+     endif
+     if (iofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (iofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"iofs invalid ",iofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*iofs2-1,jj)
+
+    else if (jj.eq.2) then !du/dy
+
+     if (iofs2.eq.irefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (iofs2.eq.1-irefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (SDIM.eq.3) then
+      if (kofs2.eq.0) then
+       weightcoeff=weightcoeff*0.75d0
+      else if (abs(kofs2).eq.1) then
+       weightcoeff=weightcoeff*0.25d0
+      else
+       print *,"kofs2 invalid"
+       stop
+      endif
+     endif
+     if (jofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (jofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"jofs invalid ",jofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*jofs2,jj)
+
+    else if ((jj.eq.3).and.(SDIM.eq.3)) then !du/dz
+
+     if (iofs2.eq.irefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (iofs2.eq.1-irefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (jofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(jofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (kofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (kofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"kofs invalid ",kofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*kofs2,jj)
+
     else
-     print *,"jj invalid(a): ",jj
+     print *,"jj invalid"
      stop
     endif
+
+    dui(ii,jj)=dui(ii,jj)+ &
+     weightcoeff*signcoeff*xmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
@@ -26928,30 +27015,113 @@ do jj=1,3 !deriv dir
      print *,"krefine invalid: ",krefine
      stop
     endif
-    signcoeff=one
-    if (((jj.eq.1).and.(iofs.eq.0)).or. &
-        ((jj.eq.2).and.(jofs.eq.0)).or. &
-        ((jj.eq.3).and.(kofs.eq.0))) then
-     signcoeff=-one
-    endif
-    dui(ii,jj)=dui(ii,jj)+ &
-     signcoeff*ymac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
-    if (jj.eq.1) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
-    else if (jj.eq.2) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2-1,jj)
-    else if (jj.eq.SDIM) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2,jj)
+    signcoeff=one
+    weightcoeff=one
+
+    if (jj.eq.1) then !dv/dx
+
+     if (jofs2.eq.jrefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (jofs2.eq.1-jrefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (SDIM.eq.3) then
+      if (kofs2.eq.0) then
+       weightcoeff=weightcoeff*0.75d0
+      else if (abs(kofs2).eq.1) then
+       weightcoeff=weightcoeff*0.25d0
+      else
+       print *,"kofs2 invalid"
+       stop
+      endif
+     endif
+     if (iofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (iofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"iofs invalid ",iofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*iofs2,jj)
+
+    else if (jj.eq.2) then !dv/dy
+
+     if (iofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(iofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (SDIM.eq.3) then
+      if (kofs2.eq.0) then
+       weightcoeff=weightcoeff*0.75d0
+      else if (abs(kofs2).eq.1) then
+       weightcoeff=weightcoeff*0.25d0
+      else
+       print *,"kofs2 invalid"
+       stop
+      endif
+     endif
+     if (jofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (jofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"jofs invalid ",jofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*jofs2-1,jj)
+
+    else if ((jj.eq.3).and.(SDIM.eq.3)) then !dv/dz
+
+     if (jofs2.eq.jrefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (jofs2.eq.1-jrefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (iofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(iofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (kofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (kofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"kofs invalid ",kofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*kofs2,jj)
+
     else
-     print *,"jj invalid(a) ",jj
+     print *,"jj invalid"
      stop
     endif
+
+    dui(ii,jj)=dui(ii,jj)+ &
+     weightcoeff*signcoeff*ymac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
    else
-    print *,"jj invalid(b) ",jj
+    print *,"jj invalid(b): ",jj
     stop
    endif 
 
@@ -26975,27 +27145,104 @@ do jj=1,3 !deriv dir
      print *,"jrefine invalid: ",jrefine
      stop
     endif
-    signcoeff=one
-    if (((jj.eq.1).and.(iofs.eq.0)).or. &
-        ((jj.eq.2).and.(jofs.eq.0)).or. &
-        ((jj.eq.3).and.(kofs.eq.0))) then
-     signcoeff=-one
-    endif
-    dui(ii,jj)=dui(ii,jj)+ &
-     signcoeff*zmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
-    if (jj.eq.1) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*iofs2,jj)
-    else if (jj.eq.2) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*jofs2,jj)
-    else if (jj.eq.SDIM) then
-     dxj(ii,jj)=dxj(ii,jj)+signcoeff*xsten(2*kofs2-1,jj)
-    else if (jj.eq.3) then
-     !do nothing
+    signcoeff=one
+    weightcoeff=one
+
+    if (jj.eq.1) then !dw/dx
+
+     if (kofs2.eq.krefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (kofs2.eq.1-krefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
+     endif
+     if (jofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(jofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (iofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (iofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"iofs invalid ",iofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*iofs2,jj)
+
+    else if (jj.eq.2) then !dw/dy
+
+     if (iofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(iofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (kofs2.eq.krefine) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (kofs2.eq.1-krefine) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"kofs2 invalid"
+      stop
+     endif
+     if (jofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (jofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"jofs invalid ",jofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*jofs2,jj)
+
+    else if (jj.eq.3) then !dw/dz
+
+     if (jofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(jofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"jofs2 invalid"
+      stop
+     endif
+     if (iofs2.eq.0) then
+      weightcoeff=weightcoeff*0.75d0
+     else if (abs(iofs2).eq.1) then
+      weightcoeff=weightcoeff*0.25d0
+     else
+      print *,"iofs2 invalid"
+      stop
+     endif
+     if (kofs.eq.0) then
+      signcoeff=-one
+      total_weight=total_weight+weightcoeff
+     else if (kofs.eq.1) then
+      signcoeff=one
+     else
+      print *,"kofs invalid ",kofs
+      stop
+     endif
+     dxj(ii,jj)=dxj(ii,jj)+weightcoeff*signcoeff*xsten(2*kofs2-1,jj)
+
     else
-     print *,"jj invalid(a): ",jj
+     print *,"jj invalid"
      stop
     endif
+
+    dui(ii,jj)=dui(ii,jj)+ &
+     weightcoeff*signcoeff*zmac(D_DECL(i+iofs2,j+jofs2,k+kofs2))
 
    else if ((jj.eq.3).and.(SDIM.eq.2)) then
     !do nothing
@@ -27004,7 +27251,7 @@ do jj=1,3 !deriv dir
     stop
    endif 
 
-  else if (ii.eq.3) then
+  else if ((ii.eq.3).and.(SDIM.eq.2)) then
    !do nothing
   else
    print *,"ii invalid: ",ii
@@ -27020,6 +27267,14 @@ do jj=1,3 !deriv dir
  gradV_MAC=zero
  if ((ii.ge.1).and.(ii.le.SDIM).and. &
      (jj.ge.1).and.(jj.le.SDIM)) then
+
+  if (abs(total_weight-one).le.EPS10) then
+   !do nothing
+  else
+   print *,"total_weight invalid: ",total_weight
+   stop
+  endif
+
   if (dxj(ii,jj).gt.zero) then
    gradV_MAC=dui(ii,jj)/dxj(ii,jj)
   else
