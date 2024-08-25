@@ -340,6 +340,7 @@ extern "C"
       Real* denconst,
       Real* visc_coef,
       Real* gravity_reference_wavelen_in,
+      Real* max_A,
       int* dir,
       int* nparts,
       int* nparts_def,

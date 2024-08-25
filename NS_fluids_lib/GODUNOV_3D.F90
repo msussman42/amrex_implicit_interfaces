@@ -2434,6 +2434,7 @@ stop
         denconst, &
         visc_coef, &
         gravity_reference_wavelen_in, &
+        max_A, &
         dirnormal, &
         nparts, &
         nparts_def, &
@@ -2506,6 +2507,7 @@ stop
       real(amrex_real), INTENT(in) :: denconst(num_materials)
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: gravity_reference_wavelen_in
+      real(amrex_real), INTENT(in) :: max_A
       real(amrex_real) :: gravity_reference_wavelen
 
       integer, INTENT(in) :: DIMDEC(velmac)
@@ -2635,6 +2637,13 @@ stop
       if ((enable_spectral.lt.0).or. &
           (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid fort_estdt"
+       stop
+      endif
+
+      if (max_A.ge.zero) then
+       ! do nothing
+      else
+       print *,"max_A invalid: ",max_A
        stop
       endif
 
@@ -3130,8 +3139,8 @@ stop
              ! beta = kg/(m s^2)
              ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
             if (fort_elastic_viscosity(im).ge.zero) then
-             elastic_wave_speed=visc_coef*fort_elastic_viscosity(im)/ &
-                (local_elastic_time*fort_denconst(im))
+             elastic_wave_speed= &
+              two*visc_coef*max_A*fort_elastic_viscosity(im)/fort_denconst(im)
             else
              print *,"fort_elastic_viscosity(im) invalid"
              stop
@@ -3143,7 +3152,7 @@ stop
             else if (elastic_wave_speed.eq.zero) then
              ! do nothing
             else
-             print *,"elastic_wave_speed invalid"
+             print *,"elastic_wave_speed invalid: ",elastic_wave_speed
              stop
             endif
            else

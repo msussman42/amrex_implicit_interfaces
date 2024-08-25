@@ -21663,6 +21663,32 @@ void NavierStokes::MaxAdvectSpeed(
     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
  }
 
+ Real max_A=0.0;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+  if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+   for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;scomp++) {
+    max_A=std::max(max_A,Tensor_new.norminf(scomp));
+   }
+   max_A=3.0*(max_A+1.0);
+  } else
+   amrex::Error("Tensor_new invalid");
+
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid:maxAdvectSpeed");
+
+ if (level==finest_level) {
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "max_A= " << max_A << '\n';
+   }
+  }
+ }
+
  MultiFab* distmf=getStateDist(2,cur_time_slab,local_caller_string);
   // num_materials*num_state_material
  MultiFab* denmf=getStateDen(1,cur_time_slab);  
@@ -21812,6 +21838,7 @@ void NavierStokes::MaxAdvectSpeed(
     denconst.dataPtr(),
     &visc_coef,
     &gravity_reference_wavelen,
+    &max_A,
     &dir,
     &nparts,
     &nparts_def,
