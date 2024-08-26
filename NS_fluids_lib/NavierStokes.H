@@ -1602,6 +1602,7 @@ protected:
 
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
+    static int explicit_viscosity_dt; //default is 0
     static Real min_velocity_for_dt; // dt<dx/min_velocity_for_dt
      //uu_stefan=max(uu_stefan,min_stefan_velocity_for_dt) 
     static Real min_stefan_velocity_for_dt; 
