@@ -230,6 +230,7 @@ Real NavierStokes::fixed_dt_init = 0.0;
 Real NavierStokes::min_velocity_for_dt = CPP_EPS_12_6;
 Real NavierStokes::min_stefan_velocity_for_dt = CPP_EPS_12_6;
 Real NavierStokes::fixed_dt_velocity = 0.0;
+int NavierStokes::explicit_viscosity_dt = 0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::gravity      = 0.0;
 // default=diagonal length of the domain tangent to the
@@ -2989,6 +2990,7 @@ NavierStokes::read_params ()
      amrex::Error("min_stefan_velocity_for_dt invalid");
 
     pp.queryAdd("fixed_dt_velocity",fixed_dt_velocity);
+    pp.queryAdd("explicit_viscosity_dt",explicit_viscosity_dt);
     pp.queryAdd("sum_interval",sum_interval);
 
     pp.queryAdd("profile_debug",profile_debug);
@@ -6052,6 +6054,7 @@ NavierStokes::read_params ()
      std::cout << "fixed_dt=" << fixed_dt << '\n';
      std::cout << "fixed_dt_init=" << fixed_dt_init << '\n';
      std::cout << "fixed_dt_velocity=" << fixed_dt_velocity << '\n';
+     std::cout << "explicit_viscosity_dt=" << explicit_viscosity_dt << '\n';
      std::cout << "min_velocity_for_dt=" << min_velocity_for_dt << '\n';
      std::cout << "min_stefan_velocity_for_dt=" << 
         min_stefan_velocity_for_dt << '\n';
@@ -21830,6 +21833,7 @@ void NavierStokes::MaxAdvectSpeed(
     tilelo,tilehi,
     fablo,fabhi,
     &bfact,
+    &explicit_viscosity_dt,
     &min_stefan_velocity_for_dt,
     local_cap_wave_speed[tid_current].dataPtr(),
     local_vel_max_estdt[tid_current].dataPtr(),
