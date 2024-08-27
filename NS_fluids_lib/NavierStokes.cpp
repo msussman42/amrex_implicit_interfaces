@@ -21687,7 +21687,7 @@ void NavierStokes::MaxAdvectSpeed(
  if (level==finest_level) {
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "max_A= " << max_A << '\n';
+    std::cout << "TIME= " << cur_time_slab << " max_A= " << max_A << '\n';
    }
   }
  }
