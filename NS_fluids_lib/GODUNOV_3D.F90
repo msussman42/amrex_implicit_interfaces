@@ -8543,7 +8543,7 @@ stop
        ymac,DIMS(ymac), &
        zmac,DIMS(zmac), &
        tnew,DIMS(tnew), &
-       told,DIMS(told), &
+       told,DIMS(told), & !ngrow=1
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
@@ -8613,7 +8613,10 @@ stop
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
 
       integer :: i,j,k
+      integer :: ibase,jbase,kbase
       integer :: irefine,jrefine,krefine,nrefine
+      integer :: irefine2,jrefine2,krefine2,nrefine2
+      integer :: iofs,jofs,kofs
       real(amrex_real), INTENT(in) :: dt,elastic_time
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
@@ -8621,6 +8624,11 @@ stop
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
+      integer :: ii,jj
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) told_average,told_weight,local_weight
+      real(amrex_real) rval
 
       tnew_ptr=>tnew
 
@@ -8710,13 +8718,15 @@ stop
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1)
 
       told_ptr=>told
-      call checkbound_array(fablo,fabhi,told_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,told_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
        krefine=0
 #if (AMREX_SPACEDIM==3)
@@ -8727,9 +8737,132 @@ stop
         nrefine=4*krefine+2*jrefine+irefine+1
 
         do dir_local=1,ENUM_NUM_TENSOR_TYPE
-         point_told(dir_local)=told(D_DECL(i,j,k), &
-            (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
-        enddo
+
+         call stress_index(dir_local,ii,jj)
+
+         told_average=zero
+         told_weight=zero
+#if (AMREX_SPACEDIM==3)
+         do kofs=0,1
+#endif
+         do jofs=0,1
+         do iofs=0,1
+          ibase=i
+          jbase=j
+          kbase=k
+          irefine2=iofs
+          jrefine2=jofs
+          krefine2=kofs
+          if (ii.eq.jj) then
+           rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
+          else if (((ii.eq.1).and.(jj.eq.2)).or. &
+                   ((ii.eq.2).and.(jj.eq.1))) then
+           if (irefine.eq.0) then
+            ibase=i-1+iofs
+            irefine2=1-iofs
+            rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
+           else if (irefine.eq.1) then
+            ibase=i+iofs
+            irefine2=1-iofs
+            rval=half*(xsten(2*iofs,1)+xsten(1,1))
+           else
+            print *,"irefine invalid"
+            stop
+           endif
+           if (jrefine.eq.0) then
+            jbase=j-1+jofs
+            jrefine2=1-jofs
+           else if (jrefine.eq.1) then
+            jbase=j+jofs
+            jrefine2=1-jofs
+           else
+            print *,"jrefine invalid"
+            stop
+           endif
+          else if (((ii.eq.1).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
+                   ((ii.eq.3).and.(jj.eq.1).and.(SDIM.eq.3))) then
+           if (irefine.eq.0) then
+            ibase=i-1+iofs
+            irefine2=1-iofs
+            rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
+           else if (irefine.eq.1) then
+            ibase=i+iofs
+            irefine2=1-iofs
+            rval=half*(xsten(2*iofs,1)+xsten(1,1))
+           else
+            print *,"irefine invalid"
+            stop
+           endif
+           if (krefine.eq.0) then
+            kbase=k-1+kofs
+            krefine2=1-kofs
+           else if (krefine.eq.1) then
+            kbase=k+kofs
+            krefine2=1-kofs
+           else
+            print *,"krefine invalid"
+            stop
+           endif
+
+          else if (((ii.eq.2).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
+                   ((ii.eq.3).and.(jj.eq.2).and.(SDIM.eq.3))) then
+
+           if (jrefine.eq.0) then
+            jbase=j-1+jofs
+            jrefine2=1-jofs
+           else if (jrefine.eq.1) then
+            jbase=j+jofs
+            jrefine2=1-jofs
+           else
+            print *,"jrefine invalid"
+            stop
+           endif
+           if (krefine.eq.0) then
+            kbase=k-1+kofs
+            krefine2=1-kofs
+           else if (krefine.eq.1) then
+            kbase=k+kofs
+            krefine2=1-kofs
+           else
+            print *,"krefine invalid"
+            stop
+           endif
+           rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
+
+          else
+           print *,"ii,jj invalid"
+           stop
+          endif
+
+          nrefine2=4*krefine2+2*jrefine2+irefine2+1
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           local_weight=one
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           local_weight=abs(rval)
+          else if (levelrz.eq.COORDSYS_RZ) then
+           local_weight=abs(rval)
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+          told_average=told_average+local_weight* &
+            told(D_DECL(ibase,jbase,kbase), &
+               (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
+          told_weight=told_weight+local_weight
+         enddo !iofs=0,1
+         enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+         enddo !kofs=0,1
+#endif
+         if (told_weight.gt.zero) then
+          told_average=told_average/told_weight
+         else
+          print *,"told_weight invalid"
+          stop
+         endif
+                 
+         point_told(dir_local)=told_average
+        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
 
         !point_updatetensor is declared in: GLOBALUTIL.F90
         call point_updatetensor( &
