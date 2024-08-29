@@ -2761,6 +2761,29 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // extrapolates Q at the end.
       tensor_advection_updateALL();
 
+      if (step_through_data==1) {
+       int basestep_debug=nStep();
+       parent->writeDEBUG_PlotFile(
+	 basestep_debug,
+	 SDC_outer_sweeps,
+	 slab_step,
+	 divu_outer_sweeps);
+       std::cout << "press any number then enter: after tensor_advection_updateALL\n";
+       std::cout << "timeSEM= " << timeSEM << '\n';
+       std::cout << "dtSEM= " << dtSEM << '\n';
+       std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+       std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+       std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+       std::cout << "slab_step= " << 
+	       slab_step << '\n';
+       std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
+       int n_input;
+       std::cin >> n_input;
+      }
+
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
@@ -3468,6 +3491,30 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // do nothing
     } else
       amrex::Error("ns_time_order or advance_status invalid: do_the..");
+
+
+    if (step_through_data==1) {
+     int basestep_debug=nStep();
+     parent->writeDEBUG_PlotFile(
+       basestep_debug,
+       SDC_outer_sweeps,
+       slab_step,
+       divu_outer_sweeps);
+     std::cout << "press any number then enter: just before close of divu_outer_sweeps loop\n";
+     std::cout << "timeSEM= " << timeSEM << '\n';
+     std::cout << "dtSEM= " << dtSEM << '\n';
+     std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+     std::cout << "local_num_divu_outer_sweeps= " << 
+             local_num_divu_outer_sweeps << '\n';
+     std::cout << "num_divu_outer_sweeps= " << 
+             num_divu_outer_sweeps << '\n';
+     std::cout << "slab_step= " << 
+             slab_step << '\n';
+     std::cout << "SDC_outer_sweeps= " << 
+             SDC_outer_sweeps << '\n';
+     int n_input;
+     std::cin >> n_input;
+    }
 
    } // divu_outer_sweeps loop
 
