@@ -8742,6 +8742,7 @@ stop
 
          told_average=zero
          told_weight=zero
+         kofs=0
 #if (AMREX_SPACEDIM==3)
          do kofs=0,1
 #endif
@@ -8766,7 +8767,7 @@ stop
             irefine2=1-iofs
             rval=half*(xsten(2*iofs,1)+xsten(1,1))
            else
-            print *,"irefine invalid"
+            print *,"irefine invalid: ",irefine
             stop
            endif
            if (jrefine.eq.0) then
@@ -8776,7 +8777,7 @@ stop
             jbase=j+jofs
             jrefine2=1-jofs
            else
-            print *,"jrefine invalid"
+            print *,"jrefine invalid: ",jrefine
             stop
            endif
           else if (((ii.eq.1).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
@@ -8790,7 +8791,7 @@ stop
             irefine2=1-iofs
             rval=half*(xsten(2*iofs,1)+xsten(1,1))
            else
-            print *,"irefine invalid"
+            print *,"irefine invalid: ",irefine
             stop
            endif
            if (krefine.eq.0) then
@@ -8800,7 +8801,7 @@ stop
             kbase=k+kofs
             krefine2=1-kofs
            else
-            print *,"krefine invalid"
+            print *,"krefine invalid: ",krefine
             stop
            endif
 
@@ -8814,7 +8815,7 @@ stop
             jbase=j+jofs
             jrefine2=1-jofs
            else
-            print *,"jrefine invalid"
+            print *,"jrefine invalid: ",jrefine
             stop
            endif
            if (krefine.eq.0) then
@@ -8824,17 +8825,18 @@ stop
             kbase=k+kofs
             krefine2=1-kofs
            else
-            print *,"krefine invalid"
+            print *,"krefine invalid: ",krefine
             stop
            endif
            rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
 
           else
-           print *,"ii,jj invalid"
+           print *,"ii,jj invalid: ",ii,jj
            stop
           endif
 
           nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
           if (levelrz.eq.COORDSYS_CARTESIAN) then
            local_weight=one
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
@@ -8842,7 +8844,7 @@ stop
           else if (levelrz.eq.COORDSYS_RZ) then
            local_weight=abs(rval)
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid: ",levelrz
            stop
           endif
           told_average=told_average+local_weight* &
@@ -8857,7 +8859,7 @@ stop
          if (told_weight.gt.zero) then
           told_average=told_average/told_weight
          else
-          print *,"told_weight invalid"
+          print *,"told_weight invalid: ",told_weight
           stop
          endif
                  
