@@ -3172,7 +3172,7 @@ stop
              ! beta = kg/(m s^2)
              ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
             if (fort_elastic_viscosity(im).ge.zero) then
-             elastic_wave_speed= &
+             elastic_wave_speed=four*  &
               two*visc_coef*max_A*fort_elastic_viscosity(im)/fort_denconst(im)
             else
              print *,"fort_elastic_viscosity(im) invalid"
@@ -13805,6 +13805,10 @@ stop
            else
             print *, &
              "is_compressible_mat or fort_material_conservation_form invalid"
+            print *,"im=",im
+            print *,"is_compressible_mat ",is_compressible_mat(im)
+            print *,"fort_material_conservation_form ", &
+                fort_material_conservation_form(im)
             stop
            endif
            istate=istate+1
@@ -14768,7 +14772,8 @@ stop
          else if (incompressible_interface_flag.eq.1) then
           vol_target_local=volmat_depart_cor(im)
          else 
-          print *,"incompressible_interface_flag invalid"
+          print *,"incompressible_interface_flag invalid: ", &
+             incompressible_interface_flag
           stop
          endif
         else
@@ -15058,6 +15063,10 @@ stop
             else
              print *, &
               "is_compressible_mat or fort_material_conservation_form invalid"
+             print *,"im,is_compressible_mat: ", &
+              im,is_compressible_mat(im)
+             print *,"im,fort_material_conservation_form: ", &
+              im,fort_material_conservation_form(im)
              stop
             endif
             if (ETcore.lt.fort_tempcutoff(im)) then
@@ -15069,7 +15078,7 @@ stop
             if (ETcore.gt.zero) then
              ! do nothing
             else
-             print *,"Energy (ETcore) went negative(2)"
+             print *,"Energy (ETcore) went negative(2): ",ETcore
              stop
             endif
             snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore

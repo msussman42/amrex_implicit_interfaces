@@ -26754,6 +26754,7 @@ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental model
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
  ! Xia, Lu, Tryggvason 2018
  ! coeff=elastic_viscosity
+ force_unity_determinant=0
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
