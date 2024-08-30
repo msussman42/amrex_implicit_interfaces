@@ -12817,10 +12817,16 @@ stop
             rhs(D_DECL(i,j,k),1)=Eforce_conservative
            else 
             print *,"fort_material_conservation_form(im_majority) bad"
+            print *,"im_majority=",im_majority
+            print *,"fort_material_conservation_form(im_majority): ", &
+              fort_material_conservation_form(im_majority)
             stop
            endif
           else 
            print *,"is_compressible_mat(im_majority) bad"
+           print *,"im_majority=",im_majority
+           print *,"is_compressible_mat(im_majority): ", &
+              is_compressible_mat(im_majority)
            stop
           endif
 
@@ -12952,6 +12958,9 @@ stop
  
               else
                print *,"fort_material_conservation_form(im) invalid"
+               print *,"im=",im
+               print *,"fort_material_conservation_form(im): ", &
+                 fort_material_conservation_form(im)
                stop
               endif
 
