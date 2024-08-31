@@ -1951,7 +1951,8 @@ void fortran_parameters() {
    NavierStokes::store_refine_density_data[im]=1;
 
    if ((NavierStokes::FSI_flag[im]==FSI_FLUID)||
-       (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)) {
+       (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)||
+       (NavierStokes::FSI_flag[im]==FSI_EULERIAN_ELASTIC)) {
     //do nothing
    } else
     amrex::Error("NavierStokes::FSI_flag invalid");

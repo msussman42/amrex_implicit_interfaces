@@ -15150,7 +15150,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
-        print *,"energyflag invalid OP_VEL_MAC_TO_CELL"
+        print *,"energyflag invalid OP_VEL_MAC_TO_CELL: ",energyflag
         stop
        endif
        if (ncomp_xvel.ne.1) then
