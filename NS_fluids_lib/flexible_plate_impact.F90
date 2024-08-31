@@ -370,12 +370,8 @@ subroutine EOS_flexible_plate_impact(rho,internal_energy,pressure, &
  real(amrex_real), INTENT(in) :: internal_energy
  real(amrex_real), INTENT(out) :: pressure
 
- if (imattype.eq.24) then
-  pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
- else
-  print *,"imattype invalid EOS_flexible_plate_impact"
-  stop
- endif
+ print *,"EOS_flexible_plate_impact should not be used; the default is fine"
+ stop
 
  return
 end subroutine EOS_flexible_plate_impact
@@ -389,13 +385,8 @@ subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
  real(amrex_real), INTENT(out) :: soundsqr
  real(amrex_real) pressure
 
- if (imattype.eq.24) then
-  call EOS_flexible_plate_impact(rho,internal_energy,pressure,imattype,im)
-  soundsqr=DEF_VAPOR_GAMMA*pressure/rho
- else
-  print *,"imattype invalid SOUNDSQR_flexible_plate_impact"
-  stop
- endif
+ print *,"SOUNDSQR_flexible_plate_impact shouldn't be used; the default is ok"
+ stop
 
  return
 end subroutine SOUNDSQR_flexible_plate_impact
@@ -410,8 +401,8 @@ subroutine INTERNAL_flexible_plate_impact(rho,temperature, &
  real(amrex_real), INTENT(in) :: temperature 
  real(amrex_real), INTENT(out) :: local_internal_energy
 
- call INTERNAL_default(rho,temperature,local_internal_energy, &
-        imattype,im)
+ print *,"INTERNAL_flexible_plate_impact shouldn't be used; the default is ok"
+ stop
 
  return
 end subroutine INTERNAL_flexible_plate_impact
@@ -425,8 +416,8 @@ subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
  real(amrex_real), INTENT(out) :: temperature 
  real(amrex_real), INTENT(in) :: internal_energy
 
- call TEMPERATURE_default(rho,temperature,internal_energy, &
-        imattype,im)
+ print *,"TEMPERATURE_flexible_plate_impact shouldn't be used; default is ok"
+ stop
 
  return
 end subroutine TEMPERATURE_flexible_plate_impact
@@ -449,7 +440,7 @@ else
  print *,"nmat invalid"
  stop
 endif
-PRES=outflow_pressure
+PRES=A_ELASTIC
 
 return 
 end subroutine flexible_plate_impact_PRES
