@@ -20953,12 +20953,21 @@ end subroutine print_visual_descriptor
       end subroutine SOUNDSQR_galinstan_rho
 
 
-      subroutine INTERNAL_elastic_rho(rho,temperature,internal_energy)
+      subroutine INTERNAL_elastic_rho(rho,temperature,internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,temperature
+      real(amrex_real), intent(out) :: internal_energy
+      real(amrex_real) :: cv
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
 
       if (rho.gt.zero) then 
        !do nothing
@@ -20978,12 +20987,22 @@ end subroutine print_visual_descriptor
       return
       end subroutine INTERNAL_elastic_rho
 
-      subroutine TEMPERATURE_elastic_rho(rho,temperature,internal_energy)
+      subroutine TEMPERATURE_elastic_rho(rho,temperature,internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: temperature
+      real(amrex_real) :: cv
 
+
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
 
       if (rho.gt.zero) then
        !do nothing
@@ -21003,17 +21022,25 @@ end subroutine print_visual_descriptor
       return
       end subroutine TEMPERATURE_elastic_rho
 
-      subroutine EOS_elastic_rho(rho,internal_energy,pressure)
+      subroutine EOS_elastic_rho(rho,internal_energy,pressure,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,pressure
+      integer, intent(in) :: im
+      real(amrex_real),intent(in):: rho,internal_energy
+      real(amrex_real),intent(out):: pressure
       real(amrex_real) A,B,rhobar,pcav
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
 
       A=A_ELASTIC   ! dyne/cm^2
       B=B_ELASTIC  ! dyne/cm^2
-      rhobar=fort_denconst(num_materials) ! g/cm^3
+      rhobar=fort_denconst(im) ! g/cm^3
 
       if (rhobar.ge.0.001) then
        !do nothing
@@ -21047,15 +21074,23 @@ end subroutine print_visual_descriptor
       end subroutine EOS_elastic_rho
 
 
-      subroutine SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr)
+      subroutine SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,soundsqr
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,internal_energy
+      real(amrex_real),intent(out) :: soundsqr
       real(amrex_real) A,B,rhobar,pcav,rhocav,pressure
       real(amrex_real) rho_sound
 
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
       if (rho.gt.zero) then
        !do nothing
       else
@@ -21071,7 +21106,7 @@ end subroutine print_visual_descriptor
 
       A=A_ELASTIC ! dyne/cm^2
       B=B_ELASTIC ! dyne/cm^2
-      rhobar=fort_denconst(num_materials) ! g/cm^3
+      rhobar=fort_denconst(im) ! g/cm^3
 
       if (rhobar.ge.0.001) then
        !do nothing
@@ -23934,6 +23969,12 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(inout) :: pressure
       real(amrex_real) :: T
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
       if (rho.gt.zero) then
        !do nothing
       else
@@ -23996,7 +24037,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.24) then
        call EOS_galinstan_rho(rho,internal_energy,pressure)
       else if (imattype.eq.25) then !uses denconst(num_materials)
-       call EOS_elastic_rho(rho,internal_energy,pressure)
+       call EOS_elastic_rho(rho,internal_energy,pressure,im)
       else
        print *,"imattype invalid EOS_material_CORE"
        stop
@@ -24081,6 +24122,12 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(in) :: massfrac_var(num_species_var+1)
       real(amrex_real), INTENT(out) :: soundsqr
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
 
       if (rho.le.zero) then
        print *,"rho invalid"
@@ -24140,7 +24187,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.24) then
        call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
       else if (imattype.eq.25) then
-       call SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr)
+       call SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr,im)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE"
        stop
@@ -24164,6 +24211,12 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(out) :: internal_energy
       real(amrex_real) local_internal_energy
 
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid: ",im
+       stop
+      endif
       if (rho.gt.zero) then
        ! do nothing
       else
@@ -24230,7 +24283,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.24) then
        call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
       else if (imattype.eq.25) then
-       call INTERNAL_elastic_rho(rho,temperature,local_internal_energy)
+       call INTERNAL_elastic_rho(rho,temperature,local_internal_energy,im)
       else
        print *,"imattype invalid INTERNAL_material_CORE"
        stop
@@ -24322,7 +24375,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.24) then
        call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
       else if (imattype.eq.25) then
-       call TEMPERATURE_elastic_rho(rho,temperature,internal_energy)
+       call TEMPERATURE_elastic_rho(rho,temperature,internal_energy,im)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype

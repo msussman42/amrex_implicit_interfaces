@@ -11339,7 +11339,7 @@ stop
 
        ! 0=no div(up)
        ! 1=div(up) ok
-      integer use_face_pres_cen
+      integer use_face_pres_cen !fort_mac_to_cell
       integer use_face_pres(2)  ! faces that are on either side of a cell.
       real(amrex_real) ASIDE(2,ncphys)
       real(amrex_real) mass_side(2)
@@ -12540,6 +12540,7 @@ stop
         is_rigid_near=0
         do im=1,num_materials
          if (is_rigid(im).eq.1) then
+           !incomp_thickness declared in PROBCOMMON.F90
           if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
            is_rigid_near=1
           else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
@@ -12560,6 +12561,7 @@ stop
          use_face_pres_cen=0
         else if (is_rigid_near.eq.0) then
          do im=1,num_materials
+           !incomp_thickness declared in PROBCOMMON.F90
           if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
 
             !material_type=0 or 999
@@ -12812,16 +12814,34 @@ stop
            rhs(D_DECL(i,j,k),1)=zero
           else if (is_compressible_mat(im_majority).eq.1) then
            if (fort_material_conservation_form(im_majority).eq.0) then
-            rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
+            if (is_rigid_CL(im_majority).eq.0) then
+             rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
+            else if (is_rigid_CL(im_majority).eq.1) then
+             rhs(D_DECL(i,j,k),1)=zero
+            else
+             print *,"is_rigid_CL invalid: ", &
+               im_majority,is_rigid_CL(im_majority)
+             stop
+            endif
            else if (fort_material_conservation_form(im_majority).eq.1) then
-            rhs(D_DECL(i,j,k),1)=Eforce_conservative
+
+            if (is_rigid_CL(im_majority).eq.0) then
+             rhs(D_DECL(i,j,k),1)=Eforce_conservative
+            else
+             print *,"im_majority=",im_majority
+             print *,"make fort_material_conservation_form=0 if is_rigid_CL"
+             stop
+            endif
+
            else 
+
             print *,"fort_material_conservation_form(im_majority) bad"
             print *,"im_majority=",im_majority
             print *,"fort_material_conservation_form(im_majority): ", &
               fort_material_conservation_form(im_majority)
             stop
            endif
+
           else 
            print *,"is_compressible_mat(im_majority) bad"
            print *,"im_majority=",im_majority
@@ -12916,7 +12936,13 @@ stop
               if (fort_material_conservation_form(im).eq.1) then
 
                ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
-               internal_e=internal_e+KE_diff+Eforce_conservative
+               if (is_rigid_CL(im).eq.0) then
+                internal_e=internal_e+KE_diff+Eforce_conservative
+               else
+                print *,"im=",im
+                print *,"make fort_material_conservation_form=0 if is_rigid_CL"
+                stop
+               endif
 
               else if (fort_material_conservation_form(im).eq.0) then
 
@@ -12937,18 +12963,27 @@ stop
                 stop
                endif
  
-               if (Eforce_non_conservative.ge.zero) then
-                ! e=e^*-dt div(up)/rho
-                internal_e=internal_e+Eforce_non_conservative
-               else if (Eforce_non_conservative.lt.zero) then
-                internal_e=internal_e/ &
-                 (one-Eforce_non_conservative/internal_e)
+               if (is_rigid_CL(im).eq.0) then
+
+                if (Eforce_non_conservative.ge.zero) then
+                 ! e=e^*-dt div(up)/rho
+                 internal_e=internal_e+Eforce_non_conservative
+                else if (Eforce_non_conservative.lt.zero) then
+                 internal_e=internal_e/ &
+                  (one-Eforce_non_conservative/internal_e)
+                else
+                 print *,"Eforce_non_conservative invalid: ", &
+                   Eforce_non_conservative
+                 stop
+                endif
+         
+               else if (is_rigid_CL(im).eq.1) then
+                !do nothing
                else
-                print *,"Eforce_non_conservative invalid: ", &
-                  Eforce_non_conservative
+                print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
                 stop
                endif
-         
+
                if (internal_e.gt.zero) then
                 !do nothing
                else
@@ -13036,9 +13071,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       if (ns_time_order.eq.1) then
        if (enable_spectral.eq.0) then
@@ -13611,7 +13646,7 @@ stop
       integer mask_covered(2)
       integer mask_coarsefine(2)
       integer at_reflect_wall,at_wall,at_ext_wall
-      integer use_face_pres
+      integer use_face_pres !fort_cell_to_mac
       integer at_coarse_fine_wallF
       integer at_coarse_fine_wallC
       real(amrex_real) user_tension(num_interfaces)
@@ -14935,7 +14970,7 @@ stop
           at_coarse_fine_wallF=0
           at_coarse_fine_wallC=0
 
-          use_face_pres=1 ! use div(up)
+          use_face_pres=1 ! use div(up) (fort_cell_to_mac)
 
           solid_velocity=local_face(FACECOMP_FACEVEL+1)
 
@@ -15013,7 +15048,7 @@ stop
           endif
 
           if (local_face(FACECOMP_ELASTICMASK+1).eq.zero) then
-           use_face_pres=0 ! do not use div(up)
+           !use_face_pres=0 ! do not use div(up)
           else if ((local_face(FACECOMP_ELASTICMASK+1).gt.zero).and. &
                    (local_face(FACECOMP_ELASTICMASK+1).le.one)) then
            ! do nothing

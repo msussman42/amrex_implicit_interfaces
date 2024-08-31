@@ -139,7 +139,9 @@ ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
 #ns.material_type=0 0 999 # CTML
-ns.material_type=0 0 0 # Eulerian FSI
+#ns.material_type=0 0 0 # Eulerian FSI
+ns.material_conservation_form=0 0 0
+ns.material_type=0 0 25 # Compressible Eulerian FSI (elastic)
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)
@@ -168,7 +170,7 @@ ns.tempconst=293.0 293.0 293.0
 ns.lo_bc          = 3 3
 ns.hi_bc          = 3 2
 #ns.v=0,1,2
-#ns.v=2
+ns.v=1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
