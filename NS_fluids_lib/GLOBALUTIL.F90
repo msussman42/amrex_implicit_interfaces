@@ -20813,13 +20813,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then 
        !do nothing
       else
-       print *,"density negative"
+       print *,"density negative: ",rho
        stop
       endif
       if (temperature.gt.zero) then
        !do nothing
       else
-       print *,"temperature <=0"
+       print *,"temperature <=0: ",temperature
        stop
       endif
       cv=4.1855D+7
@@ -20838,13 +20838,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"density negative"
+       print *,"density negative: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"internal energy <=0"
+       print *,"internal energy <=0: ",internal_energy
        stop
       endif
       cv=4.1855D+7
@@ -20868,7 +20868,7 @@ end subroutine print_visual_descriptor
       if (rhobar.ge.0.001) then
        !do nothing
       else
-       print *,"rhobar invalid in eos galinstan rho"
+       print *,"rhobar invalid in eos galinstan rho: ",rhobar
        stop
       endif
 
@@ -20877,13 +20877,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid: ",internal_energy
        stop
       endif
 
@@ -20909,13 +20909,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid: ", internal_energy
        stop
       endif
 
@@ -20926,7 +20926,7 @@ end subroutine print_visual_descriptor
       if (rhobar.ge.0.001) then
        !do nothing
       else
-       print *,"rhobar invalid in soundsqr galinstan rho"
+       print *,"rhobar invalid in soundsqr galinstan rho: ",rhobar
        stop
       endif
 
@@ -20937,7 +20937,7 @@ end subroutine print_visual_descriptor
       if (rhocav.gt.zero) then
        !do nothing
       else
-       print *,"rhocav invalid"
+       print *,"rhocav invalid: ",rhocav
        stop
       endif
 
@@ -20953,7 +20953,154 @@ end subroutine print_visual_descriptor
       end subroutine SOUNDSQR_galinstan_rho
 
 
+      subroutine INTERNAL_elastic_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
 
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+
+      if (rho.gt.zero) then 
+       !do nothing
+      else
+       print *,"density negative: ",rho
+       stop
+      endif
+      if (temperature.gt.zero) then
+       !do nothing
+      else
+       print *,"temperature <=0: ",temperature
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_elastic_rho
+
+      subroutine TEMPERATURE_elastic_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy <=0: ",internal_energy
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_elastic_rho
+
+      subroutine EOS_elastic_rho(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,internal_energy,pressure
+      real(amrex_real) A,B,rhobar,pcav
+
+
+      A=A_ELASTIC   ! dyne/cm^2
+      B=B_ELASTIC  ! dyne/cm^2
+      rhobar=fort_denconst(num_materials) ! g/cm^3
+
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
+       print *,"rhobar invalid in eos elastic rho: ",rhobar
+       stop
+      endif
+
+      pcav=PCAV_ELASTIC
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid: ",rho
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid: ",internal_energy
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_ELASTIC - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_elastic_rho
+
+
+      subroutine SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,internal_energy,soundsqr
+      real(amrex_real) A,B,rhobar,pcav,rhocav,pressure
+      real(amrex_real) rho_sound
+
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid: ",rho
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid: ",internal_energy
+       stop
+      endif
+
+      A=A_ELASTIC ! dyne/cm^2
+      B=B_ELASTIC ! dyne/cm^2
+      rhobar=fort_denconst(num_materials) ! g/cm^3
+
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
+       print *,"rhobar invalid in soundsqr elastic rho: ",rhobar
+       stop
+      endif
+
+      pcav=PCAV_ELASTIC
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_ELASTIC) )
+      pressure=B*( (rho/rhobar)**GAMMA_ELASTIC - one ) + A
+      
+      if (rhocav.gt.zero) then
+       !do nothing
+      else
+       print *,"rhocav invalid: ",rhocav
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_ELASTIC*B/rhobar)* &
+        ( (rho_sound/rhobar)**(GAMMA_ELASTIC-one) )
+
+      return
+      end subroutine SOUNDSQR_ELASTIC_rho
 
       subroutine INTERNAL_tait_rhohydro(rho,temperature,internal_energy)
       use probcommon_module
@@ -23790,13 +23937,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid: ",internal_energy
        stop
       endif
 
@@ -23848,6 +23995,8 @@ end subroutine print_visual_descriptor
        call EOS_peng_robinson(rho,internal_energy,pressure)
       else if (imattype.eq.24) then
        call EOS_galinstan_rho(rho,internal_energy,pressure)
+      else if (imattype.eq.25) then !uses denconst(num_materials)
+       call EOS_elastic_rho(rho,internal_energy,pressure)
       else
        print *,"imattype invalid EOS_material_CORE"
        stop
@@ -23990,6 +24139,8 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
       else if (imattype.eq.24) then
        call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
+      else if (imattype.eq.25) then
+       call SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE"
        stop
@@ -24078,6 +24229,8 @@ end subroutine print_visual_descriptor
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
       else if (imattype.eq.24) then
        call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
+      else if (imattype.eq.25) then
+       call INTERNAL_elastic_rho(rho,temperature,local_internal_energy)
       else
        print *,"imattype invalid INTERNAL_material_CORE"
        stop
@@ -24168,6 +24321,8 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
       else if (imattype.eq.24) then
        call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
+      else if (imattype.eq.25) then
+       call TEMPERATURE_elastic_rho(rho,temperature,internal_energy)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype
