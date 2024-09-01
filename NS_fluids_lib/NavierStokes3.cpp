@@ -264,10 +264,66 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 }  // end subroutine avgDownMacState
 
+void NavierStokes::init_rest_fraction(const std::string& caller_string) {
+
+ if (rest_fraction==0.0) {
+  //do nothing
+ } else if ((rest_fraction>0.0)&&(rest_fraction<=4.0)) {
+  ParallelDescriptor::Barrier();
+  std::fflush(NULL);
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "init_rest_fraction caller_string= " << caller_string << '\n';
+  }
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+  start_rest=ParallelDescriptor::second(); 
+ } else
+  amrex::Error("rest_fraction invalid");
+
+}
+
+void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
+
+ if (rest_fraction==0.0) {
+  //do nothing
+ } else if ((rest_fraction>0.0)&&(rest_fraction<=4.0)) {
+  ParallelDescriptor::Barrier();
+  std::fflush(NULL);
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "finalize_rest_fraction caller_string= " << 
+     caller_string << '\n';
+  }
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+  end_rest=ParallelDescriptor::second();
+  double len_rest=end_rest-start_rest;
+  if (len_rest>0.0) {
+   double abs_rest=len_rest*rest_fraction;
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "end_rest-start_rest= " << len_rest << '\n';
+   }
+   amrex::Sleep(abs_rest);
+   ParallelDescriptor::Barrier();
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "end_rest-start_rest= " << len_rest << '\n';
+    std::cout << "abs_rest= " << abs_rest << '\n';
+    std::cout << "done sleeping\n";
+   }
+   std::fflush(NULL);
+  } else
+   amrex::Error("len_rest invalid");
+
+ } else
+  amrex::Error("rest_fraction invalid");
+
+}
+
 void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  std::string local_caller_string="nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
+
+ init_rest_fraction(local_caller_string);
 
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
   advect_time_slab=prev_time_slab;
@@ -730,6 +786,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 #if (NS_profile_solver==1)
  bprof.stop();
 #endif
+
+ finalize_rest_fraction(local_caller_string);
 
 }  // end subroutine nonlinear_advection
 
@@ -9238,6 +9296,8 @@ void NavierStokes::multiphase_project(int project_option) {
  if (level!=0)
   amrex::Error("level invalid multiphase_project");
 
+ init_rest_fraction(local_caller_string);
+
  std::fflush(NULL);
 
 #if (profile_solver==1)
@@ -11521,6 +11581,8 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
  std::fflush(NULL);
+
+ finalize_rest_fraction(local_caller_string);
 
 }  // end subroutine multiphase_project
 

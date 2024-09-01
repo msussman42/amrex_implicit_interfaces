@@ -1149,6 +1149,9 @@ void apply_pressure_grad(
       int idx_umac,
       int& restart_flag);
 
+    void init_rest_fraction(const std::string& caller_string);
+    void finalize_rest_fraction(const std::string& caller_string);
+
     void multiphase_project(int project_option);
 
     static void set_local_tolerances(int project_option);
@@ -2193,7 +2196,11 @@ protected:
     static Vector<int> material_type_evap; 
     static Vector<int> material_type_lowmach; // 0 incomp   
     static Vector<int> material_type_visual; // 0 incomp   
-    static Real wait_time;
+
+    static double rest_fraction;
+    static double start_rest;
+    static double end_rest;
+
     static Real advbot;
 
 // mg.bot_atol

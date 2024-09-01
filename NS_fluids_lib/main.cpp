@@ -105,7 +105,6 @@ fork_job(int fork_id) {
 
  const double run_strt = amrex::ParallelDescriptor::second();
 
- int  wait_for_key=0;
  int  max_step;  // int is 4 bytes
  amrex::Real strt_time;
  amrex::Real stop_time;
@@ -118,7 +117,6 @@ fork_job(int fork_id) {
 
  double sleepsec=0.0;
 
- pp.queryAdd("wait_for_key",wait_for_key);
  pp.queryAdd("max_step",max_step);
  pp.queryAdd("strt_time",strt_time);
  pp.queryAdd("stop_time",stop_time);
@@ -240,7 +238,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, August 31, 2024, 16:51 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Sep 1, 2024, 17:00 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

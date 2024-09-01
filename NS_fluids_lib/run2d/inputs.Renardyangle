@@ -14,7 +14,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 1.0    # prob_hi=0.5,0.5 for TWO (1.0 1.0 o.t.)
 geometry.is_periodic=1 0    # geometry.is_periodic=0 0 for TWO (1 0 o.t.)
 
-ns.wait_time=0.0  
 ns.diffuse_solid_temp=1
 ns.implicit_surface_tension=1
 ns.slipcoeff=0.1  # 1.0E-8 or 1/10
