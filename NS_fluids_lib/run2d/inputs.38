@@ -15,7 +15,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 2.0   # 1.0 2.0
 
-ns.wait_time=20  # 5.36, 20
 ns.diffuse_solid_temp=1
 ns.implicit_surface_tension=1
 ns.ls_curvature=1

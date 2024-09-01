@@ -2,7 +2,6 @@
 # CHANGES FROM PAST VERSION:
 # blob.* now becomes ns.*
 #
-#wait_for_key = 1
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  4.0  # maximum problem time

@@ -919,7 +919,10 @@ Vector<int> NavierStokes::material_type_evap;
 Vector<int> NavierStokes::material_type_lowmach;
 Vector<int> NavierStokes::material_type_visual;
 
-Real NavierStokes::wait_time=0.0;
+double NavierStokes::rest_fraction=0.0;
+double NavierStokes::start_rest=0.0;
+double NavierStokes::end_rest=0.0;
+
 Real NavierStokes::advbot=1.0;
 Real NavierStokes::inflow_pressure=0.0;
 Real NavierStokes::outflow_pressure=0.0;
@@ -5156,7 +5159,7 @@ NavierStokes::read_params ()
 
     } // i=0..num_materials-1
 
-    pp.queryAdd("wait_time",wait_time);
+    pp.queryAdd("rest_fraction",rest_fraction);
 
     pp.get("advbot",advbot);
     pp.queryAdd("inflow_pressure",inflow_pressure);
@@ -5994,7 +5997,7 @@ NavierStokes::read_params ()
      std::cout << "ractivex " << ractivex << '\n';
      std::cout << "ractivey " << ractivey << '\n';
      std::cout << "ractivez " << ractivez << '\n';
-     std::cout << "wait_time " << wait_time << '\n';
+     std::cout << "rest_fraction " << rest_fraction << '\n';
 
      std::cout << "multilevel_maxcycle " << multilevel_maxcycle << '\n';
 
