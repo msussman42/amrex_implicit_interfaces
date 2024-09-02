@@ -5535,7 +5535,7 @@ real(amrex_real) :: trace_S
 if (n.ge.2) then
  ! do nothing
 else
- print *,"expecting n>=2"
+ print *,"expecting n>=2 (project_to_traceless)"
  stop
 endif
 
@@ -5559,29 +5559,32 @@ do i=1,n
  else if (evals_STS(i).le.max_eval_sqr) then
   ! do nothing
  else
-  print *,"evals_STS or max_eval_sqr invalid"
+  print *,"evals_STS or max_eval_sqr invalid(project_to_traceless): ", &
+          i,n,evals_STS(i), &
+          max_eval_sqr
   stop
  endif
 
  if (evals_STS(i).lt.zero) then
-  print *,"evals_STS(i) cannot be negative"
+  print *,"evals_STS(i) cannot be negative(project_to_Traceless): ", &
+     i,evals_STS(i)
   stop
  else if (evals_STS(i).ge.zero) then
   ! do nothing
  else
-  print *,"evals_STS(i) is NaN"
+  print *,"evals_STS(i) is NaN(project_to_traceless): ",i,n,evals_STS(i)
   stop
  endif
 
-enddo
+enddo !i=1,n
 
 if (max_eval_sqr.lt.zero) then
- print *,"max_eval_sqr cannot be negative"
+ print *,"max_eval_sqr cannot be negative: ",max_eval_sqr
  stop
 else if (max_eval_sqr.ge.zero) then
  ! do nothing
 else
- print *,"max_eval_sqr is NaN"
+ print *,"max_eval_sqr is NaN: ",max_eval_sqr
  stop
 endif
 
