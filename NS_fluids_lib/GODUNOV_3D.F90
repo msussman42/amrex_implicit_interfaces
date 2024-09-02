@@ -8629,6 +8629,7 @@ stop
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) told_average,told_weight,local_weight
       real(amrex_real) rval
+      integer, parameter :: remove_checkerboard=0
 
       tnew_ptr=>tnew
 
@@ -8740,126 +8741,139 @@ stop
 
          call stress_index(dir_local,ii,jj)
 
-         told_average=zero
-         told_weight=zero
-         kofs=0
+         if (remove_checkerboard.eq.1) then
+
+          told_average=zero
+          told_weight=zero
+          kofs=0
 #if (AMREX_SPACEDIM==3)
-         do kofs=0,1
+          do kofs=0,1
 #endif
-         do jofs=0,1
-         do iofs=0,1
-          ibase=i
-          jbase=j
-          kbase=k
-          irefine2=iofs
-          jrefine2=jofs
-          krefine2=kofs
-          if (ii.eq.jj) then
-           rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
-          else if (((ii.eq.1).and.(jj.eq.2)).or. &
-                   ((ii.eq.2).and.(jj.eq.1))) then
-           if (irefine.eq.0) then
-            ibase=i-1+iofs
-            irefine2=1-iofs
-            rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
-           else if (irefine.eq.1) then
-            ibase=i+iofs
-            irefine2=1-iofs
-            rval=half*(xsten(2*iofs,1)+xsten(1,1))
+          do jofs=0,1
+          do iofs=0,1
+           ibase=i
+           jbase=j
+           kbase=k
+           irefine2=iofs
+           jrefine2=jofs
+           krefine2=kofs
+           if (ii.eq.jj) then
+            rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
+           else if (((ii.eq.1).and.(jj.eq.2)).or. &
+                    ((ii.eq.2).and.(jj.eq.1))) then
+            if (irefine.eq.0) then
+             ibase=i-1+iofs
+             irefine2=1-iofs
+             rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
+            else if (irefine.eq.1) then
+             ibase=i+iofs
+             irefine2=1-iofs
+             rval=half*(xsten(2*iofs,1)+xsten(1,1))
+            else
+             print *,"irefine invalid: ",irefine
+             stop
+            endif
+            if (jrefine.eq.0) then
+             jbase=j-1+jofs
+             jrefine2=1-jofs
+            else if (jrefine.eq.1) then
+             jbase=j+jofs
+             jrefine2=1-jofs
+            else
+             print *,"jrefine invalid: ",jrefine
+             stop
+            endif
+           else if (((ii.eq.1).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
+                    ((ii.eq.3).and.(jj.eq.1).and.(SDIM.eq.3))) then
+            if (irefine.eq.0) then
+             ibase=i-1+iofs
+             irefine2=1-iofs
+             rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
+            else if (irefine.eq.1) then
+             ibase=i+iofs
+             irefine2=1-iofs
+             rval=half*(xsten(2*iofs,1)+xsten(1,1))
+            else
+             print *,"irefine invalid: ",irefine
+             stop
+            endif
+            if (krefine.eq.0) then
+             kbase=k-1+kofs
+             krefine2=1-kofs
+            else if (krefine.eq.1) then
+             kbase=k+kofs
+             krefine2=1-kofs
+            else
+             print *,"krefine invalid: ",krefine
+             stop
+            endif
+
+           else if (((ii.eq.2).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
+                    ((ii.eq.3).and.(jj.eq.2).and.(SDIM.eq.3))) then
+
+            if (jrefine.eq.0) then
+             jbase=j-1+jofs
+             jrefine2=1-jofs
+            else if (jrefine.eq.1) then
+             jbase=j+jofs
+             jrefine2=1-jofs
+            else
+             print *,"jrefine invalid: ",jrefine
+             stop
+            endif
+            if (krefine.eq.0) then
+             kbase=k-1+kofs
+             krefine2=1-kofs
+            else if (krefine.eq.1) then
+             kbase=k+kofs
+             krefine2=1-kofs
+            else
+             print *,"krefine invalid: ",krefine
+             stop
+            endif
+            rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
+
            else
-            print *,"irefine invalid: ",irefine
-            stop
-           endif
-           if (jrefine.eq.0) then
-            jbase=j-1+jofs
-            jrefine2=1-jofs
-           else if (jrefine.eq.1) then
-            jbase=j+jofs
-            jrefine2=1-jofs
-           else
-            print *,"jrefine invalid: ",jrefine
-            stop
-           endif
-          else if (((ii.eq.1).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
-                   ((ii.eq.3).and.(jj.eq.1).and.(SDIM.eq.3))) then
-           if (irefine.eq.0) then
-            ibase=i-1+iofs
-            irefine2=1-iofs
-            rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
-           else if (irefine.eq.1) then
-            ibase=i+iofs
-            irefine2=1-iofs
-            rval=half*(xsten(2*iofs,1)+xsten(1,1))
-           else
-            print *,"irefine invalid: ",irefine
-            stop
-           endif
-           if (krefine.eq.0) then
-            kbase=k-1+kofs
-            krefine2=1-kofs
-           else if (krefine.eq.1) then
-            kbase=k+kofs
-            krefine2=1-kofs
-           else
-            print *,"krefine invalid: ",krefine
+            print *,"ii,jj invalid: ",ii,jj
             stop
            endif
 
-          else if (((ii.eq.2).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
-                   ((ii.eq.3).and.(jj.eq.2).and.(SDIM.eq.3))) then
+           nrefine2=4*krefine2+2*jrefine2+irefine2+1
 
-           if (jrefine.eq.0) then
-            jbase=j-1+jofs
-            jrefine2=1-jofs
-           else if (jrefine.eq.1) then
-            jbase=j+jofs
-            jrefine2=1-jofs
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
+            local_weight=one
+           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+            local_weight=abs(rval)
+           else if (levelrz.eq.COORDSYS_RZ) then
+            local_weight=abs(rval)
            else
-            print *,"jrefine invalid: ",jrefine
+            print *,"levelrz invalid: ",levelrz
             stop
            endif
-           if (krefine.eq.0) then
-            kbase=k-1+kofs
-            krefine2=1-kofs
-           else if (krefine.eq.1) then
-            kbase=k+kofs
-            krefine2=1-kofs
-           else
-            print *,"krefine invalid: ",krefine
-            stop
-           endif
-           rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
-
+           told_average=told_average+local_weight* &
+             told(D_DECL(ibase,jbase,kbase), &
+                (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
+           told_weight=told_weight+local_weight
+          enddo !iofs=0,1
+          enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+          enddo !kofs=0,1
+#endif
+          if (told_weight.gt.zero) then
+           told_average=told_average/told_weight
           else
-           print *,"ii,jj invalid: ",ii,jj
+           print *,"told_weight invalid: ",told_weight
            stop
           endif
 
-          nrefine2=4*krefine2+2*jrefine2+irefine2+1
+         else if (remove_checkerboard.eq.0) then
 
-          if (levelrz.eq.COORDSYS_CARTESIAN) then
-           local_weight=one
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           local_weight=abs(rval)
-          else if (levelrz.eq.COORDSYS_RZ) then
-           local_weight=abs(rval)
-          else
-           print *,"levelrz invalid: ",levelrz
-           stop
-          endif
-          told_average=told_average+local_weight* &
-            told(D_DECL(ibase,jbase,kbase), &
-               (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
-          told_weight=told_weight+local_weight
-         enddo !iofs=0,1
-         enddo !jofs=0,1
-#if (AMREX_SPACEDIM==3)
-         enddo !kofs=0,1
-#endif
-         if (told_weight.gt.zero) then
-          told_average=told_average/told_weight
+          told_average= &
+            told(D_DECL(i,j,k), &
+              (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
+
          else
-          print *,"told_weight invalid: ",told_weight
+          print *,"remove_checkerboard invalid: ",remove_checkerboard
           stop
          endif
                  

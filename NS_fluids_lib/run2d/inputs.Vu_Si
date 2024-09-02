@@ -194,9 +194,10 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 76.2e+5
 # 1 Pa = 10 CGS
 
 ns.uncoupled_viscosity=0
+ns.explicit_viscosity_dt=1
 #increase the Reynolds number by factor of 100.
 #ns.viscconst=21.8e-3 1.08e-3 1.0 1000.0 # derive CGS:  CGS= Pa s x 10
-ns.viscconst=21.8e-1 1.08e-1 1000.0 1000.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=21.8e-1 1.08e-1 1.0 1.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #SUSSMAN JAN20 2023
 ns.denconst=2.583 0.129 2.350 10.0 #physical values of denconst
