@@ -5440,7 +5440,7 @@ real(amrex_real) :: max_eval_sqr
 if (n.ge.2) then
  ! do nothing
 else
- print *,"expecting n>=2"
+ print *,"expecting n>=2(abs_value_determinant)"
  stop
 endif
 
@@ -5464,29 +5464,32 @@ do i=1,n
  else if (evals_STS(i).le.max_eval_sqr) then
   ! do nothing
  else
-  print *,"evals_STS or max_eval_sqr invalid"
+  print *,"evals_STS or max_eval_sqr invalid(abs_value_determinant): ", &
+          i,n,evals_STS(i), &
+          max_eval_sqr
   stop
  endif
 
  if (evals_STS(i).lt.zero) then
-  print *,"evals_STS(i) cannot be negative"
+  print *,"evals_STS(i) cannot be negative(abs_value_determinant): ", &
+     i,n,evals_STS(i)
   stop
  else if (evals_STS(i).ge.zero) then
   ! do nothing
  else
-  print *,"evals_STS(i) is NaN"
+  print *,"evals_STS(i) is NaN(abs_value_determinant): ",i,n,evals_STS(i)
   stop
  endif
 
 enddo ! i=1,n
 
 if (max_eval_sqr.lt.zero) then
- print *,"max_eval_sqr cannot be negative"
+ print *,"max_eval_sqr cannot be negative: ",max_eval_sqr
  stop
 else if (max_eval_sqr.ge.zero) then
  ! do nothing
 else
- print *,"max_eval_sqr is NaN"
+ print *,"max_eval_sqr is NaN: ",max_eval_sqr
  stop
 endif
 
@@ -5567,7 +5570,7 @@ do i=1,n
 
  if (evals_STS(i).lt.zero) then
   print *,"evals_STS(i) cannot be negative(project_to_Traceless): ", &
-     i,evals_STS(i)
+     i,n,evals_STS(i)
   stop
  else if (evals_STS(i).ge.zero) then
   ! do nothing
@@ -5656,6 +5659,7 @@ real(amrex_real) :: product_evals
 if (max_condition_number.gt.one) then
  ! do nothing
 else
+ print *,"in project_to_positive_definite"
  print *,"max_condition_number invalid: ",max_condition_number
  stop
 endif
@@ -5663,7 +5667,7 @@ endif
 if ((n.eq.2).or.(n.eq.3)) then
  ! do nothing
 else
- print *,"expecting n==2 or 3"
+ print *,"expecting n==2 or 3: ",n
  stop
 endif
 
@@ -5687,18 +5691,19 @@ do i=1,n
  else if (evals_STS(i).le.max_eval_sqr) then
   ! do nothing
  else
-  print *,"evals_STS or max_eval_sqr invalid: ", &
-    evals_STS(i),max_eval_sqr
+  print *,"evals_STS or max_eval_sqr invalid(project_to_positive_definite):", &
+    i,n,evals_STS(i),max_eval_sqr
   stop
  endif
 
  if (evals_STS(i).lt.zero) then
-  print *,"evals_STS(i) cannot be negative"
+  print *,"evals_STS(i) cannot be negative(project_to_positive_definite): ", &
+     i,n,evals_STS(i)
   stop
  else if (evals_STS(i).ge.zero) then
   ! do nothing
  else
-  print *,"evals_STS(i) is NaN: ",evals_STS(i)
+  print *,"evals_STS(i) is NaN(project_to_pos_definite): ",i,n,evals_STS(i)
   stop
  endif
 
