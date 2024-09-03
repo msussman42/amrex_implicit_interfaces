@@ -8629,7 +8629,7 @@ stop
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) told_average,told_weight,local_weight
       real(amrex_real) rval
-      integer, parameter :: remove_checkerboard=0
+      integer, parameter :: remove_checkerboard=1
 
       tnew_ptr=>tnew
 
