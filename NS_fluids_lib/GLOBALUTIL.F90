@@ -5458,7 +5458,21 @@ call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
 call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
 
 max_eval_sqr=-1.0D+20
+
 do i=1,n
+
+ if (evals_STS(i).lt.-EPS_10_5) then
+  print *,"evals_STS(i) cannot be negative(abs_value_determinant): ", &
+     i,n,evals_STS(i)
+ else if (evals_STS(i).lt.zero) then
+  evals_STS(i)=zero
+ else if (evals_STS(i).ge.zero) then
+  !do nothing
+ else
+  print *,"evals_STS(i) bust: ",i,n,evals_STS(i)
+  stop
+ endif
+
  if (evals_STS(i).gt.max_eval_sqr) then
   max_eval_sqr=evals_STS(i)
  else if (evals_STS(i).le.max_eval_sqr) then
@@ -5557,6 +5571,19 @@ call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
 
 max_eval_sqr=-1.0D+20
 do i=1,n
+
+ if (evals_STS(i).lt.-EPS_10_5) then
+  print *,"evals_STS(i) cannot be negative(project_to_traceless): ", &
+     i,n,evals_STS(i)
+ else if (evals_STS(i).lt.zero) then
+  evals_STS(i)=zero
+ else if (evals_STS(i).ge.zero) then
+  !do nothing
+ else
+  print *,"evals_STS(i) bust: ",i,n,evals_STS(i)
+  stop
+ endif
+
  if (evals_STS(i).gt.max_eval_sqr) then
   max_eval_sqr=evals_STS(i)
  else if (evals_STS(i).le.max_eval_sqr) then
@@ -5686,6 +5713,19 @@ call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
 
 max_eval_sqr=-1.0D+20
 do i=1,n
+
+ if (evals_STS(i).lt.-EPS_10_5) then
+  print *,"evals_STS(i) cannot be negative(project_to_positive_def): ", &
+     i,n,evals_STS(i)
+ else if (evals_STS(i).lt.zero) then
+  evals_STS(i)=zero
+ else if (evals_STS(i).ge.zero) then
+  !do nothing
+ else
+  print *,"evals_STS(i) bust: ",i,n,evals_STS(i)
+  stop
+ endif
+
  if (evals_STS(i).gt.max_eval_sqr) then
   max_eval_sqr=evals_STS(i)
  else if (evals_STS(i).le.max_eval_sqr) then
