@@ -18700,6 +18700,10 @@ contains
         ! do not modify the slope or intercept
        else
         print *,"mag invalid in project_slopes_to_face"
+        print *,"mag=",mag
+        print *,"dir_side=",dir_side
+        print *,"intercept_project= ",intercept_project
+        print *,"slope_project=",slope_project
         stop
        endif
 
