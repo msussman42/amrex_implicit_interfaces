@@ -1,6 +1,7 @@
 
 #include <climits>
 
+#include <local_thread_class.H>
 #include <AMReX_FArrayBox.H>
 #include <AMReX_Geometry.H>
 #include <Interpolater.H>
@@ -317,6 +318,12 @@ multiMOFInterp::interp (Real time,
   int bfactc,int bfactf,
   int grid_type)
 {
+ int tid=0;
+#ifdef _OPENMP
+ tid = omp_get_thread_num();
+#endif
+ if ((tid<0)||(tid>=thread_class::nthreads))
+  amrex::Error("tid invalid");
 
  if (time>=0.0) {
   //do nothing
@@ -369,6 +376,7 @@ multiMOFInterp::interp (Real time,
   // 1. MOF reconstruction on coarse level
   // 2. interpolate from coarse to fine (traverse fine grid)
  fort_multimofinterp(
+  &tid,
   &time,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,
@@ -431,6 +439,12 @@ multiEXTMOFInterp::interp (Real time,
   int bfactc,int bfactf,
   int grid_type)
 {
+ int tid=0;
+#ifdef _OPENMP
+ tid = omp_get_thread_num();
+#endif
+ if ((tid<0)||(tid>=thread_class::nthreads))
+  amrex::Error("tid invalid");
 
  if (time>=0.0) {
   //do nothing
@@ -480,6 +494,7 @@ multiEXTMOFInterp::interp (Real time,
  // 2. reconstruct interior cells only.
  // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
  fort_multiextmofinterp(
+  &tid,
   &time,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
@@ -897,6 +912,12 @@ LSInterp::interp (
  int bfactc,int bfactf,
  int grid_type)
 {
+ int tid=0;
+#ifdef _OPENMP
+ tid = omp_get_thread_num();
+#endif
+ if ((tid<0)||(tid>=thread_class::nthreads))
+  amrex::Error("tid invalid");
 
  if (time>=0.0) {
   //do nothing
@@ -938,6 +959,7 @@ LSInterp::interp (
  AMREX_ALWAYS_ASSERT(fine.nComp()>=ncomp);
 
  fort_lsinterp (
+  &tid,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),

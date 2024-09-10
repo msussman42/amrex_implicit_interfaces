@@ -413,6 +413,7 @@ extern "C" {
       const int* lof, const int* hif);
 
     void fort_mofavgdown(
+      const int* tid,
       Real* time,
       const Real* problo,
       const Real* dxc,

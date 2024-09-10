@@ -13617,6 +13617,7 @@ END SUBROUTINE SIMP
 
 
       subroutine fort_mofavgdown ( &
+       tid, &
        time, &
        problo, &
        dxc, &
@@ -13635,6 +13636,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: tid
       integer, INTENT(in) :: bfact_c,bfact_f
       integer, INTENT(in) :: DIMDEC(crse)
       integer, INTENT(in) :: DIMDEC(fine)
@@ -13698,19 +13700,23 @@ END SUBROUTINE SIMP
 
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      integer tid
+      integer :: tid_check=0
 #ifdef _OPENMP
       integer omp_get_thread_num
 #endif
 
-      tid=0       
+      tid_check=0       
 #ifdef _OPENMP
-      tid=omp_get_thread_num()
+      tid_check=omp_get_thread_num()
 #endif
       if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
+       print *,"tid invalid: ",tid
        stop
       endif 
+      if (tid.ne.tid_check) then
+       print *,"tid<>tid_check ",tid,tid_check
+       stop
+      endif
 
       nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
 
@@ -13882,6 +13888,7 @@ END SUBROUTINE SIMP
                enddo
 
                call multimaterial_MOF( &
+                tid, &
                 bfact_f,dxf,xstenfine,nhalf, &
                 mof_verbose, & ! =0
                 use_ls_data, & ! =0

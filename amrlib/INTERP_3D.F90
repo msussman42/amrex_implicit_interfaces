@@ -114,6 +114,7 @@ stop
       end subroutine fort_gl_slab
 
       subroutine fort_multimofinterp( &
+       tid_in, &
        time, &
        datamof,DIMS(dmof), &
        clo,chi, &
@@ -133,6 +134,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: levelc,levelf
       integer, INTENT(in) :: bfact_coarse,bfact_fine
       real(amrex_real), INTENT(in) :: time
@@ -189,19 +191,24 @@ stop
       integer n_overlap
       integer tessellate
 
-      integer tid
+      integer tid_check
 #ifdef _OPENMP
       integer omp_get_thread_num
 #endif
 
-      tid=0       
+      tid_check=0       
 #ifdef _OPENMP
-      tid=omp_get_thread_num()
+      tid_check=omp_get_thread_num()
 #endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid"
        stop
       endif 
+      if (tid_in.ne.tid_check) then
+       print *,"tid_in: ",tid_in
+       print *,"tid_check: ",tid_check
+       stop
+      endif
 
       tessellate=0
 
@@ -294,12 +301,13 @@ stop
        endif
 
        call multimaterial_MOF( &
+         tid_in, &
          bfact_coarse,dxc,xsten,nhalf, &
          mof_verbose, &
          use_ls_data, & ! use_ls_data=0
          LS_stencil, &
-         geom_xtetlist(1,1,1,tid+1), &
-         geom_xtetlist(1,1,1,tid+1), &
+         geom_xtetlist(1,1,1,tid_in+1), &
+         geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
          mofdata, & !intent(inout)
@@ -399,7 +407,7 @@ stop
                mofdata, &
                xstengrid,nhalfgrid, &
                multi_volume,multi_cen, &
-               geom_xtetlist(1,1,1,tid+1), &
+               geom_xtetlist(1,1,1,tid_in+1), &
                nmax, &
                nmax, &
                SDIM)
@@ -496,6 +504,7 @@ stop
 
 
       subroutine fort_lsinterp( &
+       tid_in, &
        clsdata,DIMS(clsdata), &
        clo,chi, &
        flsdata,DIMS(flsdata), &
@@ -514,6 +523,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: levelc,levelf
       integer, INTENT(in) :: bfact_coarse,bfact_fine
       integer, INTENT(in) :: ncomp
@@ -552,19 +562,24 @@ stop
       real(amrex_real) LS_FINE(ncomp)
       real(amrex_real) LS_COARSE(ncomp)
 
-      integer tid
+      integer tid_check
 #ifdef _OPENMP
       integer omp_get_thread_num
 #endif
 
-      tid=0       
+      tid_check=0       
 #ifdef _OPENMP
-      tid=omp_get_thread_num()
+      tid_check=omp_get_thread_num()
 #endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid"
        stop
-      endif 
+      endif
+      if (tid_in.ne.tid_check) then
+       print *,"tid_in: ",tid_in
+       print *,"tid_check: ",tid_check
+       stop
+      endif
 
       if (ncomp.ne.(SDIM+1)*num_materials) then
        print *,"ncomp invalid"
@@ -748,6 +763,7 @@ stop
       ! 2. reconstruct interior cells only.
       ! 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
       subroutine fort_multiextmofinterp( &
+       tid_in, &
        time, &
        datamof,DIMS(dmof), &
        fdatamof,DIMS(fdmof), &
@@ -766,6 +782,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: levelc,levelf
       integer, INTENT(in) :: bfact_coarse,bfact_fine
       real(amrex_real), INTENT(in) :: time
@@ -817,19 +834,24 @@ stop
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      integer tid
+      integer tid_check
 #ifdef _OPENMP
       integer omp_get_thread_num
 #endif
 
-      tid=0       
+      tid_check=0       
 #ifdef _OPENMP
-      tid=omp_get_thread_num()
+      tid_check=omp_get_thread_num()
 #endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid"
        stop
       endif 
+      if (tid_in.ne.tid_check) then
+       print *,"tid_in: ",tid_in
+       print *,"tid_check: ",tid_check
+       stop
+      endif
 
       tessellate=0
 
@@ -955,7 +977,7 @@ stop
                mofdata, &
                xstengrid,nhalfgrid, &
                multi_volume,multi_cen, &
-               geom_xtetlist(1,1,1,tid+1), &
+               geom_xtetlist(1,1,1,tid_in+1), &
                nmax, &
                nmax, &
                SDIM)
@@ -1090,12 +1112,13 @@ stop
        enddo
 
        call multimaterial_MOF( &
+         tid_in, &
          bfact_fine,dxf,xstenfine,nhalf, &
          mof_verbose, &
          use_ls_data, &
          LS_stencil, &
-         geom_xtetlist(1,1,1,tid+1), &
-         geom_xtetlist(1,1,1,tid+1), &
+         geom_xtetlist(1,1,1,tid_in+1), &
+         geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
          mofdata, & !intent(inout)

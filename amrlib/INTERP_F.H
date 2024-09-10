@@ -74,6 +74,7 @@ extern "C"
      int* bfactc,int* bfactf);
 
     void fort_lsinterp(
+       int* tid_in,
        const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        const int* clo, const int* chi,
        Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
@@ -85,6 +86,7 @@ extern "C"
        int* bfactc,int* bfactf);
 
     void fort_multimofinterp(
+       int* tid_in,
        Real* time,
        const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        const int* clo, const int* chi,
@@ -99,6 +101,7 @@ extern "C"
 
 
     void fort_multiextmofinterp(
+       int* tid_in,
        Real* time,
        const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
