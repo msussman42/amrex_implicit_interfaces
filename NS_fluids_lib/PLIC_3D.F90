@@ -1023,6 +1023,7 @@ stop
               num_fluid_materials_in_stencil))) then
 
          call multimaterial_MOF( &
+          tid, &
           bfact,dx, &
           xsten, &
           nhalf, &
@@ -1107,6 +1108,7 @@ stop
           !mofdata_super_vfrac: centroid super cell, vfrac super cell
 
          call multimaterial_MOF( &
+          tid, &
           bfact,dx, &
           xsten, &
           nhalf, &
@@ -1255,6 +1257,7 @@ stop
          continuous_mof_parm=STANDARD_MOF
 
          call multimaterial_MOF( &
+          tid, &
           bfact,dx, &
           xsten, &
           nhalf, &

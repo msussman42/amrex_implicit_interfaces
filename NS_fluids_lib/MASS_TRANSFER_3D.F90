@@ -5419,6 +5419,7 @@ stop
 
              ! LS=n dot (x-x0)+intercept
             call multimaterial_MOF( &
+             tid, &
              bfact,dx,u_xsten_updatecell,nhalf, &
              mof_verbose, & !=0
              use_ls_data, & !=0

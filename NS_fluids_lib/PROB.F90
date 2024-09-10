@@ -20236,6 +20236,7 @@ end subroutine RatePhaseChange
         enddo
 
         call multimaterial_MOF( &
+         nucleate_in%tid, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
@@ -29992,6 +29993,7 @@ end subroutine initialize2d
          enddo
 
          call multimaterial_MOF( &
+          tid, &
           bfact,dx,xsten,nhalf, &
           mof_verbose, & !=0
           use_ls_data, & !=0

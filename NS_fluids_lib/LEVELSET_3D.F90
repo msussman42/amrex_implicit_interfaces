@@ -19335,6 +19335,7 @@ stop
             mof_verbose=0
 
             call multimaterial_MOF( &
+             tid, &
              bfact,dx,xsten,nhalf, &
              mof_verbose, &
              use_ls_data, &
