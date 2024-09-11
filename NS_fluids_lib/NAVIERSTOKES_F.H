@@ -425,6 +425,7 @@ extern "C" {
 
 
     void fort_refine_density_avgdown(
+      int* tid_in, 
       Real* time,
       const Real* problo,
       const Real* dxc,

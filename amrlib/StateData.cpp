@@ -675,6 +675,16 @@ StateData::FillBoundary (
         xlo[i] = problo[i] + dx[i]*(dlo[i]-plo[i]);
     }
     int dc_offset=0;
+
+    int tid_current=0;
+#ifdef _OPENMP
+    tid_current = omp_get_thread_num();
+#endif
+    if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+     // do nothing
+    } else
+    amrex::Error("tid_current invalid");
+
     for (int i = 0; i < ncomp; )
     {
         const int dc  = dcomp+dc_offset;
@@ -739,6 +749,7 @@ StateData::FillBoundary (
                 // Use the "group" boundary fill routine.
                 //
                 desc->bndryFill(sc_group)(
+                  &tid_current,
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
@@ -755,6 +766,7 @@ StateData::FillBoundary (
 
                 amrex::setBC(bx,domain,desc->getBC(sc),bcr);
                 desc->bndryFill(sc)( 
+                  &tid_current,
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
@@ -771,6 +783,7 @@ StateData::FillBoundary (
 
             amrex::setBC(bx,domain,desc->getBC(sc),bcr);
             desc->bndryFill(sc)(
+              &tid_current,
               &grid_type,
               &level,
               dat,dlo,dhi,plo,phi,dx,xlo,
@@ -837,6 +850,16 @@ StateData::FillBoundaryGHOST (
         xlo[i] = problo[i] + dx[i]*(dlo[i]-plo[i]);
     }
     int dc_offset=0;
+
+    int tid_current=0;
+#ifdef _OPENMP
+    tid_current = omp_get_thread_num();
+#endif
+    if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+     // do nothing
+    } else
+    amrex::Error("tid_current invalid");
+
     for (int i = 0; i < ncomp; )
     {
         const int dc  = dcomp+dc_offset;
@@ -900,6 +923,7 @@ StateData::FillBoundaryGHOST (
                 // Use the "group" boundary fill routine.
                 //
                 descGHOST->bndryFill(sc_group)(
+                  &tid_current,
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
@@ -916,6 +940,7 @@ StateData::FillBoundaryGHOST (
 
                 amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
                 descGHOST->bndryFill(sc)(
+                  &tid_current,
                   &grid_type,
                   &level,
                   dat,dlo,dhi,plo,phi,dx,xlo,
@@ -932,6 +957,7 @@ StateData::FillBoundaryGHOST (
 
             amrex::setBC(bx,domain,descGHOST->getBC(sc),bcr);
             descGHOST->bndryFill(sc)(
+              &tid_current,
               &grid_type,
               &level,
               dat,dlo,dhi,plo,phi,dx,xlo,

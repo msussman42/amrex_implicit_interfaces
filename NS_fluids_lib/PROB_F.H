@@ -158,6 +158,7 @@ namespace amrex{
       // x=grd_lo+(i-datalo+1/2)dx=problo+dx*(i-domlo+1/2)
 
      void fort_statefill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -167,6 +168,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_refine_densityfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -176,6 +178,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_pressurefill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -185,6 +188,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact); 
 
      void fort_group_statefill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -195,6 +199,7 @@ namespace amrex{
 
 
      void fort_group_refine_densityfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -204,6 +209,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_tensorfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -213,6 +219,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_scalarfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -222,6 +229,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_extrapfill (
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -231,6 +239,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_extrapfill (
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -240,6 +249,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_ls_fill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -249,6 +259,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_ls_fill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -258,6 +269,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_moffill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -267,6 +279,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_extmoffill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -276,6 +289,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_moffill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -285,6 +299,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_extmoffill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -294,6 +309,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_velfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -303,6 +319,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_velfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -313,6 +330,7 @@ namespace amrex{
 
 
      void fort_solvfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -322,6 +340,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
      void fort_group_solvfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -358,6 +377,7 @@ namespace amrex{
       Real* time);
 
      void fort_umacfill(
+      int* tid_in,
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

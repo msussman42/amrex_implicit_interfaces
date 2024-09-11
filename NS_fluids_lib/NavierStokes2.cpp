@@ -9647,9 +9647,14 @@ void NavierStokes::MOF_training() {
  int cpp_k=0;
  int local_continuous_mof=STANDARD_MOF;
 
+ int tid_current=ns_thread();
+ if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+  amrex::Error("tid_current invalid");
+
   // fort_MOF_DT_training is declared in: PLIC_3D.F90
   // "local_continuous_mof" varied internally.
  fort_MOF_DT_training(
+   &tid_current,
    &mof_decision_tree_learning,
    &finest_level,
    &max_level,
@@ -9664,6 +9669,7 @@ void NavierStokes::MOF_training() {
   // op_training=1 => generate data and do python processing
   // op_training=2 => read either NN, DT, or RF network data
   fort_MOF_training(
+   &tid_current,
    &mof_machine_learning,
    &op_training, // =0 ("allocate")
    cpp_training_lo,
@@ -9690,6 +9696,7 @@ void NavierStokes::MOF_training() {
    ParallelDescriptor::Barrier();
    if (ParallelDescriptor::IOProcessor()) {
     fort_MOF_training(
+     &tid_current,
      &mof_machine_learning,
      &op_training,
      cpp_training_lo,
@@ -9705,6 +9712,7 @@ void NavierStokes::MOF_training() {
    ParallelDescriptor::Barrier();
    op_training=2;  // read either NN, DT, or RF network data
    fort_MOF_training(
+    &tid_current,
     &mof_machine_learning,
     &op_training,
     cpp_training_lo,
