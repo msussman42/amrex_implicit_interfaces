@@ -23200,6 +23200,7 @@ end subroutine initialize2d
       end subroutine fort_vfracerror
 
       subroutine fort_group_extrapfill ( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -23209,9 +23210,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -23242,6 +23245,11 @@ end subroutine initialize2d
       integer ncomp_per_tsat
       integer ncomp_expect
       integer, parameter :: homogeneous_flag=1
+
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
 
       if (grid_type.eq.-1) then
        ! do nothing
@@ -23400,6 +23408,7 @@ end subroutine initialize2d
       end subroutine fort_group_extrapfill
 
       subroutine fort_extrapfill ( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -23412,6 +23421,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -28292,6 +28302,7 @@ end subroutine initialize2d
       end subroutine fort_forcevelocity
 
       subroutine fort_velfill( &
+      tid_in, &
        grid_type, &
        level, &
        u,DIMS(u), &
@@ -28304,6 +28315,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -28460,6 +28472,7 @@ end subroutine initialize2d
        ! gets all components of the velocity at once. 
        ! (for just a single material)
       subroutine fort_group_velfill( &
+       tid_in, &
        grid_type, &
        level, &
        u,DIMS(u), &
@@ -28469,9 +28482,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -28495,6 +28510,10 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -28627,6 +28646,7 @@ end subroutine initialize2d
 
        ! associated with Solid_State_Type
       subroutine fort_solvfill( &
+      tid_in, &
        grid_type, &
        level, &
        u,DIMS(u), &
@@ -28639,6 +28659,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -28812,6 +28833,7 @@ end subroutine initialize2d
        ! gets all components of the velocity at once. 
        ! (for just a single material)
       subroutine fort_group_solvfill( &
+       tid_in, &
        grid_type, &
        level, &
        u,DIMS(u), &
@@ -28821,9 +28843,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -28847,6 +28871,10 @@ end subroutine initialize2d
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       integer nparts
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -28994,6 +29022,7 @@ end subroutine initialize2d
 
 
       subroutine fort_umacfill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29006,6 +29035,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29189,6 +29219,7 @@ end subroutine initialize2d
       end subroutine fort_umacfill
 
       subroutine fort_moffill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29198,6 +29229,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29214,6 +29246,7 @@ end subroutine initialize2d
 
 
       subroutine fort_refine_densityfill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29223,6 +29256,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29239,6 +29273,7 @@ end subroutine initialize2d
 
 
       subroutine fort_extmoffill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29248,6 +29283,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29263,6 +29299,7 @@ end subroutine initialize2d
       end subroutine fort_extmoffill
 
       subroutine fort_group_moffill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29272,9 +29309,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29302,6 +29341,10 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 6"
        stop
@@ -29479,6 +29522,7 @@ end subroutine initialize2d
 
 
       subroutine fort_group_refine_densityfill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29488,9 +29532,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29522,6 +29568,10 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in group_refine_densityfill"
        stop
@@ -29716,6 +29766,7 @@ end subroutine initialize2d
 
 
       subroutine fort_group_extmoffill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -29730,6 +29781,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -29776,21 +29828,15 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
 
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-      integer tid,nmax
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
+      integer nmax
+
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
 
       nmax=POLYGON_LIST_MAX ! in: fort_group_extmoffill
 
-      tid=0       
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid"
-       stop
-      endif 
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 7"
        stop
@@ -29993,13 +30039,13 @@ end subroutine initialize2d
          enddo
 
          call multimaterial_MOF( &
-          tid, &
+          tid_in, &
           bfact,dx,xsten,nhalf, &
           mof_verbose, & !=0
           use_ls_data, & !=0
           LS_stencil, & 
-          geom_xtetlist(1,1,1,tid+1), &
-          geom_xtetlist(1,1,1,tid+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata, & !intent(inout)
@@ -30026,6 +30072,7 @@ end subroutine initialize2d
       end subroutine fort_group_extmoffill
 
       subroutine fort_ls_fill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30035,6 +30082,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30051,6 +30099,7 @@ end subroutine initialize2d
       end subroutine fort_ls_fill
 
       subroutine fort_group_ls_fill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30060,9 +30109,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30090,6 +30141,10 @@ end subroutine initialize2d
       integer ncomp_ho,icomp
       integer, parameter :: homogeneous_flag=0
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 10"
        stop
@@ -30308,6 +30363,7 @@ end subroutine initialize2d
 
        ! this is for the "errorind" variable.
       subroutine fort_scalarfill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30320,6 +30376,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30463,6 +30520,7 @@ end subroutine initialize2d
       end subroutine fort_scalarfill
 
       subroutine fort_statefill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30475,6 +30533,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30661,6 +30720,7 @@ end subroutine initialize2d
 
 
       subroutine fort_pressurefill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30673,6 +30733,7 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30811,6 +30872,7 @@ end subroutine initialize2d
       end subroutine fort_pressurefill
 
       subroutine fort_group_statefill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -30820,9 +30882,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp,ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
@@ -30846,6 +30910,10 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
        ! c++ index
       if (scomp.ne.STATECOMP_STATES) then
        print *,"scomp invalid fort_group_statefill"
@@ -30989,6 +31057,7 @@ end subroutine initialize2d
       end subroutine fort_group_statefill
 
       subroutine fort_group_tensorfill( &
+      tid_in, &
       grid_type, &
       level, &
       u,DIMS(u), &
@@ -31000,9 +31069,11 @@ end subroutine initialize2d
 
       use filcc_module
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
       integer, INTENT(in) :: scomp
       integer, INTENT(in) :: ncomp,bfact,level
@@ -31036,6 +31107,10 @@ end subroutine initialize2d
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
       
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (group fill): ",tid_in
+       stop
+      endif
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else

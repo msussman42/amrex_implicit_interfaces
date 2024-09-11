@@ -13397,6 +13397,7 @@ contains
        use_initial_guess=0
 
        call multi_find_intercept( &
+        tid_in, &
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim
@@ -14530,6 +14531,7 @@ contains
            ! centroidA in absolute coordinate system.
 
           call multi_find_intercept( &
+           tid_in, &
            nMAT_OPT_standard, & !1
            nDOF_standard, & !sdim-1
            nEQN_standard, & !sdim
@@ -16757,6 +16759,7 @@ contains
           if (continuous_mof_rigid.eq.STANDARD_MOF) then
 
            call single_find_intercept( &
+            tid_in, &
             nMAT_OPT_standard, & !nMAT_OPT_standard=1
             nDOF_standard, & !nDOF_standard=sdim-1
             nEQN_standard, &  !nEQN_standard=sdim
@@ -16771,6 +16774,7 @@ contains
           else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
 
            call multi_find_intercept( &
+            tid_in, &
             nMAT_OPT_standard, & !nMAT_OPT_standard=1
             nDOF_standard, & !nDOF_standard=sdim-1
             nEQN_standard, &  !nEQN_standard=sdim

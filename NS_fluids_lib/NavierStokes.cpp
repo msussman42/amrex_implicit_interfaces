@@ -24528,6 +24528,7 @@ void NavierStokes::avgDown_refine_density(int im_comp) {
   int bfact_f=parent->Space_blockingFactor(f_level);
 
   fort_refine_density_avgdown(
+   &tid_current,
    &cur_time_slab,
    prob_lo,
    dxc,
@@ -24639,6 +24640,7 @@ void NavierStokes::avgDown_refine_tensor(int scomp) {
   int bfact_f=parent->Space_blockingFactor(f_level);
 
   fort_refine_density_avgdown(
+   &tid_current,
    &cur_time_slab,
    prob_lo,
    dxc,
@@ -24749,6 +24751,7 @@ void NavierStokes::avgDown_refine_tensor_localMF(int scomp,
   int bfact_f=parent->Space_blockingFactor(f_level);
 
   fort_refine_density_avgdown(
+   &tid_current,
    &cur_time_slab,
    prob_lo,
    dxc,

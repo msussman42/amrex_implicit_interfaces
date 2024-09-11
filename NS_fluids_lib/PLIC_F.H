@@ -13,6 +13,7 @@ extern "C"
 {
 
       void fort_MOF_DT_training(
+       int* tid_in,
        int* num_samples,
        int* finest_level,
        int* max_level,
@@ -21,6 +22,7 @@ extern "C"
        const Real* dx);
 
       void fort_MOF_training(
+       int* tid_in,
        int* num_samples,
        int* op_training,
        int* cpp_training_lo,
@@ -36,7 +38,7 @@ extern "C"
        int* continuous_mof);
 
       void fort_sloperecon(
-        int* tid,
+        int* tid_in,
         const int* gridno,
         int* level,
         int* finest_level,

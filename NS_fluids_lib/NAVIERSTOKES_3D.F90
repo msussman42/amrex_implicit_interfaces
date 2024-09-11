@@ -13617,7 +13617,7 @@ END SUBROUTINE SIMP
 
 
       subroutine fort_mofavgdown ( &
-       tid, &
+       tid_in, &
        time, &
        problo, &
        dxc, &
@@ -13636,7 +13636,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: time
-      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: bfact_c,bfact_f
       integer, INTENT(in) :: DIMDEC(crse)
       integer, INTENT(in) :: DIMDEC(fine)
@@ -13700,23 +13700,10 @@ END SUBROUTINE SIMP
 
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      integer :: tid_check=0
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-      tid_check=0       
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid: ",tid
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid: ",tid_in
        stop
       endif 
-      if (tid.ne.tid_check) then
-       print *,"tid<>tid_check ",tid,tid_check
-       stop
-      endif
 
       nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
 
@@ -13888,13 +13875,13 @@ END SUBROUTINE SIMP
                enddo
 
                call multimaterial_MOF( &
-                tid, &
+                tid_in, &
                 bfact_f,dxf,xstenfine,nhalf, &
                 mof_verbose, & ! =0
                 use_ls_data, & ! =0
                 LS_stencil, &
-                geom_xtetlist(1,1,1,tid+1), &
-                geom_xtetlist(1,1,1,tid+1), &
+                geom_xtetlist(1,1,1,tid_in+1), &
+                geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &
                 mofdatafine, & !intent(inout)
@@ -13914,7 +13901,7 @@ END SUBROUTINE SIMP
                 mofdatafine, &
                 xstengrid,nhalfgrid, &
                 multi_volume,multi_cen, &
-                geom_xtetlist(1,1,1,tid+1), &
+                geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &
                 SDIM)
@@ -14035,6 +14022,7 @@ END SUBROUTINE SIMP
 
 
       subroutine fort_refine_density_avgdown ( &
+       tid_in, &
        time, &
        problo, &
        dxc, &
@@ -14052,6 +14040,7 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       real(amrex_real), INTENT(in) :: problo(SDIM)
       real(amrex_real), INTENT(in) :: dxf(SDIM)
       real(amrex_real), INTENT(in) :: dxc(SDIM)
@@ -14080,17 +14069,8 @@ END SUBROUTINE SIMP
       real(amrex_real) crse_value
 
 
-      integer tid
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-      tid=0       
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid: ",tid
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid: ",tid_in
        stop
       endif 
 

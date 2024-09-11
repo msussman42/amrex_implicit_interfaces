@@ -1474,6 +1474,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: num_samples
       integer, INTENT(in) :: op_training
       integer, INTENT(inout) :: cpp_training_lo(SDIM)
@@ -2174,6 +2175,11 @@ stop
       integer cmof_idx
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer klosten,khisten
+
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid: ",tid_in
+       stop
+      endif
 
       if (num_samples.eq.0) then
 

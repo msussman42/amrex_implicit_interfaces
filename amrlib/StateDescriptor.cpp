@@ -39,6 +39,7 @@ StateDescriptor::BndryFunc::~BndryFunc () {}
 // FILL
 void
 StateDescriptor::BndryFunc::operator () (
+ int* tid_in,
  int* grid_type,
  int* level,
  Real* data,const int* lo,const int* hi,
@@ -50,6 +51,7 @@ StateDescriptor::BndryFunc::operator () (
     BL_ASSERT(m_func != 0);
 
     m_func(
+      tid_in,
       grid_type,
       level,
       data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,
@@ -60,6 +62,7 @@ StateDescriptor::BndryFunc::operator () (
 // GROUP FILL
 void
 StateDescriptor::BndryFunc::operator () (
+ int* tid_in,
  int* grid_type,
  int* level,
  Real* data,const int* lo,const int* hi,
@@ -71,6 +74,7 @@ StateDescriptor::BndryFunc::operator () (
     BL_ASSERT(m_gfunc != 0);
 
     m_gfunc(
+      tid_in,
       grid_type,
       level,
       data,AMREX_ARLIM(lo),AMREX_ARLIM(hi),dom_lo,dom_hi,dx,grd_lo,time,
