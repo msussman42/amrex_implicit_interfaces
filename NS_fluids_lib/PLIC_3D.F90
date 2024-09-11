@@ -39,7 +39,7 @@ stop
       ! (3) =1 interior+ngrow-1  =0 otherwise
       ! (4) =1 interior+ngrow    =0 otherwise
       subroutine fort_sloperecon( &
-        tid, &
+        tid_in, &
         gridno, &
         level, &
         finest_level, &
@@ -74,7 +74,7 @@ stop
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: gridno
       integer, INTENT(in) :: level,finest_level,max_level
       integer, INTENT(in) :: nsteps
@@ -214,8 +214,8 @@ stop
       slopes_ptr=>slopes
       snew_ptr=>snew
 
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid: ",tid_in
        stop
       endif
 
@@ -1023,15 +1023,15 @@ stop
               num_fluid_materials_in_stencil))) then
 
          call multimaterial_MOF( &
-          tid, &
+          tid_in, &
           bfact,dx, &
           xsten, &
           nhalf, &
           mof_verbose, &
           use_ls_data, & ! use_ls_data=1
           LS_stencil, &
-          geom_xtetlist(1,1,1,tid+1), &
-          geom_xtetlist_old(1,1,1,tid+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          geom_xtetlist_old(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata_super, & !intent(inout)
@@ -1061,11 +1061,11 @@ stop
          ! mof_calls, mof_iterations, mof_errors are init. in 
          ! multimaterial_MOF
          do im=1,num_materials
-          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
           total_iterations(im)= &
-           total_iterations(im)+mof_iterations(tid+1,im)
+           total_iterations(im)+mof_iterations(tid_in+1,im)
           total_errors(im)= &
-           total_errors(im)+mof_errors(tid+1,im)
+           total_errors(im)+mof_errors(tid_in+1,im)
          enddo  ! im=1..num_materials
 
          ! suppose number of fluid materials in super cell greater
@@ -1108,15 +1108,15 @@ stop
           !mofdata_super_vfrac: centroid super cell, vfrac super cell
 
          call multimaterial_MOF( &
-          tid, &
+          tid_in, &
           bfact,dx, &
           xsten, &
           nhalf, &
           mof_verbose, &
           use_ls_data, & ! use_ls_data=1
           LS_stencil, &
-          geom_xtetlist(1,1,1,tid+1), &
-          geom_xtetlist_old(1,1,1,tid+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          geom_xtetlist_old(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata_super_vfrac, & !intent(inout)
@@ -1131,11 +1131,11 @@ stop
          ! mof_calls, mof_iterations, mof_errors are init. in 
          ! multimaterial_MOF
          do im=1,num_materials
-          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
           total_iterations(im)= &
-           total_iterations(im)+mof_iterations(tid+1,im)
+           total_iterations(im)+mof_iterations(tid_in+1,im)
           total_errors(im)= &
-           total_errors(im)+mof_errors(tid+1,im)
+           total_errors(im)+mof_errors(tid_in+1,im)
          enddo  ! im=1..num_materials
 
          do im=1,num_materials
@@ -1167,7 +1167,7 @@ stop
           multi_volume, &
           multi_cen, & !(sdim,num_materials) absolute frame of ref.
           multi_area, & !(num_materials)
-          geom_xtetlist_uncapt(1,1,1,tid+1), &
+          geom_xtetlist_uncapt(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           SDIM, &
@@ -1257,15 +1257,15 @@ stop
          continuous_mof_parm=STANDARD_MOF
 
          call multimaterial_MOF( &
-          tid, &
+          tid_in, &
           bfact,dx, &
           xsten, &
           nhalf, &
           mof_verbose, &
           use_ls_data, & ! use_ls_data=1
           LS_stencil, &
-          geom_xtetlist(1,1,1,tid+1), &
-          geom_xtetlist_old(1,1,1,tid+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          geom_xtetlist_old(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata_super, & !intent(inout)
@@ -1280,11 +1280,11 @@ stop
          ! mof_calls, mof_iterations, mof_errors are init. in 
          ! multimaterial_MOF
          do im=1,num_materials
-          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
           total_iterations(im)= &
-           total_iterations(im)+mof_iterations(tid+1,im)
+           total_iterations(im)+mof_iterations(tid_in+1,im)
           total_errors(im)= &
-           total_errors(im)+mof_errors(tid+1,im)
+           total_errors(im)+mof_errors(tid_in+1,im)
          enddo  ! im=1..num_materials
  
         else
@@ -1318,7 +1318,7 @@ stop
          multi_volume, &
          multi_cen, & !(sdim,num_materials) absolute frame of ref.
          multi_area, & !(num_materials)
-         geom_xtetlist_uncapt(1,1,1,tid+1), &
+         geom_xtetlist_uncapt(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
          SDIM, &
@@ -1453,6 +1453,7 @@ stop
 
 
       subroutine fort_MOF_training( &
+        tid_in, &
         num_samples, &
         op_training, & !0=alloc 1=create data,python proc 2=read network data
         cpp_training_lo, &
@@ -1522,10 +1523,11 @@ stop
       integer cmof_idx
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer klosten,khisten
-      integer tid
-  
-      tid=0
 
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid: ",tid_in
+       stop
+      endif
       if (num_samples.gt.0) then
        ! do nothing
       else
@@ -1715,13 +1717,14 @@ stop
 
            ! given the slope, find the centroid.
           call angle_init_from_angle_recon_and_F( &
+           tid_in, &
            bfact,dx, &
            xsten,nhalf, &
            refvfrac, & 
            continuous_mof, & !=STANDARD_MOF or CMOF_X
            cmofsten, & 
-           geom_xtetlist(1,1,1,tid+1), &
-           geom_xtetlist_old(1,1,1,tid+1), &
+           geom_xtetlist(1,1,1,tid_in+1), &
+           geom_xtetlist_old(1,1,1,tid_in+1), &
            nmax, &
            angle_init_db, & ! INTENT(out)
            refcen, &  ! INTENT(out)
@@ -2107,6 +2110,7 @@ stop
       !NavierStokes::prepare_post_process calls NavierStokes::MOF_training
       !NavierStokes::MOF_training calls fort_MOF_DT_training
       subroutine fort_MOF_DT_training( &
+        tid_in, &
         num_samples, & !mof_decision_tree_learning
         finest_level, &
         max_level, &
@@ -2122,6 +2126,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: num_samples
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: max_level
@@ -2169,9 +2174,6 @@ stop
       integer cmof_idx
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer klosten,khisten
-      integer tid
-   
-      tid=0
 
       if (num_samples.eq.0) then
 
@@ -2344,12 +2346,13 @@ stop
 
             ! given the slope, find the centroid.
            call angle_init_from_angle_recon_and_F( &
+            tid_in, &
             bfact,dx,xsten,nhalf, &
             refvfrac, & 
             local_continuous_mof, & 
             cmofsten, & 
-            geom_xtetlist(1,1,1,tid+1), &
-            geom_xtetlist_old(1,1,1,tid+1), &
+            geom_xtetlist(1,1,1,tid_in+1), &
+            geom_xtetlist_old(1,1,1,tid_in+1), &
             nmax, &
             angle_init_db, & ! INTENT(out)
             refcen, &  ! INTENT(out)

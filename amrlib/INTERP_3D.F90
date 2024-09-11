@@ -191,24 +191,10 @@ stop
       integer n_overlap
       integer tessellate
 
-      integer tid_check
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-      tid_check=0       
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
-       print *,"tid_in invalid"
+       print *,"tid_in invalid: ",tid_in
        stop
       endif 
-      if (tid_in.ne.tid_check) then
-       print *,"tid_in: ",tid_in
-       print *,"tid_check: ",tid_check
-       stop
-      endif
 
       tessellate=0
 
@@ -562,22 +548,8 @@ stop
       real(amrex_real) LS_FINE(ncomp)
       real(amrex_real) LS_COARSE(ncomp)
 
-      integer tid_check
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-      tid_check=0       
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
-       print *,"tid_in invalid"
-       stop
-      endif
-      if (tid_in.ne.tid_check) then
-       print *,"tid_in: ",tid_in
-       print *,"tid_check: ",tid_check
+       print *,"tid_in invalid: ",tid_in
        stop
       endif
 
@@ -834,24 +806,10 @@ stop
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      integer tid_check
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-      tid_check=0       
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
-       print *,"tid_in invalid"
+       print *,"tid_in invalid: ",tid_in
        stop
       endif 
-      if (tid_in.ne.tid_check) then
-       print *,"tid_in: ",tid_in
-       print *,"tid_check: ",tid_check
-       stop
-      endif
 
       tessellate=0
 

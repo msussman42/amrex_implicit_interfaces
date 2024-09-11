@@ -6313,7 +6313,7 @@ end subroutine volume_sanity_check
       subroutine tets_box_planes_super( &
        continuous_mof, &
        tessellate, &
-       tid, &
+       tid_in, &
        bfact,dx, &
        xsten0,nhalf0, &
        mofdata, &
@@ -6331,7 +6331,7 @@ end subroutine volume_sanity_check
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: tessellate
-      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: use_super_cell
       integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -6356,8 +6356,8 @@ end subroutine volume_sanity_check
        stop
       endif
 
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid (tets_box_planes_super) ",tid
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid (tets_box_planes_super) ",tid_in
        stop
       endif
 
@@ -6439,7 +6439,7 @@ end subroutine volume_sanity_check
           xsten0,nhalf0, &
           xsten2,nhalf2, &
           mofdata, &
-          geom_xtetlist_local(1,1,1,tid+1), &
+          geom_xtetlist_local(1,1,1,tid_in+1), &
           geom_nmax, &
           nlist_local, &
           nmax, &
@@ -6448,7 +6448,7 @@ end subroutine volume_sanity_check
           print *,"too many tetrahedrons in tets_box_planes_super"
           print *,"tessellate=",tessellate
           print *,"bfact=",bfact
-          print *,"tid=",tid
+          print *,"tid_in=",tid_in
           print *,"nlist_local=",nlist_local
           print *,"nlist=",nlist
           print *,"nmax=",nmax
@@ -6460,7 +6460,7 @@ end subroutine volume_sanity_check
           nlist=nlist+1
           do itri=1,sdim+1
           do dir=1,sdim
-           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid+1)
+           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid_in+1)
           enddo
           enddo
          enddo  ! nn
@@ -9515,6 +9515,7 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine multi_find_intercept( &
+       tid_in, &
        nMAT_OPT, & ! 1 
        nDOF, & ! sdim-1
        nEQN, & ! sdim
@@ -9539,6 +9540,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nMAT_OPT ! 1
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
@@ -9579,17 +9581,9 @@ contains
       integer nn
       real(amrex_real) intercept_upper,intercept_lower
       real(amrex_real) intercept_test,aa,bb,fa,fb
-      integer :: tid=0
 
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid (multi_find_intercept) ",tid
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_find_intercept) ",tid_in
        stop
       endif 
 
@@ -9935,7 +9929,7 @@ contains
           print *,"min_err invalid"
           stop
          endif
-         intercept_error_history(niter+1,tid+1)=err
+         intercept_error_history(niter+1,tid_in+1)=err
 
          if (arean.ge.zero) then
 
@@ -10115,8 +10109,10 @@ contains
 
          if (niter.gt.maxiter-2) then
           if (abs(min_err-err).le.moftol) then
-           if ((abs(err-intercept_error_history(niter,tid+1)).le.moftol).and. &
-               (abs(err-intercept_error_history(niter-1,tid+1)).le.moftol)) then
+           if ((abs(err-intercept_error_history(niter,tid_in+1)).le. &
+                moftol).and. &
+               (abs(err-intercept_error_history(niter-1,tid_in+1)).le.  &
+                moftol)) then
             err=zero
            endif
           else if (abs(min_err-err).gt.moftol) then
@@ -10151,8 +10147,8 @@ contains
          print *,"moftol ",moftol
          print *,"error history: "
          do nn=1,maxiter
-          print *,"nn,tid,error ",nn,tid, &
-             intercept_error_history(nn,tid+1)
+          print *,"nn,tid_in,error ",nn,tid_in, &
+             intercept_error_history(nn,tid_in+1)
          enddo
          stop
         else if ((niter.lt.maxiter).or.(err.le.moftol)) then
@@ -10178,6 +10174,7 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine single_find_intercept( &
+       tid_in, &
        nMAT_OPT, & ! 1 
        nDOF, & ! sdim-1
        nEQN, & ! sdim
@@ -10194,6 +10191,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nMAT_OPT ! 1 
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
@@ -10227,17 +10225,9 @@ contains
       integer nn
       real(amrex_real) intercept_upper,intercept_lower
       real(amrex_real) intercept_test,aa,bb,fa,fb
-      integer :: tid=0
 
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid (single_find_intercept) ",tid
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (single_find_intercept) ",tid_in
        stop
       endif 
 
@@ -10433,7 +10423,7 @@ contains
           print *,"min_err invalid"
           stop
          endif
-         intercept_error_history(niter+1,tid+1)=err
+         intercept_error_history(niter+1,tid_in+1)=err
 
          if (arean.ge.zero) then
 
@@ -10583,8 +10573,8 @@ contains
 
          if (niter.gt.maxiter-2) then
           if (abs(min_err-err).le.moftol) then
-           if ((abs(err-intercept_error_history(niter,tid+1)).le.moftol).and. &
-               (abs(err-intercept_error_history(niter-1,tid+1)).le.moftol)) then
+           if ((abs(err-intercept_error_history(niter,tid_in+1)).le.moftol).and. &
+               (abs(err-intercept_error_history(niter-1,tid_in+1)).le.moftol)) then
             err=zero
            endif
           else if (abs(min_err-err).gt.moftol) then
@@ -10619,8 +10609,8 @@ contains
          print *,"moftol ",moftol
          print *,"error history: "
          do nn=1,maxiter
-          print *,"nn,tid,error ",nn,tid, &
-             intercept_error_history(nn,tid+1)
+          print *,"nn,tid_in,error ",nn,tid_in, &
+             intercept_error_history(nn,tid_in+1)
          enddo
          stop
         else if ((niter.lt.maxiter).or.(err.le.moftol)) then
@@ -10716,7 +10706,7 @@ contains
         ! refcentroid is passed into this routine.
         ! refcentroid is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
-        tid, &
+        tid_in, &
         uncaptured_volume_vof, & !intent(in)
         mofdata, &
         nMAT_OPT, & ! 1 
@@ -10751,7 +10741,7 @@ contains
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
 
       real(amrex_real), INTENT(in) :: uncaptured_volume_vof
@@ -10825,31 +10815,13 @@ contains
       real(NOTUS_REAL) NOTUS_PI
 
       integer, PARAMETER :: use_super_cell=1
-      integer :: tid_check=0
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
 
       NOTUS_PI=4.0d0*atan(1.0d0)
 
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid (multi_rotatefunc) ",tid
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid (multi_rotatefunc) ",tid_in
        stop
       endif
-
-      if ((tid_check.ge.geom_nthreads).or. &
-          (tid_check.lt.0).or. &
-          (tid_check.ne.tid)) then
-       print *,"tid_check invalid (multi_rotatefunc): ",tid_check
-       print *,"geom_nthreads: ",geom_nthreads
-       print *,"tid: ",tid
-       print *,"tid_check: ",tid_check
-       stop
-      endif 
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_rotatefunc"
@@ -11046,6 +11018,7 @@ contains
          !  the material region with the center cell (super cell if 
          !  continuous_mof==-1))
        call multi_find_intercept( &
+        tid_in, &
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim 
@@ -11696,6 +11669,7 @@ contains
        ! 2. n_init=(x - xcell)
        ! 3. call slope_to_angle(n_init,angle_init,sdim)
       subroutine angle_init_from_angle_recon_and_F( &
+        tid_in, &
         bfact,dx, &
         xsten0,nhalf0, &
         refvfrac, & !intent(in)
@@ -11716,6 +11690,7 @@ contains
 
 #include "mofdata.H"
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
       integer, PARAMETER :: nMAT_OPT_standard=1
       integer :: nDOF_standard
@@ -11742,7 +11717,6 @@ contains
 
       real(amrex_real) intercept_init(nMAT_OPT_standard)
       integer :: use_MilcentLemoine
-      integer :: tid=0
       real(amrex_real) refcentroid(sdim)
       integer dir
       real(amrex_real) :: angle_init_local(sdim-1)
@@ -11760,14 +11734,9 @@ contains
       real(amrex_real), PARAMETER :: uncaptured_volume_vof_placeholder=one
 
       real(amrex_real) :: mofdata(num_materials*ngeom_recon)
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid(angle_init_from_angle_recon_and_F) ",tid
+
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid(angle_init_from_angle_recon_and_F) ",tid_in
        stop
       endif 
 
@@ -11840,7 +11809,7 @@ contains
         ! calling from:
         !   angle_init_from_angle_recon_and_F
       call multi_rotatefunc( &
-       tid, &
+       tid_in, &
        uncaptured_volume_vof_placeholder, & !intent(in)
        mofdata, &
        nMAT_OPT_standard, & ! 1
@@ -11902,7 +11871,7 @@ contains
         ! output: intercept,centroidA,nslope
         ! called from: individual_MOF and multimaterial_MOF
       subroutine find_cut_geom_slope( &
-        tid, &
+        tid_in, &
         uncaptured_volume_vof, &
         mofdata, &
         grid_index, &
@@ -11942,7 +11911,7 @@ contains
 
 #include "mofdata.H"
 
-      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tid_in
 
       integer, INTENT(in) :: nMAT_OPT ! 1 
       integer, INTENT(in) :: nDOF ! sdim-1
@@ -12077,31 +12046,10 @@ contains
 
       integer :: use_MilcentLemoine
 
-      integer :: tid_check=0
-
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid find_cut_geom_slope: ",tid
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid find_cut_geom_slope: ",tid_in
        stop
       endif
-
-      print *,"tid in find_cut_geom_slope: ",tid
-
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
-
-      if ((tid_check.ge.geom_nthreads).or. &
-          (tid_check.lt.0).or. &
-          (tid_check.ne.tid)) then
-       print *,"tid_check invalid (find_cut_geom_slope): ",tid_check
-       print *,"geom_nthreads: ",geom_nthreads
-       print *,"tid: ",tid
-       print *,"tid_check: ",tid_check
-       stop
-      endif 
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
@@ -12791,7 +12739,7 @@ contains
         ! calling from:
         !   find_cut_geom_slope
        call multi_rotatefunc( &
-        tid, &
+        tid_in, &
         uncaptured_volume_vof, &
         mofdata, &
         nMAT_OPT, & ! 1 
@@ -12958,7 +12906,7 @@ contains
          ! calling from:
          !   find_cut_geom_slope
         call multi_rotatefunc( &
-         tid, &
+         tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
          nMAT_OPT, & ! 1 
@@ -13003,7 +12951,7 @@ contains
          ! calling from:
          !   find_cut_geom_slope
         call multi_rotatefunc( &
-         tid, &
+         tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
          nMAT_OPT, & ! 1 
@@ -13168,7 +13116,7 @@ contains
          ! calling from:
          !   find_cut_geom_slope
         call multi_rotatefunc( &
-         tid, &
+         tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
          nMAT_OPT, & ! 1 
@@ -13218,7 +13166,7 @@ contains
          ! calling from:
          !   find_cut_geom_slope
         call multi_rotatefunc( &
-         tid, &
+         tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
          nMAT_OPT, & ! 1 
@@ -13471,12 +13419,12 @@ contains
        stop
       endif
 
-      mof_iterations(tid+1,critical_material)= &
-       mof_iterations(tid+1,critical_material)+iter
-      mof_errors(tid+1,critical_material)= &
-       mof_errors(tid+1,critical_material)+best_error
-      mof_calls(tid+1,critical_material)= &
-       mof_calls(tid+1,critical_material)+1
+      mof_iterations(tid_in+1,critical_material)= &
+       mof_iterations(tid_in+1,critical_material)+iter
+      mof_errors(tid_in+1,critical_material)= &
+       mof_errors(tid_in+1,critical_material)+best_error
+      mof_calls(tid_in+1,critical_material)= &
+       mof_calls(tid_in+1,critical_material)+1
 
       return
       end subroutine find_cut_geom_slope
@@ -13665,7 +13613,7 @@ contains
       subroutine individual_MOF( &
         grid_index, &
         grid_level, &
-        tid, &
+        tid_in, &
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
@@ -13694,7 +13642,7 @@ contains
       IMPLICIT NONE
 
       integer, INTENT(IN) :: nlist_alloc 
-      integer, INTENT(IN) :: tid
+      integer, INTENT(IN) :: tid_in
       integer, INTENT(in) :: sdim 
       integer, INTENT (IN) :: grid_index(sdim)
       integer, INTENT (IN) :: grid_level
@@ -13766,12 +13714,6 @@ contains
       integer :: nEQN_standard
       integer is_rigid_local(num_materials)
 
-      integer :: tid_check=0
-
-#ifdef _OPENMP
-      integer omp_get_thread_num
-#endif
-
 #include "mofdata.H"
 
       nDOF_standard=sdim-1
@@ -13803,24 +13745,10 @@ contains
        endif
       enddo ! im=1..num_materials
 
-      print *,"individual_MOF (tid debug) ",tid
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid individual_MOF: ",tid
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid individual_MOF: ",tid_in
        stop
       endif
-#ifdef _OPENMP
-      tid_check=omp_get_thread_num()
-#endif
-      if ((tid_check.ge.geom_nthreads).or. &
-          (tid_check.lt.0).or. &
-          (tid_check.ne.tid)) then
-       print *,"tid_check invalid (individual_MOF): ",tid_check
-       print *,"geom_nthreads: ",geom_nthreads
-       print *,"tid: ",tid
-       print *,"tid_check: ",tid_check
-       stop
-      endif 
 
       if (nhalf0.lt.3) then
        print *,"expecting nhalf0>=3: ",nhalf0
@@ -14011,7 +13939,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0 (is_rigid==1 regions not subtracted)
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14026,7 +13954,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14042,7 +13970,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14057,7 +13985,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14074,7 +14002,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14089,7 +14017,7 @@ contains
         call tets_box_planes_super( &
          continuous_mof, &
          tessellate, & ! =0
-         tid, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          mofdata, &
@@ -14400,7 +14328,7 @@ contains
            ! cell.
            ! find_cut_geom_slope called from: individual_MOF
          call find_cut_geom_slope( &
-           tid, &
+           tid_in, &
            uncaptured_volume_vof, &
            mofdata, &
            grid_index, &
@@ -16220,13 +16148,10 @@ contains
       integer, parameter :: num_particles=0;
       real(amrex_real) :: particle_list(1,sdim+1)
 
-      integer :: tid=0
-      integer :: tid_check=0
-!      logical :: get_dyn=.true.
-      integer :: get_dyn=1
+!      logical :: get_dyn=.false.
+      integer :: get_dyn=0
 
 #ifdef _OPENMP
-      integer omp_get_thread_num
       integer omp_get_dynamic
 #endif
 
@@ -16238,18 +16163,12 @@ contains
       endif
 
 #ifdef _OPENMP
-      tid=omp_get_thread_num()
       get_dyn=omp_get_dynamic()
 #endif
-      print *,"multimaterial_MOF (tid debug) ",tid
-      print *,"multimaterial_MOF (omp_get_dynamic) ",get_dyn
-      if (tid.ne.tid_in) then
-       print *,"p001 tid <> tid_in ",tid,tid_in
-       stop
-      endif
-
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
-       print *,"tid invalid (multimaterial_MOF): ",tid
+      if (get_dyn.eq.0) then
+       !do nothing
+      else
+       print *,"get_dyn invalid: ",get_dyn
        stop
       endif
 
@@ -16257,13 +16176,6 @@ contains
       nEQN_standard=sdim
 
       do imaterial=1,num_materials
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"p01 tid <> tid_check ",imaterial,tid,tid_check
-          stop
-         endif
        is_rigid_local(imaterial)=is_rigid(imaterial)
        if (tessellate.eq.2) then
         is_rigid_local(imaterial)=0
@@ -16288,13 +16200,6 @@ contains
        print *,"bfact invalid135"
        stop
       endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"1tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       if (grid_level.eq.-1) then
        ! do nothing
@@ -16371,13 +16276,6 @@ contains
        stop
       endif
       null_intercept=two*bfact*dxmaxLS_volume_constraint
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"2tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       if (sdim.eq.2) then
        k1lo=0
@@ -16458,13 +16356,6 @@ contains
        endif
 
       enddo ! imaterial=1,num_materials
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"3tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials))
 
@@ -16488,13 +16379,6 @@ contains
         tessellate, &  ! =0
         mofdata, &
         sdim)
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"4tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       if (continuous_mof.eq.STANDARD_MOF) then 
 
@@ -16558,13 +16442,6 @@ contains
        print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"5tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       if (use_ls_data.eq.1) then
 
@@ -16632,13 +16509,6 @@ contains
            centroid_absolute(dir)=uncaptured_centroid_cen(dir)+ &
                mofdata(vofcomp+dir)
           enddo
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"6tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -16660,13 +16530,6 @@ contains
            imaterial, & !intent(in)
            dxmaxLS_volume_constraint, & !intent(in)
            sdim) !intent(in)
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"7tid <> tid_check ",tid,tid_check
-          stop
-         endif
  
          else
           print *,"continuous_mof invalid: ",continuous_mof
@@ -16702,9 +16565,9 @@ contains
 
       do imaterial=1,num_materials
 
-       mof_iterations(tid+1,imaterial)=0
-       mof_errors(tid+1,imaterial)=0.0d0
-       mof_calls(tid+1,imaterial)=0
+       mof_iterations(tid_in+1,imaterial)=0
+       mof_errors(tid_in+1,imaterial)=0.0d0
+       mof_calls(tid_in+1,imaterial)=0
        vofcomp=(imaterial-1)*ngeom_recon+1
 
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
@@ -16787,13 +16650,6 @@ contains
          print *,"vof_super mismatch with refvfrac(1)"
          stop
         endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"8tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
         if ((refvfrac(1).le.VOFTOL).and. &
             (refvfrac(1).ge.zero)) then
@@ -16810,13 +16666,6 @@ contains
          enddo
 
          single_volume=refvfrac(1)*uncaptured_volume_vof_rigid
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"9tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
           ! centroid_ref-centroid_free
           ! normal points from light to dark
@@ -16830,13 +16679,6 @@ contains
            centroid_ref, &
            bfact,dx, &
            xsten0,nhalf0,sdim)
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"10tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
          if (mag(1).gt.zero) then
 
@@ -16850,7 +16692,7 @@ contains
           ! This call is for the reconstruction of is_rigid=1 materials;
           ! continuous_mof_rigid=STANDARD_MOF or MOF_TRI_TET
           call find_cut_geom_slope( &
-           tid, &
+           tid_in, &
            uncaptured_volume_vof_rigid, &
            mofdata, &
            grid_index, &
@@ -16882,13 +16724,6 @@ contains
            nMAT_OPT_standard, & !nMAT_OPT_standard=1
            nDOF_standard, & !nDOF_standard=sdim-1
            nEQN_standard)   !nEQN_standard=sdim
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"11tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
           mofdata(vofcomp+sdim+1)=one ! order=1
           mofdata(vofcomp+2*sdim+2)=intercept(1)
@@ -16932,13 +16767,6 @@ contains
             refvfrac(1), &
             centroidA, & ! centroid in absolute coordinate system
             sdim)
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"12tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
           else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
 
@@ -16965,20 +16793,6 @@ contains
            print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
            stop
           endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"13tid <> tid_check ",tid,tid_check
-          stop
-         endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"14tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
           mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
@@ -17081,13 +16895,6 @@ contains
        endif
 
       enddo  ! imaterial=1..num_materials
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"15tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       if (num_materials_cell.le.2) then
 
@@ -17186,13 +16993,6 @@ contains
        print *,"num_materials_cell invalid: ",num_materials_cell
        stop
       endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"16tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       n_ndef=0
@@ -17312,13 +17112,6 @@ contains
          stop
         endif
        enddo ! while order_stack_count>0
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"17tid <> tid_check ",tid,tid_check
-          stop
-         endif
     
        deallocate(order_stack) 
        alloc_flag=alloc_flag-1
@@ -17368,17 +17161,10 @@ contains
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"18tid <> tid_check ",tid,tid_check
-          stop
-         endif
          call individual_MOF( &
           grid_index, &
           grid_level, &
-          tid, &
+          tid_in, &
           ls_mof, &
           lsnormal, &
           lsnormal_valid, &
@@ -17400,21 +17186,7 @@ contains
           cmofsten, &
           sdim)
          imaterial_count=imaterial_count+1
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"19tid <> tid_check ",tid,tid_check
-          stop
-         endif
         enddo
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"20tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
          ! multiple orderings must be tested.
        else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
@@ -17519,13 +17291,6 @@ contains
            enddo
            stop
           endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"21tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
          enddo ! iflex=1...n_ndef
        
@@ -17601,28 +17366,14 @@ contains
           print *,"order_count invalid: ",order_count
           stop
          endif
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"22tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
          imaterial_count=1
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
-#ifdef _OPENMP
-          tid_check=omp_get_thread_num()
-#endif
-          if (tid.ne.tid_check) then
-           print *,"23tid <> tid_check ",tid,tid_check
-           stop
-          endif
           call individual_MOF( &
            grid_index, &
            grid_level, &
-           tid, &
+           tid_in, &
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
@@ -17644,13 +17395,6 @@ contains
            sdim)
           imaterial_count=imaterial_count+1
          enddo ! while not all of uncaptured space filled
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"24tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
          mof_err=zero
          do imaterial = 1,num_materials
@@ -17823,13 +17567,6 @@ contains
       deallocate(lsnormal)
       deallocate(lsnormal_valid)
       deallocate(ls_intercept)
-#ifdef _OPENMP
-         tid_check=omp_get_thread_num()
-#endif
-         if (tid.ne.tid_check) then
-          print *,"25tid <> tid_check ",tid,tid_check
-          stop
-         endif
 
       return
       end subroutine multimaterial_MOF
@@ -17919,6 +17656,13 @@ contains
 
       print *,"in diagnostic_MOF"
       print *,"DO NOT RUN THIS TEST WITH MULTIPLE THREADS"
+
+      if (geom_nthreads.eq.1) then
+       !do nothing
+      else
+       print *,"expecting geom_nthreads=1"
+       stop
+      endif
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon invalid"
