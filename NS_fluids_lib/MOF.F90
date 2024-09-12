@@ -11710,8 +11710,8 @@ contains
       real(amrex_real), INTENT(out) :: refcen(sdim)
       real(amrex_real), INTENT(out) :: angle_init(sdim-1)
 
-      integer :: nlist_vof=0
-      integer :: nlist_cen=0
+      integer, parameter :: nlist_vof=0
+      integer, parameter :: nlist_cen=0
       integer, PARAMETER :: fastflag=1
       integer, PARAMETER :: use_initial_guess=0
 
@@ -16151,7 +16151,7 @@ contains
       real(amrex_real) :: particle_list(1,sdim+1)
 
 !      logical :: get_dyn=.false.
-      integer :: get_dyn=0
+      integer :: get_dyn
 
 #ifdef _OPENMP
       integer omp_get_dynamic
@@ -16164,6 +16164,7 @@ contains
        stop
       endif
 
+      get_dyn=0
 #ifdef _OPENMP
       get_dyn=omp_get_dynamic()
 #endif
@@ -22140,7 +22141,8 @@ contains
        tid_in, &
        normdir, &
        coeff, &
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        mofdata, &
        xsten_grid,nhalf_grid, &
        multi_volume, &
@@ -22219,9 +22221,11 @@ contains
       integer num_processed_fluid
       integer num_processed_total
       integer loop_counter
-      integer :: tessellate_local=0
+      integer :: tessellate_local
       integer is_rigid_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
+
+      tessellate_local=0
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (multi_get_volume_grid_and_map) ",tid_in
