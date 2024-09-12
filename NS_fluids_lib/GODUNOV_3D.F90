@@ -14218,9 +14218,9 @@ stop
               normdir, & ! normdir=0..sdim-1
               coeff, &
               bfact,dx, &
-              xsten_recon,1, &
+              xsten_recon,nhalf, &
               mofdata_grid, &
-              xsten_depart,1, &
+              xsten_depart,nhalf, &
               multi_volume_grid, & ! intersection of departure with grid.
               multi_cen_grid, &
               multi_volume, & ! intersection of target with grid.

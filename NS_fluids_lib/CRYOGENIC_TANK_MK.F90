@@ -769,6 +769,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  IMPLICIT NONE
 
  real(amrex_real), INTENT(out) :: xfoot(3)
+ real(amrex_real) :: xfoot_translate(3)
  real(amrex_real), INTENT(in) :: t
  real(amrex_real), INTENT(in) :: xphys(3)
  real(amrex_real), INTENT(out) :: velphys(3)
@@ -785,7 +786,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  real(amrex_real)    :: Q(2,2)
  
  do dir=1,3                  ! bug fixed        
-  xfoot(dir)=xphys(dir)      
+  xfoot(dir)=xphys(dir) 
+  xfoot_translate(dir)=xphys(dir) 
   velphys(dir)=zero
  enddo
 
@@ -849,7 +851,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    Q(2,1)=-Q(1,2)
    Q(2,2)=Q(1,1)
 
-   xfoot(rotx)= Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
+   xfoot(rotx)=Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
    xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
    xfoot(rotz)=xphys(rotz)
 
@@ -876,6 +878,51 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    print *,"SDIM invalid"
    stop
   endif
+ elseif(NINT(radblob7).eq.3) then
+  !angular velocity zblob7 
+  xdisp_angV=zblob7 
+  xdisp_amplitude=xblob7   
+  xdisp_freq=yblob7
+  xfoot_translate(1)=xphys(1)-  &
+     xdisp_amplitude*sin(xdisp_freq*t)
+
+   ! xphys(2) is the vertical direction.
+  rot_dir=NINT(radblob8)
+
+  if (SDIM.eq.3) then
+   !do nothing
+  else
+   print *,"expecting 3d"
+   stop
+  endif
+  if (rot_dir.eq.3) then
+   rotx=1
+   roty=2
+   rotz=rot_dir
+  else
+   print *,"expecting rot_dir==3"
+   stop
+  endif
+
+  sign_term=(-1.0d0)**(mod(rot_dir,2))
+  Q(1,1)=cos(xdisp_angV*t)
+  Q(1,2)=-sign_term*sin(xdisp_angV*t)
+  Q(2,1)=-Q(1,2)
+  Q(2,2)=Q(1,1)
+
+  xfoot(rotx)=Q(1,1)*xfoot_translate(rotx)+Q(1,2)*xfoot_translate(roty)
+  xfoot(roty)=Q(2,1)*xfoot_translate(rotx)+Q(2,2)*xfoot_translate(roty) 
+  xfoot(rotz)=xfoot_translate(rotz)
+
+  velphys(rotx)=sign_term*xdisp_angV*xfoot_translate(roty)
+  velphys(roty)=-sign_term*xdisp_angV*xfoot_translate(rotx)
+  velphys(rotz)=0.0d0
+
+   !xphys=xfoot+A*sin(wt)
+   !velphys=Aw cos(wt)
+  velphys(1)=velphys(1)+  &
+     xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
+
  else
   print *,"radblob7 invalid (rigid motion type invalid): ",radblob7
   stop

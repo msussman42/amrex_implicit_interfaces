@@ -1464,9 +1464,10 @@ contains
       real(amrex_real) :: u_tau,tau_w,x_n,x_np1 !x_n, x_(n+1) --> u_tau
       real(amrex_real) :: iter_diff
       real(amrex_real) :: f, fprime
-      integer :: iter, iter_max=1000
+      integer, parameter :: iter_max=1000
+      integer :: iter
        !initialize wall function parameters here
-      real(amrex_real) :: K=0.41d0, B=5.5d0
+      real(amrex_real), parameter :: K=0.41d0, B=5.5d0
       real(amrex_real) :: rho_w !wall density
       real(amrex_real) :: mu_w  !mu_w: wall molecular viscosity
       real(amrex_real) :: predict_deriv_utan

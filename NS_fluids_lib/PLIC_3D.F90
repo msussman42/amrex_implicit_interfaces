@@ -125,7 +125,7 @@ stop
 
       integer :: grid_index(SDIM)
       integer :: grid_side(SDIM)
-      integer :: grid_level=-1
+      integer :: grid_level
 
       integer im
       real(amrex_real) mofdata(num_materials*ngeom_recon)
@@ -205,6 +205,8 @@ stop
       integer :: verification_flag
 
 #include "mofdata.H"
+
+      grid_level=-1
 
       maskcov_ptr=>maskcov
       masknbr_ptr=>masknbr
@@ -1489,7 +1491,7 @@ stop
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: dx(SDIM)
 
-      integer :: nmax=POLYGON_LIST_MAX
+      integer, parameter :: nmax=POLYGON_LIST_MAX
 
       real(amrex_real) :: vof_training(num_samples)
       real(amrex_real) :: phi_training(num_samples)
@@ -2139,7 +2141,7 @@ stop
 
       integer :: i,j,k
       integer :: local_continuous_mof
-      integer :: nmax=POLYGON_LIST_MAX
+      integer, parameter :: nmax=POLYGON_LIST_MAX
       real(amrex_real) :: vof_training(num_samples)
       real(amrex_real) :: phi_training(num_samples)
       real(amrex_real) :: theta_training(num_samples)
