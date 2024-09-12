@@ -6211,6 +6211,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) vfrac,dxmaxREFINE
       real(amrex_real) local_LS
       integer inode
+      integer, parameter :: tid_local=0
      
       if (nhalf.lt.3) then
        print *,"nhalf invalid get symmetric error"
@@ -6448,6 +6449,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! in: get_symmetric_error
         ! EPS2
        call multi_get_volume_grid_simple( &
+        tid_local, &
         EPS2, &
         tessellate, &  ! =1
         bfact,dx,xsten0,nhalf0, &
@@ -20264,6 +20266,7 @@ end subroutine RatePhaseChange
         local_tessellate=3
          !EPS2
         call multi_get_volume_tessellate( &
+         nucleate_in%tid, &
          local_tessellate, & ! =3
          nucleate_in%bfact, &
          nucleate_in%dx, &

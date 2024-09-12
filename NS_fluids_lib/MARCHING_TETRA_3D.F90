@@ -652,6 +652,7 @@ stop
          ! after  (mofdata): fluids and solids tessellate
          ! EPS2
          call multi_get_volume_tessellate( &
+          tid, &
           visual_tessellate_vfrac, &
           bfact, &
           dx,xsten,nhalf, &
