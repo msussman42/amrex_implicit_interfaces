@@ -2653,6 +2653,7 @@ stop
           ! base case
           ! in: FORT_CELLFACEINIT
          call multi_get_volume_grid( &
+          tid, &
           EPS2, &
           tessellate, &  ! =0,1, or 3
           bfact,dx, &
@@ -2755,6 +2756,7 @@ stop
                 ! also, target volume is a cube, not a tet.
                 ! EPS2 
                call multi_get_volume_grid_simple( &
+                tid, &
                 EPS2, &
                 tessellate, &  ! =1
                 bfact,dx,xsten,nhalf, &
@@ -2994,6 +2996,7 @@ stop
                ! in: fort_cellfaceinit
                ! EPS2
               call multi_get_volume_grid_simple( &
+               tid, &
                EPS2, &
                tessellate, &  !=0,1, or 3
                bfact,dx,xsten,nhalf, &
@@ -5062,6 +5065,7 @@ stop
             (tessellate.eq.3)) then
           !EPS2
          call multi_get_volume_tessellate( &
+          tid_current, &
           tessellate, & ! =1 or 3
           bfact, &
           dx, &
@@ -10312,6 +10316,7 @@ stop
          ! (if majority=solid => all solid)
          !EPS2
         call multi_get_volume_tessellate( &
+         tid, &
          local_tessellate, & ! =3
          bfact, &
          dx, &
@@ -10886,6 +10891,7 @@ stop
           ! multi_cen is "absolute" (not relative to cell centroid)
           ! EPS2
          call multi_get_volume_grid_simple( &
+           tid, &
            EPS2, &
            tessellate, &  !=0,1, or 3
            bfact,dx, &
@@ -19356,6 +19362,7 @@ stop
             tessellate_transfer=1 
              !EPS2
             call multi_get_volume_tessellate( &
+             tid, &
              tessellate_transfer, &
              bfact, &
              dx,xsten,nhalf, &

@@ -2417,6 +2417,7 @@ END SUBROUTINE SIMP
        ! after  (mofdata_raster): fluids and solids tessellate (rasterized)
        ! EPS2
        call multi_get_volume_tessellate( &
+        tid, &
         tessellate_raster, & !=3
         bfact, &
         dx,xsten,nhalf, &
@@ -2432,6 +2433,7 @@ END SUBROUTINE SIMP
          ! after  (mofdata): fluids and solids tessellate
          ! EPS2
         call multi_get_volume_tessellate( &
+         tid, &
          visual_tessellate_vfrac, &
          bfact, &
          dx,xsten,nhalf, &
@@ -7534,6 +7536,7 @@ END SUBROUTINE SIMP
         ! EPS2
         local_tessellate=1
         call multi_get_volume_tessellate( &
+         tid, &
          local_tessellate, &
          bfact, &
          dx,xsten,nhalf, &
@@ -8677,6 +8680,7 @@ END SUBROUTINE SIMP
          tessellate=1 ! tessellate output (tessellate=3 => raster output)
           ! EPS2
          call multi_get_volume_tessellate( &
+           tid_current, &
            tessellate, & ! tessellate=1 
            bfact, &
            dx, &
@@ -9139,6 +9143,7 @@ END SUBROUTINE SIMP
           tessellate=1 ! tessellate output (tessellate=3 => raster output)
            ! EPS2
           call multi_get_volume_tessellate( &
+           tid_current, &
            tessellate, & ! tessellate=1 
            bfact, &
            dx, &
@@ -9151,6 +9156,7 @@ END SUBROUTINE SIMP
 
            ! EPS2
           call multi_get_volume_tessellate( &
+           tid_current, &
            tessellate, & ! tessellate=1 
            bfact, &
            dx, &
@@ -13895,6 +13901,7 @@ END SUBROUTINE SIMP
 
                 ! EPS2
                call multi_get_volume_grid_simple( &
+                tid_in, &
                 EPS2, &
                 tessellate, &  !=0
                 bfact_f,dxf,xstenfine,nhalf, &

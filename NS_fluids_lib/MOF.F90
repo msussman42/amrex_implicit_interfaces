@@ -18750,6 +18750,7 @@ contains
         ! themselves.
         ! for advection, EPS_SINGLE=EPS_8_4=EPS_UNCAPTURED
       subroutine multi_get_volume_grid( &
+       tid_in, &
        EPS_SINGLE, &
        tessellate, & ! =0,1,2,3
        bfact,dx, &
@@ -18772,6 +18773,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
@@ -18834,6 +18836,10 @@ contains
       integer local_tessellate
       real(amrex_real) vfrac_raster_solid
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_volume_grid) ",tid_in
+       stop
+      endif 
       if ((EPS_SINGLE.gt.zero).and. &
           (EPS_SINGLE.lt.half)) then
        !do nothing
@@ -19835,6 +19841,7 @@ contains
       end subroutine multi_get_volume_grid
 
       subroutine multi_get_volume_tetlist( &
+       tid_in, &
        EPS_SINGLE, &
        tessellate, & ! =0 or 2
        bfact,dx, &
@@ -19857,6 +19864,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nlist_alloc_in
       integer, INTENT(in) :: nlist_in
@@ -19883,6 +19891,10 @@ contains
       integer i_list
       integer itet_node
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_volume_tetlist) ",tid_in
+       stop
+      endif 
       if ((EPS_SINGLE.gt.zero).and. &
           (EPS_SINGLE.lt.half)) then
        !do nothing
@@ -19951,6 +19963,7 @@ contains
         enddo
          ! multi_cen_sub is "absolute" (not relative to cell centroid)
         call multi_get_volume_grid( &
+          tid_in, &
           EPS_SINGLE, &
           tessellate, &  ! =0 or 2
           bfact,dx, &
@@ -20054,6 +20067,7 @@ contains
 ! tessellate_in=0,1, or 3
 ! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
       subroutine multi_get_area_pairs( &
+       tid_in, &
        tessellate_in, &
        bfact,dx, &
        xsten0_plus, &
@@ -20076,6 +20090,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: tessellate_in ! 0,1, or 3
       integer, INTENT(in) :: nlist_alloc_plus
       integer, INTENT(in) :: nlist_alloc_minus
@@ -20161,6 +20176,10 @@ contains
       real(amrex_real) intercept
       integer, parameter :: continuous_mof=STANDARD_MOF
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_area_pairs) ",tid_in
+       stop
+      endif 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
       else
@@ -20289,6 +20308,7 @@ contains
        !        consider cell as F_{im_solid_max}=1
        !   b) else, only consider fluids.
        call multi_get_volume_tessellate( &
+        tid_in, &
         tessellate_in, & ! = 1 or 3
         bfact,dx, &
         xsten0_plus,nhalf0, &
@@ -20299,6 +20319,7 @@ contains
         sdim)
 
        call multi_get_volume_tessellate( &
+        tid_in, &
         tessellate_in, & ! =1 or 3
         bfact,dx, &
         xsten0_minus,nhalf0, &
@@ -20342,6 +20363,7 @@ contains
        ! since multi_get_volume_tessellate tessellates each cell with 
        ! fluids and solids (tess=1,3), the flag "is_rigid" should be ignored.
       call multi_get_volume_grid( &
+       tid_in, &
        EPS_FULL_WEAK, & !tolerance for "single material" criterion
        local_tessellate_in, &  ! =0 or 2
        bfact,dx, &
@@ -20587,6 +20609,7 @@ contains
               (material_used(critical_material).le.num_materials)) then
 
             call multi_get_volume_tetlist( &
+             tid_in, &
              EPS_FULL_WEAK, & !tolerance for "single material" criterion
              local_tessellate_in, &  ! =0 or 2
              bfact,dx, &
@@ -21072,6 +21095,7 @@ contains
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_simple( &
+       tid_in, &
        EPS_SINGLE, &
        tessellate, & !=0,1,2,3
        bfact,dx,xsten0,nhalf0, &
@@ -21090,6 +21114,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       real(amrex_real), INTENT(in) :: EPS_SINGLE
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
@@ -21151,6 +21176,10 @@ contains
       integer return_raster_info
       real(amrex_real) vfrac_raster_solid
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_volume_grid_simple) ",tid_in
+       stop
+      endif 
       if ((EPS_SINGLE.gt.zero).and. &
           (EPS_SINGLE.lt.half)) then
        !do nothing
@@ -22108,6 +22137,7 @@ contains
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_and_map( &
+       tid_in, &
        normdir, &
        coeff, &
        bfact,dx,xsten0,nhalf0, &
@@ -22128,6 +22158,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: sdim
@@ -22192,16 +22223,20 @@ contains
       integer is_rigid_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_volume_grid_and_map) ",tid_in
+       stop
+      endif 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate_local.eq.2) then
         is_rigid_local(im)=0
-        print *,"22199 expecting tessellate_local==0: ",tessellate_local
+        print *,"22234 expecting tessellate_local==0: ",tessellate_local
         stop
        else if (tessellate_local.eq.0) then
         ! do nothing
        else if (tessellate_local.eq.1) then
-        print *,"22204 expecting tessellate_local==0: ",tessellate_local
+        print *,"22239 expecting tessellate_local==0: ",tessellate_local
         stop
        else
         print *,"tessellate_local invalid: ",tessellate_local
@@ -23212,6 +23247,7 @@ contains
        !  if fluid material(s) dominate the cell, then F_solid=0,
        !  sum F_fluid=1
       subroutine multi_get_volume_tessellate( &
+       tid_in, &
        tessellate_in, & ! =1 or 3
        bfact,dx,xsten0,nhalf0, &
        mofdata, &
@@ -23226,6 +23262,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: sdim
@@ -23263,6 +23300,10 @@ contains
       integer im_raster_solid
       real(amrex_real) vfrac_raster_solid
 
+      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
+       print *,"tid_in invalid (multi_get_volume_tessellate) ",tid_in
+       stop
+      endif 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (renorm_tessellate.eq.2) then
@@ -23455,6 +23496,7 @@ contains
        endif
 
        call multi_get_volume_grid( &
+        tid_in, &
         EPS_FULL_WEAK, & ! tolerance for "single material" criterion
         local_tessellate, & ! =1 or 2
         bfact,dx,xsten0,nhalf0, &

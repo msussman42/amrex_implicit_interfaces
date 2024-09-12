@@ -1157,6 +1157,7 @@ stop
           volume_super,cen_super,SDIM)
 
          call multi_get_volume_grid( &
+          tid_in, &
           EPS_8_4, &
           tessellate, & ! =0
           bfact,dx, &
@@ -1308,6 +1309,7 @@ stop
           volume_super,cen_super,SDIM)
 
         call multi_get_volume_grid( &
+         tid_in, &
          EPS_8_4, &
          tessellate, & ! =0
          bfact,dx, &

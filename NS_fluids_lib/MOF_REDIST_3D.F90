@@ -1087,6 +1087,7 @@ stop
 
         !EPS2=EPS_FULL_WEAK
        call multi_get_volume_tessellate( &
+         tid_current, &
          tessellate, & ! =1 or 3
          bfact, &
          dx, &
@@ -3379,6 +3380,7 @@ stop
 
           !EPS_FULL_WEAK
          call multi_get_volume_tessellate( &
+          tid, &
           tessellate, &  ! =3
           bfact,dx, &
           xsten,nhalf, &
@@ -3480,6 +3482,7 @@ stop
            ! centroid)
            ! in: fort_faceinit
           call multi_get_volume_grid( &
+            tid, &
             EPS_FULL_WEAK, &
             local_tessellate, &  ! 0,1, or 2
             bfact,dx,xsten,nhalf, &
@@ -4021,6 +4024,7 @@ stop
           !  a) local_tessellate_in=0
           ! 
          call multi_get_area_pairs( &
+           tid, &
            local_tessellate, & ! =1 or 3
            bfact, &
            dx, &

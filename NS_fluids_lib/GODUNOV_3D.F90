@@ -506,7 +506,7 @@ stop
        enddo
 
       else
-       print *,"map_forward invalid"
+       print *,"map_forward invalid: ",map_forward
        stop
       endif
 
@@ -14214,6 +14214,7 @@ stop
               ! immersed into the domain.
 
             call multi_get_volume_grid_and_map( &
+              tid, &
               normdir, & ! normdir=0..sdim-1
               coeff, &
               bfact,dx, &
@@ -15927,6 +15928,7 @@ stop
         local_tessellate=3
          !EPS2 tolerance
         call multi_get_volume_tessellate( &
+         tid, &
          local_tessellate, &  ! =3
          bfact, &
          dx,xsten, &
@@ -17474,6 +17476,7 @@ stop
          local_tessellate=3
           !EPS2 tolerance
          call multi_get_volume_tessellate( &
+          tid, &
           local_tessellate, & !  =3
           bfact, &
           dx,xsten, &
