@@ -22196,15 +22196,15 @@ contains
        is_rigid_local(im)=is_rigid(im)
        if (tessellate_local.eq.2) then
         is_rigid_local(im)=0
-        print *,"22199 expecting tessellate_local==0"
+        print *,"22199 expecting tessellate_local==0: ",tessellate_local
         stop
        else if (tessellate_local.eq.0) then
         ! do nothing
        else if (tessellate_local.eq.1) then
-        print *,"22204 expecting tessellate_local==0"
+        print *,"22204 expecting tessellate_local==0: ",tessellate_local
         stop
        else
-        print *,"tessellate_local invalid"
+        print *,"tessellate_local invalid: ",tessellate_local
         stop
        endif
       enddo ! im=1..num_materials

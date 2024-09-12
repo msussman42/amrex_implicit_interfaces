@@ -9,6 +9,7 @@
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
 max_step  =  9999999    # maximum timestep
+#max_step  =  100    # maximum timestep
 
 stop_time = 20.0
 #stop_time=5.0 # if using "physical" latent heat.
@@ -78,7 +79,7 @@ amr.plot_int        = 500
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 1024
+amr.max_grid_size   = 32
 amr.file_name_digits=7
 #amr.restart         = chk0027800
 #amr.trace   =1
