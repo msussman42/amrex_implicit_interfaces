@@ -2618,11 +2618,11 @@ NavierStokes::read_params ()
       ns_max_grid_size[ilev]=mgs[ilev];
 
       if (AMREX_SPACEDIM==2) {
-       if (ns_max_grid_size[ilev]<32)
-        amrex::Error("expecting max_grid_size>=32 in 2D or 3DRZ");
+       if (ns_max_grid_size[ilev]<16)
+        amrex::Error("expecting max_grid_size>=16 in 2D or 3DRZ");
       } else if (AMREX_SPACEDIM==3) {
-       if (ns_max_grid_size[ilev]<32)
-        amrex::Error("expecting max_grid_size>=32 in 3D");
+       if (ns_max_grid_size[ilev]<16)
+        amrex::Error("expecting max_grid_size>=16 in 3D");
       } else
        amrex::Error("AMREX_SPACEDIM invalid");
 
