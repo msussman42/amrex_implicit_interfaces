@@ -6792,7 +6792,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch put breakpoint here2"
+         print *,"hi mismatch put breakpoint here2 GLOBALUTIL.F90:6795"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow

@@ -3003,7 +3003,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("ns_tiling",ns_tiling);
     if (ns_tiling==true) {
-     // do nothing
+     amrex::Error("tiling does not work with particles (clearParticles())"); 
     } else if (ns_tiling==false) {
      // do nothing
     } else
@@ -26147,6 +26147,10 @@ NavierStokes::makeStateCurv(int project_option,
  }
 
  bool use_tiling=ns_tiling;
+
+ if (use_tiling==true) {
+  amrex::Error("clearParticles() will not work if use_tiling==true");
+ }
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))

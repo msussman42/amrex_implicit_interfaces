@@ -7344,7 +7344,8 @@ void NavierStokes::output_triangles() {
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid output_triangles");
 
- bool use_tiling=ns_tiling;
+// bool use_tiling=ns_tiling;
+ bool use_tiling=false;
 
   // mask=tag if not covered by level+1 or outside the domain.
  Real tag=1.0;
@@ -7362,10 +7363,7 @@ void NavierStokes::output_triangles() {
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
 
-// cannot do openmp here until each thread has its own file number.
-// So, we remove the ifdef OPENMP clause ("omp parallel"), but we
-// still need tiling==true if configured as such so that OPENMP
-// will be possible in the future.
+// no open mp and no tiling.
  for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
