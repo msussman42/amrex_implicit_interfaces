@@ -1318,6 +1318,9 @@ void NavierStokes::init_splitting_force_SDC() {
  
  bool use_tiling=ns_tiling;
 
+ if (use_tiling) {
+  amrex::Error("clearParticles() will not work if tiling");
+ }
  int finest_level=parent->finestLevel();
 
  if (divu_outer_sweeps==0) {
