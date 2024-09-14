@@ -482,7 +482,15 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     // level=0
   My_ParticleContainer& localPC=newDataPC(slab_step+1);
 
-  localPC.clearParticles();
+  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
+
+  if (num_particles_look_ahead>0) {
+   localPC.clearParticles();
+  } else if (num_particles_look_ahead==0) {
+   //do nothing
+  } else
+   amrex::Error("num_particles_look_ahead invalid");
+
   localPC.Redistribute();
   localPC.copyParticles(prevPC,local_copy);
 
@@ -2050,8 +2058,15 @@ void NavierStokes::phase_change_code_segment(
    ns_level.move_particles(splitting_dir,localPC,local_caller_string);
   }
 
-  localPC.Redistribute(lev_min,lev_max,
+  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
+
+  if (num_particles_look_ahead>0) {
+   localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute,remove_negative);
+  } else if (num_particles_look_ahead==0) {
+   //do nothing
+  } else
+   amrex::Error("num_particles_look_ahead invalid");
 
  } else
   amrex::Error("slab_step invalid");
