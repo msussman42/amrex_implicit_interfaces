@@ -14401,7 +14401,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                       (local_bctype(side).eq.SEM_INTERIOR)) then
               ! do nothing
              else
-              print *,"local_bctype invalid"
+              print *,"local_bctype invalid PROB.F90: 14404"
+              print *,"side=",side
+              print *,"local_bctype(side)=",local_bctype(side)
               stop
              endif
             else if (nbr_outside_domain_flag(side).eq.0) then

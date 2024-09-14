@@ -859,10 +859,6 @@ stop
         F_new(DIMV(F_new),num_materials*ngeom_recon)
       real(amrex_real), pointer :: F_new_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), allocatable, target :: F_tess(D_DECL(:,:,:),:)
-      real(amrex_real), pointer :: F_tess_ptr(D_DECL(:,:,:),:)
-      integer DIMDEC(F_tess)
-
       real(amrex_real), INTENT(in), target :: &
          LS_new(DIMV(LS_new),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_new_ptr(D_DECL(:,:,:),:)
@@ -926,8 +922,6 @@ stop
       real(amrex_real) curv_LS
       real(amrex_real) curv_VOF
       real(amrex_real) curv_choice
-      real(amrex_real) mofdata(num_materials*ngeom_recon)
-      integer tessellate
       integer nmax
       integer LSstenlo(3),LSstenhi(3)
       integer HTstenlo(3),HTstenhi(3)
@@ -1053,58 +1047,6 @@ stop
        print *,"dimension bust"
        stop
       endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_distance)
-
-       ! input: growlo,growhi
-       ! output: DIMS(F_tess)
-      call box_to_dim( &
-        DIMS(F_tess), &
-        growlo,growhi)
-      allocate(F_tess(DIMV(F_tess),num_materials*ngeom_recon))
-      
-      F_tess_ptr=>F_tess
-      call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1)
-
-      do k=growlo(3),growhi(3)
-      do j=growlo(2),growhi(2)
-      do i=growlo(1),growhi(1)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       do im=1,num_materials*ngeom_recon
-        mofdata(im)=F_new(D_DECL(i,j,k),im)
-       enddo
-
-       ! before (mofdata): fluids tessellate, solids are embedded.
-       ! after  (mofdata): fluids and solids tessellate
-       ! if tessellate==3:
-       !  if solid material(s) dominate the cell, then F_solid_raster=1
-       !  and F_fluid=0.
-       !  if fluid material(s) dominate the cell, then F_solid=0,
-       !  sum F_fluid=1
-       tessellate=3
-
-        !EPS2=EPS_FULL_WEAK
-       call multi_get_volume_tessellate( &
-         tid_current, &
-         tessellate, & ! =1 or 3
-         bfact, &
-         dx, &
-         xsten,nhalf, &
-         mofdata, &
-         geom_xtetlist(1,1,1,tid_current+1), &
-         nmax, &
-         nmax, &
-         SDIM)
-
-       do im=1,num_materials*ngeom_recon
-        F_tess(D_DECL(i,j,k),im)=mofdata(im)
-       enddo
-
-      enddo
-      enddo
-      enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
@@ -1436,7 +1378,8 @@ stop
            if (dir.eq.1) then
             if (levelrz.eq.COORDSYS_CARTESIAN) then
              ! do nothing
-            else if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+            else if ((levelrz.eq.COORDSYS_RZ).or. &
+                     (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
              if (xsten_grow(-2*ngrow_distance,1).lt.zero) then
               normal_test(dir)=zero
@@ -1729,8 +1672,6 @@ stop
       enddo
       enddo
       enddo  !i,j,k 
-
-      deallocate(F_tess)
 
       return
       end subroutine fort_node_to_cell

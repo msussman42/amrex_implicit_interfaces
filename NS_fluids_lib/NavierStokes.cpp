@@ -3003,7 +3003,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("ns_tiling",ns_tiling);
     if (ns_tiling==true) {
-     amrex::Error("tiling does not work with particles (clearParticles())"); 
+     // do nothing
     } else if (ns_tiling==false) {
      // do nothing
     } else
@@ -23116,7 +23116,16 @@ NavierStokes::init_particle_containerALL(int append_flag,
  }
 
  NBR_Particle_Container->clearNeighbors();
- delete NBR_Particle_Container;
+
+ Long num_particles_look_ahead=
+   NBR_Particle_Container->TotalNumberOfParticles();
+
+ if (num_particles_look_ahead>0) {
+  delete NBR_Particle_Container;
+ } else if (num_particles_look_ahead==0) {
+  //do nothing
+ } else
+  amrex::Error("num_particles_look_ahead invalid");
 
  if ((append_flag==OP_PARTICLE_INIT)||
      (append_flag==OP_PARTICLE_ADD)) {
@@ -23142,6 +23151,9 @@ NavierStokes::init_particle_container(int append_flag,
  local_caller_string=caller_string+local_caller_string;
 
  bool use_tiling=ns_tiling;
+
+ use_tiling=false;
+
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
 
@@ -26147,10 +26159,6 @@ NavierStokes::makeStateCurv(int project_option,
  }
 
  bool use_tiling=ns_tiling;
-
- if (use_tiling==true) {
-  amrex::Error("clearParticles() will not work if use_tiling==true");
- }
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))

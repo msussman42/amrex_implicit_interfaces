@@ -10463,7 +10463,9 @@ END SUBROUTINE SIMP
             pres_cell=presden(D_DECL(ii,jj,kk),1)
             den_cell=presden(D_DECL(ii,jj,kk),2)
            else
-            print *,"local_bctype invalid"
+            print *,"local_bctype invalid NAVIERSTOKES_3D.F90:10466"
+            print *,"local_bctype=",local_bctype
+            print *,"dir,side= ",dir,side
             stop
            endif
 
@@ -10481,10 +10483,18 @@ END SUBROUTINE SIMP
 
         else if (exteriorbc.eq.0) then
 
-         if (local_bctype.eq.INT_DIR) then
+         if ((side.eq.1).and. &
+             (fablo(dir).lt.tilelo(dir))) then
+          !do nothing
+         else if ((side.eq.2).and. &
+                  (fabhi(dir).gt.tilehi(dir))) then
+          !do nothing
+         else if (local_bctype.eq.INT_DIR) then
           ! do nothing
          else
-          print *,"local_bctype invalid"
+          print *,"local_bctype invalid NAVIERSTOKES_3D.F90:10487"
+          print *,"local_bctype=",local_bctype
+          print *,"dir,side= ",dir,side
           stop
          endif
 
