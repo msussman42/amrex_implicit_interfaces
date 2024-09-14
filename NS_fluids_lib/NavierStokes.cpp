@@ -23065,9 +23065,11 @@ NavierStokes::init_particle_containerALL(int append_flag,
  BLProfiler bprof(local_caller_string);
 #endif
 
- int num_neighbors=1;
+ int nGrow_Redistribute=0;
+
  if (append_flag==OP_PARTICLE_INIT) {
-  num_neighbors=0;
+
+  nGrow_Redistribute=0;
 
   if (slab_step==ns_time_order-1) {
    // do nothing
@@ -23075,9 +23077,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
    amrex::Error("expecting slab_step==ns_time_order-1");
 
  } else if (append_flag==OP_PARTICLE_ADD) {
-  num_neighbors=0;
+
+  nGrow_Redistribute=0;
+
  } else if (append_flag==OP_PARTICLE_SLOPES) {
-  num_neighbors=1;
+
+  nGrow_Redistribute=1;
+
  } else
   amrex::Error("append_flag invalid");
 
@@ -23090,13 +23096,12 @@ NavierStokes::init_particle_containerALL(int append_flag,
      slab_step+1 << " is equal to " << num_particles << '\n';
  }
 
-  //m_num_neighbor_cells=nneighbor=ncells=num_neighbors
+  //m_num_neighbor_cells=nneighbor=ncells=nGrow_Redistribute
  NBR_Particle_Container=
-  new My_NBR_ParticleContainer(parent->GetParGDB(),num_neighbors);
+  new My_NBR_ParticleContainer(parent->GetParGDB(),nGrow_Redistribute);
 
  int lev_min=0;
  int lev_max=finest_level;
- int nGrow_Redistribute=0;
  bool local_copy=true; //do not redistribute inside of copyParticles
  int local_redistribute=0;
  bool remove_negative=true;
@@ -23108,7 +23113,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
  NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute);
 
- NBR_Particle_Container->fillNeighbors();
+ if (nGrow_Redistribute==0) {
+  //do nothing
+ } else if (nGrow_Redistribute==1) {
+  NBR_Particle_Container->fillNeighbors();
+ } else
+  amrex::Error("nGrow_Redistribute invalid");
+
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -23152,7 +23163,14 @@ NavierStokes::init_particle_container(int append_flag,
 
  bool use_tiling=ns_tiling;
 
- use_tiling=false;
+ if (append_flag==OP_PARTICLE_INIT) {
+  use_tiling=false;
+ } else if (append_flag==OP_PARTICLE_ADD) {
+  use_tiling=false;
+ } else if (append_flag==OP_PARTICLE_SLOPES) {
+  use_tiling=false;
+ } else
+  amrex::Error("append_flag invalid");
 
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
@@ -23264,7 +23282,17 @@ NavierStokes::init_particle_container(int append_flag,
   const int gridno = mfi.index();
 
   const Box& tilegrid = mfi.tilebox();
-  Box tilegrid_grow(grow(tilegrid,1));
+
+  int tile_ngrow=0;
+  if ((append_flag==OP_PARTICLE_INIT)||
+      (append_flag==OP_PARTICLE_ADD)) {
+   //do nothing
+  } else if (append_flag==OP_PARTICLE_SLOPES) {
+   tile_ngrow=1;
+  } else
+   amrex::Error("append_flag invalid");
+
+  Box tilegrid_grow(grow(tilegrid,tile_ngrow));
 
   const Box& fabgrid = grids[gridno];
   const int* tilelo=tilegrid.loVect();

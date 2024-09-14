@@ -6787,7 +6787,9 @@ void NavierStokes::move_particles(
 
  bool use_tiling=ns_tiling;
 
- use_tiling=false;
+ if (1==1) {
+  use_tiling=false;
+ }
 
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
