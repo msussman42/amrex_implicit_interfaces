@@ -23132,11 +23132,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
    NBR_Particle_Container->TotalNumberOfParticles();
 
  if (num_particles_look_ahead>0) {
-  delete NBR_Particle_Container;
+  //do nothing
  } else if (num_particles_look_ahead==0) {
   //do nothing
  } else
   amrex::Error("num_particles_look_ahead invalid");
+
+ delete NBR_Particle_Container;
 
  if ((append_flag==OP_PARTICLE_INIT)||
      (append_flag==OP_PARTICLE_ADD)) {
