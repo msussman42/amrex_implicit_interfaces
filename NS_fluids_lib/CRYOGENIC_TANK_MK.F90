@@ -603,6 +603,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
 
+   print *,"axis_dir=0, tank geometry prescribed internally (not from file)"
+
    number_of_source_regions=1 ! side heater
 
    TANK_MK_HEATER_WALL_MODEL = 0.1683d0
@@ -762,7 +764,12 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  !    self-pressurization: Crossing fluid types, scales, and gravity levels 
  !  Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
  !
- ! xphys(2) is the vertical direction.
+ ! xphys(2) is the vertical direction. 
+ ! prior to this call (3D):
+ ! x3D(1)=x(1)
+ ! x3D(2)=x(3)
+ ! x3D(3)=x(2)
+
 
 subroutine rigid_displacement(xfoot,t,xphys,velphys)
  use probcommon_module
@@ -784,6 +791,13 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  integer :: dir
  real(amrex_real)    :: sign_term
  real(amrex_real)    :: Q(2,2)
+
+ if (t.ge.0.0d0) then
+  !do nothing
+ else
+  print *,"t invalid: ",t
+  stop
+ endif
  
  do dir=1,3                  ! bug fixed        
   xfoot(dir)=xphys(dir) 
@@ -895,12 +909,12 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    print *,"expecting 3d"
    stop
   endif
-  if (rot_dir.eq.3) then
+  if (rot_dir.eq.2) then
    rotx=1
-   roty=2
+   roty=3
    rotz=rot_dir
   else
-   print *,"expecting rot_dir==3"
+   print *,"expecting rot_dir==2"
    stop
   endif
 
@@ -944,7 +958,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   x3D(1)=x(dir_x)
   x3D(2)=x(dir_z)
  else
-  print *,"expecting dir_x=1 and dir_z=sdim"
+  print *,"expecting dir_x=1 and dir_z=sdim: ",dir_x,dir_z
   stop
  endif
 
@@ -955,7 +969,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   if (dir_y.eq.2) then
    x3D(3)=x(dir_y)
   else
-   print *,"expecting dir_y=2"
+   print *,"expecting dir_y=2: ",dir_y
    stop
   endif
 
@@ -1004,6 +1018,10 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
    !x(SDIM) is the vertical direction of gravity.
    !x3D(2) is the vertical direction of geometry.
+   !in 3D:
+   ! x3D(1)=x(1)
+   ! x3D(2)=x(3)
+   ! x3D(3)=x(2)
   call convert_to_x3D(x,x3D)
 
   call rigid_displacement(xfoot3D,t,x3D,xvel)
@@ -1013,6 +1031,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    ! material 3= tank geometry (e.g. acrylic)
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
+   !TANK_MK_INTERFACE_RADIUS = radblob2
    if (TANK_MK_INTERFACE_RADIUS.eq.0.0d0) then
     LS(1)=TANK_MK_INTERFACE_LOCATION-xfoot3D(2)
    else if (TANK_MK_INTERFACE_RADIUS.gt.0.0d0) then
@@ -1021,6 +1040,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
                 (xfoot3D(2)-TANK_MK_BUBBLE_Y)**2)&
                -TANK_MK_INTERFACE_RADIUS
     else if (SDIM.eq.3) then 
+     !TANK_MK_BUBBLE_X         = xblob2
      LS(1)=sqrt((xfoot3D(1)-TANK_MK_BUBBLE_X)**2+&
                 (xfoot3D(3)-TANK_MK_BUBBLE_Y)**2+&
                 (xfoot3D(2)-TANK_MK_BUBBLE_Z)**2)&
@@ -1030,10 +1050,15 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
    else
-    print *,"radblob2 invalid"
+    print *,"radblob2 invalid: ",radblob2
     stop
    endif 
    LS(2)=-LS(1)
+
+   if (1.eq.0) then
+    print *,"x,t,LS(1),LS(2) ",x,t,LS(1),LS(2)
+   endif
+
    ! Solid
 
    if ((axis_dir.eq.0).or. &
@@ -1048,6 +1073,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
 
+  !R=abs(sqrt(P(1)**2+P(3)**2))
+  !Z=abs(P(2))
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
     if (axis_dir.eq.0) then
@@ -1230,6 +1257,10 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    stop
   endif
 
+  ! swap y and z in 3D.
+  ! no change in 2D.
+  ! x(SDIM) is the vertical direction for gravity
+  ! x3D(2) is the vertical direction for the geometry files.
   call convert_to_x3D(x,x3D)
 
   call rigid_displacement(xfoot3D,t,x3D,xvel)
@@ -1269,7 +1300,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     enddo
 
     if ((LS(3).ge.zero).or. &
-        (velsolid_flag.eq.1)) then
+        (velsolid_flag.eq.1).or. &
+        (t.ge.zero)) then
      do dir=1,SDIM
       VEL(dir)=0.0d0
      enddo
@@ -1292,6 +1324,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      enddo
     else
      print *,"LS(3) or velsolid_flag bust"
+     print *,"LS(3)=",LS(3)
+     print *,"velsolid_flag=",velsolid_flag
+     print *,"t=",t
      stop
     endif
 
@@ -1371,8 +1406,11 @@ real(amrex_real) function SOLID_TOP_HALF_DIST(P)
 
   ! R=Z=0 is the dead center of the tank; computation domain goes from
   ! -ZTOTAL/2, ... ,ZTOTAL/2
+  ! TANK_MK_END_RADIUS       = xblob4
  if (TANK_MK_END_RADIUS.eq.0.0d0) then ! rectangular tank
 
+  !TANK_MK_RADIUS             = xblob
+  !TANK_MK_HEIGHT             = yblob
   if (Z.le.TANK_MK_HEIGHT/2.0) then
    if (R.ge.TANK_MK_RADIUS) then
     SOLID_TOP_HALF_DIST=R-TANK_MK_RADIUS
@@ -1395,12 +1433,15 @@ real(amrex_real) function SOLID_TOP_HALF_DIST(P)
    endif
   endif
     
+  ! TANK_MK_END_RADIUS       = xblob4
  else if (TANK_MK_END_RADIUS.gt.0.0d0) then
  
   ! Equation of the line passing through
   ! (0,TANK_MK_END_CENTER)
   !          and
   ! (TANK_MK_RADIUS,TANK_MK_HEIGHT/2)
+  ! TANK_MK_END_CENTER       = yblob4
+  ! TANK_MK_RADIUS             = xblob
   FRZ=R*(TANK_MK_END_CENTER-TANK_MK_HEIGHT/2.0d0)/TANK_MK_RADIUS &
      + Z - TANK_MK_END_CENTER
 
@@ -1418,6 +1459,8 @@ real(amrex_real) function SOLID_TOP_HALF_DIST(P)
      SOLID_TOP_HALF_DIST = R - TANK_MK_RADIUS
     elseif (Z.gt.TANK_MK_HEIGHT/2) then
      ! Above the cap baseline
+     !TANK_MK_RADIUS             = xblob
+     !TANK_MK_HEIGHT             = yblob
      SOLID_TOP_HALF_DIST = &
       sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2.0d0)**2)
     else
@@ -1457,7 +1500,7 @@ real(amrex_real) function SOLID_TOP_HALF_DIST(P)
    stop
   end if ! FRZ
  else 
-  print *,"TANK_MK_END_RADIUS invalid"
+  print *,"TANK_MK_END_RADIUS invalid: ",TANK_MK_END_RADIUS
   stop
  endif
 
