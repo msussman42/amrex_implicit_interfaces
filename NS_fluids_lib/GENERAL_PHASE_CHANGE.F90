@@ -1798,7 +1798,7 @@ real(amrex_real) :: theta
   else if (axis_dir.ge.0) then
    !do nothing
   else
-   print *"axis_dir invalid:",axis_dir
+   print *,"axis_dir invalid:",axis_dir
    stop
   endif
  else
