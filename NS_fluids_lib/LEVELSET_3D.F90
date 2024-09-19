@@ -1023,6 +1023,11 @@ stop
        call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
         user_tension,cos_angle,sin_angle)
 
+       if (1.eq.0) then
+        print *,"TIME, cos_angle, sin_angle: ", &
+            time,cos_angle,sin_angle
+       endif
+
        if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
         angle_im=asin(sin_angle)
         ! sin_angle=sin(a)  cos_angle=cos(a)

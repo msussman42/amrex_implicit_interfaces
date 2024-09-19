@@ -19041,17 +19041,44 @@ end subroutine print_visual_descriptor
         print *,"fort_tension_min invalid"
         stop
        endif
+
+        ! im<im_opp
+       call get_inverse_iten(im,im_opp,iten)
+
        if (fort_tension_slope(iten).eq.zero) then
-        ! do nothing
+
+        if ((temperature(im).gt.zero).and. &
+            (temperature(im_opp).gt.zero)) then
+         ! do nothing
+        else
+         print *,"temperature must be positive"
+         print *,"im,im_opp ",im,im_opp
+         print *,"temperature(im) ",temperature(im)
+         print *,"temperature(im_opp) ",temperature(im_opp)
+         stop
+        endif
+        avgtemp=half*(temperature(im)+temperature(im_opp))
+
+        if (is_in_probtype_list().eq.1) then
+         call SUB_VARIABLE_SURFACE_TENSION(xpos,time,iten, &
+           avgtemp,new_tension(iten))
+        endif
+
+        if (new_tension(iten).ge.zero) then
+         ! do nothing
+        else
+         print *,"new_tension invalid: ",iten,new_tension(iten)
+         stop
+        endif
+
        else if (fort_tension_slope(iten).lt.zero) then
+
         if (fort_tension_T0(iten).gt.zero) then
          ! do nothing
         else
          print *,"T0 invalid"
          stop
         endif
-         ! im<im_opp
-        call get_inverse_iten(im,im_opp,iten)
         if ((temperature(im).gt.zero).and. &
             (temperature(im_opp).gt.zero)) then
          ! do nothing
