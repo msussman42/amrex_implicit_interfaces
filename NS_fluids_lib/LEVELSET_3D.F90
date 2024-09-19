@@ -776,6 +776,7 @@ stop
        temperature_cen(im_sort)=mgoni_temp(0,0,0,im_sort)
       enddo
 
+       ! get_user_tension is declared in GLOBALUTIL.F90
       call get_user_tension(xcenter,time, &
         fort_tension,user_tension,temperature_cen)
 
@@ -791,14 +792,14 @@ stop
        if (fort_tension(dir2).ge.zero) then
         ! do nothing
        else
-        print *,"fort_tension(dir2) invalid"
+        print *,"fort_tension(dir2) invalid: ",dir2,fort_tension(dir2)
         stop
        endif
 
        if (user_tension(dir2).ge.zero) then
         ! do nothing
        else
-        print *,"user_tension(dir2) invalid"
+        print *,"user_tension(dir2) invalid: ",dir2,user_tension(dir2)
         stop
        endif
 
@@ -3572,7 +3573,7 @@ stop
        if (fort_tension(i).ge.zero) then
         ! do nothing
        else
-        print *,"fort_tension(i) invalid"
+        print *,"fort_tension(i) invalid: ",i,fort_tension(i)
         stop
        endif
       enddo ! i=1,num_interfaces
