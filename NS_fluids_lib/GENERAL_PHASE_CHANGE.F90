@@ -1731,4 +1731,82 @@ endif
 
 end subroutine GENERAL_PHASE_CHANGE_SUMINT
 
+
+subroutine GENERAL_PHASE_CHANGE_VARIABLE_SURFACE_TENSION( &
+  xpos, &
+  time, &
+  iten, &
+  temperature, &
+  tension)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: time,temperature
+real(amrex_real), INTENT(in) :: xpos(SDIM)
+real(amrex_real), INTENT(inout) :: tension
+real(amrex_real) :: theta
+
+ if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+  ! do nothing
+ else
+  print *,"iten invalid: ",iten
+  stop
+ endif
+ if (temperature.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"temperature invalid: ",temperature
+  stop
+ endif
+ if (time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"time invalid: ",time
+  stop
+ endif
+ if (tension.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"tension invalid: ",tension
+  stop
+ endif
+
+ if (probtype.eq.55) then
+  if (axis_dir.eq.5) then !freezing
+   if (radblob9.eq.zero) then
+    !do nothing
+   else if (radblob9.gt.zero) then
+    if (time.eq.zero) then
+     tension=fort_tension_init(iten)
+    else if (time.ge.radblob9) then
+     tension=fort_tension(iten)
+    else if ((time.gt.zero).and. &
+             (time.le.radblob9)) then
+     theta=time/radblob9
+     tension=(one-theta)*fort_tension_init(iten)+ &
+             theta*fort_tension(iten)
+    else
+     print *,"time invalid: ",time
+     stop
+    endif
+   else
+    print *,"radblob9 invalid: ",radblob9
+    stop
+   endif
+  else if (axis_dir.ge.0) then
+   !do nothing
+  else
+   print *"axis_dir invalid:",axis_dir
+   stop
+  endif
+ else
+  print *,"unexpected probtype: ",probtype
+  stop
+ endif
+
+end subroutine GENERAL_PHASE_CHANGE_VARIABLE_SURFACE_TENSION
+
+
 end module GENERAL_PHASE_CHANGE_module

@@ -19079,7 +19079,7 @@ end subroutine print_visual_descriptor
         if (new_tension(iten).ge.zero) then
          ! do nothing
         else
-         print *,"new_tension invalid"
+         print *,"new_tension invalid: ",iten,new_tension(iten)
          stop
         endif
        else
