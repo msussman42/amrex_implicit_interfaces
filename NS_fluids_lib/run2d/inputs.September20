@@ -117,7 +117,8 @@ amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
 #amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0572500
+#amr.restart         = chk0185000
+
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -150,8 +151,8 @@ ns.gravity        = -980.0e-1   # cgs
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
-ns.tension=72.8e-1 72.8e-1 72.8e-1 72.8e-1 72.8e-1 72.8e-1   
-#ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
+ns.tension=72.8e-1 72.8e-1 72.8e-1 109.2e-1 72.8e-1 72.8e-1
+  
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
 #ns.stiffCP = 4.1855e+7 1.0e+7 2.0e+7 2.0e+7  # dimensional
@@ -289,19 +290,16 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
+# ice is a very viscous fluid 
+#increase viscosity by a factor of 100.
+#ns.viscconst=0.0179 0.00017 1000.0 1000.0 # dimensional
 ns.explicit_viscosity_dt=1
-#Artificial viscosity should be enough so that the explicity_viscosity_dt
-#constraint makes a difference.
-#dx=1/32=0.03125 dx^2=0.00098 dt=4.3e-5
-#4* sdim * mu/rho * dt / dx^2 = 1
-#mu/rho=dx^2/(12 dt)=1.9
-#ns.viscconst=0.018 0.00017 0.018 0.018 # dimensional
-ns.viscconst=1.9 0.019 1.9 1.9 # dimensional
+ns.viscconst=1.8 0.017 1.8 1.8 # dimensional
 #ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0
-ns.denconst=1.0 0.001 0.934 8.96
+ns.denconst=1.0 0.001292 0.917 8.96
 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 #FSI_ICE_PROBF90=3
 ns.FSI_flag=0 0 3 1 
@@ -338,7 +336,7 @@ ns.radblob2=0.0 # zero degrees incline (radians)
 # ice + water thickness = radblob
 # water thickness = radblob3  usually radblob3 << radlob (initial water
 # is "seed" for starting the melting process)
-ns.radblob3=0.1 #water thickness
+ns.radblob3=0.0625 #water thickness
 ns.radblob4=0.3 #radius of ice block
 #RZ
 #MUST HAVE: yblob-radblob/2=zblob2
