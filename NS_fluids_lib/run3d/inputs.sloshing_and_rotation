@@ -46,12 +46,17 @@ ns.num_species_var  = 0
 # 0  => incompressible
 # 24 => compressible 
 # 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
-ns.material_type = 0 0 999 
+# for air: material_type=5 EOS_air
+# TANK_MK_MATERIAL_TYPE=24
+ns.material_type = 0 0 999  #INCOMPRESSIBLE
+ns.material_conservation_form=0 0 0
+#ns.material_type = 0 24 999  #COMPRESSIBLE GAS
 ns.material_type_evap = 0 24 999 # needed for Kassemi model
 ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
 ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
-ns.num_divu_outer_sweeps=1
+#ns.num_divu_outer_sweeps=2  #COMPRESSIBLE GAS
+ns.num_divu_outer_sweeps=1   #INCOMPRESSIBLE
 
 # Solid definition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)

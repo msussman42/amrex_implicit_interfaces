@@ -22263,7 +22263,7 @@ end subroutine print_visual_descriptor
       return
       end subroutine tait_hydrostatic_pressure_density
 
-
+       !material_type=14
       subroutine EOS_air_rho2(rho,internal_energy,pressure)
       use probcommon_module
       IMPLICIT NONE
@@ -22570,7 +22570,7 @@ end subroutine print_visual_descriptor
 !
 ! for SF6, R=56.92 m^2/(s^2 K)=0.05692D+7 cm^2/(s^2 K)
 
-
+        !material_type=5
       subroutine EOS_air(rho,internal_energy,pressure)
       use probcommon_module
       IMPLICIT NONE
@@ -23694,36 +23694,50 @@ end subroutine print_visual_descriptor
        stop
       endif
       cp=get_user_stiffCP(im)
-      if (cp.le.zero) then
-       print *,"cp invalid"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp invalid: ",cp
        stop
       endif
       gamma_constant=fort_stiffGAMMA(im)
-      if (gamma_constant.le.zero) then
-       print *,"gamma_constant invalid"
+      if (gamma_constant.gt.zero) then
+       !do nothing
+      else
+       print *,"gamma_constant invalid: ",gamma_constant
        stop
       endif
       cv=cp/gamma_constant
 
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy cannot be <=0: ",internal_energy
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
       PP=fort_stiffPINF(im)
-      if (PP.lt.zero) then
-       print *,"fort_stiff PINF invalid"
+      if (PP.ge.zero) then
+       !do nothing
+      else
+       print *,"fort_stiff PINF invalid: ",PP
        stop
       endif
       pressure=(gamma_constant-one)*rho*internal_energy- &
@@ -23733,7 +23747,7 @@ end subroutine print_visual_descriptor
       endif
 
       return
-      end subroutine
+      end subroutine EOS_stiffened
 
       subroutine SOUNDSQR_stiffened(rho,internal_energy,soundsqr,im)
       use probcommon_module
@@ -23749,36 +23763,50 @@ end subroutine print_visual_descriptor
        stop
       endif
       cp=get_user_stiffCP(im)
-      if (cp.le.zero) then
-       print *,"cp invalid"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp invalid: ",cp
        stop
       endif
       gamma_constant=fort_stiffGAMMA(im)
-      if (gamma_constant.le.zero) then
-       print *,"gamma_constant invalid"
+      if (gamma_constant.gt.zero) then
+       !do nothing
+      else
+       print *,"gamma_constant invalid: ",gamma_constant
        stop
       endif
       cv=cp/gamma_constant
 
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy cannot be <=0: ",internal_energy
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
       PP=fort_stiffPINF(im)
-      if (PP.lt.zero) then
-       print *,"fort_stiff PINF invalid"
+      if (PP.ge.zero) then
+       !do nothing
+      else
+       print *,"fort_stiff PINF invalid: ",PP
        stop
       endif
 
@@ -23791,7 +23819,7 @@ end subroutine print_visual_descriptor
       soundsqr=gamma_constant*(pressure+PP)/rho
 
       return
-      end subroutine
+      end subroutine SOUNDSQR_stiffened
 
 
       subroutine INTERNAL_stiffened(rho,temperature,internal_energy,im)
