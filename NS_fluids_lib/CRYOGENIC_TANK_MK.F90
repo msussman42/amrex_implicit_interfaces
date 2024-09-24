@@ -688,7 +688,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   ! Here we pick C_{v,spc} from input file.
   ! C_{p,spc} = C_{v,spc} + R_spc
 
-  TANK_MK_R_UNIV = 8.31446261815324D0
+  TANK_MK_R_UNIV = 8.31446261815324D0 !J/(mol Kelvin)
+   !molar_mass units: kg/mol
 
   TANK_MK_GAS_CV = fort_stiffCV(2) ![J/(kg K)]
 !  TANK_MK_GAS_CP = fort_stiffCP(2) ![J∕(kg·K)]
@@ -1649,7 +1650,7 @@ subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
     if (rho.gt.0.0d0) then
      soundsqr=TANK_MK_GAS_GAMMA*pressure/rho
     else
-     print *,"rho invalid"
+     print *,"rho invalid: ",rho
      stop
     endif
    else
