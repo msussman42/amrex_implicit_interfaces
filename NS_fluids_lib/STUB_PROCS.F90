@@ -303,6 +303,56 @@ return
 end subroutine STUB_clamped_LS
 
 
+subroutine STUB_clamped_LS_jetting(x,t,LS,vel,temperature,prescribed_flag,dx)
+use probcommon_module
+use global_utility_module
+use global_distance_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real), INTENT(out) :: vel(SDIM)
+real(amrex_real), INTENT(out) :: temperature
+integer, INTENT(out) :: prescribed_flag
+integer dir
+integer, parameter :: for_clamped=1
+
+ if (probtype.eq.42) then
+
+  if (num_materials.eq.3) then
+   !do nothing
+  else
+   print *,"expecting num_materials.eq.3: ",num_materials
+   stop
+  endif
+
+  LS=CLAMPED_NO_WHERE_LS
+  do dir=1,SDIM
+   vel(dir)=zero
+  enddo
+  temperature=room_temperature
+  prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
+
+  if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
+   LS=-99999.0d0
+   temperature=293.0d0
+
+    !LS<0 in the clamped regions
+   call jetting_plate_dist(x(1),x(2),x(SDIM),LS,for_clamped)
+   LS=-LS
+   if (LS.ge.zero) then
+    LS=99999.0d0
+   endif
+  endif
+ else
+  print *,"expecting probtype.eq.42 ",probtype
+  stop
+ endif
+
+return
+end subroutine STUB_clamped_LS_jetting
 
 ! initial velocity is zero
 subroutine STUB_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)

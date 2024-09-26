@@ -756,6 +756,10 @@ stop
       SUB_verification_flag=>STUB_verification_flag
       SUB_clamped_LS_no_scale=>STUB_clamped_LS
 
+      if (probtype.eq.42) then
+       SUB_clamped_LS_no_scale=>STUB_clamped_LS_jetting
+      endif
+
       SUB_wallfunc=>STUB_wallfunc
 
       SUB_MAPPING_WEIGHT_COEFF=>STUB_MAPPING_WEIGHT_COEFF

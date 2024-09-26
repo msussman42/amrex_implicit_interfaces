@@ -355,7 +355,7 @@ end subroutine nozzle2d
       endif
 
       if (is_rigid(im).ne.1) then
-       print *,"is_rigid invalid GLOBALDIST.F90"
+       print *,"is_rigid invalid GLOBALDIST.F90 (materialdistsolid)"
        stop
       endif
 
@@ -858,12 +858,14 @@ end subroutine nozzle2d
        !jetting_plate_dist is called from soliddist.
        !soliddist is called from materialdistsolid.
        !dist<0 in the plate.
-      subroutine jetting_plate_dist(x,y,z,dist)
+      subroutine jetting_plate_dist(x,y,z,dist,for_clamped)
       use global_utility_module
       IMPLICIT NONE
+      integer, INTENT(in) :: for_clamped
       real(amrex_real), INTENT(in) :: x,y,z
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real) :: aspect,offset,distplate,hugedist
+      real(amrex_real) :: dist_left,dist_right
 
       hugedist=99999.0
 
@@ -878,15 +880,27 @@ end subroutine nozzle2d
        if (radblob2.eq.zero) then
         dist=hugedist
        else if (radblob2.gt.zero) then
+
           ! negative in the square
-        call squaredist(x,y,-aspect,aspect,yblob+distplate, &
-         yblob+distplate+offset,dist)
+        if (for_clamped.eq.0) then
+         call squaredist(x,y,-aspect,aspect,yblob+distplate, &
+          yblob+distplate+offset,dist)
+        else if (for_clamped.eq.1) then
+         call squaredist(x,y,-aspect,-aspect+offset,yblob+distplate, &
+          yblob+distplate+offset,dist_left)
+         call squaredist(x,y,aspect-offset,aspect,yblob+distplate, &
+          yblob+distplate+offset,dist_right)
+         dist=min(dist_left,dist_right)
+        else
+         print *,"for_clamped invalid: ",for_clamped
+         stop
+        endif
        else
         print *,"radblob2 invalid for bubble jetting problem"
         stop
        endif
       else
-       print *,"probtype invalid in jetting_plate_dist"
+       print *,"probtype invalid in jetting_plate_dist: ",probtype
        stop
       endif
 
@@ -1273,6 +1287,7 @@ end subroutine nozzle2d
       real(amrex_real) factor_zblob
       real(amrex_real) diamblob
       integer i,j,iSphere
+      integer, parameter :: for_clamped=0
 
       if (num_materials.lt.1) then
        print *,"num_materials invalid in soliddist"
@@ -1280,7 +1295,12 @@ end subroutine nozzle2d
       endif
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid11"
+       print *,"im invalid11 (soliddist) ",im
+       stop
+      endif
+
+      if (is_rigid(im).ne.1) then
+       print *,"is_rigid invalid GLOBALDIST.F90 (soliddist)"
        stop
       endif
 
@@ -1373,7 +1393,7 @@ end subroutine nozzle2d
 
        !dist<0 in the solid
        !soliddist is called by: subroutine materialdistsolid 
-       call jetting_plate_dist(x,y,z,dist)
+       call jetting_plate_dist(x,y,z,dist,for_clamped)
 
        ! soliddist
       else if (probtype.eq.bubbleInPackedColumn) then

@@ -3185,25 +3185,22 @@ NavierStokes::sum_integrated_quantities (
   std::cout << "TIME= " << upper_slab_time << 
    " RIGHTPRES=  " << rightpres << '\n';
 
-   // bubble jetting problem
-  if (probtype==42) {
-   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
-   Real radbubble=std::exp(std::log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
-   std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
-    radbubble << '\n';
-  }
+  Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
+  Real radbubble=std::exp(std::log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
+  std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
+   bubble_volume << " JETTING_RZ_RAD " << radbubble << '\n';
 
    // inputs.circular_freeze
    // pi r^2/4=F
    // r=std::sqrt(4F/pi)
   if ((probtype==801)&&(axis_dir==3)) {
-   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
-   Real radbubble=0.0;
+   bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
+   radbubble=0.0;
    if (NS_geometry_coord==COORDSYS_CARTESIAN) {
     radbubble=std::sqrt(4.0*bubble_volume/NS_PI);
 
-   // 4/3 pi r^3 = 2V
-   // r=(3V/(2 pi))^{1/3}
+    // 4/3 pi r^3 = 2V
+    // r=(3V/(2 pi))^{1/3}
    } else if (NS_geometry_coord==COORDSYS_RZ) {
     radbubble=std::exp(std::log(3.0*bubble_volume/(2.0*NS_PI))/3.0);
    } else
@@ -3218,8 +3215,8 @@ NavierStokes::sum_integrated_quantities (
       ((axis_dir==6)||    // incompressible boiling
        (axis_dir==7))) {  // compressible boiling
 
-   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
-   Real radbubble=0.0;
+   bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
+   radbubble=0.0;
 
    if (AMREX_SPACEDIM==2) {
     // 4/3 pi r^3 = V
