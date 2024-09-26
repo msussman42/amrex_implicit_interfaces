@@ -344,6 +344,8 @@ integer, parameter :: for_clamped=1
    LS=-LS
    if (LS.ge.zero) then
     LS=99999.0d0
+   else
+    LS=-99999.0d0
    endif
   endif
  else
