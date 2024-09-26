@@ -7824,7 +7824,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) maxdx
       real(amrex_real) :: box_xlo,box_xhi
       real(amrex_real) :: box_ylo,box_yhi
-
+      integer, parameter :: for_clamped=0
 
       im_solid_materialdist=im_solid_primary()
 
@@ -8054,6 +8054,28 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call RiverHeight(x,y,dist(1),axis_dir)
        dist(1)=dist(1)-z
        dist(2)=-dist(1)
+
+      else if (probtype.eq.42) then  !bubble jetting
+
+       call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
+       dist(2)=-dist(1)
+       if (num_materials.eq.3) then
+        if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
+            (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
+            (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+         !do nothing
+        else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
+         call jetting_plate_dist(x,y,z,dist(3),for_clamped)
+         dist(3)=-dist(3) !now: dist(3)>0 in the plate.
+         dist(1)=min(dist(1),-dist(3))
+        else
+         print *,"probtype.eq.42 invalid FSI_flag: ",FSI_flag(3)
+         stop
+        endif
+       else
+        print *,"expecting num_materials==3 if probtype.eq.42"
+        stop
+       endif
 
       else
 
