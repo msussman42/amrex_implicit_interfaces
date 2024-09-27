@@ -347,6 +347,13 @@ integer, parameter :: for_clamped=1
    else
     LS=-99999.0d0
    endif
+  else if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
+           (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
+           (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+   !do nothing
+  else
+   print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+   stop
   endif
  else
   print *,"expecting probtype.eq.42 ",probtype
