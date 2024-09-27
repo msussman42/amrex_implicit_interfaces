@@ -638,7 +638,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
     print *,"TANK_MK_AUX_THICK_WALLS=",TANK_MK_AUX_THICK_WALLS
     print *,"num_aux_expect ",num_aux_expect
    else
-    print *,"axis_dir invalid"
+    print *,"axis_dir invalid: ",axis_dir
     stop
    endif
   
@@ -676,7 +676,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
   else
-   print *,"axis_dir invalid"
+   print *,"axis_dir invalid: ",axis_dir
    stop
   endif
 
@@ -1062,8 +1062,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
    ! Solid
 
-   if ((axis_dir.eq.0).or. &
-       (axis_dir.eq.1)) then
+   if ((axis_dir.eq.0).or. & !ZBOT
+       (axis_dir.eq.1)) then !TPCE
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1078,7 +1078,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   !Z=abs(P(2))
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
-    if (axis_dir.eq.0) then
+    if (axis_dir.eq.0) then !ZBOT
      ! do nothing
     else if (axis_dir.eq.1) then ! TPCE
      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
@@ -1092,10 +1092,10 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       LS(3)=LS_A
      endif
     else
-     print *,"axis_dir invalid"
+     print *,"axis_dir invalid: ",axis_dir
      stop
     endif
-   else if (axis_dir.eq.2) then
+   else if (axis_dir.eq.2) then !TPCE e.g. tpce_geometry.vtk
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1128,7 +1128,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
    else
-    print *,"axis_dir invalid"
+    print *,"axis_dir invalid: ",axis_dir
     stop
    endif
 
@@ -1250,6 +1250,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   real(amrex_real) :: x3D(3)
   real(amrex_real) :: xfoot3D(3)
   real(amrex_real) :: xvel(3)
+  integer, parameter :: impulsive_tank_forcing=0
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -1276,37 +1277,32 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-   if ((axis_dir.eq.0).or. &
-       (axis_dir.eq.1)) then
-
-    ! if SOLID VELOCITY requested everywhere (including outside of the solid),
-    ! then velsolid==1
-    if(1.eq.0)then
-     if((t.eq.0.0d0).or. &         ! called from fort_initvelocity
-        (velsolid_flag.eq.0)) then ! called from boundary condition routine
-      do dir=1,SDIM
-       VEL(dir)=0.0d0
-      enddo
-     else if ((t.gt.0.0d0).and. &
-              (velsolid_flag.eq.1)) then
-      ! do nothing (vel=0.0 is the default)
-     else
-      print *,"t or velsolid_flag invalid"
-      stop
-     endif
-    endif
+   if ((axis_dir.eq.0).or. &  !ZBOT problem
+       (axis_dir.eq.1).or. &  !TPCE problem
+       (axis_dir.eq.2)) then  !read e.g. tpce_geometry.vtk (TPCE problem)
 
     do dir=1,SDIM
      VEL(dir)=0.0d0
     enddo
 
-    if ((LS(3).ge.zero).or. &
-        (velsolid_flag.eq.1).or. &
-        (t.ge.zero)) then
+    ! if SOLID VELOCITY requested everywhere (including outside of the solid),
+    ! then velsolid==1
+
+    if (((t.eq.0.0d0).or. &           ! called from fort_initvelocity
+         (velsolid_flag.eq.0)).and. & ! called from boundary condition routine
+        (LS(3).lt.zero).and. &
+        (impulsive_tank_forcing.eq.1)) then
+
      do dir=1,SDIM
       VEL(dir)=0.0d0
      enddo
- !    VEL(dir_x)=xvel(dir_x)
+
+    else if (((t.gt.0.0d0).and. &
+              (velsolid_flag.eq.1)).or. &
+             (LS(3).ge.zero).or. &
+             (impulsive_tank_forcing.eq.0)) then
+
+ !   VEL(dir_x)=xvel(dir_x)
      if (SDIM.eq.2) then
       VEL(1)=xvel(1)
       VEL(2)=xvel(2)
@@ -1318,56 +1314,18 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       print *,"dimension bust"
       stop
      endif
-    else if ((LS(3).le.zero).and. &
-             (velsolid_flag.eq.0)) then
-     do dir=1,SDIM
-      VEL(dir)=0.0d0
-     enddo
+
     else
      print *,"LS(3) or velsolid_flag bust"
      print *,"LS(3)=",LS(3)
      print *,"velsolid_flag=",velsolid_flag
      print *,"t=",t
-     stop
-    endif
-
-   else if (axis_dir.eq.2) then
-
-    do dir=1,SDIM
-     VEL(dir)=0.0d0
-    enddo
-
-    if ((LS(3).ge.zero).or. &
-        (velsolid_flag.eq.1)) then
-     do dir=1,SDIM
-      VEL(dir)=0.0d0
-     enddo
- !    VEL(dir_x)=xvel(dir_x)
-
-     if (SDIM.eq.2) then
-      VEL(1)=xvel(1)
-      VEL(2)=xvel(2)
-     else if (SDIM.eq.3) then
-      VEL(1)=xvel(1)
-      VEL(SDIM)=xvel(2) !SDIM=vertical dir of grav.  2=vertical of geom files
-      VEL(2)=xvel(3)
-     else
-      print *,"dimension bust"
-      stop
-     endif
-
-    else if ((LS(3).le.zero).and. &
-             (velsolid_flag.eq.0)) then
-     do dir=1,SDIM
-      VEL(dir)=0.0d0
-     enddo
-    else
-     print *,"LS(3) or velsolid_flag bust"
+     print *,"impulsive_tank_forcing =",impulsive_tank_forcing
      stop
     endif
 
    else
-    print *,"axis_dir invalid"
+    print *,"axis_dir invalid: ",axis_dir
     stop
    endif
 
