@@ -27721,6 +27721,8 @@ if (force_coef.gt.zero) then
  ! do nothing
 else
  print *,"expecting force_coef>0: ",force_coef
+ print *,"im_critical=",im_critical
+ print *,"fort_visc_coef=",fort_visc_coef
  stop
 endif
 

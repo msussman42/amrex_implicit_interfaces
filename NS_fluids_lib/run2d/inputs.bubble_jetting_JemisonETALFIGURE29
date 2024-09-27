@@ -124,7 +124,7 @@ ns.shock_timestep=1 1 2
 ns.cfl            = 0.5      # cfl=0.5 if t<0.00067; cfl=0.25 t>0.00067 
 ns.init_shrink    = 0.1      # scale back initial timestep
 ns.change_max=1.01      # scale back initial timestep
-ns.visc_coef      = 0.0    # coef of viscosity
+ns.visc_coef      = 1.0    # coef of viscosity
 ns.gravity        = -981.0  # must be nonzero, otherwise not used.
 ns.tension        = 0.0 0.0 0.0 
 ns.density_ratio_relaxation_factor=1000.0
