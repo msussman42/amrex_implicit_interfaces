@@ -1265,6 +1265,14 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   ! x3D(2) is the vertical direction for the geometry files.
   call convert_to_x3D(x,x3D)
 
+   ! if w_dot<>0 then
+   !  w=t * w_dot
+   !  Omega=w_dot * t^2/2
+   !  Assume Satellite frame of reference,
+   !  w=t*w_dot  0<t<t_cut
+   !  w=t_cut*w_dt t>t_cut
+   !  x_centrifugal=x_tank
+   !  y_centrifugal=y_tank+lever_arm 
   call rigid_displacement(xfoot3D,t,x3D,xvel)
 
   if ((velsolid_flag.eq.0).or. &
@@ -3394,6 +3402,33 @@ endif
 
 return
 end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
+
+subroutine CRYOGENIC_TANK_MK_angular_velocity(x,cur_time, &
+   angular_velocity,angular_velocity_custom, &
+   angular_velocity_dot,lever_arm)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: angular_velocity
+real(amrex_real), INTENT(out) :: angular_velocity_custom
+real(amrex_real), INTENT(out) :: angular_velocity_dot
+real(amrex_real), INTENT(out) :: lever_arm
+
+ if (cur_time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"cur_time invalid: ",cur_time
+  stop
+ endif
+
+ angular_velocity_custom=angular_velocity
+ angular_velocity_dot=zero
+ lever_arm=zero
+
+end subroutine CRYOGENIC_TANK_MK_angular_velocity
 
 
 end module CRYOGENIC_TANK_MK_module

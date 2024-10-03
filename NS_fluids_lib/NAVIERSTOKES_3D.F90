@@ -10283,6 +10283,7 @@ END SUBROUTINE SIMP
 ! F=mass r w^2   w units: radians/s   mass r w^2 = kg m/s^2
 !
       subroutine fort_init_potential( &
+       time, &
        presden,DIMS(presden), &
        state,DIMS(state), &
        tilelo,tilehi, &
@@ -10306,6 +10307,7 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: level
       integer, INTENT(in) :: isweep
+      real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt  ! dt_slab
       real(amrex_real), INTENT(in) :: angular_velocity
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
@@ -10373,6 +10375,7 @@ END SUBROUTINE SIMP
          ! general_hydrostatic_pressure_density is declared in:
          !  PROB.F90
         call general_hydrostatic_pressure_density( &
+          time, &
           i,j,k,level, &
           angular_velocity, &
           centrifugal_force_factor, &
@@ -10431,6 +10434,7 @@ END SUBROUTINE SIMP
 
              ! p=dt( \vec{g}\cdot\vec{x} + (1/2)Omega^2 r^2 )
             call general_hydrostatic_pressure_density( &
+             time, &
              i,j,k,level, &
              angular_velocity, & !intent(in)
              centrifugal_force_factor, & !intent(in)

@@ -6084,6 +6084,7 @@ void NavierStokes::init_gravity_potential() {
      // \vec{g} = \frac{ \nabla rho_{0} (\vec{g} dot \vec{x})}{rho_{0}}
      // fort_init_potential is declared in: NAVIERSTOKES_3D.F90
     fort_init_potential(
+     &cur_time_slab,
      presdenfab.dataPtr(),
      ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()),
      statefab.dataPtr(),
