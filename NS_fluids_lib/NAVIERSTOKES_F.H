@@ -194,6 +194,7 @@ extern "C" {
       const Real* time);
 
     void fort_init_potential(
+      Real* time,
       Real* presden,AMREX_ARLIM_P(presdenlo),AMREX_ARLIM_P(presdenhi),
       Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi),
       const int* tilelo,const int* tilehi,

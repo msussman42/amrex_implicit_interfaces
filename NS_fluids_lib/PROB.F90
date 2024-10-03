@@ -2529,6 +2529,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! called from presBDRYCOND (PROB.F90)
        ! called from fort_initdata (PROB.F90)
       subroutine general_hydrostatic_pressure_density( &
+        time, &
         i,j,k,level, &
         angular_velocity, &!intent(in) general_hydrostatic_pressure_density
         centrifugal_force_factor, &!intent(in) "     "
@@ -2542,7 +2543,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer, INTENT(in) :: i,j,k,level
        !general_hydrostatic_pressure_density
       real(amrex_real), INTENT(in) :: angular_velocity 
+      real(amrex_real) :: angular_velocity_custom
+      real(amrex_real) :: angular_velocity_dot
+      real(amrex_real) :: lever_arm
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
+      real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(out) :: rho_hydrostatic
       real(amrex_real), INTENT(out) :: pres_hydrostatic
@@ -2598,9 +2603,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            (centrifugal_force_factor.le.one)) then
         ! do nothing
        else
-        print *,"expecting 0<=centrifugal_force_factor<=1"
+        print *,"expecting 0<=centrifugal_force_factor<=1: ", &
+         centrifugal_force_factor
         stop
        endif
+
+       call SUB_angular_velocity(xcell,time, &
+         angular_velocity,angular_velocity_custom, &
+         angular_velocity_dot,lever_arm)
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
 
@@ -2610,9 +2620,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  (centrifugal_force_factor.le.one)) then
          pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity**2)*(xcell(1)**2+xcell(2)**2)
+           (angular_velocity_custom**2)*(xcell(1)**2+(xcell(2)+lever_arm)**2)
         else
-         print *,"expecting 0<=centrifugal_force_factor<=1"
+         print *,"expecting 0<=centrifugal_force_factor<=1: ", &
+          centrifugal_force_factor
          stop
         endif
      
@@ -2633,7 +2644,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity**2)*(xcell(1)**2)
+           (angular_velocity_custom**2)*(xcell(1)**2)
 
        else
         print *,"levelrz invalid general hydrostatic pressure density"

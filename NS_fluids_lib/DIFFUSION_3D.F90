@@ -217,6 +217,9 @@ stop
        integer, INTENT(in) :: finest_level
        integer, INTENT(in) :: rzflag
        real(amrex_real), INTENT(in) :: angular_velocity
+       real(amrex_real) :: angular_velocity_custom
+       real(amrex_real) :: angular_velocity_dot
+       real(amrex_real) :: lever_arm
        real(amrex_real), INTENT(in) :: centrifugal_force_factor
        real(amrex_real), INTENT(in) :: visc_coef
        integer, INTENT(in) :: uncoupled_viscosity
@@ -747,6 +750,10 @@ stop
           ! X-Y-Z 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2+xpos(2)**2)
 
+         call SUB_angular_velocity(xpoint,cur_time_slab, &
+           angular_velocity,angular_velocity_custom, &
+           angular_velocity_dot,lever_arm)
+
          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
           if (RCEN.gt.zero) then
@@ -759,16 +766,18 @@ stop
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
-             two*angular_velocity*(un(2)-V_BASE(2)))
+             two*angular_velocity_custom*(un(2)-V_BASE(2))- &
+             angular_velocity_dot*(xpoint(2)+lever_arm))
           unp1(2)=unp1(2)-dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-             two*angular_velocity*(un(1)-V_BASE(1)))
+             two*angular_velocity_custom*(un(1)-V_BASE(1))- &
+             angular_velocity_dot*(xpoint(1)))
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
           unp1(1)=unp1(1)+ &
-           dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*RCEN
+           dt*DTEMP*centrifugal_force_factor*(angular_velocity_custom**2)*RCEN
 
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
@@ -779,27 +788,32 @@ stop
           !  u        v         w
           ! = -2(-angular_vel. v,angular_velocity u)
           unp1(1)=unp1(1)+ &
-               dt*( two*angular_velocity*(un(2)-V_BASE(2)) )
+               dt*( two*angular_velocity_custom*(un(2)-V_BASE(2))- &
+                    angular_velocity_dot*(xpoint(2)+lever_arm))
           unp1(2)=unp1(2)- &
-               dt*( two*angular_velocity*(un(1)-V_BASE(1)) )
+               dt*( two*angular_velocity_custom*(un(1)-V_BASE(1))- &
+                    angular_velocity_dot*(xpoint(1))  )
 
           if ((DTEMP.eq.zero).or. &
-              (angular_velocity.eq.zero)) then
+              (angular_velocity_custom.eq.zero)) then
            ! do nothing
           else if ((DTEMP.ne.zero).and. &
-                   (angular_velocity.gt.zero)) then
+                   (angular_velocity_custom.gt.zero)) then
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
            unp1(1)=unp1(1)+ &
-            dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*xsten(0,1)
+            dt*DTEMP* &
+            centrifugal_force_factor*(angular_velocity_custom**2)*xsten(0,1)
            unp1(2)=unp1(2)+ &
-            dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*xsten(0,2)
+            dt*DTEMP* &
+            centrifugal_force_factor*(angular_velocity_custom**2)*xsten(0,2)
           else
            print *,"DTEMP or angular_velocity invalid"
            print *,"DTEMP=",DTEMP
            print *,"angular_velocity=",angular_velocity
+           print *,"angular_velocity_custom=",angular_velocity_custom
            stop
           endif
 
@@ -819,7 +833,7 @@ stop
           endif
 
          else
-          print *,"rzflag invalid"
+          print *,"rzflag invalid: ",rzflag
           stop
          endif
             

@@ -1738,5 +1738,33 @@ integer dir
 
 end subroutine STUB_V0_Coriolis
 
+subroutine STUB_angular_velocity(x,cur_time, &
+   angular_velocity,angular_velocity_custom, &
+   angular_velocity_dot,lever_arm)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: angular_velocity
+real(amrex_real), INTENT(out) :: angular_velocity_custom
+real(amrex_real), INTENT(out) :: angular_velocity_dot
+real(amrex_real), INTENT(out) :: lever_arm
+
+ if (cur_time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"cur_time invalid: ",cur_time
+  stop
+ endif
+
+ angular_velocity_custom=angular_velocity
+ angular_velocity_dot=zero
+ lever_arm=zero
+
+end subroutine STUB_angular_velocity
+
+
 
 end module STUB_module

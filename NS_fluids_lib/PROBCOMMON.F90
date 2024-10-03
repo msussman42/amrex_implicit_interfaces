@@ -727,6 +727,18 @@ implicit none
       real(amrex_real), INTENT(out) :: V0(SDIM)
       end subroutine TEMPLATE_V0_Coriolis
 
+      subroutine TEMPLATE_angular_velocity(x,cur_time, &
+       angular_velocity,angular_velocity_custom, &
+       angular_velocity_dot,lever_arm)
+      use amrex_fort_module, only : amrex_real
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      real(amrex_real), INTENT(in) :: cur_time
+      real(amrex_real), INTENT(in) :: angular_velocity
+      real(amrex_real), INTENT(out) :: angular_velocity_custom
+      real(amrex_real), INTENT(out) :: angular_velocity_dot
+      real(amrex_real), INTENT(out) :: lever_arm
+      end subroutine TEMPLATE_angular_velocity
+
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
         density, &
         temperature, &
@@ -1396,6 +1408,7 @@ implicit none
 
       PROCEDURE(TEMPLATE_T0_Boussinesq), POINTER :: SUB_T0_Boussinesq
       PROCEDURE(TEMPLATE_V0_Coriolis), POINTER :: SUB_V0_Coriolis
+      PROCEDURE(TEMPLATE_angular_velocity), POINTER :: SUB_angular_velocity
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
       PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &

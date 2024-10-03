@@ -782,6 +782,7 @@ stop
 
       SUB_T0_Boussinesq=>STUB_T0_Boussinesq
       SUB_V0_Coriolis=>STUB_V0_Coriolis
+      SUB_angular_velocity=>STUB_angular_velocity
 
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -834,6 +835,8 @@ stop
        SUB_PRES_BC=>CRYOGENIC_TANK_MK_PRES_BC
        SUB_STATE_BC=>CRYOGENIC_TANK_MK_STATE_BC
        SUB_HEATSOURCE=>CRYOGENIC_TANK_MK_HEATSOURCE
+
+       SUB_angular_velocity=>CRYOGENIC_TANK_MK_angular_velocity
 
        SUB_SUMINT=>CRYOGENIC_TANK_MK_SUMINT
        SUB_INIT_REGIONS_LIST=>CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
