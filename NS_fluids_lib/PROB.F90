@@ -2612,6 +2612,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          angular_velocity,angular_velocity_custom, &
          angular_velocity_dot,lever_arm)
 
+       if ((angular_velocity_custom.le.angular_velocity).and. &
+           (angular_velocity_custom.ge.zero).and. &
+           (angular_velocity_dot.ge.zero).and. &
+           (lever_arm.ge.zero)) then
+        !do nothing
+       else
+        print *,"angular_velocity parameters invalid (PROB.F90)"
+        stop
+       endif
+
        if (levelrz.eq.COORDSYS_CARTESIAN) then
 
         if (centrifugal_force_factor.eq.zero) then

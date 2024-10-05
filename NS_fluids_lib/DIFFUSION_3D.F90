@@ -754,6 +754,16 @@ stop
            angular_velocity,angular_velocity_custom, &
            angular_velocity_dot,lever_arm)
 
+         if ((angular_velocity_custom.le.angular_velocity).and. &
+             (angular_velocity_custom.ge.zero).and. &
+             (angular_velocity_dot.ge.zero).and. &
+             (lever_arm.ge.zero)) then
+          !do nothing
+         else
+          print *,"angular_velocity parameters invalid (DIFFUSION_3D.F90) "
+          stop
+         endif
+
          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
           if (RCEN.gt.zero) then
@@ -765,12 +775,14 @@ stop
            ! Coriolis "force"
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
-          unp1(1)=unp1(1)+dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
-             two*angular_velocity_custom*(un(2)-V_BASE(2))- &
-             angular_velocity_dot*(xpoint(2)+lever_arm))
-          unp1(2)=unp1(2)-dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-             two*angular_velocity_custom*(un(1)-V_BASE(1))- &
-             angular_velocity_dot*(xpoint(1)))
+          unp1(1)=unp1(1)+ &
+           dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
+               two*angular_velocity_custom*(un(2)-V_BASE(2))+ &
+               angular_velocity_dot*(xpoint(2)+lever_arm))
+          unp1(2)=unp1(2)- &
+           dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
+               two*angular_velocity_custom*(un(1)-V_BASE(1))+ &
+               angular_velocity_dot*(xpoint(1)))
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
@@ -787,12 +799,13 @@ stop
           !  0        0      angular_velocity
           !  u        v         w
           ! = -2(-angular_vel. v,angular_velocity u)
+
           unp1(1)=unp1(1)+ &
-               dt*( two*angular_velocity_custom*(un(2)-V_BASE(2))- &
-                    angular_velocity_dot*(xpoint(2)+lever_arm))
+            dt*( two*angular_velocity_custom*(un(2)-V_BASE(2))+ &
+                 angular_velocity_dot*(xpoint(2)+lever_arm))
           unp1(2)=unp1(2)- &
-               dt*( two*angular_velocity_custom*(un(1)-V_BASE(1))- &
-                    angular_velocity_dot*(xpoint(1))  )
+            dt*( two*angular_velocity_custom*(un(1)-V_BASE(1))+ &
+                 angular_velocity_dot*(xpoint(1))  )
 
           if ((DTEMP.eq.zero).or. &
               (angular_velocity_custom.eq.zero)) then

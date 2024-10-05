@@ -3424,6 +3424,13 @@ real(amrex_real), INTENT(out) :: lever_arm
   stop
  endif
 
+ if (angular_velocity.ge.zero) then
+  !do nothing
+ else
+  print *,"angular_velocity invalid"
+  stop
+ endif
+
  angular_velocity_custom=angular_velocity
  angular_velocity_dot=zero
  lever_arm=zero
