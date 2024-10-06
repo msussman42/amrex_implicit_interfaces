@@ -6,6 +6,10 @@
 # For post processing:
 # git clone https://github.com/AMReX-Codes/amrex.git
 # git clone https://github.com/AMReX-Combustion/PeleAnalysis.git 
+# installing python3 and associated pip on a mac:
+# 1. install homebrew
+# 2. brew install python
+# (on windows: install subsystem for linux, then sudo apt-get python3 ... etc)
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
