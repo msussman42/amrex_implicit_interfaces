@@ -133,7 +133,7 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 #Reduce surface_tension and gravity by a factor of 10; i.e. use the
 #proper Bond number and increase the Weber number by a factor of 10.
-ns.gravity        = -980.0e-1   # cgs
+ns.gravity        = -980.0e-2   # cgs
 #ns.incremental_gravity_flag=1
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
@@ -151,7 +151,7 @@ ns.gravity        = -980.0e-1   # cgs
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
-ns.tension=72.8e-1 72.8e-1 72.8e-1 109.2e-1 72.8e-1 72.8e-1
+ns.tension=72.8e-2 72.8e-2 72.8e-2 109.2e-2 72.8e-2 72.8e-2
   
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
@@ -294,7 +294,7 @@ ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
 #increase viscosity by a factor of 100.
 #ns.viscconst=0.0179 0.00017 1000.0 1000.0 # dimensional
 ns.explicit_viscosity_dt=1
-ns.viscconst=1.8 0.017 1.8 1.8 # dimensional
+ns.viscconst=0.18 0.0017 0.18 0.18 # dimensional
 #ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
@@ -313,8 +313,9 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=0  
 # 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=273.0 273.0 273.0 353.0  
-ns.initial_temperature=273.0 273.0 273.0 353.0  # dimensionless
+# superheat: +80? +200?
+ns.tempconst=273.0 273.0 273.0 473.0  
+ns.initial_temperature=273.0 273.0 273.0 473.0  # dimensionless
 # dxcoarse=2/64=1/32
 # RZ
 ns.xblob=0.0  # center of ice block 
