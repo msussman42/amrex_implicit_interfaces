@@ -3431,9 +3431,25 @@ real(amrex_real), INTENT(out) :: lever_arm
   stop
  endif
 
+ if (xblob8.ge.zero) then
+  !do nothing
+ else
+  print *,"expecting xblob8>=0"
+  stop
+ endif
+
  angular_velocity_custom=angular_velocity
  angular_velocity_dot=zero
- lever_arm=zero
+ lever_arm=radblob8
+ if (cur_time.ge.xblob8) then
+  !do nothing
+ else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
+  angular_velocity_custom=angular_velocity*cur_time/xblob8
+  angular_velocity_dot=angular_velocity/xblob8
+ else
+  print *,"cur_time invalid"
+  stop
+ endif
 
 end subroutine CRYOGENIC_TANK_MK_angular_velocity
 

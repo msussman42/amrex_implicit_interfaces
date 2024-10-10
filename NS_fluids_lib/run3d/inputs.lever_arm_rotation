@@ -46,21 +46,16 @@ ns.num_species_var  = 0
 # 0  => incompressible
 # 24 => compressible 
 # 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
-# for air: material_type=5 EOS_air
-# TANK_MK_MATERIAL_TYPE=24
-ns.material_type = 0 0 999  #INCOMPRESSIBLE
+ns.material_type = 0 0 999 
 ns.material_conservation_form=0 0 0
-#ns.material_type = 0 24 999  #COMPRESSIBLE GAS
 ns.material_type_evap = 0 24 999 # needed for Kassemi model
 ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
 ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
-#ns.num_divu_outer_sweeps=2  #COMPRESSIBLE GAS
-ns.num_divu_outer_sweeps=1   #INCOMPRESSIBLE
+ns.num_divu_outer_sweeps=1
 
 # Solid definition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
-#      (FSI_PRESCRIBED_PROBF90)
 # 2 => prescribed rigid solid, non-tessellating (sci_clsvof.F90)
 ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 #FSI_interval=0 => only read in geometry at the beginning and copy data
@@ -70,7 +65,7 @@ ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 ns.FSI_interval     = 0 
 
 ns.xblob            = 0.1  # Tank radius-cylindrical parts
-ns.yblob            = 0.0  # tank height-cylindrical parts
+ns.yblob            = 0.0  # tank height-cylidrcal parts
 ns.xblob4 	    = 0.1  # End cap radius 
                            # set it to be same with xblob
 ns.yblob4	    = 0.0  # Z coord (vert) of the top spherical cap center
@@ -89,24 +84,25 @@ ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
 ns.zblob2           = 0.0
 
-ns.radblob7        = 3.0    # 0=no motion  1=sloshing  2=rotation  3=both
+ns.radblob7        = 0.0    # 0=no motion  1=sloshing  2=rotation  3=both
 
-# if radblob7=1, sloshing
+#not used if radblob7=0.0
 ns.xblob7         = 0.01       # xdisp_amplitude
 ns.yblob7         = 18.6889    # xdisp_freq
 
-# if radblob7=2, axis rotation
-# if radblob7=3, axis rotation should be radblob8=3.0
-ns.radblob8      = 2.0 #rotation axis: 2 is z (aligned w/tank),3 is y ,1 is x
-ns.zblob7 = 10.0          # rotation angula velocity  zblob7= omega,(rad/s)    omega*t 
-   # xblob8 yblob8 zblob8 defines axis position
-   # for example, rotation with axis parallel to z axis then provide xblob8 and yblob8 (position)
-   #                                             y axis              xblob8 and zblob8
-   #                                             x axis              yblob8 and zblob8
-#ns.xblob8 = 0.15        
-#ns.yblob8 = 0.15
-ns.xblob8 = 0.0
-ns.yblob8 = 0.0
+ns.angular_velocity=10.0 #radians/s
+ns.xblob8=0.7 # transition time for the angular velocity
+ns.radblob8=0.4 # lever arm (meters)
+#not used if radblob7=0.0
+#ns.radblob8      = 2.0   # rotation axis z, 2 is z, 3 is y , 1 is x
+#ns.zblob7 = 10.0 # rotation angular velocity  zblob7= omega,(rad/s)    omega*t 
+# xblob8 yblob8 zblob8 defines axis position
+# for example, rotation with axis parallel to z axis 
+#then provide xblob8 and yblob8 (position)
+#   y axis              xblob8 and zblob8
+#   x axis              yblob8 and zblob8
+ns.xblob8 = 0.15        
+ns.yblob8 = 0.15
 ns.zblob8 = 0.0
 
 # ----------------------------------------------------------
@@ -148,8 +144,8 @@ amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
 amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 4 4 4  # number of buffer cells in error est 
-amr.blocking_factor = 8 4 4  # block factor in grid generation
+amr.n_error_buf     = 2 2 2  # number of buffer cells in error est 
+amr.blocking_factor = 8 2 2  # block factor in grid generation
 
 amr.grid_eff        = 0.85  # smaller => less boxes
 
@@ -177,7 +173,7 @@ ns.shock_timestep=2 2 2
 #ns.visual_nddata_format=2
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
-amr.check_int       = 100  # number of timesteps between checkpoints 3D
+amr.check_int       = 10  # number of timesteps between checkpoints 3D
 amr.check_file      = chk  # root name of checkpoint file
 
 #ns.slice_dir=1 # vertical direction 2D
@@ -185,7 +181,7 @@ ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 #amr.plot_int        = 200 # number of timesteps between plot files (2D)
-amr.plot_int        = 100  # number of timesteps between plot files (2D)
+amr.plot_int        = 10  # number of timesteps between plot files (2D)
 #amr.plot_int        = 1   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
@@ -313,7 +309,8 @@ ns.tension=8.94e-3 8.94e-3 11.9796e-3
 # 12 13 23 21 31 32
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
-ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
+#ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
+ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
 # For evaporation and Boiling, this should always be 0.
