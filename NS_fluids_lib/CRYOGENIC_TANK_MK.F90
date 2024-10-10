@@ -1918,39 +1918,47 @@ if ((num_materials.eq.3).and. &
      stop
     endif
     LL=get_user_latent_heat(1,room_temperature,1)
-    call Pgamma_Clausius_Clapyron(Pgamma, &
+
+    if (LL.ne.zero) then
+     call Pgamma_Clausius_Clapyron(Pgamma, &
             fort_reference_pressure(1), &
             temperature, &
             fort_saturation_temp(1), &
             LL, &
             TANK_MK_R_UNIV,fort_molar_mass(2))
-    if (abs(Pgamma-pressure).le.EPS2*pressure) then
-     ! do nothing
-    else
-     print *,"mismatch between Pgamma and Pgas"
-     print *,"Pgamma=",Pgamma
-     print *,"Pgas=",pressure
-     print *,"reference pressure=",fort_reference_pressure(1)
-     print *,"modify reference pressure to be: ", &
+     if (abs(Pgamma-pressure).le.EPS2*pressure) then
+      ! do nothing
+     else
+      print *,"mismatch between Pgamma and Pgas"
+      print *,"Pgamma=",Pgamma
+      print *,"Pgas=",pressure
+      print *,"reference pressure=",fort_reference_pressure(1)
+      print *,"modify reference pressure to be: ", &
         fort_reference_pressure(1)*pressure/Pgamma
-     print *,"im=",im
-     print *,"fort_R_Palmore_Desjardins=",fort_R_Palmore_Desjardins
-     print *,"den=",den
-     print *,"temperature=",temperature
-     print *,"fort_stiffCV(2)=",fort_stiffCV(2)
-     print *,"TANK_MK_GAS_CV=",TANK_MK_GAS_CV
-     print *,"internal_energy (e=cv T)=",internal_energy
-     print *,"TANK_MK_GAS_CP=",TANK_MK_GAS_CP
-     print *,"fort_stiffCP(2)=",fort_stiffCP(2)
-     print *,"TANK_MK_GAS_GAMMA=",TANK_MK_GAS_GAMMA
-     print *,"pressure=rho (gamma-1) e= ",pressure
-     print *,"latent heat= ",LL
-     print *,"fort_saturation_temp(1)=",fort_saturation_temp(1)
-     print *,"fort_molar_mass(2)=",fort_molar_mass(2)
-     print *,"P_Clausius=Pref*exp(-(L*W/R)*(1/Tgamma-1/TSAT))=",Pgamma
+      print *,"im=",im
+      print *,"fort_R_Palmore_Desjardins=",fort_R_Palmore_Desjardins
+      print *,"den=",den
+      print *,"temperature=",temperature
+      print *,"fort_stiffCV(2)=",fort_stiffCV(2)
+      print *,"TANK_MK_GAS_CV=",TANK_MK_GAS_CV
+      print *,"internal_energy (e=cv T)=",internal_energy
+      print *,"TANK_MK_GAS_CP=",TANK_MK_GAS_CP
+      print *,"fort_stiffCP(2)=",fort_stiffCP(2)
+      print *,"TANK_MK_GAS_GAMMA=",TANK_MK_GAS_GAMMA
+      print *,"pressure=rho (gamma-1) e= ",pressure
+      print *,"latent heat= ",LL
+      print *,"fort_saturation_temp(1)=",fort_saturation_temp(1)
+      print *,"fort_molar_mass(2)=",fort_molar_mass(2)
+      print *,"P_Clausius=Pref*exp(-(L*W/R)*(1/Tgamma-1/TSAT))=",Pgamma
+      stop
+     endif
+    else if (LL.eq.zero) then
+     !do nothing
+    else
+     print *,"LL invalid: ",LL
      stop
-    endif
-             
+    endif 
+
    else if ((im.eq.1).or.(im.eq.3)) then
     ! do nothing
    else
