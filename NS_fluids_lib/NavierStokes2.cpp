@@ -5727,6 +5727,7 @@ void NavierStokes::make_physics_vars(int project_option,
  
 } // end subroutine make_physics_vars
 
+//called from: NavierStokes::veldiffuseALL
 void NavierStokes::solid_temperature() {
  
  bool use_tiling=ns_tiling;
@@ -5818,7 +5819,7 @@ void NavierStokes::solid_temperature() {
  } else
   amrex::Error("solid_exists invalid solid_temperature");
 
-} // solid_temperature
+} // end subroutine solid_temperature
 
 // adds gravity force and surface tension 
 // to cell and face velocity (all components).

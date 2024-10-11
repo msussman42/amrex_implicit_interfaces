@@ -23965,7 +23965,8 @@ end subroutine initialize2d
       real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),nden)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+      real(amrex_real), INTENT(in), target :: &
+           lsnew(DIMV(lsnew),num_materials*(SDIM+1))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k
@@ -24001,10 +24002,10 @@ end subroutine initialize2d
       else if (time.ge.1.0D+20) then
        print *,"WARNING time.ge.1.0D+20 in initsolidtemp"
       else if (time.lt.zero) then
-       print *,"time invalid in initsolidtemp"
+       print *,"time invalid in initsolidtemp: ",time
        stop
       else
-       print *,"time bust in initsolidtemp"
+       print *,"time bust in initsolidtemp: ",time
        stop
       endif
 
