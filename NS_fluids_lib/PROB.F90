@@ -6805,7 +6805,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_solid_temp=im_solid_primary()
 
       if (is_rigid(im).ne.1) then
-       print *,"is_rigid invalid PROB.F90 in tempsolid"
+       print *,"is_rigid invalid PROB.F90 in tempsolid: ",im,is_rigid(im)
        stop
       endif
       xvec(1)=x      
@@ -6854,7 +6854,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         temp=fort_tempconst(im)
        endif
       else
-       print *,"im_solid_temp invalid 4"
+       print *,"im_solid_temp invalid 4: ",im_solid_temp
        stop
       endif
 
@@ -23984,16 +23984,16 @@ end subroutine initialize2d
       lsnew_ptr=>lsnew
 
       if (nden.ne.num_materials*num_state_material) then
-       print *,"nden invalid"
+       print *,"nden invalid: ",nden
        stop
       endif
 
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid: ",num_state_base
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact out of range"
+       print *,"bfact out of range: ",bfact
        stop
       endif
 
@@ -24012,11 +24012,14 @@ end subroutine initialize2d
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
+       !fort_initsolidtemp only called when:
+       !(a) solid_exists==1, and, 
+       !(b) solid_heat_flag=1 or 2
       im_solid_thermal=im_solid_primary()
 
       if ((im_solid_thermal.lt.1).or. &
           (im_solid_thermal.gt.num_materials)) then
-       print *,"im_solid_thermal invalid 18"
+       print *,"im_solid_thermal invalid 18: ",im_solid_thermal
        stop
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -24060,7 +24063,7 @@ end subroutine initialize2d
      
        if ((im_solid_crit.lt.1).or. &
            (im_solid_crit.gt.num_materials)) then
-        print *,"im_solid_crit invalid in initsolidtemp"
+        print *,"im_solid_crit invalid in initsolidtemp: ",im_solid_crit
         stop
        endif
  

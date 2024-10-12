@@ -976,12 +976,13 @@ if (probtype.eq.55) then
    endif ! im=1
   else if (axis_dir.eq.5) then ! freezing drop on substrate
    if (nmat.lt.4) then
-    print *,"nmat too small for freezing drop on substrate"
+    print *,"nmat too small for freezing drop on substrate: ",nmat
     stop
    endif
    ! ice or substrate (initial temperature)
    if ((im.eq.3).or.(im.eq.4)) then
     ! bcflag=0 (calling from GENERAL_PHASE_CHANGE_STATE))
+    ! "outside_temperature" declared in GLOBALUTIL.F90
     call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif
