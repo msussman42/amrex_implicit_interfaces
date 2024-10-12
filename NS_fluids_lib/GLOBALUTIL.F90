@@ -3897,7 +3897,7 @@ end subroutine dynamic_contact_angle
       endif
       if ((bcflag.ne.0).and. & ! called from initdata
           (bcflag.ne.1)) then  ! called from denBC (density, temp, spec bc)
-       print *,"bcflag invalid"
+       print *,"bcflag invalid: ",bcflag
        stop
       endif
 
@@ -4008,7 +4008,7 @@ end subroutine dynamic_contact_angle
        else if (SDIM.eq.3) then 
         substrate_height=zblob2
        else
-        print *,"dimension bust"
+        print *,"dimension bust: ",SDIM
         stop
        endif
 
@@ -4016,7 +4016,7 @@ end subroutine dynamic_contact_angle
 
         seed_thickness=radblob3
 
-         ! substrate: 0<y<substrate_height
+         ! substrate: 0<y<substrate_height (yblob2 or zblob2)
         if (substrate_height.gt.zero) then  
 
          if (zblob4.eq.substrate_height) then !transition thermal layer
@@ -4024,7 +4024,8 @@ end subroutine dynamic_contact_angle
          else if (zblob4.eq.zero) then ! no transition, T=T_substrate
           ! do nothing
          else
-          print *,"zblob4 invalid"
+          print *,"zblob4 invalid: ",zblob4
+          print *,"substrate_height: ",substrate_height
           stop
          endif
 
@@ -4156,7 +4157,7 @@ end subroutine dynamic_contact_angle
         endif
 
         if (radblob2.lt.zero) then
-         print *,"radblob2 invalid"
+         print *,"radblob2 invalid: ",radblob2
         else if (radblob2.eq.zero) then
          ! do nothing
         else if (radblob2.gt.zero) then ! angle of incline

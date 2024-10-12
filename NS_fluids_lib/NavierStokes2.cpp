@@ -5752,11 +5752,12 @@ void NavierStokes::solid_temperature() {
    // do nothing
   } else
    amrex::Error("ns_is_rigid invalid");
- } // im
+ } // im=0 ... nmat-1
 
  if (solid_exists==0) {
   // do nothing
  } else if (solid_exists==1) {
+
   const Real* dx = geom.CellSize();
 
   if (solidheat_flag==0) { // diffuse in the solid
