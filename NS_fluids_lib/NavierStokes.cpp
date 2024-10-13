@@ -23612,6 +23612,8 @@ NavierStokes::post_init_state () {
     update_flux,
     interface_cond_avail); 
 
+  ns_level.solid_temperature();  // if solid temperature is prescribed
+
   for (int ns=0;ns<num_species_var;ns++) {
    ns_level.combine_state_variable(
     SOLVETYPE_SPEC+ns,
@@ -23712,6 +23714,7 @@ NavierStokes::post_init_state () {
    combine_idx=-1;
    update_flux=0;
    interface_cond_avail=0;
+
    ns_level.combine_state_variable(
     SOLVETYPE_VISC,
     combine_idx,
@@ -23719,6 +23722,7 @@ NavierStokes::post_init_state () {
     hflag,
     update_flux, 
     interface_cond_avail);
+
    update_flux=1;
    ns_level.combine_state_variable(
     SOLVETYPE_PRES,

@@ -8160,7 +8160,7 @@ stop
 
       if ((solidheat_flag.lt.0).or. &
           (solidheat_flag.gt.2)) then
-       print *,"solidheat_flag invalid"
+       print *,"solidheat_flag invalid: ",solidheat_flag
        stop
       endif
 
@@ -8397,7 +8397,7 @@ stop
                (solidheat_flag.eq.2)) then ! neumann
        ! do nothing
       else
-       print *,"solidheat_flag invalid"
+       print *,"solidheat_flag invalid: ",solidheat_flag
        stop
       endif
 
@@ -9043,7 +9043,7 @@ stop
              facespecies_local(imspec)=zero
             enddo
            else
-            print *,"solidheat_flag invalid"
+            print *,"solidheat_flag invalid: ",solidheat_flag
             stop
            endif
           else
@@ -9112,7 +9112,7 @@ stop
                     (solidheat_flag.eq.2)) then ! neumann
             ! do nothing
            else
-            print *,"solidheat_flag invalid"
+            print *,"solidheat_flag invalid: ",solidheat_flag
             stop
            endif
  
@@ -9144,7 +9144,7 @@ stop
              facespecies_local(imspec)=zero
             enddo
            else
-            print *,"solidheat_flag invalid"
+            print *,"solidheat_flag invalid: ",solidheat_flag
             stop
            endif
 

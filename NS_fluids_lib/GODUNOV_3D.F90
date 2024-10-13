@@ -9254,7 +9254,8 @@ stop
       integer, INTENT(in) :: solidheat_flag
       real(amrex_real), INTENT(in) :: microlayer_size(num_materials)
       integer, INTENT(in) :: microlayer_substrate(num_materials)
-      real(amrex_real), INTENT(in) :: microlayer_temperature_substrate(num_materials)
+      real(amrex_real), INTENT(in) :: &
+              microlayer_temperature_substrate(num_materials)
       
       integer, INTENT(in) :: adjust_temperature
       integer, INTENT(in) :: level
@@ -9458,7 +9459,7 @@ stop
        ! solidheat_flag==2 Neumann solid/fluid
       if ((solidheat_flag.lt.0).or. &
           (solidheat_flag.gt.2)) then
-       print *,"solidheat_flag invalid"
+       print *,"solidheat_flag invalid: ",solidheat_flag
        stop
       endif
       do im=1,num_materials
@@ -9794,7 +9795,7 @@ stop
                            (solidheat_flag.eq.2)) then ! neumann 
                    ! do nothing
                   else
-                   print *,"solidheat_flag invalid"
+                   print *,"solidheat_flag invalid: ",solidheat_flag
                    stop
                   endif
 
@@ -13213,7 +13214,7 @@ stop
       endif
       if ((solidheat_flag.lt.0).or. &
           (solidheat_flag.gt.2)) then
-       print *,"solidheat_flag invalid"
+       print *,"solidheat_flag invalid: ",solidheat_flag
        stop
       endif
 

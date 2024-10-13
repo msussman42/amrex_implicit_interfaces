@@ -18007,6 +18007,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: ADV
+
+      integer, parameter :: bcflag_denbc=1
+
       real(amrex_real) xwall
       real(amrex_real) ADVwall
       real(amrex_real) x,y,z
@@ -24191,7 +24194,7 @@ end subroutine initialize2d
 
       if ((solidheat_flag.lt.0).or. &
           (solidheat_flag.gt.2)) then
-       print *,"solidheat_flag invalid"
+       print *,"solidheat_flag invalid: ",solidheat_flag
        stop
       endif
 
@@ -24390,7 +24393,7 @@ end subroutine initialize2d
                   (solidheat_flag.eq.1)) then
           ! do nothing
          else
-          print *,"solidheat_flag invalid"
+          print *,"solidheat_flag invalid: ",solidheat_flag
           stop
          endif
 

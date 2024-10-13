@@ -4046,8 +4046,18 @@ end subroutine dynamic_contact_angle
             print *,"num_materials invalid: ",num_materials
             stop
            endif
+
            if (z_shift.ge.substrate_height) then
-            temperature=get_user_temperature(time,bcflag,3) ! ice
+
+            if (zblob4.eq.zero) then
+             temperature=get_user_temperature(time,bcflag,im_solid_temperature)
+            else if (zblob4.eq.substrate_height) then
+             temperature=get_user_temperature(time,bcflag,3) ! ice
+            else
+             print *,"zblob4 invalid: ",zblob4
+             stop
+            endif
+
            else if ((z_shift.ge.zero).and. &
                     (z_shift.le.substrate_height)) then
 
@@ -4060,19 +4070,21 @@ end subroutine dynamic_contact_angle
                get_user_temperature(time,bcflag,im_solid_temperature))* &
               z_shift/substrate_height 
             else
-             print *,"zblob4 invalid"
+             print *,"zblob4 invalid: ",zblob4
              stop
             endif
 
            else if (z_shift.le.zero) then
+
             temperature= &
              get_user_temperature(time,bcflag,im_solid_temperature) !substrate
+
            else
-            print *,"z_shift failure"
+            print *,"z_shift failure: ",z_shift
             stop
            endif
           else
-           print *,"im invalid64"
+           print *,"im invalid64: ",im
            stop
           endif
 

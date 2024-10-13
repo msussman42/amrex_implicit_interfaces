@@ -478,7 +478,7 @@ stop
        endif
        if ((solidheat_flag.lt.0).or. &
            (solidheat_flag.gt.2)) then
-        print *,"solidheat_flag invalid"
+        print *,"solidheat_flag invalid: ",solidheat_flag
         stop
        endif
        if (rzflag.ne.levelrz) then
@@ -693,7 +693,7 @@ stop
          if (dt.gt.zero) then
           ! do nothing
          else
-          print *,"dt invalid"
+          print *,"dt invalid: ",dt
           stop
          endif
           ! The variable "DeDT" stores: 1/(den cv)  
@@ -731,7 +731,7 @@ stop
            ! otherwise)
            local_cterm(1)=local_cterm(1)*rigid_mask 
           else
-           print *,"solidheat_flag invalid"
+           print *,"solidheat_flag invalid: ",solidheat_flag
            stop
           endif
 
