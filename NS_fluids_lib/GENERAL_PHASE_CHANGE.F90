@@ -918,13 +918,14 @@ return
 end subroutine GENERAL_PHASE_CHANGE_PRES
 
 
-
+!bcflag=bcflag_initdata if called from tempsolid.
 subroutine GENERAL_PHASE_CHANGE_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, parameter :: bcflag_initdata=0
 integer, INTENT(in) :: nmat
 integer, INTENT(in) :: nstate_mat
 real(amrex_real), INTENT(in) :: x(SDIM)
@@ -955,7 +956,7 @@ if (probtype.eq.55) then
   else if (t.gt.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
-   print *,"t invalid"
+   print *,"t invalid: ",t
    stop
   endif
 
@@ -970,8 +971,7 @@ if (probtype.eq.55) then
       (axis_dir.eq.7)) then  ! compressible
    ! water phase
    if (im.eq.1) then
-    ! bcflag=0 (initial data)
-    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
+    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,bcflag_initdata)
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif ! im=1
   else if (axis_dir.eq.5) then ! freezing drop on substrate
@@ -981,9 +981,9 @@ if (probtype.eq.55) then
    endif
    ! ice or substrate (initial temperature)
    if ((im.eq.3).or.(im.eq.4)) then
-    ! bcflag=0 (calling from GENERAL_PHASE_CHANGE_STATE))
+    ! bcflag_initdata (calling from GENERAL_PHASE_CHANGE_STATE))
     ! "outside_temperature" declared in GLOBALUTIL.F90
-    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
+    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,bcflag_initdata)
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif
   endif
@@ -1191,7 +1191,7 @@ integer, INTENT(in) :: dir,side
 real(amrex_real), INTENT(in) :: dx(SDIM)
 integer, INTENT(in) :: istate,im
 integer ibase,im_crit
-integer local_bcflag
+integer, parameter :: bcflag_denbc=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1199,13 +1199,12 @@ else
  print *,"nmat invalid"
  stop
 endif
-local_bcflag=1
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call GENERAL_PHASE_CHANGE_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+ call GENERAL_PHASE_CHANGE_STATE(xghost,t,LS,local_STATE,bcflag_denbc, &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
@@ -1223,9 +1222,8 @@ if ((istate.ge.1).and. &
    if (istate.eq.1) then ! density
     ! do nothing 
    else if (istate.eq.2) then ! temperature
-    ! bcflag=1 (calling from denBC - boundary conditions
-    ! for density, temperature and species variables)
-    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
+    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE, &
+            im,bcflag_denbc) 
     if (side.eq.2) then !xhi, 2D or 3D, yhi (3D)
      if (axis_dir.eq.5) then
       if (xblob3.gt.zero) then
@@ -1273,8 +1271,8 @@ if ((istate.ge.1).and. &
     if (istate.eq.1) then ! density
      ! do nothing 
     else if (istate.eq.2) then ! temperature
-     ! bcflag=1 (calling from denBC)
-     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
+     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE, &
+             im,bcflag_denbc) 
      STATE_merge=STATE
     else
      print *,"istate invalid"
@@ -1290,8 +1288,8 @@ if ((istate.ge.1).and. &
    if (istate.eq.1) then ! density
     ! do nothing
    else if (istate.eq.2) then ! temperature
-    ! bcflag=1 (calling from denBC)
-    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
+    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE, &
+            im,bcflag_denbc) 
     if (axis_dir.eq.5) then
      if (xblob3.gt.zero) then
       STATE=xblob3

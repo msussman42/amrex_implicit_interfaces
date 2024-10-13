@@ -3784,12 +3784,12 @@ end subroutine dynamic_contact_angle
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
       else if (time.ge.1.0D+20) then
-       print *,"WARNING time.ge.1.0D+20 in get_user_temperature"
+       print *,"WARNING time.ge.1.0D+20 in get_user_temperature: ",time
       else if (time.lt.zero) then
-       print *,"time invalid in get_user_temperature"
+       print *,"time invalid in get_user_temperature: ",time
        stop
       else
-       print *,"time bust in get_user_temperature"
+       print *,"time bust in get_user_temperature: ",time
        stop
       endif
 
@@ -3799,6 +3799,8 @@ end subroutine dynamic_contact_angle
       else
        print *,"fort_initial_temperature(im) invalid or"
        print *,"fort_tempconst(im) invalid"
+       print *,"im,fort_initial_temperature(im),fort_tempconst(im) ", &
+        im,fort_initial_temperature(im),fort_tempconst(im)
        stop
       endif
 
@@ -3822,11 +3824,11 @@ end subroutine dynamic_contact_angle
           (fort_tempconst(im)-fort_initial_temperature(im))* &
           time/startup_time
         else
-         print *,"time invalid in get_user_temperature"
+         print *,"time invalid in get_user_temperature: ",time
          stop
         endif
        else
-        print *,"startup_time or im invalid"
+        print *,"startup_time or im invalid: ",startup_time,im
         stop
        endif
       else
@@ -3836,7 +3838,7 @@ end subroutine dynamic_contact_angle
        else if (bcflag.eq.1) then
         get_user_temperature=fort_tempconst(im)
        else
-        print *,"bcflag invalid"
+        print *,"bcflag invalid: ",bcflag
         stop
        endif
 
@@ -3850,7 +3852,7 @@ end subroutine dynamic_contact_angle
         ! called from denBC, process_initdata,
         ! GENERAL_PHASE_CHANGE_STATE,
         ! probtype.eq.59, probtype.eq.55, or probtype.eq.710
-        ! bcflag==0 => called from initdata
+        ! bcflag==0 => called from initdata or GENERAL_PHASE_CHANGE_STATE
         ! bcflag==1 => called from denbc
       subroutine outside_temperature(time,x,y,z,temperature,im,bcflag)
       use probcommon_module
@@ -3870,12 +3872,12 @@ end subroutine dynamic_contact_angle
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
       else if (time.ge.1.0D+20) then
-       print *,"WARNING time.ge.1.0D+20 in outside_temperature"
+       print *,"WARNING time.ge.1.0D+20 in outside_temperature: ",time
       else if (time.lt.zero) then
-       print *,"time invalid in outside_temperature"
+       print *,"time invalid in outside_temperature: ",time
        stop
       else
-       print *,"time bust in outside_temperature"
+       print *,"time bust in outside_temperature: ",time
        stop
       endif
 
@@ -3995,7 +3997,7 @@ end subroutine dynamic_contact_angle
           stop
          endif
         else
-         print *,"bcflag invalid"
+         print *,"bcflag invalid: ",bcflag
          stop
         endif
        endif ! substrate_height>0
@@ -4037,11 +4039,11 @@ end subroutine dynamic_contact_angle
            temperature=get_user_temperature(time,bcflag,im)
           else if (im.eq.4) then ! substrate
            if (im_solid_temperature.ne.4) then
-            print *,"im_solid_temperature invalid"
+            print *,"im_solid_temperature invalid: ",im_solid_temperature
             stop
            endif
            if (num_materials.lt.4) then
-            print *,"num_materials invalid"
+            print *,"num_materials invalid: ",num_materials
             stop
            endif
            if (z_shift.ge.substrate_height) then
@@ -4110,7 +4112,7 @@ end subroutine dynamic_contact_angle
            stop
           endif
          else
-          print *,"bcflag invalid"
+          print *,"bcflag invalid: ",bcflag
           stop
          endif
          ! substrate: 0<y<substrate_height
@@ -4221,6 +4223,7 @@ end subroutine dynamic_contact_angle
       else
        print *,"expecting probtype=55, 59, 414, 2001, or 710 "
        print *,"in outside_temperature"
+       print *,"probtype: ",probtype
        stop
       endif
  

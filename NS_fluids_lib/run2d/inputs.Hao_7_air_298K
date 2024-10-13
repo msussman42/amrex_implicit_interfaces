@@ -223,7 +223,7 @@ ns.xblob=0.0  # center of water drop
 ns.yblob=0.01875 #4*dxcoarse=3.125e-3
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.01875 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
+ns.yblob2=0.01875 #dxcoarse=0.2/48  4*dxcoarse=1/60=0.01666667
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
