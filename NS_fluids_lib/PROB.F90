@@ -23994,7 +23994,7 @@ end subroutine initialize2d
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
       else if (time.ge.1.0D+20) then
-       print *,"WARNING time.ge.1.0D+20 in initsolidtemp"
+       print *,"WARNING time.ge.1.0D+20 in initsolidtemp: ",time
       else if (time.lt.zero) then
        print *,"time invalid in initsolidtemp: ",time
        stop

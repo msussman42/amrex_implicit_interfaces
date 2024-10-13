@@ -18128,7 +18128,7 @@ stop
       else if (solidheat_flag.eq.2) then
        !do nothing (neumann at solid interface)
       else
-       print *,"solidheat_flag invalid: ",solidheat_flag
+       print *,"solidheat_flag invalid(renormalize_prescribe):",solidheat_flag
        stop
       endif
 
@@ -18794,7 +18794,8 @@ stop
                stop
               endif
              else
-              print *,"solidheat_flag out of range"
+              print *,"solidheat_flag invalid(fort_renormalize_prescribe):", &
+                solidheat_flag
               stop
              endif
             else if ((LS_solid_new(im).le.zero).and. &

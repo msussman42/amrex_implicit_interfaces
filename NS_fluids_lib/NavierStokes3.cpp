@@ -2687,7 +2687,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         combine_flag,
         hflag,
         update_flux,
-        interface_cond_avail); 
+        interface_cond_avail);
+
+       ns_level.solid_temperature();  // if solid temperature is prescribed
+
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
@@ -2888,6 +2891,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         hflag,
         update_flux,
         interface_cond_avail); 
+
+       ns_level.solid_temperature();  // if solid temperature is prescribed
+
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
@@ -2897,6 +2903,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          update_flux,
          interface_cond_avail); 
        }
+
        ns_level.combine_state_variable(
         SOLVETYPE_VISC, //cell centered velocity
         combine_idx,
@@ -2985,6 +2992,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          hflag,
          update_flux, 
          interface_cond_avail);
+
         update_flux=1;
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //mac velocity
@@ -11454,6 +11462,9 @@ void NavierStokes::multiphase_project(int project_option) {
      hflag,
      update_flux,
      interface_cond_avail); 
+
+    ns_level.solid_temperature();  // if solid temperature is prescribed
+
     for (int ns=0;ns<num_species_var;ns++) {
      ns_level.combine_state_variable(
       SOLVETYPE_SPEC+ns,
@@ -12071,12 +12082,12 @@ void NavierStokes::veldiffuseALL() {
 
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
-  int combine_flag=0;  
+   int combine_flag=0;  
    // combine_idx==-1 => update S_new  
    // combine_idx>=0  => update localMF[combine_idx]
-  int combine_idx=-1; 
-  int update_flux=0;
-  int interface_cond_avail=1;
+   int combine_idx=-1; 
+   int update_flux=0;
+   int interface_cond_avail=1;
  
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
@@ -12089,6 +12100,8 @@ void NavierStokes::veldiffuseALL() {
     hflag,
     update_flux,
     interface_cond_avail); 
+
+   ns_level.solid_temperature();  // if solid temperature is prescribed
 
    for (int ns=0;ns<num_species_var;ns++) {
 
@@ -12491,6 +12504,8 @@ void NavierStokes::veldiffuseALL() {
     hflag,
     update_flux,
     interface_cond_avail); 
+
+   ns_level.solid_temperature();
 
    for (int ns=0;ns<num_species_var;ns++) {
 
