@@ -6798,9 +6798,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) xvec(SDIM)
       real(amrex_real) STATE(num_materials*num_state_material)
       integer ibase
-      integer bcflag
-
-      bcflag=0
+      integer, parameter :: bcflag_initdata=0
+      integer, parameter :: bcflag_denbc=1
 
       im_solid_temp=im_solid_primary()
 
@@ -6821,7 +6820,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         call SUB_LS(xvec,time,LS,num_materials)
         call SUB_STATE(xvec,time,LS,STATE, &
-                bcflag,num_materials,num_state_material)
+                bcflag_initdata,num_materials,num_state_material)
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
 
@@ -18262,9 +18261,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
             else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-             ! bcflag=1 (calling from denBC - boundary conditions
              ! for density, temperature and species variables)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
+             call outside_temperature(time,x,y,z,ADV,im,bcflag_denbc) 
             else
              print *,"istate invalid"
              stop
@@ -18358,8 +18356,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
             else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-             ! bcflag=1 (calling from denBC)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
+             call outside_temperature(time,x,y,z,ADV,im,bcflag_denbc) 
             else
              print *,"istate invalid"
              stop
@@ -18432,8 +18429,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
             else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-             ! bcflag=1 (calling from denBC)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
+             call outside_temperature(time,x,y,z,ADV,im,bcflag_denbc) 
             else
              print *,"istate invalid"
              stop
@@ -18529,8 +18525,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing
             else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-             ! bcflag=1 (calling from denBC)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
+             call outside_temperature(time,x,y,z,ADV,im,bcflag_denbc) 
             else
              print *,"istate invalid"
              stop
@@ -18612,8 +18607,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (istate.eq.ENUM_DENVAR+1) then
             ! do nothing (density)
            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-             ! bcflag=1 (calling from denBC)
-            call outside_temperature(time,x,y,z,ADV,im,1)
+            call outside_temperature(time,x,y,z,ADV,im,bcflag_denbc)
            else
             print *,"istate invalid"
             stop
@@ -25082,7 +25076,7 @@ end subroutine initialize2d
        real(amrex_real) massfrac_parm(num_species_var+1)
        integer local_ibase
        integer tessellate
-       integer bcflag
+       integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
        integer, parameter :: continuous_mof=STANDARD_MOF
        integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -25115,8 +25109,6 @@ end subroutine initialize2d
        LS_ptr=>LS
 
        tessellate=0
-
-       bcflag=0
 
        if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
         print *,"tid invalid"
@@ -25220,9 +25212,8 @@ end subroutine initialize2d
 
          call SUB_LS(xpos,time,distbatch,num_materials)
 
-             ! bcflag=0 (calling from fort_initdata)
          call SUB_STATE(xpos,time,distbatch,local_state, &
-                 bcflag,num_materials,num_state_material)
+                 bcflag_initdata,num_materials,num_state_material)
          do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
@@ -25658,8 +25649,7 @@ end subroutine initialize2d
            endif
            ! substrate (initial temperature)
            if (im.eq.4) then
-            ! bcflag=0 (calling from fort_initdata)
-            call outside_temperature(time,x,y,z,water_temp,im,0)
+            call outside_temperature(time,x,y,z,water_temp,im,bcflag_initdata)
             scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp
            endif
 
