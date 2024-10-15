@@ -64,9 +64,11 @@ ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 #FSI_interval applicable when FSI_flag=2, not when FSI_flag=1
 ns.FSI_interval     = 0 
 
-ns.xblob            = 0.1  # Tank radius-cylindrical parts
-ns.yblob            = 0.0  # tank height-cylidrcal parts
-ns.xblob4 	    = 0.1  # End cap radius 
+ns.xblob            = 0.2925  # Tank radius-cylindrical parts
+# yblob=0.0 needed for spherical tank
+ns.yblob            = 0.0  # tank height-cylindrical parts
+# ns.xblob4=ns.xblob if spherical tank.
+ns.xblob4 	    = 0.2925  # End cap radius 
                            # set it to be same with xblob
 ns.yblob4	    = 0.0  # Z coord (vert) of the top spherical cap center
                            # set it to be half of yblob
@@ -74,12 +76,12 @@ ns.yblob4	    = 0.0  # Z coord (vert) of the top spherical cap center
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 
-ns.radblob3 = 0.01 # tank thickness
+ns.radblob3 = 0.03 # tank thickness
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
 # TANK GEOMETRY FILES IN 3D have the "vertical direction" as the
 # "y" direction, but the code swaps y and z so that
 # the "z" direction becomes the vertical direction.
-ns.radblob2         = 0.03   # radius of spherical ullage
+ns.radblob2         = 0.2320   # radius of spherical ullage
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
 ns.zblob2           = 0.0
@@ -90,8 +92,10 @@ ns.radblob7        = 0.0    # 0=no motion  1=sloshing  2=rotation  3=both
 ns.xblob7         = 0.01       # xdisp_amplitude
 ns.yblob7         = 18.6889    # xdisp_freq
 
-ns.angular_velocity=10.0 #radians/s
-ns.xblob8=0.7 # transition time for the angular velocity
+#omega_dot=0.045e-3 radians/s^2
+#0.045e-3=0.668e-2/T  T=0.668e-2/0.045e-3=148.44444444
+ns.angular_velocity=0.668e-2 #radians/s
+ns.xblob8=148.4444 # transition time for the angular velocity
 ns.radblob8=0.4 # lever arm (meters)
 #not used if radblob7=0.0
 #ns.radblob8      = 2.0   # rotation axis z, 2 is z, 3 is y , 1 is x
@@ -101,9 +105,9 @@ ns.radblob8=0.4 # lever arm (meters)
 #then provide xblob8 and yblob8 (position)
 #   y axis              xblob8 and zblob8
 #   x axis              yblob8 and zblob8
-ns.xblob8 = 0.15        
-ns.yblob8 = 0.15
-ns.zblob8 = 0.0
+#ns.xblob8 = 0.15        
+#ns.yblob8 = 0.15
+#ns.zblob8 = 0.0
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------
@@ -120,8 +124,8 @@ geometry.coord_sys  = 0 # 3D
 #geometry.prob_lo    = 0.0  -0.2 #2D RZ
 #geometry.prob_lo    = -0.2  -0.2 #2D XY
 #geometry.prob_hi    = 0.2  0.2  #2D
-geometry.prob_lo    = -0.15  -0.15 -0.15 #3D
-geometry.prob_hi    =  0.15  0.15 0.15    #3
+geometry.prob_lo    = -0.33  -0.33 -0.33 #3D
+geometry.prob_hi    =  0.33  0.33 0.33    #3
 #geometry.prob_lo    = -0.1  -0.1 -0.1 #3D
 #geometry.prob_hi    = 0.1  0.1 0.3    #3
 geometry.is_periodic= 0 0 0
@@ -173,7 +177,7 @@ ns.shock_timestep=2 2 2
 #ns.visual_nddata_format=2
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
-amr.check_int       = 10  # number of timesteps between checkpoints 3D
+amr.check_int       = 100  # number of timesteps between checkpoints 3D
 amr.check_file      = chk  # root name of checkpoint file
 
 #ns.slice_dir=1 # vertical direction 2D
@@ -181,7 +185,7 @@ ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 #amr.plot_int        = 200 # number of timesteps between plot files (2D)
-amr.plot_int        = 10  # number of timesteps between plot files (2D)
+amr.plot_int        = 100  # number of timesteps between plot files (2D)
 #amr.plot_int        = 1   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
@@ -309,22 +313,26 @@ ns.tension=8.94e-3 8.94e-3 11.9796e-3
 # 12 13 23 21 31 32
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
+# COMMENT OUT THIS LINE IF NO PHASECHANGE
 #ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
 ns.latent_heat=0.0 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term
 # For evaporation and Boiling, this should always be 0.
-ns.distribute_from_target= 0 0 0 0 0 0
-ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+# COMMENT OUT THESE TWO LINES IF NO PHASE CHANGE
+#ns.distribute_from_target= 0 0 0 0 0 0
+#ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
 # density in the ambient gas will increase in a sealed tank.
-ns.constant_density_all_time=1 0 1 # sealed 1..nmat
+# COMMENT OUT THIS LINE IF NO PHASE CHANGE
+#ns.constant_density_all_time=1 0 1 # sealed 1..nmat
 # constant_volume_mdot=0 in an open container
 # constant_volume_mdot=-1 => redistribute -sum mdot evenly into the destination
 #  material.
 # constant_volume_mdot=1 => redistribute -sum mdot evenly into the source
 #  material.
 #  12,13,23,21,31,32
-ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
+# COMMENT OUT THIS LINE IF NO PHASE CHANGE
+#ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 
 # MK model (evaporation only) 
 #ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
@@ -332,10 +340,12 @@ ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
 # freezing_model==6 => Either Villegas etal/Palmore Desjardins model with
 #  species for evaporation/condensation or 
 #  Kassemi hybrid energy jump+Schrage model.
-ns.freezing_model=      6 0 0 0 0 0
+# COMMENT OUT THIS LINE IF NO PHASE CHANGE
+#ns.freezing_model=      6 0 0 0 0 0
 # Tanasawa_or_Schrage_or_Kassemi=0 => Villegas etal/Palmore Desjardins
 # Tanasawa_or_Schrage_or_Kassemi=3 => Kassemi
-ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
+# COMMENT OUT THIS LINE IF NO PHASE CHANGE
+#ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 
 # if initial temperature is 295.41 Kelvin,
 # find P_ref so that
@@ -347,10 +357,11 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 # The phase-change saturation temperature and pressure are calculated
 # from Clausius–Clapeyron relation. The "reference" temprature and
 # pressure are given below.
-ns.saturation_temp=77.25 0.0 0.0 0.0 0.0 0.0  # T_ref
-ns.saturation_temp_min=69.28 0.0 0.0 0.0 0.0 0.0
-ns.reference_pressure=583982.19871598808 0.0 0.0 0.0 0.0 0.0
-ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
+# COMMENT OUT THESE 4 LINES IF NO PHASE CHANGE
+#ns.saturation_temp=77.25 0.0 0.0 0.0 0.0 0.0  # T_ref
+#ns.saturation_temp_min=69.28 0.0 0.0 0.0 0.0 0.0
+#ns.reference_pressure=583982.19871598808 0.0 0.0 0.0 0.0 0.0
+#ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
 
@@ -470,12 +481,12 @@ cg.maxiter = 200
 cg.restart_period=25
 
 #mg.bot_atol = 1.0e-8 #2D
-mg.bot_atol = 1.0e-6 #3D
+mg.bot_atol = 1.0e-10 #3D
 mg.rtol_b = -0.01
 Lp.v = 1
 
 #mac.mac_abs_tol=1.0e-8  #2D
-mac.mac_abs_tol=1.0e-6 #3D
+mac.mac_abs_tol=1.0e-8 #3D
 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 
