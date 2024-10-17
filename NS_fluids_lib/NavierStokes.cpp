@@ -329,6 +329,7 @@ int  NavierStokes::visual_divergence_plot_int=0;
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
 
+//ns.blob_history_plot_int
 int  NavierStokes::blob_history_plot_int=0;
 
 //default: tecplot nodes
@@ -21482,7 +21483,19 @@ NavierStokes::writePlotFile (
     for (int i=0;i<history_size;i++) {
      int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
      for (int j=0;j<snapshot_size;j++) {
-      std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,vol " <<
+      Real rad_min= 
+	 blob_history_class.blob_history[i].snapshots[j].blob_axis_len[0];
+      Real rad_max=rad_min;
+      for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
+       rad_min=min(rad_min,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+       rad_max=max(rad_max,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+      }
+      Real defparm=-1.0;
+      if (rad_min+rad_max>0.0) {
+       defparm=(rad_max-rad_min)/(rad_max+rad_min);
+      }
+
+      std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,defparm,vol " <<
        blob_history_class.blob_history[i].im << ' ' <<
        i << ' ' <<
        j << ' ' <<
@@ -21497,6 +21510,7 @@ NavierStokes::writePlotFile (
           blob_axis_len[1] << ' ' <<
        blob_history_class.blob_history[i].snapshots[j].
           blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
+       defparm << ' ' <<
        blob_history_class.blob_history[i].snapshots[j].
           blob_volume << '\n';
      } //j
