@@ -133,13 +133,14 @@ ns.incremental_gravity_flag=0
 # theta_L=40 degrees sigma_SL=sigma_LG * (1-cos(40))=407.1
 # theta_L=44 degrees sigma_SL=sigma_LG * (1-cos(44))=488.3
 # theta_L=70 degrees sigma_SL=sigma_LG * (1-cos(70))=1144.9
+# theta_L=135 degrees sigma_SL=sigma_LG * (1-cos(135))=2970.4
 #
 # sigma_IG-sigma_IL=sigma_LG cos(25)
 # sigma_IG=sigma_LG=1740e-3
 # sigma_IL=sigma_LG(1-cos(25))=163.0
 # LG,LI,LS,IG,GS,SI  
 ns.radblob9=0.5
-ns.tension=      1740.0e-3 1144.9e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
+ns.tension=      1740.0e-3 2970.4e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
 ns.tension_init= 1740.0e-3 280.7e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
 
 # 1 J/kg = 10^4 erg/g
