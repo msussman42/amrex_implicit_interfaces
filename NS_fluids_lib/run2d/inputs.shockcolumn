@@ -160,12 +160,12 @@ ns.v = 1
 prescribe_temperature_outflow=1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-#ns.lo_bc          = 3 2
+#ns.lo_bc          = 3 1
 #ns.hi_bc          = 3 2
 #Sep 16, 2018 (slipwall not allowed if viscosity present, and
 # NoSlipWall causes artifacts to form on the walls)
 # Either symmetry or outflow is ok for xlo and xhi walls.
-ns.lo_bc          = 3 2
+ns.lo_bc          = 3 1
 ns.hi_bc          = 3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
