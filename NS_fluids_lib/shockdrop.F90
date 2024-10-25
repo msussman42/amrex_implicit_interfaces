@@ -180,6 +180,8 @@ if (shockdrop_VEL0.gt.shockdrop_VEL1) then
  shockdrop_inertial_time_scale=two*radblob* &
     sqrt(fort_denconst(1)/shockdrop_DEN1)/ &
     (shockdrop_VEL0-shockdrop_VEL1) 
+ print *,"shockdrop_DownStreamVelocity=", &
+    shockdrop_VEL0-shockdrop_VEL1
  print *,"shockdrop_We=",shockdrop_We
  print *,"shockdrop_Oh=",shockdrop_Oh
  print *,"shockdrop_Re=",shockdrop_Re
@@ -248,8 +250,11 @@ else
  ! downstream: v=-shockdrop_VEL1
  if (ls_local.ge.zero) then  ! upstream (above the shock)
   vel(SDIM)=zero
- else
+ else if (ls_local.le.zero) then
   vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
+ else
+  print *,"ls_local invalid: ",ls_local
+  stop
  endif
 endif 
 
@@ -270,7 +275,16 @@ if ((dir.lt.0).or.(dir.ge.SDIM)) then
  print *,"dir invalid: ",dir
  stop
 endif
-vel_local=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
+
+if (time.eq.zero) then
+ vel_local=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
+else if (time.gt.zero) then
+ vel_local=abs(abs(shockdrop_VEL0)-abs(shockdrop_VEL1))
+else
+ print *,"time invalid in shockdrop_maxvelocity: ",time
+ stop
+endif
+
 vel_local=max(abs(advbot),abs(vel_local))
 vel=max(abs(vel),abs(vel_local))
 
@@ -425,7 +439,7 @@ if ((axis_dir.eq.150).or. &
     (axis_dir.eq.152)) then
  LS=z-zblob2
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
