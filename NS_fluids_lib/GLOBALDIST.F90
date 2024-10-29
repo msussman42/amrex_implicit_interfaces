@@ -869,6 +869,7 @@ end subroutine nozzle2d
       real(amrex_real) :: dist_left,dist_right
       real(amrex_real) :: offset_biofilm
       real(amrex_real) :: local_offset
+      real(amrex_real) :: height_shift
 
       hugedist=99999.0
 

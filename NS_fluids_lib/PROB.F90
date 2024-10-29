@@ -8095,6 +8095,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (num_materials.eq.3) then
           !do nothing
          else if (num_materials.eq.4) then
+          solid_id=2
           call jetting_plate_dist(x,y,z, &
             dist(num_materials),solid_id,for_clamped)
           dist(num_materials)=-dist(num_materials) !now: dist(4)>0 in the plate.
@@ -29587,7 +29588,9 @@ end subroutine initialize2d
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact) &
+      xlo,time,bc, &
+      scomp, & !absolute sc=scompBC_map[i]
+      ncomp,bfact) &
       bind(c,name='fort_group_refine_densityfill')
 
       use filcc_module
@@ -29598,7 +29601,8 @@ end subroutine initialize2d
 
       integer, INTENT (IN) :: tid_in
       integer, INTENT(in) :: grid_type
-      integer, INTENT(in) :: scomp,ncomp,bfact,level
+      integer, INTENT(in) :: scomp !absolute
+      integer, INTENT(in) :: ncomp,bfact,level
       integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM), xlo(SDIM), time
@@ -29701,7 +29705,7 @@ end subroutine initialize2d
       u_ptr=>u
       call local_filcc4D_refine(bfact, &
        u_ptr, &
-       scomp_data, & !scomp_data=1
+       scomp_data, & !scomp_data=1 (relative, not absolute)
        ncomp, &
        ncomp, &
        domlo,domhi,bc)
@@ -31120,10 +31124,10 @@ end subroutine initialize2d
       tid_in, &
       grid_type, &
       level, &
-      u,DIMS(u), &
+      u,DIMS(u), & !dest.dataPtr(dc)
       domlo,domhi,dx, &
       xlo,time,bc, &
-      scomp, &
+      scomp, & !absolute sc=scompBC_map[i]
       ncomp,bfact) &
       bind(c,name='fort_group_tensorfill')
 
@@ -31192,7 +31196,7 @@ end subroutine initialize2d
        stop
       endif
 
-      increment=4*(AMREX_SPACEDIM-1)
+      increment=4*(AMREX_SPACEDIM-1) 
       nparts=ncomp/increment
       if (nparts*increment.eq.ncomp) then
        !do nothing
@@ -31243,12 +31247,12 @@ end subroutine initialize2d
       u_ptr=>u
       do iparts_local=1,ncomp,increment
        call local_filcc4D_refine(bfact, &
-        u_ptr, &
+        u_ptr, & !u(DIMV(u),ncomp)
         iparts_local, &
         increment, &
         ncomp, &
         domlo,domhi, &
-        bc)
+        bc) !bc(sdim,2,ncomp)
       enddo
 
       do dir2=1,SDIM
@@ -31262,6 +31266,8 @@ end subroutine initialize2d
        endif
       enddo  ! dir2
 
+        !scomp=scompBC_map[i]
+        !increment=4*(sdim-1)
       ipart_start=scomp/increment
       if (ipart_start*increment.eq.scomp) then
        !do nothing
@@ -31398,6 +31404,7 @@ end subroutine initialize2d
          stop
         endif
 
+        !do iparts_local=scomp+1,scomp+ncomp,increment
         if ((ipart-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
             (istate-1)*increment.eq.iparts_local-1) then
          !do nothing
@@ -31424,7 +31431,25 @@ end subroutine initialize2d
           do jfine=0,1
           do ifine=0,1
            nfine=4*kfine+2*jfine+ifine+1
-           u(D_DECL(i,j,k),iparts_local-1+nfine)=zero
+
+            !scomp is absolute
+           if ((iparts_local-1-scomp+nfine.le.ncomp).and. &
+               (iparts_local-1-scomp+nfine.ge.1)) then
+            u(D_DECL(i,j,k),iparts_local-1-scomp+nfine)=zero
+           else
+            print *,"(breakpoint) break point and gdb: "
+            print *,"(1) compile with the -g option"
+            print *,"(2) break PROB.F90:31434"
+            print *,"ifine,jfine,kfine,nfine ",ifine,jfine,kfine,nfine
+            print *,"nparts ",nparts
+            print *,"iparts_local: ",iparts_local
+            print *,"scomp,ncomp ",scomp,ncomp
+            print *,"ipart,istate ",ipart,istate
+            print *,"time ",time
+            print *,"level ",level
+            print *,"i,j,k ",i,j,k
+            stop
+           endif
           enddo !ifine
           enddo !jfine
 #if (AMREX_SPACEDIM==3)

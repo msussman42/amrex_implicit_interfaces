@@ -894,7 +894,8 @@ NavierStokes::variableSetUp ()
       1,
       NUM_CELL_ELASTIC_REFINE,
       &refine_elastic_pc_interp,
-      state_holds_data,refined_blocking);
+      state_holds_data,
+      refined_blocking); //refined_blocking=4*(sdim-1)
 
       // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,
@@ -1044,7 +1045,7 @@ NavierStokes::variableSetUp ()
        MOFvelocity_fill_class_tensor,
        &refine_elastic_pc_interp);
 
-     } // partid=0..nparts-1
+     } // partid=0..num_materials_viscoelastic-1
 
     } else if (num_materials_viscoelastic==0) {
      // do nothing
