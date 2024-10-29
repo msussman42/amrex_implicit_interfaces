@@ -25161,7 +25161,7 @@ MultiFab* NavierStokes::getStateTensor (
    MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
     ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
 
-   FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp, debug_fillpatch);
+   FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp,debug_fillpatch);
 
    ParallelDescriptor::Barrier();
 

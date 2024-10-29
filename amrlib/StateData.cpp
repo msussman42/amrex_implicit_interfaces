@@ -703,7 +703,7 @@ StateData::FillBoundary (
               groupsize=std::min(groupsize,state_blocking);
 	    } else if (state_blocking>1) {
 
-  	     sc_group=0;
+  	     sc_group=0; //insure that we call the group fill routine.
 	     if (desc->master(sc_group)) {
 	      //do nothing
 	     } else
@@ -717,8 +717,8 @@ StateData::FillBoundary (
 
             BL_ASSERT(groupsize != 0);
 
-            if (groupsize+i <= ncomp)
-            {
+            if (groupsize+i <= ncomp) {
+
                 //
                 // Can do the whole group at once.
                 //
@@ -752,9 +752,10 @@ StateData::FillBoundary (
                   &tid_current,
                   &grid_type,
                   &level,
-                  dat,dlo,dhi,plo,phi,dx,xlo,
+                  dat, //dat=dest.dataPtr(dc)
+		  dlo,dhi,plo,phi,dx,xlo,
                   &time,bcrs.dataPtr(),
-                  &sc,
+                  &sc, //absolute sc=scompBC_map[i]
                   &groupsize,&bfact,true);
 
                 i += groupsize;

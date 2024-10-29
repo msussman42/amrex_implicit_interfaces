@@ -1230,7 +1230,7 @@ AmrLevel::FillPatch (AmrLevel & old,
                      int       dcomp,
                      Real      time,
                      int       index,
-                     int       scomp, //absolute within the state.
+                     int       scomp, //absolute within the state (old).
                      int       ncomp,
 		     int debug_fillpatch)
 {
@@ -1246,6 +1246,7 @@ AmrLevel::FillPatch (AmrLevel & old,
 
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
+
  for (int icomp=0;icomp<ncomp;icomp++)
   scompBC_map[icomp]=scomp+icomp;
 
