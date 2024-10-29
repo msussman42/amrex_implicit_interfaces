@@ -318,13 +318,14 @@ real(amrex_real), INTENT(out) :: temperature
 integer, INTENT(out) :: prescribed_flag
 integer dir
 integer, parameter :: for_clamped=1
+integer :: solid_id !=1 or 2
 
  if (probtype.eq.42) then
 
-  if (num_materials.eq.3) then
+  if (num_materials.ge.3) then
    !do nothing
   else
-   print *,"expecting num_materials.eq.3: ",num_materials
+   print *,"expecting num_materials.ge.3: ",num_materials
    stop
   endif
 
@@ -340,13 +341,37 @@ integer, parameter :: for_clamped=1
    temperature=293.0d0
 
     !LS<0 in the clamped regions
-   call jetting_plate_dist(x(1),x(2),x(SDIM),LS,for_clamped)
+   solid_id=1
+   call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
    LS=-LS
    if (LS.ge.zero) then
     LS=99999.0d0
    else
     LS=-99999.0d0
    endif
+   if (LS.lt.zero) then
+    if (num_materials.eq.3) then
+     !do nothing
+    else if (num_materials.eq.4) then
+     solid_id=2
+     call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
+     LS=-LS
+     if (LS.ge.zero) then
+      LS=99999.0d0
+     else
+      LS=-99999.0d0
+     endif
+    else
+     print *,"num_materials invalid: ",num_materials
+     stop
+    endif
+   else if (LS.ge.zero) then
+    !do nothing
+   else
+    print *,"LS invalid: ",LS
+    stop
+   endif
+    
   else if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
            (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
            (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then

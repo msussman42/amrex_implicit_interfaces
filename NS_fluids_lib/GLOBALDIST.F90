@@ -858,14 +858,17 @@ end subroutine nozzle2d
        !jetting_plate_dist is called from soliddist.
        !soliddist is called from materialdistsolid.
        !dist<0 in the plate.
-      subroutine jetting_plate_dist(x,y,z,dist,for_clamped)
+      subroutine jetting_plate_dist(x,y,z,dist,solid_id,for_clamped)
       use global_utility_module
       IMPLICIT NONE
       integer, INTENT(in) :: for_clamped
+      integer, INTENT(in) :: solid_id !=1 or 2
       real(amrex_real), INTENT(in) :: x,y,z
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real) :: aspect,offset,distplate,hugedist
       real(amrex_real) :: dist_left,dist_right
+      real(amrex_real) :: offset_biofilm
+      real(amrex_real) :: local_offset
 
       hugedist=99999.0
 
@@ -873,30 +876,56 @@ end subroutine nozzle2d
        ! near a flat plate.
       if (probtype.eq.42) then
        aspect=xblob2
+
 !      offset=2.54d0
-       offset=radblob2
+       offset=radblob2 ! thickness of substrate 
+       offset_biofilm=offset ! thickness of biofilm
+
        distplate=yblob2
 
        if (radblob2.eq.zero) then
-        dist=hugedist
+        dist=hugedist !no plate
        else if (radblob2.gt.zero) then
+
+        if (solid_id.eq.1) then
+         height_shift=zero
+         local_offset=offset
+        else if (solid_id.eq.2) then
+         height_shift=-offset_biofilm
+         local_offset=offset_biofilm
+         if (num_materials.eq.4) then
+          !do nothing
+         else
+          print *,"num_materials invalid ",num_materials
+          stop
+         endif
+        else
+         print *,"solid_id invalid: ",solid_id
+         stop
+        endif 
 
           ! negative in the square
         if (for_clamped.eq.0) then
-         call squaredist(x,y,-aspect,aspect,yblob+distplate, &
-          yblob+distplate+offset,dist)
+         call squaredist(x,y,-aspect,aspect, &
+          yblob+distplate+height_shift, &
+          yblob+distplate+local_offset+height_shift, &
+          dist)
         else if (for_clamped.eq.1) then
-         call squaredist(x,y,-aspect,-aspect+offset,yblob+distplate, &
-          yblob+distplate+offset,dist_left)
-         call squaredist(x,y,aspect-offset,aspect,yblob+distplate, &
-          yblob+distplate+offset,dist_right)
+         call squaredist(x,y,-aspect,-aspect+offset, &
+          yblob+distplate+height_shift, &
+          yblob+distplate+local_offset+height_shift, &
+          dist_left)
+         call squaredist(x,y,aspect-offset,aspect, &
+          yblob+distplate+height_shift, &
+          yblob+distplate+local_offset+height_shift, &
+          dist_right)
          dist=min(dist_left,dist_right)
         else
          print *,"for_clamped invalid: ",for_clamped
          stop
         endif
        else
-        print *,"radblob2 invalid for bubble jetting problem"
+        print *,"radblob2 invalid for bubble jetting problem: ",radblob2
         stop
        endif
       else
@@ -1287,6 +1316,7 @@ end subroutine nozzle2d
       real(amrex_real) factor_zblob
       real(amrex_real) diamblob
       integer i,j,iSphere
+      integer :: solid_id !1=substrate 2=biofilm
       integer, parameter :: for_clamped=0
 
       if (num_materials.lt.1) then
@@ -1393,7 +1423,16 @@ end subroutine nozzle2d
 
        !dist<0 in the solid
        !soliddist is called by: subroutine materialdistsolid 
-       call jetting_plate_dist(x,y,z,dist,for_clamped)
+       if (im.eq.3) then
+        solid_id=1
+       else if ((im.eq.4).and.(num_materials.eq.4)) then
+        solid_id=2
+       else
+        print *,"im invalid in soliddist: ",im
+        stop
+       endif
+
+       call jetting_plate_dist(x,y,z,dist,solid_id,for_clamped)
 
        ! soliddist
       else if (probtype.eq.bubbleInPackedColumn) then
