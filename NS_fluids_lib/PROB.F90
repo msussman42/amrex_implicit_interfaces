@@ -7845,6 +7845,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: box_xlo,box_xhi
       real(amrex_real) :: box_ylo,box_yhi
       integer, parameter :: for_clamped=0
+      integer :: solid_id !=1 or 2
 
       im_solid_materialdist=im_solid_primary()
 
@@ -8079,15 +8080,29 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        dist(2)=-dist(1)
-       if (num_materials.eq.3) then
+       if (num_materials.ge.3) then
         if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
             (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
             (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
          !do nothing
+
+         !1=liquid 2=JWL 3=substrate 4=biofilm
         else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
-         call jetting_plate_dist(x,y,z,dist(3),for_clamped)
+         solid_id=1
+         call jetting_plate_dist(x,y,z,dist(3),solid_id,for_clamped)
          dist(3)=-dist(3) !now: dist(3)>0 in the plate.
          dist(1)=min(dist(1),-dist(3))
+         if (num_materials.eq.3) then
+          !do nothing
+         else if (num_materials.eq.4) then
+          call jetting_plate_dist(x,y,z, &
+            dist(num_materials),solid_id,for_clamped)
+          dist(num_materials)=-dist(num_materials) !now: dist(4)>0 in the plate.
+          dist(1)=min(dist(1),-dist(num_materials))
+         else
+          print *,"num_materials invalid: ",num_materials
+          stop
+         endif
         else
          print *,"probtype.eq.42 invalid FSI_flag: ",FSI_flag(3)
          stop
