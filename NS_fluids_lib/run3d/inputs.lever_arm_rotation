@@ -92,10 +92,22 @@ ns.radblob7        = 0.0    # 0=no motion  1=sloshing  2=rotation  3=both
 ns.xblob7         = 0.01       # xdisp_amplitude
 ns.yblob7         = 18.6889    # xdisp_freq
 
+#BO_i=rho_L omega_dot L D0^2/sigma=1.16
+#BO_c=rho_L omega^2 L D0^2/sigma=0.116
+#rho_L=1004.0 kg/m^3
+#L=0.4m
+#D0=bubble diameter=0.464 meters
+#sigma=0.03325 N/m
+#Omega=0.668e-2 rad/s
+#Omega_dot=0.445e-3
+#OM=(x,L+y,z)
+#centrifugal force: omega x (omega x OM)
+#angular acceleration force: omega_dot x OM
+#coriolis force: 2 Omega x u
 #omega_dot=0.045e-3 radians/s^2
 #0.045e-3=0.668e-2/T  T=0.668e-2/0.045e-3=148.44444444
 ns.angular_velocity=0.668e-2 #radians/s
-ns.xblob8=148.4444 # transition time for the angular velocity
+ns.xblob8=15.011 # transition time for the angular velocity
 ns.radblob8=0.4 # lever arm (meters)
 #not used if radblob7=0.0
 #ns.radblob8      = 2.0   # rotation axis z, 2 is z, 3 is y , 1 is x
@@ -258,7 +270,7 @@ ns.molar_mass = 0.002016 0.00201588 0.0269815386  # 1..num_materials
                            # molar mass.
 
 # Density [kg/m^3]  HFE7000
-ns.denconst= 835.51 1.8960 2700
+ns.denconst= 1004.0 2.41 2700
 ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
@@ -290,7 +302,12 @@ ns.viscconst=156.2e-06 5.3e-06 1.0
 ns.tempconst=70 70 70
 
 # Surface tension [N/m]
-ns.tension=8.94e-3 8.94e-3 11.9796e-3
+# sigma_LG * cos(theta_L)+ sigma_SL = sigma_SG
+# theta_L=0
+# sigma_LG=sigma_SG-sigma_SL
+# sigma_SL=0.0
+# LG LS GS
+ns.tension=0.03325 0.0 0.03325
 #ns.tension=1.2E-02 1.2E-02 1.2E-02
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
