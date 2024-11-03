@@ -253,13 +253,13 @@ stop
        ! see subroutine eval_face_coeff
 
       if (FSI_outer_sweeps.eq.0) then
-       ! not used; all viscoelastic/ice materials are fluids
+       ! not used; all elastic/ice materials are fluids
        ! cc_group=cc (SOLVETYPE_PRES)
        ! cc_group=cc*cc_elasticmask (SOLVETYPE_INITPROJ)
        im_rigid_CL=num_materials 
       else if ((FSI_outer_sweeps.ge.1).and. &
                (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
-       !if im<=im_rigid_CL then viscoelastic/ice material is a rigid solid.
+       !if im<=im_rigid_CL then elastic/ice material is a rigid solid.
        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
        if ((im_rigid_CL.ge.1).and.(im_rigid_CL.le.num_materials)) then
         !do nothing
