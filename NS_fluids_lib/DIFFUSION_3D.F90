@@ -308,7 +308,7 @@ stop
        integer im_rigid_CL
 
        if (FSI_outer_sweeps.eq.0) then
-        im_rigid_CL=num_materials
+        im_rigid_CL=num_materials !not used
        else if ((FSI_outer_sweeps.ge.1).and. &
                 (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
         im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
@@ -467,6 +467,11 @@ stop
         do im=1,num_materials
          LStest=lsnew(D_DECL(i,j,k),im)
 
+          !FSI_PRESCRIBED_PROBF90
+          !FSI_PRESCRIBED_NODES
+          !FSI_SHOELE_CTML
+          !FSI_PRESCRIBED_ICE_NODES_INIT
+          !FSI_FLUID_NODES_INIT
          if (is_lag_part(im).eq.1) then
           if (is_rigid(im).eq.1) then
            if (LStest.ge.zero) then
@@ -584,8 +589,8 @@ stop
          endif
 
         else if ((im_FSI.ge.1).and.(im_FSI.le.num_materials)) then
-         !do nothing
-        else if ((im_solid.eq.0).and.(im_FSI.eq.0))  then ! in the fluid
+         !do nothing (velocity in the ice/elastic material is already set)
+        else if ((im_solid.eq.0).and.(im_FSI.eq.0)) then ! in the fluid
 
          RCEN=xsten(0,1)
 

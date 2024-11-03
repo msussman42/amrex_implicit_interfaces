@@ -576,7 +576,7 @@ stop
           else if ((num_FSI_outer_sweeps.gt.1).and. &
                    (num_FSI_outer_sweeps.le.num_materials)) then
            if (FSI_outer_sweeps.eq.0) then
-            im_rigid_CL=num_materials
+            im_rigid_CL=num_materials !not used FSI_outer_sweeps==0
            else if ((FSI_outer_sweeps.ge.1).and. &
                     (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
             im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
