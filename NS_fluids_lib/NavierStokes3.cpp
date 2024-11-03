@@ -9489,6 +9489,7 @@ void NavierStokes::multiphase_project(int project_option) {
    print_project_option(project_option);
    std::cout << " divu_outer_sweeps= " << divu_outer_sweeps << '\n';
    std::cout << " SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
+   std::cout << " FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
    std::cout << " slab_step= " << slab_step << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
@@ -11298,7 +11299,8 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << "project_option= " << project_option <<
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << 
-          " FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
+          " FSI_outer_sweeps= " << FSI_outer_sweeps << 
+	  " divu_outer_sweeps= " << divu_outer_sweeps << '\n';
    std::cout << "project_option= " << project_option <<
 	  " error0= " << error0 << '\n';
 

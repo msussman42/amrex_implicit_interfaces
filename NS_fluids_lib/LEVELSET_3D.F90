@@ -16976,12 +16976,14 @@ stop
           at_RZ_face=1
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+
          if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
           !do nothing
          else
           print *,"xstenMAC_center(1) invalid: ",xstenMAC_center(1)
           stop
          endif
+
          if ((dir.eq.0).and. &
              (abs(xstenMAC_center(1)).le.EPS2*dx(1))) then
           at_RZ_face=1
@@ -17009,7 +17011,7 @@ stop
                 (im_left.le.im_rigid_CL)).or. &
                ((is_rigid_CL(im_right).eq.1).and. &
                 (im_right.le.im_rigid_CL))) then
-            !do nothing
+            !do nothing (elastic/ice velocity is fixed)
            else if (((is_rigid_CL(im_left).eq.0).or. &
                      (im_left.gt.im_rigid_CL)).and. &
                     ((is_rigid_CL(im_right).eq.0).or. &
@@ -17022,10 +17024,17 @@ stop
             stop
            endif
 
+           !above:
+           !im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
           else if (extend_solid_velocity.eq.1) then
 
+           !below:
            !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
-           !FSI_outer_sweeps>=0
+           ! 0 <= FSI_outer_sweeps <= num_FSI_outer_sweeps-1
+           ! if FSI_outer_sweeps==num_FSI_outer_sweeps-1 then
+           !  nothing is extended.
+           ! if an is_rigid_CL material is already processed, then
+           !  nothing is extended.
            do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
             im_critical=im_elastic_map(ipart)+1
 
@@ -17037,6 +17046,7 @@ stop
              stop
             endif
 
+             !sanity check
             if (is_rigid_CL(im_critical).eq.1) then
 
              if ((LSleft(im_critical).ge.-extend_offset).and. &
@@ -17207,7 +17217,7 @@ stop
              stop
             endif
 
-           enddo !ipart
+           enddo !ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
 
           else
            print *,"extend_solid_velocity invalid: ",extend_solid_velocity
@@ -17288,7 +17298,7 @@ stop
           !FSI_outer_sweeps>=1
           if ((is_rigid_CL(im_left).eq.1).and. &
               (im_left.le.im_rigid_CL)) then
-           !do nothing
+           !do nothing (elastic/ice velocity is fixed)
           else if ((is_rigid_CL(im_left).eq.0).or. &
                    (im_left.gt.im_rigid_CL)) then
            velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
@@ -17297,10 +17307,17 @@ stop
            stop
           endif
 
+          !above:
+          !im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
          else if (extend_solid_velocity.eq.1) then
 
+          !below:
           !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
-          !FSI_outer_sweeps>=0
+          ! 0 <= FSI_outer_sweeps <= num_FSI_outer_sweeps-1
+          ! if FSI_outer_sweeps==num_FSI_outer_sweeps-1 then
+          !  nothing is extended.
+          ! if an is_rigid_CL material is already processed, then
+          !  nothing is extended.
           do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
            im_critical=im_elastic_map(ipart)+1
 
@@ -17312,6 +17329,7 @@ stop
             stop
            endif
 
+            !sanity check
            if (is_rigid_CL(im_critical).eq.1) then
 
             if ((localLS(im_critical).ge.-extend_offset).and. &
@@ -17334,7 +17352,7 @@ stop
             stop
            endif
 
-          enddo !ipart
+          enddo !ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
 
          else
           print *,"extend_solid_velocity invalid: ",extend_solid_velocity
