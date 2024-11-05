@@ -8,6 +8,8 @@
 #68 degree contact angle
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
+#Pr=Cpl mul/kl=4.22e7 * 1.79e-2 / .516e+5 = 14.639
+#theta=Tcold+(T-Tcold)/(Thot-Tcold)=263.0 + (T-263.0)/(273-263)
 max_step  =  9999999    # maximum timestep
 
 stop_time = 70.0
@@ -207,6 +209,7 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
 #instead of T=271.0 (-2 test plate), try -3,-4,-5,-6, -73
+#pendant drop experiment: T_substrate=263.0
 ns.tempconst=          273.0 293.0 273.0 200.0
 ns.initial_temperature=273.0 293.0 273.0 200.0
 #ns.xblob3=298.0 #force ambient temperature condition on all walls except the
