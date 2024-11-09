@@ -626,7 +626,7 @@ stop
        stop
       endif
       if (im.ge.im_opp) then
-       print *,"im and im_opp invalid"
+       print *,"im and im_opp invalid: ",im,im_opp
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -3775,6 +3775,7 @@ stop
             enddo
 
             call merge_levelset(xcenter,time,LSSIDE,LS_merge)
+             !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
             call get_primary_material(LSSIDE_merge_fixed,im_opp)
             do im=1,num_materials
@@ -3782,6 +3783,7 @@ stop
             enddo
             im_star_merge_majority(sidestar,dirstar)=im_opp
 
+             !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
             call get_primary_material(LSSIDE_fixed,im_opp)
             do im=1,num_materials
@@ -8010,7 +8012,9 @@ stop
       real(amrex_real) LSIDE(2)
       real(amrex_real) LSIDE_tension(2)
       real(amrex_real) LSIDE_MAT(num_materials)
+      real(amrex_real) LSIDE_MAT_fixed(num_materials)
       real(amrex_real) LSIDE_tension_MAT(num_materials)
+      real(amrex_real) LSIDE_tension_MAT_fixed(num_materials)
 
       real(amrex_real) DXMAXLS
       real(amrex_real) FFACE(num_materials)
@@ -8914,12 +8918,14 @@ stop
           do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,iten_main,LSIDE(1))
+          call FIX_LS_tessellate(LSIDE_MAT,LSIDE_MAT_fixed)
+          call get_LS_extend(LSIDE_MAT_fixed,iten_main,LSIDE(1))
 
           do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,iten_main,LSIDE(2))
+          call FIX_LS_tessellate(LSIDE_MAT,LSIDE_MAT_fixed)
+          call get_LS_extend(LSIDE_MAT_fixed,iten_main,LSIDE(2))
 
           if (LSIDE(1)*LSIDE(2).le.zero) then
            LS_consistent=1
@@ -8949,12 +8955,16 @@ stop
           do im=1,num_materials
            LSIDE_tension_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
-          call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(1))
+          call FIX_LS_tessellate(LSIDE_tension_MAT,LSIDE_tension_MAT_fixed)
+          call get_LS_extend(LSIDE_tension_MAT_fixed,iten_tension, &
+                  LSIDE_tension(1))
 
           do im=1,num_materials
            LSIDE_tension_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
-          call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(2))
+          call FIX_LS_tessellate(LSIDE_tension_MAT,LSIDE_tension_MAT_fixed)
+          call get_LS_extend(LSIDE_tension_MAT_fixed,iten_tension, &
+                  LSIDE_tension(2))
 
           sign_test=gradh_tension*(LSIDE_tension(2)-LSIDE_tension(1))
           if (sign_test.ge.zero) then

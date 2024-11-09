@@ -23111,14 +23111,15 @@ contains
              im_tessellate=im_opp
             endif
            else
-            print *,"im_tessellate invalid"
+            print *,"im_tessellate invalid: ",im_tessellate
             stop
            endif
           endif
          else if (is_rigid_local(im_opp).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_local(im_opp) invalid"
+          print *,"is_rigid_local(im_opp) invalid: ", &
+             im_opp,is_rigid_local(im_opp)
           stop
          endif
         enddo !im_opp=1..num_materials
@@ -23140,7 +23141,7 @@ contains
        else if (is_rigid_local(im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid_local(im) invalid"
+        print *,"is_rigid_local(im) invalid: ",im,is_rigid_local(im)
         stop
        endif
       enddo ! im=1..num_materials
