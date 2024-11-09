@@ -1326,7 +1326,7 @@ void apply_pressure_grad(
     void makeStateCurv(int project_option,
 	  const std::string& caller_string);
 
-    void make_marangoni_force();
+    void make_marangoni_and_disjoining_pressure_force();
 
     void delete_array(int idx_localMF);
 
@@ -1789,6 +1789,11 @@ protected:
     static Vector<Real> latent_heat_slope; //should be non-positive 
 
     static Vector<Real> reaction_rate; 
+
+// August 2021: "Disjoining Pressure of water in Nanochannels"
+    static Vector<Real> disjoining_pressure_amplitude; 
+    static Vector<Real> disjoining_pressure_cell_width; //99 percent drop-off
+
      // freezing_model:
      // 0=sharp interface model (TSAT dirichlet BC)
      // 1=source term model (single equation for T with source term)

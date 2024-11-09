@@ -54,6 +54,8 @@ extern "C"
     int* nstate,
     int* num_curv,
     const Real* xlo,const Real* dx,
+    Real* disjoining_pressure_amplitude,
+    Real* disjoining_pressure_cell_width,
     Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
     Real* rhoinverse,
     AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),

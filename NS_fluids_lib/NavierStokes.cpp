@@ -720,6 +720,11 @@ Vector<Real> NavierStokes::latent_heat_T0;
 Real NavierStokes::R_Palmore_Desjardins=8.31446261815324e+7;
 
 Vector<Real> NavierStokes::reaction_rate;
+
+// August 2021: "Disjoining Pressure of water in Nanochannels"
+Vector<Real> NavierStokes::disjoining_pressure_amplitude;
+Vector<Real> NavierStokes::disjoining_pressure_cell_width;
+
 // 0=T_interface=TSAT-epsC K -epsV V ambient air is 100 percent
 //   saturated.
 //  
@@ -3812,6 +3817,9 @@ NavierStokes::read_params ()
 
     reaction_rate.resize(2*num_interfaces);
 
+    disjoining_pressure_amplitude.resize(2*num_interfaces);
+    disjoining_pressure_cell_width.resize(2*num_interfaces);
+
     freezing_model.resize(2*num_interfaces);
     prescribed_mdot.resize(2*num_interfaces);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
@@ -3904,6 +3912,11 @@ NavierStokes::read_params ()
 
      reaction_rate[i]=0.0;
      reaction_rate[i+num_interfaces]=0.0;
+
+     disjoining_pressure_amplitude[i]=0.0;
+     disjoining_pressure_amplitude[i+num_interfaces]=0.0;
+     disjoining_pressure_cell_width[i]=0.0;
+     disjoining_pressure_cell_width[i+num_interfaces]=0.0;
 
      freezing_model[i]=0;
      freezing_model[i+num_interfaces]=0;
@@ -4269,6 +4282,11 @@ NavierStokes::read_params ()
 
 
     pp.queryAdd("reaction_rate",reaction_rate,2*num_interfaces);
+
+    pp.queryAdd("disjoining_pressure_amplitude",
+      disjoining_pressure_amplitude,2*num_interfaces);
+    pp.queryAdd("disjoining_pressure_cell_width",
+      disjoining_pressure_cell_width,2*num_interfaces);
 
     pp.queryAdd("freezing_model",freezing_model,2*num_interfaces);
     pp.queryAdd("prescribed_mdot",prescribed_mdot,2*num_interfaces);
@@ -5868,6 +5886,18 @@ NavierStokes::read_params ()
        reaction_rate[i] << '\n';
       std::cout << "reaction_rate i+num_interfaces=" << 
        i+num_interfaces << "  " << reaction_rate[i+num_interfaces] << '\n';
+
+      std::cout << "disjoining_pressure_amplitude i=" << i << "  " << 
+       disjoining_pressure_amplitude[i] << '\n';
+      std::cout << "disjoining_pressure_amplitude i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
+       disjoining_pressure_amplitude[i+num_interfaces] << '\n';
+
+      std::cout << "disjoining_pressure_cell_width i=" << i << "  " << 
+       disjoining_pressure_cell_width[i] << '\n';
+      std::cout << "disjoining_pressure_cell_width i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
+       disjoining_pressure_cell_width[i+num_interfaces] << '\n';
 
       std::cout << "freezing_model i=" << i << "  " << 
        freezing_model[i] << '\n';
@@ -11449,16 +11479,16 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
 }   // subroutine make_viscoelastic_heating
 
-void NavierStokes::make_marangoni_force() {
+void NavierStokes::make_marangoni_and_disjoining_pressure_force() {
 
- std::string local_caller_string="make_marangoni_force";
+ std::string local_caller_string="make_marangoni_and_disjoining_pressure_force";
 
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
 
  if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid make_marangoni_force");
+  amrex::Error("level invalid make_marangoni_and_disjoining_pressure_force");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -11547,6 +11577,8 @@ void NavierStokes::make_marangoni_force() {
    &nstate,
    &num_curv,
    xlo,dx,
+   disjoining_pressure_amplitude.dataPtr(),
+   disjoining_pressure_cell_width.dataPtr(),
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    rhoinversefab.dataPtr(),
    ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
@@ -11565,7 +11597,7 @@ void NavierStokes::make_marangoni_force() {
 } // omp
  ns_reconcile_d_num(LOOP_MARANGONIFORCE,"make_marangoni_force");
 
-}   // end subroutine make_marangoni_force
+}   // end subroutine make_marangoni_and_disjoining_pressure_force
 
 void NavierStokes::ns_reconcile_d_num(int caller_loop_id,
 		const std::string& caller_string) {
