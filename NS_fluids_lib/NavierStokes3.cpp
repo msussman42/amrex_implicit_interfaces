@@ -3058,7 +3058,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //   e. viscoelastic force
         //   f. FSI force
         //   g. momentum force
-        //   h. Marangoni force 
+        //   h. Marangoni and disjoining pressure force 
         //
         veldiffuseALL();  
 
@@ -12340,7 +12340,7 @@ void NavierStokes::veldiffuseALL() {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.make_marangoni_force();
+  ns_level.make_marangoni_and_disjoining_pressure_force();
  } // ilev=finest_level ... level
 
   // spectral_override==1 => order derived from "enable_spectral"

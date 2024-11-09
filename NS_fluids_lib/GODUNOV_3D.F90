@@ -6351,6 +6351,8 @@ stop
        nstate, &
        num_curv, &
        xlo,dx,  &
+       disjoining_pressure_amplitude, &
+       disjoining_pressure_cell_width, &
        ls,DIMS(ls), &
        rhoinverse, &
        DIMS(rhoinverse), &
@@ -6383,6 +6385,10 @@ stop
       integer growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: bfact_grid
+      real(amrex_real), INTENT(in) :: &
+          disjoining_pressure_amplitude(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: &
+          disjoining_pressure_cell_width(2*num_interfaces)
       real(amrex_real), INTENT(in), target :: &
         ls(DIMV(ls),num_materials*(SDIM+1))
       real(amrex_real), pointer :: ls_ptr(D_DECL(:,:,:),:)
@@ -6398,11 +6404,15 @@ stop
       integer, PARAMETER :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) LScen(num_materials)
-      integer im
+      integer im,im1,im2,im_liquid,im_backing
+      integer ireverse
       integer iten
       integer iforce
       integer dirloc
       integer i,j,k
+      real(amrex_real) local_amp
+      real(amrex_real) local_width
+      real(amrex_real) alpha,PD
       real(amrex_real) surface_tension_force(SDIM)
 
       if (bfact.lt.1) then
@@ -6449,17 +6459,23 @@ stop
        print *,"nstate invalid"
        stop
       endif
+      if (dx(1).gt.zero) then
+       ! do nothing
+      else
+       print *,"dx(1) invalid: ",dx(1)
+       stop
+      endif
 
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
       if (cur_time.ge.zero) then
        ! do nothing
       else
-       print *,"cur_time invalid"
+       print *,"cur_time invalid: ",cur_time
        stop
       endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
@@ -6501,6 +6517,74 @@ stop
 
         do iten=1,num_interfaces
 
+         call get_inverse_iten(im1,im2,iten)
+         if ((im1.lt.im2).and. &
+             (im1.ge.1).and. &
+             (im2.ge.1).and. &
+             (im2.le.num_materials)) then
+          !do nothing
+         else
+          print *,"expecting im1<im2: ",im1,im2
+          stop
+         endif
+
+         do ireverse=0,1
+          local_amp= &
+            disjoining_pressure_amplitude(ireverse*num_interfaces+iten)
+          if (local_amp.eq.zero) then
+           !do nothing
+          else if (local_amp.gt.zero) then
+           local_width= &
+            disjoining_pressure_cell_width(ireverse*num_interfaces+iten)
+           if ((local_width.ge.one).and. &
+               (local_width.le.three)) then
+            if (ireverse.eq.0) then
+             im_liquid=im1
+             im_backing=im2
+            else if (ireverse.eq.1) then
+             im_liquid=im2
+             im_backing=im1
+            else
+             print *,"ireverse invalid"
+             stop
+            endif
+            if (im_liquid.eq.im) then
+             if ((LScen(im_backing).le.zero).and. &
+                 (LScen(im_backing).ge.-local_width)) then
+              alpha=log(100.0d0)/(dx(1)*local_width)
+              PD=dt*local_amp*alpha*rhoinverse(D_DECL(i,j,k))* &
+                exp(alpha*LScen(im_backing)) 
+              do dirloc=1,SDIM
+               surface_tension_force(dirloc)= &
+                surface_tension_force(dirloc)+ &
+                PD* &
+                ls(D_DECL(i,j,k),num_materials+ &
+                   (im_backing-1)*SDIM+dirloc)
+              enddo  ! dirloc
+             else if ((LScen(im_backing).gt.zero).or. &
+                      (LScen(im_backing).lt.-local_width)) then
+              !do nothing
+             else
+              print *,"LScen(im_backing) invalid: ",im_backing, &
+               LScen(im_backing)
+              stop
+             endif
+
+            else
+             !do nothing
+            endif
+
+           else
+            print *,"local_width invalid: ",local_width
+            stop
+           endif
+
+          else
+           print *,"local_amp invalid: ",local_amp
+           stop
+          endif
+         enddo !ireverse=0,1
+
          do dirloc=1,SDIM
           iforce=(iten-1)*CURVCOMP_NCOMP+CURVCOMP_MARANGONI+dirloc
           surface_tension_force(dirloc)= &
@@ -6513,7 +6597,7 @@ stop
        else if (is_rigid(im).eq.1) then 
         ! do nothing
        else
-        print *,"is_rigid(im) invalid"
+        print *,"is_rigid(im) invalid: ",im,is_rigid(im)
         stop
        endif 
       
