@@ -10698,8 +10698,10 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
     // do nothing
    } else if ((elastic_time[im]==0.0)||
               (elastic_viscosity[im]==0.0)) {
+
     if (viscoelastic_model[im]!=0)
      amrex::Error("viscoelastic_model[im]!=0");
+
    } else
     amrex::Error("elastic_time/elastic_viscosity getStateVISC");
 

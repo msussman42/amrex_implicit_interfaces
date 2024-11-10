@@ -11809,7 +11809,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
        int im_cutoff=num_materials;
        if (FSI_outer_sweeps==0) {
-        im_cutoff=num_materials;
+        im_cutoff=num_materials; //not used
        } else if ((FSI_outer_sweeps>0)&&
                   (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
         im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1;
@@ -11851,7 +11851,10 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
  
      } else if ((elastic_time[im]==0.0)||
   	        (elastic_viscosity[im]==0.0)) {
-      // do nothing
+
+      if (viscoelastic_model[im]!=0)
+       amrex::Error("viscoelastic_model[im]!=0");
+
      } else
       amrex::Error("elastic_time[im] or elastic_viscosity[im] invalid");
 
@@ -12560,7 +12563,10 @@ void NavierStokes::veldiffuseALL() {
        delete_array(VISCOTEN_MF);
       } else if ((elastic_time[im]==0.0)||
                  (elastic_viscosity[im]==0.0)) {
-       // do nothing
+
+       if (viscoelastic_model[im]!=0)
+        amrex::Error("viscoelastic_model[im]!=0");
+
       } else
        amrex::Error("elastic_time or elastic_viscosity invalid");
 
