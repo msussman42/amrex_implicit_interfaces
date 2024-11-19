@@ -12,8 +12,9 @@
       real*8 :: jump
       integer :: MKS_or_CGS
 
-      M0=2.0d0  ! Mach 2 upstream
-      T0=273.0d0  ! Kelvin
+       ! wrt the shock, the flow moves upstream to downstream
+      M0=1.00175d0  ! Mach number upstream
+      T0=278.0d0  ! Kelvin
 
       MKS_or_CGS=1
 
@@ -22,11 +23,11 @@
        R=2.87d+6 ! ergs/(Kelvin g)
        cv=7.2d+6 ! erg/g
       else if (MKS_or_CGS.eq.1) then
-       rho0=1.23d0
+       rho0=1.25d0
        R=2.87d+2 ! J/(Kelvin kg)
        cv=7.2d+2 ! J/kg
       else
-       print *,"MKS_or_CGS invalid"
+       print *,"MKS_or_CGS invalid: ",MKS_or_CGS
        stop
       endif
       cp=R+cv
@@ -67,6 +68,7 @@
       print *,"DOWNSTREAM rho,u,p,c,M ",rho1,u1,p1,c1,T1,M1
       print *,"DOWNSTREAM rho u, rho E ",rho1*u1,rho1*EE1
       print *,"DOWNSTREAM u-c ",u1-c1
+      print *,"DOWNSTREAM VELOCITY RELATIVE TO THE UPSTREAM (u1-u0): ",u1-u0
 
 
       return

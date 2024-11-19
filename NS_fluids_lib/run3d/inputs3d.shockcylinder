@@ -47,12 +47,17 @@ ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
+#geometry.prob_hi   =  2.4 0.8 3.2
+#diameter=0.094cm dx=diameter/45=0.094/45=0.00209
+#3D case: dx=0.00209
+#2.4/N=0.0209  N=2.4/0.00209=1150
+#1150/144=8.0
 amr.n_cell    = 144 48 192
 #amr.n_cell    = 144 192
 #amr.max_level =  4 # about 80 points in the cylinder diameter
-#amr.max_level =  3 # about 40 points in the cylinder diameter
-#amr.max_level =  2 # about 20 points in the cylinder diameter
-amr.max_level =  1 # about 10 points in the cylinder diameter
+amr.max_level =  3 # about 45 points in the cylinder diameter
+#amr.max_level =  2 # about 22 points in the cylinder diameter
+#amr.max_level =  1 # about 11 points in the cylinder diameter
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
@@ -83,8 +88,8 @@ mac.mac_abs_tol    = 1.0e-9
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # LIQUID COMPRESSIBLE: make shock_timestep(1)=1
-ns.shock_timestep=1 1
-ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.shock_timestep=2 2
+ns.cfl            = 0.75      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 1e-08   # Sep 16, 2018
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
 ns.init_shrink    = 0.1      # scale back initial timestep
@@ -99,8 +104,10 @@ ns.axis_dir=152 #shock cylinder
 ns.vorterr=1.0e+10 1.0e+10
 ns.rgasinlet=1.57
 # MACH number of shock.
-ns.vinletgas=1.0534 #water (We=12.6  Re=1600)
+#ns.vinletgas=1.0534 #water (We=12.6  Re=1600)
 #ns.vinletgas=1.1478 #Galinstan (We=10.2 Re=4900)
+#Initialization (water):
+ns.vinletgas=1.0017
 ns.twall=0.1
 #Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
 #(shock moves in the x-direction)
@@ -167,7 +174,7 @@ ns.yblob=0.0
 ns.zblob=1.2
 # zblob2 is the initial position of the shock.
 ns.zblob2=1.0
-ns.radblob=0.042 #0.84 mm diameter
+ns.radblob=0.047 #0.94 mm diameter
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=3001
