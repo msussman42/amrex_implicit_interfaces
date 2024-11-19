@@ -57,24 +57,39 @@ real(amrex_real) shockdrop_EE1
 
 real(amrex_real) shockdrop_gamma
 
+integer, parameter :: n_data=94
+real(amrex_real) :: vel_data(n_data) ! m/s
+real(amrex_real) :: time_data(n_data) !ms
+
 CONTAINS
 
-! units are cgs
-subroutine shockdrop_init()
+subroutine recompute_globals(time)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
+real(amrex_real), intent(in) :: time
 real(amrex_real) test_pres
+integer :: idata
 
+!some remarks:
+! in a frame of reference wrt the shock:
+! shockspeed=0.0
+! M0 C0 = V0  (supersonic)
+! M1 C1 = V1  (subsonic)
+! in a frame of reference wrt the drop:
+! V0_drop = 0
+! shockspeed=-V0
+! V1_downstream=V1-V0 (opposite side of the drop wrt shock)
  !material_type=5 EOS_air
  !see PROBCOMMON.F90
-shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g)
-shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g)
+shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g) (0.287D+7)
+shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g) (0.72D+7)
 shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
 ! shockdrop_M0=1.4
 ! shockdrop_M0=3.0
 ! shockdrop_M0=1.17
+! shockdrop_M0=1.0017
 shockdrop_M0=vinletgas
 
 if (shockdrop_M0.gt.one) then
@@ -160,11 +175,6 @@ if (fort_material_type(2).ne.5) then
  stop
 endif
 
-print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
- shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
-print *,"shockdrop: downstream den,SPEED,T,M,C ", &
- shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
-
 ! in shock frame of reference, the upstream velocity is -|V0| and the
 ! downstream velocity is -|V1|.  In upstream frame of reference the 
 ! downstream velocity is |V0|-|V1|
@@ -180,6 +190,81 @@ if (shockdrop_VEL0.gt.shockdrop_VEL1) then
  shockdrop_inertial_time_scale=two*radblob* &
     sqrt(fort_denconst(1)/shockdrop_DEN1)/ &
     (shockdrop_VEL0-shockdrop_VEL1) 
+else
+ print *,"shockdrop_VEL0 or shockdrop_VEL1 invalid: ", &
+   shockdrop_VEL0,shockdrop_VEL1
+ stop
+endif
+
+if (axis_dir.eq.150) then
+ !do nothing (shock drop)
+else if (axis_dir.eq.151) then
+ !do nothing (shock column)
+else if (axis_dir.eq.152) then
+ !shock cylinder
+ idata=1
+ do while ((time_data(idata)*1.0D-3.lt.time).and.(idata.lt.n_data)) 
+  idata=idata+1
+ enddo
+ shockdrop_VEL0=shockdrop_VEL1+vel_data(idata)*1.0D+2
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
+
+return
+end subroutine recompute_globals
+
+! units are cgs
+subroutine shockdrop_init()
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+real(amrex_real) time
+integer :: test_n_data
+integer :: idata
+
+time=0.0d0
+
+if (axis_dir.eq.150) then
+ !do nothing (shock drop)
+else if (axis_dir.eq.151) then
+ !do nothing (shock column)
+else if (axis_dir.eq.152) then
+ !shock cylinder
+ print *,"reading GuildenbecherDataRaw"
+ open(unit=2, file='GuildenbecherDataRaw')
+ read(2,*) test_n_data
+ print *,"test_n_data=",test_n_data
+ if (test_n_data.eq.n_data) then
+  !do nothing
+ else
+  print *,"test_n_data invalid: ",test_n_data,n_data
+  stop
+ endif
+  !time_data ms
+  !vel_data  m/s
+ do idata=1,n_data
+  read(2,*) time_data(idata),vel_data(idata)
+ enddo
+ close(2)
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
+
+call recompute_globals(time)
+
+print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
+ shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
+print *,"shockdrop: downstream den,SPEED,T,M,C ", &
+ shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
+
+! in shock frame of reference, the upstream velocity is -|V0| and the
+! downstream velocity is -|V1|.  In upstream frame of reference the 
+! downstream velocity is |V0|-|V1|
+
+if (shockdrop_VEL0.gt.shockdrop_VEL1) then
  print *,"shockdrop_DownStreamVelocity=", &
     shockdrop_VEL0-shockdrop_VEL1
  print *,"shockdrop_We=",shockdrop_We
@@ -271,20 +356,9 @@ real(amrex_real), INTENT(inout) ::  vel
 real(amrex_real) :: vel_local
 real(amrex_real), INTENT(in) :: dx(SDIM)
 
-if ((dir.lt.0).or.(dir.ge.SDIM)) then
- print *,"dir invalid: ",dir
- stop
-endif
+call recompute_globals(time)
 
-if (time.eq.zero) then
- vel_local=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
-else if (time.gt.zero) then
- vel_local=abs(abs(shockdrop_VEL0)-abs(shockdrop_VEL1))
-else
- print *,"time invalid in shockdrop_maxvelocity: ",time
- stop
-endif
-
+vel_local=abs(abs(shockdrop_VEL0)-abs(shockdrop_VEL1))
 vel_local=max(abs(advbot),abs(vel_local))
 vel=max(abs(vel),abs(vel_local))
 
@@ -824,6 +898,18 @@ if ((num_materials.ge.2).and. &
                snew_ptr(D_DECL(i,j,k),STATECOMP_PRES+1))/shockdrop_P0)
   else
    print *,"time invalid: ",time
+   stop
+  endif
+
+  if (axis_dir.eq.150) then
+   !do nothing (shock drop)
+  else if (axis_dir.eq.151) then
+   !do nothing (shock column)
+  else if (axis_dir.eq.152) then
+   !shock cylinder
+   P_diff=zero
+  else
+   print *,"axis_dir invalid: ",axis_dir
    stop
   endif
 
