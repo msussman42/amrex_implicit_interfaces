@@ -43,6 +43,7 @@ real(amrex_real) shockdrop_T0
 real(amrex_real) shockdrop_DEN0
 real(amrex_real) shockdrop_M0
 real(amrex_real) shockdrop_VEL0
+real(amrex_real) shockdrop_init_VEL0
 real(amrex_real) shockdrop_C0
 real(amrex_real) shockdrop_EE0
 
@@ -205,7 +206,20 @@ else if (axis_dir.eq.152) then
  idata=1
  do while ((time_data(idata)*1.0D-3.lt.time).and.(idata.lt.n_data)) 
   idata=idata+1
+  if ((time_data(idata).ge.time_data(idata-1).and. &
+      (time_data(idata-1).ge.zero)) then
+   !do nothing
+  else
+   print *,"time_data invalid"
+   stop
+  endif
  enddo
+ if (vel_data(idata).ge.zero) then
+  !do nothing
+ else
+  print *,"vel_data invalid"
+  stop
+ endif
  shockdrop_VEL0=shockdrop_VEL1+vel_data(idata)*1.0D+2
 else
  print *,"axis_dir invalid: ",axis_dir
@@ -253,7 +267,12 @@ else
  stop
 endif
 
-call recompute_globals(time)
+shockdrop_init_VEL0=shockdrop_VEL0
+
+call recompute_globals(time) !modifies shockdrop_VEL0
+
+print *,"shockdrop: init VEL0 ",shockdrop_init_VEL0
+print *,"shockdrop: VEL0 ",shockdrop_VEL0
 
 print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
  shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
@@ -347,6 +366,8 @@ return
 end subroutine shockdrop_velocity
 
  !gets mapped to SUB_CFL_HELPER
+ !SUB_CFL_HELPER is called from check_user_defined_velbc (PROB.F90)
+ !check_user_defined_velbc is called from fort_estdt (GODUNOV_3D.F90)
 subroutine shockdrop_maxvelocity(time,dir,vel,dx)
 use probcommon_module
 IMPLICIT NONE
