@@ -164,7 +164,7 @@ shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 !shock_vel0-shock_vel1=M0 * C0 - M1 * C1
 
 call general_hydrostatic_pressure(test_pres)
-if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
+if (abs(test_pres-shockdrop_P0)/test_pres.gt.EPS3) then
  print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
  print *,"test_pres=",test_pres
  print *,"shockdrop_P0=",shockdrop_P0
@@ -206,7 +206,7 @@ else if (axis_dir.eq.152) then
  idata=1
  do while ((time_data(idata)*1.0D-3.lt.time).and.(idata.lt.n_data)) 
   idata=idata+1
-  if ((time_data(idata).ge.time_data(idata-1).and. &
+  if ((time_data(idata).ge.time_data(idata-1)).and. &
       (time_data(idata-1).ge.zero)) then
    !do nothing
   else
