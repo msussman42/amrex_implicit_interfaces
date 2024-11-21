@@ -1473,7 +1473,7 @@ end subroutine nozzle2d
         if (z.LE.2*xblob10) THEN
          dist=radcross-x
         elseif (x.LE.xblob10/2) THEN
-         dist=dsqrt((x-xblob10/2)**two+(z-2*xblob10)**two)
+         dist=sqrt((x-xblob10/2)**two+(z-2*xblob10)**two)
         else 
          dist=z-2*xblob10
         endif
@@ -1484,7 +1484,7 @@ end subroutine nozzle2d
        if (z.LE.(two*xblob10-radblob)) then
         dist=radcross-x
        elseif (x.LE.(xblob10/two+radblob)) then
-        dist=dsqrt((x-(xblob10/two+radblob))**two+ &
+        dist=sqrt((x-(xblob10/two+radblob))**two+ &
         (z-(two*xblob10-radblob))**two)-radblob
        else 
         dist=z-two*xblob10

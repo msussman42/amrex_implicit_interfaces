@@ -506,10 +506,10 @@ StateData::setTimeLevel (Real time,Real& dt)
  } else
   amrex::Error("time or dt bust");
 
- if (dt<CPP_EPS_12_6) {
+ if (dt<1.0e-12) {
   std::cout << "dt= " << dt << '\n';
-  std::cout << "CPP_EPS_12_6= " << CPP_EPS_12_6 << '\n';
-  amrex::Error("dt<CPP_EPS_12_6 in setTimeLevel StateData");
+  std::cout << "dt cutoff= " << 1.0e-12 << '\n';
+  amrex::Error("dt<1.0e-12 in setTimeLevel StateData");
  }
  if (time<0.0)
   amrex::Error("time<0 in setTimeLevel StateData");
