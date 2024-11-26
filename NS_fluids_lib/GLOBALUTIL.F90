@@ -24154,12 +24154,12 @@ end subroutine print_visual_descriptor
        call EOS_tillotson(rho,internal_energy,pressure)
       else if (imattype.eq.23) then
        call EOS_peng_robinson(rho,internal_energy,pressure)
-      else if (imattype.eq.24) then
-       call EOS_galinstan_rho(rho,internal_energy,pressure)
       else if (imattype.eq.25) then !uses denconst(num_materials)
        call EOS_elastic_rho(rho,internal_energy,pressure,im)
+      else if (imattype.eq.34) then
+       call EOS_galinstan_rho(rho,internal_energy,pressure)
       else
-       print *,"imattype invalid EOS_material_CORE"
+       print *,"imattype invalid EOS_material_CORE: ",imattype
        stop
       endif
 
@@ -24210,14 +24210,14 @@ end subroutine print_visual_descriptor
       endif
 
       if ((imattype.ge.1).and. &
-          (imattype.le.24)) then
+          (imattype.le.34)) then
        dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
       else if (imattype.eq.0) then
        dVdT=zero
       else if (imattype.eq.999) then
        dVdT=zero
       else
-       print *,"imattype invalid in dVdT_material_CORE"
+       print *,"imattype invalid in dVdT_material_CORE: ",imattype
        stop
       endif
 
@@ -24304,12 +24304,12 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
       else if (imattype.eq.23) then
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
-      else if (imattype.eq.24) then
-       call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
       else if (imattype.eq.25) then
        call SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr,im)
+      else if (imattype.eq.34) then
+       call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
       else
-       print *,"imattype invalid SOUNDSQR_material_CORE"
+       print *,"imattype invalid SOUNDSQR_material_CORE: ",imattype
        stop
       endif
 
@@ -24400,12 +24400,12 @@ end subroutine print_visual_descriptor
        call INTERNAL_tillotson(rho,temperature,local_internal_energy)
       else if (imattype.eq.23) then
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
-      else if (imattype.eq.24) then
-       call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
       else if (imattype.eq.25) then
        call INTERNAL_elastic_rho(rho,temperature,local_internal_energy,im)
+      else if (imattype.eq.34) then
+       call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
       else
-       print *,"imattype invalid INTERNAL_material_CORE"
+       print *,"imattype invalid INTERNAL_material_CORE: ",imattype
        stop
       endif
 
@@ -24492,10 +24492,10 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_tillotson(rho,temperature,internal_energy)
       else if (imattype.eq.23) then
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
-      else if (imattype.eq.24) then
-       call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
       else if (imattype.eq.25) then
        call TEMPERATURE_elastic_rho(rho,temperature,internal_energy,im)
+      else if (imattype.eq.34) then
+       call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype
