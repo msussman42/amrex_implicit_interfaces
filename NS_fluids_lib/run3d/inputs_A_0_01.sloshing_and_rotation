@@ -58,7 +58,7 @@ ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
 #see: Jemison, Sussman, Arienti
 #ns.num_divu_outer_sweeps=2  #COMPRESSIBLE GAS
-ns.num_divu_outer_sweeps=1  #INCOMPRESSIBLE
+ns.num_divu_outer_sweeps=1   #INCOMPRESSIBLE
 
 # Solid definition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
@@ -71,9 +71,13 @@ ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 #FSI_interval applicable when FSI_flag=2, not when FSI_flag=1
 ns.FSI_interval     = 0 
 
-ns.xblob            = 0.1  # Tank radius-cylindrical parts
-ns.yblob            = 0.0  # tank height-cylidrcal parts
-ns.xblob4 	    = 0.1  # End cap radius 
+
+# -------- tank volume  ------------
+# V_tank = 4/3 (pi* r^3) --> r=0.3 --> V = 0.1131 m^3
+# ---------------------------------- 
+ns.xblob            = 0.3  # Tank radius-cylindrical parts
+ns.yblob            = 0.0  # tank height-cylindrical parts
+ns.xblob4 	    = 0.3      # End cap radius 
                            # set it to be same with xblob
 ns.yblob4	    = 0.0  # Z coord (vert) of the top spherical cap center
                            # set it to be half of yblob
@@ -86,26 +90,49 @@ ns.radblob3 = 0.01 # tank thickness
 # TANK GEOMETRY FILES IN 3D have the "vertical direction" as the
 # "y" direction, but the code swaps y and z so that
 # the "z" direction becomes the vertical direction.
-ns.radblob2         = 0.03   # radius of spherical ullage
+
+# -------- bubble radius --> volume ratio ------------
+# r^3 = ((50/100)(V_tank))/((4/3)(pi))
+# ----------------------------------------------------
+ns.radblob2         = 0.24   # radius of spherical ullage 
+# ns.radblob2 = 0.24 --> 50% filled with bubble 
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
 ns.zblob2           = 0.0
 
-ns.radblob7        = 2.0    # 0=no motion  1=sloshing  2=rotation 
+ns.radblob7        = 1.0    # 0=no motion  1=sloshing  2=rotation  3=both
 
 # if radblob7=1, sloshing
-ns.xblob7         = 0.01       # xdisp_amplitude
-ns.yblob7         = 18.6889    # xdisp_freq
+ns.xblob7         = 0.01       # xdisp_amplitude (A)
+ns.yblob7         = 1.62    # xdisp_freq (omega)
+
+# -------- displacement/velocity/MAX velocity ------------
+# S = A*sin(omega*t)    displacement
+# U = A*omega*cos(omega*A)    velocity
+# U_MAX = A*omega = 0.0162 m/s
+# --------------------------------------------------------
+
+# -------- Web and Re numbers ----------------------------
+# material properties for liquid and gaseous hydrogen provided (based on those)
+
+# Re_number = (rho*D*U_MAX^2)/mu  --> D is tank radius 
+# Re_number = 53971.09
+# Web_number = (rho * D * (U_MAX^2)) / sigma 
+# Web_number = 4.75
+# --------------------------------------------------------
 
 # if radblob7=2, axis rotation
-ns.radblob8      = 2.0   # rotation axis z, 2 is z, 3 is y , 1 is x
+# if radblob7=3, axis rotation should be radblob8=3.0
+ns.radblob8      = 2.0 #rotation axis: 2 is z (aligned w/tank),3 is y ,1 is x
 ns.zblob7 = 10.0          # rotation angula velocity  zblob7= omega,(rad/s)    omega*t 
    # xblob8 yblob8 zblob8 defines axis position
    # for example, rotation with axis parallel to z axis then provide xblob8 and yblob8 (position)
    #                                             y axis              xblob8 and zblob8
    #                                             x axis              yblob8 and zblob8
-ns.xblob8 = 0.15        
-ns.yblob8 = 0.15
+#ns.xblob8 = 0.15        
+#ns.yblob8 = 0.15
+ns.xblob8 = 0.0
+ns.yblob8 = 0.0
 ns.zblob8 = 0.0
 
 # ----------------------------------------------------------
@@ -124,7 +151,7 @@ geometry.coord_sys  = 0 # 3D
 #geometry.prob_lo    = -0.2  -0.2 #2D XY
 #geometry.prob_hi    = 0.2  0.2  #2D
 geometry.prob_lo    = -0.15  -0.15 -0.15 #3D
-geometry.prob_hi    =  0.45  0.45 0.15    #3
+geometry.prob_hi    =  0.15  0.15 0.15    #3
 #geometry.prob_lo    = -0.1  -0.1 -0.1 #3D
 #geometry.prob_hi    = 0.1  0.1 0.3    #3
 geometry.is_periodic= 0 0 0
@@ -138,7 +165,7 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 #amr.n_cell          = 64 64 #2D XY
 #amr.max_level       = 1     #2D
 #amr.n_cell          = 128 128 128 #3D
-amr.n_cell          = 128 128 64 # maxlevel=0: 16 cores compute1 #3D
+amr.n_cell          = 64 64 64 # maxlevel=0: 16 cores compute1 #3D
 amr.max_level       = 0 #3D
 
 amr.regrid_int      = 1     # How often to regrid
@@ -147,8 +174,8 @@ amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
 amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 2 2 2  # number of buffer cells in error est 
-amr.blocking_factor = 8 2 2  # block factor in grid generation
+amr.n_error_buf     = 4 4 4  # number of buffer cells in error est 
+amr.blocking_factor = 8 4 4  # block factor in grid generation
 
 amr.grid_eff        = 0.85  # smaller => less boxes
 
@@ -177,7 +204,7 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 #ns.visual_nddata_format=2
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
-amr.check_int       = 10  # number of timesteps between checkpoints 3D
+amr.check_int       = 100  # number of timesteps between checkpoints 3D
 amr.check_file      = chk  # root name of checkpoint file
 
 #ns.slice_dir=1 # vertical direction 2D
@@ -185,7 +212,7 @@ ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 #amr.plot_int        = 200 # number of timesteps between plot files (2D)
-amr.plot_int        = 10  # number of timesteps between plot files (2D)
+amr.plot_int        = 100  # number of timesteps between plot files (2D)
 #amr.plot_int        = 1   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
@@ -255,7 +282,7 @@ ns.molar_mass = 0.002016 0.00201588 0.0269815386  # 1..num_materials
                            # molar mass.
 
 # Density [kg/m^3]  HFE7000
-ns.denconst= 835.51 1.8960 2700
+ns.denconst= 70.85 1.34 2700.0
 ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
@@ -277,17 +304,17 @@ ns.stiffCP=2063.3 1120.0 500.0
 ns.stiffCV=9580.0 10160.0 500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-ns.heatviscconst=0.1338 7.6e-3 205
+ns.heatviscconst=0.098 0.0146 205.0
 
 # Dynamic viscosity [Pa.s]
 # (PNP: 4.2E-4)
-ns.viscconst=156.2e-06 5.3e-06 1.0
+ns.viscconst=1.28e-05 1.01e-06 1.0
 
 # Initial temeparture [K]
-ns.tempconst=70 70 70
+ns.tempconst=20 20 20
 
 # Surface tension [N/m]
-ns.tension=8.94e-3 8.94e-3 11.9796e-3
+ns.tension=0.00236 0.00236 11.9796e-3
 #ns.tension=1.2E-02 1.2E-02 1.2E-02
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -352,7 +379,7 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 # pressure are given below.
 ns.saturation_temp=77.25 0.0 0.0 0.0 0.0 0.0  # T_ref
 ns.saturation_temp_min=69.28 0.0 0.0 0.0 0.0 0.0
-ns.reference_pressure=583982.19871598808 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=742298.04794595542 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
@@ -433,7 +460,7 @@ ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 1 # 0=MOF 2=CMOF
+ns.continuous_mof   = 1 # 0=MOF 1=CMOF
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
