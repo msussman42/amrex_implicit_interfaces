@@ -9729,16 +9729,16 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 1"
+        print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 2"
+        print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
         stop
        endif
       else if (bfact_f.gt.1) then
@@ -9755,16 +9755,16 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
         stop
        endif
       else if (bfact_c.gt.1) then
@@ -9839,16 +9839,16 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 1"
+        print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 2"
+        print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
         stop
        endif
       else if (bfact_f.gt.1) then
@@ -9865,16 +9865,16 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
         stop
        endif
       else if (bfact_c.gt.1) then
@@ -10005,16 +10005,16 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 1"
+        print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 2"
+        print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
         stop
        endif
       else if (bfact_f.gt.1) then
@@ -10031,16 +10031,16 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
         stop
        endif
       else if (bfact_c.gt.1) then
@@ -10124,16 +10124,16 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 1"
+        print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xf invalid 2"
+        print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
         stop
        endif
       else if (bfact_f.gt.1) then
@@ -10150,16 +10150,16 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_2) then
         !do nothing
        else
-        print *,"xc invalid"
+        print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
         stop
        endif
       else if (bfact_c.gt.1) then
@@ -10334,12 +10334,12 @@ end subroutine print_visual_descriptor
         call gridsten1DMAC(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
         if (bfact_f.eq.1) then
-         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
-          print *,"xf invalid 1"
+         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_2) then
+          print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
           stop
          endif
-         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
-          print *,"xf invalid 2"
+         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_2) then
+          print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
           stop
          endif
         else if (bfact_f.gt.1) then
@@ -10354,12 +10354,12 @@ end subroutine print_visual_descriptor
         endif
 
         if (bfact_c.eq.1) then
-         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
-          print *,"xc invalid"
+         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_2) then
+          print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
           stop
          endif
-         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
-          print *,"xc invalid"
+         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_2) then
+          print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
           stop
          endif
         else if (bfact_c.gt.1) then
@@ -10741,12 +10741,12 @@ end subroutine print_visual_descriptor
         call gridsten1DMAC(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
         if (bfact_f.eq.1) then
-         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
-          print *,"xf invalid 1"
+         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_2) then
+          print *,"xf invalid 1: ",abs(xf(1)-xf(-1)-dxf(1))
           stop
          endif
-         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
-          print *,"xf invalid 2"
+         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_2) then
+          print *,"xf invalid 2: ",abs(xf(1)+xf(-1)-two*xf(0))
           stop
          endif
         else if (bfact_f.gt.1) then
@@ -10761,12 +10761,12 @@ end subroutine print_visual_descriptor
         endif
 
         if (bfact_c.eq.1) then
-         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
-          print *,"xc invalid"
+         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_2) then
+          print *,"xc invalid1: ",abs(xc(1)-xc(-1)-dxc(1))
           stop
          endif
-         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
-          print *,"xc invalid"
+         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_2) then
+          print *,"xc invalid2: ",abs(xc(1)+xc(-1)-two*xc(0))
           stop
          endif
         else if (bfact_c.gt.1) then
