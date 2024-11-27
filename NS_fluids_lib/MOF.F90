@@ -14054,7 +14054,7 @@ contains
       endif      
 
       if (abs(volcut_vof-uncaptured_volume_vof).le. &
-          EPS_8_4*volcell_vof) then
+          EPS_8_2*volcell_vof) then
         !do nothing
       else
         print *,"(breakpoint) break point and gdb: "
