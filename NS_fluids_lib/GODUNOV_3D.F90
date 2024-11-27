@@ -464,17 +464,17 @@ stop
        bfact,dx,map_forward,normdir)
       IMPLICIT NONE
 
-      integer map_forward,bfact,normdir
-      real(amrex_real) dx(SDIM)
-      real(amrex_real) xsten_accept(-1:1,SDIM)
-      real(amrex_real) xsten_donate(-1:1,SDIM)
-      real(amrex_real) xsten_target(-1:1,SDIM)
-      real(amrex_real) xsten_depart(-1:1,SDIM)
-      real(amrex_real) usten_accept(-1:1)
-      real(amrex_real) usten_donate(-1:1)
-      real(amrex_real) xdepartsize,xtargetsize,xloint,xhiint
-      real(amrex_real) volint
-      real(amrex_real) coeff(2)
+      integer, intent(in) :: map_forward,bfact,normdir
+      real(amrex_real), intent(in) :: dx(SDIM)
+      real(amrex_real), intent(in) :: xsten_accept(-1:1,SDIM)
+      real(amrex_real), intent(in) :: xsten_donate(-1:1,SDIM)
+      real(amrex_real), intent(out) :: xsten_target(-1:1,SDIM)
+      real(amrex_real), intent(out) :: xsten_depart(-1:1,SDIM)
+      real(amrex_real), intent(in) :: usten_accept(-1:1)
+      real(amrex_real), intent(in) :: usten_donate(-1:1)
+      real(amrex_real), intent(out) :: xdepartsize,xtargetsize,xloint,xhiint
+      real(amrex_real), intent(out) :: volint
+      real(amrex_real), intent(out) :: coeff(2)
       real(amrex_real) coeffINV(2)
       integer ihalf
 
@@ -535,7 +535,7 @@ stop
        xloint=max(xsten_accept(-1,normdir+1),xsten_target(-1,normdir+1))
        xhiint=min(xsten_accept(1,normdir+1),xsten_target(1,normdir+1))
       else
-       print *,"map_forward invalid"
+       print *,"map_forward invalid: ",map_forward
        stop
       endif
       volint=xhiint-xloint
@@ -569,7 +569,7 @@ stop
       else if (volint.lt.zero) then
        volint=zero
       else
-       print *,"volint invalid"
+       print *,"volint invalid: ",volint
        stop
       endif
 
@@ -14277,7 +14277,7 @@ stop
             xtargetsize, &
             xloint, &
             xhiint, &
-            volint, &
+            volint, & !volint=xhiint-xloint
             coeff, &
             bfact, & !only used for sanity checks
             dx, &
@@ -14334,14 +14334,18 @@ stop
 
             if (LS_voltotal_depart.gt.zero) then
              ! do nothing
+            else if (LS_voltotal_depart.eq.zero) then
+             volint=zero
             else
              print *,"EPS_8_4= ",EPS_8_4
+             print *,"EPS_8_3= ",EPS_8_3
              print *,"LS_voltotal_depart bust (multi_get_volume_grid_and_map)"
              print *,"LS_voltotal_depart ",LS_voltotal_depart
              print *,"map_forward,volint ",map_forward,volint
              print *,"istencil ",istencil
              print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
              print *,"level,finest_level ",level,finest_level
+             print *,"dx ",dx(1),dx(2),dx(SDIM)
              do im=1,num_materials 
               vofcomp=(im-1)*ngeom_recon+1
               print *,"im,multi_volume_grid ",im,multi_volume_grid(im)
@@ -14352,267 +14356,281 @@ stop
              stop
             endif
 
-            voltotal_depart=voltotal_depart+LS_voltotal_depart
-            voltotal_depart_refine(nfine)= &
-               voltotal_depart_refine(nfine)+LS_voltotal_depart
+            if (volint.gt.zero) then
 
-            im_refine_density=0
+             voltotal_depart=voltotal_depart+LS_voltotal_depart
+             voltotal_depart_refine(nfine)= &
+                voltotal_depart_refine(nfine)+LS_voltotal_depart
 
-            do im=1,num_materials
-             ! density
-             dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-              ! conserve is initialized in the beginning of this routine.
-              ! donate_density is equal to the density that is stored in the
-              ! old state variable.
-             donate_density= &
-              conserve(D_DECL(idonate,jdonate,kdonate), &
-                fine_offset+CISLCOMP_STATES+dencomp_data) 
-             if (is_compressible_mat(im).eq.0) then
-              donate_mom_density= &
-               mom_den(D_DECL(idonate,jdonate,kdonate),im) 
-             else if (is_compressible_mat(im).eq.1) then
-              im_refine_density=im_refine_density+1
-              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
-               !do nothing
+             im_refine_density=0
+
+             do im=1,num_materials
+              ! density
+              dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
+               ! conserve is initialized in the beginning of this routine.
+               ! donate_density is equal to the density that is stored in the
+               ! old state variable.
+              donate_density= &
+               conserve(D_DECL(idonate,jdonate,kdonate), &
+                 fine_offset+CISLCOMP_STATES+dencomp_data) 
+              if (is_compressible_mat(im).eq.0) then
+               donate_mom_density= &
+                mom_den(D_DECL(idonate,jdonate,kdonate),im) 
+              else if (is_compressible_mat(im).eq.1) then
+               im_refine_density=im_refine_density+1
+               if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+                !do nothing
+               else
+                print *,"fort_im_refine_density_map invalid"
+                stop
+               endif
+               donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
+                 (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+ &
+                 nfine_stencil)
               else
-               print *,"fort_im_refine_density_map invalid"
+               print *,"is_compressible_mat(im) invalid"
                stop
               endif
-              donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
-                (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+ &
-                nfine_stencil)
-             else
-              print *,"is_compressible_mat(im) invalid"
-              stop
-             endif
 
-             if (donate_density.gt.zero) then
-              ! do nothing
-             else
-              print *,"donate_density must be positive: ",donate_density
-              stop
-             endif
-             if (donate_mom_density.gt.zero) then
-              ! do nothing
-             else
-              print *,"donate_mom_density must be positive: ", &
-                  donate_mom_density
-              stop
-             endif
-             massdepart=donate_density
-             massdepart_mom=donate_mom_density
+              if (donate_density.gt.zero) then
+               ! do nothing
+              else
+               print *,"donate_density must be positive: ",donate_density
+               stop
+              endif
+              if (donate_mom_density.gt.zero) then
+               ! do nothing
+              else
+               print *,"donate_mom_density must be positive: ", &
+                   donate_mom_density
+               stop
+              endif
+              massdepart=donate_density
+              massdepart_mom=donate_mom_density
 
-             if (massdepart.gt.zero) then
-              ! do nothing
-             else
-              print *,"density invalid in vfrac split 2"
-              print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
-              print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
-              print *,"im ",im
-              print *,"donate_density ",donate_density
-              print *,"multi_volume_grid(im) ",multi_volume_grid(im)
-              print *,"massdepart ",massdepart
-              stop
-             endif
+              if (massdepart.gt.zero) then
+               ! do nothing
+              else
+               print *,"density invalid in vfrac split 2"
+               print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+               print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
+               print *,"im ",im
+               print *,"donate_density ",donate_density
+               print *,"multi_volume_grid(im) ",multi_volume_grid(im)
+               print *,"massdepart ",massdepart
+               stop
+              endif
 
-             if (massdepart_mom.gt.zero) then
-              ! do nothing
-             else
-              print *,"density (for mom) invalid in vfrac split 2"
-              print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
-              print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
-              print *,"im ",im
-              print *,"donate_density ",donate_density
-              print *,"multi_volume_grid(im) ",multi_volume_grid(im)
-              print *,"massdepart_mom ",massdepart_mom
-              stop
-             endif
+              if (massdepart_mom.gt.zero) then
+               ! do nothing
+              else
+               print *,"density (for mom) invalid in vfrac split 2"
+               print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+               print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
+               print *,"im ",im
+               print *,"donate_density ",donate_density
+               print *,"multi_volume_grid(im) ",multi_volume_grid(im)
+               print *,"massdepart_mom ",massdepart_mom
+               stop
+              endif
 
-             do veldir=1,SDIM
-              donate_data= &
-               conserve(D_DECL(idonate,jdonate,kdonate), &
-                fine_offset+veldir)
-              mom2(veldir)=multi_volume_grid(im)*massdepart_mom*donate_data
-             enddo  ! veldir=1..sdim (velocity)
+              do veldir=1,SDIM
+               donate_data= &
+                conserve(D_DECL(idonate,jdonate,kdonate), &
+                 fine_offset+veldir)
+               mom2(veldir)=multi_volume_grid(im)*massdepart_mom*donate_data
+              enddo  ! veldir=1..sdim (velocity)
 
-             massdepart=massdepart*multi_volume_grid(im)
-             massdepart_mom=massdepart_mom*multi_volume_grid(im)
+              massdepart=massdepart*multi_volume_grid(im)
+              massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
-             veldata(CISLCOMP_DEN_MOM+im)= &
-              veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
-             veldata(CISLCOMP_STATES+dencomp_data)= &
-              veldata(CISLCOMP_STATES+dencomp_data)+massdepart
+              veldata(CISLCOMP_DEN_MOM+im)= &
+               veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
+              veldata(CISLCOMP_STATES+dencomp_data)= &
+               veldata(CISLCOMP_STATES+dencomp_data)+massdepart
 
-             if (is_compressible_mat(im).eq.0) then
-              !do nothing
-             else if (is_compressible_mat(im).eq.1) then
-              refine_den_bucket(im_refine_density)= &
-               refine_den_bucket(im_refine_density)+massdepart
-             else
-              print *,"is_compressible_mat(im) invalid"
-              stop
-             endif
+              if (is_compressible_mat(im).eq.0) then
+               !do nothing
+              else if (is_compressible_mat(im).eq.1) then
+               refine_den_bucket(im_refine_density)= &
+                refine_den_bucket(im_refine_density)+massdepart
+              else
+               print *,"is_compressible_mat(im) invalid"
+               stop
+              endif
 
-             ! skip density,then do energy,scalars,Q, ...
-             ! for temperature:
-             ! if incompressible: conserve=den * temp
-             ! if compressible  : conserve=0.5 den |u|^2 + den * temp
-             ! this is energy in the departure region.
-             istate=2
-             do while (istate.le.num_state_material)
-              statecomp_data=(im-1)*num_state_material+istate
+              ! skip density,then do energy,scalars,Q, ...
+              ! for temperature:
+              ! if incompressible: conserve=den * temp
+              ! if compressible  : conserve=0.5 den |u|^2 + den * temp
+              ! this is energy in the departure region.
+              istate=2
+              do while (istate.le.num_state_material)
+               statecomp_data=(im-1)*num_state_material+istate
 
-               ! conserve initialized in the beginning of this routine.
-               ! Temperature and species variables are multiplied by 
-               ! dencore(im) in BUILD_CONSERVE.  (dencore(im) is the
-               ! value of density stored in the state variable)
-              donate_data= &
-               conserve(D_DECL(idonate,jdonate,kdonate), &
-                 fine_offset+CISLCOMP_STATES+statecomp_data) 
-              
-              veldata(CISLCOMP_STATES+statecomp_data)= &
-               veldata(CISLCOMP_STATES+statecomp_data)+ & 
-               multi_volume_grid(im)*donate_data
+                ! conserve initialized in the beginning of this routine.
+                ! Temperature and species variables are multiplied by 
+                ! dencore(im) in BUILD_CONSERVE.  (dencore(im) is the
+                ! value of density stored in the state variable)
+               donate_data= &
+                conserve(D_DECL(idonate,jdonate,kdonate), &
+                  fine_offset+CISLCOMP_STATES+statecomp_data) 
+               
+               veldata(CISLCOMP_STATES+statecomp_data)= &
+                veldata(CISLCOMP_STATES+statecomp_data)+ & 
+                multi_volume_grid(im)*donate_data
 
-              if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-               if (veldata(CISLCOMP_STATES+statecomp_data).ge.zero) then
+               if (istate.eq.ENUM_TEMPERATUREVAR+1) then
+                if (veldata(CISLCOMP_STATES+statecomp_data).ge.zero) then
+                 ! do nothing
+                else
+                 print *,"energy became negative "
+                 print *,"im,comp2 ",im,CISLCOMP_STATES+statecomp_data
+                 print *,"current donated value ", &
+                  veldata(CISLCOMP_STATES+statecomp_data)
+                 print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse 
+                 print *,"idonate,jdonate,kdonate ", &
+                  idonate,jdonate,kdonate
+                 print *,"normdir,dir_counter ",normdir,dir_counter
+                 print *,"num_materials ",num_materials
+                 stop
+                endif
+               endif
+
+               istate=istate+1
+              enddo  !do while (istate.le.num_state_material)
+
+              if ((num_materials_viscoelastic.ge.1).and. &
+                  (num_materials_viscoelastic.le.num_materials)) then
+
+               if (fort_store_elastic_data(im).eq.1) then
+                imap=1
+                do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
+                          (imap.le.num_materials_viscoelastic))
+                 imap=imap+1
+                enddo
+
+                if ((imap.ge.1).and. &
+                    (imap.le.num_materials_viscoelastic)) then
+
+                 do istate=1,ENUM_NUM_TENSOR_TYPE
+                  statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+                     (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+                  ! configuration tensor is stored at the cell centers, not the
+                  ! corresponding material centroid.
+                  donate_data= &
+                   tensor(D_DECL(idonate,jdonate,kdonate), &
+                     statecomp_data+nfine_stencil)
+                  veldata(CISLCOMP_TENSOR+statecomp_data+nfine)= &
+                   veldata(CISLCOMP_TENSOR+statecomp_data+nfine)+ &
+                   LS_voltotal_depart*donate_data 
+                 enddo !istate=1..ENUM_NUM_TENSOR_TYPE
+
+                else 
+                 print *,"imap invalid: ",imap
+                 stop
+                endif
+               else if (fort_store_elastic_data(im).eq.0) then
                 ! do nothing
                else
-                print *,"energy became negative "
-                print *,"im,comp2 ",im,CISLCOMP_STATES+statecomp_data
-                print *,"current donated value ", &
-                 veldata(CISLCOMP_STATES+statecomp_data)
-                print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse 
-                print *,"idonate,jdonate,kdonate ", &
-                 idonate,jdonate,kdonate
-                print *,"normdir,dir_counter ",normdir,dir_counter
-                print *,"num_materials ",num_materials
+                print *,"fort_store_elastic_data(im) invalid"
                 stop
                endif
-              endif
 
-              istate=istate+1
-             enddo  !do while (istate.le.num_state_material)
-
-             if ((num_materials_viscoelastic.ge.1).and. &
-                 (num_materials_viscoelastic.le.num_materials)) then
-
-              if (fort_store_elastic_data(im).eq.1) then
-               imap=1
-               do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
-                         (imap.le.num_materials_viscoelastic))
-                imap=imap+1
-               enddo
-
-               if ((imap.ge.1).and. &
-                   (imap.le.num_materials_viscoelastic)) then
-
-                do istate=1,ENUM_NUM_TENSOR_TYPE
-                 statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
-                    (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
-                 ! configuration tensor is stored at the cell centers, not the
-                 ! corresponding material centroid.
-                 donate_data= &
-                  tensor(D_DECL(idonate,jdonate,kdonate), &
-                    statecomp_data+nfine_stencil)
-                 veldata(CISLCOMP_TENSOR+statecomp_data+nfine)= &
-                  veldata(CISLCOMP_TENSOR+statecomp_data+nfine)+ &
-                  LS_voltotal_depart*donate_data 
-                enddo !istate=1..ENUM_NUM_TENSOR_TYPE
-
-               else 
-                print *,"imap invalid: ",imap
-                stop
-               endif
-              else if (fort_store_elastic_data(im).eq.0) then
+              else if (num_materials_viscoelastic.eq.0) then
                ! do nothing
               else
-               print *,"fort_store_elastic_data(im) invalid"
+               print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
                stop
               endif
 
-             else if (num_materials_viscoelastic.eq.0) then
-              ! do nothing
-             else
-              print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
-              stop
-             endif
+              ! level set function for im material.
+              ! level set function is stored at the cell centers, not the
+              ! corresponding material centroid.
+              donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
+              veldata(CISLCOMP_LS+im)=veldata(CISLCOMP_LS+im)+ &
+               LS_voltotal_depart*donate_data
 
-             ! level set function for im material.
-             ! level set function is stored at the cell centers, not the
-             ! corresponding material centroid.
-             donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
-             veldata(CISLCOMP_LS+im)=veldata(CISLCOMP_LS+im)+ &
-              LS_voltotal_depart*donate_data
+              vofcomp=(im-1)*ngeom_raw+1
+              ! material volume from departure (donating) region
+              veldata(CISLCOMP_MOF+vofcomp)= &
+               veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid(im)
+              ! material volume from target (accepting) region
+              veldata(CISLCOMP_FTARGET+im)= &
+               veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
 
-             vofcomp=(im-1)*ngeom_raw+1
-             ! material volume from departure (donating) region
-             veldata(CISLCOMP_MOF+vofcomp)= &
-              veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid(im)
-             ! material volume from target (accepting) region
-             veldata(CISLCOMP_FTARGET+im)= &
-              veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
-
-             if (is_compressible_mat(im).eq.0) then
-              !do nothing
-             else if (is_compressible_mat(im).eq.1) then
-              refine_vol_bucket(im_refine_density)= &
-               refine_vol_bucket(im_refine_density)+multi_volume(im)
-             else
-              print *,"is_compressible_mat(im) invalid"
-              stop
-             endif
+              if (is_compressible_mat(im).eq.0) then
+               !do nothing
+              else if (is_compressible_mat(im).eq.1) then
+               refine_vol_bucket(im_refine_density)= &
+                refine_vol_bucket(im_refine_density)+multi_volume(im)
+              else
+               print *,"is_compressible_mat(im) invalid"
+               stop
+              endif
 
 
-             ! material centroid from target (accepting) region
-             do dir2=1,SDIM
-              veldata(CISLCOMP_MOF+vofcomp+dir2)= &
-               veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
-               multi_volume(im)*multi_cen(dir2,im)
-             enddo 
+              ! material centroid from target (accepting) region
+              do dir2=1,SDIM
+               veldata(CISLCOMP_MOF+vofcomp+dir2)= &
+                veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
+                multi_volume(im)*multi_cen(dir2,im)
+              enddo 
 
-             do veldir=1,SDIM
-               ! fluid materials tessellate the domain.
-              if (is_rigid(im).eq.0) then
-               veldata(veldir)=veldata(veldir)+mom2(veldir) 
+              do veldir=1,SDIM
+                ! fluid materials tessellate the domain.
+               if (is_rigid(im).eq.0) then
+                veldata(veldir)=veldata(veldir)+mom2(veldir) 
 
-               if (veldir.eq.1) then
-                xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
-                 xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
-                 mom2(veldir)
-                xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
-                 xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
-                 massdepart_mom
-               else if (veldir.eq.2) then
-                ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
-                 ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
-                 mom2(veldir)
-                ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
-                 ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
-                 massdepart_mom
-               else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-                zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
-                 zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
-                 mom2(veldir)
-                zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
-                 zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
-                 massdepart_mom
+                if (veldir.eq.1) then
+                 xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
+                  xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
+                  mom2(veldir)
+                 xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
+                  xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
+                  massdepart_mom
+                else if (veldir.eq.2) then
+                 ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
+                  ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
+                  mom2(veldir)
+                 ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
+                  ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
+                  massdepart_mom
+                else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+                 zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
+                  zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
+                  mom2(veldir)
+                 zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
+                  zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
+                  massdepart_mom
+                else
+                 print *,"veldir invalid: ",veldir
+                 stop
+                endif
+
+               else if (is_rigid(im).eq.1) then
+                ! do nothing
                else
-                print *,"veldir invalid: ",veldir
+                print *,"is_rigid invalid GODUNOV_3D.F90"
                 stop
                endif
+              enddo ! veldir=1..sdim
+     
+             enddo ! im=1,..,num_materials (state variables, geometry, velocity)
 
-              else if (is_rigid(im).eq.1) then
-               ! do nothing
-              else
-               print *,"is_rigid invalid GODUNOV_3D.F90"
-               stop
-              endif
-             enddo ! veldir=1..sdim
-    
-            enddo ! im=1,..,num_materials (state variables, geometry, velocity)
+            else if (volint.eq.zero) then
+             !do nothing
+            else
+             print *,"volint invalid(2): ",volint
+             stop
+            endif 
 
-           endif ! volint>0
+           else if (volint.eq.zero) then
+            !do nothing
+           else
+            print *,"volint invalid(1): ",volint
+            stop
+           endif 
 
           else if (check_intersection.eq.0) then
            ! do nothing
