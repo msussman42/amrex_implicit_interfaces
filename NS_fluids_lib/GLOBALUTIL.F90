@@ -13692,25 +13692,33 @@ end subroutine print_visual_descriptor
 
       end subroutine interp_from_aux_grid
 
-      subroutine bilinear_interp_stencil3D(data_stencil,wt_dist, &
+      subroutine bilinear_interp_stencil3D(data_stencil,wt_dist_in, &
                       ncomp,data_interp)
       use probcommon_module
       IMPLICIT NONE
 
       integer, INTENT(in) :: ncomp
       real(amrex_real), dimension(2,2,2,ncomp), INTENT(in) :: data_stencil
-      real(amrex_real), INTENT(in) :: wt_dist(3)
+      real(amrex_real), INTENT(in) :: wt_dist_in(3)
+      real(amrex_real) :: wt_dist(3)
       real(amrex_real), INTENT(out) :: data_interp(ncomp)
       integer :: dir
       real(amrex_real) :: c00,c01,c10,c11,c0,c1
 
       do dir=1,3
-       if ((wt_dist(dir).ge.-VOFTOL).and. &
-           (wt_dist(dir).le.one+VOFTOL)) then
-        ! do nothing
+       wt_dist(dir)=wt_dist_in(dir)
+       if ((wt_dist(dir).ge.zero).and. &
+           (wt_dist(dir).le.one)) then
+        !do nothing
+       else if ((wt_dist(dir).ge.-EPS2).and. &
+                (wt_dist(dir).le.zero)) then
+        wt_dist(dir)=zero
+       else if ((wt_dist(dir).le.one+EPS2).and. &
+                (wt_dist(dir).ge.one)) then
+        wt_dist(dir)=one
        else
         print *,"put breakpoint here to see the caller"
-        print *,"wt_dist out of range"
+        print *,"wt_dist out of range bilinear_interp_stencil3D"
         print *,"dir,wt_dist ",dir,wt_dist(dir)
         print *,"ncomp= ",ncomp
         stop
@@ -13735,29 +13743,40 @@ end subroutine print_visual_descriptor
 
       end subroutine bilinear_interp_stencil3D
 
-      subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
+      subroutine bilinear_interp_stencil(data_stencil,wt_dist_in, &
                       ncomp,data_interp)
       use probcommon_module
       IMPLICIT NONE
 
       integer, INTENT(in) :: ncomp
-      real(amrex_real), dimension(D_DECL(2,2,2),ncomp), INTENT(in) :: data_stencil
-      real(amrex_real), INTENT(in) :: wt_dist(SDIM)
+      real(amrex_real), dimension(D_DECL(2,2,2),ncomp), INTENT(in) :: &
+              data_stencil
+      real(amrex_real), INTENT(in) :: wt_dist_in(SDIM)
+      real(amrex_real) :: wt_dist(SDIM)
       real(amrex_real), INTENT(out) :: data_interp(ncomp)
       integer :: dir
       real(amrex_real) :: c00,c01,c10,c11,c0,c1
 
       do dir=1,SDIM
-       if ((wt_dist(dir).ge.-VOFTOL).and. &
-           (wt_dist(dir).le.one+VOFTOL)) then
-        ! do nothing
+
+       wt_dist(dir)=wt_dist_in(dir)
+       if ((wt_dist(dir).ge.zero).and. &
+           (wt_dist(dir).le.one)) then
+        !do nothing
+       else if ((wt_dist(dir).ge.-EPS2).and. &
+                (wt_dist(dir).le.zero)) then
+        wt_dist(dir)=zero
+       else if ((wt_dist(dir).le.one+EPS2).and. &
+                (wt_dist(dir).ge.one)) then
+        wt_dist(dir)=one
        else
         print *,"put breakpoint here to see the caller"
-        print *,"wt_dist out of range"
+        print *,"wt_dist out of range (bilinear_interp_stencil)"
         print *,"dir,wt_dist ",dir,wt_dist(dir)
         print *,"ncomp= ",ncomp
         stop
        endif
+
       enddo ! dir=1..sdim
 
       do dir=1,ncomp

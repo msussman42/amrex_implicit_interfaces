@@ -6,8 +6,8 @@
 #SBATCH -N 1
 #SBATCH -n 64
 #SBATCH --partition=engineering_q
-#SBATCH --mail-type="FAIL"
-###SBATCH --mail-user=whliu13@gmail.com
+#SBATCH --mail-type="ALL"
+#SBATCH --mail-user=msussman@fsu.edu
 #SBATCH -t 48:00:00
 #SBATCH --output=run.out
 #SBATCH --error=run.err

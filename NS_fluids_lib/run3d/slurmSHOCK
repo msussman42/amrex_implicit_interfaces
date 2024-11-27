@@ -10,8 +10,8 @@
 ##SBATCH --partition=engineering_q
 ##SBATCH --partition=backfill
 #SBATCH --partition=mecfd_q
-#SBATCH --mail-type="FAIL"
-###SBATCH --mail-user=whliu13@gmail.com
+#SBATCH --mail-type="ALL"
+#SBATCH --mail-user=msussman@fsu.edu
 ##SBATCH -t 4:00:00
 ##SBATCH -t 48:00:00
 #SBATCH -t 14-00:00:00
