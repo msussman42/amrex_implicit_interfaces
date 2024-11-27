@@ -16458,7 +16458,7 @@ end subroutine print_visual_descriptor
       if (comp_dx.gt.zero) then
        ! do nothing
       else
-       print *,"comp_dx invalid"
+       print *,"comp_dx invalid: ",comp_dx
        stop
       endif
 
@@ -16480,7 +16480,7 @@ end subroutine print_visual_descriptor
         if (xphys_hi.gt.xphys_lo) then
          ! do nothing
         else
-         print *,"xphys_hi-xphys_lo invalid"
+         print *,"xphys_hi-xphys_lo invalid: ",xphys_lo,xphys_hi
          stop
         endif
 
@@ -16488,13 +16488,19 @@ end subroutine print_visual_descriptor
          xphys_of_xcomp=xphys_lo
         else if (abs(xcomp-xcell_hi).le.comp_dx*EPS_12_4) then
          xphys_of_xcomp=xphys_hi
-        else if ((xcomp.gt.xcell_lo).and. &
-                 (xcomp.lt.xcell_hi)) then
+        else if ((xcomp.gt.xcell_lo-comp_dx*EPS_12_2).and. &
+                 (xcomp.le.xcell_lo)) then
+         xphys_of_xcomp=xphys_lo
+        else if ((xcomp.lt.xcell_hi+comp_dx*EPS_12_2).and. &
+                 (xcomp.ge.xcell_hi)) then
+         xphys_of_xcomp=xphys_hi
+        else if ((xcomp.ge.xcell_lo).and. &
+                 (xcomp.le.xcell_hi)) then
          xphys_of_xcomp=xphys_lo+ &
             (xphys_hi-xphys_lo)* &
             (xcomp-xcell_lo)/(xcell_hi-xcell_lo)
         else
-         print *,"xcomp invalid"
+         print *,"xcomp invalid: ",xcomp,xcell_lo,xcell_hi,comp_dx
          stop
         endif
        else if (icrit.lt.0) then
@@ -16572,8 +16578,14 @@ end subroutine print_visual_descriptor
          xcomp_of_xphys=xcomp_lo
         else if (abs(xphys-xcell_hi).le.EPS_12_4*comp_dx) then
          xcomp_of_xphys=xcomp_hi
-        else if ((xphys.gt.xcell_lo).and. &
-                 (xphys.lt.xcell_hi)) then
+        else if ((xphys.gt.xcell_lo-comp_dx*EPS_12_2).and. &
+                 (xphys.le.xcell_lo)) then
+         xcomp_of_xphys=xcomp_lo
+        else if ((xphys.lt.xcell_hi+comp_dx*EPS_12_2).and. &
+                 (xphys.ge.xcell_hi)) then
+         xcomp_of_xphys=xcomp_hi
+        else if ((xphys.ge.xcell_lo).and. &
+                 (xphys.le.xcell_hi)) then
          xcomp_of_xphys=xcomp_lo+ &
             (xcomp_hi-xcomp_lo)* &
             (xphys-xcell_lo)/(xcell_hi-xcell_lo)
@@ -16583,6 +16595,7 @@ end subroutine print_visual_descriptor
          print *,"xcell_hi=",xcell_hi
          print *,"xcomp_lo=",xcomp_lo
          print *,"xcomp_hi=",xcomp_hi
+         print *,"comp_dx=",comp_dx
          stop
         endif
        else if (icrit.lt.0) then
