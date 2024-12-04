@@ -11910,7 +11910,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
 } // end subroutine vel_elastic_ALL
 
-
+//Mass_Energy_Sources_SinksALL() called from: NavierStokes::do_the_advance.
 void NavierStokes::Mass_Energy_Sources_SinksALL() {
 
  int finest_level=parent->finestLevel();

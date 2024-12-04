@@ -26867,6 +26867,14 @@ end subroutine initialize2d
            ! do nothing
           else
            print *,"region_dt must be positive"
+           print *,"iregions=",iregions
+           print *,"number_of_source_regions=",number_of_source_regions
+           print *,"lower_bound=",lower_bound
+           print *,"upper_bound=",upper_bound
+           print *,"regions_list(iregions,0)%region_dt=", &
+            regions_list(iregions,0)%region_dt
+           print *,"regions_list(iregions,0)%region_material_id ", &
+            regions_list(iregions,0)%region_material_id
            stop
           endif
 
