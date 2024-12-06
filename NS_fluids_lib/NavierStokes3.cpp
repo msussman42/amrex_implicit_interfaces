@@ -474,6 +474,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   bool remove_negative=true;
 
     // level=0
+    // particles at t^{n}
   My_ParticleContainer& prevPC=newDataPC(slab_step);
 
   prevPC.Redistribute(lev_min,lev_max,
@@ -483,7 +484,15 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   My_ParticleContainer& localPC=newDataPC(slab_step+1);
 
   Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
-
+  
+   // if num_divu_outer_sweeps>1 (e.g. for compressible flow) or spectral
+   // element method, then
+   // for sweeps after the initial sweep, we want to clear the particle
+   // data from the previous sweep.  This old t^{n+1} particle data used an
+   // old advective velocity, and we want to replace with t^{n+1} particle
+   // data using the new advective velocity.  For reference regarding
+   // num_divu_outer_sweeps, see
+   // Jemison, Sussman, Arienti.
   if (num_particles_look_ahead>0) {
    localPC.clearParticles();
   } else if (num_particles_look_ahead==0) {
@@ -491,8 +500,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   } else
    amrex::Error("num_particles_look_ahead invalid");
 
-  localPC.Redistribute();
-  localPC.copyParticles(prevPC,local_copy);
+  localPC.Redistribute();  //Sussman superstition
+  localPC.copyParticles(prevPC,local_copy); //initialize t^{n+1} data w/t^{n}
 
     //prior to advection
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);

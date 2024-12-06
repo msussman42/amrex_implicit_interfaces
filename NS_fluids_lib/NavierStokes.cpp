@@ -23152,8 +23152,8 @@ NavierStokes::init_particle_containerALL(int append_flag,
  int local_redistribute=0;
  bool remove_negative=true;
 
- NBR_Particle_Container->clearParticles();
- NBR_Particle_Container->Redistribute();
+ NBR_Particle_Container->clearParticles(); //Sussman superstition
+ NBR_Particle_Container->Redistribute(); //Sussman superstition
  NBR_Particle_Container->copyParticles(localPC,local_copy);
 
  NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
