@@ -209,7 +209,6 @@ Vector<int> NavierStokes::force_blob_symmetry;
 int NavierStokes::particle_feedback=1; 
 int NavierStokes::particle_nsubdivide_dx=4; 
 int NavierStokes::particle_nsubdivide=4; 
-int NavierStokes::particle_max_per_nsubdivide=2; 
 
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.01;
@@ -5369,9 +5368,6 @@ NavierStokes::read_params ()
      //default=particle_nsubdivide
     pp.queryAdd("particle_nsubdivide_dx",particle_nsubdivide_dx);
 
-     //default=2
-    pp.queryAdd("particle_max_per_nsubdivide",particle_max_per_nsubdivide);
-
     for (int im=1;im<=num_materials;im++) {
      for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
       for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -5618,8 +5614,6 @@ NavierStokes::read_params ()
      std::cout<<"particle_feedback="<<particle_feedback<<'\n';
      std::cout<<"particle_nsubdivide_dx="<<particle_nsubdivide_dx<<'\n';
      std::cout<<"particle_nsubdivide="<<particle_nsubdivide<<'\n';
-     std::cout << "particle_max_per_nsubdivide= " <<
-        particle_max_per_nsubdivide << '\n';
 
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "force_blob_symmetry i= " << i << ' ' <<
@@ -23166,10 +23160,12 @@ NavierStokes::init_particle_containerALL(int append_flag,
  } else
   amrex::Error("nGrow_Redistribute invalid");
 
+ Long num_particles_sanity_check=0;
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.init_particle_container(append_flag,local_caller_string);
+  ns_level.init_particle_container(append_flag,local_caller_string,
+   num_particles_sanity_check);
  }
 
  NBR_Particle_Container->clearNeighbors();
@@ -23190,6 +23186,15 @@ NavierStokes::init_particle_containerALL(int append_flag,
      (append_flag==OP_PARTICLE_ADD)) {
   localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute,remove_negative);
+
+  if (num_particles==num_particles_sanity_check) {
+   //do nothing
+  } else {
+   std::cout << "num_particles= " << num_particles << '\n';
+   std::cout << "num_particles_sanity_check= " << 
+     num_particles_sanity_check << '\n';
+   amrex::Error("num_particles<>num_particles_sanity_check");
+  }
  } else if (append_flag==OP_PARTICLE_SLOPES) {
   // do nothing
  } else {
@@ -23204,7 +23209,8 @@ NavierStokes::init_particle_containerALL(int append_flag,
  
 void
 NavierStokes::init_particle_container(int append_flag,
-   const std::string& caller_string) {
+   const std::string& caller_string,
+   Long& num_particles_sanity_check) {
 
  std::string local_caller_string="init_particle_container";
  local_caller_string=caller_string+local_caller_string;
@@ -23325,6 +23331,8 @@ NavierStokes::init_particle_container(int append_flag,
 #pragma omp parallel
 #endif
 {
+
+  //use_tiling==false
  for (MFIter mfi(*lsmf,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
@@ -23442,6 +23450,7 @@ NavierStokes::init_particle_container(int append_flag,
   for (int isweep=0;isweep<number_sweeps;isweep++) {
 
    int new_Pdata_size=new_particle_data.size();
+   int local_num_particles_sanity=0;
 
    // declared in: LEVELSET_3D.F90
    fort_init_particle_container( 
@@ -23458,7 +23467,6 @@ NavierStokes::init_particle_container(int append_flag,
      &particle_feedback,
      &particle_nsubdivide_dx,
      &particle_nsubdivide,
-     &particle_max_per_nsubdivide,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -23468,6 +23476,7 @@ NavierStokes::init_particle_container(int append_flag,
      &dt_slab, //init_particle_container
      xlo,dx,
      &ncomp_state,
+     &local_num_particles_sanity,
      particles_AoS.data(), // existing particles, intent(inout)
      NBR_particles_AoS.data(), //intent(in)
      Np,  // pass by value
@@ -23492,6 +23501,7 @@ NavierStokes::init_particle_container(int append_flag,
      ARLIM(mfinerfab.hiVect()));
     
    if (isweep==0) {
+    num_particles_sanity_check+=local_num_particles_sanity;
     new_particle_data.resize(Np_append*single_particle_size);
    }
   } // isweep=0,...,number_sweeps-1

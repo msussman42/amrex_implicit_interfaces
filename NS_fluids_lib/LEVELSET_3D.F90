@@ -19793,7 +19793,8 @@ stop
        particlesptr, &
        cell_particle_count, &
        particle_link_data, &
-       Np)
+       Np, &
+       local_num_particles_sanity)
 
       use global_utility_module
       use mass_transfer_module
@@ -19801,6 +19802,8 @@ stop
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       integer, value, INTENT(in) :: Np 
+      integer, INTENT(inout) :: local_num_particles_sanity
+
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       integer, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
@@ -19846,6 +19849,7 @@ stop
 
        interior_ok=1
        do dir=1,SDIM
+FIX ME
         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-local_ngrow).or. &
             (cell_index(dir).gt.accum_PARM%tilehi(dir)+local_ngrow)) then
          interior_ok=0
@@ -20335,7 +20339,6 @@ stop
         particle_feedback, &
         particle_nsubdivide_dx, &
         particle_nsubdivide, &
-        particle_max_per_nsubdivide, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -20345,6 +20348,7 @@ stop
         dt_slab, &
         xlo,dx, &
         ncomp_state, &
+        local_num_particles_sanity, &
         particles, & ! a list of particles intent(inout)
         NBR_particles, & ! a list of particles intent(in)
         Np, & !  Np = number of particles
@@ -20387,11 +20391,11 @@ stop
       integer, INTENT(in) :: particle_feedback
       integer, INTENT(in) :: particle_nsubdivide_dx
       integer, INTENT(in) :: particle_nsubdivide
-      integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
       real(amrex_real), INTENT(in)    :: dt_slab
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
       integer, INTENT(in) :: ncomp_state
+      integer, INTENT(out) :: local_num_particles_sanity
       integer, value, INTENT(in) :: Np ! pass by value
       integer, value, INTENT(in) :: NBR_Np ! pass by value
       type(particle_t), INTENT(inout), target :: particles(Np)
@@ -20543,6 +20547,8 @@ stop
        stop
       endif
 
+      local_num_particles_sanity=0
+
       if (ncomp_state.eq.num_materials*(1+AMREX_SPACEDIM)) then
        !do nothing
       else
@@ -20604,8 +20610,21 @@ stop
       do dir=1,SDIM
        grid_PARM%fablo(dir)=fablo(dir)
        grid_PARM%fabhi(dir)=fabhi(dir)
+
        grid_PARM%tilelo(dir)=tilelo(dir)
        grid_PARM%tilehi(dir)=tilehi(dir)
+
+       if (fablo(dir).ne.tilelo(dir)) then
+        print *,"expecting fablo=tilelo init_particle_container"
+        print *,"dir,fablo,tilelo ",dir,fablo(dir),tilelo(dir)
+        stop
+       endif
+       if (fabhi(dir).ne.tilehi(dir)) then
+        print *,"expecting fabhi=tilehi init_particle_container"
+        print *,"dir,fabhi,tilehi ",dir,fabhi(dir),tilehi(dir)
+        stop
+       endif
+
        grid_PARM%dx(dir)=dx(dir)
        grid_PARM%xlo(dir)=xlo(dir)
        do side=1,2
@@ -20621,6 +20640,7 @@ stop
         enddo
        enddo ! dir_local=1,sdim
       enddo ! dir=1,sdim
+
       grid_PARM%bfact=bfact
       grid_PARM%level=level
       grid_PARM%finest_level=finest_level
@@ -20724,7 +20744,8 @@ stop
          particlesptr, &
          cell_particle_count_ptr, &
          particle_link_data, &
-         Np)
+         Np, &
+         local_num_particles_sanity)
        else if (append_flag.eq.OP_PARTICLE_SLOPES) then
         accum_PARM%Npart=NBR_Np
         call count_particles( &
@@ -20732,7 +20753,8 @@ stop
          NBR_particlesptr, &
          cell_particle_count_ptr, &
          particle_link_data, &
-         NBR_Np)
+         NBR_Np, &
+         local_num_particles_sanity)
 
         ! initialize particles for the first time.
        else if (append_flag.eq.OP_PARTICLE_INIT) then

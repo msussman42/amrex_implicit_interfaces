@@ -120,7 +120,6 @@ amr.n_cell          = 16 64
 amr.max_level       = 0
 
 ns.particle_nsubdivide=4
-ns.particle_max_per_nsubdivide=2
 
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
