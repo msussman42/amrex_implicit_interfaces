@@ -978,7 +978,7 @@ protected:
     void init_particle_containerALL(int append_flag,
       const std::string& caller_string);
     void init_particle_container(int append_flag,
-      const std::string& caller_string);
+      const std::string& caller_string,Long& num_particles_sanity_check);
     void move_particles(
       int splitting_dir,
       My_ParticleContainer& localPC,
@@ -1587,7 +1587,6 @@ protected:
     static int particle_feedback;  //particle_feedback=1 is the default. 
     static int particle_nsubdivide_dx; 
     static int particle_nsubdivide;
-    static int particle_max_per_nsubdivide;  
 
     static int  enable_spectral;
 
