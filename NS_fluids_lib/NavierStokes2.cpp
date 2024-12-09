@@ -6739,8 +6739,10 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   int lev_max_DIST=-1;
   int nGrow_Redistribute_DIST=0;
   int local_Redistribute_DIST=0; 
+  bool remove_negative_DIST=true; 
   localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
-    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+    nGrow_Redistribute_DIST,local_Redistribute_DIST,
+    remove_negative_DIST);
 
 #endif
 
