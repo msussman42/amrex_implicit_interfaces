@@ -23105,9 +23105,17 @@ NavierStokes::init_particle_containerALL(int append_flag,
  BLProfiler bprof(local_caller_string);
 #endif
 
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
+ Long num_particles=localPC.TotalNumberOfParticles();
+
  int nGrow_Redistribute=0;
 
  if (append_flag==OP_PARTICLE_INIT) {
+
+  if (num_particles==0) {
+   //do nothing
+  } else 
+   amrex::Error("expecting num_particles==0 if OP_PARTICLE_INIT");
 
   nGrow_Redistribute=0;
 
@@ -23127,8 +23135,6 @@ NavierStokes::init_particle_containerALL(int append_flag,
  } else
   amrex::Error("append_flag invalid");
 
- My_ParticleContainer& localPC=newDataPC(slab_step+1);
- Long num_particles=localPC.TotalNumberOfParticles();
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << local_caller_string << '\n';
   std::cout << "append_flag= " << append_flag << '\n';
@@ -23148,10 +23154,18 @@ NavierStokes::init_particle_containerALL(int append_flag,
 
  NBR_Particle_Container->clearParticles(); //Sussman superstition
  NBR_Particle_Container->Redistribute(); //Sussman superstition
- NBR_Particle_Container->copyParticles(localPC,local_copy);
 
- NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_redistribute);
+ if (append_flag==OP_PARTICLE_ADD) {
+  localPC->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute,remove_negative);
+  NBR_Particle_Container->copyParticles(localPC,local_copy);
+ } else if ((append_flag==OP_PARTICLE_INIT)||
+            (append_flag==OP_PARTICLE_SLOPES)) {
+  NBR_Particle_Container->copyParticles(localPC,local_copy);
+  NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute,remove_negative);
+ } else
+  amrex::Error("append_flag invalid");
 
  if (nGrow_Redistribute==0) {
   //do nothing
