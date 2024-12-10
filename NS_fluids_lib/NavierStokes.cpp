@@ -23338,6 +23338,8 @@ NavierStokes::init_particle_container(int append_flag,
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
+ Long num_particles_level=0;
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(lsmf->boxArray().d_numPts());
@@ -23516,7 +23518,7 @@ NavierStokes::init_particle_container(int append_flag,
      ARLIM(mfinerfab.hiVect()));
     
    if (isweep==0) {
-    num_particles_sanity_check+=local_num_particles_sanity;
+    num_particles_level+=local_num_particles_sanity;
     new_particle_data.resize(Np_append*single_particle_size);
    }
   } // isweep=0,...,number_sweeps-1
@@ -23625,6 +23627,11 @@ NavierStokes::init_particle_container(int append_flag,
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_INIT_PARTICLE_CONTAINER,"init_particle_container");
+
+  //tiling must be turned off.
+ ParallelDescriptor::ReduceLongSum(num_particles_level);
+
+ num_particles_sanity_check+=num_particles_level;
 
  delete lsmf;
 
