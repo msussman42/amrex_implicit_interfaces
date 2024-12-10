@@ -19993,9 +19993,11 @@ stop
       do dir=1,SDIM
        dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
        if (dx_sub.gt.zero) then
-        if (abs(xpart(dir)-xsten(-1,dir)).le.EPS2*dx_sub) then
+        if ((xpart(dir).ge.xsten(-1,dir)-EPS1*dx_sub).and. &
+            (xpart(dir).le.xsten(-1,dir)+EPS2*dx_sub)) then
          isub_local(dir)=0
-        else if (abs(xpart(dir)-xsten(1,dir)).le.EPS2*dx_sub) then
+        else if ((xpart(dir).le.xsten(1,dir)+EPS1*dx_sub).and. &
+                 (xpart(dir).ge.xsten(1,dir)-EPS2*dx_sub)) then
          isub_local(dir)=accum_PARM%nsubdivide-1
         else if ((xpart(dir).ge.xsten(-1,dir)).and. &
                  (xpart(dir).le.xsten(1,dir))) then
@@ -20548,6 +20550,7 @@ stop
       integer :: slope_loop
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: particle_max_per_nsubdivide=2
+      integer :: num_processed_particles
 
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
       do i=1,caller_string_len
@@ -20825,6 +20828,8 @@ stop
       data_in%fablo=fablo
       data_in%fabhi=fabhi
 
+      num_processed_particles=0
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -20840,6 +20845,7 @@ stop
          ! or "fluid" material.
         call get_primary_material(LS_sub,im_primary_sub)
 
+         !sanity check
         if ((is_rigid(im_primary_sub).eq.1).or. &
             (is_rigid(im_primary_sub).eq.0)) then
 
@@ -21014,7 +21020,7 @@ stop
           if (current_link.eq.0) then
            ! do nothing
           else
-           print *,"expecting current_link=0"
+           print *,"expecting current_link=0: ",current_link
            stop
           endif
 
@@ -21070,6 +21076,7 @@ stop
            stop
           endif
 
+           !sanity check
           if (cell_count_check.eq.cell_count_hold) then
 
            cell_count_check=0
@@ -21354,6 +21361,9 @@ stop
                   imat_primary_particle
                 stop
                endif
+
+               num_processed_particles=num_processed_particles+1
+
               enddo ! bubble_iter=1,local_count
 
              else
@@ -22049,10 +22059,39 @@ stop
          stop
         endif
 
-       else if (local_mask.eq.0) then
+       else if ((local_mask.eq.0).and. &
+                (append_flag.eq.OP_PARTICLE_SLOPES)) then
         ! do nothing
+       else if ((local_mask.eq.0).and. &
+                (append_flag.eq.OP_PARTICLE_INIT)) then
+        ! do nothing
+       else if ((local_mask.eq.0).and. &
+                (append_flag.eq.OP_PARTICLE_ADD)) then
+        cell_count_check=0
+        cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
+        current_link=cell_particle_count(D_DECL(i,j,k),2)
+        do while (current_link.ge.1)
+         cell_count_check=cell_count_check+1
+         if ((cell_count_check.ge.1).and. &
+             (cell_count_check.le.cell_count_hold)) then
+          !do nothing
+         else
+          print *,"cell_count_check invalid: ",cell_count_check
+          stop
+         endif
+         particles(current_link)% &
+           extra_int(N_EXTRA_INT_PRIMARY_MATERIAL_ID+1)=-1
+         particles(current_link)% &
+           extra_int(N_EXTRA_INT_SECONDARY_MATERIAL_ID+1)=-1
+         particle_delete_flag(current_link)=1
+         num_processed_particles=num_processed_particles+1
+         ibase=(current_link-1)*(1+SDIM)
+         ! 0<=current_link<=total number particles
+         current_link=particle_link_data(ibase+1)
+        enddo !do while (current_link.ge.1)
        else
         print *,"local_mask invalid: ",local_mask
+        print *,"append_flag= ",append_flag
         stop
        endif
 
@@ -22062,12 +22101,23 @@ stop
 
       if ((append_flag.eq.OP_PARTICLE_ADD).or. &
           (append_flag.eq.OP_PARTICLE_INIT)) then 
+
        if (Np_append_test.eq.Np_append) then
         ! do nothing
        else
         print *,"mismatch Np_append,Np_append_test ",Np_append,Np_append_test
         stop
        endif
+       if (num_processed_particles.eq.Np) then
+        !do nothing
+       else
+        print *,"expecting num_processed_particles==Np"
+        print *,"num_processed_particles=",num_processed_particles
+        print *,"Np=",Np
+        print *,"append_flag=",append_flag
+        stop
+       endif
+         
       else if (append_flag.eq.OP_PARTICLE_SLOPES) then
        ! do nothing
       else
