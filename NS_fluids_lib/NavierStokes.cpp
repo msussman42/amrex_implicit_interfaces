@@ -22098,10 +22098,11 @@ void NavierStokes::post_regrid (int lbase,
   int lev_max=new_finest;
   int nGrow_Redistribute=0;
   int local_Redistribute=0;
+  bool remove_negative=true;
 
   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
+     local_Redistribute,remove_negative);
 
   Long num_particles=current_PC.TotalNumberOfParticles();
 
@@ -23156,14 +23157,14 @@ NavierStokes::init_particle_containerALL(int append_flag,
  NBR_Particle_Container->Redistribute(); //Sussman superstition
 
  if (append_flag==OP_PARTICLE_ADD) {
-  localPC->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute,remove_negative);
   NBR_Particle_Container->copyParticles(localPC,local_copy);
  } else if ((append_flag==OP_PARTICLE_INIT)||
             (append_flag==OP_PARTICLE_SLOPES)) {
   NBR_Particle_Container->copyParticles(localPC,local_copy);
   NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_redistribute,remove_negative);
+    local_redistribute);
  } else
   amrex::Error("append_flag invalid");
 
@@ -23539,12 +23540,42 @@ NavierStokes::init_particle_container(int append_flag,
    unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
    mirrorPC_AoS.resize(Np_mirror_AoS);
 
-   //save the existing particle data to:
+   //1. save the existing particle data to:
    // mirrorPC_AoS
+   //2. reuse deleted particle data ids for new particles.
+
+   int i_append=0;
    unsigned int i_mirror=0;
+
    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
     if (particle_delete_flag[i_delete]==1) {
-     // do nothing
+
+     if (i_append<Np_append) {
+      mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
+      mirrorPC_AoS[i_mirror].cpu() = ParallelDescriptor::MyProc();
+
+      int ibase=i_append*single_particle_size;
+      //pos(AMREX_SPACEDIM)
+      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+       mirrorPC_AoS[i_mirror].pos(dir) = new_particle_data[ibase+dir];
+      }
+      for (int dir=0;dir<N_EXTRA_REAL;dir++) {
+       mirrorPC_AoS[i_mirror].rdata(dir) = 
+         new_particle_data[ibase+AMREX_SPACEDIM+dir];
+      }
+      //material id.
+      for (int dir=0;dir<N_EXTRA_INT;dir++) {
+       mirrorPC_AoS[i_mirror].idata(dir) = 
+        (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
+      }
+      i_append++;
+      i_mirror++;
+
+     } else if (i_append==Np_append) {
+      //do nothing
+     } else
+      amrex::Error("i_append or Np_append invalid");
+
     } else if (particle_delete_flag[i_delete]==0) {
      mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
      i_mirror++;
@@ -23552,9 +23583,9 @@ NavierStokes::init_particle_container(int append_flag,
      amrex::Error("particle_delete_flag[i_delete] invalid");
    } // for (unsigned int i_delete=0;i_delete<Np;i_delete++) 
 
-   AMREX_ALWAYS_ASSERT(i_mirror==Np-Np_delete);
+   AMREX_ALWAYS_ASSERT(i_mirror==Np-Np_delete+i_append);
 
-   for (int i_append=0;i_append<Np_append;i_append++) {
+   for ( ; i_append<Np_append ; i_append++) {
 
     My_ParticleContainer::ParticleType p;
     p.id() = My_ParticleContainer::ParticleType::NextID();
