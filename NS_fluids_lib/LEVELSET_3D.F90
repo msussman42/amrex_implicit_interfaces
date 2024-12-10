@@ -19813,8 +19813,8 @@ stop
       integer :: interior_ID
       integer :: dir
       real(amrex_real), target :: xpart(SDIM)
+      real(amrex_real) :: xhi
       integer cell_index(SDIM)
-      integer interior_ok
       integer i,j,k
       integer :: local_ngrow
       integer :: ok_to_add_link
@@ -19847,98 +19847,115 @@ stop
          xpart, &
          cell_index)
 
-       interior_ok=1
        do dir=1,SDIM
-FIX ME
-        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-local_ngrow).or. &
-            (cell_index(dir).gt.accum_PARM%tilehi(dir)+local_ngrow)) then
-         interior_ok=0
+
+        xhi=accum_PARM%xlo(dir)+ &
+         (accum_PARM%tilehi(dir)-accum_PARM%tilelo(dir)+1)* &
+         accum_PARM%dx(dir)
+
+        if (cell_index(dir).lt.accum_PARM%tilelo(dir)-local_ngrow) then
+         cell_index(dir)=accum_PARM%tilelo(dir)-local_ngrow
         endif
+        if (cell_index(dir).gt.accum_PARM%tilehi(dir)+local_ngrow) then
+         cell_index(dir)=accum_PARM%tilehi(dir)+local_ngrow
+        endif
+
+        if ((cell_index(dir).ge.accum_PARM%tilelo(dir)).and. &
+            (cell_index(dir).le.accum_PARM%tilehi(dir))) then
+         if ((xpart(dir).ge. &
+              accum_PARM%xlo(dir)-EPS2*accum_PARM%dx(dir)).and. &
+             (xpart(dir).le. &
+              xhi+EPS2*accum_PARM%dx(dir))) then
+          !do nothing
+         else
+          print *,"particle outside of box"
+          print *,"dir=",dir
+          print *,"xpart(dir) ",xpart(dir)
+          print *,"xlo(dir)= ",accum_PARM%xlo(dir)
+          print *,"xhi(dir)= ",xhi
+          stop
+         endif
+        endif
+
        enddo !dir=1..sdim
-       if (interior_ok.eq.1) then
 
-        i=cell_index(1)
-        j=cell_index(2)
-        k=cell_index(SDIM)
+       i=cell_index(1)
+       j=cell_index(2)
+       k=cell_index(SDIM)
 
-        ok_to_add_link=1
+       ok_to_add_link=1
 
-        previous_link=cell_particle_count(D_DECL(i,j,k),2)
-        if (previous_link.eq.0) then
-         ! do nothing; no particles attached to cell (i,j,k)
-        else if ((previous_link.ge.1).and. &
-                 (previous_link.le.Np)) then
-         ibase=(previous_link-1)*(SDIM+1)
-         i_parent=particle_link_data(ibase+2) 
-         j_parent=particle_link_data(ibase+3) 
-         k_parent=particle_link_data(ibase+1+SDIM) 
-         if ((i.eq.i_parent).and. &
-             (j.eq.j_parent)) then
+       previous_link=cell_particle_count(D_DECL(i,j,k),2)
+       if (previous_link.eq.0) then
+        ! do nothing; no particles attached to cell (i,j,k)
+       else if ((previous_link.ge.1).and. &
+                (previous_link.le.Np)) then
+        ibase=(previous_link-1)*(SDIM+1)
+        i_parent=particle_link_data(ibase+2) 
+        j_parent=particle_link_data(ibase+3) 
+        k_parent=particle_link_data(ibase+1+SDIM) 
+        if ((i.eq.i_parent).and. &
+            (j.eq.j_parent)) then
+         ! do nothing
+        else
+         ok_to_add_link=0
+        endif
+        if (SDIM.eq.3) then
+         if (k.eq.k_parent) then
           ! do nothing
          else
           ok_to_add_link=0
          endif
-         if (SDIM.eq.3) then
-          if (k.eq.k_parent) then
-           ! do nothing
-          else
-           ok_to_add_link=0
-          endif
-         endif
-        else
-         print *,"previous_link invalid: ",previous_link
-         stop
         endif
-
-        if (ok_to_add_link.eq.1) then
-
-         if (previous_link.ne.interior_ID) then
-          !do nothing
-         else
-          print *,"previous_link==interior_ID => corruption"
-          print *,"previous_link=",previous_link
-          print *,"interior_ID=",interior_ID
-          stop
-         endif
-
-         cell_particle_count(D_DECL(i,j,k),1)= &
-           cell_particle_count(D_DECL(i,j,k),1)+1
-
-          ! the new particle is placed at the top of the list.
-          ! the previous particle that was at the top is now in the second
-          ! spot.
-         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
-
-         ibase_new=(interior_ID-1)*(SDIM+1)
-          ! previous_link=0 if the list was previously empty.
-         particle_link_data(ibase_new+1)=previous_link
-         particle_link_data(ibase_new+2)=i 
-         particle_link_data(ibase_new+3)=j
-         if (SDIM.eq.3) then 
-          particle_link_data(ibase_new+SDIM+1)=k
-         endif
-
-        else if (ok_to_add_link.eq.0) then
-         print *,"ok_to_add_link==0"
-         print *,"the parent of a particle added to (i,j,k) should"
-         print *,"always be (i,j,k)"
-         print *,"i,j,k ",i,j,k
-         print *,"i_parent,j_parent,k_parent ", &
-           i_parent,j_parent,k_parent
-         print *,"previous_link,interior_ID ", &
-            previous_link,interior_ID 
-         stop
-        else
-         print *,"ok_to_add_link invalid: ",ok_to_add_link
-         stop
-        endif
-
-       else if (interior_ok.eq.0) then
-        ! do nothing
        else
-        print *,"interior_ok invalid: ",interior_ok
+        print *,"previous_link invalid: ",previous_link
         stop
        endif
+
+       if (ok_to_add_link.eq.1) then
+
+        if (previous_link.ne.interior_ID) then
+         !do nothing
+        else
+         print *,"previous_link==interior_ID => corruption"
+         print *,"previous_link=",previous_link
+         print *,"interior_ID=",interior_ID
+         stop
+        endif
+
+        cell_particle_count(D_DECL(i,j,k),1)= &
+          cell_particle_count(D_DECL(i,j,k),1)+1
+
+         ! the new particle is placed at the top of the list.
+         ! the previous particle that was at the top is now in the second
+         ! spot.
+        cell_particle_count(D_DECL(i,j,k),2)=interior_ID
+
+        ibase_new=(interior_ID-1)*(SDIM+1)
+         ! previous_link=0 if the list was previously empty.
+        particle_link_data(ibase_new+1)=previous_link
+        particle_link_data(ibase_new+2)=i 
+        particle_link_data(ibase_new+3)=j
+        if (SDIM.eq.3) then 
+         particle_link_data(ibase_new+SDIM+1)=k
+        endif
+
+       else if (ok_to_add_link.eq.0) then
+        print *,"ok_to_add_link==0"
+        print *,"the parent of a particle added to (i,j,k) should"
+        print *,"always be (i,j,k)"
+        print *,"i,j,k ",i,j,k
+        print *,"i_parent,j_parent,k_parent ", &
+          i_parent,j_parent,k_parent
+        print *,"previous_link,interior_ID ", &
+           previous_link,interior_ID 
+        stop
+       else
+        print *,"ok_to_add_link invalid: ",ok_to_add_link
+        stop
+       endif
+
+       local_num_particles_sanity=local_num_particles_sanity+1
 
       enddo ! do interior_ID=1,accum_PARM%Npart
 
@@ -20530,6 +20547,7 @@ FIX ME
 
       integer :: slope_loop
       integer, parameter :: continuous_mof=STANDARD_MOF
+      integer, parameter :: particle_max_per_nsubdivide=2
 
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
       do i=1,caller_string_len
@@ -20739,6 +20757,14 @@ FIX ME
       if (isweep.eq.0) then
         ! particles exist
        if (append_flag.eq.OP_PARTICLE_ADD) then
+        if (NBR_Np.eq.Np) then
+         !do nothing
+        else
+         print *,"expecting NBR_Np==Np if OP_PARTICLE_ADD"
+         print *,"NBR_Np ",NBR_Np
+         print *,"Np ",Np
+         stop
+        endif
         call count_particles( &
          accum_PARM, &
          particlesptr, &
