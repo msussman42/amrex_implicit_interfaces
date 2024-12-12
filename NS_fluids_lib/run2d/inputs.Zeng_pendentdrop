@@ -10,6 +10,26 @@
 #radius: 400 microns, height: 250 microns
 #Pr=Cpl mul/kl=4.22e7 * 1.79e-2 / .516e+5 = 14.639
 #theta=Tcold+(T-Tcold)/(Thot-Tcold)=263.0 + (T-263.0)/(273-263)
+#St=Cpl (Tm - Tc)/Lh=4.22e7 (10.0)/3.334e9
+#see effective_radius.f
+#R=wetting radius
+#Bo=rhoL g R^2 / sigma = 1.0 (980) R^2/72.8
+#Re=rhoL U R/mu_L
+#We=rhoL U^2 R/sigma
+#Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
+#  (1/We)sigma kappa grad H/rho+(Bo/We)*g
+#(rho cp theta)_t+div(rho cp u theta)=(1/Pr)div k grad theta
+#summary:
+#1. liquid density=1  rho_gl=rho_g/rho_L 
+#2. liquid viscosity=1  mu_gl=mu_g/mu_L
+#3. liquid cp =1  cpgl=cpg/cpl
+#4. Latent heat=1/StefanNum
+#5. liquid k=1  k_gl=kg/kl
+#6. substrate supercool=-1
+#7. wetting radius=1
+#8. modify We so that capillary wave speeds comparable to freezing speed.
+#9. modify Re so that explicity viscosity stability constraint is comparable
+#   to the surface tension stability constraint.
 max_step  =  9999999    # maximum timestep
 
 stop_time = 70.0
@@ -93,7 +113,7 @@ mac.mac_abs_tol    = 1.0e-13
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
-ns.visc_coef      = 1.0
+ns.visc_coef      = 1.0  #(1/Re)
 ns.explicit_viscosity_dt=1
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
@@ -232,6 +252,8 @@ ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
+#radblob=effective hemispherical radius
+#see effective_radius.f
 #ns.radblob=0.15631 # centimeters
 ns.radblob=0.2 # centimeters
 ns.denfact=1.0
