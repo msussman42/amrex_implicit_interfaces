@@ -122,7 +122,7 @@ stop
           if (abs(mag-one).lt.EPS2) then
            ! do nothing
           else
-           print *,"nslope_cell (mag) invalid"
+           print *,"nslope_cell (mag) invalid: ",mag
            stop
           endif
 
@@ -1339,6 +1339,8 @@ stop
         print *,"col_ht_VOF=",col_ht_LS
         print *,"xtop=",xtop
         print *,"xbottom=",xbottom
+        print *,"dircrit ",dircrit
+        print *,"dx(dircrit) ",dx(dircrit)
         stop
        endif
        if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
@@ -1349,6 +1351,8 @@ stop
         print *,"col_ht_VOF=",col_ht_VOF
         print *,"xtop=",xtop
         print *,"xbottom=",xbottom
+        print *,"dircrit ",dircrit
+        print *,"dx(dircrit) ",dx(dircrit)
         stop
        endif
 
@@ -9623,18 +9627,18 @@ stop
              else if (xstenMAC_center(1).gt.EPS2*dx(1)) then
               ! do nothing
              else
-              print *,"xstenMAC invalid"
+              print *,"xstenMAC invalid: ",xstenMAC_center(1),dx(1)
               stop
              endif
             else if (iside.eq.1) then
              if (xstenMAC_center(1).gt.-EPS2*dx(1)) then
               ! do nothing
              else
-              print *,"xstenMAC invalid"
+              print *,"xstenMAC invalid: ",xstenMAC_center(1),dx(1)
               stop
              endif
             else
-             print *,"iside invalid"
+             print *,"iside invalid: ",iside
              stop
             endif
            else if ((veldir.eq.1).or.(veldir.eq.SDIM-1)) then
@@ -9884,7 +9888,8 @@ stop
                     (FFACE(im_opp).gt.-EPS1)) then
             ! do nothing
            else
-            print *,"FFACE invalid"
+            print *,"FFACE invalid: ",im,im_opp, &
+               FFACE(im),FFACE(im_opp)
             stop
            endif
 
@@ -9945,13 +9950,13 @@ stop
             else if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
              ! do nothing
             else
-             print *,"xstenMAC invalid"
+             print *,"xstenMAC invalid: ",xstenMAC_center(1),dx(1)
              stop
             endif
            else if (veldir.eq.1) then
             ! do nothing
            else
-            print *,"veldir invalid"
+            print *,"veldir invalid: ",veldir
             stop
            endif
           else
@@ -19863,9 +19868,9 @@ stop
         if ((cell_index(dir).ge.accum_PARM%tilelo(dir)).and. &
             (cell_index(dir).le.accum_PARM%tilehi(dir))) then
          if ((xpart(dir).ge. &
-              accum_PARM%xlo(dir)-EPS2*accum_PARM%dx(dir)).and. &
+              accum_PARM%xlo(dir)-accum_PARM%dx(dir)).and. &
              (xpart(dir).le. &
-              xhi+EPS2*accum_PARM%dx(dir))) then
+              xhi+accum_PARM%dx(dir))) then
           !do nothing
          else
           print *,"particle outside of box"
@@ -19873,6 +19878,7 @@ stop
           print *,"xpart(dir) ",xpart(dir)
           print *,"xlo(dir)= ",accum_PARM%xlo(dir)
           print *,"xhi(dir)= ",xhi
+          print *,"dx= ",accum_PARM%dx(dir)
           stop
          endif
         endif
@@ -19993,10 +19999,10 @@ stop
       do dir=1,SDIM
        dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
        if (dx_sub.gt.zero) then
-        if ((xpart(dir).ge.xsten(-1,dir)-EPS1*dx_sub).and. &
+        if ((xpart(dir).ge.xsten(-1,dir)-accum_PARM%dx(dir)).and. &
             (xpart(dir).le.xsten(-1,dir)+EPS2*dx_sub)) then
          isub_local(dir)=0
-        else if ((xpart(dir).le.xsten(1,dir)+EPS1*dx_sub).and. &
+        else if ((xpart(dir).le.xsten(1,dir)+accum_PARM%dx(dir)).and. &
                  (xpart(dir).ge.xsten(1,dir)-EPS2*dx_sub)) then
          isub_local(dir)=accum_PARM%nsubdivide-1
         else if ((xpart(dir).ge.xsten(-1,dir)).and. &
