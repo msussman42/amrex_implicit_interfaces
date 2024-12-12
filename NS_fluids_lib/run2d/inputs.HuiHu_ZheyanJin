@@ -202,6 +202,7 @@ ns.radblob3=0.0015625
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #r_{base}: 400 microns, height: 250 microns
+#see effective_radius.f
 ns.radblob=0.03 # centimeters  (radblob is effective hemispherical radius)
                 # r_base=0.038cm=3.8x10^{-4}m=380 microns
 ns.denfact=1.0
