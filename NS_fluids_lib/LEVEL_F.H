@@ -605,6 +605,7 @@ namespace amrex{
         const Real* xlo,const Real* dx,
 	int* ncomp_state,
 	int* local_num_particles_sanity,
+	int* local_misplaced_particles,
         const void* particles,
         const void* NBR_particles,
         int Np, 

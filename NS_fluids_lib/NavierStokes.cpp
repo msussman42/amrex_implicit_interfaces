@@ -23176,11 +23176,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
   amrex::Error("nGrow_Redistribute invalid");
 
  Long num_particles_sanity_check=0;
+ Long misplaced_particles=0;
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.init_particle_container(append_flag,local_caller_string,
-   num_particles_sanity_check);
+   num_particles_sanity_check,
+   misplaced_particles);
  }
 
  NBR_Particle_Container->clearNeighbors();
@@ -23210,6 +23212,12 @@ NavierStokes::init_particle_containerALL(int append_flag,
      num_particles_sanity_check << '\n';
    amrex::Error("num_particles<>num_particles_sanity_check");
   }
+  if (misplaced_particles!=0) {
+   std::cout << "num_particles= " << num_particles << '\n';
+   std::cout << "misplaced_particles= " << misplaced_particles << '\n';
+   amrex::Warning("misplaced_particles<>0");
+  }
+
  } else if (append_flag==OP_PARTICLE_SLOPES) {
   // do nothing
  } else {
@@ -23225,7 +23233,8 @@ NavierStokes::init_particle_containerALL(int append_flag,
 void
 NavierStokes::init_particle_container(int append_flag,
    const std::string& caller_string,
-   Long& num_particles_sanity_check) {
+   Long& num_particles_sanity_check,
+   Long& misplaced_particles) {
 
  std::string local_caller_string="init_particle_container";
  local_caller_string=caller_string+local_caller_string;
@@ -23339,6 +23348,7 @@ NavierStokes::init_particle_container(int append_flag,
  const int* domhi = domain.hiVect();
 
  Long num_particles_level=0;
+ Long misplaced_particles_level=0;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -23468,6 +23478,7 @@ NavierStokes::init_particle_container(int append_flag,
 
    int new_Pdata_size=new_particle_data.size();
    int local_num_particles_sanity=0;
+   int local_misplaced_particles=0;
 
    // declared in: LEVELSET_3D.F90
    fort_init_particle_container( 
@@ -23494,6 +23505,7 @@ NavierStokes::init_particle_container(int append_flag,
      xlo,dx,
      &ncomp_state,
      &local_num_particles_sanity,
+     &local_misplaced_particles,
      particles_AoS.data(), // existing particles, intent(inout)
      NBR_particles_AoS.data(), //intent(in)
      Np,  // pass by value
@@ -23519,6 +23531,7 @@ NavierStokes::init_particle_container(int append_flag,
     
    if (isweep==0) {
     num_particles_level+=local_num_particles_sanity;
+    misplaced_particles_level+=local_misplaced_particles;
     new_particle_data.resize(Np_append*single_particle_size);
    }
   } // isweep=0,...,number_sweeps-1
@@ -23630,8 +23643,10 @@ NavierStokes::init_particle_container(int append_flag,
 
   //tiling must be turned off.
  ParallelDescriptor::ReduceLongSum(num_particles_level);
+ ParallelDescriptor::ReduceLongSum(misplaced_particles_level);
 
  num_particles_sanity_check+=num_particles_level;
+ misplaced_particles+=misplaced_particles_level;
 
  delete lsmf;
 
