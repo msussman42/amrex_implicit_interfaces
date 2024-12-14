@@ -17427,6 +17427,7 @@ stop
        max_face_wt, & ! static variable
        presbc_arr, &
        visc_coef, &
+       heatvisc_coef, &
        uncoupled_viscosity, &
        project_option) &
       bind(c,name='fort_buildfacewt')
@@ -17447,6 +17448,7 @@ stop
       integer, INTENT(in) :: local_face_index
       integer, INTENT(in) :: local_face_ncomp
       real(amrex_real), INTENT(in) :: visc_coef
+      real(amrex_real), INTENT(in) :: heatvisc_coef
       integer, INTENT(in) :: uncoupled_viscosity
       integer, INTENT(in) :: project_option
       real(amrex_real), INTENT(inout) :: min_face_wt(NCOMP_FACE_WT)
@@ -17563,9 +17565,18 @@ stop
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef
        stop
       endif
+
+      if (heatvisc_coef.gt.zero) then
+       ! do nothing
+      else
+       print *,"heatvisc_coef invalid(buildfacewt): ",heatvisc_coef
+       stop
+      endif
+
+
       if ((nsolve.ne.1).and.(nsolve.ne.AMREX_SPACEDIM)) then
        print *,"nsolve invalid8"
        stop
@@ -17735,6 +17746,7 @@ stop
              dd, &
              dd_group, &  ! intent(out)
              visc_coef, &
+             heatvisc_coef, &
              nsolve, &
              dir,veldir, &
              project_option, &

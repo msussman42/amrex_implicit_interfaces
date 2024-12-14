@@ -18,7 +18,7 @@
 #We=rhoL U^2 R/sigma
 #Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
 #  (1/We)sigma kappa grad H/rho+(Bo/We)*g
-#(rho cp theta)_t+div(rho cp u theta)=(1/Pr)div k grad theta
+#(rho cp theta)_t+div(rho cp u theta)=(1/(Pr Re))div k grad theta
 #summary:
 #1. liquid density=1  rho_gl=rho_g/rho_L 
 #2. liquid viscosity=1  mu_gl=mu_g/mu_L

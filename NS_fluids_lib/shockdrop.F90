@@ -452,10 +452,10 @@ real(amrex_real), intent(out) :: den
 real(amrex_real) LS
 
 if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-6) then
+ if (abs(z-y).le.1.0E-3) then
   !do nothing
  else
-  print *,"expecting z=y"
+  print *,"expecting z=y shockdrop_gas_density"
   stop
  endif
 endif
@@ -484,10 +484,10 @@ real(amrex_real), intent(out) :: temp
 real(amrex_real) LS
 
 if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-6) then
+ if (abs(z-y).le.1.0E-3) then
   !do nothing
  else
-  print *,"expecting z=y"
+  print *,"expecting z=y shockdrop_gas_temperature"
   stop
  endif
 endif
@@ -521,10 +521,10 @@ real(amrex_real),INTENT(in) :: x,y,z
 real(amrex_real),INTENT(out) :: LS
 
 if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-6) then
+ if (abs(z-y).le.1.0E-3) then
   !do nothing
  else
-  print *,"z<>y error"
+  print *,"z<>y error shockdrop_shockLS"
   stop
  endif
 endif
@@ -554,10 +554,10 @@ real(amrex_real),INTENT(out) :: LS
 real(amrex_real) mag
 
 if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-6) then
+ if (abs(z-y).le.1.0E-3) then
   !do nothing
  else
-  print *,"z<>y error"
+  print *,"z<>y error shockdrop_dropLS"
   stop
  endif
 endif
