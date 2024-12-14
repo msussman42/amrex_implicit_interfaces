@@ -19799,7 +19799,8 @@ stop
        cell_particle_count, &
        particle_link_data, &
        Np, &
-       local_num_particles_sanity)
+       local_num_particles_sanity, &
+       local_misplaced_particles)
 
       use global_utility_module
       use mass_transfer_module
@@ -19808,6 +19809,7 @@ stop
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       integer, value, INTENT(in) :: Np 
       integer, INTENT(inout) :: local_num_particles_sanity
+      integer, INTENT(inout) :: local_misplaced_particles
 
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
@@ -19827,6 +19829,7 @@ stop
       integer :: ibase
       integer :: ibase_new
       integer :: i_parent,j_parent,k_parent
+      integer :: misplaced_flag
 
       local_ngrow=0
       if ((accum_PARM%append_flag.eq.OP_PARTICLE_INIT).or. &
@@ -19844,6 +19847,9 @@ stop
        do dir=1,SDIM
         xpart(dir)=particlesptr(interior_ID)%pos(dir)
        enddo
+
+       misplaced_flag=0;
+
         !containing_cell is declared in: GLOBALUTIL.F90
        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
@@ -19871,7 +19877,21 @@ stop
               accum_PARM%xlo(dir)-accum_PARM%dx(dir)).and. &
              (xpart(dir).le. &
               xhi+accum_PARM%dx(dir))) then
-          !do nothing
+          
+          if ((xpart(dir).lt. &
+               accum_PARM%xlo(dir)-EPS2*accum_PARM%dx(dir)).or. &
+              (xpart(dir).gt. &
+               xhi+EPS2*accum_PARM%dx(dir))) then
+           if (local_ngrow.eq.0) then
+            misplaced_flag=1
+           else if (local_ngrow.eq.1) then
+            ! do nothing
+           else
+            print *,"local_ngrow invalid: ",local_ngrow 
+            stop
+           endif
+          endif
+
          else
           print *,"particle outside of box"
           print *,"dir=",dir
@@ -19962,6 +19982,14 @@ stop
        endif
 
        local_num_particles_sanity=local_num_particles_sanity+1
+       if (misplaced_flag.eq.0) then
+        !do nothing
+       else if (misplaced_flag.eq.1) then
+        local_misplaced_particles=local_misplaced_particles+1
+       else
+        print *,"misplaced_flag invalid: ",misplaced_flag
+        stop
+       endif
 
       enddo ! do interior_ID=1,accum_PARM%Npart
 
@@ -20374,6 +20402,7 @@ stop
         xlo,dx, &
         ncomp_state, &
         local_num_particles_sanity, &
+        local_misplaced_particles, &
         particles, & ! a list of particles intent(inout)
         NBR_particles, & ! a list of particles intent(in)
         Np, & !  Np = number of particles
@@ -20421,6 +20450,7 @@ stop
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
       integer, INTENT(in) :: ncomp_state
       integer, INTENT(out) :: local_num_particles_sanity
+      integer, INTENT(out) :: local_misplaced_particles
       integer, value, INTENT(in) :: Np ! pass by value
       integer, value, INTENT(in) :: NBR_Np ! pass by value
       type(particle_t), INTENT(inout), target :: particles(Np)
@@ -20575,6 +20605,7 @@ stop
       endif
 
       local_num_particles_sanity=0
+      local_misplaced_particles=0
 
       if (ncomp_state.eq.num_materials*(1+AMREX_SPACEDIM)) then
        !do nothing
@@ -20780,7 +20811,8 @@ stop
          cell_particle_count_ptr, &
          particle_link_data, &
          Np, &
-         local_num_particles_sanity)
+         local_num_particles_sanity, &
+         local_misplaced_particles)
        else if (append_flag.eq.OP_PARTICLE_SLOPES) then
         accum_PARM%Npart=NBR_Np
         call count_particles( &
@@ -20789,7 +20821,8 @@ stop
          cell_particle_count_ptr, &
          particle_link_data, &
          NBR_Np, &
-         local_num_particles_sanity)
+         local_num_particles_sanity, &
+         local_misplaced_particles)
 
         ! initialize particles for the first time.
        else if (append_flag.eq.OP_PARTICLE_INIT) then

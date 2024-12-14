@@ -978,7 +978,9 @@ protected:
     void init_particle_containerALL(int append_flag,
       const std::string& caller_string);
     void init_particle_container(int append_flag,
-      const std::string& caller_string,Long& num_particles_sanity_check);
+      const std::string& caller_string,
+      Long& num_particles_sanity_check,
+      Long& misplaced_particles);
     void move_particles(
       int splitting_dir,
       My_ParticleContainer& localPC,
