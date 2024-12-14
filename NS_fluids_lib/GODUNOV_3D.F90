@@ -2115,7 +2115,7 @@ stop
 
          visc_constant=visc_coef*xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
          if (visc_constant.lt.zero) then
-          print *,"visc_constant cannot be negative"
+          print *,"visc_constant cannot be negative: ",visc_constant
           stop
          endif
          visc_constant=-dt*visc_constant
@@ -2671,7 +2671,7 @@ stop
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef
        stop
       endif
 
@@ -3195,7 +3195,7 @@ stop
             stop
            endif
           else
-           print *,"visc_coef invalid"
+           print *,"visc_coef invalid: ",visc_coef
            stop
           endif
          else
@@ -10905,13 +10905,14 @@ stop
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef
        stop
       endif 
       if (visc_coef.eq.fort_visc_coef) then
        ! do nothing
       else
-       print *,"visc_coef.eq.fort_visc_coef is false"
+       print *,"visc_coef.eq.fort_visc_coef is false: ",visc_coef, &
+               fort_visc_coef
        stop
       endif
 

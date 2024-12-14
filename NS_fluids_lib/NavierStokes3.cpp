@@ -7772,6 +7772,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
     max_face_wt[tid_current].dataPtr(),
     presbc.dataPtr(),
     &visc_coef,
+    &heatvisc_coef,
     &uncoupled_viscosity,
     &project_option);
 

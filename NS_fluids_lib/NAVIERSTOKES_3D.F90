@@ -11726,7 +11726,9 @@ END SUBROUTINE SIMP
       real(amrex_real) AL
       real(amrex_real) AL_elastic
       real(amrex_real) AL_elasticpart
-      real(amrex_real) local_dd,local_visc_coef
+      real(amrex_real) local_dd
+      real(amrex_real) local_visc_coef
+      real(amrex_real) local_heatvisc_coef
       real(amrex_real) cc_group,local_dd_group
       integer local_uncoupled_viscosity
       integer icrit,side,bccrit
@@ -11896,6 +11898,7 @@ END SUBROUTINE SIMP
 
          local_dd=one
          local_visc_coef=one
+         local_heatvisc_coef=one
          local_uncoupled_viscosity=1
 
          side=0
@@ -11935,8 +11938,10 @@ END SUBROUTINE SIMP
            local_dd, & !intent(in)
            local_dd_group, & !intent(out)
            local_visc_coef, &
+           local_heatvisc_coef, &
            nsolve,dir,veldir,project_option, &
-           local_uncoupled_viscosity,side,bccrit,local_wt)
+           local_uncoupled_viscosity,side,bccrit, &
+           local_wt)
 
          if (local_wt(veldir).ge.zero) then
 

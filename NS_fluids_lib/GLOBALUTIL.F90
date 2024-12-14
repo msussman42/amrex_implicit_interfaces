@@ -2379,7 +2379,7 @@ end subroutine dynamic_contact_angle
        if (LOW%visc_coef.ge.zero) then
         ! do nothing
        else
-        print *,"visc_coef invalid"
+        print *,"visc_coef invalid: ",LOW%visc_coef
         stop
        endif 
        if ((law_of_the_wall.eq.1).or. &

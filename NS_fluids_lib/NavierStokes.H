@@ -321,6 +321,7 @@ public:
     static int  MOF_DEBUG_RECON;
 
     static Real visc_coef; 
+    static Real heatvisc_coef; 
 
     static Real angular_velocity;  //Omega in Lewis and Nagata (Lappa's book)
 

@@ -1010,6 +1010,7 @@ int NavierStokes::CTML_FSI_init = 0;
 Vector<int> NavierStokes::shock_timestep; 
 
 Real NavierStokes::visc_coef=0.0;
+Real NavierStokes::heatvisc_coef=1.0;
 
 int NavierStokes::include_viscous_heating=0;
 
@@ -3119,6 +3120,12 @@ NavierStokes::read_params ()
 
     pp.get("visc_coef",visc_coef);
 
+    pp.queryAdd("heatvisc_coef",heatvisc_coef);
+    if (heatvisc_coef>0.0) {
+     //do nothing
+    } else
+     amrex::Error("heatvisc_coef invalid");
+
     pp.queryAdd("include_viscous_heating",include_viscous_heating);
     if ((include_viscous_heating<0)||
         (include_viscous_heating>1))
@@ -3140,6 +3147,7 @@ NavierStokes::read_params ()
      std::cout << "output_drop_distribution " << 
       output_drop_distribution << '\n';
      std::cout << "visc_coef " << visc_coef << '\n';
+     std::cout << "heatvisc_coef " << heatvisc_coef << '\n';
      std::cout << "include_viscous_heating " << include_viscous_heating << '\n';
 
      std::cout << "gravity_vector 0..sdim-1: " << 

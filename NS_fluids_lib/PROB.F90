@@ -12189,6 +12189,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd, &
        dd_group, & ! intent(out)
        visc_coef, &
+       heatvisc_coef, &
        nsolve, &
        dir, &
        veldir, & ! veldir=1..nsolve
@@ -12212,6 +12213,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: ddfactor
       real(amrex_real), INTENT(out) :: dd_group
       real(amrex_real), INTENT(in) :: visc_coef
+      real(amrex_real), INTENT(in) :: heatvisc_coef
       integer, INTENT(in) :: nsolve,dir,veldir,project_option
       integer, INTENT(in) :: uncoupled_viscosity
       integer, INTENT(in) :: side
@@ -12232,6 +12234,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (cc_elasticmaskpart.le.one).and. &
           (dd.ge.zero).and. &
           (visc_coef.ge.zero).and. &
+          (heatvisc_coef.gt.zero).and. &
           (nsolve.ge.1).and. &
           (veldir.ge.1).and. &
           (veldir.le.nsolve).and. &
@@ -12444,7 +12447,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         cc_group=one  ! rely on solid coefficient at solid
         if ((dd_group.ge.zero).and. &
             (cc_group.eq.one)) then
+
+         if (project_option.eq.SOLVETYPE_HEAT) then
+          dd_group=dd_group*heatvisc_coef
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+          !do nothing
+         else
+          print *,"project_option invalid: ",project_option
+          stop
+         endif
+
          local_wt(veldir)=dd_group*cc_group
+
          if (side.eq.0) then
           ! do nothing
          else if ((side.eq.1).or.(side.eq.2)) then
@@ -12484,6 +12499,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ddfactor=one
         if ((dd_group.ge.zero).and. &
             (cc_group.eq.one)) then
+
          if (uncoupled_viscosity.eq.0) then
           if (dir+1.eq.veldir) then
            ddfactor=two
@@ -12543,6 +12559,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"cc_elasticmaskpart=",cc_elasticmaskpart
        print *,"dd=",dd
        print *,"visc_coef=",visc_coef
+       print *,"heatvisc_coef=",heatvisc_coef
        print *,"nsolve=",nsolve
        print *,"veldir=",veldir
        print *,"dir=",dir

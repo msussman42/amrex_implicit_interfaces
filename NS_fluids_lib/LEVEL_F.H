@@ -526,6 +526,7 @@ namespace amrex{
         Real* max_face_wt,
         int* presbc,
         Real* visc_coef,
+        Real* heatvisc_coef,
         int* uncoupled_viscosity,
         int* project_option);
 

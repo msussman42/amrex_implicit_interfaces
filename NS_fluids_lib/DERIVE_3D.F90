@@ -817,7 +817,7 @@ stop
       if (visc_coef.eq.fort_visc_coef) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef,fort_visc_coef
        stop
       endif
 
@@ -904,7 +904,7 @@ stop
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef
        stop
       endif
 
@@ -2230,13 +2230,13 @@ stop
       if (visc_coef.eq.fort_visc_coef) then
        ! do nothing
       else
-       print *,"fort_visc_coef invalid"
+       print *,"fort_visc_coef invalid: ",visc_coef,fort_visc_coef
        stop
       endif
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid ",visc_coef
        stop
       endif
       do im=1,num_materials
