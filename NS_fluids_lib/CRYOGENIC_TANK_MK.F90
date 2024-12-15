@@ -3398,6 +3398,9 @@ endif
 wt=one
 
 if (fort_grid_stretching_parameter(1).gt.zero) then
+
+ use_identity_mapping=0
+
  if (dir.eq.0) then
   if (phys_x.le.problenx/10.0d0) then
    wt=1.0d0/100.0d0

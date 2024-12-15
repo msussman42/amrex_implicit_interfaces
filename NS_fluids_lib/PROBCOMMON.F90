@@ -555,6 +555,7 @@ implicit none
        ! index,dir
       real(amrex_real), allocatable, dimension(:,:) :: mapping_comp_to_phys
       real(amrex_real), allocatable, dimension(:,:) :: mapping_phys_to_comp
+      integer :: use_identity_mapping=1
       integer :: mapping_n_cell(0:2)
       integer :: mapping_n_cell_max=0
       integer :: mapping_allocated=0

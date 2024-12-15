@@ -615,6 +615,9 @@ endif
 if (1.eq.1) then
  wt=one
 else if (1.eq.0) then
+
+ use_identity_mapping=0
+
  if (dir+1.eq.radial_dir) then
   scaling=problen_array(radial_dir)
   mid_x=half*(problo_array(radial_dir)+probhi_array(radial_dir))

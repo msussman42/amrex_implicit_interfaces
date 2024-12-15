@@ -19894,14 +19894,13 @@ stop
                accum_PARM%xlo(dir)-EPS2*accum_PARM%dx(dir)).or. &
               (xpart(dir).gt. &
                xhi+EPS2*accum_PARM%dx(dir))) then
-           if (local_ngrow.eq.0) then
-            misplaced_flag=1
-           else if (local_ngrow.eq.1) then
-            ! do nothing
-           else
-            print *,"local_ngrow invalid: ",local_ngrow 
+           misplaced_flag=1
+
+           if (1.eq.0) then
+            print *,"misplaced_flag triggered"
             stop
            endif
+
           endif
 
          else
@@ -20004,6 +20003,10 @@ stop
        endif
 
       enddo ! do interior_ID=1,accum_PARM%Npart
+
+      if (1.eq.0) then
+       print *,"local_misplaced_particles: ",local_misplaced_particles
+      endif
 
       return
       end subroutine count_particles
