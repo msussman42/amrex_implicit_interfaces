@@ -16468,7 +16468,7 @@ end subroutine print_visual_descriptor
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"dir invalid"
+       print *,"dir invalid: ",dir
        stop
       endif
       xlo=problo_array(dir+1)
@@ -16481,59 +16481,69 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (xcomp.le.xlo) then
+      if (use_identity_mapping.eq.1) then
        xphys_of_xcomp=xcomp
-      else if (xcomp.ge.xhi) then
-       xphys_of_xcomp=xcomp
-      else if ((xcomp.gt.xlo).and. &
-               (xcomp.lt.xhi)) then
-        ! xcomp=xlo+(i+1/2)*dx
-        ! i=NINT((xcomp-xlo)/dx-1/2)
-       icrit=NINT((xcomp-xlo)/comp_dx-half)
-       if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
-        xcell_lo=xlo+icrit*comp_dx
-        xcell_hi=xcell_lo+comp_dx
-        xphys_lo=mapping_comp_to_phys(icrit,dir)
-        xphys_hi=mapping_comp_to_phys(icrit+1,dir)
+      else if (use_identity_mapping.eq.0) then
 
-        if (xphys_hi.gt.xphys_lo) then
-         ! do nothing
+       if (xcomp.le.xlo) then
+        xphys_of_xcomp=xcomp
+       else if (xcomp.ge.xhi) then
+        xphys_of_xcomp=xcomp
+       else if ((xcomp.gt.xlo).and. &
+                (xcomp.lt.xhi)) then
+         ! xcomp=xlo+(i+1/2)*dx
+         ! i=NINT((xcomp-xlo)/dx-1/2)
+        icrit=NINT((xcomp-xlo)/comp_dx-half)
+        if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
+         xcell_lo=xlo+icrit*comp_dx
+         xcell_hi=xcell_lo+comp_dx
+         xphys_lo=mapping_comp_to_phys(icrit,dir)
+         xphys_hi=mapping_comp_to_phys(icrit+1,dir)
+
+         if (xphys_hi.gt.xphys_lo) then
+          ! do nothing
+         else
+          print *,"xphys_hi-xphys_lo invalid: ",xphys_lo,xphys_hi
+          stop
+         endif
+
+         if (abs(xcomp-xcell_lo).le.comp_dx*EPS_12_4) then
+          xphys_of_xcomp=xphys_lo
+         else if (abs(xcomp-xcell_hi).le.comp_dx*EPS_12_4) then
+          xphys_of_xcomp=xphys_hi
+         else if ((xcomp.gt.xcell_lo-comp_dx*EPS_12_2).and. &
+                  (xcomp.le.xcell_lo)) then
+          xphys_of_xcomp=xphys_lo
+         else if ((xcomp.lt.xcell_hi+comp_dx*EPS_12_2).and. &
+                  (xcomp.ge.xcell_hi)) then
+          xphys_of_xcomp=xphys_hi
+         else if ((xcomp.ge.xcell_lo).and. &
+                  (xcomp.le.xcell_hi)) then
+          xphys_of_xcomp=xphys_lo+ &
+             (xphys_hi-xphys_lo)* &
+             (xcomp-xcell_lo)/(xcell_hi-xcell_lo)
+         else
+          print *,"xcomp invalid: ",xcomp,xcell_lo,xcell_hi,comp_dx
+          stop
+         endif
+        else if (icrit.lt.0) then
+         xphys_of_xcomp=xcomp
+        else if (icrit.ge.nelement) then
+         xphys_of_xcomp=xcomp
         else
-         print *,"xphys_hi-xphys_lo invalid: ",xphys_lo,xphys_hi
+         print *,"icrit invalid"
          stop
         endif
-
-        if (abs(xcomp-xcell_lo).le.comp_dx*EPS_12_4) then
-         xphys_of_xcomp=xphys_lo
-        else if (abs(xcomp-xcell_hi).le.comp_dx*EPS_12_4) then
-         xphys_of_xcomp=xphys_hi
-        else if ((xcomp.gt.xcell_lo-comp_dx*EPS_12_2).and. &
-                 (xcomp.le.xcell_lo)) then
-         xphys_of_xcomp=xphys_lo
-        else if ((xcomp.lt.xcell_hi+comp_dx*EPS_12_2).and. &
-                 (xcomp.ge.xcell_hi)) then
-         xphys_of_xcomp=xphys_hi
-        else if ((xcomp.ge.xcell_lo).and. &
-                 (xcomp.le.xcell_hi)) then
-         xphys_of_xcomp=xphys_lo+ &
-            (xphys_hi-xphys_lo)* &
-            (xcomp-xcell_lo)/(xcell_hi-xcell_lo)
-        else
-         print *,"xcomp invalid: ",xcomp,xcell_lo,xcell_hi,comp_dx
-         stop
-        endif
-       else if (icrit.lt.0) then
-        xphys_of_xcomp=xcomp
-       else if (icrit.ge.nelement) then
-        xphys_of_xcomp=xcomp
        else
-        print *,"icrit invalid"
+        print *,"xcomp is NaN"
         stop
        endif
-      else
-       print *,"xcomp is NaN"
+
+      else 
+       print *,"use_identity_mapping invalid:",use_identity_mapping
        stop
       endif
+
       end function xphys_of_xcomp
 
        !dir=0..sdim-1
@@ -16558,7 +16568,7 @@ end subroutine print_visual_descriptor
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"dir invalid"
+       print *,"dir invalid: ",dir
        stop
       endif
       xlo=problo_array(dir+1)
@@ -16571,64 +16581,74 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (xphys.le.xlo) then
+      if (use_identity_mapping.eq.1) then
        xcomp_of_xphys=xphys
-      else if (xphys.ge.xhi) then
-       xcomp_of_xphys=xphys
-      else if ((xphys.gt.xlo).and. &
-               (xphys.lt.xhi)) then
-        ! xphys=xlo+(i+1/2)*dx
-        ! i=NINT((xphys-xlo)/dx-1/2)
-       icrit=NINT((xphys-xlo)/comp_dx-half)
-       if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
-        xcell_lo=xlo+icrit*comp_dx
-        xcell_hi=xcell_lo+comp_dx
-        xcomp_lo=mapping_phys_to_comp(icrit,dir)
-        xcomp_hi=mapping_phys_to_comp(icrit+1,dir)
+      else if (use_identity_mapping.eq.0) then
 
-        if (xcomp_hi.gt.xcomp_lo) then
-         ! do nothing
+       if (xphys.le.xlo) then
+        xcomp_of_xphys=xphys
+       else if (xphys.ge.xhi) then
+        xcomp_of_xphys=xphys
+       else if ((xphys.gt.xlo).and. &
+                (xphys.lt.xhi)) then
+         ! xphys=xlo+(i+1/2)*dx
+         ! i=NINT((xphys-xlo)/dx-1/2)
+        icrit=NINT((xphys-xlo)/comp_dx-half)
+        if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
+         xcell_lo=xlo+icrit*comp_dx
+         xcell_hi=xcell_lo+comp_dx
+         xcomp_lo=mapping_phys_to_comp(icrit,dir)
+         xcomp_hi=mapping_phys_to_comp(icrit+1,dir)
+
+         if (xcomp_hi.gt.xcomp_lo) then
+          ! do nothing
+         else
+          print *,"xcomp_hi-xcomp_lo invalid: ",xcomp_lo,xcomp_hi
+          stop
+         endif
+
+         if (abs(xphys-xcell_lo).le.EPS_12_4*comp_dx) then
+          xcomp_of_xphys=xcomp_lo
+         else if (abs(xphys-xcell_hi).le.EPS_12_4*comp_dx) then
+          xcomp_of_xphys=xcomp_hi
+         else if ((xphys.gt.xcell_lo-comp_dx*EPS_12_2).and. &
+                  (xphys.le.xcell_lo)) then
+          xcomp_of_xphys=xcomp_lo
+         else if ((xphys.lt.xcell_hi+comp_dx*EPS_12_2).and. &
+                  (xphys.ge.xcell_hi)) then
+          xcomp_of_xphys=xcomp_hi
+         else if ((xphys.ge.xcell_lo).and. &
+                  (xphys.le.xcell_hi)) then
+          xcomp_of_xphys=xcomp_lo+ &
+             (xcomp_hi-xcomp_lo)* &
+             (xphys-xcell_lo)/(xcell_hi-xcell_lo)
+         else
+          print *,"xphys invalid: ",xphys
+          print *,"xcell_lo=",xcell_lo
+          print *,"xcell_hi=",xcell_hi
+          print *,"xcomp_lo=",xcomp_lo
+          print *,"xcomp_hi=",xcomp_hi
+          print *,"comp_dx=",comp_dx
+          stop
+         endif
+        else if (icrit.lt.0) then
+         xcomp_of_xphys=xphys
+        else if (icrit.ge.nelement) then
+         xcomp_of_xphys=xphys
         else
-         print *,"xcomp_hi-xcomp_lo invalid: ",xcomp_lo,xcomp_hi
+         print *,"icrit invalid"
          stop
         endif
-
-        if (abs(xphys-xcell_lo).le.EPS_12_4*comp_dx) then
-         xcomp_of_xphys=xcomp_lo
-        else if (abs(xphys-xcell_hi).le.EPS_12_4*comp_dx) then
-         xcomp_of_xphys=xcomp_hi
-        else if ((xphys.gt.xcell_lo-comp_dx*EPS_12_2).and. &
-                 (xphys.le.xcell_lo)) then
-         xcomp_of_xphys=xcomp_lo
-        else if ((xphys.lt.xcell_hi+comp_dx*EPS_12_2).and. &
-                 (xphys.ge.xcell_hi)) then
-         xcomp_of_xphys=xcomp_hi
-        else if ((xphys.ge.xcell_lo).and. &
-                 (xphys.le.xcell_hi)) then
-         xcomp_of_xphys=xcomp_lo+ &
-            (xcomp_hi-xcomp_lo)* &
-            (xphys-xcell_lo)/(xcell_hi-xcell_lo)
-        else
-         print *,"xphys invalid: ",xphys
-         print *,"xcell_lo=",xcell_lo
-         print *,"xcell_hi=",xcell_hi
-         print *,"xcomp_lo=",xcomp_lo
-         print *,"xcomp_hi=",xcomp_hi
-         print *,"comp_dx=",comp_dx
-         stop
-        endif
-       else if (icrit.lt.0) then
-        xcomp_of_xphys=xphys
-       else if (icrit.ge.nelement) then
-        xcomp_of_xphys=xphys
        else
-        print *,"icrit invalid"
+        print *,"xphys is NaN"
         stop
        endif
-      else
-       print *,"xphys is NaN"
+
+      else 
+       print *,"use_identity_mapping invalid:",use_identity_mapping
        stop
       endif
+      
       end function xcomp_of_xphys
 
        ! dir=0..sdim-1
@@ -16663,7 +16683,7 @@ end subroutine print_visual_descriptor
       if (comp_dx.gt.zero) then
        ! do nothing
       else
-       print *,"comp_dx invalid"
+       print *,"comp_dx invalid: ",comp_dx
        stop
       endif
       if (nelement.ge.1) then
@@ -16766,7 +16786,7 @@ end subroutine print_visual_descriptor
       if (comp_dx.gt.zero) then
        ! do nothing
       else
-       print *,"comp_dx invalid"
+       print *,"comp_dx invalid: ",comp_dx
        stop
       endif
 

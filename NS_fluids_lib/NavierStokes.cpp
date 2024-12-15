@@ -23212,6 +23212,15 @@ NavierStokes::init_particle_containerALL(int append_flag,
   localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute,remove_negative);
 
+  if (1==0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "num_particles= " << num_particles << '\n';
+    std::cout << "num_particles_sanity_check= " << 
+     num_particles_sanity_check << '\n';
+    std::cout << "misplaced_particles= " << misplaced_particles << '\n';
+   }
+  }
+
   if (num_particles==num_particles_sanity_check) {
    //do nothing
   } else {
