@@ -66,7 +66,7 @@ amr.grid_eff        = 0.7   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 8 8 8 8 8 8   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100     # 50
+amr.plot_int        = 0     # 50
 #amr.slice_int       = 100     # 50
 # e.g. slice_dir==1 => look at Y line of data
 ns.slice_dir=1 # 0..sdim-1

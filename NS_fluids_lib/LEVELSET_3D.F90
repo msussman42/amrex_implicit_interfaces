@@ -19806,6 +19806,7 @@ stop
       contains
 
       subroutine count_particles( &
+       particle_ngrow_slopes, &
        accum_PARM, &
        particlesptr, &
        cell_particle_count, &
@@ -19817,6 +19818,7 @@ stop
       use global_utility_module
       use mass_transfer_module
 
+      integer, INTENT(in) :: particle_ngrow_slopes
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       integer, value, INTENT(in) :: Np 
@@ -19848,7 +19850,7 @@ stop
           (accum_PARM%append_flag.eq.OP_PARTICLE_ADD)) then
        !do nothing
       else if (accum_PARM%append_flag.eq.OP_PARTICLE_SLOPES) then
-       local_ngrow=1
+       local_ngrow=particle_ngrow_slopes
       else
        print *,"accum_PARM%append_flag invalid: ",accum_PARM%append_flag
        stop
@@ -20407,6 +20409,7 @@ stop
         particle_feedback, &
         particle_nsubdivide_dx, &
         particle_nsubdivide, &
+        particle_ngrow_slopes, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -20460,6 +20463,7 @@ stop
       integer, INTENT(in) :: particle_feedback
       integer, INTENT(in) :: particle_nsubdivide_dx
       integer, INTENT(in) :: particle_nsubdivide
+      integer, INTENT(in) :: particle_ngrow_slopes
       real(amrex_real), INTENT(in)    :: cur_time_slab
       real(amrex_real), INTENT(in)    :: dt_slab
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
@@ -20521,6 +20525,7 @@ stop
       real(amrex_real) :: reflect_particle_pos(SDIM)
       real(amrex_real) :: local_pos
       integer :: k1lo,k1hi
+      integer :: k1lo_part,k1hi_part
       integer :: isub,jsub,ksub
       integer :: dir
       integer :: dir_local
@@ -20618,6 +20623,13 @@ stop
        print *,"finest_level: ",finest_level
        stop
       endif
+      if ((particle_ngrow_slopes.eq.0).or. &
+          (particle_ngrow_slopes.eq.1)) then
+       !do nothing
+      else
+       print *,"particle_ngrow_slopes invalid: ",particle_ngrow_slopes
+       stop
+      endif
 
       local_num_particles_sanity=0
       local_misplaced_particles=0
@@ -20667,9 +20679,13 @@ stop
 
       k1lo=-1
       k1hi=1
+      k1lo_part=-particle_ngrow_slopes
+      k1hi_part=particle_ngrow_slopes
       if (SDIM.eq.2) then
        k1lo=0
        k1hi=0
+       k1lo_part=0
+       k1hi_part=0
       endif
 
       problo_arr(1)=problox
@@ -20734,7 +20750,7 @@ stop
 
       if (append_flag.eq.OP_PARTICLE_SLOPES) then
        call checkbound_array_INTEGER(tilelo,tilehi, &
-              cell_particle_count_ptr,1,-1)
+              cell_particle_count_ptr,particle_ngrow_slopes,-1)
       endif
 
       if (cur_time_slab.ge.zero) then
@@ -20821,6 +20837,7 @@ stop
          stop
         endif
         call count_particles( &
+         particle_ngrow_slopes, &
          accum_PARM, &
          particlesptr, &
          cell_particle_count_ptr, &
@@ -20831,6 +20848,7 @@ stop
        else if (append_flag.eq.OP_PARTICLE_SLOPES) then
         accum_PARM%Npart=NBR_Np
         call count_particles( &
+         particle_ngrow_slopes, &
          accum_PARM, &
          NBR_particlesptr, &
          cell_particle_count_ptr, &
@@ -21738,9 +21756,9 @@ stop
                 num_particles=0
                 num_primary_particles=0
 
-                do i1=-1,1
-                do j1=-1,1
-                do k1=k1lo,k1hi
+                do i1=-particle_ngrow_slopes,particle_ngrow_slopes
+                do j1=-particle_ngrow_slopes,particle_ngrow_slopes
+                do k1=k1lo_part,k1hi_part
                  isten=i+i1
                  jsten=j+j1
                  ksten=k+k1
@@ -21766,7 +21784,7 @@ stop
                           (isten.le.domhi(dir_local))) then
                   !do nothing
                  else
-                  print *,"isten invalid"
+                  print *,"isten invalid: ",isten
                   stop
                  endif
 
@@ -21787,7 +21805,7 @@ stop
                           (jsten.le.domhi(dir_local))) then
                   !do nothing
                  else
-                  print *,"jsten invalid"
+                  print *,"jsten invalid: ",jsten
                   stop
                  endif
 
@@ -21810,7 +21828,7 @@ stop
                            (ksten.le.domhi(dir_local))) then
                    !do nothing
                   else
-                   print *,"ksten invalid"
+                   print *,"ksten invalid: ",ksten
                    stop
                   endif
 
@@ -21974,9 +21992,9 @@ stop
                   stop
                  endif
 
-                enddo !k1=k1lo,k1hi
-                enddo !j1=-1,1
-                enddo !i1=-1,1
+                enddo !k1=k1lo_part,k1hi_part
+                enddo !j1=-particle_ngrow_slopes,particle_ngrow_slopes
+                enddo !i1=-particle_ngrow_slopes,particle_ngrow_slopes
 
                 if (num_particles.ge.num_primary_particles) then
                  !do nothing

@@ -209,6 +209,7 @@ Vector<int> NavierStokes::force_blob_symmetry;
 int NavierStokes::particle_feedback=1; 
 int NavierStokes::particle_nsubdivide_dx=4; 
 int NavierStokes::particle_nsubdivide=4; 
+int NavierStokes::particle_ngrow_slopes=0; 
 
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.01;
@@ -5622,6 +5623,7 @@ NavierStokes::read_params ()
      std::cout<<"particle_feedback="<<particle_feedback<<'\n';
      std::cout<<"particle_nsubdivide_dx="<<particle_nsubdivide_dx<<'\n';
      std::cout<<"particle_nsubdivide="<<particle_nsubdivide<<'\n';
+     std::cout<<"particle_ngrow_slopes="<<particle_ngrow_slopes<<'\n';
 
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "force_blob_symmetry i= " << i << ' ' <<
@@ -23139,7 +23141,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
 
  } else if (append_flag==OP_PARTICLE_SLOPES) {
 
-  nGrow_Redistribute=1;
+  nGrow_Redistribute=particle_ngrow_slopes;
 
  } else
   amrex::Error("append_flag invalid");
@@ -23388,7 +23390,7 @@ NavierStokes::init_particle_container(int append_flag,
       (append_flag==OP_PARTICLE_ADD)) {
    //do nothing
   } else if (append_flag==OP_PARTICLE_SLOPES) {
-   tile_ngrow=1;
+   tile_ngrow=particle_ngrow_slopes;
   } else
    amrex::Error("append_flag invalid");
 
@@ -23512,6 +23514,7 @@ NavierStokes::init_particle_container(int append_flag,
      &particle_feedback,
      &particle_nsubdivide_dx,
      &particle_nsubdivide,
+     &particle_ngrow_slopes,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
