@@ -596,6 +596,7 @@ namespace amrex{
         int* particle_feedback,
         int* particle_nsubdivide_dx,
         int* particle_nsubdivide,
+        int* particle_ngrow_slopes,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,

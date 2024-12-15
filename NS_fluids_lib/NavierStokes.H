@@ -1590,6 +1590,7 @@ protected:
     static int particle_feedback;  //particle_feedback=1 is the default. 
     static int particle_nsubdivide_dx; 
     static int particle_nsubdivide;
+    static int particle_ngrow_slopes;
 
     static int  enable_spectral;
 
