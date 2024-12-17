@@ -6730,7 +6730,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
    //calling from NavierStokes::prescribe_solid_geometryALL
    
-  int local_redistribute_main=1; 
+  int local_redistribute_main=0; 
 
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
@@ -9231,7 +9231,7 @@ void NavierStokes::VOF_Recon_ALL(
   } // for (int ilev=level;ilev<=finest_level;ilev++)
 
 #ifdef AMREX_PARTICLES
-  int local_redistribute_main=1;
+  int local_redistribute_main=0;
   int save_slab_step=slab_step;
   if (slab_step==-1) {
    slab_step=0;

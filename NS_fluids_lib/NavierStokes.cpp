@@ -1010,8 +1010,8 @@ int NavierStokes::CTML_FSI_init = 0;
 // 2=never take into account sound speed
 Vector<int> NavierStokes::shock_timestep; 
 
-Real NavierStokes::visc_coef=0.0;
-Real NavierStokes::heatvisc_coef=1.0;
+Real NavierStokes::visc_coef=0.0; // visc_coef=1/Re
+Real NavierStokes::heatvisc_coef=1.0; // heatvisc_coef=(1/(Re Pr))
 
 int NavierStokes::include_viscous_heating=0;
 
@@ -10273,7 +10273,7 @@ NavierStokes::initData () {
  }
 
  int nGrow_Redistribute=0;
- int local_redistribute_main=0; //redistribute "from scratch"
+ int local_redistribute_main=0; //redistribute "from scratch" (global)
  bool remove_negative=true;
 
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -10544,7 +10544,7 @@ NavierStokes::init(
  int lev_max=level;
  int nGrow_Redistribute=0;
  bool local_copy=true; //do not redistribute inside of copyParticles
- int local_redistribute_main=0;
+ int local_redistribute_main=0; //init(old) (global)
  bool remove_negative=true;
 
   // if level==0, we must copy from the old Amr_level (level==0) to the
@@ -10742,7 +10742,7 @@ NavierStokes::init(
  int lev_min=0;
  int lev_max=level;
  int nGrow_Redistribute=0;
- int local_redistribute_main=0;
+ int local_redistribute_main=0; //init() (global)
  bool remove_negative=true;
 
  if (level==0) {
@@ -10802,7 +10802,7 @@ void NavierStokes::CopyNewToOldALL() {
 
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
  int nGrow_Redistribute=0;
- int local_redistribute_main=0; //redistribute "from scratch"
+ int local_redistribute_main=0; //redistribute "from scratch" (global)
  bool remove_negative=true;
 
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -10856,7 +10856,7 @@ void NavierStokes::CopyOldToNewALL() {
 
  My_ParticleContainer& current_PC=ns_level0.newDataPC(0);
  int nGrow_Redistribute=0;
- int local_redistribute_main=0; //redistribute "from scratch"
+ int local_redistribute_main=0; //redistribute "from scratch" (global)
  bool remove_negative=true;
 
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -22107,7 +22107,7 @@ void NavierStokes::post_regrid (int lbase,
   int lev_min=0;
   int lev_max=new_finest;
   int nGrow_Redistribute=0;
-  int local_redistribute_main=0;
+  int local_redistribute_main=0; //post_regrid (global)
   bool remove_negative=true;
 
   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
@@ -23056,7 +23056,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
   int update_particles=0;
 
-  int local_redistribute_main=0;
+  int local_redistribute_main=0; //global
   makeStateDistALL(update_particles,local_redistribute_main);
 
   prescribe_solid_geometryALL(cur_time_slab,
@@ -23728,7 +23728,7 @@ NavierStokes::post_init_state () {
  
   //calling from: post_init_state
   //particles are being redistributed for the first time.
- int local_redistribute_main=0;
+ int local_redistribute_main=0; //global
  init_particle_containerALL(OP_PARTICLE_INIT,local_caller_string,
     local_redistribute_main);
 

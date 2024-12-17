@@ -469,7 +469,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
-  int local_redistribute_main=1; 
+  int local_redistribute_main=0; 
   bool local_copy=true; //do not redistribute inside of copyParticles
   bool remove_negative=true;
 
@@ -505,7 +505,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     //prior to advection
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
-		  local_redistribute_main);
+    local_redistribute_main);
 
   localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_redistribute_main,
@@ -2107,7 +2107,7 @@ void NavierStokes::phase_change_code_segment(
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
   local_truncate,local_caller_string,update_particles);
 
- int local_redistribute_main=1;
+ int local_redistribute_main=0;
 
  makeStateDistALL(update_particles,local_redistribute_main);
 
@@ -2143,7 +2143,7 @@ void NavierStokes::no_mass_transfer_code_segment(
    init_vof_prev_time);
 
  int update_particles=1;
- int local_redistribute_main=1;
+ int local_redistribute_main=0;
  makeStateDistALL(update_particles,local_redistribute_main);
 
 #if (NS_profile_solver==1)
@@ -2260,7 +2260,7 @@ void NavierStokes::nucleation_code_segment(
    RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
 
  int update_particles=1;
- int local_redistribute_main=1;
+ int local_redistribute_main=0;
  makeStateDistALL(update_particles,local_redistribute_main);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
