@@ -12189,7 +12189,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd, &
        dd_group, & ! intent(out)
        visc_coef, &
-       heatvisc_coef, &
+       heatvisc_coef, & ! 1/(Re Pr)
        nsolve, &
        dir, &
        veldir, & ! veldir=1..nsolve
@@ -12213,7 +12213,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: ddfactor
       real(amrex_real), INTENT(out) :: dd_group
       real(amrex_real), INTENT(in) :: visc_coef
-      real(amrex_real), INTENT(in) :: heatvisc_coef
+      real(amrex_real), INTENT(in) :: heatvisc_coef ! 1/(Re Pr)
       integer, INTENT(in) :: nsolve,dir,veldir,project_option
       integer, INTENT(in) :: uncoupled_viscosity
       integer, INTENT(in) :: side
@@ -12449,7 +12449,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             (cc_group.eq.one)) then
 
          if (project_option.eq.SOLVETYPE_HEAT) then
-          dd_group=dd_group*heatvisc_coef
+          dd_group=dd_group*heatvisc_coef ! 1/(Re Pr)
          else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           !do nothing
@@ -12559,7 +12559,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"cc_elasticmaskpart=",cc_elasticmaskpart
        print *,"dd=",dd
        print *,"visc_coef=",visc_coef
-       print *,"heatvisc_coef=",heatvisc_coef
+       print *,"heatvisc_coef=",heatvisc_coef !1/(Re Pr)
        print *,"nsolve=",nsolve
        print *,"veldir=",veldir
        print *,"dir=",dir

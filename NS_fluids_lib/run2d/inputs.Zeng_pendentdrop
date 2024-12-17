@@ -9,13 +9,14 @@
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
 #Pr=Cpl mul/kl=4.22e7 * 1.79e-2 / .516e+5 = 14.639
-#theta=Tcold+(T-Tcold)/(Thot-Tcold)=263.0 + (T-263.0)/(273-263)
-#St=Cpl (Tm - Tc)/Lh=4.22e7 (10.0)/3.334e9
+#theta=TSAT+(T-TSAT)/(TSAT-TCOLD)=273.0 + (T-273.0)/(273-263)
+#St=Cpl (Tm - Tc)/Lh=4.22e7 (10.0)/3.334e9=0.1266
 #see effective_radius.f
-#R=wetting radius
-#Bo=rhoL g R^2 / sigma = 1.0 (980) R^2/72.8
-#Re=rhoL U R/mu_L
-#We=rhoL U^2 R/sigma
+#R=wetting radius=2mm
+#Bo=rhoL g R^2 / sigma = 1.0 (980) R^2/72.8=0.5385
+#Re=rhoL U R/mu_L=(1.0)(0.006)(.2cm)/(1.79e-2)=0.067
+#We=rhoL U^2 R/sigma=(1)(0.006^2)(.2 cm)/72.8=9.93e-8
+#TRY We=1/100
 #Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
 #  (1/We)sigma kappa grad H/rho+(Bo/We)*g
 #(rho cp theta)_t+div(rho cp u theta)=(1/(Pr Re))div k grad theta
@@ -30,6 +31,12 @@
 #8. modify We so that capillary wave speeds comparable to freezing speed.
 #9. modify Re so that explicity viscosity stability constraint is comparable
 #   to the surface tension stability constraint.
+#capillary wave speed: sqrt( n(n-1)(n+2) surface_tension/(rho R) )
+#n=32  capillary wave speed=3503.85 cm/s
+#U=3503.85 cm/s or choose U such that We=1:
+#rhoL U^2 R/sigma=1  U=sqrt( sigma/(R rhoL) )=19.08 cm/s
+#tau_c=rhoL C_{pL} R^2 /kL=(1)(4.22e+7)(.2^2)/(.516e+5)=32.71
+#U=R/tau_c=0.2/32.71=0.006 cm/s
 max_step  =  9999999    # maximum timestep
 
 stop_time = 70.0
@@ -39,7 +46,8 @@ stop_time = 70.0
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo = 0.0  0.0
-geometry.prob_hi = 0.24 0.24  # centimeters
+#geometry.prob_hi = 0.24 0.24  # centimeters
+geometry.prob_hi = 1.2 1.2  # NONDIM
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -48,7 +56,8 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=5
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.projection_pressure_scale=1.0e-2
+#ns.projection_pressure_scale=1.0e-2
+ns.projection_pressure_scale=1.0 #NONDIM
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 
 ns.num_species_var=0
@@ -113,11 +122,13 @@ mac.mac_abs_tol    = 1.0e-13
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
-ns.visc_coef      = 1.0  #(1/Re)
+#ns.visc_coef      = 1.0  #(1/Re)
+ns.visc_coef      = 14.93  #(1/Re) (NONDIM)
 ns.explicit_viscosity_dt=1
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -981.0e-5
+#ns.gravity        = -981.0e-5
+ns.gravity        = -0.5283 #NONDIM
 ns.incremental_gravity_flag=0
 ns.invert_gravity=1
 
@@ -146,8 +157,8 @@ ns.invert_gravity=1
 #ns.tension=      75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=90
 #ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 ns.radblob9=0.5
-ns.tension=      72.8e-5 55.19e-5 55.19e-5 72.8e-5 72.8e-5 0.0 #theta_L=90
-ns.tension_init= 72.8e-5 55.19e-5 55.19e-5 72.8e-5 72.8e-5 0.0
+ns.tension=      72.8e+2 55.19e+2 55.19e+2 72.8e+2 72.8e+2 0.0 #theta_L=90
+ns.tension_init= 72.8e+2 55.19e+2 55.19e+2 72.8e+2 72.8e+2 0.0
 
 #sigma_IL+sigma_LG cos(50)=sigma_IG  sigma_IG=sigma_LG
 #sigma_IL=sigma_LG(1-cos(50))=27.0
@@ -169,7 +180,8 @@ ns.tension_init= 72.8e-5 55.19e-5 55.19e-5 72.8e-5 72.8e-5 0.0
 # material 1=liquid 2=gas  3=ice 4=solid  
 # Cp_s/Cp_l=0.48
 # Pr=Cp_l mu_l/k_l=4.2e+3 * 1.7e-3 / 0.55 = 13.0
-ns.stiffCP = 4.22e+7 1.039e+7 2.050e+7 0.39e+7  # dimensional erg/(g K)
+#ns.stiffCP = 4.22e+7 1.039e+7 2.050e+7 0.39e+7  # dimensional erg/(g K)
+ns.stiffCP = 1.0 0.2462 0.4858 0.0924  # NONDIM
 #ns.stiffCV = 4.22e+7 1.039e+7 2.050e+7 0.39e+7
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
@@ -179,7 +191,8 @@ ns.stiffCP = 4.22e+7 1.039e+7 2.050e+7 0.39e+7  # dimensional erg/(g K)
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
 # St=Cp_l(T_m - T_c)/L=4.2e+3 * 2/3.34e+5 = 0.025
-ns.latent_heat = 0.0 -3.334e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+#ns.latent_heat = 0.0 -3.334e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -7.8989 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0  #NONDIM
 #ns.latent_heat = 0.0 -65.0e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 #default: Stefan model
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0 
@@ -198,7 +211,7 @@ ns.axis_dir=5
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
-ns.twall=263  # not used
+ns.twall=272  # not used
 ns.advbot=0.0  # initial falling (downward) speed of liquid drop if axis_dir=1
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
@@ -213,14 +226,17 @@ ns.material_type=0 0 0 999
 # water: k=0.58 W/(M K)
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
 # k_s/k_l=2.2/0.55=4.0
-ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K) #thermal diffusivity
+#ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K) #thermal diffusivity
+ns.heatviscconst=1.0 0.0469 4.302 4.302 # erg/(s cm K) #thermal diffusivity
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10  4.302
 # 1 Pa = 10 CGS
 #ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
-ns.viscconst=1.79e-2 1.724e-4 2.0e-2 2.0e-2 # derive CGS:  CGS= Pa s x 10
+#ns.viscconst=1.79e-2 1.724e-4 2.0e-2 2.0e-2 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=1.0 0.0096 1.0 1.0 # derive CGS:  CGS= Pa s x 10
 #ns.uncoupled_viscosity=1
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
+#ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
 ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
@@ -230,20 +246,25 @@ ns.recalesce_flag=0 0 0 0
 ns.solidheat_flag=1
 #instead of T=271.0 (-2 test plate), try -3,-4,-5,-6, -73
 #pendant drop experiment: T_substrate=263.0
-ns.tempconst=          273.0 293.0 273.0 200.0
-ns.initial_temperature=273.0 293.0 273.0 200.0
+#ns.tempconst=          273.0 293.0 273.0 200.0
+#ns.initial_temperature=273.0 293.0 273.0 200.0
+ns.tempconst=          273.0 275.0 273.0 272.0
+ns.initial_temperature=273.0 275.0 273.0 272.0
 #ns.xblob3=298.0 #force ambient temperature condition on all walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
 # dxcoarse=0.4/64
-ns.yblob=0.01875 #4*dxcoarse=3.125e-3 #align w/ grid
+#ns.yblob=0.01875 #4*dxcoarse=3.125e-3 #align w/ grid
+ns.yblob=0.09375 #4*dxcoarse=3.125e-3 #align w/ grid
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.01875 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
+#ns.yblob2=0.01875 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
+ns.yblob2=0.09375 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
+#ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
+ns.radblob3=0.046875 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # (1/2) (4/3) pi (0.15631)^3=0.007999
 # (1/2) (4/3) pi (0.142)^3=0.006
@@ -255,7 +276,8 @@ ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #radblob=effective hemispherical radius
 #see effective_radius.f
 #ns.radblob=0.15631 # centimeters
-ns.radblob=0.2 # centimeters
+#ns.radblob=0.2 # centimeters
+ns.radblob=1.0 # centimeters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55

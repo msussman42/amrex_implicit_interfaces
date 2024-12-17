@@ -17427,7 +17427,7 @@ stop
        max_face_wt, & ! static variable
        presbc_arr, &
        visc_coef, &
-       heatvisc_coef, &
+       heatvisc_coef, &  ! 1/(Re Pr)
        uncoupled_viscosity, &
        project_option) &
       bind(c,name='fort_buildfacewt')
@@ -17448,7 +17448,7 @@ stop
       integer, INTENT(in) :: local_face_index
       integer, INTENT(in) :: local_face_ncomp
       real(amrex_real), INTENT(in) :: visc_coef
-      real(amrex_real), INTENT(in) :: heatvisc_coef
+      real(amrex_real), INTENT(in) :: heatvisc_coef ! 1/(Re Pr)
       integer, INTENT(in) :: uncoupled_viscosity
       integer, INTENT(in) :: project_option
       real(amrex_real), INTENT(inout) :: min_face_wt(NCOMP_FACE_WT)
@@ -17746,7 +17746,7 @@ stop
              dd, &
              dd_group, &  ! intent(out)
              visc_coef, &
-             heatvisc_coef, &
+             heatvisc_coef, & ! 1/(Re Pr)
              nsolve, &
              dir,veldir, &
              project_option, &
