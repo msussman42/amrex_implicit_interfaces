@@ -977,7 +977,8 @@ protected:
     using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
     void init_particle_containerALL(int append_flag,
-      const std::string& caller_string);
+      const std::string& caller_string,
+      int local_redistribute_main);
     void init_particle_container(int append_flag,
       const std::string& caller_string,
       Long& num_particles_sanity_check,
@@ -1320,7 +1321,7 @@ void apply_pressure_grad(
     void makeFaceFrac(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int update_particles);
+    void makeStateDistALL(int update_particles,int local_redistribute_main);
 
     void makeStateDist();
 
