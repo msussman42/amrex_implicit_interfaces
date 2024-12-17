@@ -6729,8 +6729,12 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 #ifdef AMREX_PARTICLES
 
    //calling from NavierStokes::prescribe_solid_geometryALL
+   
+  int local_redistribute_main=1; 
+
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
+     local_redistribute_main);
   } else
    amrex::Error("slab_step invalid");
 
@@ -6738,10 +6742,9 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   int lev_min_DIST=0;
   int lev_max_DIST=-1;
   int nGrow_Redistribute_DIST=0;
-  int local_Redistribute_DIST=0; 
   bool remove_negative_DIST=true; 
   localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
-    nGrow_Redistribute_DIST,local_Redistribute_DIST,
+    nGrow_Redistribute_DIST,local_redistribute_main,
     remove_negative_DIST);
 
 #endif
@@ -9228,6 +9231,7 @@ void NavierStokes::VOF_Recon_ALL(
   } // for (int ilev=level;ilev<=finest_level;ilev++)
 
 #ifdef AMREX_PARTICLES
+  int local_redistribute_main=1;
   int save_slab_step=slab_step;
   if (slab_step==-1) {
    slab_step=0;
@@ -9239,7 +9243,8 @@ void NavierStokes::VOF_Recon_ALL(
    amrex::Error("slab_step invalid");
 
    //calling from NavierStokes::VOF_Recon_ALL
-  init_particle_containerALL(OP_PARTICLE_SLOPES,local_caller_string);
+  init_particle_containerALL(OP_PARTICLE_SLOPES,local_caller_string,
+    local_redistribute_main);
 
   slab_step=save_slab_step;
 #endif

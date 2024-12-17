@@ -469,7 +469,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
-  int local_Redistribute=0; 
+  int local_redistribute_main=1; 
   bool local_copy=true; //do not redistribute inside of copyParticles
   bool remove_negative=true;
 
@@ -478,7 +478,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   My_ParticleContainer& prevPC=newDataPC(slab_step);
 
   prevPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute,remove_negative);
+    nGrow_Redistribute,local_redistribute_main,remove_negative);
 
     // level=0
   My_ParticleContainer& localPC=newDataPC(slab_step+1);
@@ -504,10 +504,12 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   localPC.copyParticles(prevPC,local_copy); //initialize t^{n+1} data w/t^{n}
 
     //prior to advection
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
+		  local_redistribute_main);
 
   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute,remove_negative);
+    nGrow_Redistribute,local_redistribute_main,
+    remove_negative);
 
  } else
   amrex::Error("slab_step invalid");
@@ -570,7 +572,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     int lev_min=0;
     int lev_max=-1;
     int nGrow_Redistribute=0;
-    int local_Redistribute=0; 
+    int local_redistribute_main=0; //local_redistribute=0 just in case periodic
     bool remove_negative=true;
 
       //level==0
@@ -586,7 +588,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     }
 
     localPC.Redistribute(lev_min,lev_max,
-      nGrow_Redistribute,local_Redistribute,remove_negative);
+      nGrow_Redistribute,local_redistribute_main,remove_negative);
 
    } else
     amrex::Error("slab_step invalid");
@@ -1255,13 +1257,13 @@ Real NavierStokes::advance(Real time,Real dt) {
    int lev_min=0;
    int lev_max=-1;
    int nGrow_Redistribute=0;
-   int local_Redistribute=0;
+   int local_redistribute_main=0;
    bool remove_negative=true;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
    old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute,remove_negative);
+     local_redistribute_main,remove_negative);
 
 #endif
 
@@ -2054,11 +2056,11 @@ void NavierStokes::phase_change_code_segment(
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
-  int local_Redistribute=0; 
+  int local_redistribute_main=0; //local_redistribute=0 due to periodic wrap
   bool remove_negative=true;
 
   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute,remove_negative);
+    nGrow_Redistribute,local_redistribute_main,remove_negative);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -2071,7 +2073,7 @@ void NavierStokes::phase_change_code_segment(
 
   if (num_particles_look_ahead>0) {
    localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute,remove_negative);
+    nGrow_Redistribute,local_redistribute_main,remove_negative);
   } else if (num_particles_look_ahead==0) {
    //do nothing
   } else
@@ -2105,7 +2107,9 @@ void NavierStokes::phase_change_code_segment(
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
   local_truncate,local_caller_string,update_particles);
 
- makeStateDistALL(update_particles);
+ int local_redistribute_main=1;
+
+ makeStateDistALL(update_particles,local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2139,7 +2143,8 @@ void NavierStokes::no_mass_transfer_code_segment(
    init_vof_prev_time);
 
  int update_particles=1;
- makeStateDistALL(update_particles);
+ int local_redistribute_main=1;
+ makeStateDistALL(update_particles,local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2255,7 +2260,8 @@ void NavierStokes::nucleation_code_segment(
    RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
 
  int update_particles=1;
- makeStateDistALL(update_particles);
+ int local_redistribute_main=1;
+ makeStateDistALL(update_particles,local_redistribute_main);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
