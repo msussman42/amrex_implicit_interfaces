@@ -124,6 +124,7 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 #ns.visc_coef      = 1.0  #(1/Re)
 ns.visc_coef      = 14.93  #(1/Re) (NONDIM)
+ns.heatvisc_coef=1.0     # (1/(Pr Re)
 ns.explicit_viscosity_dt=1
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
