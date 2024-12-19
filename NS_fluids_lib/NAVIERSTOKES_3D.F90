@@ -433,8 +433,8 @@ stop
       character*5 gridstr
       character*32 filename32
 
-      character*6 stepstr
-      character*16 newfilename16
+      character*8 stepstr
+      character*18 newfilename18
 
       integer i,j,k,dir
       integer ilev,igrid,ivel2d,ivel3d
@@ -519,16 +519,16 @@ stop
        stop
       endif
 
-      write(stepstr,'(I6)') nsteps
-      do i=1,6
+      write(stepstr,'(I8)') nsteps
+      do i=1,8
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
 
-      write(newfilename16,'(A6,A6,A4)') 'nddata',stepstr,'.plt'
+      write(newfilename18,'(A6,A8,A4)') 'nddata',stepstr,'.plt'
 
-      print *,"newfilename16 ",newfilename16
+      print *,"newfilename18 ",newfilename18
 
 
       !--------------------------------------------------
@@ -644,7 +644,7 @@ stop
       !-------------------------------------------------------------
       ZONEMARKER = 299.0
       EOHMARKER  = 357.0
-      open(unit=11,file=newfilename16,form="unformatted",access="stream")
+      open(unit=11,file=newfilename18,form="unformatted",access="stream")
 
        ! +++++++ HEADER SECTION ++++++
 
@@ -4330,8 +4330,8 @@ END SUBROUTINE SIMP
       character*5 gridstr
       character*32 filename32
 
-      character*6 stepstr
-      character*16 newfilename16
+      character*8 stepstr
+      character*18 newfilename18
 
       integer i,j,k,dir
       integer ilev,igrid
@@ -4469,16 +4469,16 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       write(stepstr,'(I6)') nsteps
-       do i=1,6
+       write(stepstr,'(I8)') nsteps
+       do i=1,8
         if (stepstr(i:i).eq.' ') then
          stepstr(i:i)='0'
         endif
        enddo
 
-       write(newfilename16,'(A6,A6,A4)') 'nddata',stepstr,'.plt'
+       write(newfilename18,'(A6,A8,A4)') 'nddata',stepstr,'.plt'
 
-       print *,"newfilename16 ",newfilename16
+       print *,"newfilename18 ",newfilename18
 
 
        !--------------------------------------------------
@@ -4585,7 +4585,7 @@ END SUBROUTINE SIMP
        !-----------------------------------------------------------
        ZONEMARKER = 299.0
        EOHMARKER  = 357.0
-       open(unit=11,file=newfilename16,form="unformatted",access="stream")
+       open(unit=11,file=newfilename18,form="unformatted",access="stream")
 
         ! +++++++ HEADER SECTION ++++++
 
@@ -12157,9 +12157,9 @@ END SUBROUTINE SIMP
       real(amrex_real) LS_in,LS_out
       integer ebase
       character*2 im_str
-      character*6 stepstr
+      character*8 stepstr
       character*14 compfilename
-      character*17 uniformfilename
+      character*19 uniformfilename
       character*255 techeader_str1
       character*255 techeader_str2
       character*255 techeader_str3
@@ -12302,13 +12302,13 @@ END SUBROUTINE SIMP
 
       else if (do_input.eq.0) then
 
-       write(stepstr,'(I6)') nsteps
-       do i=1,6
+       write(stepstr,'(I8)') nsteps
+       do i=1,8
         if (stepstr(i:i).eq.' ') then
          stepstr(i:i)='0'
         endif
        enddo
-       write(uniformfilename,'(A7,A6,A4)') 'uniform',stepstr,'.tec'
+       write(uniformfilename,'(A7,A8,A4)') 'uniform',stepstr,'.tec'
        print *,"uniformfilename ",uniformfilename
        open(unit=11,file=uniformfilename)
 
@@ -12601,8 +12601,8 @@ END SUBROUTINE SIMP
       integer strandid
       integer n
       integer i
-      character*6 stepstr
-      character*11 sfilename
+      character*8 stepstr
+      character*13 sfilename
 
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
         ! (value of material with LS>0)
@@ -12622,14 +12622,14 @@ END SUBROUTINE SIMP
        strandid=(nsteps/sliceint)+1
       endif
 
-      write(stepstr,'(I6)') nsteps
-      do i=1,6
+      write(stepstr,'(I8)') nsteps
+      do i=1,8
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
 
-      write(sfilename,'(A5,A6)') 'slice',stepstr
+      write(sfilename,'(A5,A8)') 'slice',stepstr
 
       print *,"sfilename ",sfilename
       open(unit=11,file=sfilename)
@@ -15281,9 +15281,9 @@ END SUBROUTINE SIMP
 
       character*36 cenfilename36
 
-      character*6 stepstr
+      character*8 stepstr
 
-      character*20 newcenfilename20
+      character*22 newcenfilename22
 
       integer i
       integer ilev,igrid,ipass
@@ -15312,8 +15312,8 @@ END SUBROUTINE SIMP
 
         alloc_flag=alloc_flag+1
 
-        write(stepstr,'(I6)') nsteps
-        do i=1,6
+        write(stepstr,'(I8)') nsteps
+        do i=1,8
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
@@ -15325,9 +15325,9 @@ END SUBROUTINE SIMP
          strandid=(nsteps/plotint)+1
         endif
 
-        write(newcenfilename20,'(A10,A6,A4)') newcennamestr10,stepstr,'.tec'
-        print *,"newcenfilename20 ",newcenfilename20
-        open(unit=12,file=newcenfilename20)
+        write(newcenfilename22,'(A10,A8,A4)') newcennamestr10,stepstr,'.tec'
+        print *,"newcenfilename22 ",newcenfilename22
+        open(unit=12,file=newcenfilename22)
 
         if (N_EXTRA_REAL.eq.2) then
          ! do nothing

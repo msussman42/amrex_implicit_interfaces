@@ -82,7 +82,7 @@ ns.sum_interval     = 10      # timesteps between computing mass
 
 amr.grid_log        = grdlog  # name of grid logging file
 
-amr.file_name_digits= 7
+amr.file_name_digits=8
 
 #ns.v=1
 #amr.restart        = chk00400 # Name of the restart checkpoint file

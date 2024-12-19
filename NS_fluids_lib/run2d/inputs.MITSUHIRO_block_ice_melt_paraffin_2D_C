@@ -137,7 +137,7 @@ amr.plot_int        = 500 # was 100  (plot_int=1 for testing)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
-amr.file_name_digits=7
+amr.file_name_digits=8
 #amr.restart         = chk0337000
 #amr.trace   =1
 

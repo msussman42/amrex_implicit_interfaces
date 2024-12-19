@@ -212,7 +212,7 @@ ns.sum_interval     = 5      # timesteps between computing mass
 
 amr.grid_log        = grdlog  # name of grid logging file
 
-amr.file_name_digits= 7
+amr.file_name_digits=8
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=1

@@ -1041,10 +1041,10 @@ stop
       character*37 cenfilename37 !./temptecplot ...
 
       character*2 matstr
-      character*6 stepstr
+      character*8 stepstr
 
-      character*17 newfilename17
-      character*21 newcenfilename21
+      character*19 newfilename19
+      character*23 newcenfilename23
 
       character*80 rmcommand_mat
       character*80 rmcommand_refcen
@@ -1116,17 +1116,17 @@ stop
         allocate(IntElem(SDIM,NumIntElems))
         alloc_flag=alloc_flag+1
 
-        write(stepstr,'(I6)') nsteps
-        do i=1,6
+        write(stepstr,'(I8)') nsteps
+        do i=1,8
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
         enddo
          !newnamestr7=mat??ls ...
          !newfilename17=mat??ls ...
-        write(newfilename17,'(A7,A6,A4)') newnamestr7,stepstr,'.tec'
-        print *,"newfilename17 ",newfilename17
-        open(unit=11,file=newfilename17)
+        write(newfilename19,'(A7,A8,A4)') newnamestr7,stepstr,'.tec'
+        print *,"newfilename19 ",newfilename19
+        open(unit=11,file=newfilename19)
 
         if (SDIM.eq.3) then
          write(11,*) 'TITLE = "3D surface" '
@@ -1166,9 +1166,9 @@ stop
 
           ! newcennamestr='refcen ...'
           ! newcenfilename21='refcen ...'
-        write(newcenfilename21,'(A11,A6,A4)') newcennamestr11,stepstr,'.tec'
-        print *,"newcenfilename21 ",newcenfilename21
-        open(unit=12,file=newcenfilename21)
+        write(newcenfilename23,'(A11,A8,A4)') newcennamestr11,stepstr,'.tec'
+        print *,"newcenfilename23 ",newcenfilename23
+        open(unit=12,file=newcenfilename23)
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D moments" '
@@ -2272,8 +2272,8 @@ stop
       character*5 gridstr
       character*32 filename32
 
-      character*6 stepstr
-      character*16 newfilename16
+      character*8 stepstr
+      character*18 newfilename18
 
       character*80 rmcommand_LS
 
@@ -2305,15 +2305,15 @@ stop
 
         allocate(Node(SDIM,NumNodes))
         allocate(IntElem(SDIM,NumIntElems))
-        write(stepstr,'(I6)') nsteps
-        do i=1,6
+        write(stepstr,'(I8)') nsteps
+        do i=1,8
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
         enddo
-        write(newfilename16,'(A6,A6,A4)') 'lssing',stepstr,'.tec'
-        print *,"newfilename16 ",newfilename16
-        open(unit=11,file=newfilename16)
+        write(newfilename18,'(A6,A8,A4)') 'lssing',stepstr,'.tec'
+        print *,"newfilename18 ",newfilename18
+        open(unit=11,file=newfilename18)
 
         if (SDIM.eq.3) then
          write(11,*) 'TITLE = "3D surface" '
