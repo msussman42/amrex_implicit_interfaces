@@ -4,7 +4,6 @@
 #endif
 
 ! get rid of autoindent   :setl noai nocin nosi inde=
-#define STANDALONE 0
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
@@ -22,6 +21,8 @@
 print *,"dimension bust"
 stop
 #endif
+
+#include "EXTRAP_COMP.H"
 
       module marching_tetra_module
       use amrex_fort_module, only : amrex_real
@@ -505,8 +506,6 @@ stop
       return
       end subroutine add_to_triangle_list
 
-#if (STANDALONE==0)
-
       subroutine fort_isogrid( &
        tid, &
        visual_tessellate_vfrac, &
@@ -707,20 +706,10 @@ stop
 
        valu=zero
 
-#if (STANDALONE==0)
        write(namestr25,'(A14,A7,A2,A2)') &
                './temptecplot/','tempmat',matstr,'ls'
        write(cennamestr29,'(A14,A10,A2,A3)') &
                './temptecplot/','temprefcen',matstr,'pos'
-#elif (STANDALONE==1)
-       write(namestr25,'(A14,A7,A2,A2)') &
-               './temptecplot_','tempmat',matstr,'ls'
-       write(cennamestr29,'(A14,A10,A2,A3)') &
-               './temptecplot_','temprefcen',matstr,'pos'
-#else
-       print *,"STANDALONE invalid"
-       stop
-#endif
 
        write(levstr,'(I3)') level
        write(gridstr,'(I5)') gridno
@@ -1041,10 +1030,10 @@ stop
       character*37 cenfilename37 !./temptecplot ...
 
       character*2 matstr
-      character*8 stepstr
+      character(len=plotfile_digits) :: stepstr
 
-      character*19 newfilename19
-      character*23 newcenfilename23
+      character(len=plotfile_digits+11) :: newfilename19
+      character(len=plotfile_digits+15) :: newcenfilename23
 
       character*80 rmcommand_mat
       character*80 rmcommand_refcen
@@ -1079,20 +1068,10 @@ stop
        endif
       enddo
       
-#if (STANDALONE==0)
       write(namestr25,'(A14,A7,A2,A2)') &
               './temptecplot/','tempmat',matstr,'ls'
       write(cennamestr29,'(A14,A10,A2,A3)') &
               './temptecplot/','temprefcen',matstr,'pos'
-#elif (STANDALONE==1)
-      write(namestr25,'(A14,A7,A2,A2)') &
-              './temptecplot_','tempmat',matstr,'ls'
-      write(cennamestr29,'(A14,A10,A2,A3)') &
-              './temptecplot_','temprefcen',matstr,'pos'
-#else
-       print *,"STANDALONE invalid"
-       stop
-#endif
 
       write(newnamestr7,'(A3,A2,A2)') 'mat',matstr,'ls'
       write(newcennamestr11,'(A6,A2,A3)') 'refcen',matstr,'pos'
@@ -1116,15 +1095,19 @@ stop
         allocate(IntElem(SDIM,NumIntElems))
         alloc_flag=alloc_flag+1
 
-        write(stepstr,'(I8)') nsteps
-        do i=1,8
+        write(stepstr,1098) nsteps
+1098    format(I plotfile_digits )
+
+        do i=1,plotfile_digits
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
         enddo
          !newnamestr7=mat??ls ...
          !newfilename17=mat??ls ...
-        write(newfilename19,'(A7,A8,A4)') newnamestr7,stepstr,'.tec'
+        write(newfilename19,1106) newnamestr7,stepstr,'.tec'
+1106    format(A7,A plotfile_digits ,A4)
+
         print *,"newfilename19 ",newfilename19
         open(unit=11,file=newfilename19)
 
@@ -1166,7 +1149,9 @@ stop
 
           ! newcennamestr='refcen ...'
           ! newcenfilename21='refcen ...'
-        write(newcenfilename23,'(A11,A8,A4)') newcennamestr11,stepstr,'.tec'
+        write(newcenfilename23,1153) newcennamestr11,stepstr,'.tec'
+1153    format(A11,A plotfile_digits ,A4)
+
         print *,"newcenfilename23 ",newcenfilename23
         open(unit=12,file=newcenfilename23)
 
@@ -1332,35 +1317,7 @@ stop
 
        rmcommand_mat='rm ./temptecplot_tempmat*'
        rmcommand_refcen='rm ./temptecplot_temprefcen*'
-#if (STANDALONE==0)
-       ! do nothing
-#elif (STANDALONE==1)
-       if (ilev.eq.finest_level) then
-        if (igrid.eq.grids_per_level(ilev+1)-1) then
-         print *,"fort_combinetriangles"
-         print *,"issuing command ",rmcommand_mat
-         print *,"and issuing command ",rmcommand_refcen
 
-         call execute_command_line(rmcommand_mat,exitstat=sysret)
-         call execute_command_line(rmcommand_refcen,exitstat=sysret)
-        else if ((igrid.ge.0).and. &
-                 (igrid.lt.grids_per_level(ilev+1)-1)) then
-         ! do nothing
-        else
-         print *,"igrid invalid"
-         stop
-        endif
-       else if ((ilev.ge.0).and. &
-                (ilev.lt.finest_level)) then
-        ! do nothing
-       else
-        print *,"ilev invalid"
-        stop
-       endif
-#else
-       print *,"STANDALONE invalid"
-       stop
-#endif
       endif
 
       if (sysret.ne.0) then
@@ -1370,8 +1327,6 @@ stop
  
       return
       end subroutine fort_combinetriangles
-
-#endif
 
        ! For finding closest point map, the levelset function
        ! will have to have ngrow ghost cells where ngrow=thickness of the
@@ -1462,16 +1417,8 @@ stop
         endif
       enddo 
        ! isogridsingle
-#if (STANDALONE==0)
       write(filename32,'(A14,A10,A3,A5)') &
             './temptecplot/','templssing',levstr,gridstr
-#elif (STANDALONE==1)
-      write(filename32,'(A14,A10,A3,A5)') &
-            './temptecplot_','templssing',levstr,gridstr
-#else
-      print *,"STANDALONE invalid"
-      stop
-#endif
       print *,"filename32 ",filename32
 
       NumNodes=0
@@ -2272,8 +2219,8 @@ stop
       character*5 gridstr
       character*32 filename32
 
-      character*8 stepstr
-      character*18 newfilename18
+      character(len=plotfile_digits) :: stepstr
+      character(len=plotfile_digits+10) :: newfilename18
 
       character*80 rmcommand_LS
 
@@ -2305,13 +2252,18 @@ stop
 
         allocate(Node(SDIM,NumNodes))
         allocate(IntElem(SDIM,NumIntElems))
-        write(stepstr,'(I8)') nsteps
-        do i=1,8
+
+        write(stepstr,2260) nsteps
+2260    format(I plotfile_digits )
+
+        do i=1,plotfile_digits
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
         enddo
-        write(newfilename18,'(A6,A8,A4)') 'lssing',stepstr,'.tec'
+        write(newfilename18,2265) 'lssing',stepstr,'.tec'
+2265    format(A6,A plotfile_digits ,A4)
+
         print *,"newfilename18 ",newfilename18
         open(unit=11,file=newfilename18)
 
@@ -2361,16 +2313,8 @@ stop
           endif
          enddo
           ! combinetrianglessingle
-#if (STANDALONE==0)
          write(filename32,'(A14,A10,A3,A5)') &
             './temptecplot/','templssing',levstr,gridstr
-#elif (STANDALONE==1)
-         write(filename32,'(A14,A10,A3,A5)') &
-            './temptecplot_','templssing',levstr,gridstr
-#else
-         print *,"STANDALONE invalid"
-         stop
-#endif
 
          print *,"filename32 ",filename32
          open(unit=4,file=filename32)
@@ -2434,41 +2378,6 @@ stop
           rmcommand_LS='rm ./temptecplot_templssing*'
           sysret=0
 
-#if (STANDALONE==0)
-          ! do nothing
-#elif (STANDALONE==1)
-          if (ilev.eq.finest_level) then
-           if (igrid.eq.grids_per_level(ilev+1)-1) then
-            print *,"fort_combinetrianglessingle"
-            print *,"issuing command ",rmcommand_LS
-
-            call execute_command_line(rmcommand_LS,exitstat=sysret)
-            if (sysret.ne.0) then
-             print *,"execute_command_line has sysret=",sysret
-             stop
-            endif
-
-           else if ((igrid.ge.0).and. &
-                    (igrid.lt.grids_per_level(ilev+1)-1)) then
-            ! do nothing
-           else
-            print *,"igrid invalid"
-            stop
-           endif
-          else if ((ilev.ge.0).and. &
-                   (ilev.lt.finest_level)) then
-           ! do nothing
-          else
-           print *,"ilev invalid"
-           stop
-          endif
-
-
-#else
-          print *,"STANDALONE invalid"
-          stop
-#endif
-
          else
           print *,"ipass invalid"
           stop
@@ -2507,5 +2416,3 @@ stop
 
 
       end module marching_tetra_module
-
-#undef STANDALONE

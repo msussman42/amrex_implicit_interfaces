@@ -433,8 +433,8 @@ stop
       character*5 gridstr
       character*32 filename32
 
-      character*8 stepstr
-      character*18 newfilename18
+      character(len=plotfile_digits) :: stepstr
+      character(len=10+plotfile_digits) :: newfilename18
 
       integer i,j,k,dir
       integer ilev,igrid,ivel2d,ivel3d
@@ -519,14 +519,17 @@ stop
        stop
       endif
 
-      write(stepstr,'(I8)') nsteps
-      do i=1,8
+      write(stepstr,522) nsteps
+522   format(I plotfile_digits )
+
+      do i=1,plotfile_digits
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
 
-      write(newfilename18,'(A6,A8,A4)') 'nddata',stepstr,'.plt'
+      write(newfilename18,532) 'nddata',stepstr,'.plt'
+532   format(A6,A plotfile_digits ,A4)
 
       print *,"newfilename18 ",newfilename18
 
@@ -4330,8 +4333,8 @@ END SUBROUTINE SIMP
       character*5 gridstr
       character*32 filename32
 
-      character*8 stepstr
-      character*18 newfilename18
+      character(len=plotfile_digits) :: stepstr
+      character(len=plotfile_digits+10) :: newfilename18
 
       integer i,j,k,dir
       integer ilev,igrid
@@ -4469,14 +4472,17 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       write(stepstr,'(I8)') nsteps
-       do i=1,8
+       write(stepstr,4475) nsteps
+4475   format(I plotfile_digits )
+
+       do i=1,plotfile_digits
         if (stepstr(i:i).eq.' ') then
          stepstr(i:i)='0'
         endif
        enddo
 
-       write(newfilename18,'(A6,A8,A4)') 'nddata',stepstr,'.plt'
+       write(newfilename18,4484) 'nddata',stepstr,'.plt'
+4484   format(A6,A plotfile_digits ,A4)
 
        print *,"newfilename18 ",newfilename18
 
@@ -12157,9 +12163,9 @@ END SUBROUTINE SIMP
       real(amrex_real) LS_in,LS_out
       integer ebase
       character*2 im_str
-      character*8 stepstr
+      character(len=plotfile_digits) :: stepstr
       character*14 compfilename
-      character*19 uniformfilename
+      character(len=plotfile_digits+11) :: uniformfilename
       character*255 techeader_str1
       character*255 techeader_str2
       character*255 techeader_str3
@@ -12302,13 +12308,18 @@ END SUBROUTINE SIMP
 
       else if (do_input.eq.0) then
 
-       write(stepstr,'(I8)') nsteps
-       do i=1,8
+       write(stepstr,12308) nsteps
+12308  format(I plotfile_digits )
+
+       do i=1,plotfile_digits
         if (stepstr(i:i).eq.' ') then
          stepstr(i:i)='0'
         endif
        enddo
-       write(uniformfilename,'(A7,A8,A4)') 'uniform',stepstr,'.tec'
+
+       write(uniformfilename,12322) 'uniform',stepstr,'.tec'
+12322  format(A7,A plotfile_digits ,A4)
+
        print *,"uniformfilename ",uniformfilename
        open(unit=11,file=uniformfilename)
 
@@ -12601,8 +12612,8 @@ END SUBROUTINE SIMP
       integer strandid
       integer n
       integer i
-      character*8 stepstr
-      character*13 sfilename
+      character(len=plotfile_digits) :: stepstr
+      character(len=plotfile_digits+5) :: sfilename
 
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
         ! (value of material with LS>0)
@@ -12622,14 +12633,17 @@ END SUBROUTINE SIMP
        strandid=(nsteps/sliceint)+1
       endif
 
-      write(stepstr,'(I8)') nsteps
-      do i=1,8
+      write(stepstr,12637) nsteps
+12637 format(I plotfile_digits )
+
+      do i=1,plotfile_digits
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
 
-      write(sfilename,'(A5,A8)') 'slice',stepstr
+      write(sfilename,12645) 'slice',stepstr
+12645 format(A5,A plotfile_digits )
 
       print *,"sfilename ",sfilename
       open(unit=11,file=sfilename)
@@ -15281,9 +15295,9 @@ END SUBROUTINE SIMP
 
       character*36 cenfilename36
 
-      character*8 stepstr
+      character(len=plotfile_digits) :: stepstr
 
-      character*22 newcenfilename22
+      character(len=plotfile_digits+14) :: newcenfilename22
 
       integer i
       integer ilev,igrid,ipass
@@ -15312,8 +15326,10 @@ END SUBROUTINE SIMP
 
         alloc_flag=alloc_flag+1
 
-        write(stepstr,'(I8)') nsteps
-        do i=1,8
+        write(stepstr,15329) nsteps
+15329   format(I plotfile_digits )
+
+        do i=1,plotfile_digits
          if (stepstr(i:i).eq.' ') then
           stepstr(i:i)='0'
          endif
@@ -15325,7 +15341,10 @@ END SUBROUTINE SIMP
          strandid=(nsteps/plotint)+1
         endif
 
-        write(newcenfilename22,'(A10,A8,A4)') newcennamestr10,stepstr,'.tec'
+        write(newcenfilename22,15346) newcennamestr10,stepstr,'.tec'
+15346   format(A10,A plotfile_digits ,A4)
+
+
         print *,"newcenfilename22 ",newcenfilename22
         open(unit=12,file=newcenfilename22)
 
