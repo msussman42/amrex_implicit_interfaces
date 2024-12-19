@@ -61,9 +61,9 @@ stop
 
       integer ih
 
-      character*19 newfilename !fabdata ...
+      character(len=plotfile_digits+11) :: newfilename !fabdata ...
       character*2 matstr
-      character*8 stepstr
+      character(len=plotfile_digits) :: stepstr
 
       integer i,j,k,im,dir2
       integer nwrite
@@ -105,14 +105,17 @@ stop
        print *,"time invalid"
        stop
       endif
-      write(stepstr,'(I8)') nsteps
-      do i=1,8
+      write(stepstr,109) nsteps
+109   format(I plotfile_digits )
+
+      do i=1,plotfile_digits
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
       enddo
 
-      write(newfilename,'(A7,A8,A4)') 'fabdata',stepstr,'.plt'
+      write(newfilename,119) 'fabdata',stepstr,'.plt'
+119   format(A7,A plotfile_digits ,A4)
 
       if (interior_only.eq.0) then
        do dir2=1,SDIM
@@ -785,17 +788,17 @@ stop
 
       character*3 levstr
       character*5 gridstr
-      character*32 filename32 ! ./temptecplot_tempnddata
+      character(len=32) filename32 ! ./temptecplot_tempnddata
       character*80 rmcommand
 
-      character*8 stepstr
+      character(len=plotfile_digits) stepstr
       character*3 outerstr
       character*3 slabstr
       character*3 idstr
 
       character(len=n_root) :: root_char_str
-      character(len=n_root+38) :: newfilename40
-      character(len=38) :: fname_extend
+      character(len=n_root+30+plotfile_digits) :: newfilename40
+      character(len=30+plotfile_digits) :: fname_extend
       character(len=4) :: step_chars
       character(len=2) :: dir_chars
       character(len=5) :: outer_chars
@@ -937,8 +940,10 @@ stop
         stop
        endif
 
-       write(stepstr,'(I8)') nsteps
-       do i=1,8
+       write(stepstr,943) nsteps
+943    FORMAT(I plotfile_digits)
+
+       do i=1,plotfile_digits
         if (stepstr(i:i).eq.' ') then
          stepstr(i:i)='0'
         endif
@@ -997,12 +1002,13 @@ stop
        plt_chars='.plt'
 
        newfilename40(1:n_root)=root_char_str
-       write(fname_extend,'(A2,A2,A3,A4,A8,A5,A3,A4,A3,A4)') &
+       write(fname_extend,1003) &
                dir_chars,id_chars,idstr, &
                step_chars,stepstr,outer_chars,outerstr, &
                slab_chars,slabstr,plt_chars
+1003   format(A2,A2,A3,A4,A plotfile_digits ,A5,A3,A4,A3,A4)
 
-       newfilename40(n_root+1:n_root+38)=fname_extend
+       newfilename40(n_root+1:n_root+30+plotfile_digits)=fname_extend
 
        print *,"newfilename40 ",newfilename40
 

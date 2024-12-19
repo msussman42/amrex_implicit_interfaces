@@ -584,4 +584,6 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define MOFITERMAX_MIN 30
 #define MOFITERMAX_LIMIT 1000
 
+#define plotfile_digits 8
+
 #endif 

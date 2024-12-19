@@ -20735,7 +20735,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    std::stringstream steps_string_stream(std::stringstream::in |
      std::stringstream::out);
-   steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
+   steps_string_stream << std::setw(plotfile_digits) << 
+	   std::setfill('0') << nsteps;
    std::string steps_string=steps_string_stream.str();
 
    std::string plotfilename_MOF="MOF_PLT"; 

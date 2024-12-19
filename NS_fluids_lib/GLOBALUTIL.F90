@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
 
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
@@ -18057,14 +18056,14 @@ end subroutine print_visual_descriptor
       character*32 filename32
       character*80 rmcommand
 
-      character*8 stepstr
+      character(len=plotfile_digits) :: stepstr
       character*3 outerstr
       character*3 slabstr
       character*3 idstr
 
       character(len=n_root) :: root_char_str
-      character(len=n_root+38) :: newfilename40
-      character(len=38) :: fname_extend
+      character(len=n_root+30+plotfile_digits) :: newfilename40
+      character(len=30+plotfile_digits) :: fname_extend
       character(len=4) :: step_chars
       character(len=2) :: dir_chars
       character(len=5) :: outer_chars
@@ -18157,8 +18156,10 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      write(stepstr,'(I8)') nsteps
-      do i=1,8
+      write(stepstr,18200) nsteps
+18200 format(I plotfile_digits)
+
+      do i=1,plotfile_digits
        if (stepstr(i:i).eq.' ') then
         stepstr(i:i)='0'
        endif
@@ -18216,12 +18217,13 @@ end subroutine print_visual_descriptor
       plt_chars='.plt'
 
       newfilename40(1:n_root)=root_char_str
-      write(fname_extend,'(A2,A2,A3,A4,A8,A5,A3,A4,A3,A4)') &
+      write(fname_extend,18224) &
                dir_chars,id_chars,idstr, &
                step_chars,stepstr,outer_chars,outerstr, &
                slab_chars,slabstr,plt_chars
+18224 format(A2,A2,A3,A4,A plotfile_digits ,A5,A3,A4,A3,A4)
 
-      newfilename40(n_root+1:n_root+38)=fname_extend
+      newfilename40(n_root+1:n_root+30+plotfile_digits)=fname_extend
 
       print *,"newfilename40 ",newfilename40
 
@@ -18266,16 +18268,8 @@ end subroutine print_visual_descriptor
          gridstr(i:i)='0'
         endif
        enddo
-#if (STANDALONE==0)
        write(filename32,'(A14,A10,A3,A5)') &
               './temptecplot/','tempnddata',levstr,gridstr
-#elif (STANDALONE==1)
-       write(filename32,'(A14,A10,A3,A5)') &
-              './temptecplot_','tempnddata',levstr,gridstr
-#else
-      print *,"STANDALONE invalid"
-      stop
-#endif
        open(unit=4,file=filename32)
 
        do dir=1,plot_sdim
@@ -18517,16 +18511,8 @@ end subroutine print_visual_descriptor
         endif
        enddo
 
-#if (STANDALONE==0)
        write(filename32,'(A14,A10,A3,A5)') &
               './temptecplot/','tempnddata',levstr,gridstr
-#elif (STANDALONE==1)
-       write(filename32,'(A14,A10,A3,A5)') &
-              './temptecplot_','tempnddata',levstr,gridstr
-#else
-       print *,"STANDALONE invalid"
-       stop
-#endif
        open(unit=4,file=filename32)
        print *,"filename32 ",filename32
 
@@ -18656,21 +18642,6 @@ end subroutine print_visual_descriptor
      
       rmcommand='rm ./temptecplot_tempnddata*'
       sysret=0
-
-#if (STANDALONE==0)
-      ! do nothing
-#elif (STANDALONE==1)
-      print *,"issuing command ",rmcommand
-      call execute_command_line(rmcommand,exitstat=sysret)
-
-      if (sysret.ne.0) then
-       print *,"execute_command_line has sysret=",sysret
-       stop
-      endif
-#else
-      print *,"STANDALONE invalid"
-      stop
-#endif
 
       return
       end subroutine zones_revolve_sanity
@@ -30071,4 +30042,3 @@ end subroutine decision_tree_predict
 
 end module global_utility_module
 
-#undef STANDALONE

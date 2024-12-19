@@ -129,7 +129,7 @@ ns.explicit_viscosity_dt=1
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
 #ns.gravity        = -981.0e-5
-ns.gravity        = -0.5283 #NONDIM
+ns.gravity        = -0.5385e+2 #NONDIM
 ns.incremental_gravity_flag=0
 ns.invert_gravity=1
 
@@ -158,8 +158,10 @@ ns.invert_gravity=1
 #ns.tension=      75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=90
 #ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 ns.radblob9=0.5
-ns.tension=      72.8e+2 55.19e+2 55.19e+2 72.8e+2 72.8e+2 0.0 #theta_L=90
-ns.tension_init= 72.8e+2 55.19e+2 55.19e+2 72.8e+2 72.8e+2 0.0
+#72.8 cos_theta_L=72.8-x
+#x=72.8*(1-cos(50 deg))=26.0
+ns.tension=      72.8e+2 26.0e+2 26.0e+2 72.8e+2 72.8e+2 0.0 #theta_L=90
+ns.tension_init= 72.8e+2 26.0e+2 26.0e+2 72.8e+2 72.8e+2 0.0
 
 #sigma_IL+sigma_LG cos(50)=sigma_IG  sigma_IG=sigma_LG
 #sigma_IL=sigma_LG(1-cos(50))=27.0
@@ -274,11 +276,13 @@ ns.radblob3=0.046875 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
-#radblob=effective hemispherical radius
+#radblob=effective hemispherical radius scaled by wetting radius
 #see effective_radius.f
+#8.5 microliters=8.5e-6 liters=8.5e-3 cm^3
+#1 liter=1000cm^3
 #ns.radblob=0.15631 # centimeters
 #ns.radblob=0.2 # centimeters
-ns.radblob=1.0 # centimeters
+ns.radblob=0.724 # centimeters (.160/.221)
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
