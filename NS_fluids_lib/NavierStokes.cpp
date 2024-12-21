@@ -230,7 +230,7 @@ Real NavierStokes::fixed_dt_init = 0.0;
 Real NavierStokes::min_velocity_for_dt = CPP_EPS_12_6;
 Real NavierStokes::min_stefan_velocity_for_dt = CPP_EPS_12_6;
 Real NavierStokes::fixed_dt_velocity = 0.0;
-int NavierStokes::explicit_viscosity_dt = 0;
+Real NavierStokes::explicit_viscosity_dt = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::gravity      = 0.0;
 // default=diagonal length of the domain tangent to the
@@ -3001,7 +3001,20 @@ NavierStokes::read_params ()
      amrex::Error("min_stefan_velocity_for_dt invalid");
 
     pp.queryAdd("fixed_dt_velocity",fixed_dt_velocity);
+
     pp.queryAdd("explicit_viscosity_dt",explicit_viscosity_dt);
+
+    if (explicit_viscosity_dt==0.0) {
+     //do nothing
+    } else if ((explicit_viscosity_dt>=1.0)&&
+               (explicit_viscosity_dt<=1.0e+20)) {
+     // do nothing
+    } else {
+     std::cout << "expecting 1.0<=explicit_viscosity_dt<=1.0e+20 or ==0: " <<
+       explicit_viscosity_dt << '\n';
+     amrex::Error("explicit_viscosity_dt not 0, inbetween 1.0 and 1.0e+20");
+    }
+
     pp.queryAdd("sum_interval",sum_interval);
 
     pp.queryAdd("profile_debug",profile_debug);

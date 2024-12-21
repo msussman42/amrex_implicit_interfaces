@@ -2534,7 +2534,7 @@ stop
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(in) :: dist(DIMV(dist),num_materials)
       real(amrex_real), pointer :: dist_ptr(D_DECL(:,:,:),:)
-      integer, INTENT(in) :: explicit_viscosity_dt
+      real(amrex_real), INTENT(in) :: explicit_viscosity_dt
       real(amrex_real), INTENT(in) :: min_stefan_velocity_for_dt
       real(amrex_real), INTENT(inout) :: &
         cap_wave_speed(num_interfaces) !fort_estdt
@@ -3127,13 +3127,14 @@ stop
 
         if (fort_denconst(im).gt.zero) then
 
-         if (explicit_viscosity_dt.eq.1) then
+         if ((explicit_viscosity_dt.ge.one).and. &
+             (explicit_viscosity_dt.le.1.0D+20)) then
           mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
           if (mu.gt.zero) then
            if (visc_coef.gt.zero) then
             viscosity_wave_speed=two*SDIM*two*visc_coef*mu/ &
                 (fort_denconst(im)*hx)
-            dthold=hx/viscosity_wave_speed
+            dthold=explicit_viscosity_dt*hx/viscosity_wave_speed
             dt_min=min(dt_min,dthold)
            else if (visc_coef.eq.zero) then
             !do nothing
@@ -3148,7 +3149,7 @@ stop
            stop
           endif
 
-         else if (explicit_viscosity_dt.eq.0) then
+         else if (explicit_viscosity_dt.eq.zero) then
           !do nothing
          else
           print *,"explicit_viscosity_dt invalid: ",explicit_viscosity_dt
