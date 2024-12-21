@@ -125,7 +125,7 @@ ns.change_max     = 1.01
 #ns.visc_coef      = 1.0  #(1/Re)
 ns.visc_coef      = 14.93  #(1/Re) (NONDIM)
 ns.heatvisc_coef=1.0     # (1/(Pr Re)
-ns.explicit_viscosity_dt=1
+ns.explicit_viscosity_dt=1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
 #ns.gravity        = -981.0e-5
@@ -160,8 +160,10 @@ ns.invert_gravity=1
 ns.radblob9=0.5
 #72.8 cos_theta_L=72.8-x
 #x=72.8*(1-cos(50 deg))=26.0
-ns.tension=      72.8e+2 26.0e+2 26.0e+2 72.8e+2 72.8e+2 0.0 #theta_L=90
-ns.tension_init= 72.8e+2 26.0e+2 26.0e+2 72.8e+2 72.8e+2 0.0
+#ns.tension=      72.8 26.0 26.0 72.8 72.8 0.0 
+#ns.tension_init= 72.8 26.0 26.0 72.8 72.8 0.0
+ns.tension=      100.0 35.7 35.7 100.0 100.0 0.0 
+ns.tension_init= 100.0 35.7 35.7 100.0 100.0 0.0 
 
 #sigma_IL+sigma_LG cos(50)=sigma_IG  sigma_IG=sigma_LG
 #sigma_IL=sigma_LG(1-cos(50))=27.0
@@ -183,9 +185,9 @@ ns.tension_init= 72.8e+2 26.0e+2 26.0e+2 72.8e+2 72.8e+2 0.0
 # material 1=liquid 2=gas  3=ice 4=solid  
 # Cp_s/Cp_l=0.48
 # Pr=Cp_l mu_l/k_l=4.2e+3 * 1.7e-3 / 0.55 = 13.0
+# DEFAULT: stiffCV = stiffCP
 #ns.stiffCP = 4.22e+7 1.039e+7 2.050e+7 0.39e+7  # dimensional erg/(g K)
 ns.stiffCP = 1.0 0.2462 0.4858 0.0924  # NONDIM
-#ns.stiffCV = 4.22e+7 1.039e+7 2.050e+7 0.39e+7
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
 # <0 if condensation or solidification

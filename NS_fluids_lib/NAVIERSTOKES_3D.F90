@@ -8627,7 +8627,7 @@ END SUBROUTINE SIMP
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid in fort_regionsum: ",dt
        stop
       endif
 
@@ -8637,7 +8637,7 @@ END SUBROUTINE SIMP
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid fort_regionsum"
+       print *,"level invalid fort_regionsum: ",level,finest_level
        stop
       endif
 
