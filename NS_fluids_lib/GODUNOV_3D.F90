@@ -2429,6 +2429,7 @@ stop
         explicit_viscosity_dt, &
         min_stefan_velocity_for_dt, &
         cap_wave_speed, &
+        visc_wave_speed, &
         uu_estdt_max, & ! fort_estdt
         dt_min, &
         rzflag, &
@@ -2538,6 +2539,8 @@ stop
       real(amrex_real), INTENT(in) :: min_stefan_velocity_for_dt
       real(amrex_real), INTENT(inout) :: &
         cap_wave_speed(num_interfaces) !fort_estdt
+      real(amrex_real), INTENT(inout) :: &
+        visc_wave_speed(num_materials) !fort_estdt
       real(amrex_real) hx,hxmac
       real(amrex_real) dthold
       integer ii,jj,kk
@@ -2763,6 +2766,35 @@ stop
       
       if (recompute_wave_speed.eq.1) then
 
+       do im=1,num_materials
+
+        if (is_rigid(im).eq.1) then
+         visc_wave_speed(im)=zero
+        else if (is_rigid(im).eq.0) then
+         mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
+         if (mu.eq.zero) then
+          visc_wave_speed(im)=zero
+         else if (mu.gt.zero) then
+          if (visc_coef.gt.zero) then
+           visc_wave_speed(im)=two*SDIM*two*visc_coef*mu/ &
+                (fort_denconst(im)*dxmin)
+          else if (visc_coef.eq.zero) then
+           visc_wave_speed(im)=zero
+          else
+           print *,"visc_coef invalid: ",visc_coef
+           stop
+          endif
+         else
+          print *,"mu invalid: ",mu
+          stop
+         endif
+        else
+         print *,"is_rigid(im) invalid: ",im,is_rigid(im)
+         stop
+        endif
+
+       enddo ! im=1..num_materials
+
        do im=1,num_materials-1
         do im_opp=im+1,num_materials
          if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
@@ -2840,6 +2872,7 @@ stop
          level_cap_wave_speed(iten)=cap_wave_speed(iten)
         enddo ! im_opp=im+1..num_materials
        enddo ! im=1..num_materials-1
+
       else if (recompute_wave_speed.eq.0) then
        do im=1,num_materials-1
         do im_opp=im+1,num_materials
