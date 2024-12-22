@@ -633,6 +633,7 @@ Vector<Real> NavierStokes::prefreeze_tension;
 Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
 Vector<Real> NavierStokes::cap_wave_speed;
+Vector<Real> NavierStokes::visc_wave_speed;
 
 Vector<Real> NavierStokes::grid_stretching_parameter;
 
@@ -3864,6 +3865,7 @@ NavierStokes::read_params ()
     outflow_velocity_buffer_size.resize(2*AMREX_SPACEDIM);
 
     cap_wave_speed.resize(num_interfaces);
+    visc_wave_speed.resize(num_materials);
 
     prerecalesce_stiffCP.resize(num_materials);
     prerecalesce_stiffCV.resize(num_materials);
@@ -4204,6 +4206,9 @@ NavierStokes::read_params ()
      tension_T0[i]=293.0;
      tension_min[i]=0.0;
      cap_wave_speed[i]=0.0;
+    }
+    for (int i=0;i<num_materials;i++) {
+     visc_wave_speed[i]=0.0;
     }
 
     for (int i=0;i<2*AMREX_SPACEDIM;i++) {
@@ -5792,6 +5797,11 @@ NavierStokes::read_params ()
 
      std::cout << "unscaled_min_curvature_radius=" << 
 	      unscaled_min_curvature_radius << '\n';
+
+     for (int i=0;i<num_materials;i++) {
+      std::cout << "initial visc_wave_speed i=" << i << "  " << 
+        visc_wave_speed[i] << '\n';
+     }
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 
@@ -21777,9 +21787,11 @@ void NavierStokes::MaxAdvectSpeed(
  }
 
  Vector< Vector<Real> > local_cap_wave_speed;
+ Vector< Vector<Real> > local_visc_wave_speed;
  Vector< Vector<Real> > local_vel_max_estdt;
  Vector< Real > local_dt_min;
  local_cap_wave_speed.resize(thread_class::nthreads);
+ local_visc_wave_speed.resize(thread_class::nthreads);
  local_vel_max_estdt.resize(thread_class::nthreads);
 
  local_dt_min.resize(thread_class::nthreads);
@@ -21787,8 +21799,12 @@ void NavierStokes::MaxAdvectSpeed(
  for (int tid=0;tid<thread_class::nthreads;tid++) {
 
   local_cap_wave_speed[tid].resize(num_interfaces); 
+  local_visc_wave_speed[tid].resize(num_materials); 
   for (int iten=0;iten<num_interfaces;iten++) {
    local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
+  }
+  for (int iten=0;iten<num_materials;iten++) {
+   local_visc_wave_speed[tid][iten]=visc_wave_speed[iten];
   }
 
   local_vel_max_estdt[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
@@ -21904,6 +21920,7 @@ void NavierStokes::MaxAdvectSpeed(
     &explicit_viscosity_dt,
     &min_stefan_velocity_for_dt,
     local_cap_wave_speed[tid_current].dataPtr(),
+    local_visc_wave_speed[tid_current].dataPtr(),
     local_vel_max_estdt[tid_current].dataPtr(),
     &local_dt_min_thread,
     &NS_geometry_coord,
@@ -21935,6 +21952,10 @@ void NavierStokes::MaxAdvectSpeed(
     if (local_cap_wave_speed[tid][iten]>local_cap_wave_speed[0][iten])
      local_cap_wave_speed[0][iten]=local_cap_wave_speed[tid][iten];
 
+   for (int iten=0;iten<num_materials;iten++)
+    if (local_visc_wave_speed[tid][iten]>local_visc_wave_speed[0][iten])
+     local_visc_wave_speed[0][iten]=local_visc_wave_speed[tid][iten];
+
    if (local_dt_min[tid]<local_dt_min[0])
     local_dt_min[0]=local_dt_min[tid];
 
@@ -21950,6 +21971,9 @@ void NavierStokes::MaxAdvectSpeed(
   for (int iten=0;iten<num_interfaces;iten++) {
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
   }
+  for (int iten=0;iten<num_materials;iten++) {
+   ParallelDescriptor::ReduceRealMax(local_visc_wave_speed[0][iten]);
+  }
 
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][dir]);
   ParallelDescriptor::ReduceRealMax(local_vel_max_estdt[0][AMREX_SPACEDIM]);
@@ -21963,6 +21987,9 @@ void NavierStokes::MaxAdvectSpeed(
 
  for (int iten=0;iten<num_interfaces;iten++) {
   cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
+ }
+ for (int iten=0;iten<num_materials;iten++) {
+  visc_wave_speed[iten]=local_visc_wave_speed[0][iten];
  }
 
  for (int dir=0;dir<=AMREX_SPACEDIM;dir++) {

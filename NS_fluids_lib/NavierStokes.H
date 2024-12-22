@@ -1694,6 +1694,7 @@ protected:
     static Vector<Real> outflow_velocity_buffer_size;
 
     static Vector<Real> cap_wave_speed; // num_interfaces components
+    static Vector<Real> visc_wave_speed; // num_materials components
 
     static Real real_number_of_cells;
 

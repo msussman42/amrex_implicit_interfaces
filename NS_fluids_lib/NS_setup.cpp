@@ -2673,6 +2673,11 @@ NavierStokes::sum_integrated_quantities (
 	   " AMR_min_phase_change_rate=" <<
 	   parent->AMR_min_phase_change_rate[dir] << '\n';
   } // dir=0..sdim-1
+    
+  for (int iten=0;iten<num_materials;iten++) {
+   std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
+     " visc_wave_speed=" << visc_wave_speed[iten] << '\n';
+  }
 
   for (int iten=0;iten<num_interfaces;iten++) {
    std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
