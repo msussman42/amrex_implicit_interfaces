@@ -17693,6 +17693,12 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("dir_absolute_direct_split invalid");
  }
 
+ Vector< int > grids_per_proc;
+ grids_per_proc.resize(amrex::ParallelDescriptor::NProcs());
+ for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
+  grids_per_proc[iproc]=0;
+ }
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
@@ -17779,6 +17785,10 @@ NavierStokes::split_scalar_advection() {
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  if (tid_current==0) {
+   grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
+  }
 
    // solid distance function and solid moments are not modified.
    // solid temperature is modified only if solidheat_flag==0.
@@ -17875,6 +17885,17 @@ NavierStokes::split_scalar_advection() {
  }  // mfi
 } // omp
  ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
+
+ for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
+  ParallelDescriptor::ReduceIntSum(grids_per_proc[iproc]);
+  if (grids_per_proc[iproc]>0) {
+   //do nothing
+  } else {
+   std::cout << "level= " << level << " iproc= " << iproc << 
+    " grids_per_proc[iproc] " << grids_per_proc[iproc] << '\n';
+   amrex::Error("cannot have a dormant processor");
+  }
+ }
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   nprocessed[0]+=nprocessed[tid];
