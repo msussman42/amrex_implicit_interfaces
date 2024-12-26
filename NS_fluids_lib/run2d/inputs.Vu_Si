@@ -1,32 +1,35 @@
 #TEMPLATE: Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
 #THIS FILE: (Silicon freezing, Figure 6)
-#Vu, Tryggvason, Homma, Wells, Takakura, J. Chem. Eng. of Japan, Vol 46(11)
+#Vu, Tryggvason, Homma, Wells, Takakura, J. Chem. Eng. of Japan, Vol 46(11) 2013
 #See also Satunkin (2003), Figure 15e, r0=5.1mm z0=3.6mm 
 #wetting angle=33 degrees
 #Pr=0.013 St=0.116 Bo=1.32 We=0.05 k_sl=0.5
+#k_gl=1.52e+5/152.3e+5=0.00998
 #k_gl=0.01  Cp=1 mu_sl=5 mu_gl=0.05 rho_sl=0.91 rho_gl=0.05
 #St=Stefan=cp(Tm-Tc)/L_h
-#time scale=tau_c=rho_l C_pl R^2/k_l  R=wetting radius
+#time scale=tau_c=rho_l C_pl R^2/k_l=(2.583)(9.1e+6)(0.51^2)/152.3e+5=0.4014   R=wetting radius
 #(g/cm^3)(erg/(g K))cm^2/(erg/(s cm K))=
 #(g erg cm^2 s cm K)/(cm^3 g K erg)=s
-#U_c=R/tau_c
-#Pr=C_pl mu_l/k_l
-#Bo=rho_l g R^2/sigma
-#We=rho_l U_c^2 R/sigma
-#theta=(T-T_c)/(T_h-T_c)
+#U_c=R/tau_c=0.51/0.4014=1.27
+#Pr=C_pl mu_l/k_l=(9.1e+6)(21.8e-3)/152.3e+5=0.013
+#Bo=rho_l g R^2/sigma=2.583(980)(.51^2)/500.0=1.317
+#We=rho_l U_c^2 R/sigma=2.583(1.27^2)(.51)/500.0=0.0042 (numerical We=0.05)
+#Re=rho_l R U_c/mu_l=2.583(0.51)1.27/21.8e0-3=76.74
+#theta=TSAT+(T-TSAT)/(TSAT-TCOLD)=273.0 + (T-273.0)/(273-263)
 #pages 726-731, 2013.
+#Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
+#  (1/We)sigma kappa grad H/rho+(Bo/We)*g
+#(rho cp theta)_t+div(rho cp u theta)=(1/(Pr Re))div k grad theta
 max_step  =  9999999    # maximum timestep
 
-stop_time = 4.0 # tau=1.2 tau_c=1.4  time=1.2 x 1.4 = 1.7 seconds
+stop_time = 4.0 
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-# R=1 => corresponds to drop base radius at initial time.
-# R_dimensional=(1)(9.5D-3 meters)=9.5 mm=0.95 cm
-geometry.prob_hi=2.0 2.0  # centimeters
+geometry.prob_hi=1.2 1.2 #NONDIM
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -34,12 +37,14 @@ ns.EILE_flag=-1
 ns.minimum_relative_error=1.0e-22
 #number of iterations to get the initial guess. 
 #NavierStokes::jacobi_cycles (update_vel==1)
-ns.initial_project_cycles=100 
+ns.initial_project_cycles=5
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
+
 ns.num_species_var=0
+
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
@@ -82,10 +87,9 @@ amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8  # block factor in grid generation
-amr.check_int       = 400
-#amr.check_int       = 10000  # static freezing test 10 
+#amr.check_int       = 500
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 400
+amr.plot_int        = 500
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -102,16 +106,10 @@ mac.mac_abs_tol    = 1.0e-13
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
-ns.visc_coef      = 1.0
-ns.explicit_viscosity_dt=1
+ns.visc_coef      = 0.013  #(1/Re) (NONDIM)
+ns.explicit_viscosity_dt=1.0
 mac.visc_abs_tol  = 1.0e-10
-#EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
-#gravity and surface tension forces are both reduced by the same orders of
-#magnitude.  A factor of 10 reduction is ok for the Silicone freezing
-#test problem.
-#Vu et al did the same thing by using the realistic Bond number, and increasing
-#the Weber number by a factor of 10.
-ns.gravity        = -980.0e-3
+ns.gravity        = -26.34  #Bo/We
 ns.incremental_gravity_flag=0
 
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
@@ -125,22 +123,16 @@ ns.incremental_gravity_flag=0
 # let sigma_{SG}=sigma_{LG} =>
 # 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
 # sigma_SL = sigma_LG * (1-cos(theta_L))
-# theta_L=25 degrees sigma_SL=sigma_LG * (1-cos(25))=163.0
-# theta_L=30 degrees sigma_SL=sigma_LG * (1-cos(30))=233.1
-# theta_L=33 degrees sigma_SL=sigma_LG * (1-cos(33))=280.7
-# theta_L=35 degrees sigma_SL=sigma_LG * (1-cos(35))=315.0
-# theta_L=40 degrees sigma_SL=sigma_LG * (1-cos(40))=407.1
-# theta_L=44 degrees sigma_SL=sigma_LG * (1-cos(44))=488.3
-# theta_L=70 degrees sigma_SL=sigma_LG * (1-cos(70))=1144.9
-# theta_L=135 degrees sigma_SL=sigma_LG * (1-cos(135))=2970.4
+# 3.23=20(1-cos(theta_L))
+# theta_L=acos(1-3.23/20)=33.02 degrees
 #
 # sigma_IG-sigma_IL=sigma_LG cos(25)
 # sigma_IG=sigma_LG=1740e-3
 # sigma_IL=sigma_LG(1-cos(25))=163.0
 # LG,LI,LS,IG,GS,SI  
-ns.radblob9=0.5
-ns.tension=      1740.0e-3 2970.4e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
-ns.tension_init= 1740.0e-3 280.7e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
+ns.radblob9=0.5 # transition time from the wetting initial contact angle to the "non-wetting" case.
+ns.tension=      20.0 11.72 3.23 20.0 20.0 0.0
+ns.tension_init= 20.0 3.23  3.23  20.0 20.0 0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -149,7 +141,7 @@ ns.tension_init= 1740.0e-3 280.7e-3 280.7e-3 1740.0e-3 1740.0e-3  0.0
 # material 1=liquid 2=gas  3=ice 4=solid  
 # Cp_s/Cp_l=0.48
 # Pr=Cp_l mu_l/k_l=4.2e+3 * 1.7e-3 / 0.55 = 13.0
-ns.stiffCP = 9.10e+6 9.10e+6 9.10e+6 9.10e+6 # dimensional erg/(g K)
+ns.stiffCP = 1.0 1.0 1.0 1.0 # dimensional erg/(g K)
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
 # <0 if condensation or solidification
@@ -157,10 +149,8 @@ ns.stiffCP = 9.10e+6 9.10e+6 9.10e+6 9.10e+6 # dimensional erg/(g K)
 # latent_heat[2*max_num_tension]
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
-# St=Cp_l(T_m - T_c)/L=4.2e+3 * 2/3.34e+5 = 0.025
 # St=Cp_l(T_m - T_c)/L=9.1e+6 * 230.0/18.1e+9 = 0.116
-#ns.latent_heat = 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
-ns.latent_heat = 0.0 -18.05e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -8.62 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 #default: Stefan model
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0 
 # 1->2 liquid-> gas
@@ -170,7 +160,7 @@ ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 0.0 1683.4 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
 #ns.fixed_dt	  = 0.01     # hardwire dt
-ns.sum_interval   = 10        # timesteps between computing mass 
+ns.sum_interval   = 5        # timesteps between computing mass 
 
 # initial droplet with small layer of ice at its bottom, on a solid substrate.
 # probtype=55 (GENERAL_PHASE_CHANGE.F90)
@@ -193,40 +183,35 @@ ns.material_type=0 0 0 999
 # water: k=0.58 W/(M K)
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
 # k_s/k_l=2.2/0.55=4.0
-ns.heatviscconst=152.3e+5 1.52e+5 76.2e+5 76.2e+5 # erg/(s cm K)
+ns.heatviscconst=1.0 0.01 0.5 0.5
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 76.2e+5
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 0.5
 # 1 Pa = 10 CGS
 
 ns.uncoupled_viscosity=0
-#increase the Reynolds number by factor of 100.
-#ns.viscconst=21.8e-3 1.08e-3 1.0 1000.0 # derive CGS:  CGS= Pa s x 10
-ns.viscconst=21.8e-1 1.08e-1 1.0 1.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=1.0 0.05 5.0 1.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #SUSSMAN JAN20 2023
-ns.denconst=2.583 0.129 2.350 10.0 #physical values of denconst
-#ns.denconst=1.0 0.00129 0.850 10.0 
+ns.denconst=1.0 0.05 0.91 10.0
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-#instead of T=271.0 (-2 test plate), try -3,-4,-5,-6
-ns.tempconst=          1683.4 1683.4 1453.0 1453.0
-ns.initial_temperature=1683.4 1683.4 1453.0 1453.0
+ns.tempconst=          1683.4 1683.4 1682.4 1682.4
+ns.initial_temperature=1683.4 1683.4 1682.4 1682.4
 ns.xblob3=1683.4 #force ambient temperature condition on all walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
-ns.yblob=0.125 # 4 * dxcoarse = 4 * 2 /64=1/8
+ns.yblob=0.15  # 4 cells of 1.2/32 size
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.125
+ns.yblob2=0.15  # 4 cells of 1.2/32 size
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-# 0.0625 = 0.125/2
-ns.radblob3=0.0625 #dimensionless 2*dxcoarse=4/64=1/16
+ns.radblob3=0.0375  # 2 * 1.2/64=0.0375
 # volume of initial water+ice drop: volume=(1/2)  (4/3)pi r^3=
 # (1/2) (4/3)pi(6x10^{-1})^3=4 x 36 x pi x 10^{-3} = 0.452cm^3
 #ns.zblob4=0.25
@@ -234,9 +219,8 @@ ns.radblob3=0.0625 #dimensionless 2*dxcoarse=4/64=1/16
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #r_{base}: 400 microns, height: 250 microns
-#Vu et al: r_{base} = 9.5D-3 meters=0.95 cm
-ns.radblob=0.6 # centimeters(radblob is effective hemispherical radius)
-               # r_base=0.95cm
+#see effective_radius.f
+ns.radblob=0.612 # (radblob is effective hemispherical radius/wetting radius)
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55 #GENERAL_PHASE_CHANGE.F90

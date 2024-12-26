@@ -13,7 +13,8 @@
        !wetting radius if angle=90 degrees
       effective_hemi_r=(3.0*vol/(2.0*mypi))**0.33333d0
       static_angle=mypi/2.0d0
-      static_angle=mypi*50.0/180.0
+c     static_angle=mypi*50.0/180.0
+      static_angle=mypi*33.0/180.0
       angle_term=(2.0+cos(static_angle))*((1.0-cos(static_angle))**2)/
      &  (3.0*sin(static_angle)**3)
 
@@ -35,6 +36,8 @@
       print *,"vert= ",vert
       print *,"height= ",height
       print *,"virtual_sphere_radius= ",virtual_sphere_radius
+      print *,"effective hemi rad/wetting rad=",
+     &  effective_hemi_r/wetting_radius
       sanity_vol=mypi*height*(3.0*(wetting_radius**2)+height**2)/6.0
       print *,"sanity_vol=",sanity_vol
       sanity_vol2=mypi*(height**2)*(3.0*virtual_sphere_radius-height)/3.0

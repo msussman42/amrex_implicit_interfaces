@@ -16,7 +16,7 @@
 #Bo=rhoL g R^2 / sigma = 1.0 (980) R^2/72.8=0.5385
 #Re=rhoL U R/mu_L=(1.0)(0.006)(.2cm)/(1.79e-2)=0.067
 #We=rhoL U^2 R/sigma=(1)(0.006^2)(.2 cm)/72.8=9.93e-8
-#TRY We=1/100
+#TRY We=1/10
 #Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
 #  (1/We)sigma kappa grad H/rho+(Bo/We)*g
 #(rho cp theta)_t+div(rho cp u theta)=(1/(Pr Re))div k grad theta
@@ -31,10 +31,6 @@
 #8. modify We so that capillary wave speeds comparable to freezing speed.
 #9. modify Re so that explicity viscosity stability constraint is comparable
 #   to the surface tension stability constraint.
-#capillary wave speed: sqrt( n(n-1)(n+2) surface_tension/(rho R) )
-#n=32  capillary wave speed=3503.85 cm/s
-#U=3503.85 cm/s or choose U such that We=1:
-#rhoL U^2 R/sigma=1  U=sqrt( sigma/(R rhoL) )=19.08 cm/s
 #tau_c=rhoL C_{pL} R^2 /kL=(1)(4.22e+7)(.2^2)/(.516e+5)=32.71
 #U=R/tau_c=0.2/32.71=0.006 cm/s
 max_step  =  9999999    # maximum timestep
@@ -125,11 +121,11 @@ ns.change_max     = 1.01
 #ns.visc_coef      = 1.0  #(1/Re)
 ns.visc_coef      = 14.93  #(1/Re) (NONDIM)
 ns.heatvisc_coef=1.0     # (1/(Pr Re)
-ns.explicit_viscosity_dt=1.0
+ns.explicit_viscosity_dt=20.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
 #ns.gravity        = -981.0e-5
-ns.gravity        = -0.5385e+2 #NONDIM
+ns.gravity        = -0.5385e+1 #NONDIM We=1/10  Bo=0.5385  (Bo/We)
 ns.incremental_gravity_flag=0
 ns.invert_gravity=1
 
@@ -162,8 +158,8 @@ ns.radblob9=0.5
 #x=72.8*(1-cos(50 deg))=26.0
 #ns.tension=      72.8 26.0 26.0 72.8 72.8 0.0 
 #ns.tension_init= 72.8 26.0 26.0 72.8 72.8 0.0
-ns.tension=      100.0 35.7 35.7 100.0 100.0 0.0 
-ns.tension_init= 100.0 35.7 35.7 100.0 100.0 0.0 
+ns.tension=      10.0 3.57 3.57 10.0 10.0 0.0 
+ns.tension_init= 10.0 3.57 3.57 10.0 10.0 0.0 
 
 #sigma_IL+sigma_LG cos(50)=sigma_IG  sigma_IG=sigma_LG
 #sigma_IL=sigma_LG(1-cos(50))=27.0
@@ -260,17 +256,14 @@ ns.initial_temperature=273.0 275.0 273.0 272.0
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
 # dxcoarse=0.4/64
-#ns.yblob=0.01875 #4*dxcoarse=3.125e-3 #align w/ grid
-ns.yblob=0.09375 #4*dxcoarse=3.125e-3 #align w/ grid
+ns.yblob=0.15  # 4 cells of 1.2/32 size
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-#ns.yblob2=0.01875 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
-ns.yblob2=0.09375 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
+ns.yblob2=0.15 # 4 cells of 1.2/32 size
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-#ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
-ns.radblob3=0.046875 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
+ns.radblob3=0.0375  # 2 * 1.2/64=0.0375
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # (1/2) (4/3) pi (0.15631)^3=0.007999
 # (1/2) (4/3) pi (0.142)^3=0.006
