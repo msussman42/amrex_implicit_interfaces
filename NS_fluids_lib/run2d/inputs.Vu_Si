@@ -16,6 +16,7 @@
 #Bo=rho_l g R^2/sigma=2.583(980)(.51^2)/500.0=1.317
 #We=rho_l U_c^2 R/sigma=2.583(1.27^2)(.51)/500.0=0.0042 (numerical We=0.05)
 #Re=rho_l R U_c/mu_l=2.583(0.51)1.27/21.8e0-3=76.74
+#Pr * Re = 0.013 * 76.74=1.0
 #theta=TSAT+(T-TSAT)/(TSAT-TCOLD)=273.0 + (T-273.0)/(273-263)
 #pages 726-731, 2013.
 #Du/Dt = -grad p/rho + (1/Re)div(2 mu D) +
@@ -107,6 +108,7 @@ ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 0.013  #(1/Re) (NONDIM)
+ns.heatvisc_coef  = 1.0  #(1/(Pr Re)) (NONDIM)  Pr * Re=0.013 * 76.74=1.0
 ns.explicit_viscosity_dt=1.0
 mac.visc_abs_tol  = 1.0e-10
 ns.gravity        = -26.34  #Bo/We
