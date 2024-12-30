@@ -270,6 +270,19 @@ AmrCore::InitAmr () {
   std::cout << "Amr.verbose= " << verbose << '\n';
  }
 
+ LSA_nsteps_power_method=0;
+ pp.queryAdd("LSA_nsteps_power_method",LSA_nsteps_power_method);
+ if (LSA_nsteps_power_method>=0) {
+  //do nothing
+ } else
+  amrex::Error("expecting LSA_nsteps_power_method>=0");
+
+ LSA_current_step=0;
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "Amr.LSA_nsteps_power_method= " << 
+    LSA_nsteps_power_method  << '\n';
+ }
+
   //AmrCore::Initialize ()
  pp.queryAdd("plotfile_on_restart",plotfile_on_restart);
   //AmrCore::Initialize ()
@@ -490,6 +503,19 @@ AmrCore::InitAmr () {
   }
 
  }
+
+ if (LSA_nsteps_power_method==0) {
+  if (regrid_int>=0) {
+   //do nothing
+  } else
+   amrex::Error("expecting regrid_int>=0");
+ } else if (LSA_nsteps_power_method>=1) {
+  if (regrid_int==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting regrid_int==0");
+ } else
+  amrex::Error("expecting LSA_nsteps_power_method>=0");
 
  Vector<int> n_cell(AMREX_SPACEDIM);
  pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
@@ -1506,8 +1532,16 @@ AmrCore::timeStep (Real time,
 }  // subroutine timeStep
 
 void
-AmrCore::coarseTimeStep (Real stop_time)
+AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in)
 {
+
+    LSA_current_step=LSA_current_step_in;
+    if ((LSA_current_step>=0)&&
+        (LSA_current_step<=LSA_nsteps_power_method)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_current_step invalid");
+
     const double run_strt = ParallelDescriptor::second() ;
 
     //SUSSMAN
