@@ -17085,7 +17085,10 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       blob_array.dataPtr(),
       &blob_array_size,
       &num_colors,
-      &project_option_visc);
+      &project_option_visc,
+      &FSI_outer_sweeps,
+      &num_FSI_outer_sweeps,
+      im_elastic_map.dataPtr());
     }   // mfi
 } // omp
     ns_reconcile_d_num(LOOP_CELL_TO_MAC_ISCHEME_MAC,"SEM_scalar_advection");

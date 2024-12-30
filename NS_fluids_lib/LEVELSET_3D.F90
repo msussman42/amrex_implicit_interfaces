@@ -13493,7 +13493,10 @@ stop
        blob_array, &
        blob_array_size, &
        num_colors, &
-       project_option) &
+       project_option, &
+       FSI_outer_sweeps, &
+       num_FSI_outer_sweeps, &
+       im_elastic_map) &
       bind(c,name='fort_cell_to_mac')
 
       use global_utility_module
@@ -13560,6 +13563,9 @@ stop
       integer, INTENT(in) :: rz_flag
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       integer, INTENT(in) :: project_option
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
 
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
@@ -13993,6 +13999,7 @@ stop
         stop
        endif
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
+
        if ((energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
             POTGRAD_SURFTEN_INCREMENTAL_GRAV).or. &
            (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
@@ -14008,11 +14015,22 @@ stop
         print *,"energyflag invalid OP_POTGRAD_TO_MAC: ",energyflag
         stop
        endif
-       if ((ncomp_xp.ne.1).or. &
-           (ncomp_xgp.ne.1)) then
-        print *,"ncomp_xp or ncomp_xgp invalid"
+
+       if ((FSI_outer_sweeps.ge.0).and. &
+           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+        !do nothing
+       else
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        print *,"or, num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
         stop
        endif
+
+       if ((ncomp_xp.ne.1).or. &
+           (ncomp_xgp.ne.1)) then
+        print *,"ncomp_xp or ncomp_xgp invalid: ",ncomp_xp,ncomp_xgp
+        stop
+       endif
+
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 

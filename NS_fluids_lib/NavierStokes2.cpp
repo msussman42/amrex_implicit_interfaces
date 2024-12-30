@@ -2257,7 +2257,10 @@ void NavierStokes::init_divup_cell_vel_cell(
     blob_array.dataPtr(),
     &blob_array_size,
     &num_colors,
-    &project_option);
+    &project_option, 
+    &FSI_outer_sweeps,
+    &num_FSI_outer_sweeps,
+    im_elastic_map.dataPtr());
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_PRES_CELL_TO_MAC,"init_divup_cell_vel_cell");
@@ -3168,7 +3171,10 @@ void NavierStokes::increment_face_velocity(
        blob_array.dataPtr(),
        &blob_array_size,
        &num_colors,
-       &project_option);
+       &project_option,
+       &FSI_outer_sweeps,
+       &num_FSI_outer_sweeps,
+       im_elastic_map.dataPtr());
     } // mfi
 } // omp
     ns_reconcile_d_num(LOOP_VEL_CELL_TO_MAC,"increment_face_velocity");
@@ -4930,7 +4936,10 @@ void NavierStokes::apply_pressure_grad(
      blob_array.dataPtr(),
      &blob_array_size,
      &num_colors,
-     &project_option);
+     &project_option, 
+     &FSI_outer_sweeps,
+     &num_FSI_outer_sweeps,
+     im_elastic_map.dataPtr());
 
    }  // mfi
 } // omp
@@ -6328,6 +6337,7 @@ void NavierStokes::process_potential_force_face(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
    int ncphys_proxy=FACECOMP_NCOMP;
 
+   //xface,levelPC,pres,den,mgoni,xgp 
    // process_potential_force_face 
    fort_cell_to_mac( 
     &ncomp_mgoni,
@@ -6360,7 +6370,7 @@ void NavierStokes::process_potential_force_face(
     ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
     maskSEMfab.dataPtr(),
     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-    levelpcfab.dataPtr(),
+    levelpcfab.dataPtr(), //levelpc
     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
     solfab.dataPtr(),
     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
@@ -6371,9 +6381,9 @@ void NavierStokes::process_potential_force_face(
     xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //xvel
     presdenfab.dataPtr(),
     ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), //vel
-    presdenfab.dataPtr(0),  // HYDROSTATIC_PRESSURE
+    presdenfab.dataPtr(0),  // HYDROSTATIC_PRESSURE (pres)
     ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
-    presdenfab.dataPtr(1),  // HYDROSTATIC_DENSITY
+    presdenfab.dataPtr(1),  // HYDROSTATIC_DENSITY (den)
     ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()), 
     mgonifab.dataPtr(), // mgoni
     ARLIM(mgonifab.loVect()),ARLIM(mgonifab.hiVect()), 
@@ -6393,7 +6403,10 @@ void NavierStokes::process_potential_force_face(
     blob_array.dataPtr(),
     &blob_array_size,
     &num_colors,
-    &project_option);
+    &project_option,
+    &FSI_outer_sweeps,
+    &num_FSI_outer_sweeps,
+    im_elastic_map.dataPtr());
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_POTGRAD_TO_MAC,"process_potential_force_face");
