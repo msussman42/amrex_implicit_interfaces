@@ -66,6 +66,12 @@ public:
     Vector<Real> AMR_max_phase_change_rate;
     Vector<Real> AMR_min_phase_change_rate;
 
+    int LSA_nsteps_power_method;
+
+     //LSA_current_step=0 => define q_np1
+     //1<=LSA_current_step<=LSA_nsteps_power_method => power method
+    int LSA_current_step; 
+
     Vector<Real> AMR_volume_history;
     int AMR_volume_history_recorded;
 
@@ -97,7 +103,7 @@ public:
     //
     // Do a complete integration cycle.
     //
-    virtual void coarseTimeStep (Real stop_time);
+    virtual void coarseTimeStep (Real stop_time,int LSA_current_step_in);
     //
     // Name of the restart file.
     //

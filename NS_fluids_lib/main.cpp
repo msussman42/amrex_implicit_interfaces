@@ -110,6 +110,15 @@ fork_job(int fork_id) {
  amrex::Real stop_time;
 
  ParmParse pp;
+ ParmParse ppamr("amr");
+
+ int local_LSA_nsteps_power_method=0;
+ ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
+ if (local_LSA_nsteps_power_method>=0) {
+  //do nothing
+ } else
+  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+
 
  max_step  = -1;    
  strt_time =  0.0;  
@@ -159,30 +168,39 @@ fork_job(int fork_id) {
 
  amrex::ParallelDescriptor::Barrier();
 
+ for (int LSA_current_step=0;
+      LSA_current_step<=local_LSA_nsteps_power_method;
+      LSA_current_step++) {
+
    // if not subcycling then levelSteps(level) is independent of "level"
    // initially, cumTime()==0.0
- while ( amrptr->okToContinue()           &&
-        (amrptr->levelSteps(0) < max_step || max_step < 0) &&
-        (amrptr->cumTime() < stop_time || stop_time < 0.0) )
- {
-  amrex::ParallelDescriptor::Barrier();
-  std::fflush(NULL);
-  BL_PROFILE_INITIALIZE();
-  std::fflush(NULL);
+   // if LSA_current_step>=1, then reset:
+   // cumTime,levelSteps,initial state
+  while ( amrptr->okToContinue()           &&
+         (amrptr->levelSteps(0) < max_step || max_step < 0) &&
+         (amrptr->cumTime() < stop_time || stop_time < 0.0) ) {
+   amrex::ParallelDescriptor::Barrier();
+   std::fflush(NULL);
+   BL_PROFILE_INITIALIZE();
+   std::fflush(NULL);
 
    // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
-  amrptr->coarseTimeStep(stop_time); // synchronizes internally
+   amrptr->coarseTimeStep(stop_time,LSA_current_step);//synchronizes internally
 
-  amrex::ParallelDescriptor::Barrier();
-  std::fflush(NULL);
-  BL_PROFILE_FINALIZE();
-  std::fflush(NULL);
-  std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
+   amrex::ParallelDescriptor::Barrier();
+   std::fflush(NULL);
+   BL_PROFILE_FINALIZE();
+   std::fflush(NULL);
+   std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
     amrex::ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
-  std::fflush(NULL);
-  amrex::Sleep(sleepsec);
+   std::fflush(NULL);
+   amrex::Sleep(sleepsec);
+   amrex::ParallelDescriptor::Barrier();
+  }
   amrex::ParallelDescriptor::Barrier();
- }
+
+ }  //LSA_current_step=0 .... local_LSA_nsteps_power_method
+
  amrex::ParallelDescriptor::Barrier();
 
  delete amrptr;
@@ -238,7 +256,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, Dec 30, 2024, 12:01 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Dec 30, 2024, 16:01 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
