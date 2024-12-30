@@ -127,6 +127,17 @@ fork_job(int fork_id) {
  double sleepsec=0.0;
 
  pp.queryAdd("max_step",max_step);
+
+ if (local_LSA_nsteps_power_method==0) {
+  //do nothing
+ } else if (local_LSA_nsteps_power_method>0) {
+  if ((max_step>=1)&&(max_step<9999)) {
+   //do nothing
+  } else
+   amrex::Error("expecting 1<=max_step<9999");
+ } else
+  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+
  pp.queryAdd("strt_time",strt_time);
  pp.queryAdd("stop_time",stop_time);
 
@@ -256,7 +267,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, Dec 30, 2024, 16:01 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Dec 30, 2024, 17:01 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
