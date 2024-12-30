@@ -277,7 +277,10 @@ namespace amrex{
         Real* blob_array,
         int* blob_array_size,
         int* num_colors,
-        int* project_option);
+        int* project_option,
+	int* FSI_outer_sweeps,
+	int* num_FSI_outer_sweeps,
+        int* im_elastic_map);
 
       void fort_project_to_rigid_velocity(
         int* dir, //dir=0,1,2
