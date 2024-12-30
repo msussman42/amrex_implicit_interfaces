@@ -17896,7 +17896,7 @@ NavierStokes::split_scalar_advection() {
   } else {
    std::cout << "level= " << level << " iproc= " << iproc << 
     " grids_per_proc[iproc] " << grids_per_proc[iproc] << '\n';
-   amrex::Error("cannot have a dormant processor");
+   amrex::Error("cannot have a dormant/idle processor on any level");
   }
  }
 
