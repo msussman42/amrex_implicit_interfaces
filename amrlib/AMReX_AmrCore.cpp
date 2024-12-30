@@ -508,7 +508,7 @@ AmrCore::InitAmr () {
   if (regrid_int>=1) {
    //do nothing
   } else
-   amrex::Error("expecting regrid_int>=0");
+   amrex::Error("expecting regrid_int>=1");
  } else if (LSA_nsteps_power_method>=1) {
   if (regrid_int==9999) {
    //do nothing
