@@ -505,15 +505,15 @@ AmrCore::InitAmr () {
  }
 
  if (LSA_nsteps_power_method==0) {
-  if (regrid_int>=0) {
+  if (regrid_int>=1) {
    //do nothing
   } else
    amrex::Error("expecting regrid_int>=0");
  } else if (LSA_nsteps_power_method>=1) {
-  if (regrid_int==0) {
+  if (regrid_int==9999) {
    //do nothing
   } else
-   amrex::Error("expecting regrid_int==0");
+   amrex::Error("expecting regrid_int==9999");
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
 
