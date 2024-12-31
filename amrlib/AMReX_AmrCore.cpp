@@ -222,6 +222,7 @@ AmrCore::InitAmr () {
 
  ParmParse ppns("ns");
  ParmParse pp("amr");
+ ParmParse ppmain;
 
  AMR_max_phase_change_rate.resize(AMREX_SPACEDIM);
  AMR_min_phase_change_rate.resize(AMREX_SPACEDIM);
@@ -510,10 +511,18 @@ AmrCore::InitAmr () {
   } else
    amrex::Error("expecting regrid_int>=1");
  } else if (LSA_nsteps_power_method>=1) {
-  if (regrid_int==9999) {
+  int local_max_step=-1;
+  ppmain.queryAdd("max_step",local_max_step);
+  if (local_max_step>=1) {
    //do nothing
   } else
-   amrex::Error("expecting regrid_int==9999");
+   amrex::Error("expecting local_max_step>=1");
+
+  if (regrid_int>local_max_step) {
+   //do nothing
+  } else
+   amrex::Error("expecting regrid_int>local_max_step");
+
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
 
@@ -1530,6 +1539,21 @@ AmrCore::timeStep (Real time,
  }
 
 }  // subroutine timeStep
+
+void
+AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
+  Real initial_cumTime,int initial_levelSteps) {
+
+ for (int ilev=0;ilev<finest_level;ilev++) {
+  level_steps[ilev]=initial_levelSteps;
+ }
+ cumtime=initial_cumTime;
+ amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
+ for (int ilev = 0; ilev <= finest_level; ilev++) {
+  amr_level[ilev]->setTimeLevel(cumtime,dt_AMR);
+ }
+
+} //end subroutine rewindTimeStep
 
 void
 AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in)

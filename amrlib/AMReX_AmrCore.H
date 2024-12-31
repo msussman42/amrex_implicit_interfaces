@@ -104,6 +104,8 @@ public:
     // Do a complete integration cycle.
     //
     virtual void coarseTimeStep (Real stop_time,int LSA_current_step_in);
+    virtual void rewindTimeStep (Real stop_time,int LSA_current_step_in,
+      Real initial_cumTime,int initial_levelSteps);
     //
     // Name of the restart file.
     //
