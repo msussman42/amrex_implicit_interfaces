@@ -1544,7 +1544,7 @@ void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   Real initial_cumTime,int initial_levelSteps) {
 
- for (int ilev=0;ilev<finest_level;ilev++) {
+ for (int ilev=0;ilev<=finest_level;ilev++) {
   level_steps[ilev]=initial_levelSteps;
  }
  cumtime=initial_cumTime;
