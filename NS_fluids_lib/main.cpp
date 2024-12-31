@@ -111,6 +111,7 @@ fork_job(int fork_id) {
 
  ParmParse pp;
  ParmParse ppamr("amr");
+ ParmParse ppns("ns");
 
  int local_LSA_nsteps_power_method=0;
  ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
@@ -128,13 +129,23 @@ fork_job(int fork_id) {
 
  pp.queryAdd("max_step",max_step);
 
+ Real local_fixed_dt=0.0;
+
  if (local_LSA_nsteps_power_method==0) {
   //do nothing
  } else if (local_LSA_nsteps_power_method>0) {
-  if ((max_step>=1)&&(max_step<9999)) {
+
+  if (max_step>=1) {
    //do nothing
   } else
-   amrex::Error("expecting 1<=max_step<9999");
+   amrex::Error("expecting 1<=max_step");
+
+  ppns.queryAdd("fixed_dt",local_fixed_dt);
+  if (local_fixed_dt>0.0) {
+   //do nothing
+  } else
+   amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
+
  } else
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
 
@@ -146,10 +157,9 @@ fork_job(int fork_id) {
  if (strt_time < 0.0)
   amrex::Abort("MUST SPECIFY a non-negative strt_time");
 
- if (max_step < 0 && stop_time < 0.0)
- {
-     amrex::Abort(
-         "Exiting because neither max_step nor stop_time is non-negative.");
+ if (max_step < 0 && stop_time < 0.0) {
+  amrex::Abort(
+   "Exiting because neither max_step nor stop_time is non-negative.");
  }
 
   // NavierStokes.cpp (fortran_parameters) ->
@@ -178,6 +188,32 @@ fork_job(int fork_id) {
  amrptr->init(strt_time,stop_time);
 
  amrex::ParallelDescriptor::Barrier();
+
+ Real initial_cumTime=amrptr->cumTime();
+ int initial_levelSteps=amrptr->levelSteps(0);
+ int LSA_steps=max_step-initial_levelSteps;
+
+ if (local_LSA_nsteps_power_method==0) {
+  //do nothing
+ } else if (local_LSA_nsteps_power_method>0) {
+  if (initial_cumTime>0.0) {
+   //do nothing
+  } else
+   amrex::Error("LSA: expecting initial_cumTime>0.0");
+ 
+  if ((LSA_steps>0)&&(LSA_steps<9999)) {
+   //do nothing
+  } else
+   amrex::Error("LSA: expecting 0<LSA_steps<9999");
+
+  if (initial_cumTime+local_fixed_dt*LSA_steps<=stop_time) {
+   //do nothing
+  } else
+   amrex::Error(
+    "LSA: need initial_cumTime+local_fixed_dt*LSA_steps<=stop_time");
+
+ } else
+  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
 
  for (int LSA_current_step=0;
       LSA_current_step<=local_LSA_nsteps_power_method;
@@ -267,7 +303,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, Dec 30, 2024, 17:01 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Dec 31, 2024, 2:01 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
