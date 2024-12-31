@@ -192,10 +192,21 @@ fork_job(int fork_id) {
  Real initial_cumTime=amrptr->cumTime();
  int initial_levelSteps=amrptr->levelSteps(0);
  int LSA_steps=max_step-initial_levelSteps;
+ Real compare_time_scale=stop_time-initial_cumTime;
+
+ if (amrex::ParallelDescriptor::IOProcessor()) {
+  std::cout << "stop_time= " << stop_time <<'\n';
+  std::cout << "initial_cumTime= " << initial_cumTime <<'\n';
+  std::cout << "compare_time_scale= " << compare_time_scale <<'\n';
+  std::cout << "initial_levelSteps= " << initial_levelSteps <<'\n';
+  std::cout << "max_step= " << max_step <<'\n';
+  std::cout << "LSA_steps=max_step-initial_levelSteps= " << LSA_steps <<'\n';
+ }
 
  if (local_LSA_nsteps_power_method==0) {
   //do nothing
  } else if (local_LSA_nsteps_power_method>0) {
+
   if (initial_cumTime>0.0) {
    //do nothing
   } else
@@ -206,11 +217,11 @@ fork_job(int fork_id) {
   } else
    amrex::Error("LSA: expecting 0<LSA_steps<9999");
 
-  if (initial_cumTime+local_fixed_dt*LSA_steps<=stop_time) {
+  Real time_scale=local_fixed_dt*LSA_steps;
+  if (std::abs(compare_time_scale-time_scale)<=1.0e-4*time_scale) {
    //do nothing
   } else
-   amrex::Error(
-    "LSA: need initial_cumTime+local_fixed_dt*LSA_steps<=stop_time");
+   amrex::Error("LSA: need |compare_time_scale-time_scale|<eps");
 
  } else
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
@@ -218,6 +229,17 @@ fork_job(int fork_id) {
  for (int LSA_current_step=0;
       LSA_current_step<=local_LSA_nsteps_power_method;
       LSA_current_step++) {
+
+  if (LSA_current_step==0) {
+   //do nothing
+  } else if ((LSA_current_step>=1)&&
+             (LSA_current_step<=local_LSA_nsteps_power_method)) {
+   amrex::ParallelDescriptor::Barrier();
+   amrptr->rewindTimeStep(stop_time,LSA_current_step,
+    initial_cumTime,initial_levelSteps);
+   amrex::ParallelDescriptor::Barrier();
+  } else
+   amrex::Error("LSA_current_step invalid");
 
    // if not subcycling then levelSteps(level) is independent of "level"
    // initially, cumTime()==0.0
@@ -244,6 +266,7 @@ fork_job(int fork_id) {
    amrex::Sleep(sleepsec);
    amrex::ParallelDescriptor::Barrier();
   }
+
   amrex::ParallelDescriptor::Barrier();
 
  }  //LSA_current_step=0 .... local_LSA_nsteps_power_method
@@ -303,7 +326,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, Dec 31, 2024, 2:01 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Dec 31, 2024, 14:01 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -340,6 +363,8 @@ main (int   argc,
     int fork_id=0;
     fork_job(fork_id);
 
+     //AmrCore::regrid_ba.clear();
+     //AmrCore::initial_ba.clear();
     amrex::Finalize();
 
     return 0;
