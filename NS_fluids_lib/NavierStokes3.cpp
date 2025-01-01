@@ -1107,6 +1107,7 @@ void NavierStokes::init_delta_SDC() {
 
 }  // subroutine init_delta_SDC
 
+//called from AmrCore::timeStep
 Real NavierStokes::advance(Real time,Real dt) {
 
  std::string local_caller_string="advance";
@@ -1221,7 +1222,6 @@ Real NavierStokes::advance(Real time,Real dt) {
     // do nothing
    } else
     amrex::Error("perturbation_on_restart invalid");
-  
 
    // take care of AMR grid change.
 
@@ -1271,6 +1271,52 @@ Real NavierStokes::advance(Real time,Real dt) {
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
 
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (parent->LSA_nsteps_power_method>=1) {
+
+    if (parent->LSA_current_step==0) {
+
+     if (parent->levelSteps(0)==parent->initial_levelSteps) {
+      //save t^n data
+     } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
+      //do nothing
+     } else
+      amrex::Error("parent->initial_levelSteps invalid");
+
+     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+      //save t^{n+1} data
+     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
+      //do nothing
+     } else
+      amrex::Error("parent->LSA_max_step invalid");
+
+    } else if ((parent->LSA_current_step>=1)&&
+               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+
+     if (parent->levelSteps(0)==parent->initial_levelSteps) {
+      //restore t^n data
+      //initialize the perturbations
+      CopyNewToOldALL();
+     } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
+      //do nothing
+     } else
+      amrex::Error("parent->initial_levelSteps invalid");
+
+     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+      //compute updated eigenvalue and eigenvector
+     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
+      //do nothing
+     } else
+      amrex::Error("parent->LSA_max_step invalid");
+
+    } else 
+     amrex::Error("parent->LSA_current_step invalid");
+
+   } else 
+    amrex::Error("parent->LSA_nsteps_power_method invalid");
+
+
    interface_touch_flag=1; //advance
 
    // new_time=time+dt_new  old_time=time
@@ -1299,8 +1345,18 @@ Real NavierStokes::advance(Real time,Real dt) {
    do_the_advance(lower_slab_time,dt_new,advance_status);
 
    if (advance_status==1) {
+
     // do nothing (success)
+
    } else if (advance_status==0) { // failure
+
+    if (parent->LSA_nsteps_power_method==0) {
+     //do nothing
+    } else if (parent->LSA_nsteps_power_method>=1) {
+     amrex::Error("advance_status==0 invalid for LSA: reduce fixed_dt");
+    } else
+     amrex::Error("parent->LSA_nsteps_power_method invalid");
+
     dt_new=0.5*dt_new;
      //copy component "0" to components 1..bfact_time_order.
     CopyOldToNewALL();
