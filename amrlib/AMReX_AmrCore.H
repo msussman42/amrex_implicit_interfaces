@@ -72,6 +72,9 @@ public:
      //1<=LSA_current_step<=LSA_nsteps_power_method => power method
     int LSA_current_step; 
 
+    int initial_levelSteps; 
+    int LSA_max_step; 
+
     Vector<Real> AMR_volume_history;
     int AMR_volume_history_recorded;
 
@@ -103,9 +106,10 @@ public:
     //
     // Do a complete integration cycle.
     //
-    virtual void coarseTimeStep (Real stop_time,int LSA_current_step_in);
+    virtual void coarseTimeStep (Real stop_time,int LSA_current_step_in,
+       int initial_levelSteps_in);
     virtual void rewindTimeStep (Real stop_time,int LSA_current_step_in,
-      Real initial_cumTime,int initial_levelSteps);
+      Real initial_cumTime,int initial_levelSteps_in);
     //
     // Name of the restart file.
     //

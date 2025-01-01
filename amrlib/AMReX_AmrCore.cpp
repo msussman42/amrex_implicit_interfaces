@@ -506,22 +506,23 @@ AmrCore::InitAmr () {
  }
 
  if (LSA_nsteps_power_method==0) {
+  LSA_max_step=0;
   if (regrid_int>=1) {
    //do nothing
   } else
    amrex::Error("expecting regrid_int>=1");
  } else if (LSA_nsteps_power_method>=1) {
-  int local_max_step=-1;
-  ppmain.queryAdd("max_step",local_max_step);
-  if (local_max_step>=1) {
+  LSA_max_step=-1;
+  ppmain.queryAdd("max_step",LSA_max_step);
+  if (LSA_max_step>=1) {
    //do nothing
   } else
-   amrex::Error("expecting local_max_step>=1");
+   amrex::Error("expecting LSA_max_step>=1");
 
-  if (regrid_int>local_max_step) {
+  if (regrid_int>LSA_max_step) {
    //do nothing
   } else
-   amrex::Error("expecting regrid_int>local_max_step");
+   amrex::Error("expecting regrid_int>LSA_max_step");
 
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
@@ -1433,7 +1434,7 @@ AmrCore::regrid_level_0_on_restart() {
 
 } // end subroutine regrid_level_0_on_restart()
 
-
+//timeStep is called from coarseTimeStep
 void
 AmrCore::timeStep (Real time,
                Real stop_time)
@@ -1542,10 +1543,10 @@ AmrCore::timeStep (Real time,
 
 void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
-  Real initial_cumTime,int initial_levelSteps) {
+  Real initial_cumTime,int initial_levelSteps_in) {
 
  for (int ilev=0;ilev<=finest_level;ilev++) {
-  level_steps[ilev]=initial_levelSteps;
+  level_steps[ilev]=initial_levelSteps_in;
  }
  cumtime=initial_cumTime;
  amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
@@ -1556,10 +1557,13 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
 } //end subroutine rewindTimeStep
 
 void
-AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in)
+AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
+  int initial_levelSteps_in)
 {
 
     LSA_current_step=LSA_current_step_in;
+    initial_levelSteps=initial_levelSteps_in;
+
     if ((LSA_current_step>=0)&&
         (LSA_current_step<=LSA_nsteps_power_method)) {
      //do nothing

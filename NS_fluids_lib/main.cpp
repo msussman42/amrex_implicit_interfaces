@@ -254,7 +254,8 @@ fork_job(int fork_id) {
    std::fflush(NULL);
 
    // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
-   amrptr->coarseTimeStep(stop_time,LSA_current_step);//synchronizes internally
+   amrptr->coarseTimeStep(stop_time,
+     LSA_current_step,initial_levelSteps);//synchronizes internally
 
    amrex::ParallelDescriptor::Barrier();
    std::fflush(NULL);
@@ -326,7 +327,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, Dec 31, 2024, 14:11 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, Jan 01, 2025, 3:11 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
