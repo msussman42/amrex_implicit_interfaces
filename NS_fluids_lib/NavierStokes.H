@@ -1457,6 +1457,8 @@ protected:
 
     static int interface_touch_flag;
 
+    static bool LSA_perturbations_switch; //default is false
+
     static int ns_time_order;
      // before: get_old_data  now: get_new_data(slab_step)
      // before: get_new_data  now: get_new_data(slab_step+1)

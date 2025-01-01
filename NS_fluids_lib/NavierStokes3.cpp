@@ -1272,13 +1272,15 @@ Real NavierStokes::advance(Real time,Real dt) {
    CopyNewToOldALL();
 
    if (parent->LSA_nsteps_power_method==0) {
-    //do nothing
+    LSA_perturbations_switch=false; 
    } else if (parent->LSA_nsteps_power_method>=1) {
 
     if (parent->LSA_current_step==0) {
 
+     LSA_perturbations_switch=false; 
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
       //save t^n data
+      LSA_save_state_data(LSA_QCELL_N_MF,LSA_QFACE_N_MF);
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
      } else
@@ -1287,9 +1289,11 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else if ((parent->LSA_current_step>=1)&&
                (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
 
+     LSA_perturbations_switch=true; 
+
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
       //restore t^n data
-      //initialize the perturbations
+      LSA_restore_state_data(LSA_QCELL_N_MF,LSA_QFACE_N_MF);
       CopyNewToOldALL();
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
@@ -1369,6 +1373,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} data
+      LSA_save_state_data(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF);
+      LSA_save_state_data(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+      LSA_default_eigenvector(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else
@@ -1379,6 +1386,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
+      LSA_save_state_data(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+      LSA_eigenvector(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
+          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else

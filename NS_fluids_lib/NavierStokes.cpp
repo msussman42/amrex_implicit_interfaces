@@ -85,6 +85,8 @@ int  NavierStokes::num_FSI_outer_sweeps=1;
 
 int NavierStokes::interface_touch_flag=1;
 
+bool NavierStokes::LSA_perturbations_switch=false;
+
 Real NavierStokes::prev_time_slab=0.0;
 Real NavierStokes::cur_time_slab=0.0;
 Real NavierStokes::vel_time_slab=0.0;
