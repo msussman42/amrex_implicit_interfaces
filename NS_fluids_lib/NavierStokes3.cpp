@@ -1284,13 +1284,6 @@ Real NavierStokes::advance(Real time,Real dt) {
      } else
       amrex::Error("parent->initial_levelSteps invalid");
 
-     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
-      //save t^{n+1} data
-     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
-      //do nothing
-     } else
-      amrex::Error("parent->LSA_max_step invalid");
-
     } else if ((parent->LSA_current_step>=1)&&
                (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
 
@@ -1302,13 +1295,6 @@ Real NavierStokes::advance(Real time,Real dt) {
       //do nothing
      } else
       amrex::Error("parent->initial_levelSteps invalid");
-
-     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
-      //compute updated eigenvalue and eigenvector
-     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
-      //do nothing
-     } else
-      amrex::Error("parent->LSA_max_step invalid");
 
     } else 
      amrex::Error("parent->LSA_current_step invalid");
@@ -1374,6 +1360,35 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    delete_array(MASKCOEF_MF);
    delete_array(MASK_NBR_MF);
+
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (parent->LSA_nsteps_power_method>=1) {
+
+    if (parent->LSA_current_step==0) {
+
+     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+      //save t^{n+1} data
+     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
+      //do nothing
+     } else
+      amrex::Error("parent->LSA_max_step invalid");
+
+    } else if ((parent->LSA_current_step>=1)&&
+               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+
+     if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+      //compute updated eigenvalue and eigenvector
+     } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
+      //do nothing
+     } else
+      amrex::Error("parent->LSA_max_step invalid");
+
+    } else 
+     amrex::Error("parent->LSA_current_step invalid");
+
+   } else 
+    amrex::Error("parent->LSA_nsteps_power_method invalid");
 
   } while (advance_status==0);
 
