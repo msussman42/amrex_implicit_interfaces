@@ -10619,22 +10619,47 @@ NavierStokes::init(
 
 }  // end subroutine init(old)
 
-//make sure this data is not deleted between time steps and
-//between power law iterations.  
 void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf) {
+
+ std::string local_caller_string="LSA_save_state_data";
+
+ delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
+ delete_localMF_if_exist(cell_mf,1);
+
+ new_localMF(cell_mf,LSACOMP_NCOMP,1,-1);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
+ }
+ MultiFab* EOSdata=getStateDen(1,cur_time_slab);
+ if (EOSdata->nComp()==num_materials*num_state_material) {
+  //do nothing
+ } else
+  amrex::Error("EOSdata->nComp()!=num_materials*num_state_material");
+ MultiFab::Copy(*localMF[cell_mf],*EOSdata,0,LSACOMP_STATES,
+   num_materials*num_state_material,1);
+
+ MultiFab* LSdata=getStateDist(1,cur_time_slab,local_caller_string);
+ if (LSdata->nComp()==num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("LSdata->nComp()!=num_materials*(1+AMREX_SPACEDIM)");
+ MultiFab::Copy(*localMF[cell_mf],*LSdata,0,LSACOMP_LS,num_materials,1);
+
+ delete EOSdata;
+ delete LSdata;
+
+} // end subroutine LSA_save_state_data
+
+void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf) {
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-
-  ns_level.delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   ns_level.getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
-  }
+  ns_level.LSA_save_state_data(cell_mf,face_mf);
  } //ilev
  
 
-} //end subroutine LSA_save_state_data
+} //end subroutine LSA_save_state_dataALL
 
 // init a new level that did not exist on the previous step.
 // NavierStokes::init is called from: AmrCore::regrid
