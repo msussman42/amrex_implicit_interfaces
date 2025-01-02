@@ -10619,6 +10619,23 @@ NavierStokes::init(
 
 }  // end subroutine init(old)
 
+//make sure this data is not deleted between time steps and
+//between power law iterations.  
+void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf) {
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+
+  ns_level.delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   ns_level.getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
+  }
+ } //ilev
+ 
+
+} //end subroutine LSA_save_state_data
+
 // init a new level that did not exist on the previous step.
 // NavierStokes::init is called from: AmrCore::regrid
 //  AmrLevel* a = (*levelbld)(*this,lev,geom[lev],
@@ -11074,7 +11091,7 @@ NavierStokes::Geometry_cleanup() {
   }
  } // i=0 ... MAX_NUM_LOCAL_MF-1   
 
-} // subroutine Geometry_cleanup()
+} // end subroutine Geometry_cleanup()
 
 
 // called from:

@@ -574,7 +574,7 @@ void NavierStokes::delete_localMF_if_exist(int idx_MF,int ncomp) {
  } else
   amrex::Error("localMF_grow[idx_MF] invalid");
 
-} // subroutine delete_localMF_if_exist
+} // end subroutine delete_localMF_if_exist
 
 
 // In the valid region: 
