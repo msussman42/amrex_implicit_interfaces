@@ -7934,13 +7934,13 @@ void NavierStokes::assimilate_state_data() {
 
  for (int isweep=0;isweep<2;isweep++) {
 
-  int control_flag=NULL_CONTROL;
+  int local_control_flag=NULL_CONTROL;
   int local_cell_mf=-1;
   int ncomp_total=0;
   Vector<int> scomp;
   Vector<int> ncomp;
   init_boundary(
-    control_flag,
+    local_control_flag,
     local_cell_mf,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
@@ -10387,6 +10387,8 @@ void NavierStokes::init_boundary(
 
  } //k=0..nstate-1
 
+ int ncomp_total_sanity=0;
+
  for (int k=0;k<nstate;k++) {
 
   if (k==State_Type) {
@@ -10406,6 +10408,8 @@ void NavierStokes::init_boundary(
    MultiFab::Copy(S_new,*denmf,0,STATECOMP_STATES,nden,1);
    delete denmf;
 
+   ncomp_total_sanity+=S_new.nComp();
+
   } else if (k==Umac_Type) {
    // do nothing
   } else if (k==Vmac_Type) {
@@ -10423,11 +10427,15 @@ void NavierStokes::init_boundary(
    MultiFab::Copy(LS_new,*lsmf,0,0,num_materials*(1+AMREX_SPACEDIM),1);
    delete lsmf;
 
+   ncomp_total_sanity+=LS_new.nComp();
+
   } else if (k==DIV_Type) {
 
    MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
    if (DIV_new.nComp()!=1)
     amrex::Error("DIV_new.nComp()!=1");
+
+   ncomp_total_sanity+=DIV_new.nComp();
 
   } else if ((k==Solid_State_Type)&&
 	     (im_solid_map.size()>=1)&&
@@ -10439,6 +10447,8 @@ void NavierStokes::init_boundary(
    MultiFab* velmf=getStateSolid(1,0,nparts*AMREX_SPACEDIM,cur_time_slab);
    MultiFab::Copy(Solid_new,*velmf,0,0,nparts*AMREX_SPACEDIM,1);
    delete velmf;
+
+   ncomp_total_sanity+=Solid_new.nComp();
 
   } else if ((k==Tensor_Type)&&
              (num_materials_viscoelastic>=1)&&
@@ -10454,6 +10464,8 @@ void NavierStokes::init_boundary(
      NUM_CELL_ELASTIC_REFINE,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,NUM_CELL_ELASTIC_REFINE,1);
    delete tensormf;
+
+   ncomp_total_sanity+=Tensor_new.nComp();
 
   } else if ((k==Refine_Density_Type)&&
              (num_materials_compressible>=1)&&
@@ -10472,12 +10484,21 @@ void NavierStokes::init_boundary(
      NUM_CELL_REFINE_DENSITY,1);
    delete refine_density_mf;
   
+   ncomp_total_sanity+=Refine_Density_new.nComp();
+
   } else {
    std::cout << "k= " << k << '\n';
    amrex::Error("k invalid");
   }
 
  } // k=0..nstate-1
+
+ if (ncomp_total==ncomp_total_sanity) {
+  //do nothing
+ } else
+  amrex::Error("expecting: (ncomp_total==ncomp_total_sanity)");
+
+ ncomp_total_sanity=0;
 
  for (int k=0;k<nstate;k++) {
   
@@ -10498,8 +10519,13 @@ void NavierStokes::init_boundary(
              (k==Solid_State_Type)||
              (k==Tensor_Type)||
              (k==Refine_Density_Type)) {
-    
+ 
    MultiFab& S_new=get_new_data(k,slab_step+1);
+   if (S_new.nComp()==ncomp[k]) {
+    //do nothing
+   } else
+    amrex::Error("(S_new.nComp()==ncomp[k]) violated");
+
    if (control_flag==NULL_CONTROL) {
     //do nothing
    } else if (control_flag==SAVE_CONTROL) {
@@ -10509,10 +10535,16 @@ void NavierStokes::init_boundary(
    } else
     amrex::Error("control_flag invalid");
 
+   ncomp_total_sanity+=S_new.nComp();
   } else
    amrex::Error("k invalid");
 
  } //k=0..nstate-1
+ 
+ if (ncomp_total==ncomp_total_sanity) {
+  //do nothing
+ } else
+  amrex::Error("expecting: (ncomp_total==ncomp_total_sanity)");
 
 }  // subroutine init_boundary()
 
@@ -10732,12 +10764,12 @@ void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf,
  } else
   amrex::Error("control_flag_in invalid");
 
- int control_flag=NULL_CONTROL;
+ int local_control_flag=NULL_CONTROL;
  int ncomp_total=0;
  Vector<int> scomp;
  Vector<int> ncomp;
  init_boundary(
-   control_flag,
+   local_control_flag,
    cell_mf,
    ncomp_total,
    scomp,ncomp);

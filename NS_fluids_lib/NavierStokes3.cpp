@@ -1131,6 +1131,7 @@ Real NavierStokes::advance(Real time,Real dt) {
  Real dt_new=dt;
  int advance_status=1;
 
+  //require level==0.
  if (level==0) {
 
   int nsteps=parent->levelSteps(0); 
@@ -1145,6 +1146,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    SDC_outer_sweeps=0;
    slab_step=ns_time_order-1;
+     //cur_time_slab=state[State_Type].slabTime(slab_step+1);
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
@@ -3463,13 +3465,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // get rid of uninit in the boundaries of the state variables.
       for (int ilev=level;ilev<=finest_level;ilev++) {
        NavierStokes& ns_level=getLevel(ilev);
-       int control_flag=NULL_CONTROL;
+       int local_control_flag=NULL_CONTROL;
        int local_cell_mf=-1;
        int ncomp_total=0;
        Vector<int> scomp;
        Vector<int> ncomp;
        ns_level.init_boundary(
-        control_flag,
+        local_control_flag,
         local_cell_mf,
         ncomp_total,
         scomp,ncomp); // init ghost cells on the given level.
