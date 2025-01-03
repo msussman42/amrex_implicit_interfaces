@@ -9668,7 +9668,7 @@ void NavierStokes::multiphase_project(int project_option) {
    //      output: POTENTIAL_FORCE_EDGE_MF (OP_POTGRAD_TO_MAC)
    //
   if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
-   // do nothing
+   amrex::Error("invalid: potgrad_surface_tension_mask==POTGRAD_NULLOPTION");
   } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
    process_potential_forceALL(potgrad_surface_tension_mask,project_option);
   } else

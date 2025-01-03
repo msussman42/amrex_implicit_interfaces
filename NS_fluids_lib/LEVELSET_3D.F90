@@ -13507,6 +13507,7 @@ stop
 
       integer, INTENT(in) :: dir  !0,1,2
       integer, INTENT(in) :: ncomp_mgoni
+      integer :: LSA_perturbations_switch
       integer, INTENT(in) :: ncomp_xp
       integer, INTENT(in) :: ncomp_xgp
       integer, INTENT(in) :: simple_AMR_BC_flag
@@ -13565,6 +13566,7 @@ stop
       integer, INTENT(in) :: project_option
       integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: num_FSI_outer_sweeps
+        ! 0<=im_elastic_map<num_materials
       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
 
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
@@ -13624,6 +13626,7 @@ stop
       real(amrex_real) pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
       real(amrex_real) incremental_gravity
       real(amrex_real) pgrad_tension
+      real(amrex_real) pgrad_LSA
       real(amrex_real) gradh_tension
       real(amrex_real) gradh_gravity
       real(amrex_real) dplus,dminus
@@ -13731,6 +13734,8 @@ stop
       integer is_clamped_face
       integer local_compressible
       integer in_the_bulk
+      integer :: elastic_interface_fixed,ipart,evec_comp
+      real(amrex_real) :: evec
 
       real(amrex_real) test_current_elasticmask
 
@@ -13744,6 +13749,7 @@ stop
       DEBUG_SOLID_VEL_DEN=zero
 
       homogeneous_rigid_velocity=0
+      LSA_perturbations_switch=0
 
       semflux_ptr=>semflux
       xcut_ptr=>xcut
@@ -13940,7 +13946,10 @@ stop
         stop
        endif
        if (ncomp_mgoni.eq.num_materials*num_state_material) then
-        ! do nothing
+        LSA_perturbations_switch=0
+       else if (ncomp_mgoni.eq. &
+                num_materials*num_state_material+num_materials) then
+        LSA_perturbations_switch=1
        else
         print *,"ncomp_mgoni invalid OP_POTGRAD_TO_MAC: ",ncomp_mgoni
         stop
@@ -15417,6 +15426,8 @@ stop
 
           pgrad_tension=zero ! -sigma kappa grad H/rho_added
 
+          pgrad_LSA=zero ! (delta phi_{im})|grad H|/rho_added
+
           gradh_gravity=zero
           gradh_tension=zero
 
@@ -15452,6 +15463,7 @@ stop
             gradh_tension=zero
             gradh_gravity=zero
             incremental_gravity=zero
+            pgrad_LSA=zero
            else if (is_solid_face.eq.0) then
 
             if ((is_clamped_face.eq.1).or. &
@@ -15460,6 +15472,7 @@ stop
              gradh_tension=zero
              gradh_gravity=zero
              incremental_gravity=zero
+             pgrad_LSA=zero
             else if (is_clamped_face.eq.0) then
 
              gradh_tension=zero
@@ -15613,9 +15626,61 @@ stop
                stop
               endif
 
+              elastic_interface_fixed=0
+              do ipart=1,FSI_outer_sweeps
+               if ((im_elastic_map(ipart)+1.eq.im_gravity).or. &
+                   (im_elastic_map(ipart)+1.eq.im_opp_gravity)) then
+                elastic_interface_fixed=1
+               else if ((im_elastic_map(ipart)+1.ge.1).and. &
+                        (im_elastic_map(ipart)+1.le.num_materials)) then
+                !do nothing
+               else
+                print *,"im_elastic_map(ipart)+1 invalid:",ipart, &
+                  im_elastic_map(ipart)+1
+                stop
+               endif
+              enddo !ipart=1,FSI_outer_sweeps
+                
+              if (elastic_interface_fixed.eq.0) then
+
+               if (LSA_perturbations_switch.eq.1) then
+
+                evec_comp=num_materials*num_state_material+im_gravity
+                evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
+                           mgoni(D_DECL(i,j,k),evec_comp))
+                pgrad_LSA=-dt*evec*abs(gradh_gravity)/hx
+
+                if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                    (local_face(FACECOMP_FACECUT+1).le.half)) then
+                 pgrad_LSA=zero
+                else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                         (local_face(FACECOMP_FACECUT+1).le.one)) then
+                 pgrad_LSA=pgrad_LSA* &
+                  local_face(FACECOMP_FACECUT+1)* &
+                  local_face(FACECOMP_FACEDEN+1)
+                else
+                 print *,"local_face(FACECOMP_FACECUT+1) invalid"
+                 stop
+                endif
+
+               else if (LSA_perturbations_switch.eq.0) then
+                !do nothing
+               else
+                print *,"LSA_perturbations_switch invalid"
+                stop
+               endif
+
+              else if (elastic_interface_fixed.eq.1) then
+               !do nothing
+              else
+               print *,"elastic_interface_fixed invalid"
+               stop
+              endif
+
              else if (gradh_gravity.eq.zero) then
 
               incremental_gravity=zero
+              pgrad_LSA=zero
 
               if (im_left_gravity.eq.im_right_gravity) then
 
@@ -15789,6 +15854,8 @@ stop
            print *,"energyflag invalid OP_POTGRAD_TO_MAC"
            stop
           endif
+
+          xgp(D_DECL(i,j,k),1)=xgp(D_DECL(i,j,k),1)+pgrad_LSA
 
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then !p^CELL->MAC
 
@@ -16807,11 +16874,16 @@ stop
        ! LS_shift in subroutine check_added_mass
       extend_offset=two*dxmaxLS
 
+       ! intent(in) :: extend_solid_velocity
       if (extend_solid_velocity.eq.0) then
 
        if ((FSI_outer_sweeps.ge.1).and. &
            (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
         !do nothing
+       else if (FSI_outer_sweeps.eq.0) then
+        print *,"we always extend the elastic solid velocity in this case"
+        print *,"FSI_outer_sweeps=",FSI_outer_sweeps
+        stop
        else
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         stop
@@ -16828,12 +16900,17 @@ stop
         stop
        endif
 
+       ! intent(in) :: extend_solid_velocity
       else if (extend_solid_velocity.eq.1) then
 
        if ((FSI_outer_sweeps.ge.0).and. &
            (FSI_outer_sweeps.lt.num_FSI_outer_sweeps-1)) then
         !do nothing
-       else
+       else if (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1) then
+        print *,"all the elastic solids have been processed, no vel extend"
+        print *,"FSI_outer_sweeps=",FSI_outer_sweeps
+        stop
+       else 
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         stop
        endif
@@ -17072,6 +17149,7 @@ stop
            do ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
             im_critical=im_elastic_map(ipart)+1
 
+             !im_rigid_CL=im_elastic_map(FSI_outer_sweeps+1)+1
             if (im_critical.ge.im_rigid_CL) then
              !do nothing
             else
