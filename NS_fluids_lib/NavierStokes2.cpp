@@ -6241,7 +6241,33 @@ void NavierStokes::process_potential_force_face(
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
 
- MultiFab* dendata=getStateDen(1,cur_time_slab);
+ MultiFab* dendata;
+ int ncomp_mgoni=num_materials*num_state_material;
+
+ if (LSA_perturbations_switch==false) { 
+  dendata=getStateDen(1,cur_time_slab);
+  ncomp_mgoni=num_materials*num_state_material;
+ } else if (LSA_perturbations_switch==true) { 
+  MultiFab* local_dendata=getStateDen(1,cur_time_slab);
+  ncomp_mgoni+=num_materials;
+  dendata=new MultiFab(grids,dmap,ncomp_mgoni,1,
+    MFInfo().SetTag("dendata"),FArrayBoxFactory());
+  MultiFab::Copy(*dendata,*local_dendata,0,0,local_dendata->nComp(),1);
+  int local_control_flag=NULL_CONTROL;
+  int local_cell_mf=-1;
+  int ncomp_total=0;
+  Vector<int> scomp;
+  Vector<int> ncomp;
+  init_boundary(
+    local_control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
+  MultiFab::Copy(*dendata,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
+    num_materials*num_state_material,num_materials,1);
+  delete local_dendata;
+ } else
+  amrex::Error("LSA_perturbations_switch invalid");
 
   // gpx/rhox,gpy/rhoy,gpz/rhoz
  allocate_flux_register(operation_flag);
@@ -6303,10 +6329,11 @@ void NavierStokes::process_potential_force_face(
    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
    FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
    FArrayBox& mgonifab=(*dendata)[mfi];
-   if (mgonifab.nComp()==num_materials*num_state_material) {
+
+   if (mgonifab.nComp()==ncomp_mgoni) {
     // do nothing
    } else
-    amrex::Error("mgonifab.nComp()!=num_materials*num_state_material");
+    amrex::Error("mgonifab.nComp()!=ncomp_mgoni");
 
    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -6329,7 +6356,6 @@ void NavierStokes::process_potential_force_face(
 
    int ncomp_xp=1;
    int ncomp_xgp=1;
-   int ncomp_mgoni=mgonifab.nComp();
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -9352,7 +9378,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
   // do nothing
  } else if (localMF[SLOPE_RECON_MF]->nGrow()>=0) {
   MultiFab* slopes_mf=new MultiFab(grids,dmap,num_materials*ngeom_recon,0,
-	  MFInfo().SetTag("slope_m"),FArrayBoxFactory());
+	  MFInfo().SetTag("slope_mf"),FArrayBoxFactory());
   MultiFab::Copy(*slopes_mf,*localMF[SLOPE_RECON_MF],0,0,
 		 num_materials*ngeom_recon,0);
   delete_localMF(SLOPE_RECON_MF,1);
