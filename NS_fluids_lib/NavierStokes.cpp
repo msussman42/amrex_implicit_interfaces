@@ -7933,7 +7933,17 @@ void NavierStokes::assimilate_state_data() {
  MultiFab& Smac_new_z = get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
 
  for (int isweep=0;isweep<2;isweep++) {
-  init_boundary(); // init ghost cells on the given level.
+
+  int control_flag=NULL_CONTROL;
+  int local_cell_mf=-1;
+  int ncomp_total=0;
+  Vector<int> scomp;
+  Vector<int> ncomp;
+  init_boundary(
+    control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -10326,7 +10336,12 @@ void NavierStokes::init_boundary_list(Vector<int> scomp,
 
 } // subroutine init_boundary_list
 
-void NavierStokes::init_boundary() {
+void NavierStokes::init_boundary(
+  int control_flag,
+  int cell_mf,
+  int& ncomp_total,
+  Vector<int>& scomp,
+  Vector<int>& ncomp ) {
 
  std::string local_caller_string="init_boundary";
  if (num_state_base!=2)
@@ -10336,36 +10351,84 @@ void NavierStokes::init_boundary() {
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
 
+ scomp.resize(nstate);
+ ncomp.resize(nstate);
+ ncomp_total=0;
+
  int nden=num_materials*num_state_material;
+
+ for (int k=0;k<nstate;k++) {
+  
+  if (k==Umac_Type) {
+   // do nothing
+  } else if (k==Vmac_Type) {
+   // do nothing
+  } else if (k==Wmac_Type) {
+
+   if (AMREX_SPACEDIM==3) {
+    //do nothing
+   } else
+    amrex::Error("expecting Wmac_Type == Vmac_Type");
+
+  } else if ((k==State_Type)||
+             (k==LS_Type)||
+             (k==DIV_Type)||
+             (k==Solid_State_Type)||
+             (k==Tensor_Type)||
+             (k==Refine_Density_Type)) {
+    
+   MultiFab& S_new=get_new_data(k,slab_step+1);
+   scomp[k]=ncomp_total;
+   ncomp[k]=S_new.nComp();
+   ncomp_total+=ncomp[k]; 
+
+  } else
+   amrex::Error("k invalid");
+
+ } //k=0..nstate-1
 
  for (int k=0;k<nstate;k++) {
 
   if (k==State_Type) {
+
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    MultiFab* vofmf=getState(1,STATECOMP_MOF,
       num_materials*ngeom_raw,cur_time_slab);
    MultiFab::Copy(S_new,*vofmf,0,STATECOMP_MOF,num_materials*ngeom_raw,1);
    delete vofmf;
+
    MultiFab* velmf=getState(1,STATECOMP_VEL,
 	STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
    MultiFab::Copy(S_new,*velmf,0,0,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
    delete velmf;
+
    MultiFab* denmf=getStateDen(1,cur_time_slab);  
    MultiFab::Copy(S_new,*denmf,0,STATECOMP_STATES,nden,1);
    delete denmf;
+
   } else if (k==Umac_Type) {
    // do nothing
   } else if (k==Vmac_Type) {
    // do nothing
   } else if (k==Wmac_Type) {
-   // do nothing
+
+   if (AMREX_SPACEDIM==3) {
+    //do nothing
+   } else
+    amrex::Error("expecting Wmac_Type == Vmac_Type");
+
   } else if (k==LS_Type) {
    MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
    MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
    MultiFab::Copy(LS_new,*lsmf,0,0,num_materials*(1+AMREX_SPACEDIM),1);
    delete lsmf;
+
   } else if (k==DIV_Type) {
-   // do nothing
+
+   MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
+   if (DIV_new.nComp()!=1)
+    amrex::Error("DIV_new.nComp()!=1");
+
   } else if ((k==Solid_State_Type)&&
 	     (im_solid_map.size()>=1)&&
 	     (im_solid_map.size()<=num_materials)) {
@@ -10376,6 +10439,7 @@ void NavierStokes::init_boundary() {
    MultiFab* velmf=getStateSolid(1,0,nparts*AMREX_SPACEDIM,cur_time_slab);
    MultiFab::Copy(Solid_new,*velmf,0,0,nparts*AMREX_SPACEDIM,1);
    delete velmf;
+
   } else if ((k==Tensor_Type)&&
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
@@ -10390,6 +10454,7 @@ void NavierStokes::init_boundary() {
      NUM_CELL_ELASTIC_REFINE,cur_time_slab);
    MultiFab::Copy(Tensor_new,*tensormf,0,0,NUM_CELL_ELASTIC_REFINE,1);
    delete tensormf;
+
   } else if ((k==Refine_Density_Type)&&
              (num_materials_compressible>=1)&&
              (num_materials_compressible<=num_materials)) {
@@ -10413,6 +10478,41 @@ void NavierStokes::init_boundary() {
   }
 
  } // k=0..nstate-1
+
+ for (int k=0;k<nstate;k++) {
+  
+  if (k==Umac_Type) {
+   // do nothing
+  } else if (k==Vmac_Type) {
+   // do nothing
+  } else if (k==Wmac_Type) {
+
+   if (AMREX_SPACEDIM==3) {
+    //do nothing
+   } else
+    amrex::Error("expecting Wmac_Type == Vmac_Type");
+
+  } else if ((k==State_Type)||
+             (k==LS_Type)||
+             (k==DIV_Type)||
+             (k==Solid_State_Type)||
+             (k==Tensor_Type)||
+             (k==Refine_Density_Type)) {
+    
+   MultiFab& S_new=get_new_data(k,slab_step+1);
+   if (control_flag==NULL_CONTROL) {
+    //do nothing
+   } else if (control_flag==SAVE_CONTROL) {
+    MultiFab::Copy(*localMF[cell_mf],S_new,0,scomp[k],ncomp[k],1);
+   } else if (control_flag==RESTORE_CONTROL) {
+    MultiFab::Copy(S_new,*localMF[cell_mf],scomp[k],0,ncomp[k],1);
+   } else
+    amrex::Error("control_flag invalid");
+
+  } else
+   amrex::Error("k invalid");
+
+ } //k=0..nstate-1
 
 }  // subroutine init_boundary()
 
@@ -10619,43 +10719,58 @@ NavierStokes::init(
 
 }  // end subroutine init(old)
 
-void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf) {
+void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf,
+  int control_flag_in) {
 
  std::string local_caller_string="LSA_save_state_data";
 
- delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
- delete_localMF_if_exist(cell_mf,1);
-
- new_localMF(cell_mf,LSACOMP_NCOMP,1,-1);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
- }
- MultiFab* EOSdata=getStateDen(1,cur_time_slab);
- if (EOSdata->nComp()==num_materials*num_state_material) {
+ if (control_flag_in==SAVE_CONTROL) {
+  delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
+  delete_localMF_if_exist(cell_mf,1);
+ } else if (control_flag_in==RESTORE_CONTROL) {
   //do nothing
  } else
-  amrex::Error("EOSdata->nComp()!=num_materials*num_state_material");
- MultiFab::Copy(*localMF[cell_mf],*EOSdata,0,LSACOMP_STATES,
-   num_materials*num_state_material,1);
+  amrex::Error("control_flag_in invalid");
 
- MultiFab* LSdata=getStateDist(1,cur_time_slab,local_caller_string);
- if (LSdata->nComp()==num_materials*(1+AMREX_SPACEDIM)) {
-  //do nothing
+ int control_flag=NULL_CONTROL;
+ int ncomp_total=0;
+ Vector<int> scomp;
+ Vector<int> ncomp;
+ init_boundary(
+   control_flag,
+   cell_mf,
+   ncomp_total,
+   scomp,ncomp);
+ 
+ if (control_flag_in==SAVE_CONTROL) {
+  new_localMF(cell_mf,ncomp_total,1,-1);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
+  }
+ } else if (control_flag_in==RESTORE_CONTROL) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   MultiFab& umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+   MultiFab::Copy(umac_new,*localMF[face_mf+dir],0,0,1,0);
+  }
  } else
-  amrex::Error("LSdata->nComp()!=num_materials*(1+AMREX_SPACEDIM)");
- MultiFab::Copy(*localMF[cell_mf],*LSdata,0,LSACOMP_LS,num_materials,1);
+  amrex::Error("control_flag_in invalid");
 
- delete EOSdata;
- delete LSdata;
+ init_boundary(
+   control_flag_in,
+   cell_mf,
+   ncomp_total,
+   scomp,ncomp);
 
 } // end subroutine LSA_save_state_data
 
-void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf) {
+void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf,
+  int control_flag_in) {
 
+ int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.LSA_save_state_data(cell_mf,face_mf);
+  ns_level.LSA_save_state_data(cell_mf,face_mf,control_flag_in);
  } //ilev
  
 

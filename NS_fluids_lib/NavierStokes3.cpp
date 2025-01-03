@@ -1280,7 +1280,7 @@ Real NavierStokes::advance(Real time,Real dt) {
      LSA_perturbations_switch=false; 
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
       //save t^n data
-      LSA_save_state_data(LSA_QCELL_N_MF,LSA_QFACE_N_MF);
+      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
      } else
@@ -1293,7 +1293,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
       //restore t^n data
-      LSA_restore_state_data(LSA_QCELL_N_MF,LSA_QFACE_N_MF);
+      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
       CopyNewToOldALL();
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
@@ -1373,9 +1373,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} data
-      LSA_save_state_data(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF);
-      LSA_save_state_data(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
-      LSA_default_eigenvector(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+      LSA_save_state_dataALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
+//      LSA_default_eigenvector(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else
@@ -1386,9 +1386,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
-      LSA_save_state_data(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
-      LSA_eigenvector(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
-          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+      LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
+//      LSA_eigenvector(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
+//          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else
@@ -3463,7 +3463,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // get rid of uninit in the boundaries of the state variables.
       for (int ilev=level;ilev<=finest_level;ilev++) {
        NavierStokes& ns_level=getLevel(ilev);
-       ns_level.init_boundary();
+       int control_flag=NULL_CONTROL;
+       int local_cell_mf=-1;
+       int ncomp_total=0;
+       Vector<int> scomp;
+       Vector<int> ncomp;
+       ns_level.init_boundary(
+        control_flag,
+        local_cell_mf,
+        ncomp_total,
+        scomp,ncomp); // init ghost cells on the given level.
       }
 
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
