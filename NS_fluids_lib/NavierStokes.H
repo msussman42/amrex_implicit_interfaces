@@ -168,7 +168,13 @@ public:
     void project_right_hand_side(int index_MF,int project_option,
 		    int& change_flag);
 
-    void init_boundary();
+    void init_boundary(
+      int control_flag,
+      int cell_mf,
+      int& ncomp_total,
+      Vector<int>& scomp,
+      Vector<int>& ncomp );
+
     void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
 
     void MaxPressureVelocity(Real& minpres,Real& maxpres,
@@ -270,6 +276,9 @@ public:
     void allocate_mdot();
 
     void restore_active_pressure(int save_mf);
+
+    void LSA_save_state_data(int cell_mf,int face_mf,int control_flag_in);
+    void LSA_save_state_dataALL(int cell_mf,int face_mf,int control_flag_in);
 
     void allocate_maccoefALL(int project_option,int nsolve,
 	int create_hierarchy,Real dt_maccoef); //-1,0,1
