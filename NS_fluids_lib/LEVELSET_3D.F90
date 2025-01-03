@@ -13609,7 +13609,8 @@ stop
       real(amrex_real), INTENT(in), target ::  &
               den(DIMV(den),num_materials*num_state_material)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
+      real(amrex_real), INTENT(in), target :: &
+              mgoni(DIMV(mgoni),ncomp_mgoni)
       real(amrex_real), pointer :: mgoni_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: typefab(DIMV(typefab))
       real(amrex_real), pointer :: typefab_ptr(D_DECL(:,:,:))
@@ -13859,7 +13860,7 @@ stop
        if (ncomp_mgoni.eq.num_materials*num_state_material) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid"
+        print *,"ncomp_mgoni invalid OP_ISCHEME_MAC ",ncomp_mgoni
         stop
        endif
 
@@ -13882,7 +13883,7 @@ stop
        if (ncomp_mgoni.eq.1) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid"
+        print *,"ncomp_mgoni invalid OP_PRESGRAD_MAC: ",ncomp_mgoni
         stop
        endif
 
@@ -13917,7 +13918,7 @@ stop
        if (ncomp_mgoni.eq.1) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid"
+        print *,"ncomp_mgoni invalid OP_PRES_CELL_TO_MAC: ",ncomp_mgoni
         stop
        endif
        if (ncomp_xp.ne.NCOMP_PEDGE) then
@@ -13941,7 +13942,7 @@ stop
        if (ncomp_mgoni.eq.num_materials*num_state_material) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid"
+        print *,"ncomp_mgoni invalid OP_POTGRAD_TO_MAC: ",ncomp_mgoni
         stop
        endif
        if (ncomp_xp.ne.1) then
@@ -13956,7 +13957,7 @@ stop
        if (ncomp_mgoni.eq.SDIM) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid(OP_UNEW or OP_UMAC)"
+        print *,"ncomp_mgoni invalid(OP_UNEW or OP_UMAC): ",ncomp_mgoni
         stop
        endif
        if (ncomp_xp.ne.NCOMP_AMRSYNC_VEL_MF) then
