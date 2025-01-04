@@ -4890,7 +4890,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
           (imR.lt.1).or.(imR.gt.num_materials)) then
-       print *,"imL or imR invalid"
+       print *,"imL or imR invalid: ",imL,imR
        stop
       endif
 
@@ -4913,12 +4913,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         im=imR
         im_opp=imL
        else
-        print *,"imL or imR bust"
+        print *,"imL or imR bust: ",imL,imR
         stop
        endif
 
       else
-       print *,"is_rigid, imL, or imR invalid PROB.F90"
+       print *,"is_rigid, imL, or imR invalid PROB.F90: ", &
+        imL,imR,is_rigid(imL),is_rigid(imR)
        stop
       endif
 

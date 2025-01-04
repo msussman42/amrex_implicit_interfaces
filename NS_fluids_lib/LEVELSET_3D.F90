@@ -13943,7 +13943,7 @@ stop
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
        if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
+        print *,"ncphys invalid OP_POTGRAD_TO_MAC; ncphys=",ncphys
         stop
        endif
        if (ncomp_mgoni.eq.num_materials*num_state_material) then
@@ -15431,7 +15431,7 @@ stop
            ! u=-delta phi grad phi
            ! phi_t - delta phi =0
            ! phi_t = \delta phi
-          pgrad_LSA=zero ! -(delta phi_{im})grad H/rho_added
+          pgrad_LSA=zero ! -(delta phi_{im})grad H(phi_im)/rho_added
 
           gradh_gravity=zero
           gradh_tension=zero
@@ -15483,6 +15483,7 @@ stop
              gradh_tension=zero
              gradh_gravity=zero
              incremental_gravity=zero
+             pgrad_LSA=zero
 
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
@@ -15553,7 +15554,7 @@ stop
              else if (gradh_tension.eq.zero) then
                ! do nothing
              else
-              print *,"gradh_tension bust"
+              print *,"gradh_tension bust: ",gradh_tension
               stop
              endif 
 
@@ -15765,7 +15766,7 @@ stop
                stop
               endif
              else
-              print *,"gradh_gravity bust"
+              print *,"gradh_gravity bust: ",gradh_gravity
               stop
              endif 
 
