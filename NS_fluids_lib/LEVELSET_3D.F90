@@ -13749,6 +13749,7 @@ stop
       DEBUG_SOLID_VEL_DEN=zero
 
       homogeneous_rigid_velocity=0
+
       LSA_perturbations_switch=0
 
       semflux_ptr=>semflux
@@ -15426,7 +15427,11 @@ stop
 
           pgrad_tension=zero ! -sigma kappa grad H/rho_added
 
-          pgrad_LSA=zero ! (delta phi_{im})|grad H|/rho_added
+           ! phi_t + u dot grad phi = 0  |grad phi|=1
+           ! u=-delta phi grad phi
+           ! phi_t - delta phi =0
+           ! phi_t = \delta phi
+          pgrad_LSA=zero ! -(delta phi_{im})grad H/rho_added
 
           gradh_gravity=zero
           gradh_tension=zero
@@ -15489,6 +15494,10 @@ stop
                im_left_tension, &
                im_right_tension)
 
+              ! if imL < imR => gradh=-1
+              ! if imL > imR => gradh=1
+              ! im_gravity<im_opp_gravity
+              ! i.e. gradh=grad h_{im_gravity}
              call fluid_interface( &
                LSleft,LSright, &
                gradh_gravity, &
@@ -15500,7 +15509,7 @@ stop
               if (im.lt.im_opp) then
                ! do nothing
               else
-               print *,"im or im_opp invalid"
+               print *,"im or im_opp invalid: ",im,im_opp
                stop
               endif
 
@@ -15554,6 +15563,8 @@ stop
                ! do nothing
               else
                print *,"im_gravity or im_opp_gravity invalid"
+               print *,"im_gravity ",im_gravity
+               print *,"im_opp_gravity ",im_opp_gravity
                stop
               endif
 
@@ -15645,10 +15656,18 @@ stop
 
                if (LSA_perturbations_switch.eq.1) then
 
+                 ! phi_t + u dot grad phi = 0  |grad phi|=1
+                 ! u=-delta phi grad phi
+                 ! phi_t - delta phi =0
+                 ! phi_t = \delta phi
+                 ! if imL < imR => gradh=-1
+                 ! if imL > imR => gradh=1
+                 ! im_gravity<im_opp_gravity
+                 ! i.e. gradh=grad h_{im_gravity}
                 evec_comp=num_materials*num_state_material+im_gravity
                 evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
                            mgoni(D_DECL(i,j,k),evec_comp))
-                pgrad_LSA=-dt*evec*abs(gradh_gravity)/hx
+                pgrad_LSA=-dt*evec*gradh_gravity/hx
 
                 if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                     (local_face(FACECOMP_FACECUT+1).le.half)) then
