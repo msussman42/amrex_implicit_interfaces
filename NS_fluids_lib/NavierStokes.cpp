@@ -18349,6 +18349,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 
 } // end subroutine errorEst
 
+//GetDragALL is called from volWgtSumALL when fast_mode=0
 void NavierStokes::GetDragALL() {
 
  std::string local_caller_string="GetDragALL";
@@ -18491,6 +18492,7 @@ void NavierStokes::GetDragALL() {
 
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
+// GetDrag is called from GetDragALL
 void
 NavierStokes::GetDrag(int isweep) {
 

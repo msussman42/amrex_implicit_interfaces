@@ -2444,7 +2444,7 @@ stop
           if (local_density.gt.zero) then
            ! do nothing
           else
-           print *,"local_density invalid"
+           print *,"local_density invalid fort_getdrag: ",local_density
            stop
           endif
           mass=local_density*volgrid*mofdata_tess(vofcomp)
@@ -2517,7 +2517,7 @@ stop
            if (volume.gt.zero) then
             ! do nothing
            else
-            print *,"volume invalid"
+            print *,"volume invalid fort_getdrag: ",volume
             stop
            endif
            presmag=pres(D_DECL(icell,jcell,kcell))
@@ -2549,7 +2549,7 @@ stop
               j_side=jcell+jj
               k_side=kcell+kk
              else
-              print *,"side_cell invalid"
+              print *,"side_cell invalid fort_getdrag: ",side_cell
               stop
              endif
              imac=icell+side_cell*ii
@@ -2570,13 +2570,13 @@ stop
               else if ((facedir.eq.3).and.(SDIM.eq.3)) then
                facearea=areaz(D_DECL(imac,jmac,kmac))
               else
-               print *,"facedir invalid"
+               print *,"facedir invalid fort_getdrag: ",facedir
                stop
               endif
               if (facearea.ge.zero) then
                ! do nothing
               else
-               print *,"facearea invalid"
+               print *,"facearea invalid fort_getdrag: ",facearea
                stop
               endif
 
@@ -2589,7 +2589,7 @@ stop
               else if (side_cell.eq.1) then
                nsolid(facedir)=one
               else 
-               print *,"side_cell invalid"
+               print *,"side_cell invalid fort_getdrag: ",side_cell
                stop
               endif
 
@@ -2612,7 +2612,7 @@ stop
                else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
                 kk_visc=1
                else
-                print *,"dir_visc invalid"
+                print *,"dir_visc invalid fort_getdrag: ",dir_visc
                 stop
                endif
 
@@ -2633,7 +2633,7 @@ stop
                  j_face=jcell+jj_visc
                  k_face=kcell+kk_visc
                 else
-                 print *,"side_visc invalid"
+                 print *,"side_visc invalid fort_getdrag: ",side_visc
                  stop
                 endif
               
@@ -2651,7 +2651,7 @@ stop
                   endif
                  enddo
                  if (im_solid_map(partid+1)+1.ne.im_visc) then
-                  print *,"im_solid_map(partid+1)+1.ne.im_visc"
+                  print *,"im_solid_map(partid+1)+1.ne.im_visc (fort_getdrag)"
                   stop
                  endif
                  ibase=partid*SDIM
@@ -2666,7 +2666,7 @@ stop
                    vel6point(dir_visc,side_visc,dir)= &
                     solzfab(D_DECL(i_face,j_face,k_face),ibase+dir)
                   else
-                   print *,"dir_visc invalid"
+                   print *,"dir_visc invalid fort_getdrag: ",dir_visc
                    stop
                   endif
                  enddo ! dir=1..sdim
@@ -2678,7 +2678,8 @@ stop
                          vel(D_DECL(i_side_visc,j_side_visc,k_side_visc),dir))
                  enddo
                 else
-                 print *,"is_rigid(im_visc) invalid"
+                 print *,"is_rigid(im_visc) invalid fort_getdrag: ", &
+                         im_visc,is_rigid(im_visc)
                  stop
                 endif
 
@@ -2698,7 +2699,7 @@ stop
                  gradu(veldir,dir)= &
                   (vel6point(dir,2,veldir)-vel6point(dir,1,veldir))/delx
                 else
-                 print *,"delx invalid"
+                 print *,"delx invalid fort_getdrag: ",delx
                  stop
                 endif
                enddo ! dir=1..sdim
@@ -2756,7 +2757,7 @@ stop
                         fort_viscoelastic_model(im_primary)).eq.0) then 
                ! do nothing
               else
-               print *,"fort_built_in_elastic_model invalid"
+               print *,"fort_built_in_elastic_model invalid fort_getdrag"
                stop
               endif
 
@@ -2770,7 +2771,7 @@ stop
               if ((mu_0.ge.zero).and.(mu_non_ambient.ge.zero)) then
                ! do nothing
               else
-               print *,"mu_0 or mu_non_ambient invalid"
+               print *,"mu_0 or mu_non_ambient invalid fort_getdrag"
                stop
               endif
 
@@ -2995,12 +2996,12 @@ stop
         else if (mask_cell.eq.0) then
          ! do nothing
         else
-         print *,"mask_cell invalid"
+         print *,"mask_cell invalid fort_getdrag: ",mask_cell
          stop
         endif
 
        else
-        print *,"isweep invalid"
+        print *,"isweep invalid fort_getdrag : ",isweep
         stop
        endif
 
