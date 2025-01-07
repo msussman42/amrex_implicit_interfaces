@@ -15570,8 +15570,28 @@ end subroutine print_visual_descriptor
         print *,"drag_mod invalid"
         stop
        endif
-      else if ((drag_comp.ge.DRAGCOMP_FLAG).and. &
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUS0STRESSMAG).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUS0STRESSTAN)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOUS0STRESSMAG
+       drag_im=drag_mod
+       fort_drag_type=DRAG_TYPE_SCALAR
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUS0STRESSTAN).and. &
                (drag_comp.lt.N_DRAG)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOUS0STRESSTAN
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UVEC
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VVEC
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WVEC
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_FLAG).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUS0STRESSMAG)) then
        drag_mod=drag_comp-DRAGCOMP_FLAG
        drag_im=drag_mod
        fort_drag_type=DRAG_TYPE_FLAG
@@ -15583,14 +15603,14 @@ end subroutine print_visual_descriptor
       if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
        ! do nothing
       else
-       print *,"drag_im invalid"
+       print *,"drag_im invalid: ",drag_im
        stop
       endif
       if ((fort_drag_type.ge.0).and. &
           (fort_drag_type.lt.DRAG_TYPE_NEXT)) then
        ! do nothing
       else
-       print *,"fort_drag_type invalid"
+       print *,"fort_drag_type invalid: ",fort_drag_type
        stop
       endif
 

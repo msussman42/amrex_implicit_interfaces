@@ -2334,6 +2334,7 @@ NavierStokes::sum_integrated_quantities (
   // VOF_Recon_ALL 
   // make_physics_varsALL
   // fort_summass -> stackerror -> get_symmetric_error -> uses mofdata_tess
+  // volWgtSumALL is declared in NavierStokes.cpp
  int fast_mode=0;
  volWgtSumALL(local_caller_string,fast_mode);
 

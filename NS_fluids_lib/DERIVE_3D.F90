@@ -2093,6 +2093,8 @@ stop
       real(amrex_real) pressure_load(3)
       real(amrex_real) viscous_stress_load(3)
       real(amrex_real) viscous0_stress_load(3)
+      real(amrex_real) viscous0_stress_load_tangent(3)
+      real(amrex_real) viscous0_stress_load_magnitude
       real(amrex_real) visco_stress_load(3)
 
       real(amrex_real) pressure_stress_tensor(3,3)
@@ -2182,7 +2184,7 @@ stop
        print *,"time invalid in fort_getdrag"
        stop
       else
-       print *,"time bust in fort_getdrag"
+       print *,"time bust in fort_getdrag: ",time
        stop
       endif
 
@@ -2391,7 +2393,7 @@ stop
           if (local_density.gt.zero) then
            ! do nothing
           else
-           print *,"local_density invalid"
+           print *,"local_density invalid fort_getdrag: ",local_density
            stop
           endif
           mass=local_density*volgrid*mofdata_tess(vofcomp)
@@ -2408,7 +2410,7 @@ stop
              localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)+ &
               mass*(mofdata_tess(vofcomp+dir)+cengrid(dir))
            else
-            print *,"globalsum_sweep invalid"
+            print *,"globalsum_sweep invalid fort_getdrag"
             stop
            endif
           enddo ! dir=1..sdim
@@ -2418,7 +2420,7 @@ stop
         else if (mask_cell.eq.0) then
          ! do nothing
         else
-         print *,"mask_cell invalid"
+         print *,"mask_cell invalid fort_getdrag: ",mask_cell
          stop
         endif 
 
@@ -2503,7 +2505,9 @@ stop
            ls_sort(im)=levelpc(D_DECL(icell,jcell,kcell),im)
           enddo
            ! im_primary is the material applying a given force/torque onto
-           ! "im_test"
+           ! "im_test"; 
+           ! "im_test" is the material in which we want to 
+           ! calculate all of the forces exerted by the other materials.
            ! "get_primary_material" declared in GLOBALUTIL.F90
           call get_primary_material(ls_sort,im_primary)
 
@@ -2523,6 +2527,8 @@ stop
            presmag=pres(D_DECL(icell,jcell,kcell))
 
             ! check if im_test is a neighbor.
+            ! "im_test" is the material in which we want to 
+            ! calculate all of the forces exerted by the other materials.
            do facedir=1,SDIM
             ii=0
             jj=0
@@ -2593,6 +2599,8 @@ stop
                stop
               endif
 
+              ! "im_test" is the material in which we want to 
+              ! calculate all of the forces exerted by the other materials.
               drag(D_DECL(icell,jcell,kcell),DRAGCOMP_FLAG+im_test)=1
 
               !facedir=1..sdim
@@ -2778,10 +2786,13 @@ stop
               do j1=1,3
               do i1=1,3
 
+                !physical mu * (gradU + gradU^T)
                viscous0_stress_tensor(i1,j1)=mu_0*visc_coef* &
                  (gradu(i1,j1)+gradu(j1,i1))
+                !modeling mu * (gradU + gradU^T)
                viscous_stress_tensor(i1,j1)=mu_non_ambient*visc_coef* &
                  (gradu(i1,j1)+gradu(j1,i1))
+                !viscoelastic
                visco_stress_tensor(i1,j1)=Q(i1,j1)
 
                pressure_stress_tensor(i1,j1)=zero
@@ -2792,9 +2803,12 @@ stop
               enddo !i1
               enddo !j1
 
+              viscous0_stress_load_magnitude=zero
+
               do j1=1,3
                viscous_stress_load(j1)=zero
                viscous0_stress_load(j1)=zero
+               viscous0_stress_load_tangent(j1)=zero
                visco_stress_load(j1)=zero
                pressure_load(j1)=zero
 
@@ -2811,10 +2825,49 @@ stop
                enddo ! i1=1,3
 
                pressure_load(j1)=presmag*nsolid(j1)*facearea
+
+               if (facearea.eq.zero) then
+                viscous0_stress_load_tangent(j1)=zero
+               else if (facearea.gt.zero) then
+                if (nsolid(j1).eq.zero) then
+                 viscous0_stress_load_tangent(j1)=viscous0_stress_load(j1)
+                else if (abs(nsolid(j1)).eq.one) then
+                 viscous0_stress_load_tangent(j1)=zero
+                else
+                 print *,"nsolid(j1) (fort_getdrag) invalid: ",j1,nsolid(j1)
+                 stop
+                endif
+               else
+                print *,"facearea invalid (fort_getdrag) ",facearea
+                stop
+               endif
+
                viscous0_stress_load(j1)=viscous0_stress_load(j1)*facearea
                viscous_stress_load(j1)=viscous_stress_load(j1)*facearea
                visco_stress_load(j1)=visco_stress_load(j1)*facearea
               enddo ! j1=1,3
+
+              do j1=1,3
+               if (nsolid(j1).eq.zero) then
+                viscous0_stress_load_magnitude= &
+                 viscous0_stress_load_magnitude+ &
+                 viscous0_stress_load(j1)**2
+               else if (abs(nsolid(j1)).eq.one) then
+                !do nothing
+               else
+                print *,"nsolid(j1) (fort_getdrag) invalid: ",j1,nsolid(j1)
+                stop
+               endif
+              enddo !j1=1..3
+              if (facearea.eq.zero) then
+               viscous0_stress_load_magnitude=zero
+              else if (facearea.gt.zero) then
+               viscous0_stress_load_magnitude= &
+                sqrt(viscous0_stress_load_magnitude)/facearea
+              else
+               print *,"facearea invalid (fort_getdrag) ",facearea
+               stop
+              endif
 
 ! global_centroid will be incorrect if the solid geometry is reflected
 ! across a domain boundary.
@@ -2895,6 +2948,7 @@ stop
                drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous_stress_tensor(i1,j1)
 
+                !physical mu * (gradU + gradU^T)
                ibase=DRAGCOMP_VISCOUS0STRESS+6*(im_test-1)+dir
                drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous0_stress_tensor(i1,j1)
@@ -2904,6 +2958,16 @@ stop
                  visco_stress_tensor(i1,j1)
 
               enddo ! dir=1..6
+
+              ibase=DRAGCOMP_VISCOUS0STRESSMAG+im_test
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 viscous0_stress_load_magnitude
+
+              do dir=1,3
+               ibase=DRAGCOMP_VISCOUS0STRESSTAN+3*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 viscous0_stress_load_tangent(dir)
+              enddo
 
               do dir=1,SDIM
                ibase=DRAGCOMP_IQ_FORCE+3*(im_test-1)+dir

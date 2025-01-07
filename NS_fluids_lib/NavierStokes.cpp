@@ -18409,7 +18409,7 @@ void NavierStokes::GetDragALL() {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.GetDrag(isweep_drag);
   }
- }
+ } //isweep_drag=0...1
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

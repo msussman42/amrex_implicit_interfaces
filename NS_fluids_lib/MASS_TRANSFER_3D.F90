@@ -6858,7 +6858,8 @@ stop
       real(amrex_real), target, INTENT(inout) :: drag(DIMV(drag),ncomp)
       real(amrex_real), pointer :: drag_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
+      real(amrex_real), target, INTENT(in) :: &
+        LS(DIMV(LS),num_materials*(SDIM+1))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       integer im
@@ -7076,7 +7077,8 @@ stop
            tag_local,rtag_local
          print *,"i,j,k ",i,j,k
          print *,"level,finest_level ",level,finest_level
-         print *,"num_materials,num_interfaces,ngrow ",num_materials,num_interfaces,ngrow
+         print *,"num_materials,num_interfaces,ngrow ", &
+           num_materials,num_interfaces,ngrow
          stop
         endif
 
