@@ -68,6 +68,9 @@ DRAGCOMP_FLAG=1 => drag initialized
 DRAGCOMP_FLAG=2 => drag extended
 #endif
 #define DRAGCOMP_FLAG (DRAGCOMP_TORQUE_ARM+3*num_materials)
-#define N_DRAG (DRAGCOMP_FLAG+num_materials)
+#define DRAGCOMP_VISCOUS0STRESSMAG (DRAGCOMP_FLAG+num_materials)
+#define DRAGCOMP_VISCOUS0STRESSTAN (DRAGCOMP_VISCOUS0STRESSMAG+num_materials)
+
+#define N_DRAG (DRAGCOMP_VISCOUS0STRESSTAN+3*num_materials)
 
 #endif
