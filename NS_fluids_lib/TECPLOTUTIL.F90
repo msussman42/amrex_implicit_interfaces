@@ -843,7 +843,8 @@ stop
       else if (tower_mf_id-GET_NEW_DATA_OFFSET.ge.0) then
        !do nothing
       else
-       print *,"tower_mf_id out of range"
+       print *,"tower_mf_id out of range (fort_combinezones_sanity) ", &
+        tower_mf_id
        stop
       endif
 
@@ -1148,6 +1149,8 @@ stop
        write(11) nwrite
 
        ! Variable names: combinezones_sanity
+       ! "dumpstring_headers" declared in GLOBALUTIL.F90
+       ! "dumpstring_headers_sanity" declared in GLOBALUTIL.F90
        if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
         add_sub_cells=plot_sdim
         call dumpstring_headers(plot_sdim,add_sub_cells)

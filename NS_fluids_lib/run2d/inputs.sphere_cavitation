@@ -1,3 +1,8 @@
+#Cavitation due to an impacting sphere. 
+#K L de Graaf, P A Brandner, B W Pearce and J Y Lee
+#2015 J. Phys.: Conf. Ser. 656 012014
+#(http://iopscience.iop.org/1742-6596/656/1/012014)
+
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  130.0  # maximum problem time
