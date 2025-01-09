@@ -939,7 +939,7 @@ if ((num_materials.ge.2).and. &
    mag=mag+(local_x(SDIM)-zblob)**2
   endif
   mag=sqrt(mag)
-  if (mag.gt.five*radblob) then
+  if (mag.gt.100.d0*radblob) then
    !do nothing
   else if (mag.ge.zero) then
    if ((LS_LIQUID.ge.zero).or.(F_LIQUID.ge.0.1d0)) then
@@ -951,12 +951,12 @@ if ((num_materials.ge.2).and. &
     tagflag=1
    endif
   else
-   print *,"mag invalid: ",mag
+   print *,"mag invalid shockdrop.F90: ",mag
    stop
   endif
 
  else
-  print *,"axis_dir invalid: ",axis_dir
+  print *,"axis_dir invalid shockdrop.F90: ",axis_dir
   stop
  endif
 

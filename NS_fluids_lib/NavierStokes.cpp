@@ -336,9 +336,9 @@ int  NavierStokes::blob_history_plot_int=0;
 
 //default: tecplot nodes
 //0=tecplot nodes
-//1=plt file cells
+//1=plt file or HDF5 cells (native AMReX format or HDF5)
 //2=tecplot cells (piecewise constant reconstruction).
-int  NavierStokes::visual_nddata_format=0;  
+int  NavierStokes::visual_nddata_format=0; 
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
