@@ -19387,7 +19387,7 @@ end subroutine print_visual_descriptor
        GAMMA=1.3D0
        RHOI=1.63D0
       else
-       print *,"probtype not supported for the jwl material"
+       print *,"probtype not supported for the jwl material: ",probtype
        stop
       endif
 
@@ -22227,7 +22227,9 @@ end subroutine print_visual_descriptor
        ! in: tait_hydrostatic_pressure_density
       else if ((probtype.eq.42).and.(SDIM.eq.2)) then  ! bubble jetting
 
-       if (probloy.ne.zero) then
+       if (probloy.eq.zero) then
+        !do nothing
+       else
         print *,"probloy must be 0 for bubble jetting problem"
         stop
        endif
@@ -22260,7 +22262,9 @@ end subroutine print_visual_descriptor
 
       else if ((probtype.eq.46).and.(SDIM.eq.2)) then  ! cavitation
 
-       if (probloy.ne.zero) then
+       if (probloy.eq.zero) then
+        !do nothing
+       else
         print *,"probloy must be 0 for cavitation problem"
         stop
        endif
@@ -22271,13 +22275,13 @@ end subroutine print_visual_descriptor
         zfree=zblob+yblob  ! relative to computational grid
         z_at_depth=yblob
        else if (axis_dir.eq.10) then
-        zfree=zblob
-        z_at_depth=zero
+        print *,"there is no gravity for steel sphere collision."
+        stop
        else if (axis_dir.eq.20) then
         print *,"there is no gravity for the CODY ESTEBE created test problem"
         stop
        else
-        print *,"axis_dir out of range"
+        print *,"axis_dir out of range: ",axis_dir
         stop
        endif
        if (xpos(SDIM).gt.zfree) then
@@ -25694,7 +25698,7 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
  else if (axis_dir.eq.20) then
   ! do nothing
  else
-  print *,"axis_dir out of range"
+  print *,"axis_dir out of range: ",axis_dir
   stop
  endif
 else if (fort_material_type(1).eq.13) then
@@ -25702,7 +25706,7 @@ else if (fort_material_type(1).eq.13) then
  if (abs(gravity).gt.zero) then
   !do nothing
  else
-  print *,"gravity invalid"
+  print *,"gravity invalid: ",gravity
   stop
  endif
 
@@ -25727,13 +25731,13 @@ else if (fort_material_type(1).eq.13) then
  if (depth.gt.zero) then
   !do nothing
  else
-  print *,"depth invalid"
+  print *,"depth invalid: ",depth
   stop
  endif
  if (surface_den.gt.zero) then
   !do nothing
  else
-  print *,"surface den invalid"
+  print *,"surface den invalid: ",surface_den
   stop
  endif
  call EOS_tait_ADIABATIC_rhohydro(surface_den,surface_pressure)

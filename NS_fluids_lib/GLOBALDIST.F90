@@ -397,8 +397,12 @@ end subroutine nozzle2d
         dist=dist_array(im)
 
         ! cavitation (in materialdistsolid)
-       else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
+       else if ((probtype.eq.46).and.(axis_dir.eq.10).and.(1.eq.0)) then
+
           ! dist>0 in the steel sphere
+        print *,"steel sphere motion not hardwired anymore"
+        stop
+
         call stainless_steel_dist_rate(xprime,yprime,zprime,time, &
          dist,steel_rate)
 
@@ -1424,7 +1428,9 @@ end subroutine nozzle2d
          dist=dist1
         endif  
        endif
-      else if (probtype.eq.42) then ! bubble jetting (soliddist)
+       ! bubble jetting (soliddist) or steel sphere hitting plate (soliddist)
+      else if ((probtype.eq.42).or. &
+               ((probtype.eq.46).and.(axis_dir.eq.10))) then 
 
        !dist<0 in the solid
        !soliddist is called by: subroutine materialdistsolid 
@@ -1457,7 +1463,9 @@ end subroutine nozzle2d
           dist=min(dist,dist2)
        enddo 
        ! in soliddist
-      else if ((probtype.eq.46).and.(radblob2.gt.zero)) then
+      else if ((probtype.eq.46).and. &
+               (radblob2.gt.zero).and. &
+               (axis_dir.ne.10)) then
        print *,"the airgun problem needs to be redefined"
        stop
       else if ((probtype.eq.63).and.(SDIM.eq.3)) then

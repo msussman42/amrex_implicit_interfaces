@@ -5957,11 +5957,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             material_present_flag(im)=1
            endif
           else if (axis_dir.eq.10) then
-           ! do nothing (sphere impact)
+           ! do nothing (steel sphere impact)
           else if (axis_dir.eq.20) then
            ! do nothing (CODY ESTEBE created test problem)
           else
-           print *,"axis_dir invalid"
+           print *,"axis_dir invalid: ",axis_dir
+           print *,"probtype=",probtype
            stop
           endif
          endif 
@@ -7127,10 +7128,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (time.ge.1.0D+20) then
        print *,"WARNING time.ge.1.0D+20 in velsolid"
       else if (time.lt.zero) then
-       print *,"time invalid in velsolid"
+       print *,"time invalid in velsolid: ",time
        stop
       else
-       print *,"time bust in velsolid"
+       print *,"time bust in velsolid: ",time
        stop
       endif
 
@@ -7176,11 +7177,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_VEL(xvec,time,LS,vel,velsolid_flag)
 
-        ! cavitation
+        ! cavitation (in subroutine velsolid)
        else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
+
           ! dist>0 in the steel sphere
-        call stainless_steel_dist_rate(x,y,z,time, &
-         dist,vel(SDIM))
+          ! stainless_steel_dist_rate declared in: GLOBALDIST.F90
+        if (1.eq.0) then
+         call stainless_steel_dist_rate(x,y,z,time, &
+          dist,vel(SDIM))
+         print *,"steel ball velocity is no longer hardwired"
+         stop
+        else 
+          !plate velocity is zero
+         do dir=1,SDIM
+          vel(dir)=zero
+         enddo
+        endif
+
           ! CODY ESTEBE created test problem.
        else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
         do dir=1,SDIM
@@ -8037,7 +8050,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! in: materialdist_batch
        ! cavitation
-      else if ((probtype.eq.46).and.(SDIM.eq.2)) then
+      else if ((probtype.eq.46).and. &
+               (axis_dir.ne.10).and. &
+               (SDIM.eq.2)) then
 
          ! water, jwl, air, vacuum
        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
@@ -8083,7 +8098,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dist(1)=dist(1)-z
        dist(2)=-dist(1)
 
-      else if (probtype.eq.42) then  !bubble jetting
+       ! bubble jetting or steel ball cavitation
+       ! (materialdist_batch)
+      else if ((probtype.eq.42).or. &
+               ((probtype.eq.46).and.(axis_dir.eq.10))) then  
 
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        dist(2)=-dist(1)
@@ -8094,7 +8112,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          !do nothing
 
          !1=liquid 2=JWL 3=substrate 4=biofilm
-        else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
+        else if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
+                 (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
          solid_id=1
          call jetting_plate_dist(x,y,z,dist(3),solid_id,for_clamped)
          dist(3)=-dist(3) !now: dist(3)>0 in the plate.
@@ -8112,11 +8131,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else
-         print *,"probtype.eq.42 invalid FSI_flag: ",FSI_flag(3)
+         print *,"probtype.eq.42 or 46(10) invalid FSI_flag: ", &
+           FSI_flag(3),probtype,axis_dir
          stop
         endif
        else
-        print *,"expecting num_materials==3 if probtype.eq.42"
+        print *,"expecting num_materials>=3 if probtype.eq.42 or 46"
         stop
        endif
 
@@ -9728,7 +9748,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 
         ! vapordist cavitation 2D - dist>0 in the water for jwl case,
-        ! dist>0 in the sphere for the sphere impact case.
+        ! dist>0 in the water for the sphere impact case.
        else if (probtype.eq.46) then
 
         if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then 
@@ -9741,13 +9761,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           dist=dist1
          endif
         else if (axis_dir.eq.10) then
-         dist=radblob-sqrt( (x-xblob)**2 + (y-yblob)**2 )
+
+         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob
 
          ! CODY ESTEBE created test problem
         else if (axis_dir.eq.20) then
          dist=99999.0
         else
-         print *,"axis_dir invalid"
+         print *,"axis_dir invalid: ",axis_dir
+         print *,"probtype: ",probtype
          stop
         endif
 
@@ -17538,6 +17560,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((probtype.eq.541).and.(SDIM.eq.3)) then
           base_pres=outflow_pressure
 
+         ! steel sphere collision
+        else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
+          base_pres=outflow_pressure
+
          ! CODY ESTEBE created test problem
         else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
           base_pres=outflow_pressure
@@ -17663,10 +17689,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
-           else if (axis_dir.eq.10) then
-             !calling from presBDRYCOND
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
-                    from_boundary_hydrostatic)
+           else if (axis_dir.eq.10) then !steel sphere collision
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -17743,10 +17767,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
+
+            !steel sphere
            else if (axis_dir.eq.10) then
-             !calling from presBDRYCOND
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
-                    from_boundary_hydrostatic)
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -17858,14 +17882,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
-           else if (axis_dir.eq.10) then
-             !calling from presBDRYCOND
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
-                    from_boundary_hydrostatic)
+           else if (axis_dir.eq.10) then !steel sphere
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
-            print *,"axis_dir invalid"
+            print *,"axis_dir invalid: ",axis_dir
+            print *,"probtype=",probtype
             stop
            endif
 
@@ -25972,12 +25995,7 @@ end subroutine initialize2d
 
             endif
            else if (axis_dir.eq.10) then
-            if (im.eq.1) then ! water
-              !calling from fort_initdata
-             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
-                     from_boundary_hydrostatic)
-             scalc(ibase+ENUM_DENVAR+1)=rhohydro
-            endif
+            !do nothing (steel sphere test problem,fort_denconst(im) ok)
            else if (axis_dir.eq.20) then
             !do nothing (CODY ESTEBE created test problem,fort_denconst(im) ok)
            else
@@ -27775,13 +27793,18 @@ end subroutine initialize2d
           if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
            ! do nothing cavitation 2D, jwl
           else if (axis_dir.eq.10) then
-           if (1.eq.0) then
+           if (num_materials.ge.3) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
-            if (vfracbatch(num_materials).gt.zero) then ! sphere
+            if (vfracbatch(2).gt.zero) then ! steel sphere
              y_vel=advbot
             else
              y_vel=zero
             endif
+           else
+            print *,"num_materials invalid: ",num_materials
+            print *,"probtype=",probtype
+            print *,"axis_dir=",axis_dir
+            stop
            endif
           else if (axis_dir.eq.20) then
            x_vel=adv_vel

@@ -2,6 +2,8 @@
 #K L de Graaf, P A Brandner, B W Pearce and J Y Lee
 #2015 J. Phys.: Conf. Ser. 656 012014
 #(http://iopscience.iop.org/1742-6596/656/1/012014)
+#d=45 mm U=1.8 m/s  or 3.2 m/s
+#d=15 mm U=5 m/s
 
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
@@ -140,7 +142,7 @@ ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=0.1
-ns.advbot=0.0 
+ns.advbot=320.0 # 3.2 m/s 
 ns.adv_vel=0.0
 ns.adv_dir=2
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
@@ -182,16 +184,18 @@ ns.tiling=false
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
 ns.include_viscous_heating=0
+#at 10.22 meters, density=1.00004235
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
-ns.denconst=1.0 7.8 1.0 1.0
+ns.denconst=1.00004235 7.8 1.0 1.0
 ns.density_floor=0.999957749988 7.8 1.0 1.0
 ns.xblob=0.0
 
 #ns.yblob=5000.0
 #ns.zblob=9850.0
 ns.yblob=2.5 # y coordinate of sphere relative to domain BOTTOM
+#at 10.22 meters, density=1.00004235
 ns.zblob=1021.87  # depth of sphere
-ns.radblob=2.25  # radius of sphere
+ns.radblob=2.25  # radius of sphere d=45 mm
 ns.radblob2=2.5  # substrate thickness
 ns.yblob2=2.5    # yblob2+yblob < y < yblob2+yblob+thickness
 ns.xblob2=5.0    # substrate radius -xblob2 < r < xblob2

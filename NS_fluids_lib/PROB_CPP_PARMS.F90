@@ -668,13 +668,17 @@ stop
        stop
       endif
 
-     call random_seed(size=n_seed)
-     allocate(seed(n_seed))
-     do i=1,n_seed
-      seed(i)=i
-     enddo
-     call random_seed(put=seed)
-     deallocate(seed)
+      do im=1,num_materials
+       FSI_flag(im)=ccFSI_flag(im)
+      enddo
+
+      call random_seed(size=n_seed)
+      allocate(seed(n_seed))
+      do i=1,n_seed
+       seed(i)=i
+      enddo
+      call random_seed(put=seed)
+      deallocate(seed)
 
       ! USER DEFINED (used by "is_in_probtype_list")
       ! IN ORDER TO ADD A NEW TEST PROBLEM:
@@ -758,7 +762,21 @@ stop
 
       if ((probtype.eq.42).or. &
           ((probtype.eq.46).and.(axis_dir.eq.10))) then
-       SUB_clamped_LS_no_scale=>STUB_clamped_LS_jetting_or_cav
+
+       if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
+           (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
+           (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+        !do nothing
+
+        !1=liquid 2=JWL 3=substrate 4=biofilm
+       else if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
+                (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+        SUB_clamped_LS_no_scale=>STUB_clamped_LS_jetting_or_cav
+       else
+        print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+        stop
+       endif
+
       endif
 
       SUB_wallfunc=>STUB_wallfunc
@@ -1452,8 +1470,6 @@ stop
       
        fort_material_type(im)=ccmaterial_type(im)
        fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
-
-       FSI_flag(im)=ccFSI_flag(im)
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
