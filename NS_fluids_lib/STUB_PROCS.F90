@@ -355,8 +355,11 @@ integer :: solid_id !=1 or 2
    LS=-LS
    if (LS.ge.zero) then
     LS=99999.0d0
-   else
+   else if (LS.lt.zero) then
     LS=-99999.0d0
+   else
+    print *,"LS is NAN STUB_PROCS.F90 ",LS,solid_id
+    stop
    endif
    if (LS.lt.zero) then
     if (num_materials.eq.3) then
@@ -367,8 +370,11 @@ integer :: solid_id !=1 or 2
      LS=-LS
      if (LS.ge.zero) then
       LS=99999.0d0
-     else
+     else if (LS.lt.zero) then
       LS=-99999.0d0
+     else
+      print *,"LS is NAN STUB_PROCS.F90 ",LS,solid_id
+      stop
      endif
     else
      print *,"num_materials invalid: ",num_materials
