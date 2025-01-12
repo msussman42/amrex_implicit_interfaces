@@ -303,7 +303,8 @@ return
 end subroutine STUB_clamped_LS
 
 
-subroutine STUB_clamped_LS_jetting(x,t,LS,vel,temperature,prescribed_flag,dx)
+subroutine STUB_clamped_LS_jetting_or_cav(x,t,LS,vel, &
+               temperature,prescribed_flag,dx)
 use probcommon_module
 use global_utility_module
 use global_distance_module
@@ -320,7 +321,8 @@ integer dir
 integer, parameter :: for_clamped=1
 integer :: solid_id !=1 or 2
 
- if (probtype.eq.42) then
+ if ((probtype.eq.42).or. &
+     ((probtype.eq.46).and.(axis_dir.eq.10))) then
 
   if (num_materials.ge.3) then
    !do nothing
@@ -336,11 +338,18 @@ integer :: solid_id !=1 or 2
   temperature=room_temperature
   prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
 
-  if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
+  if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
+      (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
    LS=-99999.0d0
    temperature=293.0d0
 
     !LS<0 in the clamped regions
+    !substrate thickness=radblob2
+    !          distplate=yblob2
+    !substrate length: -xblob2 < r < xblob2
+    !substrate vertical: yblob+distplate < z < yblob+distplate+radblob2
+    ! (biofilm is on the bottom)
+    ! 
    solid_id=1
    call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
    LS=-LS
@@ -381,12 +390,13 @@ integer :: solid_id !=1 or 2
    stop
   endif
  else
-  print *,"expecting probtype.eq.42 ",probtype
+  print *,"expecting probtype.eq.42 or .eq.46 ",probtype
+  print *,"axis_dir ",axis_dir
   stop
  endif
 
 return
-end subroutine STUB_clamped_LS_jetting
+end subroutine STUB_clamped_LS_jetting_or_cav
 
 ! initial velocity is zero
 subroutine STUB_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)

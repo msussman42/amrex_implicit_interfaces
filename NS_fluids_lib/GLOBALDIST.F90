@@ -875,7 +875,10 @@ end subroutine nozzle2d
 
        ! underwater explosion, growth, and collapse of explosion bubble
        ! near a flat plate.
-      if (probtype.eq.42) then
+       !   or
+       ! impact of steel ball against flat plate.
+      if ((probtype.eq.42).or. &
+          ((probtype.eq.46).and.(axis_dir.eq.10))) then
        aspect=xblob2
 
 !      offset=2.54d0
@@ -931,6 +934,7 @@ end subroutine nozzle2d
        endif
       else
        print *,"probtype invalid in jetting_plate_dist: ",probtype
+       print *,"axis_dir= ",axis_dir
        stop
       endif
 
