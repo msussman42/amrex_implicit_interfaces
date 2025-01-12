@@ -192,12 +192,12 @@ ns.xblob=0.0
 
 #ns.yblob=5000.0
 #ns.zblob=9850.0
-ns.yblob=2.5 # y coordinate of sphere relative to domain BOTTOM
+ns.yblob=3.0 # y coordinate of sphere relative to domain BOTTOM
 #at 10.22 meters, density=1.00004235
 ns.zblob=1021.87  # depth of sphere
 ns.radblob=2.25  # radius of sphere d=45 mm
 ns.radblob2=2.5  # substrate thickness
-ns.yblob2=2.5    # yblob2+yblob < y < yblob2+yblob+thickness
+ns.yblob2=3.0    # yblob2+yblob < y < yblob2+yblob+thickness
 ns.xblob2=5.0    # substrate radius -xblob2 < r < xblob2
 ns.denfact=1.0
 ns.velfact=0.0
