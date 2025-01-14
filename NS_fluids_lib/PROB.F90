@@ -2570,7 +2570,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt must be positive"
+       print *,"dt must be positive general_hydrostatic_pressure_density ",dt
        stop
       endif
 
@@ -2579,7 +2579,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (gravity_vector(gravity_dir).ne.zero) then
        ! do nothing
       else
-       print *,"gravity_vector is NaN"
+       print *,"gravity_vector is NaN: ",gravity_dir, &
+           gravity_vector(gravity_dir)
        stop
       endif
 

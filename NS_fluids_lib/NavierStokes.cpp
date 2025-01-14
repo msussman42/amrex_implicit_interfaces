@@ -3996,6 +3996,9 @@ NavierStokes::read_params ()
      } else if (density_floor[i]==0.0) {
       // do nothing
      } else if (density_floor[i]>=denconst[i]) {
+      std::cout << "i= " << i << '\n';
+      std::cout << "density_floor= " << density_floor[i]  << '\n';
+      std::cout << "denconst= " << denconst[i]  << '\n';
       amrex::Error("density_floor[i]>=denconst[i]");
      }
 
