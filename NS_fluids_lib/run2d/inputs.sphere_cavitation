@@ -6,7 +6,7 @@
 #d=15 mm U=5 m/s
 
 max_step  =  99999    # maximum timestep
-#max_step  =  2    # maximum timestep
+#max_step  =  5    # maximum timestep
 stop_time =  130.0  # maximum problem time
 
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
@@ -74,11 +74,26 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 #   B(1- w rho/(R2 rho0))e^(-R2 rho0/rho) + w rho e
 # hydrostatic pressure=1.013x10^6
 #
+# EOS_tait (material_type=1)
+# PCAV_TAIT=220.2726
+# A_TAIT=1.0D+6
+# B_TAIT=3.31D+9
+# RHOBAR_TAIT=1.0D0
+# GAMMA_TAIT=7.15D0
+# pressure=B( (rho/rhobar)^gamma - 1) + A
+# rho_init=rhobar*( ((1.06e+6-A)/B + 1)^(1/gamma) )=1.000003
+# rho=1.000003 pressure=1.06e+6
+# rhocav=rhobar*( ((pcav-A)/B + 1)^(1/gamma) )=0.9995775
+# sigma=63.74=(P-PV)/(.5 rho U^2 )   rho=1 (liquid density), U=180
+# P-PV=63.74 (.5) rho U^2 = 1032631.73
+# 1ATM=10^6 dyne/cm^2
+# P=PV+1.03e+6=1.03e+6+(.03)(1E6)=1.06e+6
+# 
 ns.inflow_pressure=1.0e+6  # atmospheric pressure
-ns.outflow_pressure=2.002455e+6 # tank pressure at the impact plate
+ns.outflow_pressure=1.06e+6 # tank pressure at the impact plate
 
 amr.n_cell    = 128 128
-amr.max_level =  3
+amr.max_level =  1
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
@@ -90,7 +105,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100     # 5 for movies. 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 256
+amr.max_grid_size   = 64
 #amr.restart         = chk04600
 #amr.trace   =1
 
@@ -142,7 +157,11 @@ ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=0.1
-ns.advbot=320.0 # 3.2 m/s 
+#sigma=63.74=(P-PV)/(.5 rho U^2 )   rho=1 (liquid density), U=180
+#P-PV=63.74 (.5) rho U^2 = 1032631.73
+#P=PV+1.03e+6=1.06e+6
+#ns.advbot=320.0 # 3.2 m/s (another option)
+ns.advbot=240.0 # (1.8 m/s impact velocity)
 ns.adv_vel=0.0
 ns.adv_dir=2
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
@@ -151,6 +170,7 @@ ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
+# material_type=1 EOS_tait
 ns.material_type=1 0 0 0
 ns.material_conservation_form=0 0 0 0
 # FSI_flag for avaiable phase/material
@@ -162,10 +182,12 @@ ns.material_conservation_form=0 0 0 0
 # 5 rigid not prescribed
 # 8 EULERIAN FSI
 # im_elastic_map will have 3 components: 1,2,3
-ns.FSI_flag=0 5 8 8
+ns.FSI_flag=0 5 5 8
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
-ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+5 #BIOFILM
-ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #BIOFILM
+#ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+5 #BIOFILM
+ns.elastic_viscosity=0.0 0.0 0.0 4.0e+5 #BIOFILM
+#ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #BIOFILM
+ns.elastic_time=0.0 0.0 0.0 1.0e+31 #BIOFILM
 ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 #0=FENE-CR
 #1=Oldroyd B
@@ -173,7 +195,8 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 7 #BIOFILM
+#ns.viscoelastic_model=0 0 7 7 #BIOFILM
+ns.viscoelastic_model=0 0 0 7 #BIOFILM
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
@@ -183,11 +206,16 @@ ns.tiling=false
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
+ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.include_viscous_heating=0
-#at 10.22 meters, density=1.00004235
+#tank=520x1200x520 mm=52x120x52 cm^3
+#base tank added pressure=
+# (rho)(volume)g/(cross sectional area)=
+# rho gh=980 * 52^2 * 120 * 1/(52*120)=980 * 52=5.1e4 dyne/cm^2=0.051 atm
+# P=PV+1.03e+6=1.06e+6
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
-ns.denconst=1.00004235 7.8 1.0 1.0
-ns.density_floor=0.999957749988 7.8 1.0 1.0
+ns.denconst=1.000003 7.8 1.0 1.0
+ns.density_floor=0.999957749988 7.79 0.999 0.999
 ns.xblob=0.0
 
 #ns.yblob=5000.0
@@ -196,8 +224,9 @@ ns.yblob=3.0 # y coordinate of sphere relative to domain BOTTOM
 #at 10.22 meters, density=1.00004235
 ns.zblob=1021.87  # depth of sphere
 ns.radblob=2.25  # radius of sphere d=45 mm
-ns.radblob2=2.5  # substrate thickness
-ns.yblob2=3.0    # yblob2+yblob < y < yblob2+yblob+thickness
+#jetting_plate_dist declared in GLOBALDIST.F90
+ns.radblob2=1.5  # substrate thickness
+ns.yblob2=4.5    # yblob2+yblob < y < yblob2+yblob+thickness
 ns.xblob2=5.0    # substrate radius -xblob2 < r < xblob2
 ns.denfact=1.0
 ns.velfact=0.0

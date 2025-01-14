@@ -20260,25 +20260,25 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid EOS_tait: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid EOS_tait ",internal_energy
        stop
       endif
       if (A.gt.zero) then
        !do nothing
       else
-       print *,"A invalid"
+       print *,"A invalid EOS_tait ",A
        stop
       endif
       if (B.gt.zero) then
        !do nothing
       else
-       print *,"B invalid"
+       print *,"B invalid EOS_tait ",B
        stop
       endif
 
@@ -20331,12 +20331,16 @@ end subroutine print_visual_descriptor
       real(amrex_real) A,B,rhobar,pcav,rhocav,pressure
       real(amrex_real) rho_sound
 
-      if (rho.le.zero) then
-       print *,"rho invalid"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid SOUNDSQR_tait ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"e invalid"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid SOUNDSQR_tait ",internal_energy
        stop
       endif
 
@@ -20347,8 +20351,10 @@ end subroutine print_visual_descriptor
       rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
       pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
       
-      if (rhocav.le.zero) then
-       print *,"rhocav invalid"
+      if (rhocav.gt.zero) then
+       !do nothing
+      else
+       print *,"rhocav invalid SOUNDSQR_TAIT ",rhocav
        stop
       endif
 
@@ -22268,15 +22274,26 @@ end subroutine print_visual_descriptor
         print *,"probloy must be 0 for cavitation problem"
         stop
        endif
+
        ! yblob is distance from domain bottom of charge/sphere
        ! zblob is depth of charge (for jwl problem)
        denfree=one
+
        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
         zfree=zblob+yblob  ! relative to computational grid
         z_at_depth=yblob
+        if (xpos(SDIM).gt.zfree) then
+         rho=denfree
+        else
+         rho= &
+          ((density_at_depth-denfree)/ &
+           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        endif
+        call EOS_tait_ADIABATIC(rho,pres)
+
        else if (axis_dir.eq.10) then
-        print *,"there is no gravity for steel sphere collision."
-        stop
+        rho=denfree
+        pres=zero
        else if (axis_dir.eq.20) then
         print *,"there is no gravity for the CODY ESTEBE created test problem"
         stop
@@ -22284,14 +22301,6 @@ end subroutine print_visual_descriptor
         print *,"axis_dir out of range: ",axis_dir
         stop
        endif
-       if (xpos(SDIM).gt.zfree) then
-        rho=denfree
-       else
-        rho= &
-          ((density_at_depth-denfree)/ &
-           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
-       endif
-       call EOS_tait_ADIABATIC(rho,pres)
 
       else if (fort_material_type(1).eq.13) then
 
