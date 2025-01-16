@@ -120,8 +120,8 @@ mac.mac_abs_tol    = 1.0e-10
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # liquid,steel ball (hardest), backing plate (hard), biofilm (softest)
-ns.shock_timestep=1 2 2 2
-ns.cfl            = 0.5    # cfl number for hyperbolic system
+ns.shock_timestep=2 2 2 2
+ns.cfl            = 0.1    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
 ns.change_max=1.01    # scale back initial timestep
 # for underwater explosion, energy equation must be handled
