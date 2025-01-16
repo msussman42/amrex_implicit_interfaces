@@ -3167,6 +3167,27 @@ NavierStokes::read_params ()
      std::cout << "heatvisc_coef " << heatvisc_coef << '\n';
      std::cout << "include_viscous_heating " << include_viscous_heating << '\n';
 
+     if (gravity_vector_in_table==true) {
+
+      if ((gravity_in_table==false)&&
+          (gravity_dir_in_table==false)&&
+          (invert_gravity_in_table==false)) {
+       // do nothing
+      } else
+       amrex::Error("gravity parm conflict");
+
+     } else if (gravity_vector_in_table==false) {
+
+      if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
+       amrex::Error("gravity dir invalid");
+
+      std::cout << "gravity_dir= " << gravity_dir << '\n';
+      std::cout << "invert_gravity= " << invert_gravity << '\n';
+      std::cout << "abs(gravity)= " << std::abs(gravity) << '\n';
+
+     } else
+      amrex::Error("gravity_vector_in_table invalid");
+
      std::cout << "gravity_vector 0..sdim-1: " << 
        gravity_vector[0] << ' ' <<
        gravity_vector[1] << ' ' <<
