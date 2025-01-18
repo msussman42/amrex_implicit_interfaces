@@ -919,11 +919,11 @@ end subroutine nozzle2d
           yblob+distplate+local_offset+height_shift, &
           dist)
         else if (for_clamped.eq.1) then
-         call squaredist(x,y,-aspect,-aspect+offset, &
+         call squaredist(x,y,-aspect-offset,-aspect+offset, &
           yblob+distplate+height_shift, &
           yblob+distplate+local_offset+height_shift, &
           dist_left)
-         call squaredist(x,y,aspect-offset,aspect, &
+         call squaredist(x,y,aspect-offset,aspect+offset, &
           yblob+distplate+height_shift, &
           yblob+distplate+local_offset+height_shift, &
           dist_right)
