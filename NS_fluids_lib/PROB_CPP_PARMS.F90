@@ -652,7 +652,10 @@ stop
 #endif
       
       probtype=ccprobtype
+      axis_dir=ccaxis_dir
+
       num_materials=ccnum_materials
+
       if (num_materials.lt.MAX_NUM_MATERIALS) then
        ! do nothing
       else
@@ -1441,7 +1444,6 @@ stop
       
       adv_dir=ccadv_dir
       adv_vel=ccadv_vel
-      axis_dir=ccaxis_dir
       rgasinlet=ccrgasinlet
       vinletgas=ccvinletgas
       twall=cctwall

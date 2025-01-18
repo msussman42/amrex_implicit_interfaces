@@ -16164,7 +16164,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (global_velocity_scale.gt.zero) then
          vel(dir)=vel(dir)/global_velocity_scale
         else
-         print *,"global_velocity_scale invalid"
+         print *,"global_velocity_scale invalid: ",global_velocity_scale
          stop
         endif
        else
@@ -23197,7 +23197,7 @@ end subroutine initialize2d
          else if (prescribed_flag.eq.1) then
           ! do nothing
          else
-          print *,"prescribed_flag invalid"
+          print *,"prescribed_flag invalid: ",prescribed_flag
           stop
          endif
         else if (LS_clamped.lt.zero) then

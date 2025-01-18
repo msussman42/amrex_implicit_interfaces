@@ -25703,7 +25703,7 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
  if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
   density_at_depth=1.00008343D0
  else if (axis_dir.eq.10) then
-  density_at_depth=1.0000423520369408D0 ! 10.22 meters
+  density_at_depth=1.000003 !52x52x120 tank that is pressureized
  else if (axis_dir.eq.20) then
   ! do nothing
  else
