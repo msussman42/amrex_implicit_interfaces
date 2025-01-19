@@ -623,15 +623,10 @@ end subroutine nozzle2d
         print *,"no rigid body expected"
         stop
        else if (axis_dir.eq.10) then
-        if (im_project.eq.num_materials) then
-         call spheredist(x,y,z,dist) ! dist<0 in the sphere
-         dist=-dist
-        else
-         print *,"expecting im_project=num_materials; num_materials=",num_materials
-         stop
-        endif
+        print *,"no rigid sphere expected"
+        stop
        else
-        print *,"axis_dir invalid"
+        print *,"axis_dir invalid: ",axis_dir
         stop
        endif
        ! crystal_distance
@@ -753,13 +748,10 @@ end subroutine nozzle2d
         print *,"no rigid body expected"
         stop
        else if (axis_dir.eq.10) then
-        rigid_centroid(1)=xblob
-        rigid_centroid(2)=yblob
-        if (SDIM.eq.3) then
-         rigid_centroid(SDIM)=zblob
-        endif
+        print *,"no rigid sphere expected"
+        stop
        else
-        print *,"axis_dir invalid"
+        print *,"axis_dir invalid: ",axis_dir
         stop
        endif 
        ! in: crystal centroid
@@ -1326,6 +1318,7 @@ end subroutine nozzle2d
       real(amrex_real) diamblob
       integer i,j,iSphere
       integer :: solid_id !1=substrate 2=biofilm
+      integer :: backing_id
       integer, parameter :: for_clamped=0
 
       if (num_materials.lt.1) then
@@ -1432,9 +1425,18 @@ end subroutine nozzle2d
       else if ((probtype.eq.42).or. &
                ((probtype.eq.46).and.(axis_dir.eq.10))) then 
 
+       if (probtype.eq.42) then
+        backing_id=3
+       else if (probtype.eq.46) then
+        backing_id=2
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+
        !dist<0 in the solid
        !soliddist is called by: subroutine materialdistsolid 
-       if (im.eq.3) then
+       if (im.eq.backing_id) then
         solid_id=1
        else if ((im.eq.4).and.(num_materials.eq.4)) then
         solid_id=2

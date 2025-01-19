@@ -7181,19 +7181,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! cavitation (in subroutine velsolid)
        else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
 
-          ! dist>0 in the steel sphere
-          ! stainless_steel_dist_rate declared in: GLOBALDIST.F90
-        if (1.eq.0) then
-         call stainless_steel_dist_rate(x,y,z,time, &
-          dist,vel(SDIM))
-         print *,"steel ball velocity is no longer hardwired"
-         stop
-        else 
-          !plate velocity is zero
-         do dir=1,SDIM
-          vel(dir)=zero
-         enddo
-        endif
+        !stainless_steel_dist_rate (not used) is declared in: GLOBALDIST.F90
+        !plate velocity is zero
+        do dir=1,SDIM
+         vel(dir)=zero
+        enddo
 
           ! CODY ESTEBE created test problem.
        else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
@@ -7867,6 +7859,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: box_ylo,box_yhi
       integer, parameter :: for_clamped=0
       integer :: solid_id !=1 or 2
+      integer :: ball_id !=3 or 2
+      integer :: backing_id !=3 or 2
 
       im_solid_materialdist=im_solid_primary()
 
@@ -8068,24 +8062,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist(num_materials)=-99999.0 ! vacuum
         endif
        else if (axis_dir.eq.10) then ! cavitation due to falling steel ball
-        if (num_materials.ne.3) then
-         print *,"num_materials invalid: num_materials=",num_materials
-         stop
-        endif
-         ! dist(num_materials)>0 in the steel sphere
-        call vapordist(xsten,nhalf,dx,bfact,dist(num_materials)) 
-        dist(1)=99999.0 ! water
-        dist(2)=-99999.0 ! ambient
-        if (im_solid_materialdist.ne.num_materials) then
-         print *,"im_solid_materialdist invalid: ",im_solid_materialdist
-         stop
-        endif
+        print *,"steel ball cavitation handled below ..."
+        stop
+
         ! CODY ESTEBE created test problem
        else if (axis_dir.eq.20) then
         dist(1)=99999.0
         dist(2)=-99999.0 ! ambient
        else
-        print *,"axis_dir invalid"
+        print *,"axis_dir invalid: ",axis_dir
         stop
        endif
 
@@ -8105,20 +8090,31 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ((probtype.eq.46).and.(axis_dir.eq.10))) then  
 
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
-       dist(2)=-dist(1)
+       if (probtype.eq.42) then
+        ball_id=2
+        backing_id=3
+       else if (probtype.eq.46) then
+        ball_id=3
+        backing_id=2
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+
+       dist(ball_id)=-dist(1)
        if (num_materials.ge.3) then
-        if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
-            (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
-            (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+        if ((FSI_flag(backing_id).eq.FSI_PRESCRIBED_NODES).or. &
+            (FSI_flag(backing_id).eq.FSI_SHOELE_CTML).or. &
+            (FSI_flag(backing_id).eq.FSI_PRESCRIBED_PROBF90)) then
          !do nothing
 
          !1=liquid 2=JWL 3=substrate 4=biofilm
-        else if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-                 (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+        else if ((FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC).or. &
+                 (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
          solid_id=1
-         call jetting_plate_dist(x,y,z,dist(3),solid_id,for_clamped)
-         dist(3)=-dist(3) !now: dist(3)>0 in the plate.
-         dist(1)=min(dist(1),-dist(3))
+         call jetting_plate_dist(x,y,z,dist(backing_id),solid_id,for_clamped)
+         dist(backing_id)=-dist(backing_id) !now:dist(backing_id)>0 in plate.
+         dist(1)=min(dist(1),-dist(backing_id))
          if (num_materials.eq.3) then
           !do nothing
          else if (num_materials.eq.4) then
@@ -8133,7 +8129,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          endif
         else
          print *,"probtype.eq.42 or 46(10) invalid FSI_flag: ", &
-           FSI_flag(3),probtype,axis_dir
+           FSI_flag(backing_id),probtype,axis_dir
          stop
         endif
        else
@@ -27796,7 +27792,7 @@ end subroutine initialize2d
           else if (axis_dir.eq.10) then
            if (num_materials.ge.3) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
-            if (vfracbatch(2).gt.zero) then ! steel sphere
+            if (vfracbatch(3).gt.zero) then ! steel sphere
              y_vel=advbot
             else
              y_vel=zero
