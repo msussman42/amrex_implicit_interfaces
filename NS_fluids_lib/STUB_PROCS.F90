@@ -320,9 +320,19 @@ integer, INTENT(out) :: prescribed_flag
 integer dir
 integer, parameter :: for_clamped=1
 integer :: solid_id !=1 or 2
+integer :: backing_id !=3 or 2
 
  if ((probtype.eq.42).or. &
      ((probtype.eq.46).and.(axis_dir.eq.10))) then
+
+  if (probtype.eq.42) then
+   backing_id=3
+  else if (probtype.eq.46) then
+   backing_id=2
+  else
+   print *,"probtype invalid"
+   stop
+  endif
 
   if (num_materials.ge.3) then
    !do nothing
@@ -338,8 +348,8 @@ integer :: solid_id !=1 or 2
   temperature=room_temperature
   prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
 
-  if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-      (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+  if ((FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC).or. &
+      (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
    LS=-99999.0d0
    temperature=293.0d0
 
@@ -387,12 +397,12 @@ integer :: solid_id !=1 or 2
     stop
    endif
     
-  else if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
-           (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
-           (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+  else if ((FSI_flag(backing_id).eq.FSI_PRESCRIBED_NODES).or. &
+           (FSI_flag(backing_id).eq.FSI_SHOELE_CTML).or. &
+           (FSI_flag(backing_id).eq.FSI_PRESCRIBED_PROBF90)) then
    !do nothing
   else
-   print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+   print *,"FSI_flag(backing_id) invalid: ",FSI_flag(backing_id)
    stop
   endif
  else

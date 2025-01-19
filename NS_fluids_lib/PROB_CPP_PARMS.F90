@@ -640,7 +640,8 @@ stop
 
       integer :: n_seed
       integer, allocatable :: seed(:)
-      
+     
+      integer backing_id 
       integer im,iten
       integer level,bfactmax
       real(amrex_real) :: massfrac_parm(ccnum_species_var+1)
@@ -766,17 +767,26 @@ stop
       if ((probtype.eq.42).or. &
           ((probtype.eq.46).and.(axis_dir.eq.10))) then
 
-       if ((FSI_flag(3).eq.FSI_PRESCRIBED_NODES).or. &
-           (FSI_flag(3).eq.FSI_SHOELE_CTML).or. &
-           (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90)) then
+       if (probtype.eq.42) then
+        backing_id=3
+       else if (probtype.eq.46) then
+        backing_id=2
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+
+       if ((FSI_flag(backing_id).eq.FSI_PRESCRIBED_NODES).or. &
+           (FSI_flag(backing_id).eq.FSI_SHOELE_CTML).or. &
+           (FSI_flag(backing_id).eq.FSI_PRESCRIBED_PROBF90)) then
         !do nothing
 
         !1=liquid 2=JWL 3=substrate 4=biofilm
-       else if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-                (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+       else if ((FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC).or. &
+                (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
         SUB_clamped_LS_no_scale=>STUB_clamped_LS_jetting_or_cav
        else
-        print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+        print *,"FSI_flag(backing_id) invalid: ",FSI_flag(backing_id)
         stop
        endif
 
