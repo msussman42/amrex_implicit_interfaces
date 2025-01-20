@@ -5036,14 +5036,15 @@ stop
 
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact invalid fort_init_elasticmask_and_elasticmaskpart ", &
+               bfact
        stop
       endif
 
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid: ",time
+       print *,"time invalid fort_init_elasticmask_and_elasticmaskpart: ",time
        stop
       endif
 
@@ -5052,20 +5053,20 @@ stop
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base bad fort_init_elasticmask_and_elasticmaskpart"
        stop
       endif
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
-       print *,"nden invalid: ",nden
+       print *,"nden bad fort_init_elasticmask_and_elasticmaskpart: ",nden
        stop
       endif
 
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid: ",dt
+       print *,"dt bad fort_init_elasticmask_and_elasticmaskpart: ",dt
        stop
       endif
 
