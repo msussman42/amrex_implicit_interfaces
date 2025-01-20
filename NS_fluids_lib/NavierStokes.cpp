@@ -1092,7 +1092,7 @@ void extra_circle_parameters(
  zblob10=0.0; 
  radblob10=0.0; 
 
-} // subroutine extra_circle_parameters
+} // end subroutine extra_circle_parameters
 
 void read_geometry_raw(int& geometry_coord,
 	Vector<Real>& geometry_prob_lo,
@@ -6291,7 +6291,7 @@ int NavierStokes::ns_is_rigid(int im) {
 
  return local_flag;
 
-} // subroutine ns_is_rigid
+} // end subroutine ns_is_rigid
 
 
 int NavierStokes::ns_is_lag_part(int im) {
@@ -6304,7 +6304,7 @@ int NavierStokes::ns_is_lag_part(int im) {
 
  return local_flag;
 
-} // subroutine ns_is_lag_part
+} // end subroutine ns_is_lag_part
 
 int NavierStokes::is_GFM_freezing_model(int loc_freezing_model) {
 
@@ -8479,7 +8479,7 @@ void NavierStokes::build_moment_from_FSILS(Real cur_time) {
 }//omp
  ns_reconcile_d_num(LOOP_BUILD_MOMENT,"build_moment_from_FSILS");
 
-} // subroutine build_moment_from_FSILS
+} // end subroutine build_moment_from_FSILS
 
 
 // 1. coarseTimeStep
@@ -8697,7 +8697,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
  } // partid=0..nparts-1
 
-}  // subroutine Transfer_FSI_To_STATE
+}  // end subroutine Transfer_FSI_To_STATE
 
 // called from: NavierStokes::post_restart(), NavierStokes::initData() 
 void NavierStokes::init_aux_data() {
@@ -10358,7 +10358,7 @@ void NavierStokes::init_boundary_list(Vector<int> scomp,
  if (ncomp_list<=0)
   amrex::Error("ncomp_list invalid");
 
-} // subroutine init_boundary_list
+} // end subroutine init_boundary_list
 
 void NavierStokes::init_boundary(
   int control_flag,
@@ -10570,7 +10570,7 @@ void NavierStokes::init_boundary(
  } else
   amrex::Error("expecting: (ncomp_total==ncomp_total_sanity)");
 
-}  // subroutine init_boundary()
+}  // end subroutine init_boundary()
 
 
 //  AmrLevel* a = (*levelbld)(*this,lev,geom[lev],
@@ -11056,7 +11056,7 @@ void NavierStokes::CopyNewToOldALL() {
  }
 #endif
 
-}  // subroutine CopyNewToOldALL
+}  // end subroutine CopyNewToOldALL
 
 
 void NavierStokes::CopyOldToNewALL() {
@@ -11111,7 +11111,7 @@ void NavierStokes::CopyOldToNewALL() {
 
 #endif
 
-} // subroutine CopyOldToNewALL
+} // end subroutine CopyOldToNewALL
 
 
 void NavierStokes::Number_CellsALL(Real& rcells) {
@@ -11129,7 +11129,7 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
   }
  }
    
-} // subroutine Number_CellsALL  
+} // end subroutine Number_CellsALL  
 
 // called from:
 //  NavierStokes::do_the_advance  (near beginning)
@@ -11248,7 +11248,7 @@ NavierStokes::SDC_setup() {
  lower_slab_time=0.0;
  delta_slab_time=1.0;
 
-} // subroutine SDC_setup()
+} // end subroutine SDC_setup()
 
 void 
 NavierStokes::Geometry_setup() {
@@ -11534,7 +11534,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  } else
   amrex::Error("ns_is_rigid invalid");
 
-}  // subroutine make_viscoelastic_tensor
+}  // end subroutine make_viscoelastic_tensor
 
 
 void NavierStokes::make_viscoelastic_heating(int im,int idx) {
@@ -11719,7 +11719,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  } else
   amrex::Error("ns_is_rigid invalid");
 
-}   // subroutine make_viscoelastic_heating
+}   // end subroutine make_viscoelastic_heating
 
 void NavierStokes::make_marangoni_and_disjoining_pressure_force() {
 
@@ -14988,7 +14988,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("i_phase_change invalid");
  }
 
-} // subroutine level_phase_change_convert
+} // end subroutine level_phase_change_convert
 
 
 void
@@ -16077,7 +16077,7 @@ NavierStokes::level_phase_change_redistribute(
  } else
   amrex::Error("isweep invalid");
 
-} // subroutine level_phase_change_redistribute
+} // end subroutine level_phase_change_redistribute
 
 // called from: NavierStokes::make_physics_varsALL
 void
@@ -16212,7 +16212,7 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
   delete_localMF(LSNEW_MF,1);
   delete state_var_mf;
 
-} // subroutine level_init_elasticmask_and_elasticmaskpart
+} // end subroutine level_init_elasticmask_and_elasticmaskpart
 
 
 // 1. called if "is_GFM_freezing_model"
@@ -16713,7 +16713,7 @@ void NavierStokes::show_norm2_id(int mf_id,int id) {
  } else
   amrex::Error("show_norm2_flag invalid");
  
-} // subroutine show_norm2_id
+} // end subroutine show_norm2_id
 
 void NavierStokes::show_norm2(MultiFab* mf,int scomp,int ncomp,int id) {
 
@@ -16728,7 +16728,7 @@ void NavierStokes::show_norm2(MultiFab* mf,int scomp,int ncomp,int id) {
  } else
   amrex::Error("show_norm2_flag invalid");
   
-} // subroutine show_norm2
+} // end subroutine show_norm2
 
 
 void NavierStokes::check_value_max(int id,int mf_id,int scomp, 
@@ -16752,7 +16752,7 @@ void NavierStokes::check_value_max(int id,int mf_id,int scomp,
  } else
   amrex::Error("mf_check_inf_bounds invalid");
  
-} // subroutine check_value_max
+} // end subroutine check_value_max
 
 void NavierStokes::check_value_max_level(int id,MultiFab* mf,
 		int scomp,int ncomp,int ngrow,Real max_value) {
@@ -16778,7 +16778,7 @@ void NavierStokes::check_value_max_level(int id,MultiFab* mf,
  } else
   amrex::Error("mf_check_inf_bounds invalid");
   
-} // subroutine check_value_max_level
+} // end subroutine check_value_max_level
 
 
 // datatype=0 scalar or vector
@@ -16875,7 +16875,7 @@ void NavierStokes::aggressive_debug(
  } else
   amrex::Error("verbose or force_check invalid");
 
-} // subroutine aggressive_debug
+} // end subroutine aggressive_debug
 
 void
 NavierStokes::synchronize_flux_register(int operation_flag,
@@ -16890,7 +16890,7 @@ NavierStokes::synchronize_flux_register(int operation_flag,
  } else
   amrex::Error("spectral_loop invalid");
 
-} // subroutine synchronize_flux_register
+} // end subroutine synchronize_flux_register
 
 void 
 NavierStokes::allocate_flux_register(int operation_flag) {
@@ -17551,7 +17551,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  } else
   amrex::Error("enable_specral invalid");
 
-} // subroutine SEM_scalar_advection
+} // end subroutine SEM_scalar_advection
 
 void 
 NavierStokes::split_scalar_advectionALL() { 
@@ -19118,7 +19118,7 @@ void NavierStokes::zap_resid_where_singular(int index_MF) {
   MultiFab::Multiply(*dest,*ns_level.localMF[ONES_MF],0,0,1,0);
  }  // k=0..finest_level
 
-}  // subroutine zap_resid_where_singular
+}  // end subroutine zap_resid_where_singular
 
 //called from: NavierStokes::multiphase_project
 void NavierStokes::dot_productALL_ones_size(int project_option) {
@@ -21444,7 +21444,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  std::string path3="./temptecplot";
  UtilCreateDirectoryDestructive(path3);
 
-} // subroutine writeTECPLOT_File
+} // end subroutine writeTECPLOT_File
 
 
 
@@ -22243,7 +22243,7 @@ void NavierStokes::MaxAdvectSpeed(
  delete vofmf;
  delete distmf;
 
-} // subroutine MaxAdvectSpeed
+} // end subroutine MaxAdvectSpeed
 
 // called from: do_the_advance 
 //              computeNewDt (nsteps>0) 
@@ -22349,7 +22349,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,
 
  return return_dt;
 
-} // subroutine estTimeStep
+} // end subroutine estTimeStep
 
 // post_regrid is called from either:
 // 1. AmrCore::initialInit, 
@@ -22562,7 +22562,7 @@ void NavierStokes::computeInitialDt (int finest_level,
   }
  }
 
-} // subroutine computeInitialDt
+} // end subroutine computeInitialDt
 
 //
 // Fills in amrLevel okToContinue.
@@ -24332,7 +24332,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  ns_reconcile_d_num(LOOP_AVGDOWN_TAG,"level_avgDown_tag");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
-} // subroutine level_avgDown_tag
+} // end subroutine level_avgDown_tag
 
 
 void
@@ -24646,7 +24646,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp_curv_total);
  ParallelDescriptor::Barrier();
 
-} // subroutine level_avgDownCURV
+} // end subroutine level_avgDownCURV
 
 
 // spectral_override==0 => always low order.
@@ -24771,7 +24771,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  ns_reconcile_d_num(LOOP_AVGDOWN_OR_AVGDOWN_LOW,"avgDown");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
-}  // subroutine avgDown
+}  // end subroutine avgDown
 
 // spectral_override==1 => order derived from "enable_spectral"
 // spectral_override==0 => always low order.
@@ -24787,7 +24787,7 @@ NavierStokes::avgDown_list(int stateidx,Vector<int> scomp,
  if (ncomp_list<=0)
   amrex::Error("ncomp_list invalid");
 
-} // subroutine avgDown_list
+} // end subroutine avgDown_list
 
 // spectral_override==1 => order derived from "enable_spectral"
 // spectral_override==0 => always low order.
@@ -24819,7 +24819,7 @@ NavierStokes::avgDown(int stateidx,int startcomp,int numcomp,
  } else
   amrex::Error("level invalid");
 
-} // subroutine avgDown
+} // end subroutine avgDown
 
 
 
@@ -25341,7 +25341,7 @@ void NavierStokes::avgDownError() {
  ns_reconcile_d_num(LOOP_ERRORAVGDOWN,"avgDownError");
  S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_ERR,1);
  ParallelDescriptor::Barrier();
-} // subroutine avgDownError
+} // end subroutine avgDownError
 
 
 void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
@@ -25374,7 +25374,7 @@ void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
  if (dcomp!=ncomp_list*AMREX_SPACEDIM*2)
   amrex::Error("dcomp invalid");
 
-}  // subroutine getBCArray_list
+}  // end subroutine getBCArray_list
 
 MultiFab* NavierStokes::getState_list(
  int ngrow,Vector<int> scomp,Vector<int> ncomp,
@@ -25412,7 +25412,7 @@ MultiFab* NavierStokes::getState_list(
 
  return mf;
 
-} // subroutine getState_list
+} // end subroutine getState_list
 
 // copy localMF[idx_MF] to s_new
 void NavierStokes::putState_list(
@@ -25440,7 +25440,7 @@ void NavierStokes::putState_list(
  if (scomp_localMF!=ncomp_list)
   amrex::Error("scomp_localMF invalid");
 
-} // subroutine putState_list
+} // end subroutine putState_list
 
 
 MultiFab* NavierStokes::getState (
@@ -25710,7 +25710,7 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,
  ParallelDescriptor::Barrier();
 
  return mf;
-} // subroutine getStateDist
+} // end subroutine getStateDist
 
 void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 
@@ -25721,7 +25721,7 @@ void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
  } else
   amrex::Error("homflag_in invalid");
 
-}  // subroutine cpp_overridepbc
+}  // end subroutine cpp_overridepbc
 
 MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
@@ -25746,7 +25746,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  cpp_overridepbc(save_bc_status,SOLVETYPE_PRES);
 
  return mf;
-} // subroutine getStateDIV_DATA
+} // end subroutine getStateDIV_DATA
 
 
 void NavierStokes::putStateDIV_DATA(
@@ -25762,7 +25762,7 @@ void NavierStokes::putStateDIV_DATA(
  MultiFab::Copy(S_new,*localMF[idx_MF],scomp_localMF,scomp,
   	        ncomp,0); 
 
-} // subroutine putStateDIV_DATA
+} // end subroutine putStateDIV_DATA
 
 
 
@@ -26254,7 +26254,7 @@ NavierStokes::makeStateDist() {
   }
  }
 
-} // subroutine makeStateDist
+} // end subroutine makeStateDist
 
 
 void
@@ -26317,7 +26317,7 @@ NavierStokes::correct_dist_uninit() {
 } // omp
  ns_reconcile_d_num(LOOP_CORRECT_UNINIT,"correct_dist_uninit");
 
-} // subroutine correct_dist_uninit
+} // end subroutine correct_dist_uninit
 
 
 // WARNING:  allocates, but does not delete.
@@ -26430,7 +26430,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
   localMF[idxdst+dir]->FillBoundary(geom.periodicity());
  } //dir=0..sdim-1
 
-} // subroutine ProcessFaceFrac
+} // end subroutine ProcessFaceFrac
 
 
 
@@ -26515,7 +26515,7 @@ NavierStokes::makeFaceFrac(
 
  localMF[idx]->FillBoundary(geom.periodicity());
 
-} // subroutine makeFaceFrac
+} // end subroutine makeFaceFrac
 
 
 // WARNING: makeCellFrac allocates, but does not delete.
@@ -26854,7 +26854,7 @@ NavierStokes::makeStateCurv(int project_option,
  } else
    amrex::Error("project_option invalid10");
 
-}  // subroutine makeStateCurv
+}  // end subroutine makeStateCurv
 
 //dir=0..sdim-1
 MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
@@ -26879,7 +26879,7 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 
  return mf;
 
-}  // subroutine getStateMAC
+}  // end subroutine getStateMAC
 
 }/* namespace amrex */
 
