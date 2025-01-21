@@ -7861,6 +7861,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer :: solid_id !=1 or 2
       integer :: ball_id !=3 or 2
       integer :: backing_id !=3 or 2
+      integer :: biofilm_id !=backing_id+1
 
       im_solid_materialdist=im_solid_primary()
 
@@ -8094,12 +8095,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ball_id=2
         backing_id=3
        else if (probtype.eq.46) then
-        ball_id=3
+        ball_id=num_materials
         backing_id=2
        else
         print *,"probtype invalid"
         stop
        endif
+       biofilm_id=backing_id+1
 
        dist(ball_id)=-dist(1)
        if (num_materials.ge.3) then
@@ -8120,9 +8122,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (num_materials.eq.4) then
           solid_id=2
           call jetting_plate_dist(x,y,z, &
-            dist(num_materials),solid_id,for_clamped)
-          dist(num_materials)=-dist(num_materials) !now: dist(4)>0 in the plate.
-          dist(1)=min(dist(1),-dist(num_materials))
+            dist(biofilm_id),solid_id,for_clamped)
+          dist(biofilm_id)=-dist(biofilm_id)
+          dist(1)=min(dist(1),-dist(biofilm_id))
          else
           print *,"num_materials invalid: ",num_materials
           stop
@@ -27792,7 +27794,7 @@ end subroutine initialize2d
           else if (axis_dir.eq.10) then
            if (num_materials.ge.3) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
-            if (vfracbatch(3).gt.zero) then ! steel sphere
+            if (vfracbatch(num_materials).gt.zero) then ! steel sphere
              y_vel=advbot
             else
              y_vel=zero

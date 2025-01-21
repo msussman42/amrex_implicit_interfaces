@@ -623,7 +623,7 @@ end subroutine nozzle2d
         print *,"no rigid body expected"
         stop
        else if (axis_dir.eq.10) then
-        print *,"no rigid sphere expected"
+        print *,"no rigid sphere expected axis_dir=",axis_dir
         stop
        else
         print *,"axis_dir invalid: ",axis_dir
@@ -748,7 +748,7 @@ end subroutine nozzle2d
         print *,"no rigid body expected"
         stop
        else if (axis_dir.eq.10) then
-        print *,"no rigid sphere expected"
+        print *,"no rigid sphere expected ",axis_dir
         stop
        else
         print *,"axis_dir invalid: ",axis_dir
@@ -1319,6 +1319,7 @@ end subroutine nozzle2d
       integer i,j,iSphere
       integer :: solid_id !1=substrate 2=biofilm
       integer :: backing_id
+      integer :: biofilm_id
       integer, parameter :: for_clamped=0
 
       if (num_materials.lt.1) then
@@ -1430,15 +1431,16 @@ end subroutine nozzle2d
        else if (probtype.eq.46) then
         backing_id=2
        else
-        print *,"probtype invalid"
+        print *,"probtype invalid: ",probtype
         stop
        endif
+       biofilm_id=backing_id+1
 
        !dist<0 in the solid
        !soliddist is called by: subroutine materialdistsolid 
        if (im.eq.backing_id) then
         solid_id=1
-       else if ((im.eq.4).and.(num_materials.eq.4)) then
+       else if ((im.eq.biofilm_id).and.(num_materials.eq.4)) then
         solid_id=2
        else
         print *,"im invalid in soliddist: ",im
