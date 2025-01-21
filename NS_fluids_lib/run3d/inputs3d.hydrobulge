@@ -7,13 +7,17 @@
 #
 max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
-stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms)
+stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
+#stop_time =  0.2 # maximum problem time (100 microsec=0.1 ms) Tait
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   =  5.715 5.715 11.43
+#geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =  0.0 0.0
+#geometry.prob_hi   =  5.715 11.43
 
 # multigrid class
 mg.verbose = 0
@@ -29,19 +33,26 @@ ns.be_cn_theta=1.0
 ns.rk_theta=1.0
 ns.thetacut=0.1
 
-ns.pcav=50000.0E-6
-ns.dencav=0.99995681
-ns.pchopp=50000.0E-6
-ns.denchopp=0.01
-ns.soundchopp=1.0e-20
+ns.pcav=50000.0E-6 #tillotsen
+#ns.pcav=220.2726e-6 #tait
+ns.dencav=0.99995681 #tillotsen
+#ns.dencav=0.999958 #tait
+ns.pchopp=50000.0E-6 #tillotsen
+#ns.pchopp=200.0e-6 #tait
+ns.denchopp=0.01 #tillotsen
+#ns.denchopp=0.999949 #tait
+ns.soundchopp=1.0e-20 #tillotsen
+#ns.soundchopp=1500.0e-3 #tait
 ns.bubble_pressure=137066.0
 #ns.bubble_pressure=173114.0
 ns.bubble_density=1.765
 ns.atait=1.0
-ns.btait=1.0
+ns.btait=1.0 #tillotsen
+#ns.btait=3.31e+03 #tait
 ns.rho0tait=1.0
 ns.rho0gas=1.765
-ns.gammawater=1.28
+ns.gammawater=1.28 #tillotsen
+#ns.gammawater=7.15 #tait
 ns.djwl=6.17e+6
 ns.ejwl=0.169e+6
 ns.r1jwl=4.4
@@ -64,6 +75,7 @@ ns.visual_side_max = 512
 ns.projection_mg=1
 #amr.n_cell    = 96 96 192
 amr.n_cell    = 64 64 128
+#amr.n_cell    = 64 128
 amr.max_level =  0
 ns.xblob10=0.0
 ns.yblob10=0.0
@@ -148,6 +160,8 @@ ns.v = 1
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 3 3 
 ns.hi_bc          = 2 2 3
+#ns.lo_bc          = 3 3 
+#ns.hi_bc          = 2 3
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
@@ -162,38 +176,3 @@ ns.hi_bc          = 2 2 3
 #fab.precision = FLOAT     # output in FLOAT or DOUBLE
 fab.precision = DOUBLE    # output in FLOAT or DOUBLE
 
-# --------------------------------------------------------------------
-# -----       CONTOUR PLOTTING ONLY AVAILABLE IN 2-D           -------
-# --------------------------------------------------------------------
-# uncomment the next line to set a default level for contour plotting
-#contour.level = 0
-#
-# These variables control interactive contour plotting on UNIX systems
-# file_name   = root name of postscript file (will be appended with ".ps")
-# var_name    = name of thermodynamic variable to plot
-# device      = 1  => XWINDOW, 2 = POSTSCRIPT, 3 = both
-# freq        = intervals between plots (-1 = off)
-# n_cont      = number of contour lines per plot
-# sho_grd     = 0 => don't show grid placement, 1 => show grid placement
-#               2 => show grid placement and overlay velocity vector plot
-#               3 => same as 2 except show Up and not Ud
-# win_siz     = number of pixels in max window direction
-#
-#file_name  var_name   device  freq  n_cont  sho_grd win_siz sval sdir sstr
-contour.verbose = 1
-#contour.plot = level3 level3 1   1    -20         2      400   1.0E-10 2 xy
-#contour.plot = triple triple 1   1    -1         2      400   1.0E-10 0 yz
-#contour.plot = triple triple 1   1    -1         2      400   1.0E-10 1 xz
-#contour.plot = triple triple 1   1    -1         2      400   1.0E-10 2 xy
-#contour.plot = presliquid  presliquid 1  1  20   1      400   1.0E-10 0 yz
-#contour.plot = presliquid  presliquid 1  1  20   1      400   1.0E-10 1 xz
-#contour.plot = presliquid  presliquid 1  1  20   1      400   1.0E-10 2 xy
-contour.plot = triple triple 2   50    -1         2      400   1.0E-10 0 yz
-contour.plot = triple triple 2   50    -1         2      400   1.0E-10 1 xz
-contour.plot = triple triple 2   50    -1         2      400   1.0E-10 2 xy
-contour.plot = presliquid  presliquid 2  50  20   1      400   1.0E-10 0 yz
-contour.plot = presliquid  presliquid 2  50  20   1      400   1.0E-10 1 xz
-contour.plot = presliquid  presliquid 2  50  20   1      400   1.0E-10 2 xy
-#contour.plot = sound sound 2  1  20   1      400   1.0E-10 1 x
-#contour.plot = presliquid  presliquid 2  1  20   1      400   1.0E-10 1 x
-#contour.plot = presliquid  presliquid 2  1  20   1      400   1.0E-10 2 r

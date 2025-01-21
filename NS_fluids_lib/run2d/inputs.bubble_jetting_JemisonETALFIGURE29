@@ -147,7 +147,7 @@ ns.material_type=1 3 0 0     # FLEXIBLE
 ns.material_conservation_form=1 1 0 0
 ns.heatviscconst=0.0 0.0 0.0 0.0
 #liquid, JWL, substrate, biofilm
-ns.viscconst=0.0 0.0 0.01 0.1
+ns.viscconst=0.0 0.0 10.0 10.0
 ns.denconst=1.0 0.1 1.0 1.0
 ns.xblob=0.0
 # y=0 corresponds to domain bottom
