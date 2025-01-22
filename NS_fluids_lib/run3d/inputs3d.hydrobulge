@@ -1,10 +1,7 @@
-
-
-# ------------------  INPUTS TO MAIN PROGRAM  -------------------
-# CHANGES FROM PAST VERSION:
-# no more raster stuff (hdf), add mac.mac_abs_tol
-# blob.* now becomes ns.*
-#
+# Fluid structure interaction mechanisms for close-in explosions.
+# Wardlaw and Luton
+# Shock and Vibration
+# volume 7 (2000) 265-275
 max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
 stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
