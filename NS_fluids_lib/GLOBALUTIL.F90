@@ -19994,6 +19994,134 @@ end subroutine print_visual_descriptor
       end subroutine TEMPERATURE_tillotson
 
 
+      subroutine EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
+      real(amrex_real) :: rho0,T0,e0,mu
+
+      rho0=fort_denconst(im)
+      T0=fort_tempconst(im)
+
+      call INTERNAL_wardlaw_tillotson(rho0,T0,e0,im)
+
+      if ((rho0.gt.zero).and. &
+          (rho.gt.zero).and. &
+          (internal_energy.ge.zero).and. &
+          (e0.ge.zero).and. &
+          (im.ge.1).and. &
+          (im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"EOS_wardlaw_tillotson invalid parms"
+       print *,"rho0=",rho0
+       print *,"rho=",rho
+       print *,"internal_energy=",internal_energy
+       print *,"e0=",e0
+       print *,"im=",im
+       stop
+      endif
+
+
+      mu=rho/rho0-one
+      pressure=P0_tillotson+omega_wardlaw_tillotson*rho* &
+              (internal_energy-e0)+ &
+              A_wardlaw_tillotson*mu+ &
+              B_wardlaw_tillotson*(mu**2)+ &
+              C_wardlaw_tillotson*(mu**3)
+      if (pressure.ge.P_cav_tillotson) then
+       !do nothing
+      else if (pressure.lt.P_cav_tillotson) then
+       pressure=P_cav_tillotson
+      else
+       print *,"pressure or pcav invalid (eos_wardlaw_tillotson): ", &
+          pressure,P_cav_tillotson
+       stop
+      endif
+
+      return
+      end subroutine EOS_wardlaw_tillotson
+
+! c^2 = dp/drho + p dp/de / rho^2
+      subroutine SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,internal_energy,soundsqr,pressure
+      real(amrex_real) rho0,drho,de,rho_plus,rho_minus,p_plus,p_minus
+      real(amrex_real) e_plus,e_minus,dp_drho,dp_de
+
+      rho0=fort_denconst(1)
+
+      if ((rho.gt.zero).and. &
+          (internal_energy.gt.zero).and. &
+          (rho0.gt.zero).and. &
+          (rho0.gt.rho_IV_tillotson).and. &
+          (E0_tillotson.gt.zero).and. &
+          (E_CV_tillotson.gt.E_IV_tillotson)) then
+
+       call EOS_wardlaw_tillotson(rho,internal_energy,pressure)
+       drho=EPS6*rho
+       de=EPS6*internal_energy
+       rho_plus=rho+half*drho
+       rho_minus=rho-half*drho
+       call EOS_wardlaw_tillotson(rho_plus,internal_energy,p_plus)
+       call EOS_wardlaw_tillotson(rho_minus,internal_energy,p_minus)
+       dp_drho=(p_plus-p_minus)/drho
+       e_plus=internal_energy+half*de
+       e_minus=internal_energy-half*de
+       call EOS_wardlaw_tillotson(rho,e_plus,p_plus)
+       call EOS_wardlaw_tillotson(rho,e_minus,p_minus)
+       dp_de=(p_plus-p_minus)/de
+       soundsqr=dp_drho+pressure*dp_de/(rho**2)
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_wardlaw_tillotson
+
+
+      subroutine INTERNAL_wardlaw_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(temperature.gt.zero)) then
+       cv=4.1855D+7
+       internal_energy=cv*temperature
+      else
+       print *,"rho or temperature invalid"
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_wardlaw_tillotson
+
+
+      subroutine TEMPERATURE_wardlaw_tillotson(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+       cv=4.1855D+7
+       temperature=internal_energy/cv
+      else
+       print *,"rho or internal_energy invalid"
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_wardlaw_tillotson
+
+
 ! A fully compressible, two-dimensional model of small, high-speed, cavitating
 ! nozzles, Schmidt et al, Atomization and Sprays, vol 9, 255-276 (1999)
 ! units must be CGS
@@ -24214,6 +24342,8 @@ end subroutine print_visual_descriptor
        call EOS_elastic_rho(rho,internal_energy,pressure,im)
       else if (imattype.eq.34) then
        call EOS_galinstan_rho(rho,internal_energy,pressure)
+      else if (imattype.eq.35) then
+       call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
       else
        print *,"imattype invalid EOS_material_CORE: ",imattype
        stop
@@ -24266,7 +24396,7 @@ end subroutine print_visual_descriptor
       endif
 
       if ((imattype.ge.1).and. &
-          (imattype.le.34)) then
+          (imattype.le.35)) then
        dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
       else if (imattype.eq.0) then
        dVdT=zero
@@ -24364,6 +24494,8 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_elastic_rho(rho,internal_energy,soundsqr,im)
       else if (imattype.eq.34) then
        call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
+      else if (imattype.eq.35) then
+       call SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr,im)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE: ",imattype
        stop
@@ -24460,6 +24592,8 @@ end subroutine print_visual_descriptor
        call INTERNAL_elastic_rho(rho,temperature,local_internal_energy,im)
       else if (imattype.eq.34) then
        call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
+      else if (imattype.eq.35) then
+       call INTERNAL_wardlaw_tillotson(rho,temperature,local_internal_energy,im)
       else
        print *,"imattype invalid INTERNAL_material_CORE: ",imattype
        stop
@@ -24552,6 +24686,8 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_elastic_rho(rho,temperature,internal_energy,im)
       else if (imattype.eq.34) then
        call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
+      else if (imattype.eq.35) then
+       call TEMPERATURE_wardlaw_tillotson(rho,temperature,internal_energy,im)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype
