@@ -382,6 +382,7 @@ implicit none
       real(amrex_real), PARAMETER :: A_wardlaw_tillotson=2.2D+10 ! dyne/cm^2
       real(amrex_real), PARAMETER :: B_wardlaw_tillotson=9.94D+10 ! dyne/cm^2
       real(amrex_real), PARAMETER :: C_wardlaw_tillotson=1.457D+11 ! dyne/cm^2
+      real(amrex_real), PARAMETER :: rho_cav_wardlaw_tillotson=0.99995685d0 !g/cm^3
       integer, PARAMETER :: visual_RT_transform=1
       integer, PARAMETER :: bubbleInPackedColumn=1001
 
