@@ -20056,18 +20056,24 @@ end subroutine print_visual_descriptor
       real(amrex_real), intent(in) :: rho,internal_energy
       real(amrex_real), intent(out) :: soundsqr
       real(amrex_real) :: rho0,T0,e0,mu,pressure,local_rho
-      real(amrex_real) :: dmu,dpdrho,dpde
+      real(amrex_real) :: dmu,dpdrho,dpde,T0_sanity,e0_sanity
+      real(amrex_real) :: pressure_sanity,sound_sanity
 
       rho0=fort_denconst(im)
       T0=fort_tempconst(im)
 
       call INTERNAL_wardlaw_tillotson(rho0,T0,e0,im)
 
+      T0_sanity=293.0d0
+      call INTERNAL_wardlaw_tillotson(rho0,T0_sanity,e0_sanity,im)
+
       if ((rho0.gt.zero).and. &
           (rho.gt.zero).and. &
           (T0.ge.zero).and. &
+          (T0_sanity.gt.zero).and. &
           (internal_energy.ge.zero).and. &
           (e0.ge.zero).and. &
+          (e0_sanity.gt.zero).and. &
           (im.ge.1).and. &
           (im.le.num_materials)) then
        !do nothing
@@ -20076,13 +20082,28 @@ end subroutine print_visual_descriptor
        print *,"rho0=",rho0
        print *,"rho=",rho
        print *,"T0=",T0
+       print *,"T0_sanity=",T0_sanity
        print *,"internal_energy=",internal_energy
        print *,"e0=",e0
+       print *,"e0_sanity=",e0_sanity
        print *,"im=",im
        stop
       endif
 
       call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+
+      call EOS_wardlaw_tillotson(rho_cav_wardlaw_tillotson, &
+        e0_sanity,pressure_sanity,im)
+
+      if (abs(pressure_sanity-P_cav_tillotson).le. &
+          0.01d0*P_cav_tillotson) then
+       !do nothing
+      else
+       print *,"P_cav_tillotson test failed"
+       print *,"pressure_sanity: ",pressure_sanity
+       print *,"P_cav_tillotson: ",P_cav_tillotson
+       stop
+      endif
 
       if (pressure.le.P_cav_tillotson) then
        local_rho=rho_cav_wardlaw_tillotson
@@ -20117,6 +20138,24 @@ end subroutine print_visual_descriptor
        print *,"soundsqr invalid: ",soundsqr
        stop
       endif
+
+      mu=rho_cav_wardlaw_tillotson/rho0-one
+      dpdrho=omega_wardlaw_tillotson*(e0_sanity-e0)+ &
+              A_wardlaw_tillotson*dmu+ &
+              two*B_wardlaw_tillotson*mu*dmu+ &
+              three*C_wardlaw_tillotson*mu*mu*dmu
+      dpde=omega_wardlaw_tillotson*rho_cav_wardlaw_tillotson
+      sound_sanity=dpdrho+pressure*dpde/(rho_cav_wardlaw_tillotson**2)
+      sound_sanity=sqrt(sound_sanity)
+      if (abs(sound_sanity-sound_cav_wardlaw_tillotson).le. &
+          0.01d0*sound_cav_wardlaw_tillotson) then
+       ! do nothing
+      else
+       print *,"sound_sanity invalid"
+       print *,"sound_sanity=",sound_sanity
+       print *,"sound_cav_wardlaw_tillotson=",sound_cav_wardlaw_tillotson
+       stop
+      endif 
 
       return
       end subroutine SOUNDSQR_wardlaw_tillotson

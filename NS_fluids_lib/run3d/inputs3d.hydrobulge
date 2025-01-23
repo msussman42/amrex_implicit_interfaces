@@ -5,16 +5,15 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
 stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
-#stop_time =  0.2 # maximum problem time (100 microsec=0.1 ms) Tait
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   =  5.715 5.715 11.43
+geometry.prob_hi   =  8.0 8.0 32.0
 #geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
-#geometry.prob_lo   =  0.0 0.0
-#geometry.prob_hi   =  5.715 11.43
+#geometry.prob_lo   =  0.0 0.0  #2D
+#geometry.prob_hi   =  8.0 32.0
 
 # multigrid class
 mg.verbose = 0
@@ -31,15 +30,10 @@ ns.rk_theta=1.0
 ns.thetacut=0.1
 
 ns.pcav=50000.0E-6 #tillotsen
-#ns.pcav=220.2726e-6 #tait
 ns.dencav=0.99995681 #tillotsen
-#ns.dencav=0.999958 #tait
 ns.pchopp=50000.0E-6 #tillotsen
-#ns.pchopp=200.0e-6 #tait
-ns.denchopp=0.01 #tillotsen
-#ns.denchopp=0.999949 #tait
+ns.denchopp=0.001 #tillotsen
 ns.soundchopp=1.0e-20 #tillotsen
-#ns.soundchopp=1500.0e-3 #tait
 ns.bubble_pressure=137066.0
 #ns.bubble_pressure=173114.0
 ns.bubble_density=1.765
@@ -155,10 +149,11 @@ ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 3 3 3 
-ns.hi_bc          = 2 2 3
-#ns.lo_bc          = 3 3 
-#ns.hi_bc          = 2 3
+#outflow at top and bottom of can
+ns.lo_bc          = 3 3 2 
+ns.hi_bc          = 2 2 2
+#ns.lo_bc          = 3 2 
+#ns.hi_bc          = 2 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
