@@ -20010,6 +20010,7 @@ end subroutine print_visual_descriptor
 
       if ((rho0.gt.zero).and. &
           (rho.gt.zero).and. &
+          (T0.ge.zero).and. &
           (internal_energy.ge.zero).and. &
           (e0.ge.zero).and. &
           (im.ge.1).and. &
@@ -20019,13 +20020,14 @@ end subroutine print_visual_descriptor
        print *,"EOS_wardlaw_tillotson invalid parms"
        print *,"rho0=",rho0
        print *,"rho=",rho
+       print *,"T0=",T0
        print *,"internal_energy=",internal_energy
        print *,"e0=",e0
        print *,"im=",im
        stop
       endif
 
-
+       !see PROBCOMMON.F90 for "wardlaw_tillotson" parameters.
       mu=rho/rho0-one
       pressure=P0_tillotson+omega_wardlaw_tillotson*rho* &
               (internal_energy-e0)+ &
@@ -20046,39 +20048,73 @@ end subroutine print_visual_descriptor
       end subroutine EOS_wardlaw_tillotson
 
 ! c^2 = dp/drho + p dp/de / rho^2
-      subroutine SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr)
+      subroutine SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,soundsqr,pressure
-      real(amrex_real) rho0,drho,de,rho_plus,rho_minus,p_plus,p_minus
-      real(amrex_real) e_plus,e_minus,dp_drho,dp_de
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: soundsqr
+      real(amrex_real) :: rho0,T0,e0,mu,pressure,local_rho
+      real(amrex_real) :: dmu,dpdrho,dpde
 
-      rho0=fort_denconst(1)
+      rho0=fort_denconst(im)
+      T0=fort_tempconst(im)
 
-      if ((rho.gt.zero).and. &
-          (internal_energy.gt.zero).and. &
-          (rho0.gt.zero).and. &
-          (rho0.gt.rho_IV_tillotson).and. &
-          (E0_tillotson.gt.zero).and. &
-          (E_CV_tillotson.gt.E_IV_tillotson)) then
+      call INTERNAL_wardlaw_tillotson(rho0,T0,e0,im)
 
-       call EOS_wardlaw_tillotson(rho,internal_energy,pressure)
-       drho=EPS6*rho
-       de=EPS6*internal_energy
-       rho_plus=rho+half*drho
-       rho_minus=rho-half*drho
-       call EOS_wardlaw_tillotson(rho_plus,internal_energy,p_plus)
-       call EOS_wardlaw_tillotson(rho_minus,internal_energy,p_minus)
-       dp_drho=(p_plus-p_minus)/drho
-       e_plus=internal_energy+half*de
-       e_minus=internal_energy-half*de
-       call EOS_wardlaw_tillotson(rho,e_plus,p_plus)
-       call EOS_wardlaw_tillotson(rho,e_minus,p_minus)
-       dp_de=(p_plus-p_minus)/de
-       soundsqr=dp_drho+pressure*dp_de/(rho**2)
+      if ((rho0.gt.zero).and. &
+          (rho.gt.zero).and. &
+          (T0.ge.zero).and. &
+          (internal_energy.ge.zero).and. &
+          (e0.ge.zero).and. &
+          (im.ge.1).and. &
+          (im.le.num_materials)) then
+       !do nothing
       else
-       print *,"rho or internal_energy invalid"
+       print *,"soundsqr_wardlaw_tillotson invalid parms"
+       print *,"rho0=",rho0
+       print *,"rho=",rho
+       print *,"T0=",T0
+       print *,"internal_energy=",internal_energy
+       print *,"e0=",e0
+       print *,"im=",im
+       stop
+      endif
+
+      call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+
+      if (pressure.le.P_cav_tillotson) then
+       local_rho=rho_cav_wardlaw_tillotson
+      else if (pressure.ge.P_cav_tillotson) then
+       local_rho=rho
+      else
+       print *,"pressure out of range: ",pressure
+       stop
+      endif
+
+      if (local_rho.lt.rho_cav_wardlaw_tillotson) then
+       local_rho=rho_cav_wardlaw_tillotson
+      else if (local_rho.ge.rho_cav_wardlaw_tillotson) then
+       !do nothing
+      else
+       print *,"local_rho invalid: ",local_rho
+       stop
+      endif
+
+      mu=local_rho/rho0-one
+      dmu=one/rho0
+      dpdrho=omega_wardlaw_tillotson*(internal_energy-e0)+ &
+              A_wardlaw_tillotson*dmu+ &
+              two*B_wardlaw_tillotson*mu*dmu+ &
+              three*C_wardlaw_tillotson*mu*mu*dmu
+      dpde=omega_wardlaw_tillotson*local_rho
+      soundsqr=dpdrho+pressure*dpde/(local_rho**2)
+
+      if (soundsqr.gt.zero) then
+       !do nothing
+      else
+       print *,"soundsqr invalid: ",soundsqr
        stop
       endif
 
@@ -20086,17 +20122,21 @@ end subroutine print_visual_descriptor
       end subroutine SOUNDSQR_wardlaw_tillotson
 
 
-      subroutine INTERNAL_wardlaw_tillotson(rho,temperature,internal_energy)
+      subroutine INTERNAL_wardlaw_tillotson(rho,temperature, &
+                      internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,temperature
+      real(amrex_real), intent(out) :: internal_energy
+      real(amrex_real) :: cv
 
-      if ((rho.gt.zero).and.(temperature.gt.zero)) then
+      if ((rho.gt.zero).and.(temperature.ge.zero)) then
        cv=4.1855D+7
        internal_energy=cv*temperature
       else
-       print *,"rho or temperature invalid"
+       print *,"rho or temperature invalid:",rho,temperature
        stop
       endif
 
@@ -20104,17 +20144,21 @@ end subroutine print_visual_descriptor
       end subroutine INTERNAL_wardlaw_tillotson
 
 
-      subroutine TEMPERATURE_wardlaw_tillotson(rho,temperature,internal_energy)
+      subroutine TEMPERATURE_wardlaw_tillotson(rho,temperature, &
+                      internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: temperature
+      real(amrex_real) :: cv
 
-      if ((rho.gt.zero).and.(internal_energy.gt.zero)) then
+      if ((rho.gt.zero).and.(internal_energy.ge.zero)) then
        cv=4.1855D+7
        temperature=internal_energy/cv
       else
-       print *,"rho or internal_energy invalid"
+       print *,"rho or internal_energy invalid: ",rho,internal_energy
        stop
       endif
 

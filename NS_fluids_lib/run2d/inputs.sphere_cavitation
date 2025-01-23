@@ -226,8 +226,8 @@ ns.include_viscous_heating=0
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.denconst=1.000003 1.0 1.0 7.8 #BIOFILM
 ns.denconst=1.000003 1.0 7.8 
-#ns.density_floor=0.999957749988 0.999 0.999 7.79 #BIOFILM
-ns.density_floor=0.999957749988 0.999 7.79
+#ns.density_floor=0.001 0.999 0.999 7.79 #BIOFILM
+ns.density_floor=0.001 0.999 7.79
 ns.xblob=0.0
 
 #ns.yblob=5000.0
