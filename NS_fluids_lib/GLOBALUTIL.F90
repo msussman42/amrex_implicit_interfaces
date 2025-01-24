@@ -19372,6 +19372,13 @@ end subroutine print_visual_descriptor
        R2=1.21D0
        GAMMA=1.28D0
        RHOI=1.63D0
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
+       A=6.17D+12 !cgs
+       B=1.69D+11 !cgs 
+       R1=4.4D0
+       R2=1.2D0
+       GAMMA=1.25D0
+       RHOI=1.63D0
       else if (probtype.eq.42) then  ! bubble jetting
        A=3.712D+12
        B=0.03231D+12
@@ -19464,11 +19471,15 @@ end subroutine print_visual_descriptor
 
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
       OMEGA=GAMMA-one
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (entropy.le.zero) then
+      if (entropy.gt.zero) then
+       !do nothing
+      else
        print *,"entropy invalid"
        stop
       endif
@@ -19498,11 +19509,15 @@ end subroutine print_visual_descriptor
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
       OMEGA=GAMMA-one
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif
