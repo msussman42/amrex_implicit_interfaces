@@ -629,7 +629,7 @@ end subroutine nozzle2d
         print *,"axis_dir invalid: ",axis_dir
         stop
        endif
-       ! crystal_distance
+       ! in: crystal_distance
       else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
        if (im_project.eq.1) then 
         print *,"not expecting im_project=1"
