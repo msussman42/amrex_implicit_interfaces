@@ -30,6 +30,7 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+
 mg.presmooth=2
 mg.postsmooth=2
 ns.multilevel_maxcycle=200
@@ -49,6 +50,8 @@ ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 ns.mof_ordering=4 1 2 
 ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+
 # force AMR tagging within these specified boxes.
 ns.nblocks=0
 ns.xblocks=0.0
