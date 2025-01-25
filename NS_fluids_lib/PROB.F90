@@ -2712,8 +2712,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(inout) :: pres
       integer, PARAMETER :: from_boundary_hydrostatic=1
 
-       ! first material obeys TAIT EOS
-      if (fort_material_type(1).eq.13) then
+       ! first material obeys TAIT EOS or EOS_wardlaw_tillotson
+      if ((fort_material_type(1).eq.13).or. &
+          (fort_material_type(1).eq.35)) then
 
         if ((probtype.eq.36).or. &   ! bubble in liquid
             (probtype.eq.601).or. &  ! cooling disk
@@ -2735,6 +2736,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else
        print *,"expecting liquid to be compressible (Tait EOS)"
+       print *,"(or Tillotson EOS)"
        stop
       endif
  
@@ -9723,6 +9725,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist=(y+radblob*(x-xblob)-yblob)/sqrt(one+radblob**2)
         endif
 
+        if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+         !do nothing: hydrobulge
+        endif
+
         if ((probtype.eq.36).and.(axis_dir.eq.7)) then
          xmin=xblob-radblob
          xmax=xblob+radblob
@@ -10001,6 +10007,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if ((probtype.eq.36).and.(axis_dir.eq.100)) then
          dist=-dist
+        endif
+
+        if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
+         !do nothing
         endif
 
         if ((probtype.eq.36).and.(axis_dir.eq.200)) then
@@ -11033,6 +11043,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
        call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
+
+       !hydrobulge
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
       else
  
        if ((dir.eq.1).and.(side.eq.1)) then  ! xlo
@@ -11675,6 +11690,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! curvature sanity check (line in 2D, plane in 3D)
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
+
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
+       call check_lsbc_extrap(LS,LSWALL)
+
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
 
        call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
        call check_lsbc_extrap(LS,LSWALL)
@@ -17757,6 +17777,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
+
+           !hydrobulge
+          else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+             !calling from presBDRYCOND
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
+
           else if (probtype.eq.42) then ! bubble jetting 2D
              !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
@@ -17863,6 +17890,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
+  
+           !hydrobulge
+          else if ((probtype.eq.36).and.(axis_dir.eq.310)) then  ! yhi
+            !calling from presBDRYCOND
+           call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
+                   from_boundary_hydrostatic)
+
            ! yhi, presBDRYCOND, 2D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then

@@ -19362,7 +19362,7 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) A,B,GAMMA,R1,R2,RHOI
+      real(amrex_real), intent(out) :: A,B,GAMMA,R1,R2,RHOI
 
 
       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
@@ -19395,12 +19395,12 @@ end subroutine print_visual_descriptor
        RHOI=1.63D0
       else
        print *,"probtype not supported for the jwl material: ",probtype
+       print *,"axis_dir=",axis_dir
        stop
       endif
 
       return
       end subroutine get_jwl_constants
-
 
 
       subroutine INTERNAL_jwl(rho,temperature,internal_energy)
@@ -19414,13 +19414,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"density negative"
+       print *,"density negative INTERNAL_jwl:",rho
        stop
       endif
       if (temperature.gt.zero) then
        !do nothing
       else
-       print *,"temperature <=0"
+       print *,"temperature <=0 INTERNAL_jwl: ",temperature
        stop
       endif
 
@@ -19441,13 +19441,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"density negative"
+       print *,"density negative TEMPERATURE_jwl:",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"internal energy <=0"
+       print *,"internal energy <=0 TEMPERATURE_jwl:",internal_energy
        stop
       endif
 
@@ -19461,7 +19461,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,pressure,entropy,press_adiabat
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: entropy
+      real(amrex_real) :: pressure,press_adiabat
 
       call EOS_NAjwl(rho,internal_energy,pressure)
       call EOS_jwlADIABAT(rho,internal_energy,press_adiabat)
@@ -19596,7 +19598,7 @@ end subroutine print_visual_descriptor
       if (soundsqr.gt.zero) then
        !do nothing
       else
-       print *,"cannot have 0 sound speed"
+       print *,"soundsqr invalid in SOUNDSQR_NAjwl:",soundsqr
        stop
       endif
 
@@ -19655,7 +19657,7 @@ end subroutine print_visual_descriptor
       endif
 
       return
-      end subroutine
+      end subroutine EOS_jwlADIABAT
 
       subroutine SOUNDSQR_jwlADIABAT(rho,internal_energy,soundsqr)
       use probcommon_module
@@ -22490,6 +22492,10 @@ end subroutine print_visual_descriptor
       if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! spherical explosion
        rho=one
        call EOS_tait_ADIABATIC(rho,pres)
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
+       rho=one
+       call EOS_tait_ADIABATIC(rho,pres)
+
       ! JICF nozzle+pressure bc
       else if ((probtype.eq.53).and.(axis_dir.eq.2)) then
        rho=one

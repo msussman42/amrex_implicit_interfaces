@@ -383,7 +383,6 @@ subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
  real(amrex_real), INTENT(in) :: rho
  real(amrex_real), INTENT(in) :: internal_energy
  real(amrex_real), INTENT(out) :: soundsqr
- real(amrex_real) pressure
 
  print *,"SOUNDSQR_flexible_plate_impact shouldn't be used; the default is ok"
  stop
