@@ -7111,7 +7111,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(out) :: vel(SDIM)
       real(amrex_real) areacross
-      real(amrex_real) tadv,dist
+      real(amrex_real) tadv
       real(amrex_real) LS(num_materials)
       real(amrex_real) xvec(SDIM)
       integer velsolid_flag

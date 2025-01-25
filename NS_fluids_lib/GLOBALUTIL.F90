@@ -19378,7 +19378,7 @@ end subroutine print_visual_descriptor
        R1=4.4D0
        R2=1.2D0
        GAMMA=1.25D0
-       RHOI=1.63D0
+       RHOI=1.765D0 !cgs
       else if (probtype.eq.42) then  ! bubble jetting
        A=3.712D+12
        B=0.03231D+12
@@ -19407,13 +19407,19 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      real(amrex_real), intent(in) :: rho,temperature
+      real(amrex_real), intent(out) :: internal_energy
+      real(amrex_real) :: cv
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       !do nothing
+      else
        print *,"temperature <=0"
        stop
       endif
@@ -19428,13 +19434,19 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,cv
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: temperature
+      real(amrex_real) :: cv
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy <=0"
        stop
       endif
@@ -19443,7 +19455,7 @@ end subroutine print_visual_descriptor
       temperature=internal_energy/cv
 
       return
-      end subroutine
+      end subroutine TEMPERATURE_jwl
 
       subroutine ENTROPY_jwl(rho,internal_energy,entropy)
       use probcommon_module
@@ -19453,7 +19465,9 @@ end subroutine print_visual_descriptor
 
       call EOS_NAjwl(rho,internal_energy,pressure)
       call EOS_jwlADIABAT(rho,internal_energy,press_adiabat)
-      if (press_adiabat.le.zero) then
+      if (press_adiabat.gt.zero) then
+       !do nothing
+      else
        print *,"press_adiabat invalid"
        stop
       endif
@@ -19489,7 +19503,9 @@ end subroutine print_visual_descriptor
       call EOS_jwlADIABAT(rho,internal_energy,press_adiabat)
       internal_energy=(press_adiabat*entropy-pressure_part)/ &
         (OMEGA*rho)
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal_energy invalid"
        stop
       endif
@@ -19503,7 +19519,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,pressure
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
       real(amrex_real) A,B,R1,R2,GAMMA,RHOI,OMEGA
 
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
@@ -19512,13 +19529,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid EOS_NAjwl: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid EOS_NAjwl: ",internal_energy
        stop
       endif
       pressure= &
@@ -19526,13 +19543,15 @@ end subroutine print_visual_descriptor
         B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)+ &
         OMEGA*rho*internal_energy
 
-      if (pressure.le.zero) then
-       print *,"vacuum error in NA JWL"
+      if (pressure.gt.zero) then
+       !do nothing
+      else
+       print *,"vacuum error in NA JWL: ",pressure
        stop
       endif
 
       return
-      end subroutine
+      end subroutine EOS_NAjwl
 
 ! initial sound speed is:
 ! C=7.8039D+10-5.484D+12 e^(-4.94)-0.09375D+12 e^(-1.21)=
@@ -19540,19 +19559,24 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,soundsqr
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: soundsqr
       real(amrex_real) A,B,R1,R2,GAMMA,RHOI,OMEGA
       real(amrex_real) pressure,dp_de,dp_drho
 
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
       OMEGA=GAMMA-one
 
-      if (rho.le.zero) then
-       print *,"rho invalid"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid SOUNDSQR_NAjwl: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"e invalid"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid SOUNDSQR_NAjwl: ",internal_energy
        stop
       endif
 
@@ -19569,13 +19593,15 @@ end subroutine print_visual_descriptor
     
       soundsqr=(pressure*dp_de)/(rho**2)+dp_drho
  
-      if (soundsqr.le.zero) then
+      if (soundsqr.gt.zero) then
+       !do nothing
+      else
        print *,"cannot have 0 sound speed"
        stop
       endif
 
       return
-      end subroutine
+      end subroutine SOUNDSQR_NAjwl
 
 
 ! e=(E/rho) - (1/2) (u^2 + v^2)
@@ -19583,11 +19609,14 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,pressure
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
       real(amrex_real) A,B,R1,R2,GAMMA,RI,PI,RHOI,C,OMEGA
 
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
-      if (RHOI.le.zero) then
+      if (RHOI.gt.zero) then
+       !do nothing
+      else
        print *,"RHOI invalid"
        stop
       endif
@@ -19596,15 +19625,21 @@ end subroutine print_visual_descriptor
       RI=16.0D0        ! cm
       PI=7.8039D+10  ! dyne/cm^2
       C=PI-OMEGA*(A*exp(-R1)/R1+B*exp(-R2)/R2)
-      if (C.le.zero) then
+      if (C.gt.zero) then
+       !do nothing
+      else
        print *,"c invalid"
        stop
       endif
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif
@@ -19612,7 +19647,9 @@ end subroutine print_visual_descriptor
        A*exp(-R1*RHOI/rho)/R1+ &
        B*exp(-R2*RHOI/rho)/R2   )+ &
        C*( (RHOI/rho)**(-GAMMA) )
-      if (pressure.le.zero) then
+      if (pressure.gt.zero) then
+       !do nothing
+      else
        print *,"vacuum error"
        stop
       endif
@@ -19624,11 +19661,14 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,soundsqr
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: soundsqr
       real(amrex_real) A,B,R1,R2,GAMMA,RI,PI,RHOI,C,OMEGA
 
       call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
-      if (RHOI.le.zero) then
+      if (RHOI.gt.zero) then 
+       !do nothing
+      else
        print *,"RHOI invalid"
        stop
       endif
@@ -19637,15 +19677,21 @@ end subroutine print_visual_descriptor
       RI=16.0D0        ! cm
       PI=7.8039D+10  ! dyne/cm^2
       C=PI-OMEGA*(A*exp(-R1)/R1+B*exp(-R2)/R2)
-      if (C.le.zero) then
+      if (C.gt.zero) then
+       !do nothing
+      else
        print *,"c invalid"
        stop
       endif
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif
@@ -19658,7 +19704,9 @@ end subroutine print_visual_descriptor
        B*(RHOI/(rho**2))*exp(-R2*RHOI/rho)   )+ &
        (GAMMA*C/RHOI)*( (rho/RHOI)**(GAMMA-one) )
 
-      if (soundsqr.le.zero) then
+      if (soundsqr.gt.zero) then
+       !do nothing
+      else
        print *,"cannot have 0 sound speed"
        stop
       endif
