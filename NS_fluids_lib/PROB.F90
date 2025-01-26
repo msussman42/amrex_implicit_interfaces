@@ -7859,6 +7859,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) maxdx
       real(amrex_real) :: box_xlo,box_xhi
       real(amrex_real) :: box_ylo,box_yhi
+      real(amrex_real) :: outer_radius,inner_radius
       integer, parameter :: for_clamped=0
       integer :: solid_id !=1 or 2
       integer :: ball_id !=3 or 2
@@ -7868,7 +7869,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_solid_materialdist=im_solid_primary()
 
       if (bfact.lt.1) then
-       print *,"bfact invalid200"
+       print *,"bfact invalid materialdistbatch"
        stop
       endif
       if (nhalf.lt.1) then
@@ -8086,6 +8087,48 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call RiverHeight(x,y,dist(1),axis_dir)
        dist(1)=dist(1)-z
        dist(2)=-dist(1)
+
+       ! hydrobulge
+       ! (materialdist_batch)
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+        !vapordist is declared in PROB.F90
+       call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
+       dist(2)=-dist(1)
+       if (num_materials.eq.3) then
+        if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
+            (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+         outer_radius=half*radblob3
+         inner_radius=outer_radius-radblob2
+         if (SDIM.eq.2) then
+          raddist=abs(x)
+         else if (SDIM.eq.3) then
+          raddist=sqrt(x**2+y**2)
+         else
+          print *,"dimension bust"
+          stop
+         endif
+         if (raddist.le.inner_radius) then
+          dist(3)=raddist-inner_radius
+         else if (raddist.ge.outer_radius) then
+          dist(3)=outer_radius-raddist
+         else if ((raddist.ge.inner_radius).and. &
+                  (raddist.le.outer_radius)) then
+          dist(3)=half*radblob2-abs(raddist-half*(inner_radius+outer_radius))
+         else
+          print *,"raddist invalid: ",raddist
+          stop
+         endif
+         dist(1)=min(dist(1),-dist(3))
+        else
+         print *,"probtype.eq.36(310) invalid FSI_flag: ", &
+           FSI_flag(3),probtype,axis_dir
+         stop
+        endif
+
+       else
+        print *,"expecting num_materials=3: ",num_materials
+        stop
+       endif
 
        ! bubble jetting or steel ball cavitation
        ! (materialdist_batch)

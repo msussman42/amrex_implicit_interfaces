@@ -790,6 +790,10 @@ stop
         stop
        endif
 
+      else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+       SUB_clamped_LS_no_scale=>STUB_clamped_hydrobulge
+      else
+       !do nothing
       endif
 
       SUB_wallfunc=>STUB_wallfunc

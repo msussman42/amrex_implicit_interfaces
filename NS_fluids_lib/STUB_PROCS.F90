@@ -414,6 +414,83 @@ integer :: backing_id !=3 or 2
 return
 end subroutine STUB_clamped_LS_jetting_or_cav
 
+subroutine STUB_clamped_hydrobulge(x,t,LS,vel, &
+               temperature,prescribed_flag,dx)
+use probcommon_module
+use global_utility_module
+use global_distance_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real), INTENT(out) :: vel(SDIM)
+real(amrex_real), INTENT(out) :: temperature
+integer, INTENT(out) :: prescribed_flag
+real(amrex_real) :: mag
+integer :: dir
+
+ if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+
+  if (num_materials.eq.3) then
+   !do nothing
+  else
+   print *,"expecting num_materials.eq.3: ",num_materials
+   stop
+  endif
+
+  LS=CLAMPED_NO_WHERE_LS ! -99999.0
+  do dir=1,SDIM
+   vel(dir)=zero
+  enddo
+  temperature=room_temperature
+  prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
+
+  if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
+      (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+   LS=-99999.0d0
+   temperature=293.0d0
+
+   if (SDIM.eq.2) then
+    mag=abs(x(1))
+   else if (SDIM.eq.3) then
+    mag=sqrt(x(1)**2+x(2)**2)
+   else
+    print *,"dimension bust"
+    stop
+   endif
+   if (abs(x(SDIM)).lt.half*radblob4) then
+    !do nothing
+   else if (abs(x(SDIM)).ge.half*radblob4) then
+    if (mag.ge.half*radblob3-radblob2) then
+     LS=99999.0d0
+    else if (mag.le.half*radblob3-radblob2) then
+     !do nothing
+    else
+     print *,"mag invalid: ",mag
+     stop
+    endif
+   else
+    print *,"abs(x(SDIM)) invalid: ",x(SDIM)
+    stop
+   endif
+
+  else
+   print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+   stop
+  endif
+ else
+  print *,"expecting probtype.eq.36(310) ",probtype
+  print *,"axis_dir ",axis_dir
+  stop
+ endif
+
+return
+end subroutine STUB_clamped_hydrobulge
+
+
+
 ! initial velocity is zero
 subroutine STUB_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
