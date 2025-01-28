@@ -14,17 +14,17 @@ ns.num_divu_outer_sweeps=2
 ns.post_init_pressure_solve=0
 # if slice_dir=0,
 # then plots data in which y=0.0 and z=0.0
-ns.slice_dir=0 # 0,1,...,sdim-1
+ns.slice_dir=0 # 0,1,..,sdim-1
 ns.xslice=0.0 0.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0 -16.0
-geometry.prob_hi   =  8.0 8.0 16.0
-#geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
-#geometry.prob_lo   =  0.0 -16.0  #2D
-#geometry.prob_hi   =  8.0 16.0
+#geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =  0.0 0.0 -16.0
+#geometry.prob_hi   =  8.0 8.0 16.0
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 -16.0  #2D
+geometry.prob_hi   =  8.0 16.0
 
 # multigrid class
 mg.verbose = 0
@@ -69,8 +69,8 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 ns.inflow_pressure=1.0e+6  # atmospheric pressure
 ns.outflow_pressure=1.06e+6 # tank pressure at the impact plate
 
-amr.n_cell    = 32 32 128
-#amr.n_cell    = 32 128 #2D
+#amr.n_cell    = 32 32 128
+amr.n_cell    = 32 128 #2D
 amr.max_level =  2
 
 ns.xblob10=0.0
@@ -183,7 +183,7 @@ ns.zblob=0.0
 # 128x512
 # 8/128=0.0625
 # 3 grams (4/3) pi r^3 (1.765)=3  r^3=(9/4)(1/1.765)(1/pi)  r=0.74 cm
-ns.radblob=0.74 
+ns.radblob=0.74
 ns.radblob2=0.635  # cylinder thickness
 ns.radblob3=10.16  # outside diameter
 ns.radblob4=22.9  # cylinder length
@@ -197,10 +197,10 @@ ns.v = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
 #outflow at top and bottom of can
-ns.lo_bc          = 3 3 2 
-ns.hi_bc          = 2 2 2
-#ns.lo_bc          = 3 2 
-#ns.hi_bc          = 2 2
+#ns.lo_bc          = 3 3 2 
+#ns.hi_bc          = 2 2 2
+ns.lo_bc          = 3 2  #2D
+ns.hi_bc          = 2 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
