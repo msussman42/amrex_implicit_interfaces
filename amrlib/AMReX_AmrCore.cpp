@@ -507,10 +507,24 @@ AmrCore::InitAmr () {
 
  if (LSA_nsteps_power_method==0) {
   LSA_max_step=0;
-  if (regrid_int>=1) {
-   //do nothing
+
+  if (max_level==0) {
+   if (regrid_int==0) {
+    //do nothing
+   } else {
+    amrex::Error("expecting regrid_int==0");
+   }
+  } else if (max_level>0) {
+
+   if (regrid_int>=1) {
+    //do nothing
+   } else {
+    amrex::Error("expecting regrid_int>=1");
+   }
+
   } else
-   amrex::Error("expecting regrid_int>=1");
+   amrex::Error("max_level invalid");
+
  } else if (LSA_nsteps_power_method>=1) {
   LSA_max_step=-1;
   ppmain.queryAdd("max_step",LSA_max_step);

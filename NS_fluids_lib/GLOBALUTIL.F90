@@ -20210,13 +20210,28 @@ end subroutine print_visual_descriptor
               two*B_wardlaw_tillotson*mu*dmu+ &
               three*C_wardlaw_tillotson*mu*mu*dmu
       dpde=omega_wardlaw_tillotson*rho_cav_wardlaw_tillotson
-      sound_sanity=dpdrho+pressure*dpde/(rho_cav_wardlaw_tillotson**2)
+       ! c^2 = p_rho + p p_e/rho^2
+      sound_sanity=dpdrho+pressure_sanity*dpde/(rho_cav_wardlaw_tillotson**2)
       sound_sanity=sqrt(sound_sanity)
       if (abs(sound_sanity-sound_cav_wardlaw_tillotson).le. &
           0.01d0*sound_cav_wardlaw_tillotson) then
        ! do nothing
       else
        print *,"sound_sanity invalid"
+       print *,"dpdrho=",dpdrho
+       print *,"dpde=",dpde
+       print *,"mu=",mu
+       print *,"dmu=",dmu
+       print *,"omega_wardlaw_tillotson ",omega_wardlaw_tillotson
+       print *,"A_wardlaw_tillotson ",A_wardlaw_tillotson
+       print *,"B_wardlaw_tillotson ",B_wardlaw_tillotson
+       print *,"C_wardlaw_tillotson ",C_wardlaw_tillotson
+       print *,"rho0=",rho0
+       print *,"rho_cav_wardlaw_tillotson=", &
+         rho_cav_wardlaw_tillotson
+       print *,"T0_sanity ",T0_sanity
+       print *,"e0_sanity ",e0_sanity
+       print *,"e0 ",e0
        print *,"sound_sanity=",sound_sanity
        print *,"sound_cav_wardlaw_tillotson=",sound_cav_wardlaw_tillotson
        stop

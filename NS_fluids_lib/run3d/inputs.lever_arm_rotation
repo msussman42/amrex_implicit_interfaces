@@ -6,7 +6,8 @@
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
 #max_step=20
-max_step=99999999
+#max_step=17705
+max_step=999999
 stop_time=8000.0
 
 # unique problem identifier associated with each new plug-in:
@@ -152,6 +153,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 #amr.max_level       = 1     #2D
 #amr.n_cell          = 128 128 128 #3D
 amr.n_cell          = 64 64 64 # maxlevel=0: 16 cores compute1 #3D
+#ns.visual_ncell=64 64 64 #nodes
+ns.visual_ncell=8 8 8 #nodes (default)
 amr.max_level       = 0 #3D
 
 amr.regrid_int      = 1     # How often to regrid
@@ -209,11 +212,11 @@ ns.sum_interval     = 10     # timesteps between computing mass
 
 amr.grid_log        = grdlog  # name of grid logging file
 
-amr.file_name_digits=8
+amr.file_name_digits= 8
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=0
-#amr.restart        = chk0000400 # Name of the restart checkpoint file
+#amr.restart        = chk00017700 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
 

@@ -5,9 +5,12 @@
       real*8 A_TILLOTSON,B_TILLOTSON,C_TILLOTSON
       real*8 RHOBAR_TILLOTSON,OMEGA_TILLOTSON,P0_TILLOTSON,mu,rho0
       real*8 internal_energy,e0
+      real*8 cv
 
-      e0=293.0d0
-      internal_energy=293.0d0
+      cv=4.1855D+7
+      e0=293.0d0*cv
+      internal_energy=293.0d0*cv
+
       P0_TILLOTSON=1.0D+6
       A_TILLOTSON=2.2D+10
       B_TILLOTSON=9.94D+10
@@ -17,6 +20,8 @@
 
       rho0=1.0d0
       mu=rho/rho0-1.0d0
+      print *,"mu (ptillotson): ",mu
+      print *,"e0 (ptillotson): ",e0
       p=P0_tillotson+omega_tillotson*rho* &
               (internal_energy-e0)+ &
               A_tillotson*mu+ &
@@ -33,9 +38,11 @@
       real*8 A_TILLOTSON,B_TILLOTSON,C_TILLOTSON
       real*8 RHOBAR_TILLOTSON,OMEGA_TILLOTSON,P0_TILLOTSON,mu,rho0
       real*8 internal_energy,e0,sound,dmu,dpdrho,dpde
+      real*8 cv
 
-      e0=293.0d0
-      internal_energy=293.0d0
+      cv=4.1855D+7
+      e0=293.0d0*cv
+      internal_energy=293.0d0*cv
       P0_TILLOTSON=1.0D+6
       A_TILLOTSON=2.2D+10
       B_TILLOTSON=9.94D+10
@@ -45,6 +52,8 @@
 
       rho0=1.0d0
       mu=rho/rho0-1.0d0
+      print *,"mu (soundtillotson): ",mu
+      print *,"e0 (soundtillotson): ",e0
 
       dmu=1.0d0/rho0
       dpdrho=omega_tillotson*(internal_energy-e0)+ &
@@ -52,6 +61,8 @@
               2.0d0*B_TILLOTSON*mu*dmu+ &
               3.0d0*C_TILLOTSON*mu*mu*dmu
       dpde=omega_tillotson*rho
+      print *,"dpdrho=",dpdrho
+      print *,"dpde=",dpde
       call ptillotson(p,rho)
       sound=dpdrho+p*dpde/(rho**2)
       sound=sqrt(sound) 
