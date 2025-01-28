@@ -341,6 +341,8 @@ int  NavierStokes::blob_history_plot_int=0;
 int  NavierStokes::visual_nddata_format=0; 
 
 int NavierStokes::visual_compare=0; 
+// IntVect visual_fab_lo(IntVect::TheZeroVector()); 
+// IntVect visual_fab_hi(visual_ncell); 
 Vector<int> NavierStokes::visual_ncell;
 
 // 0..sdim-1
@@ -3260,7 +3262,8 @@ NavierStokes::read_params ()
 
     visual_ncell.resize(AMREX_SPACEDIM);
     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-     visual_ncell[dir]=8;
+     visual_ncell[dir]=8; //default
+     // in the inputs file: ns.visual_ncell=64 64 64
     pp.queryAdd("visual_ncell",visual_ncell,AMREX_SPACEDIM);
     pp.queryAdd("visual_compare",visual_compare);
 
