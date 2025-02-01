@@ -892,6 +892,8 @@ extern "C"
      AMREX_ARLIM_P(levelpclo),AMREX_ARLIM_P(levelpchi),
      Real* rhoinverse,
      AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi),
+     Real* dendata,
+     AMREX_ARLIM_P(dendatalo),AMREX_ARLIM_P(dendatahi),
      Real* rhoinverseMAC,
      AMREX_ARLIM_P(rhoinverseMAClo),AMREX_ARLIM_P(rhoinverseMAChi),
      Real* tensorfab,

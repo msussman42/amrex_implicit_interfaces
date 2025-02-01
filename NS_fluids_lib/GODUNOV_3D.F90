@@ -19357,6 +19357,8 @@ stop
        levelpc,DIMS(levelpc), &
        rhoinvfab, &
        DIMS(rhoinvfab), &
+       denfab, &
+       DIMS(denfab), &
        rhoinvMACfab, &
        DIMS(rhoinvMACfab), &
        tensorfab, &
@@ -19400,6 +19402,7 @@ stop
       integer, INTENT(in) :: DIMDEC(maskcoef)
       integer, INTENT(in) :: DIMDEC(levelpc)
       integer, INTENT(in) :: DIMDEC(rhoinvfab)
+      integer, INTENT(in) :: DIMDEC(denfab)
       integer, INTENT(in) :: DIMDEC(rhoinvMACfab)
       integer, INTENT(in) :: DIMDEC(tensorfab)
       integer, INTENT(in) :: DIMDEC(SNEW)
@@ -19421,6 +19424,10 @@ stop
 
       real(amrex_real), INTENT(in), target :: rhoinvfab(DIMV(rhoinvfab))
       real(amrex_real), pointer :: rhoinvfab_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+        denfab(DIMV(denfab),num_materials*num_state_material)
+      real(amrex_real), pointer :: denfab_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
         rhoinvMACfab(DIMV(rhoinvMACfab))
@@ -19483,6 +19490,7 @@ stop
       integer prescribed_flag
       integer mask_left,mask_right
       real(amrex_real) force_left,force_right
+      real(amrex_real) denleft,denright
       real(amrex_real) div_term
       real(amrex_real) d_tensor(SDIM)
       real(amrex_real) dx_local(SDIM)
@@ -19492,7 +19500,9 @@ stop
       real(amrex_real) Q_JTAN(2)
       real(amrex_real) CC_weight
       real(amrex_real) rplus,rminus
-      real(amrex_real) dTdx,local_invden
+      real(amrex_real) dTdx
+      real(amrex_real) local_invden
+      real(amrex_real) local_invden_from_cell
       real(amrex_real) dxmaxLS
       real(amrex_real) H_radius
       real(amrex_real) H_offset
@@ -19528,6 +19538,9 @@ stop
       rhoinvfab_ptr=>rhoinvfab
       call checkbound_array1(fablo,fabhi,rhoinvfab_ptr,0,-1)
 
+      denfab_ptr=>denfab
+      call checkbound_array(fablo,fabhi,denfab_ptr,1,-1)
+
       rhoinvMACfab_ptr=>rhoinvMACfab
       call checkbound_array1(fablo,fabhi,rhoinvMACfab_ptr,0,force_dir)
 
@@ -19560,6 +19573,15 @@ stop
        print *,"bfact invalid"
        stop
       endif
+
+      if (elastic_force_mac_grid.eq.1) then
+       ! force used in pressure solve
+      else if (elastic_force_mac_grid.eq.0) then
+       ! force only used for visualization
+      else
+       print *,"elastic_force_mac_grid inalid"
+       stop
+      endif 
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
       if (dxmaxLS.gt.zero) then
@@ -19698,6 +19720,43 @@ stop
        else
         print *,"im_primary_left|right|face invalid: ",im_primary_left, &
          im_primary_right,im_primary_face
+        stop
+       endif
+
+       if ((im_primary_left.ge.1).and. &
+           (im_primary_left.le.num_materials).and. &
+           (im_primary_right.ge.1).and. &
+           (im_primary_right.le.num_materials).and. &
+           (im_primary_face.ge.1).and. & 
+           (im_primary_face.le.num_materials)) then
+        !do nothing
+       else
+        print *,"expecting im_primary>=1 and im_primary<=num_materials"
+        stop
+       endif
+
+       if (im_primary_left.eq.im_viscoelastic_p1) then
+        denleft=denfab(D_DECL(i-ii,j-jj,k-kk), &
+         im_viscoelastic*num_state_material+ENUM_DENVAR+1)
+       else if (im_primary_left.ne.im_viscoelastic_p1) then
+        denleft=fort_denconst(im_viscoelastic_p1)
+       else
+        print *,"im_primary_left bust: ",im_primary_left
+        stop
+       endif
+       if (im_primary_right.eq.im_viscoelastic_p1) then
+        denright=denfab(D_DECL(i,j,k), &
+         im_viscoelastic*num_state_material+ENUM_DENVAR+1)
+       else if (im_primary_right.ne.im_viscoelastic_p1) then
+        denright=fort_denconst(im_viscoelastic_p1)
+       else
+        print *,"im_primary_right bust: ",im_primary_right
+        stop
+       endif
+       if ((denleft.gt.zero).and.(denright.gt.zero)) then
+        local_invden_from_cell=two/(denleft+denright)
+       else
+        print *,"denleft or denright invalid:",denleft,denright
         stop
        endif
 
@@ -20290,8 +20349,24 @@ stop
           
         local_invden=rhoinvMACfab(D_DECL(i,j,k))
         if (local_invden.ge.zero) then 
-         umacnew(D_DECL(i,j,k))=umacnew(D_DECL(i,j,k))+ &
-          dt*div_term*local_invden
+         if (local_invden_from_cell.ge.zero) then
+          if (local_invden.le.local_invden_from_cell) then
+           !do nothing
+          else if (local_invden.ge.local_invden_from_cell) then
+           local_invden=local_invden_from_cell
+          else
+           print *,"local_invden invalid: ",local_invden
+           print *,"or local_invden_from_cell invalid: ", &
+             local_invden_from_cell
+           stop
+          endif
+          umacnew(D_DECL(i,j,k))=umacnew(D_DECL(i,j,k))+ &
+            dt*div_term*local_invden
+         else
+          print *,"local_invden_from_cell invalid: ", &
+            local_invden_from_cell
+          stop
+         endif
         else
          print *,"local_invden invalid: ",local_invden
          stop
@@ -20370,38 +20445,12 @@ stop
 
        if (on_the_wall.eq.0) then
 
-        force_left=umacnew(D_DECL(i,j,k))-umacold(D_DECL(i,j,k))
-        local_invden=rhoinvMACfab(D_DECL(i,j,k))
-        if (local_invden.gt.zero) then
-         force_left=force_left/local_invden
-        else if (local_invden.eq.zero) then
-         !do nothing
-        else
-         print *,"local_invden invalid: ",local_invden
-         stop
-        endif
-
+        force_left=umacnew(D_DECL(i,j,k))- &
+                   umacold(D_DECL(i,j,k))
         force_right=umacnew(D_DECL(i+ii,j+jj,k+kk))- &
                     umacold(D_DECL(i+ii,j+jj,k+kk))
-        local_invden=rhoinvMACfab(D_DECL(i+ii,j+jj,k+kk))
-        if (local_invden.gt.zero) then
-         force_right=force_right/local_invden
-        else if (local_invden.eq.zero) then
-         !do nothing
-        else
-         print *,"local_invden invalid: ",local_invden
-         stop
-        endif
-
-        local_invden=rhoinvfab(D_DECL(i,j,k))
-        if (local_invden.ge.zero) then
-         SNEW(D_DECL(i,j,k))=SNEW(D_DECL(i,j,k))+ &
-          half*(force_left+force_right)*local_invden
-        else
-         print *,"local_invden invalid: rhoinvfab(D_DECL(i,j,k)): ", &
-          i,j,k,rhoinvfab(D_DECL(i,j,k))
-         stop
-        endif 
+        SNEW(D_DECL(i,j,k))=SNEW(D_DECL(i,j,k))+ &
+          half*(force_left+force_right)
         
        else if (on_the_wall.eq.1) then
         ! do nothing

@@ -1185,7 +1185,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
  } else
   amrex::Error("level invalid10");
 
-} // subroutine avgDown_and_Copy_localMF
+} // end subroutine avgDown_and_Copy_localMF
 
 
 // flux variables: interp in the tangential direction 
@@ -1435,7 +1435,7 @@ void NavierStokes::interp_and_Copy_localMF(
  } else
   amrex::Error("level invalid11");
 
-} // subroutine interp_and_Copy_localMF
+} // end subroutine interp_and_Copy_localMF
 
 void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
@@ -1534,7 +1534,7 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
  } else
   amrex::Error("dir invalid");
     
-} // subroutine sync_flux_var
+} // end subroutine sync_flux_var
 
 void NavierStokes::interp_flux_localMF(
   int coarse_flux_MF,
@@ -1711,7 +1711,7 @@ void NavierStokes::interp_flux_localMF(
  } else
   amrex::Error("level invalid11");
 
-} // subroutine interp_flux_localMF
+} // end subroutine interp_flux_localMF
 
 // interpolate from level+1 to level.
 // spectral_override==LOW_ORDER_AVGDOWN => always do low order average down.
@@ -1769,7 +1769,7 @@ void NavierStokes::avgDownEdge_localMF(
   amrex::Error("level invalid");
  }
 
-} // avgDownEdge_localMF
+} // end subroutine avgDownEdge_localMF
 
 void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
   int elastic_force_mac_grid) {
@@ -1777,17 +1777,17 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
  std::string local_caller_string="CELL_GRID_ELASTIC_FORCE";
 
  if ((im_viscoelastic>=0)&&(im_viscoelastic<num_materials)) {
-   if (ns_is_rigid(im_viscoelastic)==0) {
-    if ((elastic_time[im_viscoelastic]>0.0)&&
-        (elastic_viscosity[im_viscoelastic]>0.0)) {
-     if (store_elastic_data[im_viscoelastic]==1) {
-      // do nothing
-     } else
-      amrex::Error("expecting store_elastic_data[im_viscoelastic]==1");
+  if (ns_is_rigid(im_viscoelastic)==0) {
+   if ((elastic_time[im_viscoelastic]>0.0)&&
+       (elastic_viscosity[im_viscoelastic]>0.0)) {
+    if (store_elastic_data[im_viscoelastic]==1) {
+     // do nothing
     } else
-     amrex::Error("expecting elastic_time>0 and elastic_viscosity>0");
+     amrex::Error("expecting store_elastic_data[im_viscoelastic]==1");
    } else
-    amrex::Error("expecting ns_is_rigid(im_viscoelastic)==0)"); 
+    amrex::Error("expecting elastic_time>0 and elastic_viscosity>0");
+  } else
+   amrex::Error("expecting ns_is_rigid(im_viscoelastic)==0)"); 
  } else
   amrex::Error("im_viscoelastic invalid");
 
@@ -1831,6 +1831,16 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
+ MultiFab* dendata=getStateDen(1,cur_time_slab);
+ if (dendata->nComp()==num_materials*num_state_material) {
+  //do nothing
+ } else
+  amrex::Error("dendata->nComp() invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
+ }
+
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -1843,11 +1853,9 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
  const Real* dx = geom.CellSize();
 
- int dir=0;
-
  MultiFab* save_mac_new[AMREX_SPACEDIM];
  MultiFab* save_mac_old[AMREX_SPACEDIM];
- for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   save_mac_new[dir]=getStateMAC(0,dir,cur_time_slab);
   save_mac_old[dir]=getStateMAC(0,dir,cur_time_slab);
  }
@@ -1880,6 +1888,8 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
     // fab = Fortran Array Block
     
    FArrayBox& tensorfab=(*localMF[VISCOTEN_MF])[mfi];
+
+   FArrayBox& statefab=(*dendata)[mfi];
 
    FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
 
@@ -1933,6 +1943,8 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      rhoinversefab.dataPtr(),
      ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
+     statefab.dataPtr(),
+     ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
      xfacevar.dataPtr(FACECOMP_FACEDEN), // 1/rho
      ARLIM(xfacevar.loVect()),ARLIM(xfacevar.hiVect()),
      tensorfab.dataPtr(),
@@ -1958,7 +1970,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
  if (elastic_force_mac_grid==1) {
 
-  for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
    MultiFab::Copy(Umac_new,*save_mac_new[dir],0,0,1,0);
   }
@@ -1968,10 +1980,11 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
  } else
   amrex::Error("elastic_force_mac_grid invalid");
 
- for (dir=0;dir<AMREX_SPACEDIM;dir++) {
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete save_mac_new[dir];
   delete save_mac_old[dir];
  }
+ delete dendata;
 
 } // end subroutine CELL_GRID_ELASTIC_FORCE
 

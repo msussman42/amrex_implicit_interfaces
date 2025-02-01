@@ -11843,6 +11843,7 @@ void NavierStokes::avgDownALL_TENSOR() {
 // if viscoelastic_force_only==0, then the following command is given 
 // prior to this routine:
 //  SET_STOKES_MARK(REGISTER_MARK_MF);
+//vel_elastic_ALL called from veldiffuseALL and writeTECPLOT_File
 void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
  int elastic_force_mac_grid=1;
