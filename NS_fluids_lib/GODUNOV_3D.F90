@@ -4821,6 +4821,7 @@ stop
       real(amrex_real) :: elastic_viscosity
       integer :: ipart
       integer :: im_local
+      real(amrex_real), parameter :: FSI_extend_cells=0.5d0
 
       if ((FSI_outer_sweeps.ge.0).and. &
           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
@@ -4837,7 +4838,7 @@ stop
        stop
       endif
 
-      LS_shift=two*dxmaxLS
+      LS_shift=FSI_extend_cells*dxmaxLS
 
       do ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
        im_local=im_elastic_map(ipart+1)+1
@@ -4856,9 +4857,9 @@ stop
        endif
        if ((LSleft(im_local).ge.-LS_shift).or. &
            (LSright(im_local).ge.-LS_shift)) then
-        if (local_faceden.eq.zero) then
+        if (local_faceden.eq.zero) then ! 1/density
          ! do nothing
-        else if (local_faceden.gt.zero) then
+        else if (local_faceden.gt.zero) then ! 1/density
          elastic_density=fort_denconst(im_local)
          elastic_viscosity=fort_viscconst(im_local)
          if (elastic_density.gt.one/local_faceden) then
@@ -5231,6 +5232,8 @@ stop
           stop
          endif
 
+          !subroutine check_added_mass is also declared in GODUNOV_3D.F90 
+          !FSI_extend_cells is declared in check_added_mass
          call check_added_mass( &
           local_faceden, &
           local_facevisc, &
@@ -5295,6 +5298,8 @@ stop
          local_faceden=cell_den(D_DECL(i,j,k))
          local_facevisc=cell_visc(D_DECL(i,j,k))
 
+          !subroutine check_added_mass is also declared in GODUNOV_3D.F90 
+          !FSI_extend_cells is declared in check_added_mass
          call check_added_mass( &
           local_faceden, &
           local_facevisc, &

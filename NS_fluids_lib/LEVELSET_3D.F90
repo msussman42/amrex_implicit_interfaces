@@ -8531,7 +8531,7 @@ stop
          else if ((veldir.eq.2).and.(SDIM.eq.3)) then
           inorm=k
          else
-          print *,"veldir invalid physics_var"
+          print *,"veldir invalid physics_var: ",veldir
           stop
          endif
 
@@ -8550,7 +8550,7 @@ stop
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           im1=i-ii
          else
-          print *,"levelrz invalid init physics var"
+          print *,"levelrz invalid init physics var: ",levelrz
           stop
          endif
 
@@ -8944,7 +8944,7 @@ stop
           LSIDE(1)=zero
           LSIDE(2)=zero
          else
-          print *,"gradh bust"
+          print *,"gradh bust (fort_init_physics_vars) ",gradh
           stop
          endif
 
@@ -8981,7 +8981,8 @@ stop
           LSIDE_tension(1)=zero
           LSIDE_tension(2)=zero
          else
-          print *,"gradh_tension bust"
+          print *,"gradh_tension bust (fort_init_physics_vars) ", &
+            gradh_tension
           stop
          endif
 
@@ -9015,7 +9016,7 @@ stop
          else if (dt.gt.zero) then
           ! do nothing
          else
-          print *,"dt became corrupt; dt=",dt
+          print *,"dt became corrupt (fort_init_physics_vars) dt=",dt
           stop
          endif
 
@@ -9648,7 +9649,7 @@ stop
             stop
            endif
           else
-           print *,"levelrz invalid init physics vars 3"
+           print *,"levelrz invalid init physics vars 3: ",levelrz
            stop
           endif
 
@@ -16880,6 +16881,7 @@ stop
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
+      real(amrex_real), parameter :: FSI_extend_cells=0.5d0
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -16892,7 +16894,7 @@ stop
        ! see also:
        ! H_offset and H_radius in subroutine fort_elastic_force
        ! LS_shift in subroutine check_added_mass
-      extend_offset=two*dxmaxLS
+      extend_offset=FSI_extend_cells*dxmaxLS
 
        ! intent(in) :: extend_solid_velocity
       if (extend_solid_velocity.eq.0) then
