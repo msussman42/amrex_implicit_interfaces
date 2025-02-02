@@ -463,12 +463,14 @@ integer :: dir
    if (abs(x(SDIM)).lt.half*radblob4) then
     !do nothing
    else if (abs(x(SDIM)).ge.half*radblob4) then
-    if (mag.ge.half*radblob3-radblob2) then
+    if ((mag.ge.half*radblob3-radblob2).and. &
+        (mag.le.half*radblob3+radblob2)) then
      LS=99999.0d0
-    else if (mag.le.half*radblob3-radblob2) then
+    else if ((mag.le.half*radblob3-radblob2).or. &
+             (mag.ge.half*radblob3+radblob2)) then
      !do nothing
     else
-     print *,"mag invalid: ",mag
+     print *,"mag invalid (STUB_clamped_hydrobulge) ",mag
      stop
     endif
    else
@@ -478,6 +480,7 @@ integer :: dir
 
   else
    print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+   print *,"probtype (STUB_clamped_hydrobulge) = ",probtype
    stop
   endif
  else
