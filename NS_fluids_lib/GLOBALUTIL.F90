@@ -5947,7 +5947,10 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
- ! DQ/Dt=2(D0-D^P)+WQ+QW^T   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
+ ! (grad U)_{ij}^{T}=U_{i,j}
+ ! W_{ij}=(U_{j,i}-U_{i,j})/2
+ ! Tran and Udaykumar: Omega_{ij}=(U_{i,j}-U_{j,i})/2=-W_{ij}
+ ! DQ/Dt=2(D0-D^P)+QW-WQ   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
  ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace(Q)=0
  ! trace(Q)=sum lambda(Q)  lambda(Q)=eigenvalues of Q
  ! Q is traceless if trace(Q)=0 at t=0.
@@ -28028,8 +28031,8 @@ do jj=1,3 !deriv dir
   stop
  endif
      
-  !gradV_transpose=(\partial V_{i})/(\partial x_{j})
-! gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
+!gradV_transpose_{i,j}=(\partial V_{i})/(\partial x_{j})
+!gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
 
  gradV_transpose(ii,jj)=gradV_MAC !(vel dir,deriv dir)
 
@@ -28063,6 +28066,7 @@ endif
 do ii=1,3
 do jj=1,3
   !W=(grad V - grad V^T)/2
+  !W_{ij}=(V_{j,i}-V_{i,j})/2
  W_Jaumann(ii,jj)=half*(gradV_transpose(jj,ii)-gradV_transpose(ii,jj))
 enddo 
 enddo 
@@ -28229,7 +28233,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    Smult_right(ii,jj)=Smult_left(ii,jj)
   else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
    if (dumbbell_model.eq.0) then
-    Smult_left(ii,jj)=dt*W_Jaumann(ii,jj) 
+     !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
+    Smult_left(ii,jj)=-dt*W_Jaumann(ii,jj) 
     Smult_right(ii,jj)=Smult_left(ii,jj)
    else
     print *,"dumbbell_model invalid"
@@ -28385,9 +28390,25 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   print *,"viscoelastic_model invalid: ",viscoelastic_model
   stop
  endif
-
+ 
+ !if NN_MAIRE_ABGRALL then Smult_left=Smult_right=I+dt W
+ !DQ/Dt=2(D0-D^P)+QW-WQ   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
+ !grad U_{ij} = U_{j,i}
+ !W=(grad V - grad V^T)/2
+ !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
+ !Q^{n+1}=(I+dt WLEFT)Q^{n}(I+dt WRIGHT^T)=
+ !        Q^{n}+dt WLEFT Q + dt Q WRIGHT^T + 
+ !        dt^2 WLEFT Q WRIGHT^T \approx
+ !        Q^{n}+dt WLEFT Q + dt Q WRIGHT^T
+ !WLEFT=OMEGA=-W
+ !WRIGHT^T=-OMEGA
+ !WRIGHT=OMEGA=-W
+ !(Q^{n+1}-Q^{n})/dt=WLEFT Q + Q WRIGHT^T
+ !Smult_left=I+dt WLEFT
+ !Smult_right=I+dt WRIGHT
  do ii=1,3
  do jj=1,3
+   !SA=S_left * A
   SA(ii,jj)=zero
   do kk=1,3
    SA(ii,jj)=SA(ii,jj)+Smult_left(ii,kk)*Aadvect(kk,jj)
@@ -28397,6 +28418,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  
  do ii=1,3
  do jj=1,3
+   !SAS=S_left * A * S_right^T
   SAS(ii,jj)=zero
 
   do kk=1,3
