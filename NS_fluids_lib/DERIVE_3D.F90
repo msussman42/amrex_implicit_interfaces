@@ -970,7 +970,7 @@ stop
          if (elastic_viscosity.ge.zero) then
           ! do nothing
          else
-          print *,"elastic_viscosity invalid"
+          print *,"elastic_viscosity invalid(derviscosity)",elastic_viscosity
           stop
          endif
         else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental
@@ -978,7 +978,7 @@ stop
          if (elastic_viscosity.ge.zero) then
           ! do nothing
          else
-          print *,"elastic_viscosity invalid"
+          print *,"elastic_viscosity invalid(derviscosity)",elastic_viscosity
           stop
          endif
         else
@@ -1143,7 +1143,9 @@ stop
             stop
            endif
 
-           ! modtime=elastic_time >> 1 for 2,3,7
+           ! modtime=elastic_time >> 1 for 
+           !  NN_MAIRE_ABGRALL_ETAL or
+           !  NN_NEO_HOOKEAN
           else if ((viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL).or. & !plastic
                    (viscoelastic_model.eq.NN_NEO_HOOKEAN)) then !incremental
            modtime=elastic_time
