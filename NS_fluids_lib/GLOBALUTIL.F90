@@ -28355,7 +28355,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    enddo
    enddo
    ! "S" from Maire et al corresponds to "Aadvect" times the 
-   ! bulk modulus.
+   ! bulk (or is it shear?) modulus.
    gamma_not=elastic_viscosity/100.0d0
 
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)

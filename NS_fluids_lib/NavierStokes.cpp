@@ -486,7 +486,7 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 //       (i) lambda'=lambda
 // 3=> incremental elastic model (NN_MAIRE_ABGRALL_ETAL) 
 //   DS/DT=2 (D0-Dp) - (SW-WS)
-//     mu=Lame coefficient (bulk modulus?)
+//     mu=Lame coefficient (bulk modulus? or shear modulus?)
 //     D0=D-tr(D)Id/DIM 
 //       =D if incompressible
 //     W=(1/2)(grad V - grad V^T)    W^T=-W
