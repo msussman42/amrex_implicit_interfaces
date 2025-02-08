@@ -16,7 +16,8 @@ Aulisa et al)
 \end{description}
 
 % https://ipe.otfried.org/
-%see FSI_extend_cells
+%see FSI_extend_cells, H_offset, H_radius (fort_elastic_force),
+%LS_shift (check_added_mass)
 Given $n$ elastic materials, the algorithm is as follows:
 \begin{description}
 \item[1a. Refined advection] $S_{t}+\nabla\cdot(\bmu S)=F$
@@ -43,9 +44,9 @@ Given $n$ elastic materials, the algorithm is as follows:
 \item[7. restore state(s)] Using the saved states from step 5, restore
   the states of all materials except for the elastic materials $j=1,i-1$
 \item[8. velocity extension] For $j=i,n$ extend the $j$th elastic material
- velocity in a band of thickness $\alpha \Delta x$.  $\alpha=1/2$.
+ velocity in a band of thickness $\alpha \Delta x$.  $\alpha=1$.
 \item[9. shift MAC grid density and viscosity] For $j=i,n$ shift the
-  MAC density and viscosity $\beta \Delta x$ ($\beta=1/2$) 
+  MAC density and viscosity $\beta \Delta x$ ($\beta=1$) 
   distance out of the $j$th elastic material.
 \item[10. velocity diffusion] $\bmu_{t}=\nabla\cdot(2\mu D)/\rho$
 \item[11a. grid location project configuration tensors $j=i,n$] 

@@ -4821,7 +4821,7 @@ stop
       real(amrex_real) :: elastic_viscosity
       integer :: ipart
       integer :: im_local
-      real(amrex_real), parameter :: FSI_extend_cells=0.5d0
+      real(amrex_real), parameter :: FSI_extend_cells=1.0d0
 
       if ((FSI_outer_sweeps.ge.0).and. &
           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
@@ -4834,6 +4834,7 @@ stop
       if (dxmaxLS.gt.zero) then
        !do nothing
       else
+       print *,"check_added_mass: "
        print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
@@ -4845,6 +4846,7 @@ stop
        if ((im_local.ge.1).and.(im_local.le.num_materials)) then
         !do nothing
        else
+        print *,"check_added_mass: "
         print *,"im_local invalid: ",im_local
         stop
        endif
@@ -4852,6 +4854,7 @@ stop
        if (is_rigid_CL(im_local).eq.1) then
         !do nothing
        else
+        print *,"check_added_mass: "
         print *,"im_local invalid(2): ",im_local
         stop
        endif
@@ -4868,10 +4871,12 @@ stop
            if (local_facevisc.ge.zero) then
             local_facevisc=elastic_viscosity
            else
+            print *,"check_added_mass: "
             print *,"local_facevisc invalid: ",local_facevisc
             stop
            endif
           else
+           print *,"check_added_mass: "
            print *,"elastic_viscosity invalid: ",elastic_viscosity
            stop
           endif
@@ -4879,11 +4884,13 @@ stop
                   (elastic_density.gt.zero)) then
           !do nothing
          else
+          print *,"check_added_mass: "
           print *,"elastic_density invalid: ",elastic_density
           print *,"local_faceden: ",local_faceden
           stop
          endif
         else
+         print *,"check_added_mass: "
          print *,"local_faceden invalid: ",local_faceden
          stop
         endif
@@ -4891,6 +4898,7 @@ stop
                 (LSright(im_local).le.-LS_shift)) then
         !do nothing
        else
+        print *,"check_added_mass: "
         print *,"LS_left or LSright invalid"
         stop
        endif 
@@ -19601,6 +19609,7 @@ stop
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
        H_offset=zero
       else
+       print *,"fort_elastic_force: "
        print *,"is_FSI_elastic invalid: ",im_viscoelastic_p1, &
          is_FSI_elastic(im_viscoelastic_p1)
        stop
@@ -19850,6 +19859,7 @@ stop
          QCC(1)=QCC(1)/CC_weight
          QCC(2)=QCC(2)/CC_weight
         else
+         print *,"fort_elastic_force: "
          print *,"CC_weight invalid: ",CC_weight
          stop
         endif
@@ -20032,6 +20042,7 @@ stop
          H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
          Q_ITAN(2)=Q_ITAN(2)*H_corner 
         else
+         print *,"fort_elastic_force: "
          print *,"CC_weight invalid: ",CC_weight
          stop
         endif
@@ -20202,6 +20213,7 @@ stop
          H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
          Q_JTAN(2)=Q_JTAN(2)*H_corner 
         else
+         print *,"fort_elastic_force: "
          print *,"CC_weight invalid: ",CC_weight
          stop
         endif
@@ -20295,6 +20307,7 @@ stop
          if (dx_local(deriv_dir+1).gt.zero) then
           dTdx=d_tensor(deriv_dir+1)/dx_local(deriv_dir+1)
          else
+          print *,"fort_elastic_force: "
           print *,"dx_local invalid: ",deriv_dir,dx_local(deriv_dir+1)
           stop
          endif

@@ -16881,7 +16881,7 @@ stop
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
-      real(amrex_real), parameter :: FSI_extend_cells=0.5d0
+      real(amrex_real), parameter :: FSI_extend_cells=1.0d0
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -16903,10 +16903,12 @@ stop
            (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
         !do nothing
        else if (FSI_outer_sweeps.eq.0) then
+        print *,"fort_manage_elastic_velocity:"
         print *,"we always extend the elastic solid velocity in this case"
         print *,"FSI_outer_sweeps=",FSI_outer_sweeps
         stop
        else
+        print *,"fort_manage_elastic_velocity:"
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         stop
        endif
@@ -16929,10 +16931,12 @@ stop
            (FSI_outer_sweeps.lt.num_FSI_outer_sweeps-1)) then
         !do nothing
        else if (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1) then
+        print *,"fort_manage_elastic_velocity:"
         print *,"all the elastic solids have been processed, no vel extend"
         print *,"FSI_outer_sweeps=",FSI_outer_sweeps
         stop
        else 
+        print *,"fort_manage_elastic_velocity:"
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         stop
        endif
@@ -17151,6 +17155,7 @@ stop
                      (im_right.gt.im_rigid_CL))) then
             velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
            else
+            print *,"fort_manage_elastic_velocity:"
             print *,"is_rigid_CL bust: ",im_left,im_right, &
              is_rigid_CL(im_left),is_rigid_CL(im_right)
             print *,"im_rigid_CL: ",im_rigid_CL
@@ -17175,6 +17180,7 @@ stop
             if (im_critical.ge.im_rigid_CL) then
              !do nothing
             else
+             print *,"fort_manage_elastic_velocity:"
              print *,"expecting im_critical.ge.im_rigid_CL: ", &
               im_critical,im_rigid_CL
              stop
@@ -17339,6 +17345,7 @@ stop
                       (LSright(im_critical).ge.zero)) then
               !do nothing
              else
+              print *,"fort_manage_elastic_velocity:"
               print *,"LSleft(im_critical) invalid? ", &
                im_critical,LSleft(im_critical)
               print *,"LSright(im_critical) invalid? ", &
@@ -17346,6 +17353,7 @@ stop
               stop
              endif
             else
+             print *,"fort_manage_elastic_velocity:"
              print *,"is_rigid_CL(im_critical) invalid: ", &
               im_critical,is_rigid_CL(im_critical)
              stop
@@ -17354,11 +17362,13 @@ stop
            enddo !ipart=FSI_outer_sweeps+1,num_FSI_outer_sweeps-1
 
           else
+           print *,"fort_manage_elastic_velocity:"
            print *,"extend_solid_velocity invalid: ",extend_solid_velocity
            stop
           endif
 
          else
+          print *,"fort_manage_elastic_velocity:"
           print *,"is_rigid invalid"
           print *,"im_left is_rigid(im_left): ",im_left,is_rigid(im_left)
           print *,"im_right is_rigid(im_right): ",im_right,is_rigid(im_right)
@@ -17366,11 +17376,13 @@ stop
          endif
 
         else
+         print *,"fort_manage_elastic_velocity:"
          print *,"at_RZ_face invalid: ",at_RZ_face
          stop
         endif
 
        else
+        print *,"fort_manage_elastic_velocity:"
         print *,"LS_clamped invalid"
         print *,"LS_clamped_plus: ",LS_clamped_plus
         print *,"LS_clamped_minus: ",LS_clamped_minus
@@ -17437,6 +17449,7 @@ stop
                    (im_left.gt.im_rigid_CL)) then
            velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
           else
+           print *,"fort_manage_elastic_velocity:"
            print *,"is_rigid_CL bust: ",im_left,is_rigid_CL(im_left)
            stop
           endif
@@ -17458,6 +17471,7 @@ stop
            if (im_critical.ge.im_rigid_CL) then
             !do nothing
            else
+            print *,"fort_manage_elastic_velocity:"
             print *,"expecting im_critical.ge.im_rigid_CL: ", &
              im_critical,im_rigid_CL
             stop
@@ -17475,12 +17489,14 @@ stop
                      (localLS(im_critical).ge.zero)) then
              !do nothing
             else
+             print *,"fort_manage_elastic_velocity:"
              print *,"localLS(im_critical) invalid: ", &
               im_critical,localLS(im_critical)
              stop
             endif
 
            else
+            print *,"fort_manage_elastic_velocity:"
             print *,"is_rigid_CL(im_critical) invalid: ", &
              im_critical,is_rigid_CL(im_critical)
             stop

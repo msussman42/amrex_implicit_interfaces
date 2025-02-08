@@ -73,7 +73,8 @@ endif
 
 end subroutine MITSUHIRO_substrateLS
 
-! ice + water thickness = radblob
+! ice + water thickness = total height = radblob
+! radius of ice block = radblob4 (if radblob4==0, then default to radblob/2)
 ! water thickness = radblob3  usually radblob3 << radlob (initial water
 ! is "seed" for starting the melting process)
 !   ---------
@@ -138,14 +139,26 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   print *,"substrate_height (zblob2) =",substrate_height
   print *,"radblob=",radblob
   print *,"radblob/2=",half*radblob
+  print *,"radblob4=",radblob4
   print *,"ice_vertical-radblob/2 ",ice_vertical-half*radblob
   stop
  endif
 
   !dist<0 inside the square
   !water below the ice
- box_xlo=xblob-half*radblob
- box_xhi=xblob+half*radblob
+ if (radblob4.eq.zero) then
+  box_xlo=xblob-half*radblob
+  box_xhi=xblob+half*radblob
+ else if (radblob4.gt.zero) then
+  box_xlo=xblob-radblob4
+  box_xhi=xblob+radblob4
+ else
+  print *,"radblob4 invalid: ",radblob4
+  print *,"probtype ",probtype
+  print *,"MITSUHIRO_MELTING.F90"
+  stop
+ endif
+
  if (SDIM.eq.2) then
   box_ylo=-substrate_height-radblob3
   box_yhi=substrate_height+radblob3
@@ -166,8 +179,19 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
     box_ylo,box_yhi,LS(2))
 
  else if (SDIM.eq.3) then
-  box_ylo=yblob-half*radblob
-  box_yhi=yblob+half*radblob
+
+  if (radblob4.eq.zero) then
+   box_ylo=yblob-half*radblob
+   box_yhi=yblob+half*radblob
+  else if (radblob4.gt.zero) then
+   box_ylo=yblob-radblob4
+   box_yhi=yblob+radblob4
+  else
+   print *,"radblob4 invalid: ",radblob4
+   print *,"probtype ",probtype
+   print *,"MITSUHIRO_MELTING.F90"
+   stop
+  endif
 
   !dist<0 inside the square
   !water below the ice
