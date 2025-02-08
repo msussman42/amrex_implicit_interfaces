@@ -871,6 +871,7 @@ stop
           call INIT_LS_SOLID_AM(x(1),x(2),x(SDIM),time,dist)  !>0 in solid
           call INIT_LS_GAS_AM(x(1),x(2),x(SDIM),time,dist_gas)  !>0 in gas
          else
+          print *,"probtype (299 or 301?) ",probtype
           print *,"probtype invalid"
           stop
          endif
@@ -1013,6 +1014,7 @@ stop
           endif ! dist_gas>radblob4
 
          else
+          print *,"probtype (299 or 301?) ",probtype
           print *,"axis_dir invalid"
           stop
          endif
