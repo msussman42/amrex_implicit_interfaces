@@ -581,7 +581,7 @@ else if (axis_dir.eq.151) then ! shock column
  endif
 else if (axis_dir.eq.152) then ! shock cylinder
  if (SDIM.eq.2) then
-  mag=(y-yblob)**2
+  mag=(x-xblob)**2+(y-yblob)**2
   LS=radblob-sqrt(mag) 
  else if (SDIM.eq.3) then
   mag=(y-yblob)**2+(z-zblob)**2
