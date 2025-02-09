@@ -117,7 +117,7 @@ amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
 #amr.max_grid_size   = 1024
 amr.file_name_digits=7
-amr.restart         = chk0003500
+#amr.restart         = chk0003500
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -132,7 +132,9 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 #Reduce surface_tension and gravity by a factor of 10; i.e. use the
 #proper Bond number and increase the Weber number by a factor of 10.
-ns.gravity        = -980.0   # cgs
+#SUSSMAN BOND: Bond number should be the physical value:
+#ns.gravity        = -980.0   # cgs
+ns.gravity        = -980.0e-4   # cgs
 #ns.incremental_gravity_flag=1
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
@@ -150,7 +152,10 @@ ns.gravity        = -980.0   # cgs
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
-ns.tension=72.8 72.8 72.8 72.8 143.1 72.8   
+#SUSSMAN BOND: make capillary wave speed comparable to phase change rate
+#(but NOT too small, need quasi steady state effect)
+#ns.tension=72.8 72.8 72.8 72.8 143.1 72.8   
+ns.tension=72.8e-4 72.8e-4 72.8e-4 72.8e-4 143.1e-4 72.8e-4
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
@@ -295,7 +300,9 @@ ns.explicit_viscosity_dt=1
 #dx=1/32
 #tension=72.8e-2
 #ns.viscconst=0.018 0.00017 0.018 0.018 # dimensional
-ns.viscconst=0.18 0.0017 0.18 0.18 # dimensional
+#ns.viscconst=0.18 0.0017 0.18 0.18 # dimensional
+#SUSSMAN BOND
+ns.viscconst=0.018 0.00017 0.18 0.18 # dimensional
 #ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0

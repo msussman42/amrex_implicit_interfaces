@@ -56,6 +56,7 @@ integer, parameter :: im_solid=3
    Phi=-99999.0
   else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
    if (AMREX_SPACEDIM.eq.2) then
+      !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
       xblob2-radblob2, &
       xblob2+radblob2, &
@@ -64,6 +65,7 @@ integer, parameter :: im_solid=3
       Phi)
     Phi=-Phi
    else if (AMREX_SPACEDIM.eq.3) then
+      !cubedist returns Phi<0 in the hyperrectangle
     call cubedist( &
       xblob2-radblob2, &
       xblob2+radblob2, &
@@ -210,6 +212,7 @@ if (probtype.eq.2000) then
    radeps=radblob2/10.0d0
 
    if (AMREX_SPACEDIM.eq.2) then
+      !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
       xblob2-radblob2+radeps, &
       xblob2+radblob2-radeps, &
@@ -228,6 +231,7 @@ if (probtype.eq.2000) then
     
    else if (AMREX_SPACEDIM.eq.3) then
 
+      !cubedist returns Phi<0 in the hyperrectangle
     call cubedist( &
       xblob2-radblob2+radeps, &
       xblob2+radblob2-radeps, &

@@ -15,10 +15,10 @@ max_step  = 999999   # maximum timestep
 stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
-geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
-geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  6.0 12.0  #CGS
-geometry.is_periodic = 0 0
+geometry.coord_sys      = 0    # 0 => cart, 1 => RZ 
+geometry.prob_lo   =  0.0 0.0 0.0  
+geometry.prob_hi   =  6.0 6.0 12.0  #CGS
+geometry.is_periodic = 0 0 0
 
 # multigrid class
 mg.verbose = 0
@@ -49,7 +49,7 @@ ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
 ns.MOFITERMAX=30
-amr.n_cell=32 64 
+amr.n_cell=32 32 64 
 amr.max_level=1 
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
@@ -79,7 +79,7 @@ ns.step_through_data=0
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 1024
+amr.max_grid_size   = 16
 #amr.restart         = chk00400
 #amr.trace   =1
 
@@ -125,14 +125,15 @@ ns.vinletgas=0.0
 #INITIAL DROP SPEED
 ns.advbot=34.3 # cm/s
 ns.adv_vel=0.0
-ns.adv_dir=2       # inflow direction in the falling drop direction.
+ns.adv_dir=3 # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
-ns.yblob=7.2
+ns.yblob=0.0
 ns.zblob=7.2  
 ns.xblob2=0.0  #center of plate
-ns.yblob2=5.8
-ns.radblob2=4.0 # radius in "x" direction of plate
-ns.radblob3=0.2 # radius in "y" direction of plate
+ns.yblob2=0.0  #center of plate
+ns.zblob2=5.8
+ns.radblob2=4.0 # radius in "x" or "y" direction of plate
+ns.radblob3=0.2 # radius in "z" direction of plate
 ns.radblob=0.6 
 ns.denfact=1.0
 ns.velfact=0.0
@@ -168,8 +169,8 @@ ns.denconst=1.0 0.001225 1.5
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 3 3
-ns.hi_bc          = 3 2
+ns.lo_bc          = 3 3 3
+ns.hi_bc          = 3 3 2
 #ns.v=0,1,2
 ns.v=1
 
