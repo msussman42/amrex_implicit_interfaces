@@ -19618,6 +19618,7 @@ stop
       if ((force_dir.ge.0).and.(force_dir.lt.SDIM)) then
        ! do nothing
       else
+       print *,"fort_elastic_force: "
        print *,"force_dir invalid: ",force_dir
        stop
       endif
@@ -19702,6 +19703,7 @@ stop
         else if (velbc(force_dir+1,side,force_dir+1).eq.FOEXTRAP) then
          on_the_wall=1
         else
+         print *,"fort_elastic_force: "
          print *,"velbc invalid: ",force_dir,side, &
            velbc(force_dir+1,side,force_dir+1)
          stop
@@ -19755,6 +19757,7 @@ stop
        else if (im_primary_left.ne.im_viscoelastic_p1) then
         denleft=fort_denconst(im_viscoelastic_p1)
        else
+        print *,"fort_elastic_force: "
         print *,"im_primary_left bust: ",im_primary_left
         stop
        endif
@@ -19764,12 +19767,14 @@ stop
        else if (im_primary_right.ne.im_viscoelastic_p1) then
         denright=fort_denconst(im_viscoelastic_p1)
        else
+        print *,"fort_elastic_force: "
         print *,"im_primary_right bust: ",im_primary_right
         stop
        endif
        if ((denleft.gt.zero).and.(denright.gt.zero)) then
         local_invden_from_cell=two/(denleft+denright)
        else
+        print *,"fort_elastic_force: "
         print *,"denleft or denright invalid:",denleft,denright
         stop
        endif
@@ -20080,6 +20085,7 @@ stop
          Q_ITAN(1)=Q_ITAN(1)*rminus
          Q_ITAN(2)=Q_ITAN(2)*rplus
         else
+         print *,"fort_elastic_force: "
          print *,"rplus or rminus invalid (Q_ITAN): ",rminus,rplus
          stop
         endif
@@ -20289,6 +20295,7 @@ stop
            tensorfab(D_DECL(imajor,jmajor,kmajor), &
              (one_dim_index-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2) 
          else
+          print *,"fort_elastic_force: "
           print *,"levelrz invalid: ",levelrz
           stop
          endif
@@ -20329,6 +20336,7 @@ stop
            if (CC_weight.gt.zero) then
             dTdx=dTdx-hoop22/(CC_weight*xsten(0,1))
            else
+            print *,"fort_elastic_force: "
             print *,"CC_weight invalid: ",CC_weight
             stop
            endif
@@ -20353,6 +20361,7 @@ stop
              dTdx=dTdx-hoop12/(CC_weight*xsten(0,1))
             endif
            else
+            print *,"fort_elastic_force: "
             print *,"CC_weight invalid: ",CC_weight
             stop
            endif
@@ -20373,6 +20382,7 @@ stop
           else if (local_invden.ge.local_invden_from_cell) then
            local_invden=local_invden_from_cell
           else
+           print *,"fort_elastic_force: "
            print *,"local_invden invalid: ",local_invden
            print *,"or local_invden_from_cell invalid: ", &
              local_invden_from_cell
@@ -20381,11 +20391,13 @@ stop
           umacnew(D_DECL(i,j,k))=umacnew(D_DECL(i,j,k))+ &
             dt*div_term*local_invden
          else
+          print *,"fort_elastic_force: "
           print *,"local_invden_from_cell invalid: ", &
             local_invden_from_cell
           stop
          endif
         else
+         print *,"fort_elastic_force: "
          print *,"local_invden invalid: ",local_invden
          stop
         endif
@@ -20431,6 +20443,7 @@ stop
        else if (is_rigid(im_primary_right).eq.0) then
         !do nothing
        else
+        print *,"fort_elastic_force: "
         print *,"is_rigid_right invalid: ", &
           im_primary_right,is_rigid(im_primary_right)
         stop
@@ -20473,6 +20486,7 @@ stop
        else if (on_the_wall.eq.1) then
         ! do nothing
        else
+        print *,"fort_elastic_force: "
         print *,"on_the_wall invalid: ",on_the_wall
         stop
        endif

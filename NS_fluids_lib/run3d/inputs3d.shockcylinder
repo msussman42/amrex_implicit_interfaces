@@ -1,5 +1,6 @@
 #Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
 #(shock moves in the x-direction)
+#shockdrop.F90
 #This inputs file: shock moves in the z-direction
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
@@ -7,12 +8,18 @@ stop_time =  5.0e-3  # maximum problem time
 
 # 32x24x8 mm^3 -> 24x8x32
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+
 #geometry.prob_lo   =  0.0 0.0
-#geometry.prob_hi   =  2.4 3.2
+#geometry.prob_lo   =  -0.8 0.0 #no symmetry
+#geometry.prob_hi   =  0.8 3.2
+
 geometry.prob_lo   =  0.0 0.0 0.0
+#geometry.prob_lo   =  0.0 -0.8 0.0 #no symmetry
 geometry.prob_hi   =  2.4 0.8 3.2
-#geometry.is_periodic = 1 0
+
+#geometry.is_periodic = 0 0
 geometry.is_periodic = 1 0 0
+
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
@@ -52,8 +59,12 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #3D case: dx=0.00209
 #2.4/N=0.0209  N=2.4/0.00209=1150
 #1150/144=8.0
+
+#amr.n_cell    = 144 96 192 #no symmetry
 amr.n_cell    = 144 48 192
-#amr.n_cell    = 144 192
+#amr.n_cell    = 96 192 #no symmetry
+#amr.n_cell    = 48 192
+
 #amr.max_level =  4 # about 80 points in the cylinder diameter
 amr.max_level =  3 # about 45 points in the cylinder diameter
 #amr.max_level =  2 # about 22 points in the cylinder diameter
@@ -66,6 +77,7 @@ amr.grid_eff        = 0.7   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 8 8 8 8 8 8   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
+ns.visual_nddata_format=1 # native AMReX
 amr.plot_int        = 0     # 50
 #amr.slice_int       = 100     # 50
 # e.g. slice_dir==1 => look at Y line of data
@@ -112,6 +124,7 @@ ns.twall=0.1
 #Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
 #(shock moves in the x-direction)
 #This inputs file: shock moves in the z-direction
+#ns.advbot=0.0
 ns.advbot=1200.0  #cylinder velocity in "x" direction (water)
 #ns.advbot=400.0  #cylinder velocity in "x" direction (Galinstan)
 ns.adv_vel=0.0
@@ -190,8 +203,8 @@ ns.v = 1
 prescribe_temperature_outflow=1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-#ns.lo_bc          = 0 1
-#ns.hi_bc          = 0 2
+#ns.lo_bc          = 3 1
+#ns.hi_bc          = 3 2
 ns.lo_bc          = 0 3 1
 ns.hi_bc          = 0 3 2
 
