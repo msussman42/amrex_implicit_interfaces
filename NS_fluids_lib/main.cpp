@@ -113,6 +113,7 @@ fork_job(int fork_id) {
  ParmParse ppamr("amr");
  ParmParse ppns("ns");
 
+  // LSA = Linear Stability Analysis
  int local_LSA_nsteps_power_method=0;
  ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
  if (local_LSA_nsteps_power_method>=0) {
