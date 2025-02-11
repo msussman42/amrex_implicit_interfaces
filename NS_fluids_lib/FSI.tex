@@ -18,6 +18,7 @@ Aulisa et al)
 % https://ipe.otfried.org/
 %see FSI_extend_cells, H_offset, H_radius (fort_elastic_force),
 %LS_shift (check_added_mass)
+%related research: Sebastien Aland, Sugiyaman, Seungwon Shin
 Given $n$ elastic materials, the algorithm is as follows:
 \begin{description}
 \item[1a. Refined advection] $S_{t}+\nabla\cdot(\bmu S)=F$
@@ -44,10 +45,14 @@ Given $n$ elastic materials, the algorithm is as follows:
 \item[7. restore state(s)] Using the saved states from step 5, restore
   the states of all materials except for the elastic materials $j=1,i-1$
 \item[8. velocity extension] For $j=i,n$ extend the $j$th elastic material
- velocity in a band of thickness $\alpha \Delta x$.  $\alpha=1$.
+ velocity in a band of thickness $\alpha \Delta x$.  $\alpha=1$ if elastic
+ and $\alpha=0$ if viscoelastic (i.e. velocity extension is disable for 
+ viscoelastic materials).
 \item[9. shift MAC grid density and viscosity] For $j=i,n$ shift the
   MAC density and viscosity $\beta \Delta x$ ($\beta=1$) 
-  distance out of the $j$th elastic material.
+  distance out of the $j$th elastic material. $\beta=1$ for elastic materials
+  and $\beta=0$ for viscoelastic materials (i.e. disabled for viscoelastic
+  materials)
 \item[10. velocity diffusion] $\bmu_{t}=\nabla\cdot(2\mu D)/\rho$
 \item[11a. grid location project configuration tensors $j=i,n$] 
   project tensor data
@@ -58,12 +63,44 @@ Given $n$ elastic materials, the algorithm is as follows:
   In 3d, off diagonal are at edge centers.
 \item[11b. Elastic force $j=i,n$] For $j=i,n$, include the elastic force
   $\nabla\cdot H G Q/rho$ where $G$ is the bulk modulus, $H$ is a shifted
-  Heaviside function with shift length $\Delta x$ and thickness $\Delta x$.
-  $\rho$ is the corresponding density for elastic material $j$.
+  Heaviside function with shift length $\gamma\Delta x$ ($\gamma=1$)
+  and thickness $\Delta x$.
+  $\rho$ is the corresponding density for elastic material $j$.  For 
+  viscoelastic materials (in contrast to elastic materials) the ``shift
+  length'' is $\gamma=0$ instead of $\gamma=1$.  In otherwords, the
+  Heaviside function still has a thickness of $\Delta x$, but not shifted.
 \item[12. Compressible Pressure projection] The elastic materials, 
   $j=1,i-1$ are fixed (like a rigid solid).
 \item[13. Go back to step 6 if $i<n+1$] Go back to step 6 if $i<n+1$.
 \end{description}
+Distinctions between the present algorithm and Shin's algorithm: 
+\begin{enumerate}
+\item We do not multiply the configuration tensor by $H^{p}$ at $t=0$
+  nor do we use $H^{1-p}$ in the elastic force term ($p=1/2$ in
+  S. Shin's paper).  The rationale was that
+  multiplying the configuration tensor by $H^{p}$ would make the 
+  resulting configuration tensor field discontinuous, for which 
+  numerical methods would continue to smear the discontinuity over time.
+  Instead, we extrapolate the configuration tensor outward from the 
+  elastic material 2 grid cells, every time step.
+\item We impose a $\Delta x$ ``buffer zone'' around the elastic body
+  when computing the updated elastic state.  
+\item By design, since we use multimaterial nested dissection reconstruction
+  and Weymouth and Yue advection, volume (for incompressible materials) is
+  preserved to machine precision.
+\end{enumerate}
+Distinction between elastic material and viscoelastic materials:
+\begin{enumerate}
+\item In both cases, the staggered discretization for the configuration tensor
+  is used; this discretization was introduced by Sugiyama et al.
+\item $\alpha=\beta=\gamma=1$ for elastic materials, and 
+  $\alpha=\beta=\gamma=0$ for viscoelastic materials. 
+\item For elastic materials, there are separate pressure projection steps for
+  establishing the state in elastic materials; the elastic material
+  state is fixed for doing the ensuing ``fluids'' projection step.
+  For viscoelastic materials, the state is established at the same time as
+  for the other fluid materials.
+\end{enumerate}
 %%
 %%\bibliography{elasticpaper}
 \end{document}
