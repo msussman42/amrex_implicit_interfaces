@@ -4821,7 +4821,8 @@ stop
       real(amrex_real) :: elastic_viscosity
       integer :: ipart
       integer :: im_local
-      real(amrex_real), parameter :: FSI_extend_cells=1.0d0
+       ! subroutine check_added_mass
+      real(amrex_real), parameter :: FSI_extend_cells=0.0d0
 
       if ((FSI_outer_sweeps.ge.0).and. &
           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
@@ -4858,50 +4859,61 @@ stop
         print *,"im_local invalid(2): ",im_local
         stop
        endif
-       if ((LSleft(im_local).ge.-LS_shift).or. &
-           (LSright(im_local).ge.-LS_shift)) then
-        if (local_faceden.eq.zero) then ! 1/density
-         ! do nothing
-        else if (local_faceden.gt.zero) then ! 1/density
-         elastic_density=fort_denconst(im_local)
-         elastic_viscosity=fort_viscconst(im_local)
-         if (elastic_density.gt.one/local_faceden) then
-          local_faceden=one/elastic_density
-          if (elastic_viscosity.gt.zero) then
-           if (local_facevisc.ge.zero) then
-            local_facevisc=elastic_viscosity
+
+       if (LS_shift.gt.zero) then
+
+        if ((LSleft(im_local).ge.-LS_shift).or. &
+            (LSright(im_local).ge.-LS_shift)) then
+         if (local_faceden.eq.zero) then ! 1/density
+          ! do nothing
+         else if (local_faceden.gt.zero) then ! 1/density
+          elastic_density=fort_denconst(im_local)
+          elastic_viscosity=fort_viscconst(im_local)
+          if (elastic_density.gt.one/local_faceden) then
+           local_faceden=one/elastic_density
+           if (elastic_viscosity.gt.zero) then
+            if (local_facevisc.ge.zero) then
+             local_facevisc=elastic_viscosity
+            else
+             print *,"check_added_mass: "
+             print *,"local_facevisc invalid: ",local_facevisc
+             stop
+            endif
            else
             print *,"check_added_mass: "
-            print *,"local_facevisc invalid: ",local_facevisc
+            print *,"elastic_viscosity invalid: ",elastic_viscosity
             stop
            endif
+          else if ((elastic_density.le.one/local_faceden).and. &
+                   (elastic_density.gt.zero)) then
+           !do nothing
           else
            print *,"check_added_mass: "
-           print *,"elastic_viscosity invalid: ",elastic_viscosity
+           print *,"elastic_density invalid: ",elastic_density
+           print *,"local_faceden: ",local_faceden
            stop
           endif
-         else if ((elastic_density.le.one/local_faceden).and. &
-                  (elastic_density.gt.zero)) then
-          !do nothing
          else
           print *,"check_added_mass: "
-          print *,"elastic_density invalid: ",elastic_density
-          print *,"local_faceden: ",local_faceden
+          print *,"local_faceden invalid: ",local_faceden
           stop
          endif
+        else if ((LSleft(im_local).le.-LS_shift).and. &
+                 (LSright(im_local).le.-LS_shift)) then
+         !do nothing
         else
          print *,"check_added_mass: "
-         print *,"local_faceden invalid: ",local_faceden
+         print *,"LS_left or LSright invalid"
          stop
-        endif
-       else if ((LSleft(im_local).le.-LS_shift).and. &
-                (LSright(im_local).le.-LS_shift)) then
+        endif 
+
+       else if (LS_shift.eq.zero) then
         !do nothing
        else
-        print *,"check_added_mass: "
-        print *,"LS_left or LSright invalid"
+        print *,"LS_shift invalid: ",LS_shift
         stop
-       endif 
+       endif
+
       enddo !ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
 
       return

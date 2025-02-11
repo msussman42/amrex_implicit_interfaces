@@ -16881,6 +16881,7 @@ stop
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
+       !fort_manage_elastic_velocity
       real(amrex_real), parameter :: FSI_extend_cells=1.0d0
 
       velMAC_ptr=>velMAC
@@ -16894,6 +16895,7 @@ stop
        ! see also:
        ! H_offset and H_radius in subroutine fort_elastic_force
        ! LS_shift in subroutine check_added_mass
+       ! in: fort_manage_elastic_velocity
       extend_offset=FSI_extend_cells*dxmaxLS
 
        ! intent(in) :: extend_solid_velocity
