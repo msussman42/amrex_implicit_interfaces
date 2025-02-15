@@ -23703,7 +23703,8 @@ contains
       subroutine compare_distance( &
        bfact,dx, &
        xsten0,nhalf0, &
-       xaccept,xdonate, &
+       xaccept, &
+       xdonate, & !intent(in)
        newLS, &
        touch_hold, &
        minLS, &
@@ -23712,7 +23713,7 @@ contains
        slope,imslope, &
        imcell,sdim, &
        center_stencil, &
-       donateflag)
+       donateflag) !intent(in)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
