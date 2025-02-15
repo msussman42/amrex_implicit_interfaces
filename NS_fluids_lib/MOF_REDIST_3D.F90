@@ -36,8 +36,8 @@ stop
         xsten_accept,xsten_donate,nhalf, &
         dx,xlo,bfact,level,fablo, &
         mofdata, &
-        LSslope_center, &
-        imslope_center, &
+        LSslope_center, & !intent(in)
+        imslope_center, & !intent(in)
         nstar, &
         idon,jdon,kdon, & ! donate index
         i1,j1,k1, &  ! accept index: idon+i1,jdon+j1,kdon+k1
@@ -201,9 +201,10 @@ stop
          endif
           ! compare_distance is declared in: MOF.F90
          call compare_distance( &
-          bfact,dx,xsten_donate,nhalf, &
+          bfact,dx, &
+          xsten_donate,nhalf, &
           xaccept_point, &
-          xdonate_vert, &
+          xdonate_vert, & !intent(in)
           newLS, & !intent(inout)
           touch_hold, &
           minLS, & !intent(inout)
@@ -214,7 +215,7 @@ stop
           im0_center, &
           SDIM, &
           center_stencil, &
-          donateflag)
+          donateflag) !intent(in)
 
         else
          print *,"donateIND invalid donateIND=",donateIND
@@ -2231,7 +2232,8 @@ stop
             VFRAC_INTERP=(theta_nbr*vcenter(im)+theta_cen*VFRAC_TEMP)/ &
                          (theta_nbr+theta_cen)
            else
-            print *,"theta_nbr or theta_cen invalid"
+            print *,"fort_levelstrip: "
+            print *,"theta_nbr or theta_cen invalid: ",theta_nbr,theta_cen
             stop
            endif
            if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
