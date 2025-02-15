@@ -26057,11 +26057,12 @@ NavierStokes::makeStateDist() {
  if (profile_dist==1)
   before_profile = ParallelDescriptor::second();
 
- int nstar=9;
- if (AMREX_SPACEDIM==3)
-  nstar*=3;
+ if (NCOMP_STENCIL/2==27) {
+  //do nothing
+ } else
+  amrex::Error("NCOMP_STENCIL invalid in NavierStokes::makeStateDist");
 
- new_localMF(STENCIL_MF,nstar,ngrow_distance,-1);
+ new_localMF(STENCIL_MF,NCOMP_STENCIL,ngrow_distance,-1);
  localMF[STENCIL_MF]->setVal(0.0);
 
  if (thread_class::nthreads<1)
@@ -26094,10 +26095,8 @@ NavierStokes::makeStateDist() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: MOF_REDIST_3D.F90
+    // fort_steninit is declared in: MOF_REDIST_3D.F90
     // internally sets tessellate=0
-    // 3x3 stencil for each cell in 2D
-    // 3x3x3 stencil for each cell in 3D
     // fluid material id for each cell edge point is initialized.
    fort_steninit( 
     &level,
@@ -26113,8 +26112,7 @@ NavierStokes::makeStateDist() {
     &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
-    &ngrow_distance,
-    &nstar);
+    &ngrow_distance);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_STENINIT,"makeStateDist");
@@ -26209,8 +26207,7 @@ NavierStokes::makeStateDist() {
     &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
-    &ngrow_distance,
-    &nstar);
+    &ngrow_distance);
  } // mfi
 } // omp
 

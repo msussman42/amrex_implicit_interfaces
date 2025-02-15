@@ -9551,14 +9551,17 @@ end subroutine print_visual_descriptor
       subroutine get_istar(icomp,istar)
       IMPLICIT NONE
 
-      integer icomp,nstar,icomplocal,dir
+      integer icomp,icomplocal,dir
       integer istar(3)
 
-      nstar=9
-      if (SDIM.eq.3) then
-       nstar=nstar*3
+      if (NCOMP_STENCIL/2.eq.27) then
+       !do nothing
+      else
+       print *,"ncomp_stencil invalid get_istar"
+       stop
       endif
-      if ((icomp.lt.1).or.(icomp.gt.nstar)) then
+
+      if ((icomp.lt.1).or.(icomp.gt.NCOMP_STENCIL/2)) then
        print *,"icomp invalid"
        stop
       endif
@@ -9590,13 +9593,16 @@ end subroutine print_visual_descriptor
       subroutine put_istar(icomp,istar)
       IMPLICIT NONE
 
-      integer icomp,nstar,dir
+      integer icomp,dir
       integer istar(3)
 
-      nstar=9
-      if (SDIM.eq.3) then
-       nstar=nstar*3
+      if (NCOMP_STENCIL/2.eq.27) then
+       !do nothing
+      else
+       print *,"ncomp_stencil invalid put_istar"
+       stop
       endif
+
       do dir=1,3
        if ((istar(dir).lt.-1).or.(istar(dir).gt.1)) then
         print *,"istar invalid"
@@ -9613,7 +9619,7 @@ end subroutine print_visual_descriptor
       icomp=icomp+3*(istar(2)+1)
       icomp=icomp+(istar(1)+1)
       icomp=icomp+1
-      if ((icomp.lt.1).or.(icomp.gt.nstar)) then
+      if ((icomp.lt.1).or.(icomp.gt.NCOMP_STENCIL/2)) then
        print *,"icomp invalid"
        stop
       endif
