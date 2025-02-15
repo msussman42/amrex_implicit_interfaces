@@ -72,8 +72,7 @@ namespace amrex{
        const int* bc,const int* rz_flag,
        const Real* xlo,const Real* dx,
        Real* time,
-       int* ngrowLS,
-       int* nstar);
+       int* ngrowLS);
 
      void fort_correct_uninit(
        Real* minLS,
@@ -100,8 +99,7 @@ namespace amrex{
        const int* rz_flag,
        const Real* xlo,const Real* dx,
        Real* time,
-       int* ngrowLS,
-       int* nstar);
+       int* ngrowLS);
 
 
      void fort_faceinit(

@@ -25320,8 +25320,7 @@ contains
        vfrac_data(im)=mofdatavalid(vofcomp)
       enddo ! im=1..num_materials
 
-        ! uses VOFTOL
-      call check_full_cell_vfrac(vfrac_data,tessellate,im_crit)
+      call check_full_cell_vfrac(vfrac_data,tessellate,im_crit,EPS_8_4)
 
       if ((im_crit.ge.1).and. &
           (im_crit.le.num_materials)) then
@@ -25704,13 +25703,14 @@ contains
        ! tessellate==1 => check solid materials and fluid materials
        ! tessellate==0 => check fluid materials only
        ! tessellate==3 => same as tessellate==0 if fluids dominate cell.
-      subroutine check_full_cell_vfrac(vfrac,tessellate,im_full)
+      subroutine check_full_cell_vfrac(vfrac,tessellate,im_full,tol)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
       IMPLICIT NONE
 
+      real(amrex_real), intent(in) :: tol
       integer, INTENT(in) :: tessellate
       real(amrex_real), INTENT(in) :: vfrac(num_materials)
       integer, INTENT(out) :: im_full
@@ -25719,6 +25719,13 @@ contains
       real(amrex_real) sum_solid_vfrac,sum_fluid_vfrac
       real(amrex_real) max_solid_vfrac,max_fluid_vfrac
       integer is_rigid_local(num_materials)
+
+      if ((tol.gt.zero).and.(tol.lt.one)) then
+       !do nothing
+      else
+       print *,"tol invalid: ",tol
+       stop
+      endif
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -25751,8 +25758,8 @@ contains
       endif
 
       do im=1,num_materials
-       if ((vfrac(im).ge.-EPS_8_4).and. &
-           (vfrac(im).le.one+EPS_8_4)) then
+       if ((vfrac(im).ge.-tol).and. &
+           (vfrac(im).le.one+tol)) then
         ! do nothing
        else
         print *,"vfrac out of range im,vfrac(im): ",im,vfrac(im)
@@ -25807,14 +25814,14 @@ contains
 
       if ((tessellate.eq.1).or. &
           (tessellate.eq.3)) then
-       if (max_solid_vfrac.ge.one-EPS_8_4) then
+       if (max_solid_vfrac.ge.one-tol) then
         im_full=im_solid_max
        endif
       endif
 
-      if ((sum_solid_vfrac.le.EPS_8_4).or. &
+      if ((sum_solid_vfrac.le.tol).or. &
           (tessellate.eq.0)) then
-       if (max_fluid_vfrac.ge.one-EPS_8_4) then
+       if (max_fluid_vfrac.ge.one-tol) then
         im_full=im_fluid_max
        endif
       endif

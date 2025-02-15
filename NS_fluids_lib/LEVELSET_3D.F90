@@ -2623,7 +2623,8 @@ stop
 
         call check_full_cell_vfrac(vcenter, &
           tessellate, &  !=0,1, or 3
-          im_crit)
+          im_crit, &
+          EPS_8_4)
 
         iface=0
         do im=1,num_materials
