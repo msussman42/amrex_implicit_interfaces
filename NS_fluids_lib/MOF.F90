@@ -25753,7 +25753,7 @@ contains
       if ((tessellate.ne.0).and. &
           (tessellate.ne.1).and. &
           (tessellate.ne.3)) then
-       print *,"tessellate invalid41"
+       print *,"tessellate invalid (check_full_cell_vfrac): ",tessellate
        stop
       endif
 
@@ -25762,6 +25762,7 @@ contains
            (vfrac(im).le.one+tol)) then
         ! do nothing
        else
+        print *,"check_full_cell_vfrac: "
         print *,"vfrac out of range im,vfrac(im): ",im,vfrac(im)
         stop
        endif
@@ -25802,7 +25803,7 @@ contains
           max_fluid_vfrac=vfrac(im)
          endif
         else
-         print *,"im_fluid_max invalid"
+         print *,"im_fluid_max invalid (check_full_cell_vfrac) ",im_fluid_max
          stop
         endif
        else
