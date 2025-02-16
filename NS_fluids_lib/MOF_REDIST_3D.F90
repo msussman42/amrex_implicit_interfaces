@@ -1804,6 +1804,7 @@ stop
       integer im_corner
       integer im_test_stencil
       integer im_test_center
+      integer im_test_full
       real(amrex_real) FSUM(num_materials)
       integer on_border
        ! 1..num_materials,fluid materials in cell,NCOMP_STENCIL
@@ -2446,6 +2447,13 @@ stop
              full_neighbor(im)=1
              call put_istar(istar,istar_array) 
              donateflag(num_materials+1+istar+NCOMP_STENCIL/2)=im
+             im_test_full=NINT(stenfab(D_DECL(i,j,k),istar+NCOMP_STENCIL/2))
+             if (im.eq.im_test_full) then
+              !do nothing
+             else
+              print *,"im<>im_test_full (fort_levelstrip): ",im,im_test_full
+              stop
+             endif
             endif
            else if (is_rigid(im).eq.1) then
             ! do nothing
