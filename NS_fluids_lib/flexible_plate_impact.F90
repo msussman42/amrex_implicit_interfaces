@@ -266,7 +266,7 @@ if (probtype.eq.2000) then
    else if ((LS_A.le.zero).and.(LS_B.le.zero)) then
     LS=-99999.0d0
    else
-    print *,"LS_A or LS_B invalid"
+    print *,"LS_A or LS_B invalid: ",LS_A,LS_B
     stop
    endif
 
