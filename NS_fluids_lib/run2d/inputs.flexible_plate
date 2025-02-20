@@ -34,7 +34,7 @@ ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
 ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 #Lp.v = 1
 
@@ -46,7 +46,7 @@ ns.num_species_var=0
 ns.continuous_mof=1
 # -1=Weymouth Yue
 ns.EILE_flag=-1
-ns.projection_pressure_scale=1.0e+6
+ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
 amr.n_cell=64 128
@@ -86,13 +86,13 @@ amr.max_grid_size   = 1024
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-12
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01     
 ns.visc_coef=1.0 
-mac.visc_abs_tol   = 1.0e-10
+mac.visc_abs_tol   = 1.0e-12
 ns.gravity=0.0  
 #ns.gravity        = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -152,8 +152,8 @@ ns.material_conservation_form=0 0 0
 #ns.FSI_flag=0 0 4 #CTML
 ns.FSI_flag=0 0 8 #Eulerian FSI
 ns.heatviscconst=0.0 0.0 0.0
-#ns.elastic_viscosity=0.0 0.0 4.0e+6
-ns.elastic_viscosity=0.0 0.0 4.0e+4
+ns.elastic_viscosity=0.0 0.0 4.0e+6
+#ns.elastic_viscosity=0.0 0.0 4.0e+4
 ns.elastic_time=0.0 0.0 1.0e+31
 ns.polymer_factor=0.0 0.0 0.0 #1/L
 #0=FENE-CR
