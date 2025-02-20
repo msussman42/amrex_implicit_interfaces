@@ -13647,6 +13647,9 @@ stop
       integer im_heat,tcomp
       integer iten
       integer im_left,im_right
+      integer im_rigid_CL
+      integer sub_FSI
+      integer ok_to_update_elastic_material
       integer im_left_tension,im_right_tension
       integer im_left_gravity,im_right_gravity
       integer dir2,side
@@ -14582,7 +14585,7 @@ stop
             at_RZ_face=1
            endif
           else
-           print *,"levelrz invalid tfrmac"
+           print *,"levelrz invalid fort_cell_to_mac: ",levelrz
            stop
           endif 
 
@@ -14616,7 +14619,7 @@ stop
            else
             print *,"fluid_volface ",fluid_volface
             print *,"volface ",volface
-            print *,"volface bust tfrmac"
+            print *,"volface bust fort_cell_to_mac"
             stop
            endif
 
@@ -14699,7 +14702,8 @@ stop
 
             test_current_elasticmask= &
                  xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
-          
+         
+             ! sanity check 
             if ((test_current_elasticmask.ge.zero).and. &
                 (test_current_elasticmask.le.one)) then
 
@@ -14754,10 +14758,63 @@ stop
                   ! local_vel_old_MAC=xgp (a copy of xvel)
                  velmaterialMAC=local_vel_old_MAC
 
-                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
+                 ok_to_update_elastic_material=1
+                 if (num_FSI_outer_sweeps.eq.1) then
+                  !do nothing
+                 else if ((num_FSI_outer_sweeps.gt.1).and. &
+                          (num_FSI_outer_sweeps.le.num_materials)) then
 
-                 primary_velmaterial= &
+                  if (FSI_outer_sweeps.eq.0) then
+                   !do nothing
+                  else if ((FSI_outer_sweeps.ge.1).and. &
+                           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+                   do sub_FSI=1,FSI_outer_sweeps
+                    im_rigid_CL=im_elastic_map(sub_FSI)+1
+                    if (is_rigid_CL(im_rigid_CL).eq.1) then
+                     !do nothing
+                    else
+                     print *,"im_rigid_CL invalid: ",im_rigid_CL
+                     stop
+                    endif
+                    if ((im_left.eq.im_rigid_CL).or. &
+                        (im_right.eq.im_rigid_CL)) then
+                     ok_to_update_elastic_material=0
+                    else if ((im_left.ne.im_rigid_CL).and. &
+                             (im_right.ne.im_rigid_CL).and. &
+                             (im_left.ge.1).and. &
+                             (im_left.le.num_materials).and. &
+                             (im_right.ge.1).and. &
+                             (im_right.le.num_materials)) then 
+                     !do nothing
+                    else
+                     print *,"im_left or im_right invalid: ", &
+                      im_left,im_right
+                     stop
+                    endif
+                   enddo !sub_FSI=1,FSI_outer_sweeps
+                    
+                  else
+                   print *,"in: fort_cell_to_mac: "
+                   print *,"FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+                   stop
+                  endif
+                               
+                 else
+                  print *,"in: fort_cell_to_mac: "
+                  print *,"num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+                  stop
+                 endif
+
+                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
+                 if (ok_to_update_elastic_material.eq.1) then
+                  primary_velmaterial= &
                    velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
+                 else if (ok_to_update_elastic_material.eq.0) then
+                  !do nothing
+                 else
+                  print *,"ok_to_update_elastic_material invalid"
+                  stop
+                 endif
                 
                  if ((beta.eq.-one).or.(beta.eq.one)) then
                    ! do nothing
@@ -15000,7 +15057,6 @@ stop
            print *,"at_RZ_face invalid"
            stop
           endif 
-          FIX ME ABOVE
 
           ! local_vel_MAC initialized above with the current MAC velocity
           ! contents.
