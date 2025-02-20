@@ -9,13 +9,11 @@ stop_time =  5.0e-3  # maximum problem time
 # 32x24x8 mm^3 -> 24x8x32
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 
-#geometry.prob_lo   =  0.0 0.0
-#geometry.prob_lo   =  -0.8 0.0 #no symmetry
-#geometry.prob_hi   =  0.8 3.2
+#geometry.prob_lo   =  -0.4 0.0 
+#geometry.prob_hi   =  0.4 3.2
 
-geometry.prob_lo   =  0.0 0.0 0.0
-#geometry.prob_lo   =  0.0 -0.8 0.0 #no symmetry
-geometry.prob_hi   =  2.4 0.8 3.2
+geometry.prob_lo   =  0.0 -0.4 0.0 
+geometry.prob_hi   =  2.4 0.4 3.2
 
 #geometry.is_periodic = 0 0
 geometry.is_periodic = 1 0 0
@@ -54,22 +52,16 @@ ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-#geometry.prob_hi   =  2.4 0.8 3.2
-#diameter=0.094cm dx=diameter/45=0.094/45=0.00209
-#3D case: dx=0.00209
-#2.4/N=0.0209  N=2.4/0.00209=1150
-#1150/144=8.0
+#geometry.prob_lo   =  0.0 -0.4 0.0 
+#geometry.prob_hi   =  2.4 0.4 3.2
+#diameter=0.094cm 
 
-#amr.n_cell    = 144 96 192 #no symmetry
-amr.n_cell    = 144 48 192
-#amr.n_cell    = 96 192 #no symmetry
-#amr.n_cell    = 48 192
+amr.n_cell    = 288 96 384
+#amr.n_cell    = 96 384
 
-#amr.max_level =  4 # about 80 points in the cylinder diameter
-amr.max_level =  3 # about 45 points in the cylinder diameter
-#amr.max_level =  2 # about 22 points in the cylinder diameter
-#amr.max_level =  1 # about 11 points in the cylinder diameter
-# 0- 1 level 1- 2 levels  2- 3 levels
+amr.max_level = 3 # max_level=3 finest
+ns.max_level_for_use = 1 
+
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
