@@ -14795,7 +14795,7 @@ stop
                enddo ! im=1..num_materials
 
                if (partid_check.ne.nparts) then
-                print *,"partid_check invalid"
+                print *,"partid_check invalid fort_cell_to_mac: ",partid_check
                 stop
                endif
 
@@ -15000,6 +15000,7 @@ stop
            print *,"at_RZ_face invalid"
            stop
           endif 
+          FIX ME ABOVE
 
           ! local_vel_MAC initialized above with the current MAC velocity
           ! contents.
@@ -16768,7 +16769,7 @@ stop
       return
       end subroutine fort_project_to_rigid_velocity
 
-
+       !called from: NavierStokes::manage_FSI_data()
       subroutine fort_manage_elastic_velocity( &
        extend_solid_velocity, &
        im_elastic_map, &
@@ -16892,6 +16893,15 @@ stop
       maskcoef_ptr=>maskcoef
       levelPC_ptr=>levelPC
 
+      if ((num_FSI_outer_sweeps.ge.2).and. &
+          (num_FSI_outer_sweeps.le.num_materials)) then
+       !do nothing
+      else
+       print *,"num_FSI_outer_sweeps invalid fort_manage_elastic_velocity:", &
+          num_FSI_outer_sweeps
+       stop
+      endif
+
       call get_dxmaxLS(dx,bfact,dxmaxLS)
        ! see also:
        ! H_offset and H_radius in subroutine fort_elastic_force
@@ -16907,7 +16917,7 @@ stop
         !do nothing
        else if (FSI_outer_sweeps.eq.0) then
         print *,"fort_manage_elastic_velocity:"
-        print *,"we always extend the elastic solid velocity in this case"
+        print *,"always extend the elastic solid vel if FSI_outer_sweeps=0"
         print *,"FSI_outer_sweeps=",FSI_outer_sweeps
         stop
        else
@@ -16963,17 +16973,18 @@ stop
 
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact invalid fort_manage_elastic_velocity: ",bfact
        stop
       endif
 
       if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid fort_manage_elastic_velocity"
+       print *,"level invalid fort_manage_elastic_velocity: ",level
        stop
       endif
  
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_manage_elastic_velocity: ", &
+           num_state_base
        stop
       endif
 
