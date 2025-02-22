@@ -14721,7 +14721,7 @@ stop
                 else if (DMface.eq.zero) then
                  ! do nothing
                 else
-                 print *,"DMface invalid: ",DMface
+                 print *,"DMface invalid fort_cell_to_mac: ",DMface
                  stop
                 endif
 
@@ -14810,6 +14810,7 @@ stop
                   primary_velmaterial= &
                    velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
                  else if (ok_to_update_elastic_material.eq.0) then
+                  primary_velmaterial=velmaterialMAC
                   !do nothing
                  else
                   print *,"ok_to_update_elastic_material invalid"

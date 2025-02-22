@@ -12509,6 +12509,31 @@ void NavierStokes::veldiffuseALL() {
  diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
    HOOP_FORCE_MARK_MF,update_state);
 
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: after diffuse_hoopALL\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
  show_norm2_id(REGISTER_MARK_MF,2);
 
    // spectral_override==1 => order derived from "enable_spectral"
@@ -12519,6 +12544,30 @@ void NavierStokes::veldiffuseALL() {
   // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: after INCREMENT_REGISTERS_ALL\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
   // register_mark=unew (1 ghost cell)
@@ -12598,8 +12647,60 @@ void NavierStokes::veldiffuseALL() {
 
  show_norm2_id(REGISTER_MARK_MF,4);
 
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately prior SOLVETYPE_VISC\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
   //multigrid precond. BiCGStab viscosity
  multiphase_project(SOLVETYPE_VISC); 
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately after SOLVETYPE_VISC\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
   
   //VISCHEAT_SOURCE_MF is a parameter for:
   //  update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,...)
@@ -12623,8 +12724,61 @@ void NavierStokes::veldiffuseALL() {
 
 // ---------------- end viscosity ---------------------
 
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately before vel_elastic_ALL\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
  int viscoelastic_force_only=0;
  vel_elastic_ALL(viscoelastic_force_only);
+
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately after vel_elastic_ALL\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12638,6 +12792,30 @@ void NavierStokes::veldiffuseALL() {
   // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately after marangoni\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
 
  if (FSI_outer_sweeps==0) {
 
@@ -12899,6 +13077,31 @@ void NavierStokes::veldiffuseALL() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.assimilate_state_data();
+ }
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: immediately after assimilate\n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
  }
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);

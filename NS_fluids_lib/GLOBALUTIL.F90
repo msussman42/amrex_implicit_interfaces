@@ -17156,6 +17156,38 @@ end subroutine print_visual_descriptor
       end subroutine cylinderdist
 
 
+! dist>0 outside of annulus
+      subroutine annulusdist(x,y,z,xcen,ycen,radmean,radthick,zmin,zmax,dist)
+      use probcommon_module
+      IMPLICIT NONE
+    
+      real(amrex_real), INTENT(in) :: x,y,z,xcen,ycen,radmean,radthick
+      real(amrex_real), INTENT(out) :: dist
+      real(amrex_real), INTENT(in) :: zmin,zmax
+
+      if (zmin.ge.zmax-EPS10) then 
+       print *,"invalid parameters ",zmin,zmax
+       stop
+      endif
+      dist=abs(sqrt((x-xcen)**2+(y-ycen)**2)-radmean)-radthick
+      if (z.ge.zmax) then
+       if (dist.le.zero) then
+        dist=z-zmax
+       else
+        dist=sqrt(dist**2+(z-zmax)**2)
+       endif
+      else if (z.le.zmin) then
+       if (dist.le.zero) then
+        dist=zmin-z
+       else
+        dist=sqrt(dist**2+(zmin-z)**2)
+       endif
+      endif
+
+      return 
+      end subroutine annulusdist
+
+
        ! negative on the inside of the square
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
       use probcommon_module
