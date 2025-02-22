@@ -1848,6 +1848,32 @@ void NavierStokes::pressure_gradient_code_segment(
   // MDOT term included
  multiphase_project(SOLVETYPE_PRES);
 
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+  basestep_debug,
+  SDC_outer_sweeps,
+  slab_step,
+  divu_outer_sweeps);
+  std::cout << "press any number then enter: after SOLVETYPE_PRES \n";
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+        num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << 
+        slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << 
+        SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << 
+        FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << 
+        num_FSI_outer_sweeps << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
+
+
  int singular_parts_exist=0;
  for (int im=0;im<num_materials;im++) {
   if (is_singular_coeff(im)==0) {
@@ -1863,6 +1889,33 @@ void NavierStokes::pressure_gradient_code_segment(
   if (extend_pressure_into_solid==1) {
    if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
     multiphase_project(SOLVETYPE_PRESEXTRAP);
+
+    if (step_through_data==1) {
+     int basestep_debug=nStep();
+     parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     slab_step,
+     divu_outer_sweeps);
+     std::cout << "press any number then enter: after PRESEXTRAP\n";
+     std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+     std::cout << "dt_slab= " << dt_slab << '\n';
+     std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+     std::cout << "num_divu_outer_sweeps= " << 
+           num_divu_outer_sweeps << '\n';
+     std::cout << "slab_step= " << 
+           slab_step << '\n';
+     std::cout << "SDC_outer_sweeps= " << 
+           SDC_outer_sweeps << '\n';
+     std::cout << "FSI_outer_sweeps= " << 
+           FSI_outer_sweeps << '\n';
+     std::cout << "num_FSI_outer_sweeps= " << 
+           num_FSI_outer_sweeps << '\n';
+     int n_input;
+     std::cin >> n_input;
+    }
+
+
    } else if ((FSI_outer_sweeps>=0)&&
               (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
     //do nothing
@@ -2612,6 +2665,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       slab_step << '\n';
        std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
+       std::cout << "FSI_outer_sweeps= " << 
+	       FSI_outer_sweeps << '\n';
+       std::cout << "num_FSI_outer_sweeps= " << 
+	       num_FSI_outer_sweeps << '\n';
        int n_input;
        std::cin >> n_input;
       }
@@ -2957,6 +3014,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       slab_step << '\n';
        std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
+       std::cout << "FSI_outer_sweeps= " << 
+           FSI_outer_sweeps << '\n';
+       std::cout << "num_FSI_outer_sweeps= " << 
+           num_FSI_outer_sweeps << '\n';
        int n_input;
        std::cin >> n_input;
       }
@@ -3108,10 +3169,65 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (FSI_outer_sweeps=0;FSI_outer_sweeps<num_FSI_outer_sweeps; 
             FSI_outer_sweeps++) {
 
+        if (step_through_data==1) {
+         int basestep_debug=nStep();
+         parent->writeDEBUG_PlotFile(
+	 basestep_debug,
+	 SDC_outer_sweeps,
+	 slab_step,
+	 divu_outer_sweeps);
+         std::cout << "press any number then enter: before project_to_rigid_velocityALL\n";
+         std::cout << "timeSEM= " << timeSEM << '\n';
+         std::cout << "dtSEM= " << dtSEM << '\n';
+         std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+         std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+         std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+         std::cout << "slab_step= " << 
+	       slab_step << '\n';
+         std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
+         std::cout << "FSI_outer_sweeps= " << 
+	       FSI_outer_sweeps << '\n';
+         std::cout << "num_FSI_outer_sweeps= " << 
+	       num_FSI_outer_sweeps << '\n';
+         int n_input;
+         std::cin >> n_input;
+        }
+
+
         //project_to_rigid_velocityALL is declared in NavierStokes2.cpp
         //fort_project_to_rigid_velocity is declared in LEVELSET_3D.F90
         //overwrite the MAC and CELL velocity.
         project_to_rigid_velocityALL();
+
+        if (step_through_data==1) {
+         int basestep_debug=nStep();
+         parent->writeDEBUG_PlotFile(
+	 basestep_debug,
+	 SDC_outer_sweeps,
+	 slab_step,
+	 divu_outer_sweeps);
+         std::cout << "press any number then enter: after project_to_rigid_velocityALL\n";
+         std::cout << "timeSEM= " << timeSEM << '\n';
+         std::cout << "dtSEM= " << dtSEM << '\n';
+         std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+         std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+         std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+         std::cout << "slab_step= " << 
+	       slab_step << '\n';
+         std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
+         std::cout << "FSI_outer_sweeps= " << 
+	       FSI_outer_sweeps << '\n';
+         std::cout << "num_FSI_outer_sweeps= " << 
+	       num_FSI_outer_sweeps << '\n';
+         int n_input;
+         std::cin >> n_input;
+        }
 
         if (num_FSI_outer_sweeps==1) {
          //do nothing
@@ -3134,8 +3250,37 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
           ns_level.manage_FSI_data(); 
          }
+
+         if (step_through_data==1) {
+          int basestep_debug=nStep();
+          parent->writeDEBUG_PlotFile(
+	   basestep_debug,
+	   SDC_outer_sweeps,
+	   slab_step,
+	   divu_outer_sweeps);
+          std::cout << "press any number then enter: after manage_FSI_data\n";
+          std::cout << "timeSEM= " << timeSEM << '\n';
+          std::cout << "dtSEM= " << dtSEM << '\n';
+          std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+          std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+          std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+          std::cout << "slab_step= " << 
+	       slab_step << '\n';
+          std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
+          std::cout << "FSI_outer_sweeps= " << 
+	       FSI_outer_sweeps << '\n';
+          std::cout << "num_FSI_outer_sweeps= " << 
+	       num_FSI_outer_sweeps << '\n';
+          int n_input;
+          std::cin >> n_input;
+         }
+
         } else
          amrex::Error("num_FSI_outer_sweeps invalid");
+
 
         // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
         //    species diffusion
@@ -3159,6 +3304,33 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //   h. Marangoni and disjoining pressure force 
         //
         veldiffuseALL();  
+
+        if (step_through_data==1) {
+         int basestep_debug=nStep();
+         parent->writeDEBUG_PlotFile(
+	 basestep_debug,
+	 SDC_outer_sweeps,
+	 slab_step,
+	 divu_outer_sweeps);
+         std::cout << "press any number then enter: after veldiffuseALL\n";
+         std::cout << "timeSEM= " << timeSEM << '\n';
+         std::cout << "dtSEM= " << dtSEM << '\n';
+         std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+         std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+         std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+         std::cout << "slab_step= " << 
+	       slab_step << '\n';
+         std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
+         std::cout << "FSI_outer_sweeps= " << 
+	       FSI_outer_sweeps << '\n';
+         std::cout << "num_FSI_outer_sweeps= " << 
+	       num_FSI_outer_sweeps << '\n';
+         int n_input;
+         std::cin >> n_input;
+        }
 
         debug_memory();
   
@@ -3703,6 +3875,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
              slab_step << '\n';
      std::cout << "SDC_outer_sweeps= " << 
              SDC_outer_sweeps << '\n';
+     std::cout << "FSI_outer_sweeps= " << 
+           FSI_outer_sweeps << '\n';
+     std::cout << "num_FSI_outer_sweeps= " << 
+           num_FSI_outer_sweeps << '\n';
      int n_input;
      std::cin >> n_input;
     }
