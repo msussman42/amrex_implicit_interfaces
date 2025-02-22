@@ -75,9 +75,8 @@ amr.blocking_factor = 8 8 8       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50     # 200 for production runs
-ns.step_through_data=1
-ns.visual_nddata_format=2 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
-#amr.plot_int        = 100
+ns.step_through_data=0
+ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024

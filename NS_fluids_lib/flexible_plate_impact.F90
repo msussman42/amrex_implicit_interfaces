@@ -65,15 +65,13 @@ integer, parameter :: im_solid=3
       Phi)
     Phi=-Phi
    else if (AMREX_SPACEDIM.eq.3) then
-      !cubedist returns Phi<0 in the hyperrectangle
-    call cubedist( &
-      xblob2-radblob2, &
-      xblob2+radblob2, &
-      yblob2-radblob2, &
-      yblob2+radblob2, &
+      !cylinderdist returns Phi<0 in the cylinder
+    call cylinderdist( &
+      x(1),x(2),x(SDIM), &
+      xblob2,yblob2, &
+      radblob2, &
       zblob2-radblob3, &
       zblob2+radblob3, &
-      x(1),x(2),x(SDIM), &
       Phi)
     Phi=-Phi
    else
@@ -214,54 +212,42 @@ if (probtype.eq.2000) then
    if (AMREX_SPACEDIM.eq.2) then
       !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
+      xblob2-radblob2-radeps, &
       xblob2-radblob2+radeps, &
-      xblob2+radblob2-radeps, &
       yblob2-radblob3, &
       yblob2+radblob3, &
       LS_A)
     LS_A=-LS_A
-
+   
+      !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
-      xblob2-radblob2-radeps, &
+      xblob2+radblob2-radeps, &
       xblob2+radblob2+radeps, &
       yblob2-radblob3, &
       yblob2+radblob3, &
       LS_B)
     LS_B=-LS_B
-    
+
    else if (AMREX_SPACEDIM.eq.3) then
 
-      !cubedist returns Phi<0 in the hyperrectangle
-    call cubedist( &
-      xblob2-radblob2+radeps, &
-      xblob2+radblob2-radeps, &
-      yblob2-radblob2+radeps, &
-      yblob2+radblob2-radeps, &
+      !cubedist returns Phi<0 in the annulus
+    call annulusdist( &
+      x(1),x(2),x(SDIM), &
+      xblob2,yblob2, &
+      radblob2, &
+      radeps, & 
       zblob2-radblob3, &
       zblob2+radblob3, &
-      x(1),x(2),x(SDIM), &
       LS_A)
     LS_A=-LS_A
-
-    call cubedist( &
-      xblob2-radblob2-radeps, &
-      xblob2+radblob2+radeps, &
-      yblob2-radblob2-radeps, &
-      yblob2+radblob2+radeps, &
-      zblob2-radblob3, &
-      zblob2+radblob3, &
-      x(1),x(2),x(SDIM), &
-      LS_B)
-    LS_B=-LS_B
+    LS_B=LS_A
 
    else
     print *,"dimension bust"
     stop
    endif
 
-   if (LS_A.gt.zero) then
-    LS=-99999.0d0
-   else if ((LS_A.le.zero).and.(LS_B.ge.zero)) then
+   if ((LS_A.ge.zero).or.(LS_B.ge.zero)) then
     LS=99999.0d0
    else if ((LS_A.le.zero).and.(LS_B.le.zero)) then
     LS=-99999.0d0
