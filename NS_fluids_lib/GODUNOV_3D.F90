@@ -9072,6 +9072,7 @@ stop
       return
       end subroutine fort_updatetensor
 
+        ! called from tensor_extrapolation() in NavierStokes.cpp which is
         ! called from tensor_advecton_update() in NavierStokes.cpp
       subroutine fort_extrapolate_tensor( &
        level, &
@@ -9139,8 +9140,8 @@ stop
       k1low=0
       k1high=0
       if (SDIM.eq.3) then
-       k1low=-2
-       k1high=2
+       k1low=-4
+       k1high=4
       else if (SDIM.eq.2) then
        ! do nothing
       else
@@ -9172,12 +9173,12 @@ stop
       endif
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,2,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,4,-1)
 
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1)
 
       told_ptr=>told
-      call checkbound_array(fablo,fabhi,told_ptr,2,-1)
+      call checkbound_array(fablo,fabhi,told_ptr,4,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -9228,8 +9229,8 @@ stop
           wtsum=zero
 
           do k1=k1low,k1high
-          do j1=-2,2
-          do i1=-2,2
+          do j1=-4,4
+          do i1=-4,4
            do im=1,num_materials
             LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
            enddo
@@ -9290,9 +9291,9 @@ stop
             print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
             stop
            endif
-          enddo !k1
-          enddo !j1
-          enddo !i1
+          enddo !i1=-4,4
+          enddo !j1=-4,4
+          enddo !k1=k1low,k1high
            
           if (wtsum.eq.zero) then
            ! do nothing
@@ -19365,6 +19366,7 @@ stop
        !  H=0 in the fluid
        ! fort_elastic_force is called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
+       ! the configuration tensor is extrapolated in:
       subroutine fort_elastic_force( &
        elastic_force_mac_grid, &
        im_viscoelastic, & ! 0..num_materials-1
@@ -19615,9 +19617,11 @@ stop
        print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
-      H_radius=dxmaxLS
+!      H_radius=dxmaxLS
+      H_radius=three*dxmaxLS
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
-       H_offset=-dxmaxLS
+!      H_offset=-dxmaxLS
+       H_offset=0.0 !no shift
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
        H_offset=zero
       else
