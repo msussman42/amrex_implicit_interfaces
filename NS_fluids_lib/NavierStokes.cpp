@@ -12890,14 +12890,14 @@ void NavierStokes::tensor_extrapolation() {
       int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
 
       MultiFab* tensor_source_mf=
-       getStateTensor(2,scomp_tensor,
+       getStateTensor(4,scomp_tensor,
          ENUM_NUM_TENSOR_TYPE_REFINE,
          cur_time_slab);
 
       //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
       //called from "make_physics_varsALL" which was called after
       //the phase change update and before this routine was called.
-      resize_levelset(2,LEVELPC_MF);
+      resize_levelset(4,LEVELPC_MF);
 
       if (thread_class::nthreads<1)
        amrex::Error("thread_class::nthreads invalid");

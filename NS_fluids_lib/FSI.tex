@@ -19,6 +19,10 @@ Aulisa et al)
 %see FSI_extend_cells, H_offset, H_radius (fort_elastic_force),
 %LS_shift (check_added_mass)
 %related research: Sebastien Aland, Sugiyaman, Seungwon Shin
+%A 3D phase-field based Eulerian variational framework for
+%multiphase fluid–structure interaction with contact dynamics
+%Xiaoyu Mao, Biswajeet Rath, Rajeev Jaiman 
+%CMAME 2024
 Given $n$ elastic materials, the algorithm is as follows:
 \begin{description}
 \item[1a. Refined advection] $S_{t}+\nabla\cdot(\bmu S)=F$
@@ -37,8 +41,8 @@ Given $n$ elastic materials, the algorithm is as follows:
   $\dot{m}=|\delta F|$.
 \item[4a. upper convective derivative or Jaumann derivative source terms]
   $S_{t}=\nabla\bmu S+S\nabla\bmu$ (elastic materials $1\le i\le n$)
-\item[4b. extrapolate configuration tensor data] Extrapolate two
- grid cells.  $1\le i\le n$.
+\item[4b. extrapolate configuration tensor data] Extrapolate four
+ grid cells.  $1\le i\le n$.  See \verb=fort_extrapolate_tensor=
 \item[5. save the current state (velocity field, interface(s), \ldots)]
   $\bmu,T,\rho,F,\phi$.
 \item[6. coupling loop] For $i=1,n+1$
@@ -48,30 +52,32 @@ Given $n$ elastic materials, the algorithm is as follows:
  velocity in a band of thickness $\alpha \Delta x$.  $\alpha=1$ if elastic
  and $\alpha=0$ if viscoelastic (i.e. velocity extension is disable for 
  viscoelastic materials).
-\item[9. shift MAC grid density and viscosity] For $j=i,n$ shift the
-  MAC density and viscosity $\beta \Delta x$ ($\beta=1$) 
-  distance out of the $j$th elastic material. $\beta=1$ for elastic materials
-  and $\beta=0$ for viscoelastic materials (i.e. disabled for viscoelastic
-  materials)
-\item[10. velocity diffusion] $\bmu_{t}=\nabla\cdot(2\mu D)/\rho$
-\item[11a. grid location project configuration tensors $j=i,n$] 
+\item[9. velocity diffusion] $\bmu_{t}=\nabla\cdot(2\mu D)/\rho$
+\item[10a. grid location project configuration tensors $j=i,n$] 
   project tensor data
   from refined grid locations to strategic tensor grid locations
   (see Sugiyama et al). Note: the tensor data still lives on the refined
   grid, but projected to be strategically piecewise constant.
   In 2d, diagonal terms are at cell centers, and off diagonal are at nodes.
   In 3d, off diagonal are at edge centers.
-\item[11b. Elastic force $j=i,n$] For $j=i,n$, include the elastic force
-  $\nabla\cdot H G Q/rho$ where $G$ is the bulk modulus, $H$ is a shifted
+\item[10b. Elastic force $j=i,n$] For $j=i,n$, include the elastic force
+  $\nabla\cdot H G Q/rho$ where $G$ is the shear modulus, $H$ is a shifted
   Heaviside function with shift length $\gamma\Delta x$ ($\gamma=1$)
   and thickness $\Delta x$.
+  For elastic materials: H=1 when Levelset=0, and H=0 when Levelset=2 dx.
+  For Volume tracking Estebe et al right now:
+  Phase=1 if Levelset=0 and Phase=-1 if Levelset =2 dx.
+  Next test:
+  Phase=1 if Levelset=-3 dx  and Phase=-1 if Levelset =3 dx.
+  In the CMAME paper, Phase=0.97 if Levelset=-3 dx and Phase=-0.97 if 
+  Levelset=3 dx.
   $\rho$ is the corresponding density for elastic material $j$.  For 
   viscoelastic materials (in contrast to elastic materials) the ``shift
   length'' is $\gamma=0$ instead of $\gamma=1$.  In otherwords, the
   Heaviside function still has a thickness of $\Delta x$, but not shifted.
-\item[12. Compressible Pressure projection] The elastic materials, 
+\item[11. Compressible Pressure projection] The elastic materials, 
   $j=1,i-1$ are fixed (like a rigid solid).
-\item[13. Go back to step 6 if $i<n+1$] Go back to step 6 if $i<n+1$.
+\item[12. Go back to step 6 if $i<n+1$] Go back to step 6 if $i<n+1$.
 \end{description}
 Distinctions between the present algorithm and Shin's algorithm: 
 \begin{enumerate}
