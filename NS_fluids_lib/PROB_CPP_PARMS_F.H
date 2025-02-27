@@ -191,6 +191,7 @@ namespace amrex{
        int* ngeom_recon,
        int* cpp_num_materials,
        int* cpp_num_interfaces,
+       int* cpp_ngrow_distance,
        int* ioproc);
   }
 

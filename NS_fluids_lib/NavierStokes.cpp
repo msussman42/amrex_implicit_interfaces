@@ -427,6 +427,9 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_materials=0;
 int  NavierStokes::num_interfaces=0;
 
+int  NavierStokes::ngrow_distance=4;
+int  NavierStokes::ngrow_make_distance=3;
+
 int  NavierStokes::ncomp_sum_int_user1=0;
 int  NavierStokes::ncomp_sum_int_user2=0;
 int  NavierStokes::ncomp_sum_int_user12=0;
@@ -1375,6 +1378,13 @@ void fortran_parameters() {
  if ((NavierStokes::num_materials<2)||(NavierStokes::num_materials>999))
   amrex::Error("num materials invalid");
 
+ pp.queryAdd("ngrow_distance",NavierStokes::ngrow_distance);
+ if ((NavierStokes::ngrow_distance<4)||
+     (NavierStokes::ngrow_distance>64))
+  amrex::Error("ngrow_distance invalid");
+
+ NavierStokes::ngrow_make_distance=NavierStokes::ngrow_distance-1;
+
  NavierStokes::num_interfaces=
   ( (NavierStokes::num_materials-1)*
     (NavierStokes::num_materials-1)+
@@ -1912,6 +1922,7 @@ void fortran_parameters() {
   &NavierStokes::ngeom_recon,
   &NavierStokes::num_materials,
   &NavierStokes::num_interfaces,
+  &NavierStokes::ngrow_distance,
   &ioproc);
 
  ParallelDescriptor::Barrier();
@@ -2531,6 +2542,13 @@ NavierStokes::read_params ()
     pp.get("num_materials",num_materials);
     if ((num_materials<2)||(num_materials>999))
      amrex::Error("num materials invalid");
+
+    pp.queryAdd("ngrow_distance",ngrow_distance);
+    if ((ngrow_distance<4)||
+        (ngrow_distance>64))
+     amrex::Error("ngrow_distance invalid");
+
+    ngrow_make_distance=ngrow_distance-1;
 
     num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2;
     if ((num_interfaces<1)||(num_interfaces>999))
@@ -3512,6 +3530,12 @@ NavierStokes::read_params ()
 		static_damping_coefficient,num_materials);
 
     for (int im=0;im<num_materials;im++) {
+     //NN_FENE_CR
+     //NN_OLDROYD_B
+     //NN_MAIRE_ABGRALL_ETAL
+     //NN_NEO_HOOKEAN
+     //NN_FENE_P
+     //NN_LINEAR_PTT
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
        &viscoelastic_model[im])==1) {
       store_elastic_data[im]=1;

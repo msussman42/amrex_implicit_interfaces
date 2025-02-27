@@ -112,6 +112,9 @@
       integer num_species_var
       integer num_materials_viscoelastic
       integer num_materials_compressible
+      integer ngrow_make_distance !default 3
+      integer ngrow_distance !default 4
+
       integer fort_im_viscoelastic_map(MAX_NUM_MATERIALS)
       integer fort_im_refine_density_map(MAX_NUM_MATERIALS)
       integer fort_viscoelastic_model(MAX_NUM_MATERIALS)
