@@ -23926,7 +23926,6 @@ end subroutine initialize2d
 
       subroutine fort_initdatasolid( &
        nparts, &
-       ngrow_make_distance_in, &
        im_solid_map, &
        time, &
        tilelo,tilehi, &
@@ -23944,7 +23943,6 @@ end subroutine initialize2d
       IMPLICIT NONE
 
       integer, INTENT(in) :: nparts
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: im_solid_map(nparts)
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -23982,14 +23980,9 @@ end subroutine initialize2d
        print *,"nparts invalid"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance invalid"
-       stop
-      endif
-      if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in invalid"
-       print *,"fort_initdatasolid"
-       print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance invalid fort_initdatasolid", &
+        ngrow_make_distance
        stop
       endif
 

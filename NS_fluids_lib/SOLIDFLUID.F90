@@ -312,8 +312,8 @@
        print *,"ioproc invalid"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance invalid"
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
        stop
       endif
       if ((FSI_operation.eq.OP_FSI_INITIALIZE_NODES).or. &  
@@ -344,8 +344,8 @@
          stop
         endif
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then
-        if (ngrow_make_distance_in.ne.3) then
-         print *,"expecting ngrow_make_distance_in==3"
+        if (ngrow_make_distance_in.lt.3) then
+         print *,"expecting ngrow_make_distance_in>=3"
          print *,"fort_headermsg 2b"
          print *,"ngrow_make_distance_in=",ngrow_make_distance_in
          stop
@@ -807,7 +807,6 @@
            im_part, &
            nparts, &
            partid, &
-           ngrow_make_distance, &
            nFSI, &
            FSI_operation, &
            touch_flag, &
@@ -1226,7 +1225,6 @@
             im_part, &
             nparts, &
             partid, &
-            ngrow_make_distance, &
             nFSI, &
             FSI_operation, &
             cur_time, &

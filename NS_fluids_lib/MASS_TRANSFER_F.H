@@ -85,7 +85,6 @@ extern "C"
     int* nucleation_flag,
     int* level,
     int* finest_level,
-    int* ngrow_distance,
     int* nstate,
     int* nburning,
     int* ntsat,

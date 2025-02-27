@@ -3147,10 +3147,10 @@ stop
        stop
       endif
        
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
-       print *,"ngrow_distance invalid"
+       print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
 
@@ -4035,8 +4035,8 @@ stop
        debugrate=1
       endif
 
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance invalid"
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
 
@@ -6901,12 +6901,12 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow.ne.4) then
-       print *,"expecting ngrow==4 in fort_extend_drag"
+      if (ngrow.lt.4) then
+       print *,"expecting ngrow>=4 in fort_extend_drag"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance==3 in fort_extend_drag"
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"expect ngrow_make_distance==ngrow_distance-1 fort_extend_drag"
        stop
       endif
       if (ncomp.eq.N_DRAG) then
@@ -7364,7 +7364,6 @@ stop
        nucleation_flag, &
        level, &
        finest_level, &
-       ngrow_distance_in, &
        nstate, &
        nburning, &
        ntsat, &
@@ -7457,7 +7456,6 @@ stop
 
       integer :: probe_ok
       real(amrex_real) :: microscale_probe_size
-      integer, INTENT(in) :: ngrow_distance_in
       integer, INTENT(in) :: nstate
       integer, INTENT(in) :: nburning
       integer, INTENT(in) :: ntsat
@@ -7774,17 +7772,13 @@ stop
        stop
       endif
 
-      if (ngrow_distance.ne.4) then
-       print *,"expecting ngrow_distance==4 in fort_ratemasschange"
-       stop
-      endif
-      if (ngrow_distance_in.ne.4) then
-       print *,"expecting ngrow_distance_in==4 in fort_ratemasschange"
+      if (ngrow_distance.lt.4) then
+       print *,"expecting ngrow_distance>=4 in fort_ratemasschange"
        stop
       endif
 
-      if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance==3 in fort_ratemasschange"
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"expect ngrow_make_distance==ngrow_distance-1 fort_ratemasschange"
        stop
       endif
 

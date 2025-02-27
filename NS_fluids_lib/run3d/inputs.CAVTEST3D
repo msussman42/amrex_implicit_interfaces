@@ -148,7 +148,6 @@ ns.law_of_the_wall=0 0 0 # make 1 for law of the wall
 #CAVITATION
 ns.FSI_flag=0 0 2  # 1 (GLOBALDIST), 2 (cas file)
 ns.FSI_refine_factor=1 0
-ns.FSI_bounding_box_ngrow=3 3
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
 # 1 ERG= 1 (gram cm^2/s^2)

@@ -617,12 +617,12 @@ stop
        print *,"bfact invalid85"
        stop
       endif
-      if (ngrow_distance.ne.4) then
-       print *,"expecting ngrow_distance=4 in initheightLS"
+      if (ngrow_distance.lt.4) then
+       print *,"expecting ngrow_distance>=4 in initheightLS"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance=3 in initheightLS"
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"expecting ngrow_make_distance=ngrow_distance-1 in initheightLS"
        stop
       endif
       if (im.ge.im_opp) then
@@ -3340,8 +3340,7 @@ stop
        time, &
        visc_coef, &
        unscaled_min_curvature_radius, &
-       num_curv, & ! num_interfaces * CURVCOMP_NCOMP
-       ngrow_distance_in) &
+       num_curv) & ! num_interfaces * CURVCOMP_NCOMP
       bind(c,name='fort_curvstrip')
 
       use ISO_C_BINDING, ONLY: C_CHAR,C_INT
@@ -3366,7 +3365,6 @@ stop
       integer :: vof_height_function_local
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: ngrow_distance_in
       integer, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       integer icurv
       real(amrex_real), INTENT(in) :: visc_coef
@@ -3538,12 +3536,8 @@ stop
       enddo
       fort_caller_string_len=caller_string_len
 
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance invalid in curvstrip"
-       stop
-      endif 
-      if (ngrow_distance_in.ne.4) then
-       print *,"ngrow_distance_in invalid in curvstrip"
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance invalid in curvstrip: ",ngrow_distance
        stop
       endif 
  
@@ -18116,7 +18110,6 @@ stop
        num_LS_extrap, &
        num_LS_extrap_iter, &
        LS_extrap_iter, &
-       ngrow_distance_in, &
        constant_density_all_time) &
       bind(c,name='fort_renormalize_prescribe')
       use global_utility_module
@@ -18129,7 +18122,6 @@ stop
 
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: solidheat_flag
-      integer, INTENT(in) :: ngrow_distance_in
 
       integer, INTENT(in) :: renormalize_only
       integer, INTENT(inout) :: num_LS_extrap
@@ -18358,16 +18350,10 @@ stop
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
-       print *,"ngrow_distance invalid"
-       stop
-      endif
-      if (ngrow_distance_in.eq.4) then
-       ! do nothing
-      else
-       print *,"ngrow_distance_in invalid"
+       print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
 
@@ -22634,7 +22620,7 @@ stop
       grid_PARM%level=level
       grid_PARM%finest_level=finest_level
 
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        !do nothing
       else
        print *,"ngrow_distance invalid: ",ngrow_distance

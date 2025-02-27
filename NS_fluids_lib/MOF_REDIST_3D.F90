@@ -342,7 +342,13 @@ stop
        stop
       endif
 
-      if (ngrow_make_distance.eq.3) then
+      if (ngrow_make_distance.ge.3) then
+       ! do nothing
+      else
+       print *,"ngrow_make_distance invalid fort_fd_normal"
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
        ! do nothing
       else
        print *,"ngrow_make_distance invalid fort_fd_normal"
@@ -519,8 +525,7 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       n_normal, &
-       ngrow_make_distance_in) &
+       n_normal) &
       bind(c,name='fort_fd_node_normal')
 
       use global_utility_module
@@ -531,7 +536,6 @@ stop
 
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: n_normal
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: DIMDEC(LS_new)
       integer, INTENT(in) :: DIMDEC(FD_NRM_ND_fab)
       real(amrex_real), INTENT(in), target :: &
@@ -578,16 +582,12 @@ stop
        stop
       endif
 
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance.ne.3 fort_fd_node_normal"
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance.lt.3 fort_fd_node_normal"
        stop
       endif
-      if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in.ne.3 fort_fd_node_normal"
-       stop
-      endif
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance.ne.4 fort_fd_node_normal"
+      if (ngrow_distance.ne.ngrow_make_distance+1) then
+       print *,"ngrow_distance.ne.ngrow_make_distance+1 fort_fd_node_normal"
        stop
       endif
       n_normal_test=(SDIM+1)*(num_interfaces+num_materials)
@@ -844,8 +844,7 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       n_normal, &
-       ngrow_make_distance_in) &
+       n_normal) &
       bind(c,name='fort_node_to_cell')
 
       use global_utility_module
@@ -859,7 +858,6 @@ stop
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: height_function_flag
       integer, INTENT(in) :: n_normal
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: DIMDEC(LS_new)
       integer, INTENT(in) :: DIMDEC(F_new)
       integer, INTENT(in) :: DIMDEC(FD_NRM_ND_fab)
@@ -987,16 +985,12 @@ stop
        stop
       endif
 
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance.ne.3 fort_node_to_cell"
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance.lt.3 fort_node_to_cell"
        stop
       endif
-      if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in.ne.3 fort_node_to_cell"
-       stop
-      endif
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance invalid"
+      if (ngrow_distance.ne.ngrow_make_distance+1) then
+       print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
 
@@ -1708,8 +1702,7 @@ stop
          bc, &
          rz_flag, &
          xlo,dx, &
-         time, &
-         ngrow_distance_in) &
+         time) &
       bind(c,name='fort_levelstrip')
 
       use global_utility_module
@@ -1722,9 +1715,8 @@ stop
       integer, INTENT(inout) :: nprocessed
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: ngrow_distance_in
 
-      integer, PARAMETER :: ngrow_make_distance_accept=3
+      integer :: ngrow_make_distance_accept
 
       real(amrex_real), INTENT(inout) :: minLS(num_materials)
       real(amrex_real), INTENT(inout) :: maxLS(num_materials)
@@ -1879,23 +1871,22 @@ stop
        stop
       endif
 
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance<>4 error in levelstrip"
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance<4 error in levelstrip"
        stop
       endif
-      if (ngrow_distance_in.ne.4) then
-       print *,"ngrow_distance_in<>4 error in levelstrip"
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance.ne.ngrow_distance-1  error in levelstrip"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance<>3 error in levelstrip"
-       stop
-      endif
+
+      ngrow_make_distance_accept=ngrow_make_distance
+
        ! 7x7x7 stencil guarantees linearity preserving property.
-      if (ngrow_make_distance_accept.eq.3) then
+      if (ngrow_make_distance_accept.ge.3) then
        ! do nothing
       else
-       print *,"ngrow_make_distance_accept<>3 in fort_levelstrip"
+       print *,"ngrow_make_distance_accept<3 in fort_levelstrip"
        stop
       endif
 
@@ -2081,7 +2072,8 @@ stop
       enddo
       enddo  ! initialize + or -
 
-       ! ngrow_make_distance=3
+       ! ngrow_make_distance>=3
+       ! ngrow_make_distance=ngrow_distance-1
       call growntilebox_TILE(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
  
@@ -2581,7 +2573,7 @@ stop
 
          ! The main loop stencil,
          ! traversing valid interface segments,
-         ! is derived from "growntilebox_TILE(ngrow_make_distance=3)
+         ! is derived from "growntilebox_TILE(ngrow_make_distance>=3)
          ! This inner loop cannot extend beyond the "owned"
          ! tile otherwise there will be competition between
          ! threads for modifying the same piece of data.
@@ -2891,8 +2883,7 @@ stop
        fablo,fabhi,bfact, &
        rz_flag, &
        xlo,dx, &
-       time, &
-       ngrow_distance_in) &
+       time) &
       bind(c,name='fort_steninit')
 
       use global_utility_module
@@ -2904,7 +2895,6 @@ stop
 
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: ngrow_distance_in
       integer, INTENT(in) :: DIMDEC(stenfab)
       integer, INTENT(in) :: DIMDEC(maskfab)
       integer, INTENT(in) :: DIMDEC(vofrecon)
@@ -2965,12 +2955,8 @@ stop
        stop
       endif
 
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance<>4 error in steninit"
-       stop
-      endif
-      if (ngrow_distance_in.ne.4) then
-       print *,"ngrow_distance_in<>4 error in steninit"
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance<4 error in steninit"
        stop
       endif
 

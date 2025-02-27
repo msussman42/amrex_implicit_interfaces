@@ -4794,131 +4794,6 @@ stop
       return
       end subroutine fort_initjumpterm
 
-      subroutine check_added_mass( &
-       local_faceden, &
-       local_facevisc, &
-       im_elastic_map, &
-       num_FSI_outer_sweeps, &
-       FSI_outer_sweeps, &
-       LSright, &
-       LSleft, &
-       dx, &
-       bfact)
-      use global_utility_module
-      IMPLICIT NONE
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: num_FSI_outer_sweeps
-      integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
-      real(amrex_real), INTENT(in) :: LSleft(num_materials)
-      real(amrex_real), INTENT(in) :: LSright(num_materials)
-      real(amrex_real), INTENT(inout) :: local_faceden
-      real(amrex_real), INTENT(inout) :: local_facevisc
-      real(amrex_real) :: dxmaxLS
-      real(amrex_real) :: LS_shift
-      real(amrex_real) :: elastic_density
-      real(amrex_real) :: elastic_viscosity
-      integer :: ipart
-      integer :: im_local
-       ! subroutine check_added_mass
-      real(amrex_real), parameter :: FSI_extend_cells=0.0d0
-
-      if ((FSI_outer_sweeps.ge.0).and. &
-          (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
-       !do nothing
-      else
-       print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
-       stop
-      endif
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
-       !do nothing
-      else
-       print *,"check_added_mass: "
-       print *,"dxmaxLS invalid: ",dxmaxLS
-       stop
-      endif
-
-      LS_shift=FSI_extend_cells*dxmaxLS
-
-      do ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
-       im_local=im_elastic_map(ipart+1)+1
-       if ((im_local.ge.1).and.(im_local.le.num_materials)) then
-        !do nothing
-       else
-        print *,"check_added_mass: "
-        print *,"im_local invalid: ",im_local
-        stop
-       endif
-
-       if (is_rigid_CL(im_local).eq.1) then
-        !do nothing
-       else
-        print *,"check_added_mass: "
-        print *,"im_local invalid(2): ",im_local
-        stop
-       endif
-
-       if (LS_shift.gt.zero) then
-
-        if ((LSleft(im_local).ge.-LS_shift).or. &
-            (LSright(im_local).ge.-LS_shift)) then
-         if (local_faceden.eq.zero) then ! 1/density
-          ! do nothing
-         else if (local_faceden.gt.zero) then ! 1/density
-          elastic_density=fort_denconst(im_local)
-          elastic_viscosity=fort_viscconst(im_local)
-          if (elastic_density.gt.one/local_faceden) then
-           local_faceden=one/elastic_density
-           if (elastic_viscosity.gt.zero) then
-            if (local_facevisc.ge.zero) then
-             local_facevisc=elastic_viscosity
-            else
-             print *,"check_added_mass: "
-             print *,"local_facevisc invalid: ",local_facevisc
-             stop
-            endif
-           else
-            print *,"check_added_mass: "
-            print *,"elastic_viscosity invalid: ",elastic_viscosity
-            stop
-           endif
-          else if ((elastic_density.le.one/local_faceden).and. &
-                   (elastic_density.gt.zero)) then
-           !do nothing
-          else
-           print *,"check_added_mass: "
-           print *,"elastic_density invalid: ",elastic_density
-           print *,"local_faceden: ",local_faceden
-           stop
-          endif
-         else
-          print *,"check_added_mass: "
-          print *,"local_faceden invalid: ",local_faceden
-          stop
-         endif
-        else if ((LSleft(im_local).le.-LS_shift).and. &
-                 (LSright(im_local).le.-LS_shift)) then
-         !do nothing
-        else
-         print *,"check_added_mass: "
-         print *,"LS_left or LSright invalid"
-         stop
-        endif 
-
-       else if (LS_shift.eq.zero) then
-        !do nothing
-       else
-        print *,"LS_shift invalid: ",LS_shift
-        stop
-       endif
-
-      enddo !ipart=FSI_outer_sweeps,num_FSI_outer_sweeps-2
-
-      return
-      end subroutine check_added_mass
-
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
@@ -4972,7 +4847,6 @@ stop
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer :: growloMAC(3),growhiMAC(3)
-      integer :: growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
@@ -5252,19 +5126,6 @@ stop
           stop
          endif
 
-          !subroutine check_added_mass is also declared in GODUNOV_3D.F90 
-          !FSI_extend_cells is declared in check_added_mass
-         call check_added_mass( &
-          local_faceden, &
-          local_facevisc, &
-          im_elastic_map, &
-          num_FSI_outer_sweeps, &
-          FSI_outer_sweeps, &
-          LSright, &
-          LSleft, &
-          dx, &
-          bfact)
-
          if (dir.eq.0) then
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
@@ -5299,51 +5160,6 @@ stop
        enddo !j
        enddo !k
       enddo ! dir=0..sdim-1
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0) 
-      do k=growlo(3),growhi(3)
-      do j=growlo(2),growhi(2)
-      do i=growlo(1),growhi(1)
-
-        local_mask_right=NINT(maskcov(D_DECL(i,j,k))) 
-
-         ! check if this is an uncovered face.
-        if (local_mask_right.eq.1) then
-         
-         do im=1,num_materials
-          LSright(im)=LSnew(D_DECL(i,j,k),im)
-         enddo
-
-         local_faceden=cell_den(D_DECL(i,j,k))
-         local_facevisc=cell_visc(D_DECL(i,j,k))
-
-          !subroutine check_added_mass is also declared in GODUNOV_3D.F90 
-          !FSI_extend_cells is declared in check_added_mass
-         call check_added_mass( &
-          local_faceden, &
-          local_facevisc, &
-          im_elastic_map, &
-          num_FSI_outer_sweeps, &
-          FSI_outer_sweeps, &
-          LSright, &
-          LSright, &
-          dx, &
-          bfact)
-
-         cell_den(D_DECL(i,j,k))=local_faceden
-         cell_visc(D_DECL(i,j,k))=local_facevisc
-
-        else if (local_mask_right.eq.0) then
-         ! do nothing
-        else
-         print *,"local_mask_right invalid: ",local_mask_right
-         stop
-        endif
-
-      enddo !i
-      enddo !j
-      enddo !k
 
       return
       end subroutine fort_init_elasticmask_and_elasticmaskpart
@@ -5402,7 +5218,7 @@ stop
        print *,"normdir invalid check_for_closest_UMAC"
        stop
       endif
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
        print *,"ngrow_distance invalid"
@@ -5630,7 +5446,7 @@ stop
        print *,"normdir invalid fort_extend_mac_vel"
        stop
       endif
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
        print *,"ngrow_distance invalid"
@@ -8281,7 +8097,6 @@ stop
        im_part, &
        nparts, &
        partid, &
-       ngrow_make_distance_in, &
        nFSI, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -8297,7 +8112,6 @@ stop
       integer, INTENT(in) :: im_part
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: partid
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: nFSI
       integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
@@ -8331,12 +8145,8 @@ stop
        print *,"nFSI invalid"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance.ne.3"
-       stop
-      endif
-      if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in.ne.3"
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance.lt.3"
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
@@ -8390,7 +8200,6 @@ stop
        finest_level, &
        nFSI, &
        nparts, &
-       ngrow_make_distance_in, &
        im_solid_map, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -8412,7 +8221,6 @@ stop
       integer, INTENT(in) :: finest_level 
       integer, INTENT(in) :: nFSI
       integer, INTENT(in) :: nparts
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: im_solid_map(nparts)
       integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
@@ -8465,14 +8273,8 @@ stop
        print *,"nparts invalid fort_build_moment"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance invalid"
-       stop
-      endif
-      if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in invalid"
-       print *,"fort_build_moment"
-       print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+      if (ngrow_make_distance.lt.3) then
+       print *,"ngrow_make_distance invalid fort_build_moment"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -9140,8 +8942,8 @@ stop
       k1low=0
       k1high=0
       if (SDIM.eq.3) then
-       k1low=-4
-       k1high=4
+       k1low=-ngrow_distance
+       k1high=ngrow_distance
       else if (SDIM.eq.2) then
        ! do nothing
       else
@@ -9229,8 +9031,8 @@ stop
           wtsum=zero
 
           do k1=k1low,k1high
-          do j1=-4,4
-          do i1=-4,4
+          do j1=-ngrow_distance,ngrow_distance
+          do i1=-ngrow_distance,ngrow_distance
            do im=1,num_materials
             LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
            enddo
@@ -9291,8 +9093,8 @@ stop
             print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
             stop
            endif
-          enddo !i1=-4,4
-          enddo !j1=-4,4
+          enddo !i1=-ngrow_distance,ngrow_distance
+          enddo !j1=-ngrow_distance,ngrow_distance
           enddo !k1=k1low,k1high
            
           if (wtsum.eq.zero) then
@@ -10753,7 +10555,6 @@ stop
        im_solid_map, &
        level, &
        finest_level, &
-       ngrow_distance_in, &
        nparts, &
        nparts_ghost, &
        nden, &
@@ -10785,7 +10586,6 @@ stop
       integer, INTENT(in) :: data_dir
       integer, INTENT(in) :: nhistory
       integer, INTENT(in) :: level,finest_level
-      integer, INTENT(in) :: ngrow_distance_in
       integer, INTENT(in) :: NS_sumdata_size
       integer, INTENT(in) :: law_of_the_wall(num_materials)
       real(amrex_real), INTENT(in) :: wall_model_velocity(num_materials)
@@ -10899,16 +10699,10 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
        print *,"ngrow_distance invalid"
-       stop
-      endif
-      if (ngrow_distance_in.eq.4) then
-       ! do nothing
-      else
-       print *,"ngrow_distance_in invalid"
        stop
       endif
       if (nden.ne.num_materials*num_state_material) then
@@ -11400,7 +11194,6 @@ stop
        im_solid_map, &
        level, &
        finest_level, &
-       ngrow_distance_in, &
        nparts, &
        nparts_ghost, &
        tilelo,tilehi, &
@@ -11420,7 +11213,6 @@ stop
 
       integer, INTENT(in) :: data_dir
       integer, INTENT(in) :: level,finest_level
-      integer, INTENT(in) :: ngrow_distance_in
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: nparts_ghost
       integer, INTENT(in) :: im_solid_map(nparts_ghost)
@@ -11465,13 +11257,7 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow_distance_in.eq.4) then
-       ! do nothing
-      else
-       print *,"ngrow_distance_in invalid"
-       stop
-      endif
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
        print *,"ngrow_distance invalid"
@@ -11744,7 +11530,7 @@ stop
        stop
       endif
 
-      if (ngrow_distance.eq.4) then
+      if (ngrow_distance.ge.4) then
        ! do nothing
       else
        print *,"ngrow_distance invalid"
@@ -12290,7 +12076,7 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (ngrow_distance.eq.4) then
+       if (ngrow_distance.ge.4) then
         ! do nothing
        else
         print *,"ngrow_distance invalid"
@@ -12633,7 +12419,7 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (ngrow_distance.eq.4) then
+       if (ngrow_distance.ge.4) then
         ! do nothing
        else
         print *,"ngrow_distance invalid"
@@ -19532,7 +19318,6 @@ stop
       real(amrex_real) local_invden_from_cell
       real(amrex_real) dxmaxLS
       real(amrex_real) H_radius
-      real(amrex_real) H_offset
 
       SNEW_ptr=>SNEW
       umacnew_ptr=>umacnew
@@ -19617,13 +19402,25 @@ stop
        print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
-!      H_radius=dxmaxLS
-      H_radius=three*dxmaxLS
+      if ((ngrow_distance.ge.4).and. &
+          (ngrow_distance.le.64)) then
+       !do nothing
+      else
+       print *,"ngrow_distance invalid: ",ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+
+      H_radius=(ngrow_make_distance)*dxmaxLS
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
-!      H_offset=-dxmaxLS
-       H_offset=0.0 !no shift
+       ! do nothing
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
-       H_offset=zero
+       ! do nothing
       else
        print *,"fort_elastic_force: "
        print *,"is_FSI_elastic invalid: ",im_viscoelastic_p1, &
@@ -19885,9 +19682,9 @@ stop
          stop
         endif
 
-        H_corner=hs(LS_left(im_viscoelastic_p1)-H_offset,H_radius)
+        H_corner=hs(LS_left(im_viscoelastic_p1),H_radius)
         QCC(1)=QCC(1)*H_corner 
-        H_corner=hs(LS_right(im_viscoelastic_p1)-H_offset,H_radius)
+        H_corner=hs(LS_right(im_viscoelastic_p1),H_radius)
         QCC(2)=QCC(2)*H_corner 
 
         rplus=one
@@ -20058,9 +19855,9 @@ stop
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
         
-         H_corner=hs(LS_bottom(im_viscoelastic_p1)-H_offset,H_radius)
+         H_corner=hs(LS_bottom(im_viscoelastic_p1),H_radius)
          Q_ITAN(1)=Q_ITAN(1)*H_corner 
-         H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
+         H_corner=hs(LS_top(im_viscoelastic_p1),H_radius)
          Q_ITAN(2)=Q_ITAN(2)*H_corner 
         else
          print *,"fort_elastic_force: "
@@ -20230,9 +20027,9 @@ stop
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
 
-         H_corner=hs(LS_bottom(im_viscoelastic_p1)-H_offset,H_radius)
+         H_corner=hs(LS_bottom(im_viscoelastic_p1),H_radius)
          Q_JTAN(1)=Q_JTAN(1)*H_corner 
-         H_corner=hs(LS_top(im_viscoelastic_p1)-H_offset,H_radius)
+         H_corner=hs(LS_top(im_viscoelastic_p1),H_radius)
          Q_JTAN(2)=Q_JTAN(2)*H_corner 
         else
          print *,"fort_elastic_force: "
@@ -20322,7 +20119,7 @@ stop
         enddo !kofs=0,1
 #endif
 
-        H_corner=hs(LS_face(im_viscoelastic_p1)-H_offset,H_radius)
+        H_corner=hs(LS_face(im_viscoelastic_p1),H_radius)
         hoop12=hoop12*H_corner
         hoop22=hoop22*H_corner
 

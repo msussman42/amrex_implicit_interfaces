@@ -51,6 +51,7 @@ ns.projection_pressure_scale=1.0e+10
 ns.MOFITERMAX=30
 amr.n_cell=64 128
 amr.max_level=0
+ns.ngrow_distance=7
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
