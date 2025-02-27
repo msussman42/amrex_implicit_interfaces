@@ -248,6 +248,7 @@ implicit none
 
 ! fort_material_conservation_form added June 15, 2024
 ! fort_im_viscoelastic_map added July 16,2024
+! ngrow_distance,ngrow_make_distance added Feb 27,2025
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
@@ -323,9 +324,6 @@ implicit none
       integer, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=0
 
       real(amrex_real), PARAMETER :: GNBC_RADIUS=2.0d0
-
-      integer, PARAMETER :: ngrow_make_distance=3
-      integer, PARAMETER :: ngrow_distance=4
 
       real(amrex_real), PARAMETER :: GAMMA_SIMPLE_PARMS=1.4d0
 
@@ -546,7 +544,8 @@ implicit none
 
        ! variables from "pressure_bcs"
       real(amrex_real)  dt_pressure_bcs
-      real(amrex_real)  time_pressure_bcs(0:100) ,  pressbc_pressure_bcs(0:100,1:3)
+      real(amrex_real)  time_pressure_bcs(0:100) 
+      real(amrex_real)  pressbc_pressure_bcs(0:100,1:3)
       integer selectpress
        ! variables from "vel_bcs"
       real(amrex_real)  timehist_velbc(0:100), &

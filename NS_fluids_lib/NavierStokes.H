@@ -1860,8 +1860,8 @@ protected:
     static Vector<int> constant_volume_mdot; // 1..2*num_interfaces
     static Vector<int> constant_density_all_time; // 1..num_materials, def=1
     static int is_phasechange;
-    static int ngrow_distance;  // should always be 4
-    static int ngrow_make_distance;  // should always be 3
+    static int ngrow_distance;  // should always be at least 4
+    static int ngrow_make_distance;  // should always be at least 3
 
     static int num_elements_blobclass;
     static int BLB_MATRIX;

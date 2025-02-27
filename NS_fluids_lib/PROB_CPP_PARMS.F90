@@ -2217,6 +2217,7 @@ stop
         ccngeom_recon, &
         ccnum_materials, &
         ccnten, &
+        ccngrow_distance, &
         ioproc) &
       bind(c,name='fort_override_MAIN_GLOBALS')
 
@@ -2228,6 +2229,7 @@ stop
       integer, INTENT(in) :: cc_int_size
       integer, INTENT(in) :: ccnum_materials
       integer, INTENT(in) :: ccnten
+      integer, INTENT(in) :: ccngrow_distance
       integer, INTENT(in) :: ccnum_species_var
       integer, INTENT(in) :: ccnum_materials_viscoelastic
       integer, INTENT(in) :: ccnum_materials_compressible
@@ -2341,10 +2343,24 @@ stop
        print *,"ngeom_raw invalid"
        stop
       endif
-      
+     
+      ngrow_distance=ccngrow_distance 
+      ngrow_make_distance=ngrow_distance-1 
+
+      if ((ngrow_distance.ge.4).and.(ngrow_distance.le.64)) then
+       !do nothing
+      else
+       print *,"fort_override_MAIN_GLOBALS ngrow_distance invalid: ", &
+               ngrow_distance
+       stop
+      endif
+              
       if (ioproc.eq.1) then
        print *,"fort_override_MAIN_GLOBALS"
       
+       print *,"ngrow_distance= ",ngrow_distance
+       print *,"ngrow_make_distance= ",ngrow_make_distance
+
        print *,"num_materials= ",num_materials
        print *,"num_interfaces= ",num_interfaces
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
