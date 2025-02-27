@@ -7439,8 +7439,8 @@ END SUBROUTINE SIMP
       call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1) 
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1) 
       call checkbound_array1(fablo,fabhi,mask_ptr,2,-1) 
-       ! ngrow_distance=4
-       ! ngrow_make_distance=3
+       ! ngrow_distance>=4
+       ! ngrow_make_distance=ngrow_distance-1
       call checkbound_array(fablo,fabhi,drag_ptr,3,-1) 
       call checkbound_array(fablo,fabhi,slopes_ptr,2,-1) 
       call checkbound_array(fablo,fabhi,den_ptr,1,-1) 

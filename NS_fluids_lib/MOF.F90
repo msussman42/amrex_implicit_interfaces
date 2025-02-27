@@ -14649,12 +14649,12 @@ contains
       real(amrex_real) vof_crit
       real(amrex_real) dx_norm,dx_tan1,dx_tan2
 
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance invalid"
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance invalid"
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
        stop
       endif
       if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then

@@ -3,7 +3,7 @@
 
 #if (0)
 This enumerated type indexes into DRAG_MF which has
-ngrow_make_distance=3 ghost cells.  Information on the
+ngrow_make_distance=ngrow_distance-1 ghost cells.  Information on the
 stress applied to a given material "im_test" is stored.
 #endif
 

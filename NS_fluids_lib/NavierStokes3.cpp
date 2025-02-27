@@ -1961,10 +1961,10 @@ void NavierStokes::phase_change_code_segment(
  BLProfiler bprof(local_caller_string);
 #endif
 
- if (ngrow_make_distance!=3)
-  amrex::Error("ngrow_make_distance!=3");
- if (ngrow_distance!=4)
-  amrex::Error("ngrow_distance!=4");
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("ngrow_make_distance!=ngrow_distance-1");
+ if (ngrow_distance<4)
+  amrex::Error("ngrow_distance<4");
 
   // first num_interfaces components correspond to the status.
  int nburning=EXTRAP_NCOMP_BURNING;
@@ -5376,7 +5376,7 @@ NavierStokes::ColorSum(
  if (level>finest_level)
   amrex::Error("level invalid ColorSum");
 
- if (ngrow_distance!=4)
+ if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
 
  int num_colors=level_blobdata.size();
@@ -6048,7 +6048,7 @@ NavierStokes::LowMachDIVU(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid LowMachDIVU");
 
- if (ngrow_distance!=4)
+ if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
 
  int num_colors=cum_blobdata.size();

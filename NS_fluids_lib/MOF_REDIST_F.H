@@ -32,8 +32,7 @@ namespace amrex{
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       int* n_normal,
-       int* ngrow_make_distance);
+       int* n_normal);
 
      void fort_node_to_cell(
        int* tid_current,
@@ -48,8 +47,7 @@ namespace amrex{
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       int* n_normal,
-       int* ngrow_make_distance);
+       int* n_normal);
 
 
      void fort_levelstrip(
@@ -71,8 +69,7 @@ namespace amrex{
        int* bfact,
        const int* bc,const int* rz_flag,
        const Real* xlo,const Real* dx,
-       Real* time,
-       int* ngrowLS);
+       Real* time);
 
      void fort_correct_uninit(
        Real* minLS,
@@ -98,8 +95,7 @@ namespace amrex{
        int* bfact,
        const int* rz_flag,
        const Real* xlo,const Real* dx,
-       Real* time,
-       int* ngrowLS);
+       Real* time);
 
 
      void fort_faceinit(

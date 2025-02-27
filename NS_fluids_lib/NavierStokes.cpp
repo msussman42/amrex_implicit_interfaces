@@ -585,9 +585,6 @@ int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
 Real NavierStokes::projection_velocity_scale=1.0;
 
-int NavierStokes::ngrow_distance=4;
-int NavierStokes::ngrow_make_distance=3;
-
 int NavierStokes::num_elements_blobclass=-32767;
 int NavierStokes::BLB_MATRIX=-32767;
 int NavierStokes::BLB_RHS=-32767;
@@ -1004,7 +1001,7 @@ int NavierStokes::num_local_aux_grids=0;
 Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
 Vector<int> NavierStokes::FSI_refine_factor; 
-// default: 3
+// default: ngrow_make_distance
 Vector<int> NavierStokes::FSI_bounding_box_ngrow; 
 
 Vector<int> NavierStokes::ns_max_grid_size; 
@@ -2136,6 +2133,7 @@ void fortran_parameters() {
   &NavierStokes::ngeom_recon,
   &NavierStokes::num_materials,
   &NavierStokes::num_interfaces,
+  &NavierStokes::ngrow_distance,
   &ioproc);
 
  ParallelDescriptor::Barrier();
@@ -3397,13 +3395,12 @@ NavierStokes::read_params ()
     for (int i=0;i<num_materials;i++) {
      FSI_flag[i]=FSI_FLUID;
      FSI_refine_factor[i]=1;
-     FSI_bounding_box_ngrow[i]=3;
+     FSI_bounding_box_ngrow[i]=ngrow_make_distance;
     }
     pp.queryAdd("FSI_flag",FSI_flag,num_materials);
     pp.queryAdd("num_local_aux_grids",num_local_aux_grids);
     pp.queryAdd("FSI_interval",FSI_interval);
     pp.queryAdd("FSI_refine_factor",FSI_refine_factor,num_materials);
-    pp.queryAdd("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,num_materials);
 
     for (int i=0;i<num_materials;i++) {
      if (FSI_flag[i]==FSI_SHOELE_CTML) {
@@ -5660,6 +5657,7 @@ NavierStokes::read_params ()
       ngrow_make_distance << '\n';
      std::cout << "ngrow_distance= " << 
       ngrow_distance << '\n';
+
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
@@ -7470,7 +7468,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
  int nparts=im_solid_map.size();
  bool use_tiling=ns_tiling;
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
   amrex::Error("ngrow_distance invalid");
@@ -7546,8 +7545,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance=4
-    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance=4
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance>=4
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance>=4
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
     int tid_current=ns_thread();
@@ -7558,7 +7557,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
-     &ngrow_distance,
      &nparts,
      &nparts_ghost,
      tilelo,tilehi,
@@ -7750,7 +7748,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
   amrex::Error("ngrow_distance invalid");
@@ -7785,7 +7784,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  } else
   amrex::Error("state_var_mf->nComp()!=nden");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
   amrex::Error("ngrow_distance invalid");
@@ -7846,9 +7846,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
     FArrayBox& lsCPfab=(*localMF[LS_NRM_CP_MF])[mfi];
     FArrayBox& lsFDfab=(*localMF[LS_NRM_FD_GNBC_MF])[mfi];
 
-    FArrayBox& statefab=(*state_var_mf)[mfi]; //ngrow_distance=4
-    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance=4
-    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance=4
+    FArrayBox& statefab=(*state_var_mf)[mfi]; //ngrow_distance>=4
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance>=4
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance>=4
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
     FArrayBox& histfab=(*localMF[HISTORY_MAC_MF+data_dir])[mfi]; 
@@ -7894,7 +7894,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
-     &ngrow_distance,
      &nparts,
      &nparts_ghost,
      &nden,
@@ -7972,7 +7971,8 @@ void NavierStokes::assimilate_state_data() {
   amrex::Error("nstate invalid in cpp assimilate");
  }
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
   amrex::Error("ngrow_distance invalid");
@@ -8158,7 +8158,6 @@ void NavierStokes::regenerate_from_eulerian(Real cur_time) {
     // fort_initdatasolid is declared in PROB.F90
    fort_initdatasolid(
      &nparts,
-     &ngrow_make_distance,
      im_solid_map.dataPtr(),
      &cur_time,
      tilelo,tilehi,
@@ -8388,7 +8387,6 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
       &im_part, 
       &nparts,
       &partid, 
-      &ngrow_make_distance, 
       &nFSI, 
       xlo,dx,
       snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -8442,8 +8440,8 @@ void NavierStokes::build_moment_from_FSILS(Real cur_time) {
  if (LS_new.nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("LS_new.nComp()!=num_materials*(1+AMREX_SPACEDIM)");
 
- if (ngrow_make_distance!=3)
-  amrex::Error("ngrow_make_distance!=3");
+ if (ngrow_make_distance<3)
+  amrex::Error("ngrow_make_distance<3");
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>num_materials))
   amrex::Error("nparts invalid");
@@ -8493,7 +8491,6 @@ void NavierStokes::build_moment_from_FSILS(Real cur_time) {
     &finest_level,
     &nFSI, 
     &nparts,
-    &ngrow_make_distance, 
     im_solid_map.dataPtr(),
     xlo,dx,
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -8628,7 +8625,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
  std::string local_caller_string="Transfer_FSI_To_STATE";
 
- if (ngrow_make_distance!=3)
+ if (ngrow_make_distance<3)
   amrex::Error("ngrow_make_distance invalid");
 
  int nparts=im_solid_map.size();
@@ -9169,7 +9166,7 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("FSI_sub_operation!=SUB_OP_FSI_DEFAULT");
 
     // FSI_MF allocated in FSI_make_distance
-   if (ngrow_make_distance!=3)
+   if (ngrow_make_distance<3)
     amrex::Error("ngrow_make_distance invalid");
    debug_ngrow(FSI_MF,ngrow_make_distance,local_caller_string);
    if (localMF[FSI_MF]->nComp()!=nFSI)
@@ -9526,7 +9523,7 @@ void NavierStokes::ns_header_msg_level(
    } else
     amrex::Error("expecting level==finest_level");
 
-   if (ngrow_make_distance!=3)
+   if (ngrow_make_distance<3)
     amrex::Error("ngrow_make_distance invalid");
    if ((FSI_sub_operation!=SUB_OP_FSI_CLEAR_LAG_DATA)&&
        (FSI_sub_operation!=SUB_OP_FSI_COPY_TO_LAG_DATA)&&
@@ -12914,14 +12911,14 @@ void NavierStokes::tensor_extrapolation() {
       int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
 
       MultiFab* tensor_source_mf=
-       getStateTensor(4,scomp_tensor,
+       getStateTensor(ngrow_distance,scomp_tensor,
          ENUM_NUM_TENSOR_TYPE_REFINE,
          cur_time_slab);
 
       //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
       //called from "make_physics_varsALL" which was called after
       //the phase change update and before this routine was called.
-      resize_levelset(4,LEVELPC_MF);
+      resize_levelset(ngrow_distance,LEVELPC_MF);
 
       if (thread_class::nthreads<1)
        amrex::Error("thread_class::nthreads invalid");
@@ -13233,7 +13230,10 @@ void NavierStokes::check_grid_places() {
 void 
 NavierStokes::prepare_mask_nbr(int ngrow) {
 
- if (ngrow_distance!=4)
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
+  //do nothing
+ } else
   amrex::Error("ngrow_distance invalid");
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
@@ -13388,15 +13388,16 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   probhi[dir]=geom.ProbHi(dir);
  }
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
-  amrex::Error("expecting (ngrow_distance==4)");
+  amrex::Error("expecting (ngrow_distance>=4)");
 
- if (ngrow_make_distance==3) {
+ if (ngrow_make_distance==ngrow_distance-1) {
   // do nothing
  } else
-  amrex::Error("expecting (ngrow_make_distance==3)");
+  amrex::Error("expecting (ngrow_make_distance==ngrow_distance-1)");
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -13758,8 +13759,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
-    &n_normal,
-    &ngrow_make_distance);
+    &n_normal);
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_FD_NODE_NORMAL,"level_phase_change_rate");
@@ -13818,8 +13818,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     fablo,fabhi,
     &bfact,
     xlo,dx,
-    &n_normal,
-    &ngrow_make_distance);
+    &n_normal);
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_NODE_TO_CELL,"level_phase_change_rate");
@@ -13914,7 +13913,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nucleation_flag,
      &level,
      &finest_level,
-     &ngrow_distance,
      &nstate,
      &nburning,
      &ntsat,
@@ -13998,7 +13996,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nucleation_flag,
      &level,
      &finest_level,
-     &ngrow_distance,
      &nstate,
      &nburning,
      &ntsat,
@@ -14138,10 +14135,13 @@ NavierStokes::level_phase_change_rate_extend() {
  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ncomp");
 
- if (ngrow_make_distance!=3)
-  amrex::Error("expecting ngrow_make_distance==3");
- if (ngrow_distance!=4)
-  amrex::Error("expecting ngrow_distance==4");
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("expecting ngrow_make_distance==ngrow_distance-1");
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
+  //do nothing
+ } else
+  amrex::Error("expecting ngrow_distance>=4");
 
  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
@@ -14314,8 +14314,8 @@ NavierStokes::level_DRAG_extend() {
  if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("localMF[DRAG_MF] incorrect ncomp");
 
- if (ngrow_make_distance!=3)
-  amrex::Error("expecting ngrow_make_distance==3");
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("expecting ngrow_make_distance==ngrow_distance-1");
 
  if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[DRAG_MF] incorrect ngrow");
@@ -14382,8 +14382,8 @@ NavierStokes::level_DRAG_extend() {
   }
 
   int ngrow=ngrow_distance;
-  if (ngrow!=4)
-   amrex::Error("expecting ngrow==4");
+  if (ngrow<4)
+   amrex::Error("expecting ngrow>=4");
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -14634,10 +14634,11 @@ NavierStokes::level_phase_change_convert(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_convert");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_distance==4");
+  amrex::Error("expecting ngrow_distance>=4");
 
  int iten;
  get_iten_cpp(im_outer,im_opp_outer,iten); //declared in NavierStokes2.cpp
@@ -15037,10 +15038,11 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_species_reaction");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_distance==4");
+  amrex::Error("expecting ngrow_distance>=4");
 
  int nstate=STATE_NCOMP;
 
@@ -15140,10 +15142,11 @@ NavierStokes::phase_change_redistributeALL() {
  if (level!=0)
   amrex::Error("level invalid phase_change_redistributeALL");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_distance==4");
+  amrex::Error("expecting ngrow_distance>=4");
 
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -15542,10 +15545,11 @@ NavierStokes::level_phase_change_redistribute(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_redistribute");
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_distance==4");
+  amrex::Error("expecting ngrow_distance>=4");
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,local_caller_string);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
@@ -18432,8 +18436,8 @@ void NavierStokes::GetDragALL() {
  } else 
   amrex::Error("GetDragALL: CELL_VISC_MATERIAL_MF invalid ncomp");
  
-  //ngrow_make_distance=3
-  //ngrow_distance=4
+  //ngrow_make_distance=ngrow_distance-1
+  //ngrow_distance>=4
  debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
  debug_ixType(DRAG_MF,-1,local_caller_string);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
@@ -22889,8 +22893,8 @@ NavierStokes::volWgtSumALL(
  }
 
   // initializes DRAG_MF to 0.0.
-  // ngrow_make_distance=3
-  // ngrow_distance=4
+  // ngrow_make_distance=ngrow_distance-1
+  // ngrow_distance>=4
  allocate_array(ngrow_make_distance,N_DRAG,-1,DRAG_MF);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
@@ -25920,7 +25924,8 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
  int finest_level=parent->finestLevel();
  const Real* dx = geom.CellSize();
 
- if (ngrow_distance==4) {
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
   // do nothing
  } else
   amrex::Error("ngrow_distance invalid");
@@ -26135,8 +26140,7 @@ NavierStokes::makeStateDist() {
     fablo,fabhi,&bfact,
     &NS_geometry_coord,
     xlo,dx,
-    &cur_time_slab,
-    &ngrow_distance);
+    &cur_time_slab);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_STENINIT,"makeStateDist");
@@ -26230,8 +26234,7 @@ NavierStokes::makeStateDist() {
     vofbc.dataPtr(),
     &NS_geometry_coord,
     xlo,dx,
-    &cur_time_slab,
-    &ngrow_distance);
+    &cur_time_slab);
  } // mfi
 } // omp
 
@@ -26655,7 +26658,10 @@ NavierStokes::makeStateCurv(int project_option,
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid makeStateCurv");
 
- if (ngrow_distance!=4)
+ if ((ngrow_distance>=4)&&
+     (ngrow_distance<=64)) {
+  // do nothing
+ } else
   amrex::Error("ngrow_distance invalid");
 
  Vector< Real > curv_min_local;
@@ -26808,8 +26814,7 @@ NavierStokes::makeStateCurv(int project_option,
      &cur_time_slab,
      &visc_coef,
      &unscaled_min_curvature_radius,
-     &num_curv,
-     &ngrow_distance);
+     &num_curv);
   } // mfi
 } //omp
   ns_reconcile_d_num(LOOP_CURVSTRIP,"makeStateCurv");

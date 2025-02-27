@@ -131,7 +131,6 @@ ns.material_type=0 999 # INCOMPRESSIBLE
 # ns.law_of_the_wall=0 0  # make 1 for law of the wall
 ns.FSI_flag=0 1  # 1 (GLOBALDIST), 2 (cas file)
 #ns.FSI_refine_factor=1 0
-#ns.FSI_bounding_box_ngrow=3 3
 #ns.heatviscconst=0.02588 0.02588
 ns.heatviscconst=0.0 0.0 # no thermal diffusion (so that test runs quickly)
 # ns.include_viscous_heating=0

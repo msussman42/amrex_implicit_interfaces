@@ -34,7 +34,6 @@
 #define CTMLunderflow (1.0D-20)
 
 #define BoundingBoxRadNode 2
-#define BoundingBoxRadCell 3
 
 module CLSVOFCouplerIO
 use amrex_fort_module, only : amrex_real
@@ -10017,7 +10016,6 @@ integer, INTENT(inout) :: FSI_touch_flag
 integer :: lev77_local
 integer :: tid_local
 integer :: tilenum_local
-integer :: ngrow_local
 integer :: nFSI_local
 real(amrex_real) :: time_local
 real(amrex_real) :: dt_local
@@ -10041,7 +10039,6 @@ real(amrex_real), dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
  lev77_local=-1
  tid_local=0
  tilenum_local=0
- ngrow_local=3
  nFSI_local=NCOMP_FSI
  time_local=0.0d0
  dt_local=1.0d0
@@ -10068,7 +10065,6 @@ real(amrex_real), dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    auxcomp, &
    fort_num_local_aux_grids, &
    auxcomp, &
-   ngrow_local, &
    nFSI_local, &
    FSI_operation, &
    FSI_touch_flag, &
@@ -10215,7 +10211,7 @@ integer, PARAMETER :: aux_unit_id=14
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
   aux_FSI(auxcomp)%refine_factor=1
-  aux_FSI(auxcomp)%bounding_box_ngrow=3
+  aux_FSI(auxcomp)%bounding_box_ngrow=ngrow_make_distance
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
 
@@ -10637,7 +10633,7 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
     print *,"FSI_refine_factor(im_sanity_check) invalid,CLSVOF_ReadHeader"
     stop
    endif
-   if (FSI_bounding_box_ngrow(im_sanity_check).ne.3) then
+   if (FSI_bounding_box_ngrow(im_sanity_check).ne.ngrow_make_distance) then
     print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid,CLSVOF_ReadHeader"
     stop
    endif
@@ -11339,7 +11335,7 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
        stop
       endif 
 
-      if (FSI_bounding_box_ngrow(im_part).eq.3) then
+      if (FSI_bounding_box_ngrow(im_part).eq.ngrow_make_distance) then
        FSI(part_id)%bounding_box_ngrow=FSI_bounding_box_ngrow(im_part)
       else
        print *,"FSI_bounding_box_ngrow(im_part) invalid"
@@ -11483,7 +11479,7 @@ integer, PARAMETER :: debug_overlap_element=0
 
  local_iband=FSI(part_id)%bounding_box_ngrow
  local_max_side=FSI(part_id)%max_side_len_refined
- if ((local_iband.eq.BoundingBoxRadCell).and. &
+ if ((local_iband.eq.ngrow_make_distance).and. &
      (local_max_side.gt.zero)) then
   do dir=1,3
    local_buffer(dir)=local_iband*dx3D(dir)+local_max_side
@@ -12600,7 +12596,6 @@ subroutine CLSVOF_InitBox(  &
   im_part, &  ! =1...fort_num_local_aux_grids for aux (auxcomp)
   nparts, &   ! =fort_num_local_aux_grids for aux
   part_id, &  ! =(auxcomp)
-  ngrow_make_distance_in, & ! =3 for all cases
   nFSI, & ! =NCOMP_FSI (aux)
   FSI_operation, &
   touch_flag, &
@@ -12633,7 +12628,6 @@ IMPLICIT NONE
   integer, INTENT(in) :: im_part
   integer, INTENT(in) :: nparts
   integer, INTENT(in) :: part_id
-  integer, INTENT(in) :: ngrow_make_distance_in
   integer, INTENT(in) :: nFSI
   integer, INTENT(in) :: FSI_operation
   integer, INTENT(inout) :: touch_flag
@@ -12834,7 +12828,7 @@ IMPLICIT NONE
   endif
 
   local_iband=FSI_mesh_type%bounding_box_ngrow
-  if (local_iband.eq.BoundingBoxRadCell) then
+  if (local_iband.eq.ngrow_make_distance) then
    ! do nothing
   else
    print *,"local_iband invalid"
@@ -13009,22 +13003,29 @@ IMPLICIT NONE
     print *,"FSI_operation invalid in CLSVOF_InitBox"
     stop
    endif
-   if (ngrow_make_distance_in.ne.3) then
-    print *,"ngrow_make_distance_in invalid"
+   if (ngrow_distance.eq.ngrow_make_distance+1) then
+    !do nothing
+   else
+    print *,"ngrow_distance invalid: ",ngrow_distance
+    stop
+   endif
+
+   if (ngrow_make_distance.lt.3) then
+    print *,"ngrow_make_distance invalid"
     print *,"CLSVOF_InitBox"
-    print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+    print *,"ngrow_make_distance=",ngrow_make_distance
     stop
    endif
 
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     FSIdata3D, &
-    ngrow_make_distance_in,-1)
+    ngrow_make_distance,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     xdata3D, &
-    ngrow_make_distance_in,-1)
+    ngrow_make_distance,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     masknbr3D, &
-    ngrow_make_distance_in,-1)
+    ngrow_make_distance,-1)
 
    if (lev77.eq.-1) then
     num_elements_container=FSI_mesh_type%NumIntElemsFINE
@@ -13166,7 +13167,7 @@ IMPLICIT NONE
       endif
      
        ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
-       ! BoundingBoxRadCell determines buffer zone.
+       ! ngrow_make_distance determines buffer zone.
       call find_grid_bounding_box( &
         FSI_mesh_type, &
         part_id, &
@@ -14184,8 +14185,8 @@ IMPLICIT NONE
 
    else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
 
-     !FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance_in
-     !FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance_in
+     !FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance
+     !FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance
     allocate(old_FSIdata( &
          FSI_growlo3D(1):FSI_growhi3D(1), &
          FSI_growlo3D(2):FSI_growhi3D(2), &
@@ -14196,7 +14197,7 @@ IMPLICIT NONE
 
     call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
      old_FSIdata_ptr, &
-     ngrow_make_distance_in,-1)
+     ngrow_make_distance,-1)
 
     do k=FSI_growlo3D(3),FSI_growhi3D(3)
     do j=FSI_growlo3D(2),FSI_growhi3D(2)
@@ -14875,7 +14876,6 @@ end subroutine CLSVOF_InitBox
        im_part, & ! 1..num_materials
        nparts, &
        part_id, &
-       ngrow_make_distance_in, &
        nFSI, &
        FSI_operation, &
        time, &
@@ -14908,7 +14908,6 @@ end subroutine CLSVOF_InitBox
       integer, INTENT(in) :: im_part ! 1..num_materials
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: part_id
-      integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: nFSI
       integer, INTENT(in) :: FSI_operation
       real(amrex_real), INTENT(in) :: time
@@ -15116,28 +15115,28 @@ end subroutine CLSVOF_InitBox
         print *,"FSI_operation invalid"
         stop
        endif
-       if (ngrow_make_distance_in.ne.3) then
-        print *,"ngrow_make_distance_in invalid"
+       if (ngrow_make_distance.lt.3) then
+        print *,"ngrow_make_distance invalid"
         print *,"CLSVOF_Copy_To_LAG"
-        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+        print *,"ngrow_make_distance=",ngrow_make_distance
         stop
        endif
 
        call checkbound3D_array(FSI_lo,FSI_hi, &
         xdata3D, &
-        ngrow_make_distance_in,-1)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressdata3D, &
-        ngrow_make_distance_in,-1)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressflag3D, &
-        ngrow_make_distance_in,-1)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         masknbr3D, &
-        ngrow_make_distance_in,-1)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         maskfiner3D, &
-        ngrow_make_distance_in,-1)
+        ngrow_make_distance,-1)
 
        num_nodes_container=contain_elem(lev77)% &
                            level_node_data(tid+1,part_id,tilenum+1)% &
@@ -15231,7 +15230,6 @@ end subroutine CLSVOF_InitBox
 
         call find_grid_bounding_box_node( &
          FSI(part_id), &
-         ngrow_make_distance_in, &
          null_probe_size, &
          local_xnot, &
          FSI_lo,FSI_hi, &
@@ -15378,7 +15376,6 @@ end subroutine CLSVOF_InitBox
 
            call find_grid_bounding_box_node( &
             FSI(part_id), &
-            ngrow_make_distance_in, &
             probe_size, &
             xprobe, &
             FSI_lo,FSI_hi, &
@@ -16439,7 +16436,7 @@ IMPLICIT NONE
  endif
 
  local_iband=FSI_mesh_type%bounding_box_ngrow
- if (local_iband.ne.BoundingBoxRadCell) then
+ if (local_iband.ne.ngrow_make_distance) then
   print *,"local_iband invalid"
   stop
  endif
@@ -16623,7 +16620,6 @@ end subroutine find_grid_bounding_box
 
 subroutine find_grid_bounding_box_node( &
  FSI_mesh_type, &
- ngrow_make_distance_in, &
  probe_size, &
  xnot, &
  FSI_lo,FSI_hi, &
@@ -16636,7 +16632,6 @@ use global_utility_module
 IMPLICIT NONE
 
  type(mesh_type), INTENT(in) :: FSI_mesh_type
- integer, INTENT(in) :: ngrow_make_distance_in
  real(amrex_real), INTENT(in) :: probe_size
  real(amrex_real), INTENT(in) :: xnot(3)
  integer, INTENT(in) :: FSI_lo(3),FSI_hi(3)
@@ -16664,10 +16659,10 @@ IMPLICIT NONE
   endif
  enddo
 
- if (ngrow_make_distance_in.ne.3) then
-  print *,"ngrow_make_distance_in invalid"
+ if (ngrow_make_distance.lt.3) then
+  print *,"ngrow_make_distance invalid"
   print *,"find_grid_bounding_box_node"
-  print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+  print *,"ngrow_make_distance=",ngrow_make_distance
   stop
  endif
 
@@ -16689,18 +16684,18 @@ IMPLICIT NONE
 
  call checkbound3D_array(FSI_lo,FSI_hi, &
    xdata3D, &
-   ngrow_make_distance_in,-1)
+   ngrow_make_distance,-1)
 
  interp_support=BoundingBoxRadNode
 
  do dir=1,3
   ngrowtest=FSI_lo(dir)-FSI_growlo(dir)
-  if (ngrowtest.ne.ngrow_make_distance_in) then
+  if (ngrowtest.ne.ngrow_make_distance) then
    print *,"ngrowtest invalid1 ",ngrowtest
    stop
   endif
   ngrowtest=FSI_growhi(dir)-FSI_hi(dir)
-  if (ngrowtest.ne.ngrow_make_distance_in) then
+  if (ngrowtest.ne.ngrow_make_distance) then
    print *,"ngrowtest invalid2 ",ngrowtest
    stop
   endif
@@ -16942,7 +16937,7 @@ logical :: theboss
     print *,"FSI_refine_factor(im_sanity_check) invalid, CLSVOF_ReadNodes"
     stop
    endif
-   if (FSI_bounding_box_ngrow(im_sanity_check).ne.3) then
+   if (FSI_bounding_box_ngrow(im_sanity_check).ne.ngrow_make_distance) then
     print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid, CLSVOF_ReadNodes"
     stop
    endif

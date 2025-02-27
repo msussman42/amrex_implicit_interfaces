@@ -211,7 +211,6 @@ namespace amrex{
        int* num_LS_extrap,
        int* num_LS_extrap_iter,
        int* LS_extrap_iter,
-       int* ngrow_distance,
        int* constant_density_all_time);
 
 
@@ -581,8 +580,7 @@ namespace amrex{
        Real* time,
        Real* visc_coef,
        Real* unscaled_min_curvature_radius,
-       int* num_curv,
-       int* ngrow_distance);
+       int* num_curv);
 
      void fort_init_particle_container(
         const char* caller_string,

@@ -899,8 +899,8 @@ void NavierStokes::avgDownDRAG_MF() {
 
  std::string local_caller_string="avgDownDRAG_MF";
 
-  //ngrow_make_distance=3
-  //ngrow_distance=4
+  //ngrow_make_distance=ngrow_distance-1
+  //ngrow_distance>=4
  debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
  debug_ixType(DRAG_MF,-1,local_caller_string);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
@@ -7179,7 +7179,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     amrex::Error("lsdata incorrect ncomp");
    if (lsdata->nGrow()!=ngrow_distance)
     amrex::Error("lsdata->nGrow()!=ngrow_distance");
-   if (ngrow_distance!=4)
+   if (ngrow_distance<4)
     amrex::Error("ngrow_distance invalid");
 
    if (thread_class::nthreads<1)
@@ -7269,7 +7269,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       &num_LS_extrap[tid_current],
       &num_LS_extrap_iter,
       &LS_extrap_iter,
-      &ngrow_distance,
       constant_density_all_time.dataPtr());
 
    }  // mfi
@@ -9434,7 +9433,7 @@ void NavierStokes::VOF_Recon(Real time,
  int max_level = parent->maxLevel();
  int nsteps=parent->levelSteps(0);
 
- if (ngrow_distance!=4)
+ if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
 
  int bfact=parent->Space_blockingFactor(level);

@@ -358,6 +358,9 @@ public:
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<int> store_refine_density_data; // refine density parameter
 
+    static int ngrow_distance;  // should always be at least 4
+    static int ngrow_make_distance;  // should always be at least 3
+
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
 
@@ -1632,7 +1635,7 @@ protected:
     static Vector<int> FSI_refine_factor;  
      // bounding box ngrow for finding box of cells to visit for a 
      // given lagrangian element.
-    static Vector<int> FSI_bounding_box_ngrow;
+    static Vector<int> FSI_bounding_box_ngrow; //def: ngrow_make_distance
 
     static Vector<int> ns_max_grid_size;
 
@@ -1860,8 +1863,6 @@ protected:
     static Vector<int> constant_volume_mdot; // 1..2*num_interfaces
     static Vector<int> constant_density_all_time; // 1..num_materials, def=1
     static int is_phasechange;
-    static int ngrow_distance;  // should always be at least 4
-    static int ngrow_make_distance;  // should always be at least 3
 
     static int num_elements_blobclass;
     static int BLB_MATRIX;
