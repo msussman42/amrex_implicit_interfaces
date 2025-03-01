@@ -185,7 +185,7 @@
       integer, INTENT(in) :: ngrow_make_distance_in
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: im_solid_map(nparts)
-      real(amrex_real), INTENT(in) :: h_small ! smallest mesh size from the max_level
+      real(amrex_real), INTENT(in) :: h_small !smallest mesh size from the max_level
       real(amrex_real), INTENT(in) :: cur_time
       real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: FSI_refine_factor(num_materials)
@@ -312,7 +312,9 @@
        print *,"ioproc invalid"
        stop
       endif
-      if (ngrow_make_distance.lt.3) then
+      if ((ngrow_make_distance.lt.3).or. &
+          (ngrow_make_distance.ne.ngrow_distance-1).or. &
+          (ngrow_make_distance.ge.64)) then
        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
        stop
       endif
@@ -344,12 +346,16 @@
          stop
         endif
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then
-        if (ngrow_make_distance_in.lt.3) then
+
+        if ((ngrow_make_distance_in.lt.3).or. &
+            (ngrow_make_distance_in.ne.ngrow_make_distance).or. &
+            (ngrow_make_distance_in.ne.ngrow_distance-1)) then
          print *,"expecting ngrow_make_distance_in>=3"
          print *,"fort_headermsg 2b"
          print *,"ngrow_make_distance_in=",ngrow_make_distance_in
          stop
         endif
+
        else
         print *,"FSI_sub_operation invalid"
         stop
@@ -371,6 +377,16 @@
           local_caller_id
         stop
        endif
+
+       if ((ngrow_make_distance_in.lt.3).or. &
+           (ngrow_make_distance_in.ne.ngrow_make_distance).or. &
+           (ngrow_make_distance_in.ne.ngrow_distance-1)) then
+        print *,"expecting ngrow_make_distance_in>=3"
+        print *,"fort_headermsg OP_FSI_MAKE_DIST"
+        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+        stop
+       endif
+
       else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then 
        if (local_caller_id.eq.caller_FSI_make_distance) then
         !do nothing
@@ -379,6 +395,16 @@
           local_caller_id
         stop
        endif
+
+       if ((ngrow_make_distance_in.lt.3).or. &
+           (ngrow_make_distance_in.ne.ngrow_make_distance).or. &
+           (ngrow_make_distance_in.ne.ngrow_distance-1)) then
+        print *,"expecting ngrow_make_distance_in>=3"
+        print *,"fort_headermsg OP_FSI_MAKE_SIGN"
+        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+        stop
+       endif
+
       else
        print *,"FSI_operation invalid"
        stop
@@ -989,6 +1015,15 @@
         ! called only on the finest level (i.e. solid must be wholly
         ! contained on the finest level)
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then 
+
+        if ((ngrow_make_distance_in.lt.3).or. &
+            (ngrow_make_distance_in.ne.ngrow_make_distance).or. &
+            (ngrow_make_distance_in.ne.ngrow_distance-1)) then
+         print *,"expecting ngrow_make_distance_in>=3"
+         print *,"fort_headermsg SUB_OP_FSI_COPY_TO_LAG_DATA"
+         print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+         stop
+        endif
 
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*num_materials)) 
         stressdata3D_ptr=>stressdata3D
