@@ -56,11 +56,11 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #geometry.prob_hi   =  2.4 0.4 3.2
 #diameter=0.094cm 
 
-amr.n_cell    = 288 96 384
-#amr.n_cell    = 96 384
+amr.n_cell    = 144 48 192
+#amr.n_cell    = 48 192
 
-amr.max_level = 3 # max_level=3 finest
-ns.max_level_for_use = 1 
+amr.max_level = 4 # max_level=4 finest
+ns.max_level_for_use = 2
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
@@ -172,7 +172,8 @@ ns.denconst=1.0 0.00125335272 #water
 #ns.denconst=6.4 0.00125335272 #Galinstan
 ns.density_ceiling=10.0 1.0
 ns.density_floor=0.1 0.0001
-# reduce numerical dissipation
+#xblob=0 is default value since the cylinder extends the full x-axis in 3D
+#xblob=0 in 2D since the x-axis in 2d is the y-axis in 3d.
 ns.xblob=0.0
 #ns.yblob=1.2
 #ns.zblob=0.0
