@@ -72,6 +72,7 @@ ns.outflow_pressure=1.06e+6 # tank pressure at the impact plate
 #amr.n_cell    = 32 32 128
 amr.n_cell    = 32 128 #2D
 amr.max_level =  2
+ns.ngrow_distance=5 #ngrow_make_distance=4
 
 ns.xblob10=0.0
 ns.yblob9=0.0
@@ -153,6 +154,7 @@ ns.material_conservation_form=1 1 0
 ns.FSI_flag=0 0 8 
 #shear modulus
 #sqrt(6.8e+11)=824621
+#sqrt(2.5e+11)=500000
 #1PA=10 dynes/cm^2
 #aluminum shear modulus=25 GPa shear modulus=25x10^10 CGS units=2.5x10^11
 ns.elastic_viscosity=0.0 0.0 2.5e+11
