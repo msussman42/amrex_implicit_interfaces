@@ -10156,6 +10156,14 @@ real(amrex_real), allocatable :: raw_nodes(:,:)
 integer, allocatable :: raw_elements(:,:)
 integer, PARAMETER :: aux_unit_id=14
 
+ if ((ngrow_make_distance.ge.3).and. &
+     (ngrow_make_distance.eq.ngrow_distance-1)) then
+  !do nothing
+ else
+  print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+  stop
+ endif
+
  initflag=1
 
  if (aux_data_allocated.eq.0) then
@@ -10624,6 +10632,14 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
    ! do nothing
   else
    print *,"local_caller_id invalid in CLSVOF_ReadHeader"
+   stop
+  endif
+
+  if ((ngrow_make_distance.ge.3).and. &
+      (ngrow_make_distance.eq.ngrow_distance-1)) then
+   !do nothing
+  else
+   print *,"ngrow_make_distance invalid: ",ngrow_make_distance
    stop
   endif
 
@@ -11452,6 +11468,15 @@ real(amrex_real) local_max_side
 real(amrex_real) local_buffer(3)
 real(amrex_real) local_minnode,local_maxnode,local_avgnode,swap_node
 integer, PARAMETER :: debug_overlap_element=0
+
+
+ if ((ngrow_make_distance.ge.3).and. &
+     (ngrow_make_distance.eq.ngrow_distance-1)) then
+  !do nothing
+ else
+  print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+  stop
+ endif
 
  do dir=1,3
   if ((xmap3D(dir).ge.0).and. &
@@ -12827,11 +12852,19 @@ IMPLICIT NONE
    stop
   endif
 
+  if ((ngrow_make_distance.ge.3).and. &
+      (ngrow_make_distance.eq.ngrow_distance-1)) then
+   !do nothing
+  else
+   print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+   stop
+  endif
+
   local_iband=FSI_mesh_type%bounding_box_ngrow
   if (local_iband.eq.ngrow_make_distance) then
    ! do nothing
   else
-   print *,"local_iband invalid"
+   print *,"local_iband invalid: ",local_iband
    stop
   endif
 
@@ -15122,6 +15155,15 @@ end subroutine CLSVOF_InitBox
         stop
        endif
 
+       if ((ngrow_make_distance.ge.3).and. &
+           (ngrow_make_distance.le.63).and. &
+           (ngrow_make_distance.eq.ngrow_distance-1)) then
+        !do nothing
+       else
+        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+        stop
+       endif
+
        call checkbound3D_array(FSI_lo,FSI_hi, &
         xdata3D, &
         ngrow_make_distance,-1)
@@ -16429,15 +16471,24 @@ IMPLICIT NONE
    print *,"xmap3D invalid"
    stop
   endif
- enddo
+ enddo !dir=1,3
+
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
 
+ if ((ngrow_make_distance.ge.3).and. &
+     (ngrow_make_distance.eq.ngrow_distance-1)) then
+  !do nothing
+ else
+  print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+  stop
+ endif
+
  local_iband=FSI_mesh_type%bounding_box_ngrow
  if (local_iband.ne.ngrow_make_distance) then
-  print *,"local_iband invalid"
+  print *,"local_iband invalid: ",local_iband
   stop
  endif
 
@@ -16663,6 +16714,15 @@ IMPLICIT NONE
   print *,"ngrow_make_distance invalid"
   print *,"find_grid_bounding_box_node"
   print *,"ngrow_make_distance=",ngrow_make_distance
+  stop
+ endif
+
+ if ((ngrow_make_distance.ge.3).and. &
+     (ngrow_make_distance.le.63).and. &
+     (ngrow_make_distance.eq.ngrow_distance-1)) then
+  !do nothing
+ else
+  print *,"ngrow_make_distance invalid: ",ngrow_make_distance
   stop
  endif
 
@@ -16929,7 +16989,7 @@ logical :: theboss
     print *,"xmap3D invalid"
     stop
    endif
-  enddo
+  enddo !dir=1,3
 
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
@@ -16958,6 +17018,14 @@ logical :: theboss
   if (plot_interval.lt.-1) then
    print *,"plot_interval invalid"
    print *,"CLSVOF_ReadNodes"
+   stop
+  endif
+
+  if ((ngrow_make_distance.ge.3).and. &
+      (ngrow_make_distance.eq.ngrow_distance-1)) then
+   !do nothing
+  else
+   print *,"ngrow_make_distance invalid: ",ngrow_make_distance
    stop
   endif
 
