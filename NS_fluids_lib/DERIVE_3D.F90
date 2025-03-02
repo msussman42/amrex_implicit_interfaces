@@ -1844,7 +1844,8 @@ stop
               (fort_viscoelastic_model(im+1).eq.NN_FENE_P).or. &!FENE-P 
               (fort_viscoelastic_model(im+1).eq.NN_NEO_HOOKEAN).or. &
               (fort_viscoelastic_model(im+1).eq.NN_LINEAR_PTT)) then!linear PTT
-           print *,"T11, T22, T33 must be positive"
+           print *,"T11, T22, T33 must be positive (fort_dermagtrace) ", &
+             T11,T22,T33
            stop
           else if (fort_viscoelastic_model(im+1).eq.NN_MAIRE_ABGRALL_ETAL) then
            ! check nothing
@@ -1853,7 +1854,7 @@ stop
            stop
           endif
          else
-          print *,"T11,T22, or T33 is NaN"
+          print *,"T11,T22, or T33 is NaN (fort_dermagtrace): ",T11,T22,T33
           stop
          endif
         enddo !irefine

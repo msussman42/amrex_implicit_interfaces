@@ -5928,7 +5928,7 @@ else if (A_dim.eq.2) then
  enddo !j=1,3
 
 else
- print *,"A_dim invalid"
+ print *,"A_dim invalid: ",A_dim
  stop
 endif
 
@@ -5954,7 +5954,9 @@ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace(Q)=0
  ! trace(Q)=sum lambda(Q)  lambda(Q)=eigenvalues of Q
  ! Q is traceless if trace(Q)=0 at t=0.
- call project_to_traceless(A_local,A_dim)
+ if (1.eq.0) then
+  call project_to_traceless(A_local,A_dim)
+ endif
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018 Rapid Prototyping Journal
  ! Seungwon Shin, Jalel Chergui, Damir Juric
@@ -28155,11 +28157,13 @@ endif
 trace_A=zero
 do ii=1,3
  trace_A=trace_A+Q(ii,ii)+one
+ !NN_FENE_CR,NN_OLDROYD_B,NN_FENE_P,NN_LINEAR_PTT
  if (dumbbell_model.eq.1) then
   if (Q(ii,ii)+one.gt.zero) then
    ! do nothing
   else
    print *,"A=Q+I should be positive definite"
+   print *,"ii,Q(ii,ii) ",ii,Q(ii,ii)
    stop
   endif
   if (Q(3,3).gt.-one) then !hoop term
@@ -28182,6 +28186,7 @@ do ii=1,3
     ! do nothing
    else
     print *,"A=Q+I should be positive definite"
+    print *,"ii,Q(ii,ii) ",ii,Q(ii,ii)
     stop
    endif
    if (Q(3,3).gt.-one) then !hoop term
@@ -28272,10 +28277,11 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
    if (dumbbell_model.eq.0) then
      !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
+     !(I-dt W)Q(I-dt W^T)=Q-dt WQ-dt QW^T=Q-dt WQ+dt QW
     Smult_left(ii,jj)=-dt*W_Jaumann(ii,jj) 
     Smult_right(ii,jj)=Smult_left(ii,jj)
    else
-    print *,"dumbbell_model invalid"
+    print *,"dumbbell_model invalid: ",dumbbell_model
     stop
    endif
   else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental Neo-Hookean
@@ -28393,8 +28399,10 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    enddo
    enddo
    ! "S" from Maire et al corresponds to "Aadvect" times the 
-   ! bulk (or is it shear?) modulus.
+   ! shear modulus.
+   ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
    gamma_not=elastic_viscosity/100.0d0
+   gamma_not=elastic_viscosity*1.0D+20
 
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
    f_plastic=magA-Y_plastic_parm_scaled
@@ -28408,6 +28416,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
     else
      print *,"f_plastic or NP_dotdot_D invalid"
+     print *,"f_plastic=",f_plastic
+     print *,"NP_dotdot_D=",NP_dotdot_D
      stop
     endif
 
