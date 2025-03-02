@@ -28392,7 +28392,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     else if (magA.eq.zero) then
      NP(ii,jj)=zero
     else
-     print *,"magA invalid"
+     print *,"magA invalid (point_updatetensor): ",magA
      stop
     endif
     NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
