@@ -488,8 +488,8 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 // 1 => Oldroyd-B (NN_OLDROYD_B)
 //       (i) lambda'=lambda
 // 3=> incremental elastic model (NN_MAIRE_ABGRALL_ETAL) 
-//   DS/DT=2 (D0-Dp) - (SW-WS)
-//     mu=Lame coefficient (bulk modulus? or shear modulus?)
+//   DS/DT=2 mu (D0-Dp) - (SW-WS)
+//     mu=Lame coefficient (shear modulus)
 //     D0=D-tr(D)Id/DIM 
 //       =D if incompressible
 //     W=(1/2)(grad V - grad V^T)    W^T=-W
@@ -499,6 +499,14 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 //       (iii) X=I+dt W
 //       (iv) S^{n+1}=X A^advect X^T-I=
 //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
+//       from wikipedia:
+//       L=velocity gradient=grad V   L_ij=v_{j,i}
+//       symmetric part of L: E=(L+L^T)/2=strain rate tensor=D
+//       skew symmetric part of L: W=(L-L^T)/2=spin tensor
+//       L^{T}=J
+//       Let Q=S/mu
+//       dQ/dt (mu)=2 mu(D0-D^p)-(mu Q W - W mu Q)
+//       dQ/dt=2(D0-Dp)-(QW-WQ)
 // 5=> FENE-P (NN_FENE_P)
 //       (v) lambda'=lambda * (1-tr(A)/L^2)
 //       (vi) Q_t = -(1/lambda')(Q+I * tr(A)/L^{2})  
