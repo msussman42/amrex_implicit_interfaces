@@ -3044,7 +3044,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (imattype.eq.5) then
        call INTERNAL_ENTROPY_air(rho,entropy,internal_energy)
       else if (imattype.eq.14) then
-       call INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy)
+       call INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy,im)
       else if (imattype.eq.6) then
        print *,"define INTERNAL_ENTROPY_Marquina"
        stop
@@ -3233,7 +3233,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (imattype.eq.5) then
        call ENTROPY_air(rho,internal_energy,entropy)
       else if (imattype.eq.14) then
-       call ENTROPY_air_rho2(rho,internal_energy,entropy)
+       call ENTROPY_air_rho2(rho,internal_energy,entropy,im)
       else if (imattype.eq.6) then
        print *,"define ENTROPY_Marquina"
        stop
@@ -8096,7 +8096,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         !vapordist is declared in PROB.F90
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        dist(2)=-dist(1)
-       if (num_materials.eq.3) then
+       if (num_materials.eq.4) then
         if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
             (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
          outer_radius=half*radblob3
@@ -8121,6 +8121,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
          dist(1)=min(dist(1),-dist(3))
+         if (raddist.ge.inner_radius) then
+          dist(1)=inner_radius-raddist
+         endif
+         dist(4)=raddist-outer_radius
         else
          print *,"probtype.eq.36(310) invalid FSI_flag: ", &
            FSI_flag(3),probtype,axis_dir
@@ -8128,7 +8132,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 
        else
-        print *,"expecting num_materials=3: ",num_materials
+        print *,"expecting num_materials=4: ",num_materials
         stop
        endif
 

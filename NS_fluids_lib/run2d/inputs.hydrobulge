@@ -6,8 +6,8 @@ max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
 stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
 
-# liquid,jwl,aluminum side walls
-ns.num_materials=3 
+# liquid,jwl,aluminum side walls,gas
+ns.num_materials=4
 ns.num_species_var=0
 ns.num_divu_outer_sweeps=2
 
@@ -47,8 +47,8 @@ Lp.v = 0
 ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
 ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
-# liquid,jwl,aluminum side walls
-ns.mof_ordering=2 3 1 
+# liquid,jwl,aluminum side walls,gas
+ns.mof_ordering=2 3 1 4
 ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
@@ -105,7 +105,7 @@ mac.mac_abs_tol    = 1.0e-10
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # liquid,jwl,aluminum side walls
-ns.shock_timestep=1 1 2
+ns.shock_timestep=1 1 2 2
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
 ns.change_max=1.01    # scale back initial timestep
@@ -115,7 +115,7 @@ ns.visc_coef      = 1.0    # coef of viscosity
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0
 ns.gravityangle = 0.0
-ns.tension        = 0.0 0.0 0.0
+ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
 ns.density_ratio_relaxation_factor=1000.0
 
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -123,7 +123,7 @@ ns.sum_interval   = 1        # timesteps between computing mass
 
 ns.axis_dir=310 #hydrobulge!
 
-ns.vorterr=0.0 0.0 0.0 
+ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=0.1
@@ -132,16 +132,17 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
 
-# liquid,jwl,aluminum side walls
-ns.viscconst=0.01 0.0 10.0 
-ns.tempconst=293.0 2413.09282 293.0
-ns.pressure_error_cutoff=10.0 10.0 0.0
+# liquid,jwl,aluminum side walls,gas
+ns.viscconst=0.01 0.0 10.0 0.0001
+ns.tempconst=293.0 2413.09282 293.0 293.0
+ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 
-# liquid,jwl,aluminum side walls
+# liquid,jwl,aluminum side walls,gas
 # 35=EOS_wardlaw_tillotson
 # 3=EOS_NAjwl
-ns.material_type=35 3 0
-ns.material_conservation_form=1 1 0
+# 14=EOS_air_rho2
+ns.material_type=35 3 0 14
+ns.material_conservation_form=1 1 0 0
 
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
@@ -151,22 +152,22 @@ ns.material_conservation_form=1 1 0
 # 4 CTML
 # 5 rigid not prescribed
 # 8 EULERIAN FSI
-ns.FSI_flag=0 0 8 
+ns.FSI_flag=0 0 8 0
 #shear modulus
 #sqrt(6.8e+11)=824621
 #sqrt(2.5e+11)=500000
 #1PA=10 dynes/cm^2
 #aluminum shear modulus=25 GPa shear modulus=25x10^10 CGS units=2.5x10^11
-ns.elastic_viscosity=0.0 0.0 2.5e+11
-ns.elastic_time=0.0 0.0 1.0e+31
-ns.polymer_factor=0.0 0.0 0.0 
+ns.elastic_viscosity=0.0 0.0 2.5e+11 0.0
+ns.elastic_time=0.0 0.0 1.0e+31 0.0
+ns.polymer_factor=0.0 0.0 0.0 0.0
 #0=FENE-CR
 #1=Oldroyd B
 #3=incremental elastic
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 
+ns.viscoelastic_model=0 0 7 0
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
@@ -176,11 +177,11 @@ ns.tiling=false
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
-ns.heatviscconst=0.0 0.0 0.0 
+ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.include_viscous_heating=0
-# liquid,jwl,aluminum side walls
-ns.denconst=1.0 1.765 2.7
-ns.density_floor=0.001 0.001 2.69
+# liquid,jwl,aluminum side walls,air
+ns.denconst=1.0 1.765 2.7 0.00177
+ns.density_floor=0.001 0.001 2.69 0.001
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0

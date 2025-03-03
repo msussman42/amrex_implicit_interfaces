@@ -22674,11 +22674,15 @@ end subroutine print_visual_descriptor
       end subroutine tait_hydrostatic_pressure_density
 
        !material_type=14
-      subroutine EOS_air_rho2(rho,internal_energy,pressure)
+      subroutine EOS_air_rho2(rho,internal_energy,pressure,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,gamma_constant,pressure,omega
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,internal_energy
+      real(amrex_real),intent(out) :: pressure
+      real(amrex_real) omega
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,pressure_adjust,preshydro,rhohydro
       real(amrex_real) xpos(SDIM)
       integer, PARAMETER :: from_boundary_hydrostatic=0
@@ -22687,31 +22691,31 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"density negative"
+       print *,"density negative: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"internal energy cannot be negative"
+       print *,"internal energy cannot be negative: ",internal_energy
        stop
       endif
       if (cv.gt.zero) then
        !do nothing
       else
-       print *,"cv error"
+       print *,"cv error: ",cv
        stop
       endif
       if (cp.gt.zero) then
        !do nothing
       else
-       print *,"cp error"
+       print *,"cp error: ",cp
        stop
       endif
       if (omega.gt.zero) then
        !do nothing
       else
-       print *,"omega error"
+       print *,"omega error: ",omega
        stop
       endif
        ! (gamma-1)rho*cv T=(cp/cv -1)*rho*cv T=
@@ -22722,8 +22726,8 @@ end subroutine print_visual_descriptor
        ! R_universal/MolarMass=g cm^2 / (s^2 g K)  
        ! (g cm^2 / (s^2 g K)) *( g/cm^3 )  * K = (g/cm)/s^2
        ! pressure=dyne/m^2=g (cm/s^2 )/cm^2 = (g/cm)/s^2
-      pressure_adjust=omega*fort_denconst(2)* &
-         cv*fort_tempconst(2)
+      pressure_adjust=omega*fort_denconst(im)* &
+         cv*fort_tempconst(im)
 
        ! first material uses "EOS_tait_rhohydro" ?
       if (fort_material_type(1).eq.13) then
@@ -22748,34 +22752,44 @@ end subroutine print_visual_descriptor
       end subroutine EOS_air_rho2
 
 
-
-      subroutine EOS_air_rho2_ADIABAT(rho,pressure)
+      subroutine EOS_air_rho2_ADIABAT(rho,pressure,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,gamma_constant,pressure
+      integer,intent(in) :: im
+      real(amrex_real),intent(in) :: rho
+      real(amrex_real),intent(out) :: pressure
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,rhohydro,omega
       real(amrex_real) RHOI,PI
       real(amrex_real) xpos(SDIM)
       integer, PARAMETER :: from_boundary_hydrostatic=0
 
-      RHOI=fort_denconst(2)
+      RHOI=fort_denconst(im)
       call general_hydrostatic_pressure(PI)
     
       call air_parms(R,cp,cv,gamma_constant,omega)
-      if (RHOI.le.zero) then
+      if (RHOI.gt.zero) then
+       !do nothing
+      else
        print *,"RHOI invalid"
        stop
       endif
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif
@@ -22799,15 +22813,20 @@ end subroutine print_visual_descriptor
       end subroutine EOS_air_rho2_ADIABAT
 
 
-      subroutine ENTROPY_air_rho2(rho,internal_energy,entropy)
+      subroutine ENTROPY_air_rho2(rho,internal_energy,entropy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,pressure,entropy,press_adiabat
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,internal_energy
+      real(amrex_real),intent(out) :: entropy
+      real(amrex_real) pressure,press_adiabat
 
-      call EOS_air_rho2(rho,internal_energy,pressure)
-      call EOS_air_rho2_ADIABAT(rho,press_adiabat)
-      if (press_adiabat.le.zero) then
+      call EOS_air_rho2(rho,internal_energy,pressure,im)
+      call EOS_air_rho2_ADIABAT(rho,press_adiabat,im)
+      if (press_adiabat.gt.zero) then
+       !do nothing
+      else
        print *,"press_adiabat invalid"
        stop
       endif
@@ -22816,26 +22835,34 @@ end subroutine print_visual_descriptor
       return
       end subroutine ENTROPY_air_rho2
 
-      subroutine INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy)
+      subroutine INTERNAL_ENTROPY_air_rho2(rho,entropy,internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,entropy,internal_energy
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,entropy
+      real(amrex_real),intent(out) :: internal_energy
       real(amrex_real) press_adiabat,unit_internal_energy,unit_press
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (entropy.le.zero) then
+      if (entropy.gt.zero) then
+       !do nothing
+      else
        print *,"entropy invalid"
        stop
       endif
-      call EOS_air_rho2_ADIABAT(rho,press_adiabat)
+      call EOS_air_rho2_ADIABAT(rho,press_adiabat,im)
       unit_internal_energy=one
-      call EOS_air_rho2(rho,unit_internal_energy,unit_press)
+      call EOS_air_rho2(rho,unit_internal_energy,unit_press,im)
       internal_energy=press_adiabat*entropy/unit_press
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal_energy invalid"
        stop
       endif
@@ -22844,38 +22871,46 @@ end subroutine print_visual_descriptor
       end subroutine INTERNAL_ENTROPY_air_rho2
 
 
-
-
-      subroutine SOUNDSQR_air_rho2(rho,internal_energy,soundsqr)
+      subroutine SOUNDSQR_air_rho2(rho,internal_energy,soundsqr,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,gamma_constant,pressure,omega
-      real(amrex_real) soundsqr
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,internal_energy
+      real(amrex_real) gamma_constant,pressure,omega
+      real(amrex_real), intent(out) :: soundsqr
       real(amrex_real) cp,cv,R,pressure_adjust,preshydro,rhohydro
       real(amrex_real) xpos(SDIM)
       integer, PARAMETER :: from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy cannot be <=0"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then 
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif
-      pressure_adjust=omega*fort_denconst(2)* &
-         cv*fort_tempconst(2)
+      pressure_adjust=omega*fort_denconst(im)* &
+         cv*fort_tempconst(im)
       if (fort_material_type(1).eq.13) then
        if (SDIM.eq.2) then
         xpos(SDIM)=yblob
@@ -22898,63 +22933,84 @@ end subroutine print_visual_descriptor
       end subroutine SOUNDSQR_air_rho2
 
 
-      subroutine INTERNAL_air_rho2(rho,temperature,internal_energy)
+      subroutine INTERNAL_air_rho2(rho,temperature,internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,gamma_constant
+      integer, intent(in) :: im
+      real(amrex_real),intent(in) :: rho,temperature
+      real(amrex_real),intent(out) :: internal_energy
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,omega
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       !do nothing
+      else
        print *,"temperature cannot be <=0 in internal_air_rho2"
        print *,temperature, rho, R, cp, cv
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
 
       internal_energy=cv*temperature
 
       return
-      end subroutine
+      end subroutine INTERNAL_air_rho2
 
 
-
-      subroutine TEMPERATURE_air_rho2(rho,temperature,internal_energy)
+      subroutine TEMPERATURE_air_rho2(rho,temperature,internal_energy,im)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,gamma_constant
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) ::  temperature
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,omega
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy cannot be <=0 ",internal_energy
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
 
@@ -22962,7 +23018,6 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine TEMPERATURE_air_rho2
-
 
 
 ! e=c_v T
@@ -24513,7 +24568,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.5) then
        call EOS_air(rho,internal_energy,pressure)
       else if (imattype.eq.14) then
-       call EOS_air_rho2(rho,internal_energy,pressure)
+       call EOS_air_rho2(rho,internal_energy,pressure,im)
       else if (imattype.eq.6) then
        call EOS_Marquina(rho,internal_energy,pressure)
       else if (imattype.eq.7) then
@@ -24665,7 +24720,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.5) then
        call SOUNDSQR_air(rho,internal_energy,soundsqr)
       else if (imattype.eq.14) then
-       call SOUNDSQR_air_rho2(rho,internal_energy,soundsqr)
+       call SOUNDSQR_air_rho2(rho,internal_energy,soundsqr,im)
       else if (imattype.eq.6) then
        call SOUNDSQR_Marquina(rho,internal_energy,soundsqr)
       else if (imattype.eq.7) then
@@ -24763,7 +24818,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.5) then
        call INTERNAL_air(rho,temperature,local_internal_energy)
       else if (imattype.eq.14) then
-       call INTERNAL_air_rho2(rho,temperature,local_internal_energy)
+       call INTERNAL_air_rho2(rho,temperature,local_internal_energy,im)
       else if (imattype.eq.6) then
        call INTERNAL_Marquina(rho,temperature,local_internal_energy)
       else if (imattype.eq.7) then
@@ -24857,7 +24912,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.5) then
        call TEMPERATURE_air(rho,temperature,internal_energy)
       else if (imattype.eq.14) then
-       call TEMPERATURE_air_rho2(rho,temperature,internal_energy)
+       call TEMPERATURE_air_rho2(rho,temperature,internal_energy,im)
       else if (imattype.eq.6) then
        call TEMPERATURE_Marquina(rho,temperature,internal_energy)
       else if (imattype.eq.7) then
@@ -25737,13 +25792,13 @@ enddo ! ispec
 if (rho.gt.zero) then
  ! do nothing
 else
- print *,"rho invalid"
+ print *,"rho invalid (EOS_material) ",rho
  stop
 endif
 if (internal_energy.gt.zero) then
  ! do nothing
 else
- print *,"e invalid"
+ print *,"e invalid (EOS_material) ",internal_energy
  stop
 endif
 
