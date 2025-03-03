@@ -114,6 +114,8 @@ fork_job(int fork_id) {
  ParmParse ppns("ns");
 
   // LSA = Linear Stability Analysis
+  // ABEL OKOJUNU
+  // LSA_nsteps_power_method=number of power method iterations.
  int local_LSA_nsteps_power_method=0;
  ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
  if (local_LSA_nsteps_power_method>=0) {
@@ -136,11 +138,20 @@ fork_job(int fork_id) {
   //do nothing
  } else if (local_LSA_nsteps_power_method>0) {
 
+   //ABEL OKOJUNO
+   //for LSA, max_step>=1, and 
+   //LSA_steps=(max_step-initial_levelSteps)>=1
+   //(initial_levelSteps=amrptr->levelSteps(0))
+   //probably best to have 
+   //LSA_steps=(max_step-initial_levelSteps)>1 so that
+   //the first step is the "forcing step" and the next step(s) is/are the
+   //resultant "perturbed" state.
   if (max_step>=1) {
    //do nothing
   } else
    amrex::Error("expecting 1<=max_step");
 
+   //time step must be fixed if LSA.
   ppns.queryAdd("fixed_dt",local_fixed_dt);
   if (local_fixed_dt>0.0) {
    //do nothing
@@ -329,7 +340,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, March 02, 2025, 16:40pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, March 03, 2025, 17:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

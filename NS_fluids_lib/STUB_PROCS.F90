@@ -433,10 +433,10 @@ integer :: dir
 
  if ((probtype.eq.36).and.(axis_dir.eq.310)) then
 
-  if (num_materials.eq.3) then
+  if (num_materials.eq.4) then
    !do nothing
   else
-   print *,"expecting num_materials.eq.3: ",num_materials
+   print *,"expecting num_materials.eq.4: ",num_materials
    stop
   endif
 
