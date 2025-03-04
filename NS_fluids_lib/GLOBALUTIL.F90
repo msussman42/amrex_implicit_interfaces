@@ -20327,6 +20327,231 @@ end subroutine print_visual_descriptor
       return
       end subroutine TEMPERATURE_wardlaw_tillotson
 
+       !material type=37
+      subroutine EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
+      real(amrex_real) :: rho0,T0,e0,mu
+
+      rho0=fort_denconst(im)
+      T0=fort_tempconst(im)
+
+      call INTERNAL_Mie_Gruneison(rho0,T0,e0,im)
+
+      if ((rho0.gt.zero).and. &
+          (rho.gt.zero).and. &
+          (T0.ge.zero).and. &
+          (internal_energy.ge.zero).and. &
+          (e0.ge.zero).and. &
+          (im.ge.1).and. &
+          (im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"EOS_Mie_Gruneison invalid parms"
+       print *,"rho0=",rho0
+       print *,"rho=",rho
+       print *,"T0=",T0
+       print *,"internal_energy=",internal_energy
+       print *,"e0=",e0
+       print *,"im=",im
+       stop
+      endif
+
+      V0=one/rho0
+      V=one/rho
+      Gamma0=2.0d0
+      c0=394000.0
+      s=1.49d0
+      mu=one-rho0/rho
+       !V0-V=1/rho0-1/rho=mu/rho0
+       !V0-s(V0-V)=(1/rho0)(1-s mu)
+       !p=c^2 rho0(mu/(1-s mu)^2)+
+       !  gamma0 rho0 *
+       !  (e(rho/rho0)-(1/2)c^2(mu/(1-s mu))^2)=
+       !  rho0 (c^2 mu(1-gamma0 mu/2)/(1-s mu)^2)+gamma0 rho e
+      pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
+        gamma0*rho*internal_energy              
+              
+      return
+      end subroutine EOS_Mie_Gruneison
+
+! c^2 = dp/drho + p dp/de / rho^2
+      subroutine SOUNDSQR_Mie_Gruneison(rho,internal_energy,soundsqr,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: soundsqr
+      real(amrex_real) :: rho0,T0,e0,mu,pressure,local_rho
+      real(amrex_real) :: dmu,dpdrho,dpde,T0_sanity,e0_sanity
+      real(amrex_real) :: pressure_sanity,sound_sanity
+
+      rho0=fort_denconst(im)
+      T0=fort_tempconst(im)
+
+      call INTERNAL_wardlaw_tillotson(rho0,T0,e0,im)
+
+      T0_sanity=293.0d0
+      call INTERNAL_wardlaw_tillotson(rho0,T0_sanity,e0_sanity,im)
+
+      if ((rho0.gt.zero).and. &
+          (rho.gt.zero).and. &
+          (T0.ge.zero).and. &
+          (T0_sanity.gt.zero).and. &
+          (internal_energy.ge.zero).and. &
+          (e0.ge.zero).and. &
+          (e0_sanity.gt.zero).and. &
+          (im.ge.1).and. &
+          (im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"soundsqr_wardlaw_tillotson invalid parms"
+       print *,"rho0=",rho0
+       print *,"rho=",rho
+       print *,"T0=",T0
+       print *,"T0_sanity=",T0_sanity
+       print *,"internal_energy=",internal_energy
+       print *,"e0=",e0
+       print *,"e0_sanity=",e0_sanity
+       print *,"im=",im
+       stop
+      endif
+
+      call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+
+      call EOS_wardlaw_tillotson(rho_cav_wardlaw_tillotson, &
+        e0_sanity,pressure_sanity,im)
+
+      if (abs(pressure_sanity-P_cav_tillotson).le. &
+          0.01d0*P_cav_tillotson) then
+       !do nothing
+      else
+       print *,"P_cav_tillotson test failed"
+       print *,"pressure_sanity: ",pressure_sanity
+       print *,"P_cav_tillotson: ",P_cav_tillotson
+       stop
+      endif
+
+      if (pressure.le.P_cav_tillotson) then
+       local_rho=rho_cav_wardlaw_tillotson
+      else if (pressure.ge.P_cav_tillotson) then
+       local_rho=rho
+      else
+       print *,"pressure out of range: ",pressure
+       stop
+      endif
+
+      if (local_rho.lt.rho_cav_wardlaw_tillotson) then
+       local_rho=rho_cav_wardlaw_tillotson
+      else if (local_rho.ge.rho_cav_wardlaw_tillotson) then
+       !do nothing
+      else
+       print *,"local_rho invalid: ",local_rho
+       stop
+      endif
+
+      mu=local_rho/rho0-one
+      dmu=one/rho0
+      dpdrho=omega_wardlaw_tillotson*(internal_energy-e0)+ &
+              A_wardlaw_tillotson*dmu+ &
+              two*B_wardlaw_tillotson*mu*dmu+ &
+              three*C_wardlaw_tillotson*mu*mu*dmu
+      dpde=omega_wardlaw_tillotson*local_rho
+      soundsqr=dpdrho+pressure*dpde/(local_rho**2)
+
+      if (soundsqr.gt.zero) then
+       !do nothing
+      else
+       print *,"soundsqr invalid: ",soundsqr
+       stop
+      endif
+
+      mu=rho_cav_wardlaw_tillotson/rho0-one
+      dpdrho=omega_wardlaw_tillotson*(e0_sanity-e0)+ &
+              A_wardlaw_tillotson*dmu+ &
+              two*B_wardlaw_tillotson*mu*dmu+ &
+              three*C_wardlaw_tillotson*mu*mu*dmu
+      dpde=omega_wardlaw_tillotson*rho_cav_wardlaw_tillotson
+       ! c^2 = p_rho + p p_e/rho^2
+      sound_sanity=dpdrho+pressure_sanity*dpde/(rho_cav_wardlaw_tillotson**2)
+      sound_sanity=sqrt(sound_sanity)
+      if (abs(sound_sanity-sound_cav_wardlaw_tillotson).le. &
+          0.01d0*sound_cav_wardlaw_tillotson) then
+       ! do nothing
+      else
+       print *,"sound_sanity invalid"
+       print *,"dpdrho=",dpdrho
+       print *,"dpde=",dpde
+       print *,"mu=",mu
+       print *,"dmu=",dmu
+       print *,"omega_wardlaw_tillotson ",omega_wardlaw_tillotson
+       print *,"A_wardlaw_tillotson ",A_wardlaw_tillotson
+       print *,"B_wardlaw_tillotson ",B_wardlaw_tillotson
+       print *,"C_wardlaw_tillotson ",C_wardlaw_tillotson
+       print *,"rho0=",rho0
+       print *,"rho_cav_wardlaw_tillotson=", &
+         rho_cav_wardlaw_tillotson
+       print *,"T0_sanity ",T0_sanity
+       print *,"e0_sanity ",e0_sanity
+       print *,"e0 ",e0
+       print *,"sound_sanity=",sound_sanity
+       print *,"sound_cav_wardlaw_tillotson=",sound_cav_wardlaw_tillotson
+       stop
+      endif 
+
+      return
+      end subroutine SOUNDSQR_Mie_Gruneison
+
+
+      subroutine INTERNAL_Mie_Gruneison(rho,temperature, &
+                      internal_energy,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,temperature
+      real(amrex_real), intent(out) :: internal_energy
+      real(amrex_real) :: cv
+
+      if ((rho.gt.zero).and.(temperature.ge.zero)) then
+       cv=4.1855D+7
+       internal_energy=cv*temperature
+      else
+       print *,"rho or temperature invalid:",rho,temperature
+       stop
+      endif
+
+      return
+      end subroutine INTERNAL_Mie_Gruneison
+
+
+      subroutine TEMPERATURE_Mie_Gruneison(rho,temperature, &
+                      internal_energy,im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: temperature
+      real(amrex_real) :: cv
+
+      if ((rho.gt.zero).and.(internal_energy.ge.zero)) then
+       cv=4.1855D+7
+       temperature=internal_energy/cv
+      else
+       print *,"rho or internal_energy invalid: ",rho,internal_energy
+       stop
+      endif
+
+      return
+      end subroutine TEMPERATURE_Mie_Gruneison
+
+
 
 ! A fully compressible, two-dimensional model of small, high-speed, cavitating
 ! nozzles, Schmidt et al, Atomization and Sprays, vol 9, 255-276 (1999)
