@@ -2087,6 +2087,7 @@ protected:
     static Vector<int> les_model;
 
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
+    static Vector<Real> yield_stress; // viscoelastic parameter
      // for freezing:
      // 1. nonlinear advection
      // 2. calculate mass flux at the liquid/ice interface
