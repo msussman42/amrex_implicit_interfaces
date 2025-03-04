@@ -135,6 +135,7 @@ namespace amrex{
        Real* phasechange_microlayer_size,
        int*  viscosity_state_model,
        Real* elastic_viscosity,
+       Real* yield_stress,
        Real* elastic_time,
        int* viscoelastic_model,
        int* store_elastic_data,

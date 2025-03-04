@@ -544,6 +544,7 @@ Vector<int> NavierStokes::les_model; // def=0
 Vector<int> NavierStokes::store_elastic_data;//def=0,0...num_materials-1
 Vector<int> NavierStokes::store_refine_density_data;//def=0,0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
+Vector<Real> NavierStokes::yield_stress; // def=0
 Vector<Real> NavierStokes::static_damping_coefficient; // def=0
 
 Vector<Real> NavierStokes::Carreau_alpha; // def=1
@@ -1457,10 +1458,12 @@ void fortran_parameters() {
     AMREX_SPACEDIM);
 
  Vector<Real> elastic_viscosity_temp;
+ Vector<Real> yield_stress_temp;
  Vector<Real> elastic_time_temp;
  Vector<int> viscoelastic_model_temp;
 
  elastic_viscosity_temp.resize(NavierStokes::num_materials);
+ yield_stress_temp.resize(NavierStokes::num_materials);
  elastic_time_temp.resize(NavierStokes::num_materials);
  viscoelastic_model_temp.resize(NavierStokes::num_materials);
 
@@ -1470,6 +1473,7 @@ void fortran_parameters() {
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
   elastic_viscosity_temp[im]=0.0;
+  yield_stress_temp[im]=0.0;
   elastic_time_temp[im]=0.0;
   viscoelastic_model_temp[im]=0;
 
@@ -1478,6 +1482,13 @@ void fortran_parameters() {
  }
  pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,
    NavierStokes::num_materials);
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  yield_stress_temp[im]=elastic_viscosity_temp[im];
+ }
+ pp.queryAdd("yield_stress",yield_stress_temp,
+   NavierStokes::num_materials);
+
  pp.queryAdd("elastic_time",elastic_time_temp,NavierStokes::num_materials);
  pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,
 	NavierStokes::num_materials);
@@ -2224,6 +2235,7 @@ void fortran_parameters() {
   phasechange_microlayer_size_temp.dataPtr(),
   viscosity_state_model_temp.dataPtr(),
   elastic_viscosity_temp.dataPtr(),
+  yield_stress_temp.dataPtr(),
   elastic_time_temp.dataPtr(),
   viscoelastic_model_temp.dataPtr(),
   NavierStokes::store_elastic_data.dataPtr(),
@@ -3503,17 +3515,24 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_CTML() invalid");
 
     elastic_viscosity.resize(num_materials);
+    yield_stress.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
     store_elastic_data.resize(num_materials);
     store_refine_density_data.resize(num_materials);
 
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
+     yield_stress[im]=0.0;
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
      store_refine_density_data[im]=0;
     }
     pp.queryAdd("elastic_viscosity",elastic_viscosity,num_materials);
+
+    for (int im=0;im<num_materials;im++) {
+     yield_stress[im]=elastic_viscosity[im];
+    }
+    pp.queryAdd("yield_stress",yield_stress,num_materials);
 
     viscoelastic_model.resize(num_materials);
     for (int i=0;i<num_materials;i++)
@@ -5101,6 +5120,8 @@ NavierStokes::read_params ()
 
      if ((elastic_time[i]<0.0)||(elastic_viscosity[i]<0.0))
       amrex::Error("elastic_time/elastic_viscosity invalid read_params");
+     if (yield_stress[i]<0.0)
+      amrex::Error("yield_stress invalid read_params");
 
      // (1/L) eps=0.01
      // 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
@@ -5228,6 +5249,7 @@ NavierStokes::read_params ()
        std::cout << "etaP0=elastic_viscosity=" << etaP[i] << '\n';
        std::cout << "etaS=etaL0-etaP0= " << etaS[i] << '\n';
        std::cout << "elastic_viscosity= " << elastic_viscosity[i] << '\n';
+       std::cout << "yield_stress= " << yield_stress[i] << '\n';
        std::cout << "store_elastic_data= " << store_elastic_data[i] << '\n';
        std::cout << "elastic_time= " << elastic_time[i] << '\n';
       }
@@ -12815,6 +12837,7 @@ void NavierStokes::tensor_advection_update() {
          &viscoelastic_model[im],
          &polymer_factor[im],
          &elastic_viscosity[im],
+         &yield_stress[im],
          &NS_geometry_coord,
          velbc.dataPtr());
        } else {

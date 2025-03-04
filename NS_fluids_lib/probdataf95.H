@@ -119,6 +119,7 @@
       integer fort_im_refine_density_map(MAX_NUM_MATERIALS)
       integer fort_viscoelastic_model(MAX_NUM_MATERIALS)
       real(amrex_real) fort_elastic_viscosity(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_yield_stress(MAX_NUM_MATERIALS)
       real(amrex_real) fort_elastic_time(MAX_NUM_MATERIALS)
       integer fort_store_elastic_data(MAX_NUM_MATERIALS)
       integer fort_store_refine_density_data(MAX_NUM_MATERIALS)

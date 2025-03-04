@@ -8498,6 +8498,7 @@ stop
        viscoelastic_model, &
        polymer_factor, &
        elastic_viscosity, &
+       yield_stress, &
        irz, &
        bc) &
       bind(c,name='fort_updatetensor')
@@ -8567,6 +8568,7 @@ stop
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
+      real(amrex_real), INTENT(in) :: yield_stress
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -8602,6 +8604,12 @@ stop
        ! do nothing
       else
        print *,"elastic_viscosity invalid: ",elastic_viscosity
+       stop
+      endif
+      if (yield_stress.gt.zero) then
+       ! do nothing
+      else
+       print *,"yield_stress invalid: ",yield_stress
        stop
       endif
 
@@ -8852,6 +8860,7 @@ stop
          viscoelastic_model, &
          polymer_factor, &
          elastic_viscosity, &
+         yield_stress, &
          irz, &
          bc) 
 

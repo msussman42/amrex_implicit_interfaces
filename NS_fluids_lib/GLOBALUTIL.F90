@@ -27560,6 +27560,7 @@ subroutine point_updatetensor( &
  viscoelastic_model, &
  polymer_factor, &
  elastic_viscosity, &
+ yield_stress, &
  irz, &
  bc) 
 
@@ -27603,6 +27604,7 @@ real(amrex_real), INTENT(in) :: dt,elastic_time
 integer, INTENT(in) :: viscoelastic_model
 real(amrex_real), INTENT(in) :: polymer_factor
 real(amrex_real), INTENT(in) :: elastic_viscosity
+real(amrex_real), INTENT(in) :: yield_stress
 integer, INTENT(in) :: bc(SDIM,2,SDIM)
 integer, INTENT(in) :: irz
 integer ii,jj,kk
@@ -27667,6 +27669,12 @@ if (elastic_viscosity.gt.zero) then
  ! do nothing
 else
  print *,"elastic_viscosity out of range"
+ stop
+endif
+if (yield_stress.gt.zero) then 
+ ! do nothing
+else
+ print *,"yield_stress out of range"
  stop
 endif
 
@@ -28627,8 +28635,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! "S" from Maire et al corresponds to "Aadvect" times the 
    ! shear modulus.
    ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
-   gamma_not=elastic_viscosity/100.0d0
-   gamma_not=elastic_viscosity*1.0D+20
+   gamma_not=yield_stress
 
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
    f_plastic=magA-Y_plastic_parm_scaled

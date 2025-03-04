@@ -286,6 +286,7 @@ extern "C"
     int* viscoelastic_model,
     Real* polymer_factor,
     Real* elastic_viscosity,
+    Real* yield_stress,
     int* irz,
     const int* bcrec);
 
