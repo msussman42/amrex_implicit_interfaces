@@ -20327,7 +20327,7 @@ end subroutine print_visual_descriptor
       return
       end subroutine TEMPERATURE_wardlaw_tillotson
 
-       !material type=37
+       !material type=36
       subroutine EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
       use probcommon_module
       IMPLICIT NONE
@@ -20336,6 +20336,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), intent(in) :: rho,internal_energy
       real(amrex_real), intent(out) :: pressure
       real(amrex_real) :: rho0,T0,e0,mu
+      real(amrex_real) :: V0,V,Gamma0,c0,s
 
       rho0=fort_denconst(im)
       T0=fort_tempconst(im)
@@ -20371,10 +20372,10 @@ end subroutine print_visual_descriptor
        !V0-s(V0-V)=(1/rho0)(1-s mu)
        !p=c^2 rho0(mu/(1-s mu)^2)+
        !  gamma0 rho0 *
-       !  (e(rho/rho0)-(1/2)c^2(mu/(1-s mu))^2)=
-       !  rho0 (c^2 mu(1-gamma0 mu/2)/(1-s mu)^2)+gamma0 rho e
+       !  (e-(1/2)c^2(mu/(1-s mu))^2)=
+       !  rho0 (c^2 mu(1-gamma0 mu/2)/(1-s mu)^2)+gamma0 rho0 e
       pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
-        gamma0*rho*internal_energy              
+        Gamma0*rho0*internal_energy              
               
       return
       end subroutine EOS_Mie_Gruneison
@@ -20387,82 +20388,52 @@ end subroutine print_visual_descriptor
       integer, intent(in) :: im
       real(amrex_real), intent(in) :: rho,internal_energy
       real(amrex_real), intent(out) :: soundsqr
-      real(amrex_real) :: rho0,T0,e0,mu,pressure,local_rho
-      real(amrex_real) :: dmu,dpdrho,dpde,T0_sanity,e0_sanity
-      real(amrex_real) :: pressure_sanity,sound_sanity
+      real(amrex_real) :: rho0,T0,e0,mu,pressure
+      real(amrex_real) :: dmu,dpdrho,dpde
+      real(amrex_real) :: w,dtop_bottom,dbottom_top,dpdmu
+      real(amrex_real) :: V0,V,Gamma0,c0,s
 
       rho0=fort_denconst(im)
       T0=fort_tempconst(im)
 
-      call INTERNAL_wardlaw_tillotson(rho0,T0,e0,im)
-
-      T0_sanity=293.0d0
-      call INTERNAL_wardlaw_tillotson(rho0,T0_sanity,e0_sanity,im)
+      call INTERNAL_Mie_Gruneison(rho0,T0,e0,im)
 
       if ((rho0.gt.zero).and. &
           (rho.gt.zero).and. &
           (T0.ge.zero).and. &
-          (T0_sanity.gt.zero).and. &
           (internal_energy.ge.zero).and. &
           (e0.ge.zero).and. &
-          (e0_sanity.gt.zero).and. &
           (im.ge.1).and. &
           (im.le.num_materials)) then
        !do nothing
       else
-       print *,"soundsqr_wardlaw_tillotson invalid parms"
+       print *,"soundsqr_Mie_Gruneison invalid parms"
        print *,"rho0=",rho0
        print *,"rho=",rho
        print *,"T0=",T0
-       print *,"T0_sanity=",T0_sanity
        print *,"internal_energy=",internal_energy
        print *,"e0=",e0
-       print *,"e0_sanity=",e0_sanity
        print *,"im=",im
        stop
       endif
 
-      call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+      V0=one/rho0
+      V=one/rho
+      Gamma0=2.0d0
+      c0=394000.0
+      s=1.49d0
+      mu=one-rho0/rho
 
-      call EOS_wardlaw_tillotson(rho_cav_wardlaw_tillotson, &
-        e0_sanity,pressure_sanity,im)
+      call EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
 
-      if (abs(pressure_sanity-P_cav_tillotson).le. &
-          0.01d0*P_cav_tillotson) then
-       !do nothing
-      else
-       print *,"P_cav_tillotson test failed"
-       print *,"pressure_sanity: ",pressure_sanity
-       print *,"P_cav_tillotson: ",P_cav_tillotson
-       stop
-      endif
-
-      if (pressure.le.P_cav_tillotson) then
-       local_rho=rho_cav_wardlaw_tillotson
-      else if (pressure.ge.P_cav_tillotson) then
-       local_rho=rho
-      else
-       print *,"pressure out of range: ",pressure
-       stop
-      endif
-
-      if (local_rho.lt.rho_cav_wardlaw_tillotson) then
-       local_rho=rho_cav_wardlaw_tillotson
-      else if (local_rho.ge.rho_cav_wardlaw_tillotson) then
-       !do nothing
-      else
-       print *,"local_rho invalid: ",local_rho
-       stop
-      endif
-
-      mu=local_rho/rho0-one
-      dmu=one/rho0
-      dpdrho=omega_wardlaw_tillotson*(internal_energy-e0)+ &
-              A_wardlaw_tillotson*dmu+ &
-              two*B_wardlaw_tillotson*mu*dmu+ &
-              three*C_wardlaw_tillotson*mu*mu*dmu
-      dpde=omega_wardlaw_tillotson*local_rho
-      soundsqr=dpdrho+pressure*dpde/(local_rho**2)
+      dmu=rho0/rho**2
+      w=one-s*mu
+      dtop_bottom=rho0*(c0**2)*(w**2)*(one-Gamma0*mu)
+      dbottom_top=rho0*(c0**2)*mu*(one-Gamma0*half*mu)*two*(-s)*w
+      dpdmu=(dtop_bottom-dbottom_top)/(w**4)
+      dpdrho=dpdmu*dmu
+      dpde=Gamma0*rho0
+      soundsqr=dpdrho+pressure*dpde/(rho**2)
 
       if (soundsqr.gt.zero) then
        !do nothing
@@ -20470,39 +20441,6 @@ end subroutine print_visual_descriptor
        print *,"soundsqr invalid: ",soundsqr
        stop
       endif
-
-      mu=rho_cav_wardlaw_tillotson/rho0-one
-      dpdrho=omega_wardlaw_tillotson*(e0_sanity-e0)+ &
-              A_wardlaw_tillotson*dmu+ &
-              two*B_wardlaw_tillotson*mu*dmu+ &
-              three*C_wardlaw_tillotson*mu*mu*dmu
-      dpde=omega_wardlaw_tillotson*rho_cav_wardlaw_tillotson
-       ! c^2 = p_rho + p p_e/rho^2
-      sound_sanity=dpdrho+pressure_sanity*dpde/(rho_cav_wardlaw_tillotson**2)
-      sound_sanity=sqrt(sound_sanity)
-      if (abs(sound_sanity-sound_cav_wardlaw_tillotson).le. &
-          0.01d0*sound_cav_wardlaw_tillotson) then
-       ! do nothing
-      else
-       print *,"sound_sanity invalid"
-       print *,"dpdrho=",dpdrho
-       print *,"dpde=",dpde
-       print *,"mu=",mu
-       print *,"dmu=",dmu
-       print *,"omega_wardlaw_tillotson ",omega_wardlaw_tillotson
-       print *,"A_wardlaw_tillotson ",A_wardlaw_tillotson
-       print *,"B_wardlaw_tillotson ",B_wardlaw_tillotson
-       print *,"C_wardlaw_tillotson ",C_wardlaw_tillotson
-       print *,"rho0=",rho0
-       print *,"rho_cav_wardlaw_tillotson=", &
-         rho_cav_wardlaw_tillotson
-       print *,"T0_sanity ",T0_sanity
-       print *,"e0_sanity ",e0_sanity
-       print *,"e0 ",e0
-       print *,"sound_sanity=",sound_sanity
-       print *,"sound_cav_wardlaw_tillotson=",sound_cav_wardlaw_tillotson
-       stop
-      endif 
 
       return
       end subroutine SOUNDSQR_Mie_Gruneison
@@ -24834,6 +24772,8 @@ end subroutine print_visual_descriptor
        call EOS_galinstan_rho(rho,internal_energy,pressure)
       else if (imattype.eq.35) then
        call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
+      else if (imattype.eq.36) then
+       call EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
       else
        print *,"imattype invalid EOS_material_CORE: ",imattype
        stop
@@ -24986,6 +24926,8 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
       else if (imattype.eq.35) then
        call SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr,im)
+      else if (imattype.eq.36) then
+       call SOUNDSQR_Mie_Gruneison(rho,internal_energy,soundsqr,im)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE: ",imattype
        stop
@@ -25084,6 +25026,8 @@ end subroutine print_visual_descriptor
        call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
       else if (imattype.eq.35) then
        call INTERNAL_wardlaw_tillotson(rho,temperature,local_internal_energy,im)
+      else if (imattype.eq.36) then
+       call INTERNAL_Mie_Gruneison(rho,temperature,local_internal_energy,im)
       else
        print *,"imattype invalid INTERNAL_material_CORE: ",imattype
        stop
@@ -25178,6 +25122,8 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
       else if (imattype.eq.35) then
        call TEMPERATURE_wardlaw_tillotson(rho,temperature,internal_energy,im)
+      else if (imattype.eq.36) then
+       call TEMPERATURE_Mie_Gruneison(rho,temperature,internal_energy,im)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype
