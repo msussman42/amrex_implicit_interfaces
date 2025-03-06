@@ -27585,10 +27585,10 @@ real(amrex_real), INTENT(in), pointer :: one_over_den(D_DECL(:,:,:))
 ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
 ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
 ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-! grad u = | ux vx wx |
+! grad u = | ux vx wx |  (grad u)_ij=u_{j,i}
 !          | uy vy wy |
 !          | uz vz wz |
-! (\partial u)/(\partial x)=(grad u)^T
+! (\partial u)/(\partial x)_ij=(grad u)^T=u_{i,j}
 !
 real(amrex_real), INTENT(in), pointer :: tendata(D_DECL(:,:,:),:)
 real(amrex_real), INTENT(in), pointer :: vel(D_DECL(:,:,:),:)
@@ -27610,12 +27610,19 @@ integer, INTENT(in) :: irz
 integer ii,jj,kk
 integer iofs,jofs,kofs
 integer iofs2,jofs2,kofs2
-real(amrex_real) visctensor(3,3)
+real(amrex_real) visctensor(3,3) ! derived from CC velocity
+real(amrex_real) visctensorMAC(3,3) !derived from MAC velocity
+  !deviatoric strain-rate
+real(amrex_real) visctensorMAC_traceless(3,3) !derived from MAC velocity
+real(amrex_real) trace_MAC
+integer trace_dim
 real(amrex_real) gradV_MAC
 real(amrex_real) gradV_transpose_FENECR(3,3)
-real(amrex_real) gradV_transpose(3,3) !partial V/partial x
+ !(grad V)_ji=(partial V/partial x)_ij=v_i,j
+real(amrex_real) gradV_transpose(3,3) 
 real(amrex_real) Q(3,3)
-real(amrex_real) W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
+! W=(1/2)(grad V - (grad V)^T)  derived from the MAC velocity
+real(amrex_real) W_Jaumann(3,3)  
 real(amrex_real) Aadvect(3,3)
 real(amrex_real) Smult_left(3,3)
 real(amrex_real) Smult_right(3,3)
@@ -27634,7 +27641,7 @@ real(amrex_real) total_weight
 
 integer dir_local
 
-integer dumbbell_model
+integer DErelaxation_model !Deborah number defines rate of relaxation
 real(amrex_real) magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
 real(amrex_real) gamma_not
 real(amrex_real) force_coef
@@ -27763,23 +27770,25 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
     (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
     (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
- dumbbell_model=1
+ DErelaxation_model=1
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
- dumbbell_model=0
+ DErelaxation_model=0
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
  ! Xia, Lu, Tryggvason 2018
  ! Seungwon Shin, Jalel Chergui, Damir Juric
- dumbbell_model=0
+ DErelaxation_model=0
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
 call gridsten_level(xsten,i,j,k,level,nhalf)
- ! (grad u)^T=| u_r  u_t/r-v/r  u_z  |=(\partial u)/(\partial x)
- !            | v_r  v_t/r+u/r  v_z  |
- !            | w_r  w_t/r      w_z  |
+ ! (grad u)_{ji}=
+ ! (grad u)^T)_{ij}=
+ !               | u_r  u_t/r-v/r  u_z  |=(\partial u)/(\partial x)=u_{i,j}
+ !               | v_r  v_t/r+u/r  v_z  |
+ !               | w_r  w_t/r      w_z  |
  ! if levelrz==COORDSYS_RZ,
  !  gradU(3,3)=u/|r|
  ! if levelrz==COORDSYS_CYLINDRICAL,
@@ -28245,7 +28254,7 @@ do jj=1,3 !deriv dir
   endif
 
   if (dxj(ii,jj).gt.zero) then
-   gradV_MAC=dui(ii,jj)/dxj(ii,jj)
+   gradV_MAC=dui(ii,jj)/dxj(ii,jj)  !v_i,j
   else
    print *,"dxj(ii,jj) invalid: ",ii,jj,dxj(ii,jj)
    stop
@@ -28308,7 +28317,9 @@ do jj=1,3 !deriv dir
 !gradV_transpose_{i,j}=(\partial V_{i})/(\partial x_{j})
 !gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
 
- gradV_transpose(ii,jj)=gradV_MAC !(vel dir,deriv dir)
+ !((grad V)^{T})_{ij}=
+ !(grad V)_ji=(partial V/partial x)_ij=v_i,j
+ gradV_transpose(ii,jj)=gradV_MAC !(vel dir,deriv dir)  v_i,j
 
  if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
@@ -28337,13 +28348,43 @@ else
  stop
 endif
 
+trace_MAC=zero
+
 do ii=1,3
 do jj=1,3
   !W=(grad V - grad V^T)/2
-  !W_{ij}=(V_{j,i}-V_{i,j})/2
+  !W_{ij}=(V_{j,i}-V_{i,j})/2=-Omega_ij  (see Tran and Udaykumar)
  W_Jaumann(ii,jj)=half*(gradV_transpose(jj,ii)-gradV_transpose(ii,jj))
+ visctensorMAC(ii,jj)=half*(gradV_transpose(jj,ii)+gradV_transpose(ii,jj))
+ visctensorMAC_traceless(ii,jj)=visctensorMAC(ii,jj)
+ if (ii.eq.jj) then
+  trace_MAC=trace_MAC+visctensorMAC(ii,jj)
+ endif
 enddo 
 enddo 
+
+!hydrostatic strain rate
+if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_RZ)) then
+ trace_MAC=trace_MAC/3.0d0
+ trace_dim=3
+else if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+ trace_MAC=trace_MAC/3.0d0
+ trace_dim=3
+else if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_CARTESIAN)) then
+ trace_MAC=trace_MAC/2.0d0
+ trace_dim=2
+else if (SDIM.eq.3) then
+ trace_MAC=trace_MAC/3.0d0
+ trace_dim=3
+else
+ print *,"sdim or levelrz invalid: ",SDIM,levelrz
+ stop
+endif
+
+do ii=1,trace_dim
+ visctensorMAC_traceless(ii,ii)=visctensorMAC_traceless(ii,ii)-trace_MAC
+enddo
+ 
  
 do ii=1,3
 do jj=1,3
@@ -28392,7 +28433,7 @@ trace_A=zero
 do ii=1,3
  trace_A=trace_A+Q(ii,ii)+one
  !NN_FENE_CR,NN_OLDROYD_B,NN_FENE_P,NN_LINEAR_PTT
- if (dumbbell_model.eq.1) then
+ if (DErelaxation_model.eq.1) then
   if (Q(ii,ii)+one.gt.zero) then
    ! do nothing
   else
@@ -28406,7 +28447,7 @@ do ii=1,3
    print *,"Q(3,3) invalid (hoop): ",Q(3,3)
    stop
   endif
- else if (dumbbell_model.eq.0) then ! e.g. incremental model
+ else if (DErelaxation_model.eq.0) then ! e.g. incremental model
   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
   !   or
   ! Xia, Lu, Tryggvason 2018
@@ -28435,7 +28476,7 @@ do ii=1,3
   endif
 
  else
-  print *,"dumbbell_model invalid: ",dumbbell_model
+  print *,"DErelaxation_model invalid: ",DErelaxation_model
   stop
  endif
 enddo ! ii=1,3
@@ -28505,17 +28546,17 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   Aadvect(ii,jj)=Q(ii,jj)
 
    !cfl cond: |u|dt<dx and dt|gradu|<1
-  if (dumbbell_model.eq.1) then
+  if (DErelaxation_model.eq.1) then
    Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) 
    Smult_right(ii,jj)=Smult_left(ii,jj)
   else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
-   if (dumbbell_model.eq.0) then
+   if (DErelaxation_model.eq.0) then
      !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
      !(I-dt W)Q(I-dt W^T)=Q-dt WQ-dt QW^T=Q-dt WQ+dt QW
-    Smult_left(ii,jj)=-dt*W_Jaumann(ii,jj) 
-    Smult_right(ii,jj)=Smult_left(ii,jj)
+    Smult_left(ii,jj)=-dt*W_Jaumann(ii,jj) ! dt * OMEGA
+    Smult_right(ii,jj)=Smult_left(ii,jj)   ! dt * OMEGA
    else
-    print *,"dumbbell_model invalid: ",dumbbell_model
+    print *,"DErelaxation_model invalid: ",DErelaxation_model
     stop
    endif
   else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental Neo-Hookean
@@ -28534,11 +28575,11 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! equilibrium is B=I
    ! discretely, B should maintain as positive definite:
    ! B^n+1 = (I+dt grad U^T)Bstar(I+dt grad U)
-   if (dumbbell_model.eq.0) then
-    Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) 
+   if (DErelaxation_model.eq.0) then
+    Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) ! dt v_{i,j}
     Smult_right(ii,jj)=Smult_left(ii,jj)
    else
-    print *,"dumbbell_model invalid: ",dumbbell_model
+    print *,"DErelaxation_model invalid: ",DErelaxation_model
     stop
    endif
   else
@@ -28583,9 +28624,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   Smult_right(ii,ii)=Smult_right(ii,ii)+one
 
    ! Aadvect <-- Q+I
-  if (dumbbell_model.eq.1) then
+  if (DErelaxation_model.eq.1) then
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
-  else if (dumbbell_model.eq.0) then ! e.g. incremental model
+  else if (DErelaxation_model.eq.0) then ! e.g. incremental model
    if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
     ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
@@ -28598,7 +28639,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     stop
    endif
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
  enddo  ! ii=1,3
@@ -28607,17 +28648,18 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  call project_A_to_positive_definite_or_traceless(Aadvect, &
          viscoelastic_model,polymer_factor,unity_det)
 
- if (dumbbell_model.eq.1) then
+ if (DErelaxation_model.eq.1) then
   ! do nothing
  else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !plastic model
-  if (dumbbell_model.eq.0) then
+  if (DErelaxation_model.eq.0) then
    magA=zero
    do ii=1,3
    do jj=1,3
     magA=magA+Aadvect(ii,jj)**2
    enddo
    enddo
-   magA=sqrt(magA)
+   magA=sqrt(magA) !sqrt(A : A)
+    !NP=A/sqrt(A:A)  (NP : NP=1)
    NP_dotdot_D=zero
    do ii=1,3
    do jj=1,3
@@ -28629,7 +28671,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      print *,"magA invalid (point_updatetensor): ",magA
      stop
     endif
-    NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
+    NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensorMAC(ii,jj)
    enddo
    enddo
    ! "S" from Maire et al corresponds to "Aadvect" times the 
@@ -28644,7 +28686,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
     if ((f_plastic.lt.zero).or. &
         ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
-     Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
+     Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
      Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
     else
@@ -28657,14 +28699,14 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    enddo !jj=1,3
    enddo !ii=1,3
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
  else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental
-  if (dumbbell_model.eq.0) then
+  if (DErelaxation_model.eq.0) then
    ! do nothing
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
  else
@@ -28672,21 +28714,28 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   stop
  endif
  
- !if NN_MAIRE_ABGRALL then Smult_left=Smult_right=I+dt W
- !DQ/Dt=2(D0-D^P)+QW-WQ   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
+ !if NN_MAIRE_ABGRALL:
+ !Maire and Abgrall paper:
+ !  W=(grad V - (grad V)^T)/2  (grad V)_{ij} = v_{j,i} = jacobian_{ji}
+ !  W_ij=(v_{j,i}-v_{i,j})/2
+ !Tran and Udaykumar:
+ !  Omega=-W    Omega_ij=(v_i,j - v_j,i)/2
+ !Maire and Abgrall
+ ! S_t=2 G(D0-Dp)-SW+WS
+ !Tran and Udaykumar:
+ ! S_t=2 G(Dbar-Dp)-S Omega + OMEGA S
+ !
+ !then Smult_left=Smult_right=I-dt W=I+dt OMEGA
+ !DQ/Dt=2(D0-D^P)+QW-WQ=
+ !      2(D0-D^P)+OMEGA Q - Q OMEGA
+ !   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
  !grad U_{ij} = U_{j,i}
  !W=(grad V - grad V^T)/2
  !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
- !Q^{n+1}=(I+dt WLEFT)Q^{n}(I+dt WRIGHT^T)=
- !        Q^{n}+dt WLEFT Q + dt Q WRIGHT^T + 
+ !Q^{n+1}=(I-dt WLEFT)Q^{n}(I-dt WRIGHT^T)=
+ !        Q^{n}-dt WLEFT Q - dt Q WRIGHT^T + 
  !        dt^2 WLEFT Q WRIGHT^T \approx
- !        Q^{n}+dt WLEFT Q + dt Q WRIGHT^T
- !WLEFT=OMEGA=-W
- !WRIGHT^T=-OMEGA
- !WRIGHT=OMEGA=-W
- !(Q^{n+1}-Q^{n})/dt=WLEFT Q + Q WRIGHT^T
- !Smult_left=I+dt WLEFT
- !Smult_right=I+dt WRIGHT
+ !        Q^{n}-dt WLEFT Q + dt Q WRIGHT
  do ii=1,3
  do jj=1,3
    !SA=S_left * A
@@ -28738,9 +28787,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
  do ii=1,3
 
-  if (dumbbell_model.eq.1) then
+  if (DErelaxation_model.eq.1) then
    Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
-  else if (dumbbell_model.eq.0) then ! e.g. incremental model
+  else if (DErelaxation_model.eq.0) then ! e.g. incremental model
    if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
     ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
@@ -28753,7 +28802,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     stop
    endif
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
 
@@ -28801,9 +28850,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  enddo
 
  do ii=1,3
-  if (dumbbell_model.eq.1) then
+  if (DErelaxation_model.eq.1) then
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
-  else if (dumbbell_model.eq.0) then ! incremental model
+  else if (DErelaxation_model.eq.0) then ! incremental model
    if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
     ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
@@ -28816,7 +28865,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     stop
    endif
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
  enddo ! do ii=1,3
@@ -28832,9 +28881,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  enddo
 
  do ii=1,3
-  if (dumbbell_model.eq.1) then
+  if (DErelaxation_model.eq.1) then
    Q(ii,ii)=Q(ii,ii)-one
-  else if (dumbbell_model.eq.0) then ! e.g. incremental model
+  else if (DErelaxation_model.eq.0) then ! e.g. incremental model
    if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental model
     ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
@@ -28847,7 +28896,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     stop
    endif
   else
-   print *,"dumbbell_model invalid: ",dumbbell_model
+   print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop
   endif
  enddo
