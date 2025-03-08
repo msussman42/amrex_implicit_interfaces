@@ -10827,7 +10827,7 @@ NavierStokes::init(
 
  debug_fillpatch=0;
 
-}  // end subroutine init(old)
+}  // end subroutine init(old,ba_in,dmap_in)
 
 void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf,
   int control_flag_in) {
@@ -11029,33 +11029,12 @@ NavierStokes::init(
 
  } // local_index=0..nstate-1
 
-#ifdef AMREX_PARTICLES
-
- int lev_min=0;
- int lev_max=level;
- int nGrow_Redistribute=0;
- int local_redistribute_main=0; //init() (global)
- bool remove_negative=true;
-
- if (level==0) {
-  amrex::Error("level==0 cannot be made from nothing");
- } else if (level>0) {
-  // do nothing
- } else
-  amrex::Error("level invalid");
-   
- NavierStokes& ns_level0=getLevel(0);
- My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
-
- new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_redistribute_main,remove_negative);
-
-#endif
+ //particle redistribution will be done in post_regrid.
 
  init_regrid_history();
  is_first_step_after_regrid = 2;
 
-}  // end subroutine init()
+}  // end subroutine init(ba_in,dmap_in)
 
 void NavierStokes::CopyNewToOldALL() {
 
