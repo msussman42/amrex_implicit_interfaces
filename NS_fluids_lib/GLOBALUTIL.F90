@@ -5899,12 +5899,17 @@ else if (A_dim.eq.2) then
  do i=1,3
   if ((i.eq.3).or.(j.eq.3)) then
    if (i.eq.j) then
-    if (A(i,j).gt.zero) then
-     ! do nothing
+    if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
+     !do nothing
     else
-     print *,"A(i,j) failed sanity check"
-     print *,"i,j,A(i,j) ",i,j,A(i,j)
-     stop
+     if (A(i,j).gt.zero) then
+      ! do nothing
+     else
+      print *,"A(i,j) failed sanity check"
+      print *,"i,j,A(i,j) ",i,j,A(i,j)
+      print *,"viscoelastic_model=",viscoelastic_model
+      stop
+     endif
     endif
    else if (i.ne.j) then
     if (A(i,j).eq.zero) then
@@ -5912,6 +5917,7 @@ else if (A_dim.eq.2) then
     else
      print *,"A(i,j) failed sanity check"
      print *,"i,j,A(i,j) ",i,j,A(i,j)
+     print *,"viscoelastic_model=",viscoelastic_model
      stop
     endif
    else
@@ -5996,11 +6002,16 @@ if (A_dim.eq.2) then
 
  local_diag=A(3,3)
 
- if (local_diag.gt.zero) then
+ if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
   !do nothing
  else
-  print *,"local_diag must be positive: ",local_diag
-  stop
+  if (local_diag.gt.zero) then
+   !do nothing
+  else
+   print *,"local_diag must be positive: ",local_diag
+   print *,"viscoelastic_model=",viscoelastic_model
+   stop
+  endif
  endif
 
  if (unity_det.eq.1) then
