@@ -163,11 +163,12 @@ ns.elastic_time=0.0 0.0 1.0e+31 0.0
 ns.polymer_factor=0.0 0.0 0.0 0.0
 #0=FENE-CR
 #1=Oldroyd B
-#3=incremental elastic
+#3=incremental elastic (plastic model)
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 0
+ns.viscoelastic_model=0 0 3 0
+ns.yield_stress=0.0 0.0 2.5e+12 0.0
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
