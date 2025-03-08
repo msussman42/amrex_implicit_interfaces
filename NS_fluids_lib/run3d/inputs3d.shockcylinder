@@ -9,11 +9,11 @@ stop_time =  5.0e-3  # maximum problem time
 # 32x24x8 mm^3 -> 24x8x32
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 
-#geometry.prob_lo   =  -0.4 0.0 
-#geometry.prob_hi   =  0.4 3.2
+#geometry.prob_lo   =  -0.8 0.0 
+#geometry.prob_hi   =  0.8 3.2
 
-geometry.prob_lo   =  0.0 -0.4 0.0 
-geometry.prob_hi   =  2.4 0.4 3.2
+geometry.prob_lo   =  0.0 -0.8 0.0 
+geometry.prob_hi   =  2.4 0.8 3.2
 
 #geometry.is_periodic = 0 0
 geometry.is_periodic = 1 0 0
@@ -52,12 +52,12 @@ ns.minimum_relative_error=1.0e-24
 ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-#geometry.prob_lo   =  0.0 -0.4 0.0 
-#geometry.prob_hi   =  2.4 0.4 3.2
+#geometry.prob_lo   =  0.0 -0.8 0.0 
+#geometry.prob_hi   =  2.4 0.8 3.2
 #diameter=0.094cm 
 
-amr.n_cell    = 144 48 192
-#amr.n_cell    = 48 192
+amr.n_cell    = 144 96 192
+#amr.n_cell    = 96 192
 
 amr.max_level = 4 # max_level=4 finest
 ns.max_level_for_use = 2
