@@ -4456,7 +4456,7 @@ stop
           delta,passive_veltime, &
           normdir,dt,map_forward)
 
-        if (abs(delta).ge.(one-0.001)*hx) then
+        if (abs(delta).ge.(one-EPS6)*hx) then
          print *,"in: velmac_override"
          print *,"MAC: displacement exceeds grid cell"
          print *,"parameters to check:"
