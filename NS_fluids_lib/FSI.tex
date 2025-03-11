@@ -7,6 +7,42 @@ material(s)
 \par\noindent
 Authors: Cody Estebe, Alireza Moradikazerouni, Mark Sussman, Kourosh Shoele
 \par\noindent
+Statement of the problem:
+(see Jemison, Sussman, Arienti or Wenzel and Arienti)
+\par\noindent
+Let $\Omega_{m}(t)$ be the region occupied by material $m$ at time $t$.
+\par\noindent
+Define the indicator function:
+\par\noindent
+\begin{eqnarray}
+	\xi_{m}(t,\bmx)=\left\{ \begin{array}{cc}
+		1 & \bmx\in \Omega_{m}(t) \\
+	0 & \mbox{otherwise}  \end{array} \right.
+\end{eqnarray}
+The volume fraction of material $m$ within a region $\Omega$ is
+\begin{eqnarray}
+	F_{m}=\frac{1}{|\Omega|}\int_{\Omega} \xi_{m}d\Omega
+\end{eqnarray}
+Define the state variable $\bmU$ as
+\begin{eqnarray}
+	\bmU=\left( \begin{array}{c}
+		\xi_{m} \\ \rho_{m}\xi_{m} \\ \rho_{m}\xi_{m}\bmu_{m} \\
+		\rho_{m}Y_{m,s}\xi_{m} \\
+	\rho_{m}E_{m}\xi_{m} \end{array} \right)
+\end{eqnarray}
+Define the ``multidimensional flux vector'' as:
+\begin{eqnarray}
+	\bmF=\left( \begin{array}{c}
+	\xi_{m}\bmu_{m} \\
+	\rho_{m}\xi_{m}\bmu_{m} \\
+	\bmu_{m}\ocirc\rho_{m}\xi_{m}\bmu_{m}+p_{m}I-\tau_{m} \\
+	(\rho_{m}Y_{m,s}\bmu_{m}-\rho_{m}{\cal D}_{m,s}\nabla Y_{m,s})\xi_{m} \\
+		(\rho_{m}E_{m}\bmu_{m}+p_{m}\bmu_{m}-\bmu_{m}\cdot \tau_{m}-
+		k_{m}\nabla T_{m}+\bmq_{h,m})\xi_{m}
+	\end{array} \right)
+\end{eqnarray}
+
+
 Time step constraint:
 \begin{description}
 \item[CFL] $\bmu \Delta t < \Delta x/6$ (see Weymouth and Yue, EILE method of
