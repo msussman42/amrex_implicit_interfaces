@@ -1,14 +1,29 @@
-\documentclass[]{article}
+%%\documentclass[]{article}
+%%\documentclass[pdf]{beamer}
+\documentclass{beamer}
+\mode<presentation>{}
 
-\par\noindent
-A numerical method for simulating multimaterial compressible flows 
-including the general interaction of fluids and elastic
-material(s)
-\par\noindent
-Authors: Cody Estebe, Alireza Moradikazerouni, Mark Sussman, Kourosh Shoele
-\par\noindent
-Statement of the problem:
-(see Jemison, Sussman, Arienti or Wenzel and Arienti)
+\title{A conservative, asymptotically preserving, numerical method for 
+simulating n-material multiphase compressible flows }
+\author{Cody Estebe, Alireza Moradikazerouni, Mark Sussman, Kourosh Shoele}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{Statement of the problem}}
+\begin{itemize}
+	\item Sloshing and pressurization in cryogenic Hydrogen fuel
+		tanks (see Kassemi et al)
+	\item Interaction of hypersonic vehicles with cloud particles.
+	\item removing biofilms via acoustic excitations of bubbles.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Math modeling, volume of fluid}
+
 \par\noindent
 Let $\Omega_{m}(t)$ be the region occupied by material $m$ at time $t$.
 \par\noindent
@@ -23,6 +38,12 @@ The volume fraction of material $m$ within a region $\Omega$ is
 \begin{eqnarray}
 	F_{m}=\frac{1}{|\Omega|}\int_{\Omega} \xi_{m}d\Omega
 \end{eqnarray}
+\end{frame}
+
+\begin{frame}{Math modeling, conservation laws}
+	Reynolds Transport Theorem.
+(see Jemison, Sussman, Arienti or Wenzel and Arienti or 5 equation model,
+	Abgrall)
 Define the state variable $\bmU$ as
 \begin{eqnarray}
 	\bmU=\left( \begin{array}{c}
@@ -35,13 +56,20 @@ Define the ``multidimensional flux vector'' as:
 	\bmF=\left( \begin{array}{c}
 	\xi_{m}\bmu_{m} \\
 	\rho_{m}\xi_{m}\bmu_{m} \\
-	\bmu_{m}\ocirc\rho_{m}\xi_{m}\bmu_{m}+p_{m}I-\tau_{m} \\
+	\bmu_{m}\otimes\rho_{m}\xi_{m}\bmu_{m}+p_{m}I-\tau_{m} \\
 	(\rho_{m}Y_{m,s}\bmu_{m}-\rho_{m}{\cal D}_{m,s}\nabla Y_{m,s})\xi_{m} \\
 		(\rho_{m}E_{m}\bmu_{m}+p_{m}\bmu_{m}-\bmu_{m}\cdot \tau_{m}-
 		k_{m}\nabla T_{m}+\bmq_{h,m})\xi_{m}
 	\end{array} \right)
 \end{eqnarray}
 
+\end{frame}
+
+\begin{frame}{Math modeling: phase change}
+(see Jemison, Sussman, Arienti or Wenzel and Arienti or 5 equation model,
+	Abgrall)
+
+\end{frame}
 
 Time step constraint:
 \begin{description}
