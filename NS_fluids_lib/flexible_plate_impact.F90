@@ -124,9 +124,9 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  if (FSI_flag(3).eq.FSI_SHOELE_CTML) then
   !do nothing
  else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
-  if (LS(3).ge.zero) then
+  if (LS(3).ge.zero) then !in the substrate
    LS(2)=-LS(3)
-  else if (LS(3).le.zero) then
+  else if (LS(3).le.zero) then !outside of the substrate
    LS(2)=min(LS(2),-LS(3))
   else
    print *,"LS(3) invalid"
@@ -230,7 +230,7 @@ if (probtype.eq.2000) then
 
    else if (AMREX_SPACEDIM.eq.3) then
 
-      !cubedist returns Phi<0 in the annulus
+      !annulusdist returns Phi<0 in the annulus
     call annulusdist( &
       x(1),x(2),x(SDIM), &
       xblob2,yblob2, &

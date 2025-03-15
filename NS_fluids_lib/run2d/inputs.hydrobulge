@@ -170,7 +170,9 @@ ns.polymer_factor=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 3 0
 #yield strength of aluminum =90MPA=90x10^7CGS=9.0x10^8 CGS units
 #9.0E+8/2.5E+11=0.0036
-ns.yield_stress=0.0 0.0 9.0e+8 0.0
+#alternate value(s):
+#9.0e+9
+ns.yield_stress=0.0 0.0 9.0e+9 0.0
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
