@@ -17144,6 +17144,7 @@ end subroutine print_visual_descriptor
     
       real(amrex_real), INTENT(in) :: x,y,z,xcen,ycen,rad
       real(amrex_real), INTENT(out) :: dist
+      real(amrex_real) :: dist2
       real(amrex_real), INTENT(in) :: zmin,zmax
 
       if (zmin.ge.zmax-EPS10) then 
@@ -17163,6 +17164,19 @@ end subroutine print_visual_descriptor
        else
         dist=sqrt(dist**2+(zmin-z)**2)
        endif
+      else if ((z.ge.zmin).and.(z.le.zmax)) then
+       if (dist.ge.zero) then
+        !do nothing
+       else if (dist.le.zero) then
+        dist2=max(zmin-z,z-zmax)
+        dist=max(dist2,dist)
+       else
+        print *,"dist invalid ",dist
+        stop
+       endif
+      else
+       print *,"z,zmin or zmax invalid: ",z,zmin,zmax
+       stop
       endif
 
       return 
@@ -17176,6 +17190,7 @@ end subroutine print_visual_descriptor
     
       real(amrex_real), INTENT(in) :: x,y,z,xcen,ycen,radmean,radthick
       real(amrex_real), INTENT(out) :: dist
+      real(amrex_real) :: dist2
       real(amrex_real), INTENT(in) :: zmin,zmax
 
       if (zmin.ge.zmax-EPS10) then 
@@ -17195,6 +17210,19 @@ end subroutine print_visual_descriptor
        else
         dist=sqrt(dist**2+(zmin-z)**2)
        endif
+      else if ((z.ge.zmin).and.(z.le.zmax)) then
+       if (dist.ge.zero) then
+        !do nothing
+       else if (dist.le.zero) then
+        dist2=max(zmin-z,z-zmax)
+        dist=max(dist2,dist)
+       else
+        print *,"dist invalid ",dist
+        stop
+       endif
+      else
+       print *,"z,zmin or zmax invalid: ",z,zmin,zmax
+       stop
       endif
 
       return 
@@ -27692,7 +27720,7 @@ endif
 if (yield_stress.gt.zero) then 
  ! do nothing
 else
- print *,"yield_stress out of range"
+ print *,"yield_stress out of range: ",yield_stress
  stop
 endif
 
