@@ -1546,7 +1546,7 @@ END SUBROUTINE SIMP
                !do nothing
               else
                print *,"fort_material_type_interface(iten) invalid: ", &
-                 iten,fort_material_type_interface
+                 iten,fort_material_type_interface(iten)
                stop
               endif
              endif !im_opp<>im

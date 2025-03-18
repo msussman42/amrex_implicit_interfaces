@@ -804,7 +804,8 @@ stop
       integer side
       integer nbase
 
-      integer im
+      integer im,im_opp
+      integer iten
 
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
@@ -2028,6 +2029,42 @@ stop
                 im,is_compressible_mat(im)
                stop
               endif
+
+              do im_opp=im+1,num_materials
+               call get_iten(im,im_opp,iten)
+
+               if (side.eq.1) then
+                local_LS=LSleft(im_opp)
+               else if (side.eq.2) then
+                local_LS=LSright(im_opp)
+               else
+                print *,"side invalid (im_opp) : ",im_opp,side
+                stop
+               endif
+
+               if (local_LS.ge.-incomp_thickness*dxmaxLS) then
+                if (fort_material_type_interface(iten).eq.0) then
+                 compressible_face=0
+                else if (fort_material_type_interface(iten).eq.999) then
+                 compressible_face=0
+                else if ((fort_material_type_interface(iten).ge.1).and. &
+                         (fort_material_type_interface(iten).le. &
+                          MAX_NUM_EOS)) then
+                 !do nothing
+                else
+                 print *,"fort_material_type_interface(iten) invalid: ", &
+                   iten,fort_material_type_interface(iten)
+                 stop
+                endif
+               else if (local_LS.le.-incomp_thickness*dxmaxLS) then
+                ! do nothing
+               else
+                print *,"local_LS corrupt,fort_crossterm"
+                print *,"im_opp,local_LS: ",im_opp,local_LS
+                stop
+               endif 
+              enddo !im_opp=im+1,num_materials
+
              else 
               print *,"is_rigid(im) invalid: ",im,is_rigid(im)
               stop
@@ -12931,7 +12968,8 @@ stop
       integer dir2
       integer iside
       integer vofcomp
-      integer im
+      integer im,im_opp
+      integer iten
       integer incompressible_interface_flag
       real(amrex_real) dxmaxLS
 
@@ -13842,6 +13880,7 @@ stop
        enddo
 
        do im=1,num_materials
+
         if (oldLS(im).ge.-incomp_thickness*dxmaxLS) then
          if (is_rigid(im).eq.1) then
           incompressible_interface_flag=1
@@ -13851,6 +13890,33 @@ stop
           print *,"is_rigid(im) invalid: ",im,is_rigid(im)
           stop
          endif
+
+         do im_opp=im+1,num_materials
+          call get_iten(im,im_opp,iten)
+
+          if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
+           if (fort_material_type_interface(iten).eq.0) then
+            incompressible_interface_flag=1
+           else if (fort_material_type_interface(iten).eq.999) then
+            incompressible_interface_flag=1
+           else if ((fort_material_type_interface(iten).ge.1).and. &
+                    (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
+            !do nothing
+           else
+            print *,"fort_material_type_interface(iten) invalid: ", &
+              iten,fort_material_type_interface(iten)
+            stop
+           endif 
+          else if (oldLS(im_opp).le.-incomp_thickness*dxmaxLS) then
+           ! do nothing
+          else
+           print *,"oldLS(im_opp) corrupt,fort_vfrac_split"
+           print *,"im,oldLS(im_opp): ",im,oldLS(im_opp)
+           stop
+          endif 
+
+         enddo !im_opp=im+1,num_materials
+
         else if (oldLS(im).le.-incomp_thickness*dxmaxLS) then
          ! do nothing
         else
@@ -13858,6 +13924,7 @@ stop
          print *,"im,oldLS(im): ",im,oldLS(im)
          stop
         endif 
+
        enddo !im=1,num_materials
 
        idonate=icrse
