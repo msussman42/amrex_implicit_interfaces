@@ -11332,7 +11332,8 @@ stop
       integer i,j,k
       integer dir,side
       integer veldir
-      integer im
+      integer im,im_opp
+      integer iten
       integer sidecomp,ibase
       integer ii,jj,kk
       integer iface,jface,kface
@@ -12581,8 +12582,11 @@ stop
         enddo ! im=1..num_materials
 
         if (is_rigid_near.eq.1) then
+
          use_face_pres_cen=0
+
         else if (is_rigid_near.eq.0) then
+
          do im=1,num_materials
            !incomp_thickness declared in PROBCOMMON.F90
           if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
@@ -12597,6 +12601,30 @@ stop
             stop
            endif
 
+           do im_opp=im+1,num_materials
+            call get_iten(im,im_opp,iten)
+            if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
+             if (fort_material_type_interface(iten).eq.0) then
+              use_face_pres_cen=0
+             else if (fort_material_type_interface(iten).eq.999) then
+              use_face_pres_cen=0
+             else if ((fort_material_type_interface(iten).ge.1).and. &
+                      (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
+              !do nothing
+             else
+              print *,"fort_material_type_interface(iten) invalid: ", &
+               iten,fort_material_type_interface(iten)
+              stop
+             endif
+            else if (LStest(im_opp).le.-incomp_thickness*dxmaxLS) then
+             ! do nothing
+            else
+             print *,"LStest(im_opp) corrupt,mac_to_cell"
+             print *,"im_opp,LStest(im_opp): ",im_opp,LStest(im_opp)
+             stop
+            endif
+           enddo !im_opp=im+1,num_materials
+
           else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
            ! do nothing
           else
@@ -12605,6 +12633,7 @@ stop
            stop
           endif 
          enddo ! im=1..num_materials
+
         else
          print *,"is_rigid_near inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
          stop
