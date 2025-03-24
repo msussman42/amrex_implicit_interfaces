@@ -224,12 +224,15 @@ fork_job(int fork_id) {
   } else
    amrex::Error("LSA: expecting initial_cumTime>0.0");
  
+//ABEL OKOJUNO
+//LSA_steps=max_step-initial_levelSteps
   if ((LSA_steps>0)&&(LSA_steps<9999)) {
    //do nothing
   } else
    amrex::Error("LSA: expecting 0<LSA_steps<9999");
 
   Real time_scale=local_fixed_dt*LSA_steps;
+//ABEL OKOJUNO: compare_time_scale=stop_time-initial_cumTime;
   if (std::abs(compare_time_scale-time_scale)<=1.0e-4*time_scale) {
    //do nothing
   } else
@@ -238,6 +241,15 @@ fork_job(int fork_id) {
  } else
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
 
+//ABEL OKOJUNO:
+//1. read in the "steady data" at time t0: data(t0)
+//2. with no perturbations run to time t1: data(t1)
+//3. let x^{(0)} initialized
+//4. k=0
+//5. using data(t0)+eps * x^{(k)} run to time t1: data(t1)^{(k)}
+//6. let x^{(k+1)}=normalized(data(t1)^{(k)}-data(t1))
+//7. k=k+1
+//8. go back to step 5.
  for (int LSA_current_step=0;
       LSA_current_step<=local_LSA_nsteps_power_method;
       LSA_current_step++) {
@@ -340,7 +352,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, March 18, 2025, 18:40pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, March 24, 2025, 18:40pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
