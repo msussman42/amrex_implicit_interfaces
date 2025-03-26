@@ -907,7 +907,8 @@ extern "C"
      int* level,
      int* finest_level,
      int* rzflag,
-     const int* domlo,const int* domhi);
+     const int* domlo,const int* domhi,
+     Real* ngrow_elastic);
 
 
    void fort_face_gradients(

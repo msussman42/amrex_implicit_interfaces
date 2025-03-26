@@ -360,6 +360,7 @@ public:
 
     static int ngrow_distance;  // should always be at least 4
     static int ngrow_make_distance;  // should always be at least 3
+    static Real ngrow_elastic; //ngrow_elastic<=ngrow_make_distance
 
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;

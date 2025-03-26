@@ -19264,7 +19264,8 @@ stop
        level, &
        finest_level, &
        rzflag, &
-       domlo,domhi) &
+       domlo,domhi, &
+       ngrow_elastic) &
       bind(c,name='fort_elastic_force')
 
       use probcommon_module
@@ -19281,6 +19282,7 @@ stop
        ! force component, force_dir=0..sdim-1
       integer, INTENT(in) :: force_dir  
       integer, INTENT(in) :: ncomp_visc
+      real(amrex_real), INTENT(in) :: ngrow_elastic
       real(amrex_real), INTENT(in) :: visc_coef
       integer, INTENT(in) :: velbc(SDIM,2,SDIM) 
       real(amrex_real), INTENT(in) :: dt 
@@ -19491,8 +19493,16 @@ stop
        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
        stop
       endif
+      if ((ngrow_elastic.gt.zero).and. &
+          (NINT(ngrow_elastic).le.ngrow_make_distance)) then
+       !do nothing
+      else
+       print *,"ngrow_elastic invalid: ",ngrow_elastic
+       stop
+      endif
 
-      H_radius=(ngrow_make_distance)*dxmaxLS
+!     H_radius=(ngrow_make_distance)*dxmaxLS
+      H_radius=(ngrow_elastic)*dxmaxLS
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
        ! do nothing
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
@@ -19758,9 +19768,9 @@ stop
          stop
         endif
 
-        H_corner=hs(LS_left(im_viscoelastic_p1),H_radius)
+        H_corner=hs_smooth(LS_left(im_viscoelastic_p1),H_radius)
         QCC(1)=QCC(1)*H_corner 
-        H_corner=hs(LS_right(im_viscoelastic_p1),H_radius)
+        H_corner=hs_smooth(LS_right(im_viscoelastic_p1),H_radius)
         QCC(2)=QCC(2)*H_corner 
 
         rplus=one
@@ -19931,9 +19941,9 @@ stop
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
         
-         H_corner=hs(LS_bottom(im_viscoelastic_p1),H_radius)
+         H_corner=hs_smooth(LS_bottom(im_viscoelastic_p1),H_radius)
          Q_ITAN(1)=Q_ITAN(1)*H_corner 
-         H_corner=hs(LS_top(im_viscoelastic_p1),H_radius)
+         H_corner=hs_smooth(LS_top(im_viscoelastic_p1),H_radius)
          Q_ITAN(2)=Q_ITAN(2)*H_corner 
         else
          print *,"fort_elastic_force: "
@@ -20103,9 +20113,9 @@ stop
           LS_top(im_LS)=LS_top(im_LS)/CC_weight
          enddo
 
-         H_corner=hs(LS_bottom(im_viscoelastic_p1),H_radius)
+         H_corner=hs_smooth(LS_bottom(im_viscoelastic_p1),H_radius)
          Q_JTAN(1)=Q_JTAN(1)*H_corner 
-         H_corner=hs(LS_top(im_viscoelastic_p1),H_radius)
+         H_corner=hs_smooth(LS_top(im_viscoelastic_p1),H_radius)
          Q_JTAN(2)=Q_JTAN(2)*H_corner 
         else
          print *,"fort_elastic_force: "
@@ -20195,7 +20205,7 @@ stop
         enddo !kofs=0,1
 #endif
 
-        H_corner=hs(LS_face(im_viscoelastic_p1),H_radius)
+        H_corner=hs_smooth(LS_face(im_viscoelastic_p1),H_radius)
         hoop12=hoop12*H_corner
         hoop22=hoop22*H_corner
 

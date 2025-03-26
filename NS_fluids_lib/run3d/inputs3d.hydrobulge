@@ -141,7 +141,8 @@ ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 # 35=EOS_wardlaw_tillotson
 # 3=EOS_NAjwl
 # 14=EOS_air_rho2
-ns.material_type=35 3 0 14
+#ns.material_type=35 3 0 14
+ns.material_type=35 3 0 0
 ns.material_conservation_form=1 1 0 0
 
 # FSI_flag for avaiable phase/material
@@ -163,11 +164,18 @@ ns.elastic_time=0.0 0.0 1.0e+31 0.0
 ns.polymer_factor=0.0 0.0 0.0 0.0
 #0=FENE-CR
 #1=Oldroyd B
-#3=incremental elastic
+#3=incremental elastic (plastic model)
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 0
+ns.viscoelastic_model=0 0 3 0
+#yield strength of aluminum =90MPA=90x10^7CGS=9.0x10^8 CGS units
+#9.0E+8/2.5E+11=0.0036 (too small)
+#alternate value(s):
+#9.0e+9 (too big)
+#2.0e+9 (5.87-5.08) (too small)
+#4.0e+9?
+ns.yield_stress=0.0 0.0 4.0e+9 0.0
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
@@ -205,8 +213,12 @@ ns.v = 1
 #outflow at top and bottom of can
 ns.lo_bc          = 3 3 2 
 ns.hi_bc          = 2 2 2
+ns.temperature_lo_bc = 3 3 2 
+ns.temperature_hi_bc = 1 1 2
 #ns.lo_bc          = 3 2 
 #ns.hi_bc          = 2 2
+#ns.temperature_lo_bc = 3 2  #2D
+#ns.temperature_hi_bc = 1 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
