@@ -429,6 +429,7 @@ int  NavierStokes::num_interfaces=0;
 
 int  NavierStokes::ngrow_distance=4;
 int  NavierStokes::ngrow_make_distance=3;
+Real NavierStokes::ngrow_elastic=3.0;
 
 int  NavierStokes::ncomp_sum_int_user1=0;
 int  NavierStokes::ncomp_sum_int_user2=0;
@@ -2567,6 +2568,9 @@ NavierStokes::read_params ()
      amrex::Error("ngrow_distance invalid");
 
     ngrow_make_distance=ngrow_distance-1;
+
+    ngrow_elastic=ngrow_make_distance;
+    pp.queryAdd("ngrow_elastic",ngrow_elastic);
 
     num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2;
     if ((num_interfaces<1)||(num_interfaces>999))
@@ -5687,6 +5691,9 @@ NavierStokes::read_params ()
       ngrow_make_distance << '\n';
      std::cout << "ngrow_distance= " << 
       ngrow_distance << '\n';
+
+     std::cout << "ngrow_elastic= " << 
+      ngrow_elastic << '\n';
 
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';

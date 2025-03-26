@@ -1961,7 +1961,8 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
      &level,
      &finest_level,
      &NS_geometry_coord,
-     domlo,domhi);
+     domlo,domhi,
+     &ngrow_elastic);
 
   } // mfi
 } // omp

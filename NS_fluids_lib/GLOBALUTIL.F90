@@ -8759,6 +8759,77 @@ end subroutine print_visual_descriptor
       return
       end function hs
 
+      real(amrex_real) function hs_smooth(phi,cutoff)
+      use probcommon_module
+      IMPLICIT NONE
+      real(amrex_real), INTENT(in) :: phi
+      real(amrex_real) :: phi_scale
+      real(amrex_real), INTENT(in) :: cutoff
+
+      if (phi.ge.cutoff) then
+        hs_smooth=one
+      else if (phi.le.-cutoff) then
+        hs_smooth=zero
+      else if (abs(phi).le.cutoff) then
+       phi_scale=half*(phi/cutoff+one)
+       hs_smooth=(phi_scale**4)*(-20.0d0*(phi_scale**3)+ &
+           70.0d0*(phi_scale**2)-84.0d0*phi_scale+35.0d0)
+       if ((hs_smooth.lt.-EPS_3_2).or.(hs_smooth.gt.one+EPS_3_2)) then
+        print *,"hs_smooth sanity check failed: ",hs_smooth
+        stop
+       else if (hs_smooth.lt.zero) then
+        hs_smooth=zero
+       else if (hs_smooth.gt.one) then
+        hs_smooth=one
+       else if ((hs_smooth.ge.zero).and.(hs_smooth.le.one)) then
+        ! do nothing
+       else
+        print *,"hs_smooth() is NaN: ",hs_smooth
+        stop
+       endif
+      else
+       print *,"phi corrupt hs_smooth: ",phi
+       stop
+      endif
+
+      return
+      end function hs_smooth
+
+      real(amrex_real) function hsprime_smooth(phi,cutoff)
+      use probcommon_module
+      IMPLICIT NONE
+      real(amrex_real), INTENT(in) :: phi
+      real(amrex_real) :: phi_scale
+      real(amrex_real), INTENT(in) :: cutoff
+
+      if (phi.ge.cutoff) then
+        hsprime_smooth=zero
+      else if (phi.le.-cutoff) then
+        hsprime_smooth=zero
+      else if (abs(phi).le.cutoff) then
+       phi_scale=half*(phi/cutoff+one)
+       hsprime_smooth=(phi_scale**3)*(-140.0d0*(phi_scale**3)+ &
+           420.0d0*(phi_scale**2)-420.0d0*phi_scale+140.0d0)
+       if (hsprime_smooth.lt.-EPS_3_2) then
+        print *,"hsprime_smooth sanity check failed: ",hsprime_smooth
+        stop
+       else if (hsprime_smooth.lt.zero) then
+        hsprime_smooth=zero
+       else if (hsprime_smooth.ge.zero) then
+        ! do nothing
+       else
+        print *,"hsprime_smooth() is NaN: ",hsprime_smooth
+        stop
+       endif
+      else
+       print *,"phi corrupt hsprime_smooth: ",phi
+       stop
+      endif
+
+      return
+      end function hsprime_smooth
+
+
       real(amrex_real) function hs_scale(phi,cutoff)
       use probcommon_module
       IMPLICIT NONE
