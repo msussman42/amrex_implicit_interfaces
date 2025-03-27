@@ -22905,6 +22905,9 @@ end subroutine print_visual_descriptor
        else if (axis_dir.eq.10) then
         rho=denfree
         pres=zero
+       else if (axis_dir.eq.11) then
+        rho=denfree
+        pres=zero
        else if (axis_dir.eq.20) then
         print *,"there is no gravity for the CODY ESTEBE created test problem"
         stop
@@ -26386,6 +26389,8 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
   density_at_depth=1.00008343D0
  else if (axis_dir.eq.10) then
   density_at_depth=1.000003 !52x52x120 tank that is pressureized
+ else if (axis_dir.eq.11) then
+  density_at_depth=one
  else if (axis_dir.eq.20) then
   ! do nothing
  else

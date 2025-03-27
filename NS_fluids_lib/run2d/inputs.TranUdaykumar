@@ -1,0 +1,276 @@
+#A particle level set based sharp interface cartesian grid method for
+#impact, penetration, and void collapse. 
+#L.B. Tran and H.S. Udaykumar
+#JCP 193 (2004) 469-510
+#Time resolved penetration of long rods into steel targets
+#Anderson, Hohler, Walker, Stilp
+#Int. J. Impact Engineering
+
+max_step  =  99999    # maximum timestep
+#max_step  =  5    # maximum timestep
+stop_time = 8.0e-5 
+
+# fluid,backing plate (hardest), Tungsten rod (elastic), biofilm (softest)
+ns.num_materials=3 #BIOFILM =4
+ns.num_species_var=0
+ns.num_divu_outer_sweeps=2
+
+ns.post_init_pressure_solve=1
+ns.slice_dir=1
+ns.xslice=0.0 0.0
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =  0.0 0.0 0.0 #3D
+#geometry.prob_hi   =  4.0 4.0 16.0
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  4.0 16.0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.presmooth=2
+mg.postsmooth=2
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
+
+mg.bot_atol = 1.0e-14
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.continuous_mof=1 # CMOF
+ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
+ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+#ns.mof_ordering=4 1 2 3 #BIOFILM
+ns.mof_ordering=4 1 2 
+ns.MOFITERMAX=30
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+# force AMR tagging within these specified boxes.
+ns.nblocks=0
+ns.xblocks=0.0
+ns.yblocks=0.0
+ns.zblocks=0.0
+ns.rxblocks=5.0
+ns.ryblocks=0.2
+ns.rzblocks=0.2
+ns.minimum_relative_error=1.0e-24
+ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_viscosity_cycles=1  # number of initial jacobi iterations
+ns.initial_thermal_cycles=1  # number of initial jacobi iterations
+ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+# cavitation pressure: 220.2726
+# cavitation density: 0.999958
+# initial bubble pressure: 83837x10^6 
+# initial bubble density: 1.63 
+# A=3.712e+12 B=0.03231e+12 r1=4.15 r2=0.95 1+w=1.3
+# e_0 = 4.2945e+10 dyne cm/g
+# subroutine INTERNAL_jwl: cv=4.1855E+7
+# temperature=e/cv=1026.0423
+# p=A(1- w rho/(R1 rho0))e^(-R1 rho0/rho)+
+#   B(1- w rho/(R2 rho0))e^(-R2 rho0/rho) + w rho e
+# hydrostatic pressure=1.013x10^6
+#
+# EOS_tait (material_type=1)
+# PCAV_TAIT=220.2726
+# A_TAIT=1.0D+6
+# B_TAIT=3.31D+9
+# RHOBAR_TAIT=1.0D0
+# GAMMA_TAIT=7.15D0
+# pressure=B( (rho/rhobar)^gamma - 1) + A
+# rho_init=rhobar*( ((1.06e+6-A)/B + 1)^(1/gamma) )=1.000003
+# rho=1.000003 pressure=1.06e+6
+# rhocav=rhobar*( ((pcav-A)/B + 1)^(1/gamma) )=0.9995775
+# sigma=63.74=(P-PV)/(.5 rho U^2 )   rho=1 (liquid density), U=180
+# P-PV=63.74 (.5) rho U^2 = 1032631.73
+# 1ATM=10^6 dyne/cm^2
+# P=PV+1.03e+6=1.03e+6+(.03)(1E6)=1.06e+6
+# 
+ns.inflow_pressure=1.0e+6  # atmospheric pressure
+ns.outflow_pressure=1.06e+6 # tank pressure at the impact plate
+
+amr.n_cell    = 32 128
+amr.max_level =  3
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 8 8 8 8 8   # block factor in grid generation
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 100     # 5 for movies. 
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 64
+#amr.restart         = chk04600
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+ns.projection_pressure_scale=1.0e+10
+
+mac.mac_abs_tol    = 1.0e-12
+
+# 1=always take sound speed into account
+# 2=never take sound speed into account
+# 0=take sound speed into account at t=0 only if compressible material
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+ns.shock_timestep=2 1 1 1
+ns.cfl            = 0.5    # cfl number for hyperbolic system
+ns.init_shrink    = 0.2      # scale back initial timestep
+ns.change_max=1.01    # scale back initial timestep
+# for underwater explosion, energy equation must be handled
+# conservatively, but not for this problem.
+ns.visc_coef      = 1.0    # coef of viscosity
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = 0.0
+ns.gravityangle = 0.0
+# things to try:
+# 1. reduce nucleation pressure from 250 closer to 220.2726
+# 2. use impedance weighting when vapor in contact with water?
+# 3. make ability to do multiple slices.
+# 4. extract time history from slices
+# 5. use prescribed initial conditions for the air.
+# 6. Wardlaw's benchmark says the charge weighs 500kg not 250kg.
+#
+# 1-2 means "material 1 is converted into material 2"
+# 1-2,1-3,2-3
+#ns.nucleation_pressure=250.0 0.0 0.0 0.0 0.0 0.0 
+# if all of these must be true for cavitation to occur:
+#ns.nucleation_pressure=220.3 0.0 0.0 0.0 0.0 0.0 
+#ns.nucleation_pmg=221.0 0.0 0.0 0.0 0.0 0.0 
+#ns.nucleation_mach=0.1 0.0 0.0 0.0 0.0 0.0 
+ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
+ns.density_ratio_relaxation_factor=1000.0
+
+#ns.fixed_dt	  = 0.01     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=11 # density_at_depth=1.000003 Tungsten rod, not sphere
+#JPW ns.vorterr=4.0
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+#sigma=63.74=(P-PV)/(.5 rho U^2 )   rho=1 (liquid density), U=180
+#P-PV=63.74 (.5) rho U^2 = 1032631.73
+#P=PV+1.03e+6=1.06e+6
+#ns.advbot=320.0 # 3.2 m/s (another option)
+#ns.advbot=240.0 # (1.8 m/s impact velocity)
+ns.advbot=125000.0 # (1250 m/s impact velocity)
+ns.adv_vel=0.0
+ns.adv_dir=2 # adv_dir=1,2,3
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+ns.viscconst=0.0001 10.0 10.0 10.0
+ns.tempconst=293.0 293.0 293.0 293.0
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+# 2 = adiabatic JWL 3=non-adiabatic JWL
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+# material_type=1 EOS_tait
+ns.material_type=0 36 36 36
+ns.material_conservation_form=0 1 1 1
+# FSI_flag for avaiable phase/material
+# 0 fluid (default)
+# 1 solid (PROB_[23]D.F90)
+# 2 solid (lagrangian)
+# 3 ice
+# 4 CTML
+# 5 rigid not prescribed
+# 8 EULERIAN FSI
+# im_elastic_map will have 3 components: 1,2,3
+#ns.FSI_flag=0 5 8 8 #BIOFILM ELASTIC BALL
+#ns.FSI_flag=0 5 8 5 #BIOFILM INELASTIC BALL
+#ns.FSI_flag=0 5 8 #ELASTIC BALL
+#ns.FSI_flag=0 5 5 #INELASTIC BALL
+ns.FSI_flag=0 8 8
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+#ns.elastic_viscosity=0.0 0.0 4.0e+5 0.0 #BIOFILM INELASTIC BALL
+#ns.elastic_viscosity=0.0 0.0 4.0e+5 4.0e+6 #BIOFILM ELASTIC BALL
+#ns.elastic_viscosity=0.0 0.0 0.0 #INELASTIC BALL
+#ns.elastic_viscosity=0.0 0.0 4.0e+6 #ELASTIC BALL
+ns.elastic_viscosity=0.0 77.3e+10 124.0e+10 # 1GPASCAL=1e+10 CGS
+#ns.elastic_time=0.0 0.0 1.0e+31 0.0 #BIOFILM INELASTIC BALL
+#ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #BIOFILM ELASTIC BALL
+#ns.elastic_time=0.0 0.0 0.0 #INELASTIC BALL
+#ns.elastic_time=0.0 0.0 1.0e+31 #ELASTIC BALL
+ns.elastic_time=0.0 1.0e+31 1.0e+31
+ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
+#0=FENE-CR
+#1=Oldroyd B
+#3=incremental elastic
+#5=FENE P
+#6=Linear PTT
+#7=Neo-Hookean
+#ns.viscoelastic_model=0 0 7 0 #BIOFILM INELASTIC BALL
+#ns.viscoelastic_model=0 0 7 7 #BIOFILM ELASTIC BALL
+#ns.viscoelastic_model=0 0 0 #INELASTIC BALL
+#ns.viscoelastic_model=0 0 7 #ELASTIC BALL
+ns.viscoelastic_model=0 3 3
+ns.yield_stress=0.0 1.50e+10 1.51e+10
+ns.rest_fraction=0.0 #prevent CPU overheating?
+ns.tiling=false
+
+# 1 Watt=10^7 ERG/S
+# 1 W/(M K)=10^5 ERG/(S CM K)
+# 1 ERG= 1 (gram cm^2/s^2)
+# air: k=0.024 W/(M K)
+# water: k=0.58 W/(M K)
+#ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
+ns.heatviscconst=0.0 134.0e+5 477.0e+5
+ns.include_viscous_heating=0
+#tank=520x1200x520 mm=52x120x52 cm^3
+#base tank added pressure=
+# (rho)(volume)g/(cross sectional area)=
+# rho gh=980 * 52^2 * 120 * 1/(52*120)=980 * 52=5.1e4 dyne/cm^2=0.051 atm
+# P=PV+1.03e+6=1.06e+6
+# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
+#ns.denconst=1.000003 1.0 1.0 7.8 #BIOFILM
+ns.denconst=0.001 7.850 17.600 
+#ns.density_floor=0.001 0.999 0.999 7.79 #BIOFILM
+ns.density_floor=0.001 0.1 0.1
+ns.xblob=0.0
+
+#ns.yblob=5000.0
+#ns.zblob=9850.0
+ns.yblob=7.6 # y coordinate of midpoint of rod relative to domain BOTTOM
+ns.zblob=1021.87  # depth of sphere (unused)
+ns.radblob=0.2  # x radius of Tungsten rod 2mm
+#jetting_plate_dist declared in GLOBALDIST.F90
+ns.radblob2=2.9  # substrate thickness
+ns.radblob3=5.0  # rod height
+ns.yblob2=3.5    # yblob2+yblob < y < yblob2+yblob+thickness
+ns.xblob2=2.0    # substrate radius -xblob2 < r < xblob2
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=46
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

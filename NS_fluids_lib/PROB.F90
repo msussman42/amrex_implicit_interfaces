@@ -5963,6 +5963,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
           else if (axis_dir.eq.10) then
            ! do nothing (steel sphere impact)
+          else if (axis_dir.eq.11) then
+           ! do nothing (Tungsten rod impact)
           else if (axis_dir.eq.20) then
            ! do nothing (CODY ESTEBE created test problem)
           else
@@ -7191,6 +7193,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          vel(dir)=zero
         enddo
 
+       else if ((probtype.eq.46).and.(axis_dir.eq.11)) then
+
+        !stainless_steel_dist_rate (not used) is declared in: GLOBALDIST.F90
+        !plate velocity is zero
+        do dir=1,SDIM
+         vel(dir)=zero
+        enddo
+
           ! CODY ESTEBE created test problem.
        else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
         do dir=1,SDIM
@@ -8053,6 +8063,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! cavitation
       else if ((probtype.eq.46).and. &
                (axis_dir.ne.10).and. &
+               (axis_dir.ne.11).and. &
                (SDIM.eq.2)) then
 
          ! water, jwl, air, vacuum
@@ -8069,6 +8080,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        else if (axis_dir.eq.10) then ! cavitation due to falling steel ball
         print *,"steel ball cavitation handled below ..."
+        stop
+       else if (axis_dir.eq.11) then 
+        print *,"Tungsten rod handled below ..."
         stop
 
         ! CODY ESTEBE created test problem
@@ -8139,7 +8153,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! bubble jetting or steel ball cavitation
        ! (materialdist_batch)
       else if ((probtype.eq.42).or. &
-               ((probtype.eq.46).and.(axis_dir.eq.10))) then  
+               ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
+               ((probtype.eq.46).and.(axis_dir.eq.11))) then  
 
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (probtype.eq.42) then
@@ -8181,7 +8196,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else
-         print *,"probtype.eq.42 or 46(10) invalid FSI_flag: ", &
+         print *,"probtype.eq.42 or 46(10,11) invalid FSI_flag: ", &
            FSI_flag(backing_id),probtype,axis_dir
          stop
         endif
@@ -9817,6 +9832,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (axis_dir.eq.10) then
 
          dist=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob
+
+        else if (axis_dir.eq.11) then
+
+          ! negative in the square
+         call squaredist(x,y,-radblob,radblob, &
+           yblob-half*radblob3,yblob+half*radblob3,dist)
 
          ! CODY ESTEBE created test problem
         else if (axis_dir.eq.20) then
@@ -17632,6 +17653,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((probtype.eq.46).and.(axis_dir.eq.10)) then
           base_pres=outflow_pressure
 
+         ! Tungsten rod collision
+        else if ((probtype.eq.46).and.(axis_dir.eq.11)) then
+          base_pres=outflow_pressure
+
          ! CODY ESTEBE created test problem
         else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
           base_pres=outflow_pressure
@@ -17759,6 +17784,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then !steel sphere collision
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
+           else if (axis_dir.eq.11) then !Tungsten rod collision
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -17846,6 +17873,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             !steel sphere
            else if (axis_dir.eq.10) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
+
+            !Tungsten rod
+           else if (axis_dir.eq.11) then
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
+
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else
@@ -17965,6 +17997,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then !steel sphere
+            ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
+           else if (axis_dir.eq.11) then !Tungsten rod
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
            else if (axis_dir.eq.20) then
             ! do nothing (ADV=base_pres, base_pres=outflow_pressure above) 
@@ -26071,6 +26105,8 @@ end subroutine initialize2d
             endif
            else if (axis_dir.eq.10) then
             !do nothing (steel sphere test problem,fort_denconst(im) ok)
+           else if (axis_dir.eq.11) then
+            !do nothing (Tungsten rod test problem,fort_denconst(im) ok)
            else if (axis_dir.eq.20) then
             !do nothing (CODY ESTEBE created test problem,fort_denconst(im) ok)
            else
@@ -27867,7 +27903,8 @@ end subroutine initialize2d
          else if (probtype.eq.46) then
           if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
            ! do nothing cavitation 2D, jwl
-          else if (axis_dir.eq.10) then
+          else if ((axis_dir.eq.10).or. &
+                   (axis_dir.eq.11)) then
            if (num_materials.ge.3) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
             if (vfracbatch(num_materials).gt.zero) then ! steel sphere
