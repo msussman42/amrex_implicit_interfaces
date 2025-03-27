@@ -406,6 +406,15 @@ end subroutine nozzle2d
         call stainless_steel_dist_rate(xprime,yprime,zprime,time, &
          dist,steel_rate)
 
+       else if ((probtype.eq.46).and.(axis_dir.eq.11).and.(1.eq.0)) then
+
+          ! dist>0 in the Tungsten rod
+        print *,"Tungsten rod  motion not hardwired anymore"
+        stop
+
+        call stainless_steel_dist_rate(xprime,yprime,zprime,time, &
+         dist,steel_rate)
+
        else if ((probtype.eq.46).and.(axis_dir.eq.20)) then
 
           ! dist>0 in the substrate (solid) region.
@@ -625,6 +634,9 @@ end subroutine nozzle2d
        else if (axis_dir.eq.10) then
         print *,"no rigid sphere expected axis_dir=",axis_dir
         stop
+       else if (axis_dir.eq.11) then
+        print *,"no rigid rod expected axis_dir=",axis_dir
+        stop
        else
         print *,"axis_dir invalid: ",axis_dir
         stop
@@ -750,6 +762,9 @@ end subroutine nozzle2d
        else if (axis_dir.eq.10) then
         print *,"no rigid sphere expected ",axis_dir
         stop
+       else if (axis_dir.eq.11) then
+        print *,"no rigid rod expected ",axis_dir
+        stop
        else
         print *,"axis_dir invalid: ",axis_dir
         stop
@@ -874,7 +889,8 @@ end subroutine nozzle2d
        !   or
        ! impact of steel ball against flat plate.
       if ((probtype.eq.42).or. &
-          ((probtype.eq.46).and.(axis_dir.eq.10))) then
+          ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
+          ((probtype.eq.46).and.(axis_dir.eq.11))) then
        aspect=xblob2
 
 !      offset=2.54d0
@@ -1424,7 +1440,8 @@ end subroutine nozzle2d
        endif
        ! bubble jetting (soliddist) or steel sphere hitting plate (soliddist)
       else if ((probtype.eq.42).or. &
-               ((probtype.eq.46).and.(axis_dir.eq.10))) then 
+               ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
+               ((probtype.eq.46).and.(axis_dir.eq.11))) then 
 
        if (probtype.eq.42) then
         backing_id=3
@@ -1469,7 +1486,8 @@ end subroutine nozzle2d
        ! in soliddist
       else if ((probtype.eq.46).and. &
                (radblob2.gt.zero).and. &
-               (axis_dir.ne.10)) then
+               ((axis_dir.lt.10).or. &
+                (axis_dir.gt.11))) then
        print *,"the airgun problem needs to be redefined"
        stop
       else if ((probtype.eq.63).and.(SDIM.eq.3)) then

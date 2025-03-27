@@ -767,7 +767,8 @@ stop
       SUB_clamped_LS_no_scale=>STUB_clamped_LS
 
       if ((probtype.eq.42).or. &
-          ((probtype.eq.46).and.(axis_dir.eq.10))) then
+          ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
+          ((probtype.eq.46).and.(axis_dir.eq.11))) then
 
        if (probtype.eq.42) then
         backing_id=3
