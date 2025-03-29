@@ -5864,7 +5864,7 @@ stop
        stop
       endif
       if ((im_parm.lt.0).or.(im_parm.ge.num_materials)) then
-       print *,"im_parm invalid24"
+       print *,"im_parm invalid24 fort_tensorheat im_parm=",im_parm
        stop
       endif
 
@@ -5931,17 +5931,21 @@ stop
          print *,"dimension bust"
          stop
         endif
-        if (xsten(0,1).le.zero) then
-         print *,"no neg domain in r-z"
+        if (xsten(0,1).gt.zero) then
+         !do nothing
+        else
+         print *,"no neg domain in r-z: ",xsten(0,1)
          stop
         endif
        else if (irz.eq.COORDSYS_CYLINDRICAL) then
-        if (xsten(-2,1).le.zero) then
-         print *,"no neg domain in r-T"
+        if (xsten(-2,1).gt.zero) then
+         !do nothing
+        else
+         print *,"no neg domain in r-T: ",xsten(-2,1)
          stop
         endif
        else
-        print *,"irz invalid"
+        print *,"irz invalid: ",irz
         stop
        endif
 
@@ -5956,7 +5960,7 @@ stop
        else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
         local_mask=0
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid: ",local_mask
         stop
        endif
 
@@ -6043,9 +6047,9 @@ stop
        DeDTinverse, &
        DIMS(DeDTinverse), &
        vischeat,DIMS(vischeat), &
-       xstress,DIMS(xstress), &
-       ystress,DIMS(ystress), &
-       zstress,DIMS(zstress), &
+       xstress,DIMS(xstress), & !tau on the MACx grid
+       ystress,DIMS(ystress), & !tau on the MACy grid
+       zstress,DIMS(zstress), & !tau on the MACz grid
        gradu,DIMS(gradu), &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -6216,6 +6220,10 @@ stop
         enddo ! veldir
        enddo ! dir=1..sdim
 
+        ! (div tau)_j = tau_{ij,i}
+        ! MACx: tau_{1j,1}=tau_{j1,1}
+        ! MACy: tau_{2j,2}=tau_{j2,2}
+        ! MACz: tau_{3j,3}=tau_{j3,3}
        do veldir=1,SDIM
         !on the xface we have (tau dot (1 0 0))_{i}=tau_{ij}e_{j}=tau_{i1}
         tensor(veldir,1)=half*(xstress(D_DECL(i,j,k),veldir)+ &
@@ -7899,7 +7907,7 @@ stop
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"ENUM_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid: ",ENUM_NUM_TENSOR_TYPE
        stop
       endif
 
@@ -7911,22 +7919,22 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small: ",bfact
        stop
       endif
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
-       print *,"level invalid fort_maketensor"
+       print *,"level invalid fort_maketensor: ",level
        stop
       endif
       if (finest_level.ne.fort_finest_level) then
-       print *,"finest_level invalid fort_maketensor"
+       print *,"finest_level invalid fort_maketensor: ",finest_level
        stop
       endif
 
       if ((im_parm.lt.0).or. &
           (im_parm.ge.num_materials).or. &
           (is_rigid(im_parm+1).eq.1)) then
-       print *,"im_parm invalid26"
+       print *,"im_parm invalid26 fort_maketensor, im_parm=",im_parm
        stop
       endif
 
@@ -7939,7 +7947,7 @@ stop
       if (polymer_factor.ge.zero) then !1/L
        ! do nothing
       else
-       print *,"polymer_factor out of range"
+       print *,"polymer_factor out of range: ",polymer_factor
        stop
       endif
 
@@ -8014,6 +8022,7 @@ stop
            ! do nothing
           else
            print *,"A=Q+I should be positive definite"
+           print *,"viscoelastic_model=",viscoelastic_model
            stop
           endif
          else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
@@ -8023,6 +8032,7 @@ stop
            ! do nothing
           else
            print *,"A=Q+I should be positive definite"
+           print *,"viscoelastic_model=",viscoelastic_model
            stop
           endif
          else
@@ -21690,6 +21700,11 @@ stop
         new_temperature=TEMPERATURE+Tforce
         if (new_temperature.le.zero) then
          new_temperature=TEMPERATURE
+        else if (new_temperature.gt.zero) then
+         !do nothing
+        else
+         print *,"new_temperature corrupt: ",new_temperature
+         stop
         endif
         snew(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)=new_temperature
        enddo ! im = 1..num_materials

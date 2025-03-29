@@ -1187,7 +1187,8 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  apply_pressure_grad(
   simple_AMR_BC_flag, 
   simple_AMR_BC_flag_viscosity, 
-  homflag,energyflag,CONSERVE_FLUXES_MF,
+  homflag,energyflag,
+  CONSERVE_FLUXES_MF,
   source_idx,
   project_option,nsolve,
   dt_slab); //diffusion_heating
@@ -1266,11 +1267,11 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
    ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
    heatfab.dataPtr(),
    ARLIM(heatfab.loVect()),ARLIM(heatfab.hiVect()),
-   xstress.dataPtr(),
+   xstress.dataPtr(), //tau on the MACx grid
    ARLIM(xstress.loVect()),ARLIM(xstress.hiVect()),
-   ystress.dataPtr(),
+   ystress.dataPtr(), //tau on the MACy grid
    ARLIM(ystress.loVect()),ARLIM(ystress.hiVect()),
-   zstress.dataPtr(),
+   zstress.dataPtr(), //tau on the MACz grid
    ARLIM(zstress.loVect()),ARLIM(zstress.hiVect()),
    gradufab.dataPtr(),
    ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),

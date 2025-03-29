@@ -226,7 +226,7 @@ ns.tiling=false
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
 ns.heatviscconst=0.0 134.0e+5 477.0e+5
-ns.include_viscous_heating=0
+ns.include_viscous_heating=1 # grad u : tau
 #tank=520x1200x520 mm=52x120x52 cm^3
 #base tank added pressure=
 # (rho)(volume)g/(cross sectional area)=
