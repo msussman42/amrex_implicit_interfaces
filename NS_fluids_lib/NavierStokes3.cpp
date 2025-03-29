@@ -11957,7 +11957,7 @@ void NavierStokes::diffusion_heatingALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-   // ::diffusion_heating declared in Diffusion.cpp
+   // NavierStokes::diffusion_heating declared in Diffusion.cpp
   ns_level.diffusion_heating(source_idx,idx_heat);
  } // ilev
 
@@ -12683,7 +12683,7 @@ void NavierStokes::veldiffuseALL() {
   SDC_outer_sweeps,
   slab_step,
   divu_outer_sweeps);
-  std::cout << "press any number then enter: immediately after SOLVETYPE_VISC\n";
+  std::cout << "press any number then enter (right after SOLVETYPE_VISC)\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
@@ -12999,7 +12999,7 @@ void NavierStokes::veldiffuseALL() {
 
    int simple_AMR_BC_flag_viscosity=1;
    init_gradu_tensorALL(
-     VISCHEAT_SOURCE_MF,
+     VISCHEAT_SOURCE_MF, //this is velocity right after viscous solver.
      do_alloc,
      CELLTENSOR_MF,
      FACETENSOR_MF,
@@ -13014,13 +13014,17 @@ void NavierStokes::veldiffuseALL() {
           (elastic_viscosity[im]>0.0)) {
        // initializes VISCOTEN_MF
        // we are currently in "veldiffuseALL"
-       make_viscoelastic_tensorALL(im);
+       // NavierStokes::make_viscoelastic_tensorALL declared in
+       // NavierStokes.cpp
+       make_viscoelastic_tensorALL(im); 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
          // VISCHEAT_MF is initialized to zero in ::prepare_viscous_solver().
          // VISCHEAT_MF is incremented with heating terms due to 
          // viscoelastic heating in this loop.
-         // uses VISCOTEN_MF
+         // uses VISCOTEN_MF and CELLTENSOR_MF
+         // NavierStokes::make_viscoelastic_heating is declared in 
+         // NavierStokes.cpp
         ns_level.make_viscoelastic_heating(im,VISCHEAT_MF);
        }  
        delete_array(VISCOTEN_MF);

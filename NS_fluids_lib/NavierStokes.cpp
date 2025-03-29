@@ -11518,7 +11518,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      FArrayBox& tenfab=(*localMF[VISCOTEN_MF])[mfi];
      // 1. maketensor: TQ_{m}=alpha_{m} Q_{m}
      // 2. tensor force: F= div (H_{m} TQ_{m})
-     //    H=H(phi_biased)
+     //    H=H(phi)
 
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
@@ -11624,12 +11624,14 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  // visc_coef.  
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials) {
   std::cout << "ncomp= " <<
-   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << 
+   " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ncomp invalid(2)");
  }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1) {
   std::cout << "ngrow= " <<
-   localMF[CELL_VISC_MATERIAL_MF]->nGrow() << " num_materials= " << num_materials << '\n';
+   localMF[CELL_VISC_MATERIAL_MF]->nGrow() << 
+   " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ngrow invalid(2)");
  }
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
