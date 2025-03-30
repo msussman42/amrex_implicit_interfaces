@@ -20474,8 +20474,14 @@ end subroutine print_visual_descriptor
 
       V0=one/rho0
       V=one/rho
-      Gamma0=2.0d0
-      c0=394000.0
+      Gamma0=fort_stiffGAMMA(im)
+      c0=fort_stiff_sound_speed(im)
+      if ((Gamma0.gt.zero).and.(c0.gt.zero)) then
+       !do nothing
+      else
+       print *,"Gamma0 or c0 invalid:",Gamma0,c0
+       stop
+      endif
       s=1.49d0
       mu=one-rho0/rho
        !V0-V=1/rho0-1/rho=mu/rho0
@@ -20484,8 +20490,22 @@ end subroutine print_visual_descriptor
        !  gamma0 rho0 *
        !  (e-(1/2)c^2(mu/(1-s mu))^2)=
        !  rho0 (c^2 mu(1-gamma0 mu/2)/(1-s mu)^2)+gamma0 rho0 e
-      pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
-        Gamma0*rho0*internal_energy              
+
+      if (mu.ge.zero) then
+       pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
+        Gamma0*rho0*internal_energy
+      else if (mu.lt.zero) then
+       pressure=(c0**2)*(rho-rho0)+Gamma0*rho0*internal_energy
+       if (pressure.gt.zero) then
+        !do nothing
+       else
+        print *,"pressure invalid: ",pressure
+        stop
+       endif
+      else
+       print *,"mu invalid: ",mu
+       stop
+      endif 
               
       return
       end subroutine EOS_Mie_Gruneison
@@ -20529,8 +20549,14 @@ end subroutine print_visual_descriptor
 
       V0=one/rho0
       V=one/rho
-      Gamma0=2.0d0
-      c0=394000.0
+      Gamma0=fort_stiffGAMMA(im)
+      c0=fort_stiff_sound_speed(im)
+      if ((Gamma0.gt.zero).and.(c0.gt.zero)) then
+       !do nothing
+      else
+       print *,"Gamma0 or c0 invalid:",Gamma0,c0
+       stop
+      endif
       s=1.49d0
       mu=one-rho0/rho
 
@@ -20543,6 +20569,15 @@ end subroutine print_visual_descriptor
       dpdmu=(dtop_bottom-dbottom_top)/(w**4)
       dpdrho=dpdmu*dmu
       dpde=Gamma0*rho0
+      if (mu.ge.zero) then
+       !do nothing
+      else if (mu.lt.zero) then
+       dpdrho=c0**2
+      else
+       print *,"mu invalid: ",mu
+       stop
+      endif 
+
       soundsqr=dpdrho+pressure*dpde/(rho**2)
 
       if (soundsqr.gt.zero) then

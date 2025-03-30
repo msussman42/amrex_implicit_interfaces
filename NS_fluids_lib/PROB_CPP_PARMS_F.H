@@ -120,6 +120,7 @@ namespace amrex{
        Real* stiffCP,
        Real* stiffCV,
        Real* stiffGAMMA,
+       Real* stiff_sound_speed,
        Real* denconst,
        Real* den_floor,
        Real* den_ceiling,

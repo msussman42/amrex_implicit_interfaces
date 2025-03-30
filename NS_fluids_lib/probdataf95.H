@@ -103,6 +103,7 @@
       real(amrex_real) fort_stiffCP(MAX_NUM_MATERIALS)
       real(amrex_real) fort_stiffCV(MAX_NUM_MATERIALS)
       real(amrex_real) fort_stiffGAMMA(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_stiff_sound_speed(MAX_NUM_MATERIALS)
 
       real(amrex_real) density_at_depth
       real(amrex_real) global_pressure_scale

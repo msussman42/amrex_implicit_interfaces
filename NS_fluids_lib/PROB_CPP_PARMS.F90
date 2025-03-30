@@ -397,6 +397,7 @@ stop
         ccstiffCP, &
         ccstiffCV, &
         ccstiffGAMMA, &
+        ccstiff_sound_speed, &
         ccdenconst, &
         ccden_floor, &
         ccden_ceiling, &
@@ -562,6 +563,7 @@ stop
       real(amrex_real), INTENT(in) :: ccstiffCP(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccstiffCV(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccstiffGAMMA(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccstiff_sound_speed(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccdenconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccden_floor(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccden_ceiling(ccnum_materials)
@@ -1611,6 +1613,7 @@ stop
        fort_stiffCP(im)=ccstiffCP(im)
        fort_stiffCV(im)=ccstiffCV(im)
        fort_stiffGAMMA(im)=ccstiffGAMMA(im)
+       fort_stiff_sound_speed(im)=ccstiff_sound_speed(im)
        fort_denconst(im)=ccdenconst(im)
        fort_density_floor(im)=ccden_floor(im)
        fort_density_ceiling(im)=ccden_ceiling(im)
@@ -1822,6 +1825,7 @@ stop
         print *,"im,stiffCP ",im,fort_stiffCP(im)
         print *,"im,stiffCV ",im,fort_stiffCV(im)
         print *,"im,stiffGAMMA ",im,fort_stiffGAMMA(im)
+        print *,"im,stiff_sound_speed ",im,fort_stiff_sound_speed(im)
         print *,"im,den ",im,fort_denconst(im)
         print *,"im,den_floor ",im,fort_density_floor(im)
         print *,"im,den_ceiling ",im,fort_density_ceiling(im)
