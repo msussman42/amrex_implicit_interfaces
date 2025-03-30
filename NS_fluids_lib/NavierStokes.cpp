@@ -890,6 +890,7 @@ Vector<Real> NavierStokes::prerecalesce_stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
+Vector<Real> NavierStokes::stiff_sound_speed; // def=3.0e+10 cm/s
 
 // uncoupled_viscosity=0 => div (2 mu D)
 // uncoupled_viscosity=1 => div (mu grad U)
@@ -1529,6 +1530,7 @@ void fortran_parameters() {
  Vector<Real> stiffCPtemp(NavierStokes::num_materials);
  Vector<Real> stiffCVtemp(NavierStokes::num_materials);
  Vector<Real> stiffGAMMAtemp(NavierStokes::num_materials);
+ Vector<Real> stiff_sound_speedtemp(NavierStokes::num_materials);
 
  //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
  //DrhoDT has units of 1/(Degrees Kelvin)
@@ -1600,6 +1602,7 @@ void fortran_parameters() {
   stiffCPtemp[im]=4.1855e+7;
   stiffCVtemp[im]=4.1855e+7;
   stiffGAMMAtemp[im]=1.4;
+  stiff_sound_speedtemp[im]=3.0e+10;
 
   DrhoDTtemp[im]=0.0;
   tempcutofftemp[im]=CPP_EPS_8_6;
@@ -1677,6 +1680,8 @@ void fortran_parameters() {
   NavierStokes::num_materials);
 
  pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,NavierStokes::num_materials);
+ pp.queryAdd("stiff_sound_speed",stiff_sound_speedtemp,
+    NavierStokes::num_materials);
 
  pp.getarr("denconst",denconst_temp,0,NavierStokes::num_materials);
 
@@ -2221,6 +2226,7 @@ void fortran_parameters() {
   stiffCPtemp.dataPtr(),
   stiffCVtemp.dataPtr(),
   stiffGAMMAtemp.dataPtr(),
+  stiff_sound_speedtemp.dataPtr(),
   denconst_temp.dataPtr(),
   den_floor_temp.dataPtr(),
   den_ceiling_temp.dataPtr(),
@@ -3802,6 +3808,7 @@ NavierStokes::read_params ()
     stiffCP.resize(num_materials);
     stiffCV.resize(num_materials);
     stiffGAMMA.resize(num_materials);
+    stiff_sound_speed.resize(num_materials);
 
     DrhoDT.resize(num_materials);
     override_density.resize(num_materials);
@@ -4130,6 +4137,7 @@ NavierStokes::read_params ()
      stiffCP[i]=4.1855e+7;
      stiffCV[i]=4.1855e+7;
      stiffGAMMA[i]=1.4;
+     stiff_sound_speed[i]=3.0e+10;
 
      tempcutoff[i]=CPP_EPS_8_6;
      tempcutoffmax[i]=1.0e+30;
@@ -4148,6 +4156,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("stiffCV",stiffCV,num_materials);
     pp.queryAdd("stiffGAMMA",stiffGAMMA,num_materials);
+    pp.queryAdd("stiff_sound_speed",stiff_sound_speed,num_materials);
 
     pp.queryAdd("angular_velocity",angular_velocity);
     pp.queryAdd("centrifugal_force_factor",centrifugal_force_factor);
@@ -5768,6 +5777,8 @@ NavierStokes::read_params ()
       std::cout << "stiffCP i=" << i << " " << stiffCP[i] << '\n';
       std::cout << "stiffCV i=" << i << " " << stiffCV[i] << '\n';
       std::cout << "stiffGAMMA i=" << i << " " << stiffGAMMA[i] << '\n';
+      std::cout << "stiff_sound_speed i=" << i << " " << 
+        stiff_sound_speed[i] << '\n';
       std::cout << "denconst i=" << i << " " << denconst[i] << '\n';
       std::cout << "density_floor i=" << i << " " << density_floor[i] << '\n';
       std::cout << "density_ceiling i="<<i<<" "<< density_ceiling[i] << '\n';

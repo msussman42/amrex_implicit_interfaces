@@ -21,7 +21,7 @@ ns.xslice=0.0 0.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 #geometry.prob_lo   =  0.0 0.0 0.0 #3D
 #geometry.prob_hi   =  4.0 4.0 16.0
 geometry.prob_lo   =  0.0 0.0
@@ -197,6 +197,9 @@ ns.FSI_flag=0 8 8
 #ns.elastic_viscosity=0.0 0.0 4.0e+5 4.0e+6 #BIOFILM ELASTIC BALL
 #ns.elastic_viscosity=0.0 0.0 0.0 #INELASTIC BALL
 #ns.elastic_viscosity=0.0 0.0 4.0e+6 #ELASTIC BALL
+#fluid, steel, tungsten, biofilm
+ns.stiffGAMMA=1.4 1.16 1.43 1.4
+ns.stiff_sound_speed=3.0e+10 4.570e+5 4.030e+5 3.0e+10
 ns.elastic_viscosity=0.0 77.3e+10 124.0e+10 # 1GPASCAL=1e+10 CGS
 #ns.elastic_time=0.0 0.0 1.0e+31 0.0 #BIOFILM INELASTIC BALL
 #ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #BIOFILM ELASTIC BALL

@@ -2173,6 +2173,7 @@ protected:
     static Vector<Real> stiffCP; // def=4.1855E+7
     static Vector<Real> stiffCV; // def=4.1855E+7
     static Vector<Real> stiffGAMMA;
+    static Vector<Real> stiff_sound_speed;
 
     static int uncoupled_viscosity;
 
