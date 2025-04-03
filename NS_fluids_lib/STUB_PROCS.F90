@@ -1293,6 +1293,148 @@ k=GRID_DATA_IN%kgrid
 
 end subroutine STUB_SUMINT
 
+subroutine STUB_HYDROBULGE_SUMINT(GRID_DATA_IN,increment_out1, &
+                increment_out2,nsum1,nsum2,isweep)
+use probcommon_module_types
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+real(amrex_real), INTENT(inout) :: increment_out1(nsum1)
+real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
+
+real(amrex_real) massfrac_parm(num_species_var+1)
+integer im
+integer im_primary
+integer dir
+integer dencomp,local_ispec
+real(amrex_real) den,temperature,internal_energy,pressure
+real(amrex_real) support_r
+real(amrex_real) dx_this_level
+real(amrex_real) volgrid
+real(amrex_real) denom
+real(amrex_real) LS(num_materials)
+
+integer :: level,finest_level
+
+integer :: i,j,k
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+level=GRID_DATA_IN%level
+finest_level=GRID_DATA_IN%finest_level
+
+if ((level.le.finest_level).and.(level.ge.0)) then
+ ! do nothing
+else
+ print *,"level invalid"
+ stop
+endif
+
+if ((num_materials.eq.4).and.(probtype.eq.36).and. &
+    (axis_dir.eq.310)) then
+
+ if ((nsum1.eq.1).and.(nsum2.eq.1)) then
+
+  if (isweep.eq.0) then
+   increment_out1(1)=zero
+  else if (isweep.eq.1) then
+   increment_out2(1)=zero
+  else
+   print *,"isweep invalid"
+   stop
+  endif
+   
+  im=1 ! liquid
+  dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+  den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
+  temperature=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1)
+  call init_massfrac_parm(den,massfrac_parm,im)
+  do local_ispec=1,num_species_var
+   massfrac_parm(local_ispec)= &
+       GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1+local_ispec)
+  enddo
+  call INTERNAL_material_CORE(den,massfrac_parm, &
+    temperature,internal_energy,fort_material_type(im), &
+    im)
+  call EOS_material_CORE(den,massfrac_parm, &
+     internal_energy,pressure,fort_material_type(im), &
+     im)
+
+  dx_this_level=GRID_DATA_IN%dx(SDIM)
+
+  do im=1,num_materials
+   LS(im)=GRID_DATA_IN%lsfab(D_DECL(i,j,k),im)
+  enddo
+  call get_primary_material(LS,im_primary)
+
+  if (im_primary.eq.1) then
+   if (abs(LS(im_primary)).le.dx_this_level) then
+   
+    support_r=0.0d0
+    do dir=1,SDIM
+     if (dir.ne.1) then
+      support_r=support_r+(GRID_DATA_IN%xsten(0,dir))**2
+     endif
+    enddo
+    support_r=sqrt(support_r) 
+    if (support_r.le.dx_this_level) then
+
+     volgrid=GRID_DATA_IN%volgrid
+     if (isweep.eq.0) then
+      increment_out1(1)=volgrid
+     else if (isweep.eq.1) then
+      denom=increment_out1(1)
+      if (denom.gt.0.0d0) then
+       increment_out2(1)=volgrid*pressure/denom
+      else
+       print *,"expecting denom>0.0:",denom
+       print *,"nsum1,nsum2 ",nsum1,nsum2
+       print *,"charfn,volgrid,pressure,temperature ", &
+         volgrid,pressure,temperature
+       print *,"i,j,k ",i,j,k
+       stop
+      endif
+     else
+      print *,"isweep invalid"
+      stop
+     endif
+    else if (support_r.ge.dx_this_level) then
+     !do nothing
+    else
+     print *,"support_r invalid"
+     stop
+    endif
+   else if (abs(LS(im_primary)).ge.dx_this_level) then
+    !do nothing
+   else
+    print *,"LS(im_primary) invalid"
+    stop
+   endif
+  else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+   !do nothing
+  else
+   print *,"im_primary invalid"
+   stop
+  endif
+ else
+  print *,"nsum1 or nsum2 invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"axis_dir ", axis_dir
+ print *,"num_materials or probtype or axis_dir invalid"
+ stop
+endif
+
+end subroutine STUB_HYDROBULGE_SUMINT
+
 
 subroutine STUB_USER_DEFINED_FORCE(xpoint,output_force,force_input)
 use probcommon_module_types

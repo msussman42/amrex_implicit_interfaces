@@ -797,6 +797,7 @@ stop
 
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
        SUB_clamped_LS_no_scale=>STUB_clamped_hydrobulge
+       SUB_SUMINT=>STUB_HYDROBULGE_SUMINT
       else
        !do nothing
       endif
