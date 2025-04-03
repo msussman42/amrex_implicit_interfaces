@@ -16,6 +16,8 @@ ns.post_init_pressure_solve=0
 # then plots data in which y=0.0 and z=0.0
 ns.slice_dir=0 # 0,1,...,sdim-1
 ns.xslice=0.0 0.0
+ns.ncomp_sum_int_user1=1 
+ns.ncomp_sum_int_user2=1  # pressure 
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
