@@ -11392,7 +11392,12 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
  } else 
   amrex::Error("VISCOTEN_MF has incorrect Ngrow");
 
- if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+ if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("ENUM_NUM_TENSOR_TYPE_BASE invalid");
+
+ if (ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) {
   // do nothing
  } else
   amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -11491,7 +11496,9 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
 
     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
 
-    if (ENUM_NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
+    if (ENUM_NUM_TENSOR_TYPE_BASE!=2*AMREX_SPACEDIM)
+     amrex::Error("ENUM_NUM_TENSOR_TYPE_BASE invalid");
+    if (ENUM_NUM_TENSOR_TYPE!=ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA)
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
      // VISCOTEN_MF will be used by NavierStokes::make_viscoelastic_heating
@@ -18723,7 +18730,12 @@ NavierStokes::GetDrag(int isweep) {
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
  }
 
- if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+ if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("ENUM_NUM_TENSOR_TYPE_BASE invalid");
+
+ if (ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) {
   // do nothing
  } else
   amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -22934,10 +22946,15 @@ NavierStokes::volWgtSumALL(
   amrex::Error("volWgtSumALL: CELL_VISC_MATERIAL_MF invalid ncomp");
  }
 
- if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+ if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
   // do nothing
  } else
-  amrex::Error("expecting ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM");
+  amrex::Error("expecting ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM");
+
+ if (ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) {
+  // do nothing
+ } else
+  amrex::Error("expecting ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
@@ -25613,7 +25630,12 @@ MultiFab* NavierStokes::getStateTensor (
 
   if (nparts==num_materials_viscoelastic) {
 
-   if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+   if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
+    // do nothing
+   } else
+    amrex::Error("ENUM_NUM_TENSOR_TYPE_BASE became corrupted");
+
+   if (ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) {
     // do nothing
    } else
     amrex::Error("ENUM_NUM_TENSOR_TYPE became corrupted");

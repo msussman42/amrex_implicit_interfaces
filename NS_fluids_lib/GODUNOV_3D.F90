@@ -7904,7 +7904,14 @@ stop
       tensor_ptr=>tensor
       visc_ptr=>visc
 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid: ",ENUM_NUM_TENSOR_TYPE_BASE
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
        print *,"ENUM_NUM_TENSOR_TYPE invalid: ",ENUM_NUM_TENSOR_TYPE
@@ -7979,7 +7986,7 @@ stop
         enddo
         enddo
 
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
          call stress_index(dir_local,ii,jj)
          Q(ii,jj)=tensor(D_DECL(i,j,k), &
           (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
@@ -8121,7 +8128,8 @@ stop
         enddo
         enddo
 
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         ! the ENUM_NUM_TENSOR_EXTRA components are not modified.
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
          call stress_index(dir_local,ii,jj)
          tensor(D_DECL(i,j,k), &
           (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)=TQ(ii,jj)
