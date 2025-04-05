@@ -27797,6 +27797,9 @@ real(amrex_real) gamma_not
 real(amrex_real) force_coef
 real(amrex_real) one_over_den_local
 real(amrex_real) r_hoop
+
+real(amrex_real) plastic_strain_old,plastic_strain_dot
+
 integer force_unity_determinant
 integer unity_det
 
@@ -28541,10 +28544,14 @@ do jj=1,3
  Q(ii,jj)=zero
 enddo
 enddo
-do dir_local=1,ENUM_NUM_TENSOR_TYPE
+do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
  call stress_index(dir_local,ii,jj)
  Q(ii,jj)=told(dir_local)
 enddo
+
+plastic_strain_old=told(ENUM_NUM_TENSOR_TYPE_BASE+1)
+plastic_strain_dot=zero
+
 Q(2,1)=Q(1,2)
 Q(3,1)=Q(1,3)
 Q(3,2)=Q(2,3)
@@ -29056,10 +29063,11 @@ else
  stop
 endif
 
-do dir_local=1,ENUM_NUM_TENSOR_TYPE
+do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
  call stress_index(dir_local,ii,jj)
  tnew(dir_local)=Q(ii,jj)
 enddo
+tnew(ENUM_NUM_TENSOR_TYPE_BASE+1)=plastic_strain_old+dt*plastic_strain_dot
 
 return
 end subroutine point_updatetensor

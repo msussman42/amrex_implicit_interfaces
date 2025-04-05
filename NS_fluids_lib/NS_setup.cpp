@@ -410,7 +410,12 @@ NavierStokes::set_tensor_extrap_components(
 
  int ibase_tensor_local=ibase_tensor;
 
- if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+ if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("ENUM_NUM_TENSOR_TYPE_BASE invalid");
+
+ if (ENUM_NUM_TENSOR_TYPE==ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) {
   // do nothing
  } else
   amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -418,9 +423,10 @@ NavierStokes::set_tensor_extrap_components(
  int refine_flag=0;
  int increment=1;
  int ijk_index=0;
+ int num_type=ENUM_NUM_TENSOR_TYPE;
 
  if (indx==State_Type) {
-  //do nothing
+  num_type=ENUM_NUM_TENSOR_TYPE_BASE;
  } else if (indx==Tensor_Type) {
   refine_flag=1;
   increment=ENUM_NUM_REFINE_DENSITY_TYPE;
@@ -428,10 +434,10 @@ NavierStokes::set_tensor_extrap_components(
   amrex::Error("expecting indx=State_Type or Tensor_Type"); 
 
  Vector<std::string> tensor_names;
- tensor_names.resize(ENUM_NUM_TENSOR_TYPE*increment);
+ tensor_names.resize(num_type*increment);
 
  Vector<BCRec> tensor_bcs;
- tensor_bcs.resize(ENUM_NUM_TENSOR_TYPE*increment);
+ tensor_bcs.resize(num_type*increment);
 
  int k=0;
 #if (AMREX_SPACEDIM==3)
@@ -574,6 +580,17 @@ NavierStokes::set_tensor_extrap_components(
 
 #endif
 
+  if (indx==State_Type) {
+   //do nothing
+  } else if (indx==Tensor_Type) {
+   ibase_tensor_local+=increment;
+   set_extrap_bc(bc,phys_bc);
+   set_extrap_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
+   std::string TEXTRA_strE="TEXTRA"+ijk_str; 
+   tensor_names[ibase_tensor_local-ibase_tensor]=TEXTRA_strE;
+  } else
+   amrex::Error("indx invalid");
+
   ijk_index++;
 
  } //i
@@ -583,7 +600,7 @@ NavierStokes::set_tensor_extrap_components(
 #endif
 
  if (ibase_tensor_local==
-     ibase_tensor+ENUM_NUM_TENSOR_TYPE*increment-1) {
+     ibase_tensor+num_type*increment-1) {
   // do nothing
  } else {
   std::cout << "ibase_tensor_local=" << ibase_tensor_local << '\n';
@@ -875,7 +892,8 @@ NavierStokes::variableSetUp ()
     if (num_materials_viscoelastic!=im_viscoelastic_map.size())
      amrex::Error("num_materials_viscoelastic!=im_viscoelastic_map.size()");
 
-    if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+    if (ENUM_NUM_TENSOR_TYPE==
+        (ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA)) {
      // do nothing
     } else
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -1018,6 +1036,13 @@ NavierStokes::variableSetUp ()
        MOFvelocity_names_tensor[ibase_tensor]=T23_str;
        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,1,2);
 #endif
+       ibase_tensor+=increment;
+     
+       std::string TEXTRA_strE="TEXTRA"+ijk_str; 
+       TEXTRA_str+=im_string; 
+       MOFvelocity_names_tensor[ibase_tensor]=TEXTRA_str;
+       set_extrap_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
+
        ijk_index++;
 
       } //i
@@ -1684,7 +1709,7 @@ NavierStokes::variableSetUp ()
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_TSAT,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
 
-     // setComponent: 0..ENUM_NUM_TENSOR_TYPE-1
+     // setComponent: 0..2*SDIM-1
      // modifies dest_lstGHOST
     set_tensor_extrap_components(coord,State_Type,EXTRAPCOMP_ELASTIC);
 
