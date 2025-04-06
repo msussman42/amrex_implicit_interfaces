@@ -5978,7 +5978,7 @@ stop
           Q(ii,jj)=zero
          enddo
          enddo
-         do dir=1,ENUM_NUM_TENSOR_TYPE
+         do dir=1,ENUM_NUM_TENSOR_TYPE_BASE
           call stress_index(dir,ii,jj)
           Q(ii,jj)=tensor(D_DECL(i,j,k), &
            (dir-1)*ENUM_NUM_REFINE_DENSITY_TYPE+refine_loop)
@@ -8746,7 +8746,57 @@ stop
        do irefine=0,1
         nrefine=4*krefine+2*jrefine+irefine+1
 
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE
+         ! plastic_strain
+        dir_local=ENUM_NUM_TENSOR_TYPE_BASE+1
+
+        told_average=zero
+        told_weight=zero
+        kofs=0
+#if (AMREX_SPACEDIM==3)
+        do kofs=0,1
+#endif
+        do jofs=0,1
+        do iofs=0,1
+         ibase=i
+         jbase=j
+         kbase=k
+         irefine2=iofs
+         jrefine2=jofs
+         krefine2=kofs
+         rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
+
+         nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          local_weight=one
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          local_weight=abs(rval)
+         else if (levelrz.eq.COORDSYS_RZ) then
+          local_weight=abs(rval)
+         else
+          print *,"levelrz invalid: ",levelrz
+          stop
+         endif
+         told_average=told_average+local_weight* &
+           told(D_DECL(ibase,jbase,kbase), &
+              (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
+         told_weight=told_weight+local_weight
+        enddo !iofs=0,1
+        enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+        enddo !kofs=0,1
+#endif
+        if (told_weight.gt.zero) then
+         told_average=told_average/told_weight
+        else
+         print *,"told_weight invalid: ",told_weight
+         stop
+        endif
+
+         ! plastic_strain
+        point_told(dir_local)=told_average
+
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
 
          call stress_index(dir_local,ii,jj)
 
@@ -8887,7 +8937,7 @@ stop
          endif
                  
          point_told(dir_local)=told_average
-        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
+        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
 
         !point_updatetensor is declared in: GLOBALUTIL.F90
         call point_updatetensor( &
@@ -9017,7 +9067,14 @@ stop
 
       tnew_ptr=>tnew
 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE INVALID"
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
        print *,"ENUM_NUM_TENSOR_TYPE INVALID"
@@ -13316,7 +13373,14 @@ stop
        stop
       endif
 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid"
+       stop
+      endif 
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
        print *,"ENUM_NUM_TENSOR_TYPE invalid"
@@ -19421,7 +19485,14 @@ stop
 
       im_viscoelastic_p1=im_viscoelastic+1
 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid"
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
        print *,"ENUM_NUM_TENSOR_TYPE invalid"
