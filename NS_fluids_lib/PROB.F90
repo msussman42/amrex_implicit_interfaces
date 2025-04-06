@@ -31342,7 +31342,14 @@ end subroutine initialize2d
        print *,"tid_in invalid (group fill): ",tid_in
        stop
       endif
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid (group_tensorfill)"
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
        print *,"ENUM_NUM_TENSOR_TYPE invalid (group_tensorfill)"

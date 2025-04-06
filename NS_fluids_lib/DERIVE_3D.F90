@@ -852,10 +852,17 @@ stop
        stop
       endif
 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*AMREX_SPACEDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*AMREX_SPACEDIM) then
        ! do nothing
       else
-       print *,"expecting ENUM_NUM_TENSOR_TYPE.eq.2*AMREX_SPACEDIM"
+       print *,"expecting ENUM_NUM_TENSOR_TYPE_BASE.eq.2*AMREX_SPACEDIM"
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.eq. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
+       ! do nothing
+      else
+       print *,"expecting ENUM_NUM_TENSOR_TYPE.eq.BASE+EXTRA"
        stop
       endif
 
@@ -1049,7 +1056,7 @@ stop
            Q(ii,jj)=zero
           enddo
           enddo
-          do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
            call stress_index(dir_local,ii,jj)
            krefine=0
 #if (AMREX_SPACEDIM==3)
@@ -1067,7 +1074,7 @@ stop
            enddo !krefine
 #endif
            Q(ii,jj)=Q(ii,jj)/ENUM_NUM_REFINE_DENSITY_TYPE
-          enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
+          enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
 
           Q(2,1)=Q(1,2)
           Q(3,1)=Q(1,3)
@@ -2277,7 +2284,12 @@ stop
        print *,"isweep invalid"
        stop
       endif
-      if (ENUM_NUM_TENSOR_TYPE.ne.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE_BASE.ne.2*SDIM) then
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid"
+       stop
+      endif
+      if (ENUM_NUM_TENSOR_TYPE.ne. &
+          ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
@@ -2736,7 +2748,7 @@ stop
                if ((partid.ge.1).and. &
                    (partid.le.num_materials_viscoelastic)) then
                 viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE_REFINE
-                do dir=1,ENUM_NUM_TENSOR_TYPE
+                do dir=1,ENUM_NUM_TENSOR_TYPE_BASE
                  call stress_index(dir,i1,j1)
                  Q(i1,j1)=zero
                  krefine=0
@@ -2755,7 +2767,7 @@ stop
                  enddo !krefine
 #endif
                  Q(i1,j1)=Q(i1,j1)/ENUM_NUM_REFINE_DENSITY_TYPE
-                enddo ! dir=1,ENUM_NUM_TENSOR_TYPE
+                enddo ! dir=1,ENUM_NUM_TENSOR_TYPE_BASE
                 Q(2,1)=Q(1,2)
                 Q(3,1)=Q(1,3)
                 Q(3,2)=Q(2,3)
