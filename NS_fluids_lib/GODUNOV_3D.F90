@@ -8538,6 +8538,7 @@ stop
        one_over_den, &
        DIMS(one_over_den), &
        tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
+       eosdata,DIMS(eosdata), &
        dx,xlo, &
        vel,DIMS(vel), &
        xmac,DIMS(xmac), &
@@ -8569,6 +8570,7 @@ stop
       integer, INTENT(in) :: DIMDEC(visc)
       integer, INTENT(in) :: DIMDEC(one_over_den)
       integer, INTENT(in) :: DIMDEC(tendata)
+      integer, INTENT(in) :: DIMDEC(eosdata)
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(xmac)
       integer, INTENT(in) :: DIMDEC(ymac)
@@ -8594,6 +8596,11 @@ stop
       real(amrex_real), INTENT(in), target :: &
               tendata(DIMV(tendata),DERIVE_TENSOR_NCOMP)
       real(amrex_real), pointer :: tendata_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), target, INTENT(in) :: &
+              eosdata(DIMV(eosdata),num_state_material*num_materials)  
+      real(amrex_real), pointer :: eosdata_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
 
@@ -8613,6 +8620,7 @@ stop
         told(DIMV(told),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real) :: cell_temperature
 
       integer :: i,j,k
       integer :: ibase,jbase,kbase
@@ -8712,6 +8720,8 @@ stop
       call checkbound_array1(fablo,fabhi,one_over_den_ptr,0,-1)
       tendata_ptr=>tendata
       call checkbound_array(fablo,fabhi,tendata_ptr,0,-1)
+      eosdata_ptr=>eosdata
+      call checkbound_array(fablo,fabhi,eosdata_ptr,1,-1)
 
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
@@ -8939,6 +8949,9 @@ stop
          point_told(dir_local)=told_average
         enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
 
+        cell_temperature=eosdata(D_DECL(i,j,k), &
+         im_critical*num_state_material+1+ENUM_TEMPERATUREVAR) 
+
         !point_updatetensor is declared in: GLOBALUTIL.F90
         call point_updatetensor( &
          i,j,k, &
@@ -8957,6 +8970,7 @@ stop
          zmac_ptr, &
          point_tnew, &
          point_told, &
+         cell_temperature, &
          tilelo, tilehi,  &
          fablo, fabhi, &
          bfact,  &

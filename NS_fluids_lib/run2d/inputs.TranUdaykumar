@@ -218,7 +218,17 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 #ns.viscoelastic_model=0 0 0 #INELASTIC BALL
 #ns.viscoelastic_model=0 0 7 #ELASTIC BALL
 ns.viscoelastic_model=0 3 3
+
 ns.yield_stress=0.0 1.50e+10 1.51e+10
+
+#fluid, steel, tungsten, biofilm
+ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10
+ns.yield_alpha=1.2 1.17 1.0 1.2
+ns.yield_n=1.0e+10 22.0 80.0 1.0e+10
+ns.yield_m=20.0 340.0 68.0 20.0
+ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
+ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
+
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 

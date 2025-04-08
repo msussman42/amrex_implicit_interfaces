@@ -1038,7 +1038,7 @@ NavierStokes::variableSetUp ()
 #endif
        ibase_tensor+=increment;
      
-       std::string TEXTRA_strE="TEXTRA"+ijk_str; 
+       std::string TEXTRA_str="TEXTRA"+ijk_str; 
        TEXTRA_str+=im_string; 
        MOFvelocity_names_tensor[ibase_tensor]=TEXTRA_str;
        set_extrap_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);

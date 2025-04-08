@@ -398,6 +398,12 @@ stop
         ccstiffCV, &
         ccstiffGAMMA, &
         ccstiff_sound_speed, &
+        ccref_plastic_strain, &
+        ccref_plastic_strain_dot, &
+        ccyield_m, &
+        ccyield_n, &
+        ccyield_alpha, &
+        ccyield_temperature, &
         ccdenconst, &
         ccden_floor, &
         ccden_ceiling, &
@@ -564,6 +570,12 @@ stop
       real(amrex_real), INTENT(in) :: ccstiffCV(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccstiffGAMMA(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccstiff_sound_speed(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccref_plastic_strain(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccref_plastic_strain_dot(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccyield_m(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccyield_n(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccyield_alpha(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccyield_temperature(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccdenconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccden_floor(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccden_ceiling(ccnum_materials)
@@ -1615,6 +1627,12 @@ stop
        fort_stiffCV(im)=ccstiffCV(im)
        fort_stiffGAMMA(im)=ccstiffGAMMA(im)
        fort_stiff_sound_speed(im)=ccstiff_sound_speed(im)
+       fort_ref_plastic_strain(im)=ccref_plastic_strain(im)
+       fort_ref_plastic_strain_dot(im)=ccref_plastic_strain_dot(im)
+       fort_yield_m(im)=ccyield_m(im)
+       fort_yield_n(im)=ccyield_n(im)
+       fort_yield_alpha(im)=ccyield_alpha(im)
+       fort_yield_temperature(im)=ccyield_temperature(im)
        fort_denconst(im)=ccdenconst(im)
        fort_density_floor(im)=ccden_floor(im)
        fort_density_ceiling(im)=ccden_ceiling(im)
@@ -1827,6 +1845,12 @@ stop
         print *,"im,stiffCV ",im,fort_stiffCV(im)
         print *,"im,stiffGAMMA ",im,fort_stiffGAMMA(im)
         print *,"im,stiff_sound_speed ",im,fort_stiff_sound_speed(im)
+        print *,"im,ref_plastic_strain ",im,fort_ref_plastic_strain(im)
+        print *,"im,ref_plastic_strain_dot ",im,fort_ref_plastic_strain_dot(im)
+        print *,"im,yield_m ",im,fort_yield_m(im)
+        print *,"im,yield_n ",im,fort_yield_n(im)
+        print *,"im,yield_alpha ",im,fort_yield_alpha(im)
+        print *,"im,yield_temperature ",im,fort_yield_temperature(im)
         print *,"im,den ",im,fort_denconst(im)
         print *,"im,den_floor ",im,fort_density_floor(im)
         print *,"im,den_ceiling ",im,fort_density_ceiling(im)

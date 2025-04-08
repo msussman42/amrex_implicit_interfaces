@@ -2175,6 +2175,25 @@ protected:
     static Vector<Real> stiffGAMMA;
     static Vector<Real> stiff_sound_speed;
 
+     //steel:base yield=1.5
+     //      ref_plastic_strain=0.001
+     //      ref_plastic_strain_dot=1.0
+     //      m=340
+     //      n=22
+     //      yield_temperature=1777 Kelvin
+     //Tungsten:base yield=1.51
+     //         ref_plastic_strain=0.0001
+     //         ref_plastic_strain_dot=1.0
+     //         m=68
+     //         n=80
+     //         yield_temperature=1723 Kelvin
+    static Vector<Real> ref_plastic_strain; 
+    static Vector<Real> ref_plastic_strain_dot; 
+    static Vector<Real> yield_m; 
+    static Vector<Real> yield_n;
+    static Vector<Real> yield_alpha;
+    static Vector<Real> yield_temperature;
+
     static int uncoupled_viscosity;
 
     static Real centrifugal_force_factor; //Eady disables centrifugal force.

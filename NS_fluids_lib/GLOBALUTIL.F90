@@ -27681,6 +27681,53 @@ endif
 return
 end subroutine circleww
 
+subroutine JohnsonCook( &
+ base_yield_stress, &
+ T,TM,T0,alpha,ref_eps_p,eps_p,n,yield_stress)
+use probcommon_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: base_yield_stress
+real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p
+real(amrex_real), INTENT(in) :: eps_p,n
+real(amrex_real), INTENT(out) :: yield_stress
+
+if (base_yield_stress.gt.zero) then
+ !do nothing
+else
+ print *,"base_yield_stress invalid"
+ stop
+endif
+if (T.le.TM) then
+ !do nothing
+else
+ print *,"T>TM!",T,TM
+ stop
+endif
+if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
+    (alpha.gt.zero).and.(ref_eps_p.gt.zero).and. &
+    (eps_p.ge.zero).and.(n.ge.one)) then
+ !do nothing
+else
+ print *,"Johnson Cook parameters corrupt"
+ stop
+endif
+
+if (T.lt.T0) then
+ yield_stress=base_yield_stress
+else if (eps_p.lt.ref_eps_p) then
+ yield_stress=base_yield_stress
+else if ((T.ge.T0).and.(eps_p.ge.ref_eps_p)) then
+ yield_stress=base_yield_stress*(one- &
+  ((T-T0)/(TM-T0))**alpha)* &
+  (one+eps_p/ref_eps_p)**(one/n)
+else
+ print *,"T or eps_p invalid"
+ stop
+endif
+
+return
+end subroutine JohnsonCook
 
   ! called from fort_updatetensor() and fort_update_particle_tensor()
   ! in GODUNOV_3D.F90
@@ -27702,6 +27749,7 @@ subroutine point_updatetensor( &
  zmac, &
  tnew, &
  told, &
+ cell_temperature, &
  tilelo, tilehi,  &
  fablo, fabhi, &
  bfact,  &
@@ -27748,6 +27796,7 @@ real(amrex_real), INTENT(in), pointer :: zmac(D_DECL(:,:,:))
 
 real(amrex_real), INTENT(out) :: tnew(ENUM_NUM_TENSOR_TYPE)
 real(amrex_real), INTENT(in) :: told(ENUM_NUM_TENSOR_TYPE)
+real(amrex_real), INTENT(in) :: cell_temperature
 
 integer :: n
 real(amrex_real), INTENT(in) :: dt,elastic_time
@@ -27835,6 +27884,12 @@ if (yield_stress.gt.zero) then
  ! do nothing
 else
  print *,"yield_stress out of range: ",yield_stress
+ stop
+endif
+if (cell_temperature.gt.zero) then 
+ ! do nothing
+else
+ print *,"cell_temperature out of range: ",cell_temperature
  stop
 endif
 
@@ -28834,8 +28889,17 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! "S" from Maire et al corresponds to "Aadvect" times the 
    ! shear modulus.
    ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
-   gamma_not=yield_stress
-
+   call JohnsonCook( &
+    yield_stress, &
+    cell_temperature, &
+    fort_yield_temperature(im_critical+1), &
+    fort_tempconst(im_critical+1), &
+    fort_yield_alpha(im_critical+1), &
+    fort_ref_plastic_strain(im_critical+1), &
+    plastic_strain_old, &
+    fort_yield_n(im_critical+1), &
+    gamma_not)
+ 
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
    f_plastic=magA-Y_plastic_parm_scaled
    do ii=1,3
@@ -28846,6 +28910,15 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
      Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
+     plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
+       ((f_plastic/Y_plastic_parm_scaled+one)** &
+       fort_yield_m(im_critical+1)-one)
+     if (plastic_strain_dot.ge.zero) then
+      !do nothing
+     else
+      print *,"plastic_strain_dot out of range ",plastic_strain_dot
+      stop
+     endif
     else
      print *,"f_plastic or NP_dotdot_D invalid"
      print *,"f_plastic=",f_plastic
