@@ -271,6 +271,7 @@ extern "C"
     AMREX_ARLIM_P(one_over_denlo),
     AMREX_ARLIM_P(one_over_denhi),
     Real* tendata,AMREX_ARLIM_P(tendatalo),AMREX_ARLIM_P(tendatahi),
+    Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
     const Real* dx,const Real* xlo,
     Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
     Real* xmac,AMREX_ARLIM_P(xmaclo),AMREX_ARLIM_P(xmachi),

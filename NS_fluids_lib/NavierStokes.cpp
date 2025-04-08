@@ -891,6 +891,26 @@ Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 Vector<Real> NavierStokes::stiff_sound_speed; // def=3.0e+10 cm/s
+     //steel:base yield=1.5
+     //      ref_plastic_strain=0.001
+     //      ref_plastic_strain_dot=1.0
+     //      m=340
+     //      n=22
+     //      yield_alpha=1.17
+     //      yield_temperature=1777 Kelvin
+     //Tungsten:base yield=1.51
+     //         ref_plastic_strain=0.0001
+     //         ref_plastic_strain_dot=1.0
+     //         m=68
+     //         n=80
+     //         yield_alpha=1.0
+     //         yield_temperature=1723 Kelvin
+Vector<Real> NavierStokes::ref_plastic_strain;
+Vector<Real> NavierStokes::ref_plastic_strain_dot;
+Vector<Real> NavierStokes::yield_m;
+Vector<Real> NavierStokes::yield_n;
+Vector<Real> NavierStokes::yield_alpha;
+Vector<Real> NavierStokes::yield_temperature;
 
 // uncoupled_viscosity=0 => div (2 mu D)
 // uncoupled_viscosity=1 => div (mu grad U)
@@ -1532,6 +1552,13 @@ void fortran_parameters() {
  Vector<Real> stiffGAMMAtemp(NavierStokes::num_materials);
  Vector<Real> stiff_sound_speedtemp(NavierStokes::num_materials);
 
+ Vector<Real> ref_plastic_straintemp(NavierStokes::num_materials);
+ Vector<Real> ref_plastic_strain_dottemp(NavierStokes::num_materials);
+ Vector<Real> yield_mtemp(NavierStokes::num_materials);
+ Vector<Real> yield_ntemp(NavierStokes::num_materials);
+ Vector<Real> yield_alphatemp(NavierStokes::num_materials);
+ Vector<Real> yield_temperaturetemp(NavierStokes::num_materials);
+
  //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
  //DrhoDT has units of 1/(Degrees Kelvin)
  Vector<Real> DrhoDTtemp(NavierStokes::num_materials);
@@ -1603,6 +1630,13 @@ void fortran_parameters() {
   stiffCVtemp[im]=4.1855e+7;
   stiffGAMMAtemp[im]=1.4;
   stiff_sound_speedtemp[im]=3.0e+10;
+
+  ref_plastic_straintemp[im]=0.001;
+  ref_plastic_strain_dottemp[im]=1.0;
+  yield_mtemp[im]=68.0;
+  yield_ntemp[im]=80.0;
+  yield_alphatemp[im]=1.17;
+  yield_temperaturetemp[im]=1777.0;
 
   DrhoDTtemp[im]=0.0;
   tempcutofftemp[im]=CPP_EPS_8_6;
@@ -1681,6 +1715,19 @@ void fortran_parameters() {
 
  pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,NavierStokes::num_materials);
  pp.queryAdd("stiff_sound_speed",stiff_sound_speedtemp,
+    NavierStokes::num_materials);
+
+ pp.queryAdd("ref_plastic_strain",ref_plastic_straintemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("ref_plastic_strain_dot",ref_plastic_strain_dottemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("yield_m",yield_mtemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("yield_n",yield_ntemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("yield_alpha",yield_alphatemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("yield_temperature",yield_temperaturetemp,
     NavierStokes::num_materials);
 
  pp.getarr("denconst",denconst_temp,0,NavierStokes::num_materials);
@@ -2227,6 +2274,12 @@ void fortran_parameters() {
   stiffCVtemp.dataPtr(),
   stiffGAMMAtemp.dataPtr(),
   stiff_sound_speedtemp.dataPtr(),
+  ref_plastic_straintemp.dataPtr(),
+  ref_plastic_strain_dottemp.dataPtr(),
+  yield_mtemp.dataPtr(),
+  yield_ntemp.dataPtr(),
+  yield_alphatemp.dataPtr(),
+  yield_temperaturetemp.dataPtr(),
   denconst_temp.dataPtr(),
   den_floor_temp.dataPtr(),
   den_ceiling_temp.dataPtr(),
@@ -3810,6 +3863,13 @@ NavierStokes::read_params ()
     stiffGAMMA.resize(num_materials);
     stiff_sound_speed.resize(num_materials);
 
+    ref_plastic_strain.resize(num_materials);
+    ref_plastic_strain_dot.resize(num_materials);
+    yield_m.resize(num_materials);
+    yield_n.resize(num_materials);
+    yield_alpha.resize(num_materials);
+    yield_temperature.resize(num_materials);
+
     DrhoDT.resize(num_materials);
     override_density.resize(num_materials);
 
@@ -4139,6 +4199,13 @@ NavierStokes::read_params ()
      stiffGAMMA[i]=1.4;
      stiff_sound_speed[i]=3.0e+10;
 
+     ref_plastic_strain[i]=0.001;
+     ref_plastic_strain_dot[i]=1.0;
+     yield_m[i]=68.0;
+     yield_n[i]=80.0;
+     yield_alpha[i]=1.17;
+     yield_temperature[i]=1777.0;
+
      tempcutoff[i]=CPP_EPS_8_6;
      tempcutoffmax[i]=1.0e+30;
      DrhoDT[i]=0.0;
@@ -4157,6 +4224,13 @@ NavierStokes::read_params ()
     pp.queryAdd("stiffCV",stiffCV,num_materials);
     pp.queryAdd("stiffGAMMA",stiffGAMMA,num_materials);
     pp.queryAdd("stiff_sound_speed",stiff_sound_speed,num_materials);
+
+    pp.queryAdd("ref_plastic_strain",ref_plastic_strain,num_materials);
+    pp.queryAdd("ref_plastic_strain_dot",ref_plastic_strain_dot,num_materials);
+    pp.queryAdd("yield_m",yield_m,num_materials);
+    pp.queryAdd("yield_n",yield_n,num_materials);
+    pp.queryAdd("yield_alpha",yield_alpha,num_materials);
+    pp.queryAdd("yield_temperature",yield_temperature,num_materials);
 
     pp.queryAdd("angular_velocity",angular_velocity);
     pp.queryAdd("centrifugal_force_factor",centrifugal_force_factor);
@@ -5779,6 +5853,18 @@ NavierStokes::read_params ()
       std::cout << "stiffGAMMA i=" << i << " " << stiffGAMMA[i] << '\n';
       std::cout << "stiff_sound_speed i=" << i << " " << 
         stiff_sound_speed[i] << '\n';
+
+      std::cout << "ref_plastic_strain i=" << i << " " << 
+        ref_plastic_strain[i] << '\n';
+      std::cout << "ref_plastic_strain_dot i=" << i << " " << 
+        ref_plastic_strain_dot[i] << '\n';
+      std::cout << "yield_m i=" << i << " " << 
+        yield_m[i] << '\n';
+      std::cout << "yield_n i=" << i << " " << 
+        yield_n[i] << '\n';
+      std::cout << "yield_alpha i=" << i << " " << 
+        yield_alpha[i] << '\n';
+
       std::cout << "denconst i=" << i << " " << denconst[i] << '\n';
       std::cout << "density_floor i=" << i << " " << density_floor[i] << '\n';
       std::cout << "density_ceiling i="<<i<<" "<< density_ceiling[i] << '\n';
@@ -12689,6 +12775,8 @@ void NavierStokes::tensor_advection_update() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
+ MultiFab* EOSdata=getStateDen(1,cur_time_slab);
+
  const Real* dx = geom.CellSize();
 
  int partid_test=0;
@@ -12799,6 +12887,7 @@ void NavierStokes::tensor_advection_update() {
         amrex::Error("tensor_source_mf_fab.nComp() invalid");
 
        FArrayBox& tendata=(*tendata_mf)[mfi];
+       FArrayBox& eosfab=(*EOSdata)[mfi];
 
        Vector<int> velbc=getBCArray(State_Type,gridno,
         STATECOMP_VEL,STATE_NCOMP_VEL);
@@ -12821,6 +12910,8 @@ void NavierStokes::tensor_advection_update() {
 	 ARLIM(one_over_den_fab.loVect()),
 	 ARLIM(one_over_den_fab.hiVect()),
          tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
+         eosfab.dataPtr(),
+         ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
          dx,xlo,
          velfab.dataPtr(),
          ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
@@ -12882,6 +12973,8 @@ void NavierStokes::tensor_advection_update() {
    amrex::Error("ns_is_rigid invalid");
 
  } // im=0..num_materials-1
+
+ delete EOSdata;
 
  if (partid_test==num_materials_viscoelastic) {
   // do nothing

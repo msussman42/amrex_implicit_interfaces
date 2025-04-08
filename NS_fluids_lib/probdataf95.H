@@ -105,6 +105,13 @@
       real(amrex_real) fort_stiffGAMMA(MAX_NUM_MATERIALS)
       real(amrex_real) fort_stiff_sound_speed(MAX_NUM_MATERIALS)
 
+      real(amrex_real) fort_ref_plastic_strain(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_ref_plastic_strain_dot(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_yield_m(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_yield_n(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_yield_alpha(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_yield_temperature(MAX_NUM_MATERIALS)
+
       real(amrex_real) density_at_depth
       real(amrex_real) global_pressure_scale
       real(amrex_real) global_velocity_scale

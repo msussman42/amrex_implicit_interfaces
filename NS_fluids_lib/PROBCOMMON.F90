@@ -251,6 +251,7 @@ implicit none
 ! ngrow_distance,ngrow_make_distance added Feb 27,2025
 ! fort_yield_stress added March 4, 2025
 ! fort_stiff_sound_speed added March 30, 2025
+! Johnson Cook parameters added April 08, 2025
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
