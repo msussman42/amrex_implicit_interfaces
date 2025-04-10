@@ -11,8 +11,10 @@
        GAMMA=1.28D0
        RHOI=1.63D0
       else if (1.eq.1) then !hydrobulge
-       A=6.17D+12 !cgs
-       B=1.69D+11 !cgs 
+!      A=6.17D+12 !cgs
+       A=6.1327D+12 !cgs
+!      B=1.69D+11 !cgs 
+       B=1.5069D+11 !cgs 
        R1=4.4D0
        R2=1.2D0
        GAMMA=1.25D0
@@ -181,16 +183,18 @@
 
       program main
       IMPLICIT NONE
-      real*8 E0,RHOI,T0,P0,C2,C
+      real*8 E0,E0_per_mass,RHOI,T0,P0,C2,C
 
-      E0=10.1D+10 ! cgs
       RHOI=1.765d0 ! cgs
-      call TEMPERATURE_jwl(RHOI,T0,E0)
-      call EOS_NAjwl(RHOI,E0,P0)
-      call SOUNDSQR_NAjwl(RHOI,E0,C2)
+      E0=10.1D+10 ! cgs ergs/cm^3=g cm^2/s^2/cm^3=g/(s^2 cm)
+      E0_per_mass=E0/RHOI
+      call TEMPERATURE_jwl(RHOI,T0,E0_per_mass)
+      call EOS_NAjwl(RHOI,E0_per_mass,P0)
+      call SOUNDSQR_NAjwl(RHOI,E0_per_mass,C2)
       C=sqrt(C2)
 
       print *,"E0=",E0
+      print *,"E0_per_mass=",E0_per_mass
       print *,"T0=",T0
       print *,"RHOI=",RHOI
       print *,"P0=",P0
