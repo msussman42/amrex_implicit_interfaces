@@ -7738,57 +7738,57 @@ END SUBROUTINE SIMP
         if ((ncomp_sum_int_user1.ge.1).or. &
             (ncomp_sum_int_user2.ge.1)) then
 
-         if (is_in_probtype_list().eq.1) then
+!        if (is_in_probtype_list().eq.1) then
 
-          do im=1,ncomp_sum_int_user1
-           idest=IQ_USER_SUM_COMP+im
-           if (sumdata_sweep(idest).eq.0) then
-            ! do nothing
-           else
-            print *,"sumdata_sweep invalid"
-            stop
-           endif
-           if (isweep.eq.0) then
-            local_user_out1(im)=zero
-           else if (isweep.eq.1) then
-            local_user_out1(im)=resultALL(idest)
-           else
-            print *,"isweep invalid"
-            stop
-           endif
-          enddo !im=1,ncomp_sum_int_user1
-
-          do im=1,ncomp_sum_int_user2
-           idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
-           if (sumdata_sweep(idest).eq.1) then
-            ! do nothing
-           else
-            print *,"sumdata_sweep invalid"
-            stop
-           endif
-           local_user_out2(im)=zero
-          enddo !im=1,ncomp_sum_int_user2
-
-          call SUB_SUMINT(GRID_DATA_PARM,local_user_out1, &
-           local_user_out2,ncomp_sum_int_user1, &
-           ncomp_sum_int_user2,isweep)
-
-          if (isweep.eq.0) then
-           do im=1,ncomp_sum_int_user1
-            idest=IQ_USER_SUM_COMP+im
-            local_result(idest)=local_result(idest)+local_user_out1(im)
-           enddo
-          else if (isweep.eq.1) then
-           do im=1,ncomp_sum_int_user2
-            idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
-            local_result(idest)=local_result(idest)+local_user_out2(im)
-           enddo
+         do im=1,ncomp_sum_int_user1
+          idest=IQ_USER_SUM_COMP+im
+          if (sumdata_sweep(idest).eq.0) then
+           ! do nothing
           else
-           print *,"isweep invalid: ",isweep
+           print *,"sumdata_sweep invalid"
            stop
           endif
+          if (isweep.eq.0) then
+           local_user_out1(im)=zero
+          else if (isweep.eq.1) then
+           local_user_out1(im)=resultALL(idest)
+          else
+           print *,"isweep invalid"
+           stop
+          endif
+         enddo !im=1,ncomp_sum_int_user1
 
-         endif ! if (is_in_probtype_list().eq.1) then
+         do im=1,ncomp_sum_int_user2
+          idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
+          if (sumdata_sweep(idest).eq.1) then
+           ! do nothing
+          else
+           print *,"sumdata_sweep invalid"
+           stop
+          endif
+          local_user_out2(im)=zero
+         enddo !im=1,ncomp_sum_int_user2
+
+         call SUB_SUMINT(GRID_DATA_PARM,local_user_out1, &
+          local_user_out2,ncomp_sum_int_user1, &
+          ncomp_sum_int_user2,isweep)
+
+         if (isweep.eq.0) then
+          do im=1,ncomp_sum_int_user1
+           idest=IQ_USER_SUM_COMP+im
+           local_result(idest)=local_result(idest)+local_user_out1(im)
+          enddo
+         else if (isweep.eq.1) then
+          do im=1,ncomp_sum_int_user2
+           idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
+           local_result(idest)=local_result(idest)+local_user_out2(im)
+          enddo
+         else
+          print *,"isweep invalid: ",isweep
+          stop
+         endif
+
+!        endif ! if (is_in_probtype_list().eq.1) then
 
         else if ((ncomp_sum_int_user1.eq.0).and. &
                  (ncomp_sum_int_user2.eq.0)) then
