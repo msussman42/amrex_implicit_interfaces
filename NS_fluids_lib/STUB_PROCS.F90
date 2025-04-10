@@ -1373,7 +1373,7 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
 
   if (im_primary.eq.1) then
    if (abs(LS(im_primary)).le.dx_this_level) then
-   
+  
     support_r=0.0d0
     do dir=1,SDIM
      if (dir.ne.1) then
