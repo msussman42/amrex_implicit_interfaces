@@ -19526,8 +19526,10 @@ end subroutine print_visual_descriptor
        GAMMA=1.28D0
        RHOI=1.63D0
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
-       A=6.17D+12 !cgs
-       B=1.69D+11 !cgs 
+!      A=6.17D+12 !cgs
+       A=6.1327D+12 !cgs
+!      B=1.69D+11 !cgs 
+       B=1.5069D+11 !cgs 
        R1=4.4D0
        R2=1.2D0
        GAMMA=1.25D0
@@ -19758,6 +19760,103 @@ end subroutine print_visual_descriptor
       return
       end subroutine SOUNDSQR_NAjwl
 
+
+! e=(E/rho) - (1/2) (u^2 + v^2)
+      subroutine EOS_Sandusky_jwl(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
+      real(amrex_real) A,B,R1,R2,GAMMA,RHOI,OMEGA
+      real(amrex_real) :: E0
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+       ! 1 J = 10^7 ergs
+       ! 1 J/m^3=10 erg/cm^3
+      E0=10.1D+10 !ergs/cm^3
+      OMEGA=GAMMA-one
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid EOS_Sandusky_jwl: ",rho
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid EOS_Sandusky_jwl: ",internal_energy
+       stop
+      endif
+      pressure= &
+        A*(one-OMEGA*rho/(R1*RHOI))*exp(-R1*RHOI/rho)+ &
+        B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)+ &
+        OMEGA*E0*rho/rhoI
+
+      if (pressure.gt.zero) then
+       !do nothing
+      else
+       print *,"vacuum error in Sandusky JWL: ",pressure
+       stop
+      endif
+
+      return
+      end subroutine EOS_Sandusky_jwl
+
+! initial sound speed is:
+! C=7.8039D+10-5.484D+12 e^(-4.94)-0.09375D+12 e^(-1.21)=
+      subroutine SOUNDSQR_Sandusky_jwl(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: soundsqr
+      real(amrex_real) A,B,R1,R2,GAMMA,RHOI,OMEGA
+      real(amrex_real) pressure,dp_de,dp_drho
+      real(amrex_real) :: E0
+
+      call get_jwl_constants(A,B,GAMMA,R1,R2,RHOI)
+       ! 1 J = 10^7 ergs
+       ! 1 J/m^3=10 erg/cm^3
+      E0=10.1D+10 !ergs/cm^3
+      OMEGA=GAMMA-one
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid SOUNDSQR_Sandusky_jwl: ",rho
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid SOUNDSQR_Sandusky_jwl: ",internal_energy
+       stop
+      endif
+
+      call EOS_Sandusky_jwl(rho,internal_energy,pressure)
+      dp_de=zero
+      dp_drho= &
+        A*(one-OMEGA*rho/(R1*RHOI))*exp(-R1*RHOI/rho)* &
+        R1*RHOI/(rho**2)- &
+        (A*OMEGA/(R1*RHOI))*exp(-R1*RHOI/rho)+ &
+        B*(one-OMEGA*rho/(R2*RHOI))*exp(-R2*RHOI/rho)* &
+        R2*RHOI/(rho**2)- &
+        B*(OMEGA/(R2*RHOI))*exp(-R2*RHOI/rho)+ &
+        OMEGA*E0/rhoI
+    
+      soundsqr=(pressure*dp_de)/(rho**2)+dp_drho
+ 
+      if (soundsqr.gt.zero) then
+       !do nothing
+      else
+       print *,"soundsqr invalid in SOUNDSQR_Sandusky_jwl:",soundsqr
+       stop
+      endif
+
+      return
+      end subroutine SOUNDSQR_Sandusky_jwl
 
 ! e=(E/rho) - (1/2) (u^2 + v^2)
       subroutine EOS_jwlADIABAT(rho,internal_energy,pressure)
@@ -24922,6 +25021,8 @@ end subroutine print_visual_descriptor
        call EOS_wardlaw_tillotson(rho,internal_energy,pressure,im)
       else if (imattype.eq.36) then
        call EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
+      else if (imattype.eq.37) then
+       call EOS_Sandusky_jwl(rho,internal_energy,pressure)
       else
        print *,"imattype invalid EOS_material_CORE: ",imattype
        stop
@@ -25076,6 +25177,8 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_wardlaw_tillotson(rho,internal_energy,soundsqr,im)
       else if (imattype.eq.36) then
        call SOUNDSQR_Mie_Gruneison(rho,internal_energy,soundsqr,im)
+      else if (imattype.eq.37) then
+       call SOUNDSQR_Sandusky_jwl(rho,internal_energy,soundsqr)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE: ",imattype
        stop
@@ -25176,6 +25279,8 @@ end subroutine print_visual_descriptor
        call INTERNAL_wardlaw_tillotson(rho,temperature,local_internal_energy,im)
       else if (imattype.eq.36) then
        call INTERNAL_Mie_Gruneison(rho,temperature,local_internal_energy,im)
+      else if (imattype.eq.37) then
+       call INTERNAL_jwl(rho,temperature,local_internal_energy)
       else
        print *,"imattype invalid INTERNAL_material_CORE: ",imattype
        stop
@@ -25272,6 +25377,8 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_wardlaw_tillotson(rho,temperature,internal_energy,im)
       else if (imattype.eq.36) then
        call TEMPERATURE_Mie_Gruneison(rho,temperature,internal_energy,im)
+      else if (imattype.eq.37) then
+       call TEMPERATURE_jwl(rho,temperature,internal_energy)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype
@@ -27681,7 +27788,7 @@ endif
 return
 end subroutine circleww
 
-subroutine JohnsonCook( &
+subroutine JohnsonCookSoftening( &
  base_yield_stress, &
  T,TM,T0,alpha,ref_eps_p,eps_p,n,yield_stress)
 use probcommon_module
@@ -27709,7 +27816,7 @@ if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
     (eps_p.ge.zero).and.(n.ge.one)) then
  !do nothing
 else
- print *,"Johnson Cook parameters corrupt"
+ print *,"Johnson Cook Softening parameters corrupt"
  stop
 endif
 
@@ -27727,7 +27834,7 @@ else
 endif
 
 return
-end subroutine JohnsonCook
+end subroutine JohnsonCookSoftening
 
   ! called from fort_updatetensor() and fort_update_particle_tensor()
   ! in GODUNOV_3D.F90
@@ -28889,7 +28996,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! "S" from Maire et al corresponds to "Aadvect" times the 
    ! shear modulus.
    ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
-   call JohnsonCook( &
+   call JohnsonCookSoftening( &
     yield_stress, &
     cell_temperature, &
     fort_yield_temperature(im_critical+1), &

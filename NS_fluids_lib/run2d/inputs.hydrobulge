@@ -2,6 +2,8 @@
 # Wardlaw and Luton
 # Shock and Vibration
 # volume 7 (2000) 265-275
+# Sandusky et al
+# Shock and Vibration
 max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
 stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
@@ -136,15 +138,17 @@ ns.adv_dir=2
 
 # liquid,jwl,aluminum side walls,gas
 ns.viscconst=0.01 0.0 10.0 0.0001
-ns.tempconst=293.0 2413.09282 293.0 293.0
+ns.tempconst=293.0 1367.191399689 293.0 293.0
 ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 
 # liquid,jwl,aluminum side walls,gas
 # 35=EOS_wardlaw_tillotson
 # 3=EOS_NAjwl
+# 37=EOS_Sandusky_jwl
 # 14=EOS_air_rho2
 #ns.material_type=35 3 0 14
 ns.material_type=35 3 0 0
+#ns.material_type=35 37 0 0
 ns.material_conservation_form=1 1 0 0
 
 # FSI_flag for avaiable phase/material
