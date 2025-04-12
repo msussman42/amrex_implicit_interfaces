@@ -1371,8 +1371,10 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
   enddo
   call get_primary_material(LS,im_primary)
 
+   !liquid,jwl,aluminum side walls,gas
   if (im_primary.eq.1) then
-   if (abs(LS(im_primary)).le.dx_this_level) then
+   if ((abs(LS(im_primary)).le.dx_this_level).and. &
+       (abs(LS(3)).le.dx_this_level)) then
   
     support_r=0.0d0
     do dir=1,SDIM
@@ -1408,7 +1410,8 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
      print *,"support_r invalid"
      stop
     endif
-   else if (abs(LS(im_primary)).ge.dx_this_level) then
+   else if ((abs(LS(im_primary)).ge.dx_this_level).or. &
+            (abs(LS(3)).ge.dx_this_level)) then
     !do nothing
    else
     print *,"LS(im_primary) invalid"

@@ -180,8 +180,9 @@ ns.viscoelastic_model=0 0 3 0
 #alternate value(s):
 #9.0e+9 (too big)
 #2.0e+9 (5.87-5.08) (too small)
+#3.0e+9?
 #4.0e+9?
-ns.yield_stress=0.0 0.0 4.0e+9 0.0
+ns.yield_stress=0.0 0.0 3.0e+9 0.0
 
 ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10
 ns.yield_alpha=1.2 1.2 1.2 1.2
