@@ -11920,7 +11920,11 @@ void NavierStokes::diffusion_heatingALL(
   ns_level.debug_ngrow(FACE_VAR_MF,0,local_caller_string);
   ns_level.resize_metrics(1);
   ns_level.debug_ngrow(VOLUME_MF,1,local_caller_string);
- }
+
+  int nsolve_visc=AMREX_SPACEDIM;
+  int project_option_visc=SOLVETYPE_VISC;
+  ns_level.allocate_pressure_work_vars(nsolve_visc,project_option_visc);
+ } //ilev=finest_level ... level
 
  if (NS_geometry_coord==COORDSYS_RZ) {
   if (AMREX_SPACEDIM!=2)
@@ -11964,6 +11968,7 @@ void NavierStokes::diffusion_heatingALL(
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.remove_FACE_WEIGHT_vars();
+  ns_level.remove_pressure_work_vars();
  }
 
 }  // subroutine diffusion_heatingALL

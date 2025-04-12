@@ -19526,10 +19526,10 @@ end subroutine print_visual_descriptor
        GAMMA=1.28D0
        RHOI=1.63D0
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then !hydrobulge
-!      A=6.17D+12 !cgs
-       A=6.1327D+12 !cgs
-!      B=1.69D+11 !cgs 
-       B=1.5069D+11 !cgs 
+       A=6.17D+12 !cgs
+!      A=6.1327D+12 !cgs
+       B=1.69D+11 !cgs 
+!      B=1.5069D+11 !cgs 
        R1=4.4D0
        R2=1.2D0
        GAMMA=1.25D0
@@ -20544,7 +20544,7 @@ end subroutine print_visual_descriptor
       integer, intent(in) :: im
       real(amrex_real), intent(in) :: rho,internal_energy
       real(amrex_real), intent(out) :: pressure
-      real(amrex_real) :: rho0,T0,e0,mu
+      real(amrex_real) :: rho0,T0,e0,mu,p0_factor
       real(amrex_real) :: V0,V,Gamma0,c0,s
 
       rho0=fort_denconst(im)
@@ -20590,15 +20590,59 @@ end subroutine print_visual_descriptor
        !  (e-(1/2)c^2(mu/(1-s mu))^2)=
        !  rho0 (c^2 mu(1-gamma0 mu/2)/(1-s mu)^2)+gamma0 rho0 e
 
+      p0_factor=1.0D+6/(Gamma0*rho0*e0)
+
       if (mu.ge.zero) then
+
+       if ((mu.ge.zero).and.(mu.lt.one)) then
+        !do nothing
+       else
+        print *,"mu invalid: ",mu
+        stop
+       endif
+
        pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
-        Gamma0*rho0*internal_energy
-      else if (mu.lt.zero) then
-       pressure=(c0**2)*(rho-rho0)+Gamma0*rho0*internal_energy
+        Gamma0*rho0*internal_energy*p0_factor
+
        if (pressure.gt.zero) then
         !do nothing
        else
-        print *,"pressure invalid: ",pressure
+        print *,"pressure invalid(a): ",pressure
+        print *,"c0=",c0
+        print *,"e0=",e0
+        print *,"rho=",rho
+        print *,"rho0=",rho0
+        print *,"Gamma0=",Gamma0
+        print *,"internal_energy=",internal_energy
+        print *,"p0_factor=",p0_factor
+        stop
+       endif
+
+      else if (mu.lt.zero) then
+       pressure=(c0**2)*(rho-rho0)+Gamma0*rho0*internal_energy*p0_factor
+       if (pressure.gt.zero) then
+        !do nothing
+       else if (pressure.le.zero) then
+        pressure=P_cav_tillotson
+        if (pressure.gt.zero) then
+         !do nothing
+        else if (pressure.le.zero) then
+
+         print *,"pressure invalid(b): ",pressure
+         print *,"c0=",c0
+         print *,"e0=",e0
+         print *,"rho=",rho
+         print *,"rho0=",rho0
+         print *,"Gamma0=",Gamma0
+         print *,"internal_energy=",internal_energy
+         print *,"p0_factor=",p0_factor
+         stop
+        else
+         print *,"pressure corrupt: ",pressure
+         stop
+        endif
+       else
+        print *,"pressure corrupt: ",pressure
         stop
        endif
       else
@@ -20617,7 +20661,7 @@ end subroutine print_visual_descriptor
       integer, intent(in) :: im
       real(amrex_real), intent(in) :: rho,internal_energy
       real(amrex_real), intent(out) :: soundsqr
-      real(amrex_real) :: rho0,T0,e0,mu,pressure
+      real(amrex_real) :: rho0,T0,e0,mu,pressure,p0_factor
       real(amrex_real) :: dmu,dpdrho,dpde
       real(amrex_real) :: w,dtop_bottom,dbottom_top,dpdmu
       real(amrex_real) :: V0,V,Gamma0,c0,s
@@ -20660,6 +20704,7 @@ end subroutine print_visual_descriptor
       mu=one-rho0/rho
 
       call EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
+      p0_factor=1.0D+6/(Gamma0*rho0*e0)
 
       dmu=rho0/rho**2
       w=one-s*mu
@@ -20667,7 +20712,7 @@ end subroutine print_visual_descriptor
       dbottom_top=rho0*(c0**2)*mu*(one-Gamma0*half*mu)*two*(-s)*w
       dpdmu=(dtop_bottom-dbottom_top)/(w**4)
       dpdrho=dpdmu*dmu
-      dpde=Gamma0*rho0
+      dpde=Gamma0*rho0*p0_factor
       if (mu.ge.zero) then
        !do nothing
       else if (mu.lt.zero) then
@@ -20701,7 +20746,8 @@ end subroutine print_visual_descriptor
       real(amrex_real) :: cv
 
       if ((rho.gt.zero).and.(temperature.ge.zero)) then
-       cv=4.1855D+7
+!      cv=4.1855D+7
+       cv=fort_stiffCV(im)
        internal_energy=cv*temperature
       else
        print *,"rho or temperature invalid:",rho,temperature
@@ -20723,7 +20769,8 @@ end subroutine print_visual_descriptor
       real(amrex_real) :: cv
 
       if ((rho.gt.zero).and.(internal_energy.ge.zero)) then
-       cv=4.1855D+7
+!      cv=4.1855D+7
+       cv=fort_stiffCV(im)
        temperature=internal_energy/cv
       else
        print *,"rho or internal_energy invalid: ",rho,internal_energy
