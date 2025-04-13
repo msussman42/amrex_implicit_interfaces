@@ -155,7 +155,9 @@ ns.gravity        = -980.0e-4   # cgs
 #SUSSMAN BOND: make capillary wave speed comparable to phase change rate
 #(but NOT too small, need quasi steady state effect)
 #ns.tension=72.8 72.8 72.8 72.8 143.1 72.8   
+ns.radblob9=0.1 # transition time from tension_init to tension.
 ns.tension=72.8e-4 72.8e-4 72.8e-4 72.8e-4 143.1e-4 72.8e-4
+ns.tension_init=72.8e-4 0.0 72.8e-4 72.8e-4 143.1e-4 72.8e-4 #wetting
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
