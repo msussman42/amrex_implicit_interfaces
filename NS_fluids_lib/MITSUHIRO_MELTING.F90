@@ -557,4 +557,76 @@ endif
 return
 end subroutine MITSUHIRO_MELTING_HEATSOURCE
 
+subroutine MITSUHIRO_MELTING_VARIABLE_SURFACE_TENSION( &
+  xpos, &
+  time, &
+  iten, &
+  temperature, &
+  tension)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: time,temperature
+real(amrex_real), INTENT(in) :: xpos(SDIM)
+real(amrex_real), INTENT(inout) :: tension
+real(amrex_real) :: theta
+
+ if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+  ! do nothing
+ else
+  print *,"iten invalid: ",iten
+  stop
+ endif
+ if (temperature.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"temperature invalid: ",temperature
+  stop
+ endif
+ if (time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"time invalid: ",time
+  stop
+ endif
+ if (tension.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"tension invalid: ",tension
+  stop
+ endif
+
+ if (probtype.eq.414) then
+   if (radblob9.eq.zero) then
+    !do nothing
+   else if (radblob9.gt.zero) then
+    if (time.eq.zero) then
+     tension=fort_tension_init(iten)
+    else if ((time.ge.zero).and. &
+             (time.le.radblob9)) then
+     tension=fort_tension_init(iten)
+    else if (time.ge.two*radblob9) then
+     tension=fort_tension(iten)
+    else if ((time.ge.radblob9).and. &
+             (time.le.two*radblob9)) then
+     theta=(time-radblob9)/radblob9
+     tension=(one-theta)*fort_tension_init(iten)+ &
+             theta*fort_tension(iten)
+    else
+     print *,"time invalid: ",time
+     stop
+    endif
+   else
+    print *,"radblob9 invalid: ",radblob9
+    stop
+   endif
+ else
+  print *,"unexpected probtype: ",probtype
+  stop
+ endif
+
+end subroutine MITSUHIRO_MELTING_VARIABLE_SURFACE_TENSION
+
 end module MITSUHIRO_MELTING_module
