@@ -122,7 +122,7 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 32 64
+amr.n_cell          = 64 128
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -184,6 +184,7 @@ amr.file_name_digits=8
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=0
 amr.plotfile_on_restart=1
+amr.regrid_on_restart=1
 #amr.restart        = chk0008000 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
@@ -385,9 +386,9 @@ ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof=1 # 0=MOF 1=CMOF
-ns.mof_decision_tree_learning=1000
-ns.mof_machine_learning=0
-ns.MOFITERMAX_AFTER_PREDICT = 15
+#ns.mof_decision_tree_learning=1000
+#ns.mof_machine_learning=0
+#ns.MOFITERMAX_AFTER_PREDICT = 15
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

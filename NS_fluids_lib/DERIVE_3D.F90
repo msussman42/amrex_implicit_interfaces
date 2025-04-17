@@ -2475,6 +2475,8 @@ stop
            gravvector(3)=zero
           endif 
 
+           !DRAGCOMP_IQ_BODYFORCE associated with
+           !IQ_BODYDRAG_SUM_COMP
           do dir=1,SDIM
            ibase=DRAGCOMP_IQ_BODYFORCE+3*(im_test-1)+dir
            localsum(ibase)=localsum(ibase)+gravvector(dir)
@@ -2805,6 +2807,10 @@ stop
                viscous0_stress_tensor(i1,j1)=mu_0*visc_coef* &
                  (gradu(i1,j1)+gradu(j1,i1))
                 !modeling mu * (gradU + gradU^T)
+                ! mu_non_ambient=c_mat_visc 
+                ! which is initialized in NavierStokes2.cpp: getStateVISC,
+                ! getStateVISC_ALL.  "c_mat_visc" includes WALE model and
+                ! "viscconst_eddy_wall" effects.
                viscous_stress_tensor(i1,j1)=mu_non_ambient*visc_coef* &
                  (gradu(i1,j1)+gradu(j1,i1))
                 !viscoelastic
