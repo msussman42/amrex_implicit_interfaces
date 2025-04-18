@@ -4353,6 +4353,73 @@ NavierStokes::read_params ()
 
     pp.queryarr("tension_init",tension_init,0,num_interfaces);
 
+    if (num_materials>2) {
+     if (ParallelDescriptor::IOProcessor()) {
+
+      for (int im1=0;im1<num_materials;im1++) {
+       for (int im2=0;im2<num_materials;im2++) {
+        if (im2!=im1) {
+         for (int im3=im2+1;im3<num_materials;im3++) {
+          if (im3!=im1) {
+           int iten23;
+           get_iten_cpp(im2+1,im3+1,iten23);
+ 	   if (tension[iten23-1]>0.0) {
+            int iten12;
+            get_iten_cpp(im1+1,im2+1,iten12);
+            int iten13;
+            get_iten_cpp(im1+1,im3+1,iten13);
+	    Real angle2=acos((tension[iten13-1]-
+  	     tension[iten12-1])/tension[iten23-1]);
+	    Real angle3=NS_PI-angle2;
+	    std::cout << "tension: im1=" << im1 << " im2=" <<
+	      im2 << " im3=" << im3 << '\n';
+	    std::cout << "tension angle im2=" << im2 << ' ' << 
+		    180.0*angle2/NS_PI << '\n';
+	    std::cout << "tension angle im3=" << im3 << ' ' << 
+		    180.0*angle3/NS_PI << '\n';
+	   }
+	  }
+	 }
+	}
+       }
+      } // tension CL statistics
+
+
+      for (int im1=0;im1<num_materials;im1++) {
+       for (int im2=0;im2<num_materials;im2++) {
+        if (im2!=im1) {
+         for (int im3=im2+1;im3<num_materials;im3++) {
+          if (im3!=im1) {
+           int iten23;
+           get_iten_cpp(im2+1,im3+1,iten23);
+ 	   if (tension_init[iten23-1]>0.0) {
+            int iten12;
+            get_iten_cpp(im1+1,im2+1,iten12);
+            int iten13;
+            get_iten_cpp(im1+1,im3+1,iten13);
+	    Real angle2=acos((tension_init[iten13-1]-
+  	     tension_init[iten12-1])/tension_init[iten23-1]);
+	    Real angle3=NS_PI-angle2;
+	    std::cout << "tension_init: im1=" << im1 << " im2=" <<
+	      im2 << " im3=" << im3 << '\n';
+	    std::cout << "tension_init angle im2=" << im2 << ' ' << 
+		    180.0*angle2/NS_PI << '\n';
+	    std::cout << "tension_init angle im3=" << im3 << ' ' << 
+		    180.0*angle3/NS_PI << '\n';
+	   }
+	  }
+	 }
+	}
+       }
+      } // tension_init CL statistics
+
+     } // if (ParallelDescriptor::IOProcessor())
+
+    } else if (num_materials==2) {
+     //do nothing
+    } else
+     amrex::Error("expecting num_materials>=2");
+
     pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
     if (unscaled_min_curvature_radius<1.0) {
      amrex::Error("must have unscaled_min_curvature_radius>=1.0");
