@@ -379,6 +379,8 @@ implicit none
       real(amrex_real), PARAMETER :: alpha_tillotson=10.0d0 
       real(amrex_real), PARAMETER :: beta_tillotson=5.0d0 
 
+      real(amrex_real), PARAMETER :: P_cav_mie_gruneisen=1.0D+6 ! dyne/cm^2
+
       real(amrex_real), PARAMETER :: omega_wardlaw_tillotson=0.28d0
       real(amrex_real), PARAMETER :: A_wardlaw_tillotson=2.2D+10 ! dyne/cm^2
       real(amrex_real), PARAMETER :: B_wardlaw_tillotson=9.94D+10 ! dyne/cm^2
