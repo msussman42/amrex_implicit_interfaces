@@ -10248,7 +10248,8 @@ stop
                endif
 
               else
-               print *,"project_option invalid fort_init_physics_vars"
+               print *,"project_option invalid fort_init_physics_vars: ", &
+                project_option
                stop
               endif
 
@@ -12191,7 +12192,7 @@ stop
             if (divu.eq.zero) then
              ! do nothing
             else 
-             print *,"divu invalid"
+             print *,"divu invalid: ",divu
              stop
             endif
            else if ((level.ge.0).and.(level.lt.finest_level)) then

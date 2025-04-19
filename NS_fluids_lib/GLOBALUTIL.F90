@@ -20575,7 +20575,7 @@ end subroutine print_visual_descriptor
       V=one/rho
       Gamma0=fort_stiffGAMMA(im)
       c0=fort_stiff_sound_speed(im)
-      if ((Gamma0.gt.zero).and.(c0.gt.zero)) then
+      if ((Gamma0.ge.one).and.(Gamma0.le.1.5d0).and.(c0.gt.zero)) then
        !do nothing
       else
        print *,"Gamma0 or c0 invalid:",Gamma0,c0
@@ -20592,7 +20592,7 @@ end subroutine print_visual_descriptor
 
       p0_factor=1.0D+6/(Gamma0*rho0*e0)
 
-      if (mu.ge.zero) then
+      if (mu.ge.zero) then !rho>=rho0
 
        if ((mu.ge.zero).and.(mu.lt.one)) then
         !do nothing
@@ -20604,26 +20604,43 @@ end subroutine print_visual_descriptor
        pressure=rho0*(c0**2)*mu*(one-half*Gamma0*mu)/((one-s*mu)**2)+ &
         Gamma0*rho0*internal_energy*p0_factor
 
-       if (pressure.gt.zero) then
+       if (pressure.gt.P_cav_mie_gruneisen) then
         !do nothing
+       else if (pressure.le.P_cav_mie_gruneisen) then
+
+        pressure=P_cav_mie_gruneisen
+
+        if (pressure.gt.zero) then
+         !do nothing
+        else if (pressure.le.zero) then
+
+         print *,"pressure invalid(a): ",pressure
+         print *,"c0=",c0
+         print *,"e0=",e0
+         print *,"rho=",rho
+         print *,"rho0=",rho0
+         print *,"Gamma0=",Gamma0
+         print *,"internal_energy=",internal_energy
+         print *,"p0_factor=",p0_factor
+         stop
+        else
+         print *,"pressure corrupt: ",pressure
+         stop
+        endif
+
        else
-        print *,"pressure invalid(a): ",pressure
-        print *,"c0=",c0
-        print *,"e0=",e0
-        print *,"rho=",rho
-        print *,"rho0=",rho0
-        print *,"Gamma0=",Gamma0
-        print *,"internal_energy=",internal_energy
-        print *,"p0_factor=",p0_factor
+        print *,"pressure corrupt: ",pressure
         stop
        endif
 
-      else if (mu.lt.zero) then
+      else if (mu.lt.zero) then !rho<rho0
        pressure=(c0**2)*(rho-rho0)+Gamma0*rho0*internal_energy*p0_factor
-       if (pressure.gt.zero) then
+       if (pressure.gt.P_cav_mie_gruneisen) then
         !do nothing
-       else if (pressure.le.zero) then
-        pressure=P_cav_tillotson
+       else if (pressure.le.P_cav_mie_gruneisen) then
+
+        pressure=P_cav_mie_gruneisen
+
         if (pressure.gt.zero) then
          !do nothing
         else if (pressure.le.zero) then
@@ -20694,7 +20711,8 @@ end subroutine print_visual_descriptor
       V=one/rho
       Gamma0=fort_stiffGAMMA(im)
       c0=fort_stiff_sound_speed(im)
-      if ((Gamma0.gt.zero).and.(c0.gt.zero)) then
+
+      if ((Gamma0.ge.one).and.(Gamma0.le.1.5d0).and.(c0.gt.zero)) then
        !do nothing
       else
        print *,"Gamma0 or c0 invalid:",Gamma0,c0
@@ -20706,7 +20724,7 @@ end subroutine print_visual_descriptor
       call EOS_Mie_Gruneison(rho,internal_energy,pressure,im)
       p0_factor=1.0D+6/(Gamma0*rho0*e0)
 
-      dmu=rho0/rho**2
+      dmu=rho0/(rho**2)
       w=one-s*mu
       dtop_bottom=rho0*(c0**2)*(w**2)*(one-Gamma0*mu)
       dbottom_top=rho0*(c0**2)*mu*(one-Gamma0*half*mu)*two*(-s)*w
@@ -20723,6 +20741,15 @@ end subroutine print_visual_descriptor
       endif 
 
       soundsqr=dpdrho+pressure*dpde/(rho**2)
+
+      if (soundsqr.lt.c0**2) then
+       soundsqr=c0**2
+      else if (soundsqr.ge.c0**2) then
+       !do nothing
+      else
+       print *,"soundsqr invalid: ",soundsqr
+       stop
+      endif
 
       if (soundsqr.gt.zero) then
        !do nothing

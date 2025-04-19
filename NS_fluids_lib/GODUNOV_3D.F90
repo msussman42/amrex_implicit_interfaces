@@ -2529,7 +2529,7 @@ stop
       real(amrex_real) uu_estdt_phase_change
       real(amrex_real) c_core
       real(amrex_real) cc,cleft,cright
-      real(amrex_real) cc_diag,cleft_diag,cright_diag
+      real(amrex_real) cc_diagnostic,cleft_diagnostic,cright_diagnostic
       integer i,j,k
       integer icell,jcell,kcell
       integer ialt,jalt,kalt
@@ -2638,6 +2638,7 @@ stop
       integer ispec
       real(amrex_real) vapor_den
       real(amrex_real) elastic_wave_speed
+      real(amrex_real) max_elastic_wave_speed
       real(amrex_real) viscosity_wave_speed
       real(amrex_real) source_perim_factor
       real(amrex_real) dest_perim_factor
@@ -3189,9 +3190,12 @@ stop
        cright=zero
        cc=zero
 
-       cleft_diag=zero
-       cright_diag=zero
-       cc_diag=zero
+       cleft_diagnostic=zero
+       cright_diagnostic=zero
+       cc_diagnostic=zero
+
+       max_elastic_wave_speed=zero
+       elastic_wave_speed=zero
 
        do im=1,num_materials
 
@@ -3249,8 +3253,13 @@ stop
              print *,"fort_elastic_viscosity(im) invalid"
              stop
             endif
+
             if (elastic_wave_speed.gt.zero) then
              elastic_wave_speed=sqrt(elastic_wave_speed)
+             if (elastic_wave_speed.gt.max_elastic_wave_speed) then
+              max_elastic_wave_speed=elastic_wave_speed
+             endif
+
              dthold=hx/elastic_wave_speed
              dt_min=min(dt_min,dthold)
             else if (elastic_wave_speed.eq.zero) then
@@ -3259,6 +3268,7 @@ stop
              print *,"elastic_wave_speed invalid: ",elastic_wave_speed
              stop
             endif
+
            else
             print *,"elastic_time invalid"
             print *,"im= ",im
@@ -3665,12 +3675,12 @@ stop
           material_type(im_primaryL),im_primaryL)
          call SOUNDSQR_material(density_left,massfrac_parm_left, &
           internal_energy_left, &
-          cleft_diag, &
+          cleft_diagnostic, &
           material_type(im_primaryL),im_primaryL)
 
          if ((shock_timestep(im_primaryL).eq.1).or. &
              ((shock_timestep(im_primaryL).eq.0).and.(time.eq.zero))) then
-          cleft=cleft_diag
+          cleft=cleft_diagnostic
          endif
         else if (material_type(im_primaryL).eq.0) then
          ! do nothing
@@ -3711,12 +3721,12 @@ stop
           material_type(im_primaryR),im_primaryR)
          call SOUNDSQR_material(density_right,massfrac_parm_right, &
           internal_energy_right, &
-          cright_diag, &
+          cright_diagnostic, &
           material_type(im_primaryR),im_primaryR)
 
          if ((shock_timestep(im_primaryR).eq.1).or. &
              ((shock_timestep(im_primaryR).eq.0).and.(time.eq.zero))) then
-          cright=cright_diag
+          cright=cright_diagnostic
          endif
 
          if (im_primaryR.eq.im_primaryL) then
@@ -3755,7 +3765,7 @@ stop
         stop
        endif
 
-       cc_diag=max(cleft_diag,cright_diag)  ! c^2
+       cc_diagnostic=max(cleft_diagnostic,cright_diagnostic)  ! c^2
        cc=max(cleft,cright)  ! c^2
 
         ! check_user_defined_velbc is declared in: PROB.F90
@@ -3765,7 +3775,7 @@ stop
 
        uu_estdt_core = max(uu_estdt_core, &
            abs(uu_estdt)+abs(uu_estdt_phase_change))
-       c_core = max(c_core,abs(cc_diag))  ! c^2
+       c_core = max(c_core,abs(cc_diagnostic))  ! c^2
 
         !weymouth_factor=weymouth_cfl/cfl
        effective_velocity=abs(uu_estdt_phase_change/weymouth_factor)
@@ -3781,13 +3791,15 @@ stop
         stop
        endif
 
-       effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)
+       effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)+ &
+         max_elastic_wave_speed
+
        if (effective_velocity.gt.zero) then
         dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing
        else
-        print *,"effective_velocity invalid"
+        print *,"effective_velocity invalid: ",effective_velocity
         stop
        endif
 

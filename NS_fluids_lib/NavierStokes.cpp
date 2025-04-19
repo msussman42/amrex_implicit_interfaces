@@ -24432,6 +24432,7 @@ NavierStokes::post_init_state () {
     update_flux,
     interface_cond_avail);
 
+    //make_MAC_velocity_consistent is declared in NavierStokes2.cpp
    ns_level.make_MAC_velocity_consistent();
   }
 

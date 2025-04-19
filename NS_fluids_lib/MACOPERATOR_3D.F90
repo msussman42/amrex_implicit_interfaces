@@ -650,7 +650,7 @@ stop
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
           local_cterm(1)=zero
          else
-          print *,"project_option invalid fort_scalarcoeff"
+          print *,"project_option invalid fort_scalarcoeff: ",project_option
           stop
          endif
 
