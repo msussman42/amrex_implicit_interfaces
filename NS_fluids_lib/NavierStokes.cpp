@@ -5021,10 +5021,30 @@ NavierStokes::read_params ()
     pp.queryAdd("shock_timestep",shock_timestep,num_materials);
 
     for (int i=0;i<num_materials;i++) {
+
      if (!((shock_timestep[i]==1)|| //always take into account acoustic waves
 	   (shock_timestep[i]==0)|| //taken into account acoustic waves t=0
            (shock_timestep[i]==2))) //never consider acoustic waves.
       amrex::Error("shock_timestep invalid");
+
+     if ((material_type[i]>0)&&
+         (material_type[i]<999)) {
+      if (elastic_viscosity[i]>0.0) {
+       if (shock_timestep[i]==1) {
+        //do nothing
+       } else
+        amrex::Error("expecting shock_timestep=1 if compressible and elastic");
+      } else if (elastic_viscosity[i]==0.0) {
+       //do nothing
+      } else
+       amrex::Error("elastic_viscosity invalid");
+     } else if (material_type[i]==0) {
+      //do nothing
+     } else if (material_type[i]==999) {
+      //do nothing
+     } else
+      amrex::Error("material_type invalid");
+
     }
 
     projection_pressure_scale=1.0;

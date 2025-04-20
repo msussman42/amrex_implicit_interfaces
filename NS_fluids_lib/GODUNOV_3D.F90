@@ -3246,9 +3246,17 @@ stop
              ! kg/(m^2 s^2) = (1/m) beta
              ! beta = kg/(m s^2)
              ! beta/rho = kg/(m s^2)   / (kg/m^3) = m^2/s^2
-            if (fort_elastic_viscosity(im).ge.zero) then
-             elastic_wave_speed=four*  &
-              two*visc_coef*max_A*fort_elastic_viscosity(im)/fort_denconst(im)
+            if (fort_elastic_viscosity(im).eq.zero) then
+             elastic_wave_speed=zero
+            else if (fort_elastic_viscosity(im).gt.zero) then
+             if (max_A.ge.three) then
+              elastic_wave_speed=four*  &
+               two*visc_coef*max_A*fort_elastic_viscosity(im)/ &
+               fort_denconst(im)
+             else
+              print *,"max_A invalid: ",max_A
+              stop
+             endif
             else
              print *,"fort_elastic_viscosity(im) invalid"
              stop
