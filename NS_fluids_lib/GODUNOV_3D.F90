@@ -2652,6 +2652,7 @@ stop
       integer ivec(3)
       integer triple_flag
       integer im_sub
+      real(amrex_real) gravity_vector_out(SDIM)
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -2969,14 +2970,20 @@ stop
       call checkbound_array(fablo,fabhi,dist_ptr,2,-1)
 
       if (rzflag.ne.levelrz) then
-       print *,"rzflag invalid fort_estdt"
+       print *,"rzflag invalid fort_estdt: ",rzflag
        stop
       endif
 
-      local_gravity_mag=gravity_vector(1)**2+ &
-        gravity_vector(2)**2
+      do dir2=1,SDIM
+       xI(dir2)=zero
+      enddo
+
+      call SUB_gravity_vector(xI,time,gravity_vector,gravity_vector_out)
+
+      local_gravity_mag=gravity_vector_out(1)**2+ &
+        gravity_vector_out(2)**2
       if (SDIM.eq.3) then
-       local_gravity_mag=local_gravity_mag+gravity_vector(SDIM)**2
+       local_gravity_mag=local_gravity_mag+gravity_vector_out(SDIM)**2
       endif
       local_gravity_mag=sqrt(local_gravity_mag)
 

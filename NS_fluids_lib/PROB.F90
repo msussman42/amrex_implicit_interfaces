@@ -2563,11 +2563,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer, parameter :: nhalf=1
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xcell(SDIM)
+      real(amrex_real) gravity_vector_out(SDIM)
       integer :: local_dir
       integer :: gravity_dir
       integer, PARAMETER :: from_boundary_hydrostatic=0
 
-      call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+      call gridsten_level(xsten,i,j,k,level,nhalf)
+      do local_dir=1,SDIM
+       xcell(local_dir)=xsten(0,local_dir)
+      enddo 
+
+      call SUB_gravity_vector(xcell,time,gravity_vector,gravity_vector_out)
+
+      call fort_derive_gravity_dir(gravity_vector_out,gravity_dir)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -2576,20 +2584,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if (gravity_vector(gravity_dir).eq.zero) then
+      if (gravity_vector_out(gravity_dir).eq.zero) then
        ! do nothing
-      else if (gravity_vector(gravity_dir).ne.zero) then
+      else if (gravity_vector_out(gravity_dir).ne.zero) then
        ! do nothing
       else
-       print *,"gravity_vector is NaN: ",gravity_dir, &
-           gravity_vector(gravity_dir)
+       print *,"gravity_vector_out is NaN: ",gravity_dir, &
+           gravity_vector_out(gravity_dir)
        stop
       endif
-
-      call gridsten_level(xsten,i,j,k,level,nhalf)
-      do local_dir=1,SDIM
-       xcell(local_dir)=xsten(0,local_dir)
-      enddo 
 
        ! the force is grad p^hydrostatic/rho^hydrostatic
       rho_hydrostatic=fort_denconst(1) 
@@ -2597,7 +2600,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        pres_hydrostatic=zero
        do local_dir=1,SDIM
         pres_hydrostatic=pres_hydrostatic+ &
-          gravity_vector(local_dir)*rho_hydrostatic*xcell(local_dir)
+          gravity_vector_out(local_dir)*rho_hydrostatic*xcell(local_dir)
        enddo
     
        if (angular_velocity.ge.zero) then
@@ -17508,8 +17511,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer, PARAMETER :: from_boundary_hydrostatic=0
 
       integer :: gravity_dir
-
-      call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+      real(amrex_real) gravity_vector_out(SDIM)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid presBDRYCOND"
@@ -17525,6 +17527,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       do local_dir=1,SDIM
        xpos(local_dir)=xsten(0,local_dir)
       enddo
+
+      call SUB_gravity_vector(xpos,time,gravity_vector,gravity_vector_out)
+      call fort_derive_gravity_dir(gravity_vector_out,gravity_dir)
 
       if (dir.eq.1) then
        if (side.eq.1) then
@@ -17673,9 +17678,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.201) then
 
           if (z.le.zblob2) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           else
-           ADV=-fort_denconst(3)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(3)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           endif
   
          else if (SDIM.eq.2) then
@@ -17701,9 +17706,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
 
            if (y.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            endif
 
           else if (probtype.eq.539) then  ! supnozzle xlo - presBDRYCOND
@@ -17716,14 +17721,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then !xlo 3D(1st material Tait EOS)
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! xlo
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
 
            ! xlo, presBDRYCOND, 3D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (z.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            endif
           endif
 
@@ -17743,9 +17748,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.201) then
 
           if (z.le.zblob2) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           else
-           ADV=-fort_denconst(3)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(3)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           endif
 
          else if (SDIM.eq.2) then
@@ -17767,7 +17772,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if (fort_material_type(1).eq.13) then ! xhi, 2D, Tait EOS
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! xhi
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
             !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
@@ -17796,9 +17801,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! xhi, presBDRYCOND, 2D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            endif
           else if (probtype.eq.539) then  ! supnozzle xhi - presBDRYCOND
            ADV=outflow_pressure
@@ -17810,14 +17815,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then ! xhi, presBDRYCOND, TAIT EOS
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! xhi
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
 
            ! xhi, presBDRYCOND, 3D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (z.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            endif
           endif
 
@@ -17838,9 +17843,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.201) then
 
           if (z.le.zblob2) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           else
-           ADV=-fort_denconst(3)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(3)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           endif
 
          else if (SDIM.eq.2) then
@@ -17848,7 +17853,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then  !ylo 2D (TAIT EOS)
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! ylo
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
              !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
@@ -17889,9 +17894,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
             ADV= &
-             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+             -fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            endif
           endif
 
@@ -17927,16 +17932,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then ! ylo 3D, Tait EOS
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then  ! ylo
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
 
            ! ylo, presBDRYCOND, 3D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (z.le.waterdepth) then
             ADV= &
-             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+             -fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            else
             ADV= &
-             -fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+             -fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            endif
           endif
 
@@ -17956,9 +17961,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.201) then
 
           if (z.le.zblob2) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           else
-           ADV=-fort_denconst(3)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+           ADV=-fort_denconst(3)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
           endif
 
          else if (SDIM.eq.2) then
@@ -17966,7 +17971,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then ! yhi,2D, Tait EOS
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! yhi
             !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
@@ -17982,10 +17987,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
             ADV= &
-             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+             -fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            else
             ADV= &
-             -fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+             -fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(y-waterdepth)
            endif
           else if (probtype.eq.42) then ! bubble jetting 2D
             !calling from presBDRYCOND
@@ -18025,12 +18030,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (x.lt.pipexlo) then
              ADV=zero
             else if (x.lt.xblob) then
-             ADV=fort_denconst(2)*abs(gravity_vector(gravity_dir))*(x-pipexlo)
+             ADV=fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
             else
              ADV= &
-              fort_denconst(2)*abs(gravity_vector(gravity_dir))* &
+              fort_denconst(2)*abs(gravity_vector_out(gravity_dir))* &
               (xblob-pipexlo)+ &
-              fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-xblob) 
+              fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-xblob) 
             endif
 
            else if (axis_dir.eq.2) then
@@ -18038,14 +18043,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (x.lt.pipexlo) then
              ADV=zero
             else if (x.lt.xblob-radblob2) then
-             ADV=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-pipexlo)
+             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
             else if (x.lt.xblob+radblob2) then
-             ADV=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(xblob-radblob2-pipexlo)+ &
-                 fort_denconst(2)*abs(gravity_vector(gravity_dir))*(x-xblob+radblob2) 
+             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(xblob-radblob2-pipexlo)+ &
+                 fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(x-xblob+radblob2) 
             else
-             ADV=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(xblob-radblob2-pipexlo)+ &
-                 fort_denconst(2)*abs(gravity_vector(gravity_dir))*(two*radblob2)+ & 
-                 fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-xblob-radblob2) 
+             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(xblob-radblob2-pipexlo)+ &
+                 fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(two*radblob2)+ & 
+                 fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-xblob-radblob2) 
             endif
 
            else if (axis_dir.eq.3) then
@@ -18053,7 +18058,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (x.lt.pipexlo) then
              ADV=zero
             else 
-             ADV=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-pipexlo)
+             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
             endif
 
            else if (axis_dir.eq.4) then
@@ -18073,13 +18078,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (fort_material_type(1).eq.13) then ! yhi, 3D, Tait EOS
            call boundary_hydrostatic(xpos,rhohydro,ADV)
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! yhi
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
            ! yhi, presBDRYCOND, 3D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (z.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
            endif
           endif
 
@@ -18097,14 +18102,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (fort_material_type(1).eq.13) then ! zlo, 3D, Tait EOS
           call boundary_hydrostatic(xpos,rhohydro,ADV)
          else if (probtype.eq.201) then ! zlo stratified material 1 at bottom
-          ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+          ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
          else if ((probtype.eq.36).and.(axis_dir.eq.0)) then  ! zlo
-          ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+          ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
          else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  ! zlo, presBDRYCOND
           if (z.le.waterdepth) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
           else
-           ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+           ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
           endif
          endif
 
@@ -18137,14 +18142,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (fort_material_type(1).eq.13) then ! zhi, 3D, Tait EOS
           call boundary_hydrostatic(xpos,rhohydro,ADV)
          else if (probtype.eq.201) then ! zhi, stratified
-          ADV=-fort_denconst(3)*abs(gravity_vector(gravity_dir))*(z-zblob2)
+          ADV=-fort_denconst(3)*abs(gravity_vector_out(gravity_dir))*(z-zblob2)
          else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! zhi
-          ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*z
+          ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*z
          else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  ! zhi, presBDRYCOND
           if (z.le.waterdepth) then
-           ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+           ADV=-fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
           else
-           ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+           ADV=-fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(z-waterdepth)
           endif
          endif
 

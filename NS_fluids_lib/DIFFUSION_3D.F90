@@ -306,6 +306,7 @@ stop
        integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
        integer im_rigid_CL
+       real(amrex_real) gravity_vector_out(SDIM)
 
        if (FSI_outer_sweeps.eq.0) then
         im_rigid_CL=num_materials !not used
@@ -453,6 +454,8 @@ stop
         do dir=1,SDIM
          xpoint(dir)=xsten(0,dir)
         enddo
+        call SUB_gravity_vector(xpoint,cur_time_slab, &
+          gravity_vector,gravity_vector_out)
 
         do dir=1,SDIM
          un(dir)=uold(D_DECL(i,j,k),dir)
@@ -732,11 +735,11 @@ stop
           ! units of gravity: m/s^2
           ! DTEMP has no units.
           ! DTEMP=beta(T-T0)  (beta<0)
-          ! usually gravity_vector(SDIM)<0
+          ! usually gravity_vector_out(SDIM)<0
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
            unp1(dir)=unp1(dir)+ &
-              dt*gravity_vector(dir)*DTEMP
+              dt*gravity_vector_out(dir)*DTEMP
           enddo
          else
           print *,"DTEMP is NaN: ",DTEMP
