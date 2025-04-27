@@ -3464,5 +3464,31 @@ real(amrex_real), INTENT(out) :: lever_arm
 
 end subroutine CRYOGENIC_TANK_MK_angular_velocity
 
+subroutine CRYOGENIC_TANK_MK_gravity_vector(x,cur_time, &
+   gravity_vector_in, &
+   gravity_vector_out)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: gravity_vector_in(SDIM)
+real(amrex_real), INTENT(out) :: gravity_vector_out(SDIM)
+integer :: dir
+
+ if (cur_time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"cur_time invalid CRYOGENIC_TANK_MK_gravity_vector: ",cur_time
+  stop
+ endif
+
+ do dir=1,SDIM
+  gravity_vector_out(dir)=gravity_vector_in(dir)
+ enddo
+
+end subroutine CRYOGENIC_TANK_MK_gravity_vector
+
 
 end module CRYOGENIC_TANK_MK_module

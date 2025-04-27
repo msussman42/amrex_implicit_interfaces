@@ -756,6 +756,15 @@ implicit none
       real(amrex_real), INTENT(out) :: lever_arm
       end subroutine TEMPLATE_angular_velocity
 
+      subroutine TEMPLATE_gravity_vector(x,cur_time, &
+       gravity_vector_in,gravity_vector_out)
+      use amrex_fort_module, only : amrex_real
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      real(amrex_real), INTENT(in) :: cur_time
+      real(amrex_real), INTENT(in) :: gravity_vector_in(SDIM)
+      real(amrex_real), INTENT(out) :: gravity_vector_out(SDIM)
+      end subroutine TEMPLATE_gravity_vector
+
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
         density, &
         temperature, &
@@ -1426,6 +1435,7 @@ implicit none
       PROCEDURE(TEMPLATE_T0_Boussinesq), POINTER :: SUB_T0_Boussinesq
       PROCEDURE(TEMPLATE_V0_Coriolis), POINTER :: SUB_V0_Coriolis
       PROCEDURE(TEMPLATE_angular_velocity), POINTER :: SUB_angular_velocity
+      PROCEDURE(TEMPLATE_gravity_vector), POINTER :: SUB_gravity_vector
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
       PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
