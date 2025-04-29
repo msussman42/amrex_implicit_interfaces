@@ -678,7 +678,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    !Experimental characterization of non-isothermal sloshing in microgravity
    !Monteiro et al 2024
   else if (axis_dir.eq.3) then
-   number_of_source_regions=3 
+   number_of_source_regions=0
    num_aux_expect=0
   else
    print *,"axis_dir invalid: ",axis_dir
