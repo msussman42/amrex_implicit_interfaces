@@ -675,6 +675,11 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
+   !Experimental characterization of non-isothermal sloshing in microgravity
+   !Monteiro et al 2024
+  else if (axis_dir.eq.3) then
+   number_of_source_regions=3 
+   num_aux_expect=0
   else
    print *,"axis_dir invalid: ",axis_dir
    stop
@@ -998,6 +1003,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   real(amrex_real) :: xfoot3D(3)
   real(amrex_real) :: xvel(3)
   integer auxcomp
+  integer num_cyl
   real(amrex_real) :: LS_heater_a
   real(amrex_real) :: LS_heater_b
   real(amrex_real) :: LS_tank
@@ -1023,9 +1029,17 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    ! x3D(1)=x(1)
    ! x3D(2)=x(3)
    ! x3D(3)=x(2)
+   !in 2D:
+   ! x3D(1)=x(1)
+   ! x3D(2)=x(2)
+   ! x3D(3)=0.0
   call convert_to_x3D(x,x3D)
 
-  call rigid_displacement(xfoot3D,t,x3D,xvel)
+  call rigid_displacement( &
+   xfoot3D, & !intent(out)
+   t, & !intent(in)
+   x3D, & !intent(in)
+   xvel) !intent(out)
 
    ! material 1= liquid  (e.g. Freon 113)
    ! material 2= vapor  
@@ -1127,6 +1141,20 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
      stop
     endif
+
+    !Experimental characterization of non-isothermal sloshing in microgravity
+    !Monteiro et al 2024
+   else if (axis_dir.eq.3) then
+    if (SDIM.eq.3) then
+     num_cyl=4
+    else if (SDIM.eq.2) then
+     num_cyl=1
+    else
+     print *,"dimension problem"
+     stop
+    endif
+
+
    else
     print *,"axis_dir invalid: ",axis_dir
     stop
