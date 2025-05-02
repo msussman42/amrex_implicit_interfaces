@@ -98,6 +98,12 @@ real(amrex_real) :: TANK_MK_GAS_GAMMA
 real(amrex_real) :: TANK_MK_GAS_CP
 real(amrex_real) :: TANK_MK_GAS_CV
 
+integer, parameter :: n_data=500
+integer :: n_data_T,n_data_x,n_data_y,n_data_z
+real(amrex_real) :: parabolic_tinit(n_data,2) ! (T deg K,z mm)
+! (t seconds,ax (alpha g0))  g0=9.81 m/s^2
+real(amrex_real) :: parabolic_xyz_accel(n_data,6) 
+
 contains
 
 ! vertical direction is "y"
@@ -565,6 +571,85 @@ integer :: stat
 return
 end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
+! z input is in MKS
+! z data is mm
+subroutine interp_parabolic_tinit(z,temperature)
+IMPLICIT NONE
+
+real(amrex_real), intent(in) :: z
+real(amrex_real), intent(out) :: temperature
+integer :: idata
+
+idata=1
+do while ((parabolic_tinit(idata,1)*1.0D-3.lt.z).and.(idata.lt.n_data_T)) 
+ idata=idata+1
+ if ((parabolic_tinit(idata,1).ge.parabolic_tinit(idata-1,1)).and. &
+     (parabolic_tinit(idata-1,1).ge.zero)) then
+  !do nothing
+ else
+  print *,"parabolic_tinit invalid"
+  stop
+ endif
+enddo
+temperature=parabolic_tinit(idata-1,2)+ &
+     (parabolic_tinit(idata,2)-parabolic_tinit(idata-1,2))* &
+     (z-parabolic_tinit(idata-1,1))/ &
+     (parabolic_tinit(idata,1)-parabolic_tinit(idata-1,1))
+
+if (temperature.ge.zero) then
+ !do nothing
+else
+ print *,"temperature invalid: ",temperature
+ stop
+endif
+
+return
+end subroutine interp_parabolic_tinit
+
+subroutine interp_parabolic_xyz(time,ax,ay,az)
+IMPLICIT NONE
+
+real(amrex_real), intent(in) :: time
+real(amrex_real), intent(out) :: ax,ay,az
+integer :: idata
+
+ idata=1
+ do while ((parabolic_xyz_accel(idata,1).lt.time).and.(idata.lt.n_data_x)) 
+  idata=idata+1
+  if ((parabolic_xyz_accel(idata,1).ge.parabolic_xyz_accel(idata-1,1)).and. &
+      (parabolic_xyz_accel(idata-1,1).ge.zero)) then
+   !do nothing
+  else
+   print *,"parabolic_xyz_accel invalid"
+   stop
+  endif
+ enddo
+ ax=parabolic_xyz_accel(idata-1,2)+ &
+      (parabolic_xyz_accel(idata,2)-parabolic_xyz_accel(idata-1,2))* &
+      (z-parabolic_xyz_accel(idata-1,1))/ &
+      (parabolic_xyz_accel(idata,1)-parabolic_xyz_accel(idata-1,1))
+
+ idata=1
+ do while ((parabolic_xyz_accel(idata,3).lt.time).and.(idata.lt.n_data_y)) 
+  idata=idata+1
+  if ((parabolic_xyz_accel(idata,3).ge.parabolic_xyz_accel(idata-1,3)).and. &
+      (parabolic_xyz_accel(idata-1,3).ge.zero)) then
+   !do nothing
+  else
+   print *,"parabolic_xyz_accel invalid"
+   stop
+  endif
+ enddo
+ ay=parabolic_xyz_accel(idata-1,4)+ &
+      (parabolic_xyz_accel(idata,4)-parabolic_xyz_accel(idata-1,4))* &
+      (z-parabolic_xyz_accel(idata-1,3))/ &
+      (parabolic_xyz_accel(idata,3)-parabolic_xyz_accel(idata-1,3))
+
+ az= ....
+ return
+ end subroutine interp_parabolic_xyz
+
+
  ! do any initial preparation needed
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
@@ -680,6 +765,38 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   else if (axis_dir.eq.3) then
    number_of_source_regions=0
    num_aux_expect=0
+
+   print *,"reading parabolic_tinit"
+   open(unit=2, file='parabolic_tinit')
+   read(2,*) n_data_T
+   print *,"n_data_T=",n_data_T
+    !temperature K
+    !z mm
+   do idata=1,n_data_T
+    read(2,*) parabolic_tinit(idata,2),parabolic_tinit(idata,1)
+   enddo
+   close(2)
+
+   print *,"reading parabolic_xyz_accel"
+   open(unit=2, file='parabolic_xyz_accel')
+   read(2,*) n_data_x,n_data_y,n_data_z
+
+   print *,"n_data_x=",n_data_x
+   print *,"n_data_y=",n_data_y
+   print *,"n_data_z=",n_data_z
+    !time second
+    !accel = alpha * g0
+   do idata=1,n_data_x
+    read(2,*) parabolic_xyz_accel(idata,1),parabolic_xyz_accel(idata,2)
+   enddo
+   do idata=1,n_data_y
+    read(2,*) parabolic_xyz_accel(idata,3),parabolic_xyz_accel(idata,4)
+   enddo
+   do idata=1,n_data_z
+    read(2,*) parabolic_xyz_accel(idata,5),parabolic_xyz_accel(idata,6)
+   enddo
+   close(2)
+
   else
    print *,"axis_dir invalid: ",axis_dir
    stop
