@@ -99,8 +99,10 @@ real(amrex_real) :: TANK_MK_GAS_CP
 real(amrex_real) :: TANK_MK_GAS_CV
 
 integer, parameter :: n_data=500
-integer :: n_data_T,n_data_x,n_data_y,n_data_z
-real(amrex_real) :: parabolic_tinit(n_data,2) ! (T deg K,z mm)
+integer :: n_data_temp
+integer :: n_data_xyz(3)
+!data file (T deg K,z mm) -> internal data (z mm,T deg K)
+real(amrex_real) :: parabolic_tinit(n_data,2) 
 ! (t seconds,ax (alpha g0))  g0=9.81 m/s^2
 real(amrex_real) :: parabolic_xyz_accel(n_data,6) 
 
@@ -578,23 +580,35 @@ IMPLICIT NONE
 
 real(amrex_real), intent(in) :: z
 real(amrex_real), intent(out) :: temperature
-integer :: idata
+integer :: idata,index_1,index_2
+
+index_1=1
+index_2=2
+
+if ((n_data_temp.ge.2).and.(n_data_temp.lt.n_data)) then
+ !do nothing
+else
+ print *,"n_data_temp invalid: ",n_data_temp
+ stop
+endif
 
 idata=1
-do while ((parabolic_tinit(idata,1)*1.0D-3.lt.z).and.(idata.lt.n_data_T)) 
+do while ((parabolic_tinit(idata,index_1)*1.0D-3.lt.z).and. &
+          (idata.lt.n_data_temp)) 
  idata=idata+1
- if ((parabolic_tinit(idata,1).ge.parabolic_tinit(idata-1,1)).and. &
-     (parabolic_tinit(idata-1,1).ge.zero)) then
+ if ((parabolic_tinit(idata,index_1).ge. &
+      parabolic_tinit(idata-1,index_1)).and. &
+     (parabolic_tinit(idata-1,index_1).ge.zero)) then
   !do nothing
  else
   print *,"parabolic_tinit invalid"
   stop
  endif
 enddo
-temperature=parabolic_tinit(idata-1,2)+ &
-     (parabolic_tinit(idata,2)-parabolic_tinit(idata-1,2))* &
-     (z-parabolic_tinit(idata-1,1))/ &
-     (parabolic_tinit(idata,1)-parabolic_tinit(idata-1,1))
+temperature=parabolic_tinit(idata-1,index_2)+ &
+     (parabolic_tinit(idata,index_2)-parabolic_tinit(idata-1,index_2))* &
+     (z-parabolic_tinit(idata-1,index_1))/ &
+     (parabolic_tinit(idata,index_1)-parabolic_tinit(idata-1,index_1))
 
 if (temperature.ge.zero) then
  !do nothing
@@ -606,54 +620,54 @@ endif
 return
 end subroutine interp_parabolic_tinit
 
-subroutine interp_parabolic_xyz(time,ax,ay,az)
+subroutine interp_parabolic_xyz(time,axyz)
 IMPLICIT NONE
 
 real(amrex_real), intent(in) :: time
-real(amrex_real), intent(out) :: ax,ay,az
-integer :: idata
+real(amrex_real), intent(out) :: axyz(3)
+integer :: idata,index_1,index_2,dir
 
+do dir=1,3
+ index_1=2*dir-1
+ index_2=index_1+1
+
+ if ((n_data_xyz(dir).ge.2).and.(n_data_xyz(dir).lt.n_data)) then
+  !do nothing
+ else
+  print *,"n_data_xyz invalid: ",dir,n_data_xyz(dir)
+  stop
+ endif
  idata=1
- do while ((parabolic_xyz_accel(idata,1).lt.time).and.(idata.lt.n_data_x)) 
+ do while ((parabolic_xyz_accel(idata,index_1).lt.time).and. &
+           (idata.lt.n_data_xyz(dir))) 
   idata=idata+1
-  if ((parabolic_xyz_accel(idata,1).ge.parabolic_xyz_accel(idata-1,1)).and. &
-      (parabolic_xyz_accel(idata-1,1).ge.zero)) then
+  if ((parabolic_xyz_accel(idata,index_1).ge. &
+       parabolic_xyz_accel(idata-1,index_1)).and. &
+      (parabolic_xyz_accel(idata-1,index_1).ge.zero)) then
    !do nothing
   else
    print *,"parabolic_xyz_accel invalid"
    stop
   endif
  enddo
- ax=parabolic_xyz_accel(idata-1,2)+ &
-      (parabolic_xyz_accel(idata,2)-parabolic_xyz_accel(idata-1,2))* &
-      (z-parabolic_xyz_accel(idata-1,1))/ &
-      (parabolic_xyz_accel(idata,1)-parabolic_xyz_accel(idata-1,1))
+ axyz(dir)=parabolic_xyz_accel(idata-1,index_2)+ &
+  (parabolic_xyz_accel(idata,index_2)-parabolic_xyz_accel(idata-1,index_2))* &
+  (time-parabolic_xyz_accel(idata-1,index_1))/ &
+  (parabolic_xyz_accel(idata,index_1)-parabolic_xyz_accel(idata-1,index_1))
 
- idata=1
- do while ((parabolic_xyz_accel(idata,3).lt.time).and.(idata.lt.n_data_y)) 
-  idata=idata+1
-  if ((parabolic_xyz_accel(idata,3).ge.parabolic_xyz_accel(idata-1,3)).and. &
-      (parabolic_xyz_accel(idata-1,3).ge.zero)) then
-   !do nothing
-  else
-   print *,"parabolic_xyz_accel invalid"
-   stop
-  endif
- enddo
- ay=parabolic_xyz_accel(idata-1,4)+ &
-      (parabolic_xyz_accel(idata,4)-parabolic_xyz_accel(idata-1,4))* &
-      (z-parabolic_xyz_accel(idata-1,3))/ &
-      (parabolic_xyz_accel(idata,3)-parabolic_xyz_accel(idata-1,3))
+enddo !dir=1,3
 
- az= ....
- return
- end subroutine interp_parabolic_xyz
+return
+end subroutine interp_parabolic_xyz
 
 
  ! do any initial preparation needed
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
+
+  integer :: dir
+  integer :: idata,index_1,index_2
 
   num_aux_expect=0
  
@@ -768,33 +782,37 @@ integer :: idata
 
    print *,"reading parabolic_tinit"
    open(unit=2, file='parabolic_tinit')
-   read(2,*) n_data_T
-   print *,"n_data_T=",n_data_T
+   read(2,*) n_data_temp
+   print *,"n_data_temp=",n_data_temp
+   index_1=1
+   index_2=2
+
     !temperature K
     !z mm
-   do idata=1,n_data_T
-    read(2,*) parabolic_tinit(idata,2),parabolic_tinit(idata,1)
+    !data file (T deg K,z mm) -> internal data (z mm,T deg K)
+   do idata=1,n_data_temp
+    read(2,*) parabolic_tinit(idata,index_2),parabolic_tinit(idata,index_1)
    enddo
    close(2)
 
    print *,"reading parabolic_xyz_accel"
    open(unit=2, file='parabolic_xyz_accel')
-   read(2,*) n_data_x,n_data_y,n_data_z
+   read(2,*) n_data_xyz(1),n_data_xyz(2),n_data_xyz(3)
 
-   print *,"n_data_x=",n_data_x
-   print *,"n_data_y=",n_data_y
-   print *,"n_data_z=",n_data_z
+   do dir=1,3
+    index_1=2*dir-1
+    index_2=index_1+1
+
+    print *,"dir, n_data_xyz=",dir,n_data_xyz(dir)
     !time second
     !accel = alpha * g0
-   do idata=1,n_data_x
-    read(2,*) parabolic_xyz_accel(idata,1),parabolic_xyz_accel(idata,2)
-   enddo
-   do idata=1,n_data_y
-    read(2,*) parabolic_xyz_accel(idata,3),parabolic_xyz_accel(idata,4)
-   enddo
-   do idata=1,n_data_z
-    read(2,*) parabolic_xyz_accel(idata,5),parabolic_xyz_accel(idata,6)
-   enddo
+    do idata=1,n_data_xyz(dir)
+     read(2,*) parabolic_xyz_accel(idata,index_1), &
+               parabolic_xyz_accel(idata,index_2)
+    enddo
+
+   enddo !dir=1,3
+
    close(2)
 
   else
