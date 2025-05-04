@@ -52,9 +52,9 @@ integer :: dir_y
 
 !! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
-real(amrex_real) :: TANK_MK_RADIUS
+real(amrex_real) :: TANK_MK_RADIUS !xblob
 ! Tank inner height (inner wall height)
-real(amrex_real) :: TANK_MK_HEIGHT
+real(amrex_real) :: TANK_MK_HEIGHT !yblob
 ! Location of liquid-gas interface in respect to
 ! middle of tank at z=0
 real(amrex_real) :: TANK_MK_INTERFACE_LOCATION
@@ -566,7 +566,7 @@ integer :: stat
   endif 
 
  else
-  print *,"expecting axis_dir.eq.2"
+  print *,"expecting axis_dir.eq.2: ",axis_dir
   stop
  endif
 
@@ -1138,12 +1138,13 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   real(amrex_real) :: xfoot3D(3)
   real(amrex_real) :: xvel(3)
   integer auxcomp
-  integer num_cyl
   real(amrex_real) :: LS_heater_a
   real(amrex_real) :: LS_heater_b
   real(amrex_real) :: LS_tank
   real(amrex_real) :: LS_nozzle
   real(amrex_real) :: LS_LAD_housing
+  real(amrex_real) :: xcen,ycen
+  real(amrex_real) :: rprobe,hprobe,dprobe
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -1280,15 +1281,34 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     !Experimental characterization of non-isothermal sloshing in microgravity
     !Monteiro et al 2024
    else if (axis_dir.eq.3) then
+    xcen=zero
+    ycen=zero
+     !LS(3)>0 outside the cylinder
+    call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,TANK_MK_RADIUS, &
+      -TANK_MK_HEIGHT/two,TANK_MK_HEIGHT/two,LS(3))
+
     if (SDIM.eq.3) then
-     num_cyl=4
+     rprobe=0.003d0
+     xcen=zero
+     ycen=-0.03d0
+     hprobe=0.11d0
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+      TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
+     LS(3)=max(LS(3),-dprobe)
+     ycen=0.03d0
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+      TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
+     LS(3)=max(LS(3),-dprobe)
+     ycen=zero
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+      TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
+     LS(3)=max(LS(3),-dprobe)
     else if (SDIM.eq.2) then
-     num_cyl=1
+     !do nothing
     else
      print *,"dimension problem"
      stop
     endif
-
 
    else
     print *,"axis_dir invalid: ",axis_dir
@@ -3639,6 +3659,9 @@ real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(in) :: gravity_vector_in(SDIM)
 real(amrex_real), INTENT(out) :: gravity_vector_out(SDIM)
 integer :: dir
+real(amrex_real) :: axyz(3)
+
+if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -3650,6 +3673,43 @@ integer :: dir
  do dir=1,SDIM
   gravity_vector_out(dir)=gravity_vector_in(dir)
  enddo
+
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.1).or. &
+     (axis_dir.eq.2)) then
+  !do nothing
+ else if (axis_dir.eq.3) then
+  if ((gravity_vector_in(1).eq.zero).and. &
+      (gravity_vector_in(SDIM-1).eq.zero).and. &
+      (abs(abs(gravity_vector_in(SDIM))-9.8d0).le.0.1d0)) then
+
+   call interp_parabolic_xyz(cur_time,axyz)
+   gravity_vector_out(1)=gravity_vector_in(SDIM)*axyz(1)
+   gravity_vector_out(SDIM)=gravity_vector_in(SDIM)*axyz(3)
+   if (SDIM.eq.2) then
+    !do nothing
+   else if (SDIM.eq.3) then
+    gravity_vector_out(2)=gravity_vector_in(SDIM)*axyz(2)
+   else
+    print *,"sdim invalid"
+    stop
+   endif
+
+  else
+   print *,"gravity_vector_in invalid:",gravity_vector_in
+   stop
+  endif
+ else
+  print *,"axis_dir invalid CRYOGENIC_TANK_MK: ",axis_dir
+  stop
+ endif
+
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"num_materials or probtype invalid"
+ stop
+endif
 
 end subroutine CRYOGENIC_TANK_MK_gravity_vector
 
