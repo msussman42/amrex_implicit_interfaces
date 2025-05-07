@@ -2720,7 +2720,7 @@ stop
       if ((finest_level.lt.0).or. &
           (level.lt.0).or. &
           (level.gt.finest_level)) then
-       print *,"level or finest level invalid estdt"
+       print *,"level or finest level invalid estdt: ",level,finest_level
        stop
       endif
 
@@ -2979,6 +2979,17 @@ stop
       enddo
 
       call SUB_gravity_vector(xI,time,gravity_vector,gravity_vector_out)
+
+      if (level.eq.finest_level) then
+       if (1.eq.1) then
+        print *,"SUB_gravity_vector sanity check: ",gravity_vector_out
+       endif
+      else if ((level.ge.0).and.(level.lt.finest_level)) then
+       !do nothing
+      else
+       print *,"level invalid: ",level,finest_level
+       stop
+      endif
 
       local_gravity_mag=gravity_vector_out(1)**2+ &
         gravity_vector_out(2)**2
