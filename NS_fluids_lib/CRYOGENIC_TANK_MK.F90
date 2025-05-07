@@ -593,22 +593,31 @@ else
 endif
 
 idata=1
-do while ((parabolic_tinit(idata,index_1)*1.0D-3.lt.z).and. &
-          (idata.lt.n_data_temp)) 
- idata=idata+1
- if ((parabolic_tinit(idata,index_1).ge. &
-      parabolic_tinit(idata-1,index_1)).and. &
-     (parabolic_tinit(idata-1,index_1).ge.zero)) then
-  !do nothing
- else
-  print *,"parabolic_tinit invalid"
-  stop
- endif
-enddo
-temperature=parabolic_tinit(idata-1,index_2)+ &
+
+if (parabolic_tinit(idata,index_1)*1.0D-3.ge.z) then
+ temperature=parabolic_tinit(idata,index_2)
+else if (parabolic_tinit(n_data_temp,index_1)*1.0D-3.le.z) then
+ temperature=parabolic_tinit(n_data_temp,index_2)
+else
+
+ do while ((parabolic_tinit(idata,index_1)*1.0D-3.lt.z).and. &
+           (idata.lt.n_data_temp)) 
+  idata=idata+1
+  if ((parabolic_tinit(idata,index_1).ge. &
+       parabolic_tinit(idata-1,index_1)).and. &
+      (parabolic_tinit(idata-1,index_1).ge.zero)) then
+   !do nothing
+  else
+   print *,"parabolic_tinit invalid"
+   stop
+  endif
+ enddo !do while 
+
+ temperature=parabolic_tinit(idata-1,index_2)+ &
      (parabolic_tinit(idata,index_2)-parabolic_tinit(idata-1,index_2))* &
-     (z-parabolic_tinit(idata-1,index_1))/ &
+     (z*1.0D+3-parabolic_tinit(idata-1,index_1))/ &
      (parabolic_tinit(idata,index_1)-parabolic_tinit(idata-1,index_1))
+endif
 
 if (temperature.ge.zero) then
  !do nothing
@@ -2045,6 +2054,7 @@ if ((num_materials.eq.3).and. &
     (probtype.eq.423)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
+
   ! density
   if(im.eq.2) then
    if(fort_material_type(2).eq.0) then
@@ -2066,15 +2076,28 @@ if ((num_materials.eq.3).and. &
    print *,"im invalid 758 ",im
    stop
   endif
+
   ! temperature
-  if (t.eq.0.0d0) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
-  else if (t.gt.0.0d0) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+
+  if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+
+   if (t.eq.0.0d0) then
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
+   else if (t.gt.0.0d0) then
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+   else
+    print *,"t invalid"
+    stop
+   endif
+
+  else if (axis_dir.eq.3) then
+   call interp_parabolic_tinit(x(SDIM), &
+     STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
-   print *,"t invalid"
+   print *,"axis_dir invalid: ",axis_dir
    stop
   endif
+
   ! species
   do n=1,num_species_var
    STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
@@ -2151,7 +2174,7 @@ if ((num_materials.eq.3).and. &
   else if (t.gt.0.0d0) then
    ! do nothing
   else
-   print *,"t invalid"
+   print *,"t invalid (CRYOGENIC_TANK_MK) ",t
    stop
   endif
  enddo ! im=1..num_materials
