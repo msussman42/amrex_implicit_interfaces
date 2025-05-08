@@ -4701,8 +4701,12 @@ NavierStokes::read_params ()
          im_constant=im_source;
         } else if (constant_volume_mdot[iten_local]==-1) {
          im_constant=im_dest;
-        } else
+        } else {
+         std::cout << "iten_local= " << iten_local << '\n'; 
+         std::cout << "constant_volume_mdot= " << 
+          constant_volume_mdot[iten_local] << '\n'; 
          amrex::Error("constant_volume_mdot[iten_local] invalid");
+        }
 
         if (im_constant==0) {
          // do nothing
@@ -4733,8 +4737,12 @@ NavierStokes::read_params ()
 
        if (constant_volume_mdot[iten_local]==0) {
         // do nothing
-       } else
+       } else {
+        std::cout << "iten_local= " << iten_local << '\n'; 
+        std::cout << "constant_volume_mdot= " << 
+          constant_volume_mdot[iten_local] << '\n'; 
         amrex::Error("constant_volume_mdot[iten_local] invalid");
+       }
 
       } else if (LL!=0.0) {
 

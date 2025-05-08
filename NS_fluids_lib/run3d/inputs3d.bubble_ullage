@@ -1,3 +1,4 @@
+# https://www.esa.int/Education/Fly_Your_Thesis/Parabolic_manoeuvres
 # For more information check
 # NASA_CRYOGENICS_GITHUB => 
 #   references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
@@ -21,7 +22,8 @@ stop_time=20.0
 # CRYOGENIC_TANK_MK.F90
 ns.probtype         = 423
 # variable accessible from plug-in:
-ns.axis_dir         = 1 #heater on top
+#ns.axis_dir         = 1 #heater on top
+ns.axis_dir         = 3 #parabolic
 # if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID).and.(axis_dir.eq.2) then
 #  zbot_flight_heatera.vtk
 #  zbot_flight_heaterb.vtk
@@ -85,6 +87,7 @@ ns.material_type_evap = 0 24 999 # needed for Kassemi model
 ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
 ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
+#ns.num_divu_outer_sweeps=2 compressible
 ns.num_divu_outer_sweeps=1
 
 # Solid definition for FSI
@@ -105,16 +108,20 @@ ns.FSI_flag         = 0 0 1
 #13.7 liter tank
 #1 liter=1000 cm^3 =10^{-3} m^3
 #volume= pi (.127)^2 .102 + (4/3)pi (.127)^3=0.01375 m^3
-ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
-ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
-ns.zblob            = 0.0    # Interface location 
+ns.xblob            = 0.04 # parabolic radius
+#ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
+ns.yblob            = 0.12 # parabolic Height
+#ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
+ns.zblob            = 0.0015 #parabolic 0.0615-0.0600=0.0015
+#ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
 #TANK_MK_NOZZLE_RAD=0.005 unfortunately cannot be resolved in 3D.
 ns.radblob3 = 0.02  #TANK_MK_NOZZLE_RAD 
 ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK=TANK_MK_NOZZLE_RAD
 ns.radblob5 = 0.02  #TANK_MK_NOZZLE_THICK_OUTLET=TANK_MK_NOZZLE_RAD
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
-ns.radblob2         = 0.082   # radius of spherical ullage
+ns.radblob2         = 0.0   # parabolic
+#ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0
 ns.zblob2           = 0.051
@@ -142,8 +149,10 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 geometry.coord_sys  = 0
 # geometry.coord_sys  = 1 # 2D RZ
 # geometry.coord_sys  = 0 # 2D XY
-geometry.prob_lo    = -0.2  -0.2 -0.2
-geometry.prob_hi    = 0.2  0.2 0.2
+geometry.prob_lo    = -0.1  -0.1 -0.1 #parabolic
+geometry.prob_hi    = 0.1  0.1 0.1 #parabolic
+#geometry.prob_lo    = -0.2  -0.2 -0.2
+#geometry.prob_hi    = 0.2  0.2 0.2
 geometry.is_periodic= 0 0 0
 
 ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
@@ -152,7 +161,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
-amr.n_cell          = 64 64 64 # 8 cores compute1
+#amr.n_cell          = 64 64 64 # 8 cores compute1
+amr.n_cell          = 32 32 32 # parabolic
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -224,7 +234,8 @@ amr.plotfile_on_restart=1
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-ns.gravity          = 0.0
+ns.gravity          = 9.8 #parabolic
+#ns.gravity          = 0.0
 ns.gravity_dir      = 3 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 #override_density=0 if compressible material
@@ -378,6 +389,8 @@ ns.hi_bc          = 3 3 3
 ns.temperature_lo_bc = 3 3 3
 ns.temperature_hi_bc = 3 3 3
 
+#compressible_dt_factor >= 1
+#coeff = (1/c^2)(1/rho)(1/dt^2)(1/compressible_dt_factor)
 ns.compressible_dt_factor=2.0 2.0 2.0
 #   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
 #   rho_t + div (rho u) =0
@@ -404,7 +417,7 @@ ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 0 # 0=MOF 1=CMOF
+ns.continuous_mof   = 1 # 0=MOF 1=CMOF (=1 if particle)
 ns.mof_decision_tree_learning=0
 ns.mof_machine_learning=0
 ns.MOFITERMAX_AFTER_PREDICT = 0
@@ -414,6 +427,7 @@ ns.MOFITERMAX_AFTER_PREDICT = 0
 ns.EILE_flag        = -1
 
 ns.MOFITERMAX=30
+ns.tiling=false
 
 
 # ----------------------------------------------------------

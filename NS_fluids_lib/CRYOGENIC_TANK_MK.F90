@@ -1192,6 +1192,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
    !TANK_MK_INTERFACE_RADIUS = radblob2
+   !TANK_MK_INTERFACE_LOCATION = zblob
    if (TANK_MK_INTERFACE_RADIUS.eq.0.0d0) then
     LS(1)=TANK_MK_INTERFACE_LOCATION-xfoot3D(2)
    else if (TANK_MK_INTERFACE_RADIUS.gt.0.0d0) then
@@ -1293,6 +1294,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     xcen=zero
     ycen=zero
      !LS(3)>0 outside the cylinder
+     !TANK_MK_RADIUS=xblob
+     !TANK_MK_HEIGHT=yblob
     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,TANK_MK_RADIUS, &
       -TANK_MK_HEIGHT/two,TANK_MK_HEIGHT/two,LS(3))
 
