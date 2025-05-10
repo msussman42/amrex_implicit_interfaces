@@ -50,6 +50,8 @@ integer, PARAMETER :: dir_z = SDIM ! vertical direction of gravity force
 ! dir_y=2 if SDIM==3
 integer :: dir_y  
 
+real(amrex_real), PARAMETER :: parabolic_lead_time=20.0d0
+
 !! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
 real(amrex_real) :: TANK_MK_RADIUS !xblob
@@ -646,23 +648,33 @@ do dir=1,3
   print *,"n_data_xyz invalid: ",dir,n_data_xyz(dir)
   stop
  endif
+
  idata=1
- do while ((parabolic_xyz_accel(idata,index_1).lt.time).and. &
-           (idata.lt.n_data_xyz(dir))) 
-  idata=idata+1
-  if ((parabolic_xyz_accel(idata,index_1).ge. &
-       parabolic_xyz_accel(idata-1,index_1)).and. &
-      (parabolic_xyz_accel(idata-1,index_1).ge.zero)) then
-   !do nothing
-  else
-   print *,"parabolic_xyz_accel invalid"
-   stop
-  endif
- enddo
- axyz(dir)=parabolic_xyz_accel(idata-1,index_2)+ &
-  (parabolic_xyz_accel(idata,index_2)-parabolic_xyz_accel(idata-1,index_2))* &
-  (time-parabolic_xyz_accel(idata-1,index_1))/ &
-  (parabolic_xyz_accel(idata,index_1)-parabolic_xyz_accel(idata-1,index_1))
+
+ if (parabolic_xyz_accel(idata,index_1).ge.time) then
+  axyz(dir)=parabolic_xyz_accel(idata,index_2)
+ else if (parabolic_xyz_accel(n_data_xyz(dir),index_1).le.time) then
+  axyz(dir)=parabolic_xyz_accel(n_data_xyz(dir),index_2)
+ else
+
+  do while ((parabolic_xyz_accel(idata,index_1).lt.time).and. &
+            (idata.lt.n_data_xyz(dir))) 
+   idata=idata+1
+   if ((parabolic_xyz_accel(idata,index_1).ge. &
+        parabolic_xyz_accel(idata-1,index_1)).and. &
+       (parabolic_xyz_accel(idata-1,index_1).ge.zero)) then
+    !do nothing
+   else
+    print *,"parabolic_xyz_accel invalid"
+    stop
+   endif
+  enddo !do while
+
+  axyz(dir)=parabolic_xyz_accel(idata-1,index_2)+ &
+   (parabolic_xyz_accel(idata,index_2)-parabolic_xyz_accel(idata-1,index_2))* &
+   (time-parabolic_xyz_accel(idata-1,index_1))/ &
+   (parabolic_xyz_accel(idata,index_1)-parabolic_xyz_accel(idata-1,index_1))
+ endif
 
 enddo !dir=1,3
 
@@ -818,7 +830,16 @@ end subroutine interp_parabolic_xyz
     do idata=1,n_data_xyz(dir)
      read(2,*) parabolic_xyz_accel(idata,index_1), &
                parabolic_xyz_accel(idata,index_2)
-    enddo
+     parabolic_xyz_accel(idata,index_1)=parabolic_xyz_accel(idata,index_1)+ &
+        parabolic_lead_time
+     if (parabolic_xyz_accel(idata,index_1).ge.zero) then
+      !do nothing
+     else
+      print *,"parabolic_xyz_accel(idata,index_1) invalid: ", &
+       parabolic_xyz_accel(idata,index_1)
+      stop
+     endif
+    enddo !idata=1,n_data_xyz(dir)
 
    enddo !dir=1,3
 
@@ -2901,7 +2922,8 @@ real(amrex_real), INTENT(in) :: temperature_probe
 real(amrex_real), INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
 real(amrex_real), INTENT(inout) :: thermal_k
 real(amrex_real) :: Ra,Gr,Pr,psi,alpha
-real(amrex_real) :: mu_w,rho_w,nu,thermal_conductivity,Cp,xi,R,thermal_diffusivity
+real(amrex_real) :: mu_w,rho_w,nu
+real(amrex_real) :: thermal_conductivity,Cp,xi,R,thermal_diffusivity
 real(amrex_real) :: gravity_local
 integer :: gravity_dir
 real(amrex_real) :: expansion_coefficient
@@ -3003,7 +3025,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
     if (thermal_conductivity.gt.zero) then
      ! do nothing
     else
-     print *,"expecting thermal_conductivity to be positive"
+     print *,"expecting thermal_conductivity to be positive: ", &
+       thermal_conductivity
      stop
     endif
     if (Cp.gt.zero) then
@@ -3066,7 +3089,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    endif
 
   else
-   print *,"im invalid"
+   print *,"im invalid: ",im
    stop
   endif
 
@@ -3106,9 +3129,17 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    print *,"im invalid"
    stop
   endif
-
+ else if (axis_dir.eq.3) then !parabolic
+  if (cur_time.le.parabolic_lead_time) then
+   thermal_k=zero
+  else if (cur_time.ge.parabolic_lead_time) then
+   !do nothing
+  else
+   print *,"cur_time invalid ",cur_time
+   stop
+  endif
  else
-  print *,"axis_dir out of range"
+  print *,"axis_dir out of range: ",axis_dir
   stop
  endif
 
@@ -3738,6 +3769,85 @@ else
 endif
 
 end subroutine CRYOGENIC_TANK_MK_gravity_vector
+
+
+subroutine CRYOGENIC_TANK_MK_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag)
+use probcommon_module
+use geometry_intersect_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), INTENT(in) :: assimilate_in
+type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
+integer, INTENT(in) :: i,j,k,cell_flag
+
+integer :: nstate,nstate_test
+real(amrex_real) :: xcrit(SDIM)
+integer :: im
+integer :: dir
+integer :: ibase
+real(amrex_real) :: parabolic_temp
+
+nstate=assimilate_in%nstate
+
+nstate_test=STATE_NCOMP
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
+ stop
+endif
+
+if ((num_materials.ge.3).and. &
+    (num_state_material.ge.2).and. & 
+    (probtype.eq.423)) then
+
+ do dir=1,SDIM
+  xcrit(dir)=assimilate_in%xsten(0,dir)
+ enddo
+ 
+ if (assimilate_in%nhalf.ge.2) then
+  ! do nothing
+ else
+  print *,"(assimilate_in%nhalf.ge.2) violated"
+  stop
+ endif
+
+ if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+  !do nothing
+ else if (axis_dir.eq.3) then
+  if (assimilate_in%cur_time.le.parabolic_lead_time) then
+   if (cell_flag.eq.-1) then
+    call interp_parabolic_tinit(xcrit(SDIM),parabolic_temp)
+    do im=1,num_materials
+     ibase=(im-1)*num_state_material
+     assimilate_out%state(D_DECL(i,j,k), &
+      STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)=parabolic_temp
+    enddo
+   endif
+  else if (assimilate_in%cur_time.ge.parabolic_lead_time) then
+   !do nothing
+  else
+   print *,"assimilate_in%cur_time invalid ", &
+    assimilate_in%cur_time
+   stop
+  endif
+ else
+  print *,"axis_dir invalid: ",axis_dir
+  stop
+ endif
+
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_ASSIMILATE
+
 
 
 end module CRYOGENIC_TANK_MK_module
