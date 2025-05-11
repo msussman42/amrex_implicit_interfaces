@@ -162,7 +162,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
 #amr.n_cell          = 64 64 64 # 8 cores compute1
-amr.n_cell          = 32 32 32 # parabolic
+#amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
+amr.n_cell          = 64 64 64 # 8 core parabolic dx=.2/64=0.003125
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
