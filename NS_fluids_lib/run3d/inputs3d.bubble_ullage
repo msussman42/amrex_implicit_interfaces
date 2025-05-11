@@ -60,8 +60,10 @@ ns.axis_dir         = 3 #parabolic
 # for TPCE: (Bentz 1993)
 # T4 is 2.5 cm from very top of tank.
 # T4: r=0.0  Z=0.051+0.127-0.025=0.153 m
-ns.ncomp_sum_int_user1=1 
-ns.ncomp_sum_int_user2=2  # pressure and temperature 
+#ns.ncomp_sum_int_user1=1 
+#ns.ncomp_sum_int_user2=2  # pressure and temperature 
+ns.ncomp_sum_int_user1=0 #parabolic 
+ns.ncomp_sum_int_user2=0 #parabolic
 
 # 1=liquid 2=gas(placeholder) 3=solid wall
 ns.num_materials    = 3

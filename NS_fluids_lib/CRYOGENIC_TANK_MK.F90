@@ -846,7 +846,7 @@ end subroutine interp_parabolic_xyz
    close(2)
 
   else
-   print *,"axis_dir invalid: ",axis_dir
+   print *,"axis_dir invalid (INIT_CRYOGENIC_TANK_MK_MODULE): ",axis_dir
    stop
   endif
 
@@ -1344,7 +1344,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     endif
 
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid (CRYOGENIC_TANK_MK_LS): ",axis_dir
     stop
    endif
 
@@ -1548,8 +1548,14 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
 
+   else if (axis_dir.eq.3) then
+
+    do dir=1,SDIM
+     VEL(dir)=0.0d0
+    enddo
+
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid (CRYOGENIC_TANK_MK_VEL): ",axis_dir
     stop
    endif
 
@@ -2483,6 +2489,8 @@ endif
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
+if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
   ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
   ! T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
@@ -2588,6 +2596,20 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   stop
  endif
 
+else if (axis_dir.eq.3) then
+
+ if ((nsum1.eq.0).and.(nsum2.eq.0)) then
+  !do nothing
+ else
+  print *,"nsum1 or nsum2 invalid"
+  stop
+ endif
+
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
+
 else
  print *,"num_materials ", num_materials
  print *,"probtype ", probtype
@@ -2690,6 +2712,8 @@ integer :: im,iregion,dir
   regions_list(3,0)%region_material_id=1
   regions_list(3,0)%region_volume_flux=-xblob5
   regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
+ else if (axis_dir.eq.3) then
+  !do nothing
  else
   print *,"axis_dir invalid"
   stop
@@ -2877,6 +2901,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
+ else if (axis_dir.eq.3) then
+  !do nothing
  else
   print *,"axis_dir invalid"
   stop
