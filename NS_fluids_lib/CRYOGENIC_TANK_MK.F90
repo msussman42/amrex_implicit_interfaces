@@ -578,6 +578,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 ! z input is in MKS
 ! z data is mm
 subroutine interp_parabolic_tinit(z,temperature)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), intent(in) :: z
@@ -607,10 +608,15 @@ else
   idata=idata+1
   if ((parabolic_tinit(idata,index_1).ge. &
        parabolic_tinit(idata-1,index_1)).and. &
-      (parabolic_tinit(idata-1,index_1).ge.zero)) then
+      (parabolic_tinit(idata-1,index_1)*1.0D-3.ge. &
+       problo_array(SDIM))) then
    !do nothing
   else
-   print *,"parabolic_tinit invalid"
+   print *,"parabolic_tinit invalid: ",idata,index_1
+   print *,"parabolic_tinit(idata-1,index_1) ", &
+           parabolic_tinit(idata-1,index_1)
+   print *,"parabolic_tinit(idata,index_1) ", &
+           parabolic_tinit(idata,index_1)
    stop
   endif
  enddo !do while 
@@ -813,6 +819,7 @@ end subroutine interp_parabolic_xyz
     !data file (T deg K,z mm) -> internal data (z mm,T deg K)
    do idata=1,n_data_temp
     read(2,*) parabolic_tinit(idata,index_2),parabolic_tinit(idata,index_1)
+    parabolic_tinit(idata,index_1)=parabolic_tinit(idata,index_1)-60.0d0
    enddo
    close(2)
 
@@ -896,29 +903,36 @@ end subroutine interp_parabolic_xyz
   real(amrex_real), INTENT(out) :: LS
   real(amrex_real) :: xlo,xhi,ylo,yhi,xcen
 
-  if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
-      (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
-      (TANK_MK_NOZZLE_HT.gt.0.0d0).and. &
-      (TANK_MK_NOZZLE_THICK_OUTLET.gt.0.0d0)) then
-   xlo=-TANK_MK_NOZZLE_RAD
-   xhi=TANK_MK_NOZZLE_RAD
-   xcen=zero
-   ! "TANK_MK_HEIGHT" term insures nozzle is flush against the
-   ! bottom of the tank.
-   ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
-   yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
-   if (SDIM.eq.2) then
-    call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,LS)
-   else if (SDIM.eq.3) then
-    call cylinderdist(x(1),x(3),x(2),xcen,xcen,xhi,ylo,yhi,LS)
+  if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+
+   if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
+       (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
+       (TANK_MK_NOZZLE_HT.gt.0.0d0).and. &
+       (TANK_MK_NOZZLE_THICK_OUTLET.gt.0.0d0)) then
+    xlo=-TANK_MK_NOZZLE_RAD
+    xhi=TANK_MK_NOZZLE_RAD
+    xcen=zero
+    ! "TANK_MK_HEIGHT" term insures nozzle is flush against the
+    ! bottom of the tank.
+    ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
+    yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
+    if (SDIM.eq.2) then
+     call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,LS)
+    else if (SDIM.eq.3) then
+     call cylinderdist(x(1),x(3),x(2),xcen,xcen,xhi,ylo,yhi,LS)
+    else
+     print *,"sdim invalid"
+     stop
+    endif
+
+    LS=-LS !now, LS>0 in the nozzle.
    else
-    print *,"sdim invalid"
+    print *,"CRYOGENIC_TANK_MK_LS_NOZZLE parameter problem"
     stop
    endif
 
-   LS=-LS !now, LS>0 in the nozzle.
   else
-   print *,"CRYOGENIC_TANK_MK_LS_NOZZLE parameter problem"
+   print *,"expecting axis_dir=0,1,or 2 in LS_NOZZLE"
    stop
   endif
 
@@ -1317,23 +1331,24 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      !LS(3)>0 outside the cylinder
      !TANK_MK_RADIUS=xblob
      !TANK_MK_HEIGHT=yblob
-    call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,TANK_MK_RADIUS, &
+    call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,ycen,TANK_MK_RADIUS, &
       -TANK_MK_HEIGHT/two,TANK_MK_HEIGHT/two,LS(3))
 
+     !example grid resolution: .2/64=0.003125
     if (SDIM.eq.3) then
      rprobe=0.003d0
      xcen=zero
      ycen=-0.03d0
      hprobe=0.11d0
-     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,ycen,rprobe, &
       TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
      LS(3)=max(LS(3),-dprobe)
      ycen=0.03d0
-     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,ycen,rprobe, &
       TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
      LS(3)=max(LS(3),-dprobe)
      ycen=zero
-     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,xcen,rprobe, &
+     call cylinderdist(x3D(1),x3D(3),x3D(2),xcen,ycen,rprobe, &
       TANK_MK_HEIGHT/two-hprobe,TANK_MK_HEIGHT/two,dprobe)
      LS(3)=max(LS(3),-dprobe)
     else if (SDIM.eq.2) then
@@ -2132,10 +2147,19 @@ if ((num_materials.eq.3).and. &
   do n=1,num_species_var
    STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
+
+   ! sanity check: Pressure(Clausius Clapyron) = Pressure(EOS) ?
   if (t.eq.0.0d0) then
    if (im.eq.2) then
     den=STATE(ibase+ENUM_DENVAR+1)
-    temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
+    if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+     temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
+    else if (axis_dir.eq.3) then
+     temperature=295.41d0
+    else
+     print *,"axis_dir invalid Pressure sanity check: ",axis_dir
+     stop
+    endif
     call init_massfrac_parm(den,massfrac_parm,im)
     do n=1,num_species_var
      massfrac_parm(n)=STATE(ibase+ENUM_SPECIESVAR+n)
@@ -2164,8 +2188,12 @@ if ((num_materials.eq.3).and. &
             TANK_MK_R_UNIV,fort_molar_mass(2))
      if (abs(Pgamma-pressure).le.EPS2*pressure) then
       ! do nothing
-     else
+     else if ((axis_dir.eq.0).or. &
+              (axis_dir.eq.1).or. &
+              (axis_dir.eq.2).or. &
+              (axis_dir.eq.3)) then !parabolic test
       print *,"mismatch between Pgamma and Pgas"
+      print *,"axis_dir=",axis_dir
       print *,"Pgamma=",Pgamma
       print *,"Pgas=",pressure
       print *,"reference pressure=",fort_reference_pressure(1)
@@ -2186,6 +2214,9 @@ if ((num_materials.eq.3).and. &
       print *,"fort_saturation_temp(1)=",fort_saturation_temp(1)
       print *,"fort_molar_mass(2)=",fort_molar_mass(2)
       print *,"P_Clausius=Pref*exp(-(L*W/R)*(1/Tgamma-1/TSAT))=",Pgamma
+      stop
+     else
+      print *,"axis_dir invalid Pressure sanity check(2): ",axis_dir
       stop
      endif
     else if (LL.eq.zero) then
@@ -2660,62 +2691,71 @@ integer :: im,iregion,dir
   stop
  endif 
 
- number_of_threads_regions=num_threads_in
- allocate(regions_list(1:number_of_source_regions, &
-                       0:number_of_threads_regions))
+ if (number_of_source_regions.gt.0) then
 
- do iregion=1,number_of_source_regions
-  regions_list(iregion,0)%region_material_id=0
-  regions_list(iregion,0)%region_dt=0.0d0  ! timestep
-  regions_list(iregion,0)%region_mass_flux=0.0d0
-  regions_list(iregion,0)%region_volume_flux=0.0d0
+  number_of_threads_regions=num_threads_in
+  allocate(regions_list(1:number_of_source_regions, &
+                        0:number_of_threads_regions))
+
+  do iregion=1,number_of_source_regions
+   regions_list(iregion,0)%region_material_id=0
+   regions_list(iregion,0)%region_dt=0.0d0  ! timestep
+   regions_list(iregion,0)%region_mass_flux=0.0d0
+   regions_list(iregion,0)%region_volume_flux=0.0d0
+     ! default region_temperature_prescribe=0.0 => homogeneous
+     ! flux condition.
+   regions_list(iregion,0)%region_temperature_prescribe=0.0d0
+   do dir=1,SDIM
+    regions_list(iregion,0)%region_velocity_prescribe(dir)=0.0d0
+   enddo
+   regions_list(iregion,0)%region_energy_flux=0.0d0
+   regions_list(iregion,0)%region_volume_raster=0.0d0 
+   regions_list(iregion,0)%region_volume=0.0d0 
+   regions_list(iregion,0)%region_mass=0.0d0 
+   regions_list(iregion,0)%region_energy=0.0d0 
+   regions_list(iregion,0)%region_energy_per_kelvin=0.0d0 
+   regions_list(iregion,0)%region_volume_after=0.0d0 
+   regions_list(iregion,0)%region_mass_after=0.0d0 
+   regions_list(iregion,0)%region_energy_after=0.0d0 
+  enddo ! iregion=1,number_of_source_regions
+
+  if (axis_dir.eq.0) then 
+   regions_list(1,0)%region_material_id=3 !heater
+   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
+  else if ((axis_dir.eq.1).or. &
+           (axis_dir.eq.2)) then 
+   regions_list(1,0)%region_material_id=3 ! heater
+   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
+    ! inflow
+   regions_list(2,0)%region_material_id=1
+   regions_list(2,0)%region_volume_flux=xblob5
+   regions_list(2,0)%region_mass_flux=xblob5*fort_denconst(1)
+    ! make xblob6 = 0 if homogeneous flux condition.
+   regions_list(2,0)%region_temperature_prescribe=xblob6
+   if (TANK_MK_NOZZLE_RAD.gt.0.0d0) then
+    regions_list(2,0)%region_velocity_prescribe(SDIM)= &
+       xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
+   else
+    print *,"TANK_MK_NOZZLE_RAD invalid"
+    stop
+   endif
+    ! outflow
     ! default region_temperature_prescribe=0.0 => homogeneous
     ! flux condition.
-  regions_list(iregion,0)%region_temperature_prescribe=0.0d0
-  do dir=1,SDIM
-   regions_list(iregion,0)%region_velocity_prescribe(dir)=0.0d0
-  enddo
-  regions_list(iregion,0)%region_energy_flux=0.0d0
-  regions_list(iregion,0)%region_volume_raster=0.0d0 
-  regions_list(iregion,0)%region_volume=0.0d0 
-  regions_list(iregion,0)%region_mass=0.0d0 
-  regions_list(iregion,0)%region_energy=0.0d0 
-  regions_list(iregion,0)%region_energy_per_kelvin=0.0d0 
-  regions_list(iregion,0)%region_volume_after=0.0d0 
-  regions_list(iregion,0)%region_mass_after=0.0d0 
-  regions_list(iregion,0)%region_energy_after=0.0d0 
- enddo ! iregion=1,number_of_source_regions
-
- if (axis_dir.eq.0) then 
-  regions_list(1,0)%region_material_id=3 !heater
-  regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
- else if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2)) then 
-  regions_list(1,0)%region_material_id=3 ! heater
-  regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
-   ! inflow
-  regions_list(2,0)%region_material_id=1
-  regions_list(2,0)%region_volume_flux=xblob5
-  regions_list(2,0)%region_mass_flux=xblob5*fort_denconst(1)
-   ! make xblob6 = 0 if homogeneous flux condition.
-  regions_list(2,0)%region_temperature_prescribe=xblob6
-  if (TANK_MK_NOZZLE_RAD.gt.0.0d0) then
-   regions_list(2,0)%region_velocity_prescribe(SDIM)= &
-      xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
+   regions_list(3,0)%region_material_id=1
+   regions_list(3,0)%region_volume_flux=-xblob5
+   regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
+  else if (axis_dir.eq.3) then
+   !do nothing
   else
-   print *,"TANK_MK_NOZZLE_RAD invalid"
+   print *,"axis_dir invalid"
    stop
   endif
-   ! outflow
-   ! default region_temperature_prescribe=0.0 => homogeneous
-   ! flux condition.
-  regions_list(3,0)%region_material_id=1
-  regions_list(3,0)%region_volume_flux=-xblob5
-  regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
- else if (axis_dir.eq.3) then
-  !do nothing
+
+ else if (number_of_source_regions.eq.0) then
+ !do nothing
  else
-  print *,"axis_dir invalid"
+  print *,"number_of_source_regions invalid ",number_of_source_regions
   stop
  endif
  
@@ -2904,7 +2944,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
  else if (axis_dir.eq.3) then
   !do nothing
  else
-  print *,"axis_dir invalid"
+  print *,"axis_dir invalid: ",axis_dir
   stop
  endif
 
