@@ -1,3 +1,21 @@
+# HEF7000 gas:
+#  critical temperature, pressure, density: 165 deg C, 2.48MPa, 553 kg/m^3
+# HEF7000 liquid:
+#  boiling point: 34 deg C
+#  freezing point: -122.5 deg C
+#  molecular wt 200 g/mol
+#  density 1400 kg/m^3 at 25 deg C
+#  kinematic visc .32 cSt at 25 deg C
+#  kinematic visc 2.0 cSt at -80 deg C
+#  kinematic visc 17.0 cSt at -120 deg C
+#  thermal cond. 0.075 W/(m K) at 25 deg C
+#  specific heat 1300 J/(kg K) at 25 deg C
+#  surface tension 12.4 dynes/cm
+#  vapor pressure 65 kPa at 25 deg C
+#  Latent heat of vaporization=142 kJ/kg
+#  saturation temp at 1 atm=34 deg C
+#  saturation pressure at 25 deg C = 65kPa 
+#  
 # https://www.esa.int/Education/Fly_Your_Thesis/Parabolic_manoeuvres
 # For more information check
 # NASA_CRYOGENICS_GITHUB => 
@@ -164,8 +182,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
 #amr.n_cell          = 64 64 64 # 8 cores compute1
-#amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
-amr.n_cell          = 64 64 64 # 8 core parabolic dx=.2/64=0.003125
+amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
+#amr.n_cell          = 64 64 64 # 8 core parabolic dx=.2/64=0.003125
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -309,7 +327,8 @@ ns.stiffCP=1300.0 2400.0 1500.0
 ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
 
 # Thermal conductivity [W/(m.K)]
-ns.heatviscconst=0.075 0.00375 0.189
+#ns.heatviscconst=0.075 0.00375 0.189
+ns.heatviscconst=0.075 0.00375 0.0 # parabolic
 
 # Dynamic viscosity [Pa.s]
 # (PNP: 4.2E-4)
@@ -389,8 +408,10 @@ ns.prescribe_temperature_outflow=0
 
 ns.lo_bc          = 3 3 3
 ns.hi_bc          = 3 3 3
-ns.temperature_lo_bc = 3 3 3
-ns.temperature_hi_bc = 3 3 3
+#ns.temperature_lo_bc = 3 3 3
+#ns.temperature_hi_bc = 3 3 3
+ns.temperature_lo_bc = 1 1 1 #parabolic
+ns.temperature_hi_bc = 1 1 1 #parabolic
 
 #compressible_dt_factor >= 1
 #coeff = (1/c^2)(1/rho)(1/dt^2)(1/compressible_dt_factor)
@@ -403,7 +424,7 @@ ns.compressible_dt_factor=2.0 2.0 2.0
 
 # Embedded boundary BC
 # 0=diffuse in solid 1=dirichlet 2=neumann
-ns.solidheat_flag   =0
+ns.solidheat_flag=0
 
 # Heat flux from heater A at top.
 ns.xblob3 = 18.3 # Watts=J/s
