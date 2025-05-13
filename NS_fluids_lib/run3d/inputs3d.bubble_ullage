@@ -187,7 +187,7 @@ amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
+amr.max_grid_size   = 16   # 32 is optimal for MPI in 3D
 amr.regrid_on_restart=1
 
 ns.multilevel_maxcycle=200
