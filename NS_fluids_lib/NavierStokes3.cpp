@@ -1869,6 +1869,8 @@ void NavierStokes::pressure_gradient_code_segment(
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -1887,7 +1889,8 @@ void NavierStokes::pressure_gradient_code_segment(
  if (singular_parts_exist==1) {
 
   if (extend_pressure_into_solid==1) {
-   if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+   if (FSI_outer_sweeps==
+       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
     multiphase_project(SOLVETYPE_PRESEXTRAP);
 
     if (step_through_data==1) {
@@ -1911,13 +1914,16 @@ void NavierStokes::pressure_gradient_code_segment(
            FSI_outer_sweeps << '\n';
      std::cout << "num_FSI_outer_sweeps= " << 
            num_FSI_outer_sweeps << '\n';
+     std::cout << "NFSI_LIMIT= " << 
+           NFSI_LIMIT << '\n';
      int n_input;
      std::cin >> n_input;
     }
 
 
    } else if ((FSI_outer_sweeps>=0)&&
-              (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+              (FSI_outer_sweeps<
+               min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
     //do nothing
    } else
     amrex::Error("FSI_outer_sweeps invalid");
@@ -2669,6 +2675,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       FSI_outer_sweeps << '\n';
        std::cout << "num_FSI_outer_sweeps= " << 
 	       num_FSI_outer_sweeps << '\n';
+       std::cout << "NFSI_LIMIT= " << 
+	       NFSI_LIMIT << '\n';
        int n_input;
        std::cin >> n_input;
       }
@@ -3018,6 +3026,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            FSI_outer_sweeps << '\n';
        std::cout << "num_FSI_outer_sweeps= " << 
            num_FSI_outer_sweeps << '\n';
+       std::cout << "NFSI_LIMIT= " << 
+           NFSI_LIMIT << '\n';
        int n_input;
        std::cin >> n_input;
       }
@@ -3166,7 +3176,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int alloc_flag=1;
        alloc_DTDtALL(alloc_flag);
 
-       for (FSI_outer_sweeps=0;FSI_outer_sweeps<num_FSI_outer_sweeps; 
+       for (FSI_outer_sweeps=0;
+            FSI_outer_sweeps<min(num_FSI_outer_sweeps,NFSI_LIMIT); 
             FSI_outer_sweeps++) {
 
         if (step_through_data==1) {
@@ -3192,6 +3203,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       FSI_outer_sweeps << '\n';
          std::cout << "num_FSI_outer_sweeps= " << 
 	       num_FSI_outer_sweeps << '\n';
+         std::cout << "NFSI_LIMIT= " << 
+	       NFSI_LIMIT << '\n';
          int n_input;
          std::cin >> n_input;
         }
@@ -3225,6 +3238,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       FSI_outer_sweeps << '\n';
          std::cout << "num_FSI_outer_sweeps= " << 
 	       num_FSI_outer_sweeps << '\n';
+         std::cout << "NFSI_LIMIT= " << 
+	       NFSI_LIMIT << '\n';
          int n_input;
          std::cin >> n_input;
         }
@@ -3274,6 +3289,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       FSI_outer_sweeps << '\n';
           std::cout << "num_FSI_outer_sweeps= " << 
 	       num_FSI_outer_sweeps << '\n';
+          std::cout << "NFSI_LIMIT= " << 
+	       NFSI_LIMIT << '\n';
           int n_input;
           std::cin >> n_input;
          }
@@ -3328,6 +3345,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       FSI_outer_sweeps << '\n';
          std::cout << "num_FSI_outer_sweeps= " << 
 	       num_FSI_outer_sweeps << '\n';
+         std::cout << "NFSI_LIMIT= " << 
+	       NFSI_LIMIT << '\n';
          int n_input;
          std::cin >> n_input;
         }
@@ -3501,7 +3520,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          alloc_DTDtALL(alloc_flag);
 
         } else if ((FSI_outer_sweeps>=1)&&
-                   (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+                   (FSI_outer_sweeps<
+                    min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
          //do nothing
         } else
          amrex::Error("FSI_outer_sweeps invalid");
@@ -3527,6 +3547,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if ((verbose>0)||(show_timings==1)) {
          if (ParallelDescriptor::IOProcessor()) {
           std::cout << "FSI_outer_sweeps=" << FSI_outer_sweeps << '\n';
+          std::cout << "num_FSI_outer_sweeps=" << num_FSI_outer_sweeps << '\n';
+          std::cout << "NFSI_LIMIT=" << NFSI_LIMIT << '\n';
           std::cout << "pressure solve time " << end_pressure_solve-
             intermediate_time << '\n';
           std::cout << "number of cells in the pressure solve " <<
@@ -3534,7 +3556,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          }
         }
 
-       } //FSI_outer_sweeps=0 ... num_FSI_outer_sweeps-1
+       } //FSI_outer_sweeps=0 ... min(num_FSI_outer_sweeps,NFSI_LIMIT)-1
 
        FSI_outer_sweeps=0;
 
@@ -3879,6 +3901,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            FSI_outer_sweeps << '\n';
      std::cout << "num_FSI_outer_sweeps= " << 
            num_FSI_outer_sweeps << '\n';
+     std::cout << "NFSI_LIMIT= " << 
+           NFSI_LIMIT << '\n';
      int n_input;
      std::cin >> n_input;
     }
@@ -9774,6 +9798,8 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << " divu_outer_sweeps= " << divu_outer_sweeps << '\n';
    std::cout << " SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
    std::cout << " FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
+   std::cout << " num_FSI_outer_sweeps= " << num_FSI_outer_sweeps << '\n';
+   std::cout << " NFSI_LIMIT= " << NFSI_LIMIT << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
    std::cout << " slab_step= " << slab_step << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
@@ -9816,7 +9842,8 @@ void NavierStokes::multiphase_project(int project_option) {
   int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
 
   if ((FSI_outer_sweeps>=0)&&
-      (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+      (FSI_outer_sweeps<
+       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
 
    if (incremental_gravity_flag==1) {
     potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
@@ -9825,7 +9852,8 @@ void NavierStokes::multiphase_project(int project_option) {
    } else
     amrex::Error("incremental_gravity_flag invalid");
 
-  } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+  } else if (FSI_outer_sweeps==
+             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
 
    if (incremental_gravity_flag==1) {
     potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
@@ -11584,6 +11612,8 @@ void NavierStokes::multiphase_project(int project_option) {
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << 
           " FSI_outer_sweeps= " << FSI_outer_sweeps << 
+          " num_FSI_outer_sweeps= " << num_FSI_outer_sweeps << 
+          " NFSI_LIMIT= " << NFSI_LIMIT << 
 	  " divu_outer_sweeps= " << divu_outer_sweeps << '\n';
    std::cout << "project_option= " << project_option <<
 	  " error0= " << error0 << '\n';
@@ -11708,9 +11738,11 @@ void NavierStokes::multiphase_project(int project_option) {
     } else if ((num_FSI_outer_sweeps>1)&&
                (num_FSI_outer_sweeps<=num_materials)) {
      if ((FSI_outer_sweeps>=0)&&
-         (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+         (FSI_outer_sweeps<
+          min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
       update_energy=SUB_OP_THERMAL_DIVUP_NULL;
-     } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+     } else if (FSI_outer_sweeps==
+                min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
       update_energy=SUB_OP_THERMAL_DIVUP_OK; 
      } else
       amrex::Error("FSI_outer_sweeps invalid");
@@ -11789,7 +11821,8 @@ void NavierStokes::multiphase_project(int project_option) {
  
    if ((num_FSI_outer_sweeps==1)||
        ((num_FSI_outer_sweeps>1)&&
-        (FSI_outer_sweeps==num_FSI_outer_sweeps-1))) {
+        (FSI_outer_sweeps==
+         min(num_FSI_outer_sweeps,NFSI_LIMIT)-1))) {
 
     //calculate the vorticity needed by "init_pressure_error_indicator"
     int do_alloc=1;
@@ -11812,7 +11845,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
    } else if ((num_FSI_outer_sweeps>1)&&
               (FSI_outer_sweeps>=0)&&
-              (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+              (FSI_outer_sweeps<
+               min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
     //do nothing
    } else 
     amrex::Error("num_FSI_outer_sweeps bust");
@@ -12101,18 +12135,21 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        if (FSI_outer_sweeps==0) {
         im_cutoff=num_materials; //not used
        } else if ((FSI_outer_sweeps>0)&&
-                  (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+                  (FSI_outer_sweeps<
+                   min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
         im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1;
        } else
         amrex::Error("FSI_outer_sweeps invalid");
 
        if ((FSI_outer_sweeps==0)||
            (viscoelastic_force_only==1)||
-           ((FSI_outer_sweeps>=1)&&
+           ((FSI_outer_sweeps>=1)&& //viscoelastic "fluid" material
             (is_rigid_CL_flag==0))||
            ((FSI_outer_sweeps>=1)&&
             (is_rigid_CL_flag==1)&&
-            (imp1>im_cutoff))) {
+            (imp1>im_cutoff)&& //im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1
+            (FSI_outer_sweeps<
+             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1))) {
 
          // find divergence of the X,Y,Z variables.
 	 // NavierStokes::CELL_GRID_ELASTIC_FORCE is declared in
@@ -12127,7 +12164,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else if ((FSI_outer_sweeps>0)&&
                   (viscoelastic_force_only==0)&&
                   (is_rigid_CL_flag==1)&&
-                  (imp1<=im_cutoff)) {
+                  ((imp1<=im_cutoff)||
+                   (FSI_outer_sweeps==
+                    min(num_FSI_outer_sweeps,NFSI_LIMIT)-1))) {
         //do nothing
        } else
         amrex::Error("FSI_outer_sweeps or is_rigid_CL_flag invalid");
@@ -12418,7 +12457,8 @@ void NavierStokes::veldiffuseALL() {
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
  } else if ((FSI_outer_sweeps>0)&&
-            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+            (FSI_outer_sweeps<
+             min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12535,6 +12575,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12570,6 +12612,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12596,7 +12640,8 @@ void NavierStokes::veldiffuseALL() {
 // -----------veldiffuseALL: viscosity -----------------------------
 
 
- if (num_FSI_outer_sweeps-1==FSI_outer_sweeps) {
+ if (min(num_FSI_outer_sweeps,NFSI_LIMIT)-1==
+     FSI_outer_sweeps) {
 
   if ((SDC_outer_sweeps>0)&&
       (SDC_outer_sweeps<ns_time_order)&&
@@ -12643,7 +12688,8 @@ void NavierStokes::veldiffuseALL() {
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
  } else if ((FSI_outer_sweeps>=0)&&
-            (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+            (FSI_outer_sweeps<
+             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12674,6 +12720,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12702,6 +12750,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12751,6 +12801,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12780,6 +12832,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -12818,6 +12872,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -13078,7 +13134,8 @@ void NavierStokes::veldiffuseALL() {
    amrex::Error("include_viscous_heating invalid");
 
  } else if ((FSI_outer_sweeps>0)&&
-            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+            (FSI_outer_sweeps<
+             min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -13109,6 +13166,8 @@ void NavierStokes::veldiffuseALL() {
         FSI_outer_sweeps << '\n';
   std::cout << "num_FSI_outer_sweeps= " << 
         num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << 
+        NFSI_LIMIT << '\n';
   int n_input;
   std::cin >> n_input;
  }
@@ -13174,7 +13233,8 @@ void NavierStokes::veldiffuseALL() {
 
   delete_array(save_state_MF);
  } else if ((FSI_outer_sweeps>0)&&
-            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+            (FSI_outer_sweeps<
+             min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -13600,9 +13660,9 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 
 
 //allocates, saves, and extends FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
-//sweeps<num_FSI_outer_sweeps-1
+//sweeps<min(num_FSI_outer_sweeps,NFSI_LIMIT)-1
 //copies fluid velocity and deletes if sweeps>=1 and 
-//sweeps<=num_FSI_outer_sweeps
+//sweeps<min(num_FSI_outer_sweeps,NFSI_LIMIT)
 void NavierStokes::manage_FSI_data() {
 
  int finest_level=parent->finestLevel();
@@ -13632,7 +13692,8 @@ void NavierStokes::manage_FSI_data() {
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
   if ((FSI_outer_sweeps>=1)&&
-      (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
+      (FSI_outer_sweeps<
+       min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -13727,7 +13788,8 @@ void NavierStokes::manage_FSI_data() {
    amrex::Error("FSI_outer_sweeps invalid");
 
   if ((FSI_outer_sweeps>=0)&&
-      (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+      (FSI_outer_sweeps<
+       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
 
    new_localMF(FSI_CELL_VELOCITY_MF,AMREX_SPACEDIM,1,-1);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -13836,7 +13898,8 @@ void NavierStokes::manage_FSI_data() {
 
    } // dir=0..sdim-1
 
-  } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+  } else if (FSI_outer_sweeps==
+             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
    //do nothing
   } else
    amrex::Error("FSI_outer_sweeps invalid");
