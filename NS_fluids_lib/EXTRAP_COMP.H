@@ -595,4 +595,6 @@ ENUM_NUM_TENSOR_TYPE=((ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA))
 
 #define plotfile_digits 8
 
+#define NFSI_LIMIT 2
+
 #endif 

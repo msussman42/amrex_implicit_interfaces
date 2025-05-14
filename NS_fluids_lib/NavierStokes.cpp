@@ -79,7 +79,9 @@ int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 
+//NFSI_LIMIT=2
 //FSI_CELL_VELOCITY_MF,FSI_MAC_VELOCITY_MF used when FSI_outer_sweeps>=1
+//FSI_outer_sweeps=0,...,min(num_FSI_outer_sweeps,NFSI_LIMIT)-1
 int  NavierStokes::FSI_outer_sweeps=0;
 int  NavierStokes::num_FSI_outer_sweeps=1;
 
@@ -3745,6 +3747,8 @@ NavierStokes::read_params ()
 
      std::cout << "num_FSI_outer_sweeps: " << 
       num_FSI_outer_sweeps << '\n';
+     std::cout << "NFSI_LIMIT: " << 
+      NFSI_LIMIT << '\n';
      for (int i=0;i<im_elastic_map.size();i++) {
       std::cout << "i= " << i << " im_elastic_map " << 
         im_elastic_map[i] << '\n';
