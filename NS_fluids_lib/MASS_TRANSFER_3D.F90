@@ -2432,10 +2432,19 @@ stop
       if (T_I.gt.TI_max) then
        T_I=TI_max
       endif
+
       if (TI_min.le.TI_max) then
        ! do nothing
       else
        print *,"TI_min>TI_max"
+       print *,"TI_min: ",TI_min
+       print *,"TI_max: ",TI_max
+       print *,"Y_I=",Y_I
+       print *,"T_I=",T_I
+       print *,"POUT%T_probe(1) ",POUT%T_probe(1)
+       print *,"POUT%T_probe(2) ",POUT%T_probe(2)
+       print *,"POUT%T_I_interp(1) ",POUT%T_I_interp(1)
+       print *,"POUT%T_I_interp(2) ",POUT%T_I_interp(2)
        stop
       endif
 
