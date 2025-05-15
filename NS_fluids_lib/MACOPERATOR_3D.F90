@@ -575,15 +575,28 @@ stop
            !do nothing
           else if ((num_FSI_outer_sweeps.gt.1).and. &
                    (num_FSI_outer_sweeps.le.num_materials)) then
+
            if (FSI_outer_sweeps.eq.0) then
             im_rigid_CL=num_materials !not used FSI_outer_sweeps==0
            else if ((FSI_outer_sweeps.ge.1).and. &
-                    (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
-            im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+                    (FSI_outer_sweeps.le. &
+                     min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
+            if (FSI_outer_sweeps.eq. &
+                min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
+             im_rigid_CL=im_elastic_map(num_FSI_outer_sweeps-1)+1
+            else if ((FSI_outer_sweeps.ge.1).and. &
+                     (FSI_outer_sweeps.lt. &
+                      min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
+             im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+            else
+             print *,"FSI_outer_sweeps invalid(1): ",FSI_outer_sweeps
+             stop
+            endif
            else
-            print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+            print *,"FSI_outer_sweeps invalid(2): ",FSI_outer_sweeps
             stop
            endif
+
            do im=1,num_materials
             if (is_rigid(im).eq.1) then
              ! do nothing
@@ -591,7 +604,8 @@ stop
              if (FSI_outer_sweeps.eq.0) then
               !do nothing
              else if ((FSI_outer_sweeps.ge.1).and. &
-                      (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
+                      (FSI_outer_sweeps.le. &
+                       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
               if (im.le.im_rigid_CL) then
                LSTEST=lsnew(D_DECL(i,j,k),im)
                if (LSTEST.ge.zero) then

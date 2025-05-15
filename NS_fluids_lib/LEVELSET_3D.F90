@@ -13673,6 +13673,7 @@ stop
       integer im_left,im_right
       integer im_rigid_CL
       integer sub_FSI
+      integer end_loop
       integer ok_to_update_elastic_material
       integer im_left_tension,im_right_tension
       integer im_left_gravity,im_right_gravity
@@ -14057,11 +14058,13 @@ stop
        endif
 
        if ((FSI_outer_sweeps.ge.0).and. &
-           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+           (FSI_outer_sweeps.lt. &
+            min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
         !do nothing
        else
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         print *,"or, num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+        print *,"NFSI_LIMIT: ",NFSI_LIMIT
         stop
        endif
 
@@ -14791,8 +14794,23 @@ stop
                   if (FSI_outer_sweeps.eq.0) then
                    !do nothing
                   else if ((FSI_outer_sweeps.ge.1).and. &
-                           (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
-                   do sub_FSI=1,FSI_outer_sweeps
+                           (FSI_outer_sweeps.lt. &
+                            min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
+
+                   if (FSI_outer_sweeps.eq. &
+                       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
+                    end_loop=num_FSI_outer_sweeps-1
+                   else if ((FSI_outer_sweeps.ge.1).and. &
+                            (FSI_outer_sweeps.lt. &
+                             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
+                    end_loop=FSI_outer_sweeps
+                   else
+                    print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+                    print *,"NFSI_LIMIT: ",NFSI_LIMIT
+                    stop
+                   endif
+
+                   do sub_FSI=1,end_loop
                     im_rigid_CL=im_elastic_map(sub_FSI)+1
                     if (is_rigid_CL(im_rigid_CL).eq.1) then
                      !do nothing
@@ -14820,6 +14838,7 @@ stop
                   else
                    print *,"in: fort_cell_to_mac: "
                    print *,"FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+                   print *,"NFSI_LIMIT ",NFSI_LIMIT
                    stop
                   endif
                                
@@ -15722,6 +15741,7 @@ stop
               endif
 
               elastic_interface_fixed=0
+              FIX ME
               do ipart=1,FSI_outer_sweeps
                if ((im_elastic_map(ipart)+1.eq.im_gravity).or. &
                    (im_elastic_map(ipart)+1.eq.im_opp_gravity)) then

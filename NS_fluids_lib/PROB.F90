@@ -258,9 +258,23 @@ stop
        ! cc_group=cc*cc_elasticmask (SOLVETYPE_INITPROJ)
        im_rigid_CL=num_materials 
       else if ((FSI_outer_sweeps.ge.1).and. &
-               (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+               (FSI_outer_sweeps.lt. &
+                min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
+
        !if im<=im_rigid_CL then elastic/ice material is a rigid solid.
-       im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+
+       if (FSI_outer_sweeps.eq. &
+           min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
+        im_rigid_CL=im_elastic_map(num_FSI_outer_sweeps-1)+1
+       else if ((FSI_outer_sweeps.ge.1).and. &
+                (FSI_outer_sweeps.lt. &
+                 min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
+        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+       else
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        stop
+       endif
+
        if ((im_rigid_CL.ge.1).and.(im_rigid_CL.le.num_materials)) then
         !do nothing
        else
@@ -12339,8 +12353,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if ((nhalf.ge.3).and. &
           (num_FSI_outer_sweeps.ge.1).and. &
           (num_FSI_outer_sweeps.le.num_materials).and. &
+          (NFSI_LIMIT.ge.2).and. &
           (FSI_outer_sweeps.ge.0).and. &
-          (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1).and. &
+          (FSI_outer_sweeps.le. &
+           min(num_FSI_outer_sweeps,NFSI_LIMIT)-1).and. &
           (cc.ge.zero).and. &
           (cc.le.one).and. &
           (cc_elasticmask.ge.zero).and. &
@@ -12431,7 +12447,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           cc_group=cc*cc_elasticmask
          else if ((num_FSI_outer_sweeps.gt.1).and. &
                   (FSI_outer_sweeps.ge.1).and. &
-                  (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+                  (FSI_outer_sweeps.lt. &
+                   min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
           cc_group=cc*cc_elasticmaskpart
          else if ((num_FSI_outer_sweeps.gt.1).and. &
                   (FSI_outer_sweeps.eq.0)) then
@@ -12440,6 +12457,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"num_FSI_outer_sweeps or FSU_outer_sweeps invalid"
           print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
           print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
+          print *,"NFSI_LIMIT: ",NFSI_LIMIT
           stop
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
@@ -12668,6 +12686,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else 
        print *,"coefficients bust"
        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
+       print *,"NFSI_LIMIT=",NFSI_LIMIT
        print *,"FSI_outer_sweeps=",FSI_outer_sweeps
        print *,"cc=",cc
        print *,"cc_elasticmask=",cc_elasticmask
