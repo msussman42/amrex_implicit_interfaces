@@ -226,16 +226,16 @@ ns.shock_timestep=2 2 2
 #ns.visual_nddata_format=2 #piecewise constant tecplot
 ns.visual_nddata_format=0
 
-#amr.check_int       = 200  # number of timesteps between checkpoints 2D
-amr.check_int       = 40    # number of timesteps between checkpoints 3D
+amr.check_int       = 200  # number of timesteps between checkpoints 2D
+#amr.check_int       = 40    # number of timesteps between checkpoints 3D
 amr.check_file      = chk   # root name of checkpoint file
 
 #ns.slice_dir=1 # vertical direction 2D
 ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
-#amr.plot_int        = 200 # number of timesteps between plot files (2D)
-amr.plot_int        = 40   # number of timesteps between plot files (3D)
+amr.plot_int        = 200 # number of timesteps between plot files (2D)
+#amr.plot_int        = 40   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1

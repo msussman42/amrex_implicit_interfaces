@@ -311,10 +311,24 @@ stop
        if (FSI_outer_sweeps.eq.0) then
         im_rigid_CL=num_materials !not used
        else if ((FSI_outer_sweeps.ge.1).and. &
-                (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
-        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+                (FSI_outer_sweeps.lt. &
+                 min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
+
+        if (FSI_outer_sweeps.eq. &
+            min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
+          ! all elastic materials are clamped
+         im_rigid_CL=im_elastic_map(num_FSI_outer_sweeps-1)+1
+        else if ((FSI_outer_sweeps.ge.1).and. &
+                 (FSI_outer_sweeps.lt. &
+                  min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
+         im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+        else
+         print *,"FSI_outer_sweeps invalid(1 hoopimplicit): ",FSI_outer_sweeps
+         stop
+        endif
+
        else
-        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        print *,"FSI_outer_sweeps invalid (2 hoopimplicit): ",FSI_outer_sweeps
         stop
        endif
 
@@ -325,10 +339,11 @@ stop
         stop
        endif
        if ((FSI_outer_sweeps.ge.0).and. &
-           (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
+           (FSI_outer_sweeps.le. &
+            min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
         !do nothing
        else
-        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        print *,"FSI_outer_sweeps invalid (3 hoopimplicit): ",FSI_outer_sweeps
         stop
        endif
 
@@ -511,11 +526,12 @@ stop
           if (FSI_outer_sweeps.eq.0) then
            !do nothing
           else if ((FSI_outer_sweeps.ge.1).and. &
-                   (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
+                   (FSI_outer_sweeps.lt. &
+                    min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
            if (LStest.ge.zero) then
             if ((is_rigid_CL(im).eq.1).and. &
                 (im.le.im_rigid_CL)) then
-             im_FSI=im
+             im_FSI=im ! this material is clamped
             else if ((is_rigid_CL(im).eq.0).or. &
                      (im.gt.im_rigid_CL)) then
              !do nothing
@@ -531,7 +547,7 @@ stop
            endif
 
           else
-           print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+           print *,"FSI_outer_sweeps invalid(5 hoopimplicit):",FSI_outer_sweeps
            stop
           endif
 
