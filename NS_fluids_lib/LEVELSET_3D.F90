@@ -17118,7 +17118,7 @@ stop
        if ((FSI_outer_sweeps.ge.0).and. &
            (FSI_outer_sweeps.lt. &
             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
-        end_loop=FSI_outer_sweep+1
+        end_loop=FSI_outer_sweeps+1
        else 
         print *,"fort_manage_elastic_velocity:"
         print *,"FSI_outer_sweeps invalid(2): ",FSI_outer_sweeps
