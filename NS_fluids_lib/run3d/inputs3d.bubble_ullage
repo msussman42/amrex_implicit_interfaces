@@ -34,7 +34,8 @@
 #max_step=200
 #max_step=10
 max_step=99999999
-stop_time=20.0
+#stop_time=20.0
+stop_time=100.0 #parabolic
 
 # unique problem identifier associated with each new plug-in:
 # CRYOGENIC_TANK_MK.F90
