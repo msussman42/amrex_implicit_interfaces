@@ -309,14 +309,14 @@ stop
        real(amrex_real) gravity_vector_out(SDIM)
 
        if (FSI_outer_sweeps.eq.0) then
-        im_rigid_CL=num_materials !not used
+        im_rigid_CL=num_materials !not used (no elastic materials are clamped)
        else if ((FSI_outer_sweeps.ge.1).and. &
                 (FSI_outer_sweeps.lt. &
                  min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
 
         if (FSI_outer_sweeps.eq. &
             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
-          ! all elastic materials are clamped
+          ! all elastic materials are clamped (fort_hoopimplicit)
          im_rigid_CL=im_elastic_map(num_FSI_outer_sweeps-1)+1
         else if ((FSI_outer_sweeps.ge.1).and. &
                  (FSI_outer_sweeps.lt. &
@@ -524,7 +524,7 @@ stop
          else if (is_lag_part(im).eq.0) then
 
           if (FSI_outer_sweeps.eq.0) then
-           !do nothing
+           !do nothing (no elastic materials are clamped)
           else if ((FSI_outer_sweeps.ge.1).and. &
                    (FSI_outer_sweeps.lt. &
                     min(num_FSI_outer_sweeps,NFSI_LIMIT))) then

@@ -3187,7 +3187,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	 SDC_outer_sweeps,
 	 slab_step,
 	 divu_outer_sweeps);
-         std::cout << "press any number then enter: before project_to_rigid_velocityALL\n";
+         std::cout << 
+          "press any number then enter: before project_to_rigid_velocityALL\n";
          std::cout << "timeSEM= " << timeSEM << '\n';
          std::cout << "dtSEM= " << dtSEM << '\n';
          std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
@@ -12136,8 +12137,11 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         im_cutoff=num_materials; //not used
        } else if ((FSI_outer_sweeps>0)&&
                   (FSI_outer_sweeps<
-                   min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
+                   min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
         im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1;
+       } else if (FSI_outer_sweeps==
+                  min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
+        im_cutoff=im_elastic_map[num_FSI_outer_sweeps-2]+1;
        } else
         amrex::Error("FSI_outer_sweeps invalid");
 
@@ -13691,6 +13695,7 @@ void NavierStokes::manage_FSI_data() {
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
+   //does velocity need to be restored?
   if ((FSI_outer_sweeps>=1)&&
       (FSI_outer_sweeps<
        min(num_FSI_outer_sweeps,NFSI_LIMIT))) {
@@ -13787,6 +13792,7 @@ void NavierStokes::manage_FSI_data() {
   } else
    amrex::Error("FSI_outer_sweeps invalid");
 
+   //does velocity need to be extended?
   if ((FSI_outer_sweeps>=0)&&
       (FSI_outer_sweeps<
        min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {

@@ -12454,7 +12454,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                   (FSI_outer_sweeps.eq.0)) then
           cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
          else
-          print *,"num_FSI_outer_sweeps or FSU_outer_sweeps invalid"
+          print *,"num_FSI_outer_sweeps or FSI_outer_sweeps invalid"
           print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
           print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
           print *,"NFSI_LIMIT: ",NFSI_LIMIT
