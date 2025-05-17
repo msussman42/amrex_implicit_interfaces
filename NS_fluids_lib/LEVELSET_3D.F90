@@ -14792,7 +14792,7 @@ stop
                           (num_FSI_outer_sweeps.le.num_materials)) then
 
                   if (FSI_outer_sweeps.eq.0) then
-                   !do nothing
+                   !do nothing (no need to fix the velocity at this stage)
                   else if ((FSI_outer_sweeps.ge.1).and. &
                            (FSI_outer_sweeps.lt. &
                             min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
@@ -14806,6 +14806,7 @@ stop
                     end_loop=FSI_outer_sweeps
                    else
                     print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+                    print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
                     print *,"NFSI_LIMIT: ",NFSI_LIMIT
                     stop
                    endif
@@ -15747,12 +15748,12 @@ stop
                ! elastic magerial regions.
 
               if (num_FSI_outer_sweeps.eq.1) then
-              !do nothing
+               !do nothing
               else if ((num_FSI_outer_sweeps.gt.1).and. &
                        (num_FSI_outer_sweeps.le.num_materials)) then
               
                if (FSI_outer_sweeps.eq.0) then
-                !do nothing
+                !do nothing (no fixed materials yet)
                else if ((FSI_outer_sweeps.ge.1).and. &
                         (FSI_outer_sweeps.lt. &
                          min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
@@ -17060,17 +17061,22 @@ stop
        else if (FSI_outer_sweeps.eq.0) then
         print *,"fort_manage_elastic_velocity:"
         print *,"always extend the elastic solid vel if FSI_outer_sweeps=0"
+        print *,"never restore the velocity field if FSI_outer_sweeps=0"
         print *,"FSI_outer_sweeps=",FSI_outer_sweeps
+        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
         stop
        else
         print *,"fort_manage_elastic_velocity:"
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
         stop
        endif
 
         !is_rigid_CL(im_test).eq.1 and
         !im_test.le.im_rigid_CL then
         !we treat "im_test" as a rigid solid.
+        !im_rigid_CL=im_elastic_map(end_loop)+1
+        !velocity is restored if im>im_rigid_CL
        if ((FSI_outer_sweeps.ge.1).and. &
            (FSI_outer_sweeps.lt. &
             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then
@@ -17081,6 +17087,7 @@ stop
        else
         print *,"fort_manage_elastic_velocity:"
         print *,"FSI_outer_sweeps invalid(2): ",FSI_outer_sweeps
+        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
         stop
        endif
 
@@ -17103,7 +17110,9 @@ stop
                 min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) then
         print *,"fort_manage_elastic_velocity:"
         print *,"all the elastic solids have been processed, no vel extend"
+        print *,"all the elastic solids have been processed, only restore vel"
         print *,"FSI_outer_sweeps=",FSI_outer_sweeps
+        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
         stop
        else 
         print *,"fort_manage_elastic_velocity:"
@@ -17115,6 +17124,8 @@ stop
         !im_test.ge.im_rigid_CL then
         !we extrapolate the "rigid" velocity into the
         !exterior narrow band of "im_test"
+        !im_rigid_CL=im_elastic_map(end_loop)+1
+        !velocity is extended if im>=im_rigid_CL
        if ((FSI_outer_sweeps.ge.0).and. &
            (FSI_outer_sweeps.lt. &
             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) then

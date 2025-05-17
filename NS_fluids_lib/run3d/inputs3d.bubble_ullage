@@ -387,8 +387,11 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 # The phase-change saturation temperature and pressure are calculated
 # from Clausius–Clapeyron relation. The "reference" temprature and
 # pressure are given below.
-ns.saturation_temp=307.0 0.0 0.0 0.0 0.0 0.0  # T_ref
+#ns.saturation_temp=307.0 0.0 0.0 0.0 0.0 0.0  # T_ref
+#parabolic_tinit: 303 < T < 334
+ns.saturation_temp=340.0 0.0 0.0 0.0 0.0 0.0  # T_ref parabolic
 ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp_max=340.0 0.0 0.0 0.0 0.0 0.0 # parabolic
 ns.reference_pressure=101513.36461739511 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
