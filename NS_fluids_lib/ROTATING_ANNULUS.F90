@@ -725,10 +725,10 @@ real(amrex_real) :: dV_dz
   print *,"expecting sdim=3"
   stop
  endif
- if (fort_angular_velocity.gt.0.0d0) then
+ if (fort_angular_velocity_vector(3).gt.0.0d0) then
   ! do nothing
  else
-  print *,"expecting fort_angular_velocity>0.0d0"
+  print *,"expecting fort_angular_velocity_vector(3)>0.0d0"
   stop
  endif
 
@@ -738,7 +738,7 @@ real(amrex_real) :: dV_dz
 
   ! rho=rho0*(1+fort_DrhoDT(im)*(T-T0))
  dV_dz=dT_dr*abs(gravity_vector(SDIM)*fort_DrhoDT(1))/ &
-             (two*fort_angular_velocity)
+             (two*fort_angular_velocity_vector(3))
 
  if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   V0(2)=dV_dz*x(SDIM)

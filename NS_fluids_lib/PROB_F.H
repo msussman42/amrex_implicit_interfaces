@@ -60,7 +60,7 @@ namespace amrex{
 
      void fort_addnoise(
       int* dir,
-      Real* angular_velocity, //parameter to fort_addnoise
+      Real* angular_velocity_vector, //parameter to fort_addnoise
       int* perturbation_mode,
       Real* perturbation_eps_temp,
       Real* perturbation_eps_vel,

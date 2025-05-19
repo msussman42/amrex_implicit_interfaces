@@ -3720,18 +3720,18 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
 
-subroutine CRYOGENIC_TANK_MK_angular_velocity(x,cur_time, &
-   angular_velocity,angular_velocity_custom, &
-   angular_velocity_dot,lever_arm)
+subroutine CRYOGENIC_TANK_MK_angular_velocity_vector(x,cur_time, &
+   angular_velocity_vector,angular_velocity_vector_custom, &
+   angular_velocity_vector_dot,lever_arm)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
-real(amrex_real), INTENT(in) :: angular_velocity
-real(amrex_real), INTENT(out) :: angular_velocity_custom
-real(amrex_real), INTENT(out) :: angular_velocity_dot
+real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
+real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
 real(amrex_real), INTENT(out) :: lever_arm
 
  if (cur_time.ge.0.0d0) then
@@ -3741,10 +3741,10 @@ real(amrex_real), INTENT(out) :: lever_arm
   stop
  endif
 
- if (angular_velocity.ge.zero) then
+ if (angular_velocity_vector(3).ge.zero) then
   !do nothing
  else
-  print *,"angular_velocity invalid"
+  print *,"angular_velocity_vector(3) invalid"
   stop
  endif
 
@@ -3755,20 +3755,20 @@ real(amrex_real), INTENT(out) :: lever_arm
   stop
  endif
 
- angular_velocity_custom=angular_velocity
- angular_velocity_dot=zero
+ angular_velocity_vector_custom=angular_velocity_vector
+ angular_velocity_vector_dot=zero
  lever_arm=radblob8
  if (cur_time.ge.xblob8) then
   !do nothing
  else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
-  angular_velocity_custom=angular_velocity*cur_time/xblob8
-  angular_velocity_dot=angular_velocity/xblob8
+  angular_velocity_vector_custom(3)=angular_velocity_vector(3)*cur_time/xblob8
+  angular_velocity_vector_dot(3)=angular_velocity_vector(3)/xblob8
  else
   print *,"cur_time invalid"
   stop
  endif
 
-end subroutine CRYOGENIC_TANK_MK_angular_velocity
+end subroutine CRYOGENIC_TANK_MK_angular_velocity_vector
 
 subroutine CRYOGENIC_TANK_MK_gravity_vector(x,cur_time, &
    gravity_vector_in, &

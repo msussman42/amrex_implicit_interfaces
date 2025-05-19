@@ -744,17 +744,17 @@ implicit none
       real(amrex_real), INTENT(out) :: V0(SDIM)
       end subroutine TEMPLATE_V0_Coriolis
 
-      subroutine TEMPLATE_angular_velocity(x,cur_time, &
-       angular_velocity,angular_velocity_custom, &
-       angular_velocity_dot,lever_arm)
+      subroutine TEMPLATE_angular_velocity_vector(x,cur_time, &
+       angular_velocity_vector,angular_velocity_vector_custom, &
+       angular_velocity_vector_dot,lever_arm)
       use amrex_fort_module, only : amrex_real
       real(amrex_real), INTENT(in) :: x(SDIM)
       real(amrex_real), INTENT(in) :: cur_time
-      real(amrex_real), INTENT(in) :: angular_velocity
-      real(amrex_real), INTENT(out) :: angular_velocity_custom
-      real(amrex_real), INTENT(out) :: angular_velocity_dot
+      real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+      real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
+      real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
       real(amrex_real), INTENT(out) :: lever_arm
-      end subroutine TEMPLATE_angular_velocity
+      end subroutine TEMPLATE_angular_velocity_vector
 
       subroutine TEMPLATE_gravity_vector(x,cur_time, &
        gravity_vector_in,gravity_vector_out)
@@ -946,7 +946,7 @@ implicit none
 
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
-        angular_velocity, &
+        angular_velocity_vector, &
         centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
@@ -954,7 +954,7 @@ implicit none
         state_ptr)
       use amrex_fort_module, only : amrex_real
       integer, INTENT(in) :: i,j,k,level
-      real(amrex_real), INTENT(in) :: angular_velocity
+      real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(inout) :: rho_hydrostatic
@@ -1434,7 +1434,8 @@ implicit none
 
       PROCEDURE(TEMPLATE_T0_Boussinesq), POINTER :: SUB_T0_Boussinesq
       PROCEDURE(TEMPLATE_V0_Coriolis), POINTER :: SUB_V0_Coriolis
-      PROCEDURE(TEMPLATE_angular_velocity), POINTER :: SUB_angular_velocity
+      PROCEDURE(TEMPLATE_angular_velocity_vector), POINTER ::  &
+              SUB_angular_velocity_vector
       PROCEDURE(TEMPLATE_gravity_vector), POINTER :: SUB_gravity_vector
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K

@@ -187,7 +187,7 @@ stop
          level, &
          finest_level, &
          visc_coef, &
-         angular_velocity, & !intent(in): fort_hoopimplicit
+         angular_velocity_vector, & !intent(in): fort_hoopimplicit
          centrifugal_force_factor, & !intent(in): fort_hoopimplicit
          uncoupled_viscosity, &
          update_state, &
@@ -216,9 +216,9 @@ stop
        integer, INTENT(in) :: level
        integer, INTENT(in) :: finest_level
        integer, INTENT(in) :: rzflag
-       real(amrex_real), INTENT(in) :: angular_velocity
-       real(amrex_real) :: angular_velocity_custom
-       real(amrex_real) :: angular_velocity_dot
+       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+       real(amrex_real) :: angular_velocity_vector_custom(3)
+       real(amrex_real) :: angular_velocity_vector_dot(3)
        real(amrex_real) :: lever_arm
        real(amrex_real), INTENT(in) :: centrifugal_force_factor
        real(amrex_real), INTENT(in) :: visc_coef
@@ -360,12 +360,13 @@ stop
         stop
        endif
 
-       if (abs(angular_velocity-fort_angular_velocity).le.EPS2) then
+       if (abs(angular_velocity_vector(3)- &
+               fort_angular_velocity_vector(3)).le.EPS2) then
         ! do nothing
        else
-        print *,"angular_velocity or fort_angular_velocity invalid"
-        print *,"angular_velocity=",angular_velocity
-        print *,"fort_angular_velocity=",fort_angular_velocity
+        print *,"angular_velocity_vector or fort_angular_velocity_vector invalid"
+        print *,"angular_velocity_vector=",angular_velocity_vector
+        print *,"fort_angular_velocity_vector=",fort_angular_velocity_vector
         stop
        endif
 
@@ -415,12 +416,12 @@ stop
         stop
        endif
 
-       if (angular_velocity.ge.zero) then
+       if (angular_velocity_vector(3).ge.zero) then
         ! do nothing
        else
-        print *,"angular_velocity cannot be negative"
+        print *,"angular_velocity_vector(3) cannot be negative"
         print *,"expecting counterclockwise"
-        print *,"angular_velocity=",angular_velocity
+        print *,"angular_velocity_vector(3)=",angular_velocity_vector(3)
         stop
        endif
        if ((centrifugal_force_factor.le.one).and. &
@@ -766,25 +767,25 @@ stop
 
           ! polar coordinates: coriolis force (temperature dependence)
           !                    centrifugal force (temperature dependence).
-          ! angular_velocity>0 => counter clockwise
-          ! angular_velocity<0 => clockwise (not allowed)
+          ! angular_velocity_vector(3)>0 => counter clockwise
+          ! angular_velocity_vector(3)<0 => clockwise (not allowed)
           ! in PROB.F90:
           ! R-Theta-Z 
-          ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
+          ! pres=pres+half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2)
           ! X-Y-Z 
-          ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2+xpos(2)**2)
+          ! pres=pres+half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2+xpos(2)**2)
 
-         call SUB_angular_velocity(xpoint,cur_time_slab, &
-           angular_velocity,angular_velocity_custom, &
-           angular_velocity_dot,lever_arm)
+         call SUB_angular_velocity_vector(xpoint,cur_time_slab, &
+           angular_velocity_vector,angular_velocity_vector_custom, &
+           angular_velocity_vector_dot,lever_arm)
 
-         if ((angular_velocity_custom.le.angular_velocity).and. &
-             (angular_velocity_custom.ge.zero).and. &
-             (angular_velocity_dot.ge.zero).and. &
+         if ((angular_velocity_vector_custom(3).le.angular_velocity_vector(3)).and. &
+             (angular_velocity_vector_custom(3).ge.zero).and. &
+             (angular_velocity_vector_dot(3).ge.zero).and. &
              (lever_arm.ge.zero)) then
           !do nothing
          else
-          print *,"angular_velocity parameters invalid (DIFFUSION_3D.F90) "
+          print *,"angular_velocity_vector parameters invalid (DIFFUSION_3D.F90) "
           stop
          endif
 
@@ -801,56 +802,57 @@ stop
            ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+ &
            dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
-               two*angular_velocity_custom*(un(2)-V_BASE(2))+ &
-               angular_velocity_dot*(xpoint(2)+lever_arm))
+               two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
+               angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm))
           unp1(2)=unp1(2)- &
            dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-               two*angular_velocity_custom*(un(1)-V_BASE(1))+ &
-               angular_velocity_dot*(xpoint(1)))
+               two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
+               angular_velocity_vector_dot(3)*(xpoint(1)))
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
           unp1(1)=unp1(1)+ &
-           dt*DTEMP*centrifugal_force_factor*(angular_velocity_custom**2)*RCEN
+           dt*DTEMP*centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*RCEN
 
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
           ! coriolis force:
           ! -2 omega cross v =
           !  rhat  theta_hat   zhat 
-          !  0        0      angular_velocity
+          !  0        0      angular_velocity_vector(3)
           !  u        v         w
-          ! = -2(-angular_vel. v,angular_velocity u)
+          ! = -2(-angular_vel. v,angular_velocity_vector(3) u)
 
           unp1(1)=unp1(1)+ &
-            dt*( two*angular_velocity_custom*(un(2)-V_BASE(2))+ &
-                 angular_velocity_dot*(xpoint(2)+lever_arm))
+            dt*( two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
+                 angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm))
           unp1(2)=unp1(2)- &
-            dt*( two*angular_velocity_custom*(un(1)-V_BASE(1))+ &
-                 angular_velocity_dot*(xpoint(1))  )
+            dt*( two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
+                 angular_velocity_vector_dot(3)*(xpoint(1))  )
 
           if ((DTEMP.eq.zero).or. &
-              (angular_velocity_custom.eq.zero)) then
+              (angular_velocity_vector_custom(3).eq.zero)) then
            ! do nothing
           else if ((DTEMP.ne.zero).and. &
-                   (angular_velocity_custom.gt.zero)) then
+                   (angular_velocity_vector_custom(3).gt.zero)) then
+                   
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
            unp1(1)=unp1(1)+ &
             dt*DTEMP* &
-            centrifugal_force_factor*(angular_velocity_custom**2)*xsten(0,1)
+            centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*xsten(0,1)
            unp1(2)=unp1(2)+ &
             dt*DTEMP* &
-            centrifugal_force_factor*(angular_velocity_custom**2)*xsten(0,2)
+            centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*xsten(0,2)
           else
-           print *,"DTEMP or angular_velocity invalid"
+           print *,"DTEMP or angular_velocity_vector invalid"
            print *,"DTEMP=",DTEMP
-           print *,"angular_velocity=",angular_velocity
-           print *,"angular_velocity_custom=",angular_velocity_custom
+           print *,"angular_velocity_vector=",angular_velocity_vector
+           print *,"angular_velocity_vector_custom=",angular_velocity_vector_custom
            stop
           endif
 
@@ -861,11 +863,11 @@ stop
            stop
           endif
 
-          if (angular_velocity.eq.zero) then
+          if (angular_velocity_vector(3).eq.zero) then
            ! do nothing
           else
-           print *,"angular_velocity<>0 not implemented RZ:", &
-            angular_velocity
+           print *,"angular_velocity_vector(3)<>0 not implemented RZ:", &
+            angular_velocity_vector(3)
            stop
           endif
 

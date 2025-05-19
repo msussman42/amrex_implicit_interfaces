@@ -6123,7 +6123,7 @@ void NavierStokes::init_gravity_potential() {
      domlo,domhi,
      xlo,dx,
      &dt_slab, //fort_init_potential
-     &angular_velocity, //fort_init_potential
+     angular_velocity_vector.dataPtr(), //fort_init_potential
      &centrifugal_force_factor, //fort_init_potential
      &isweep);
   } // mfi

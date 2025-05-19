@@ -246,6 +246,7 @@ int NavierStokes::invert_gravity = 0;
 int NavierStokes::incremental_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
+Vector<Real> NavierStokes::angular_velocity_vector;
 
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
@@ -925,9 +926,12 @@ Real NavierStokes::centrifugal_force_factor=1.0;
 //DrhoDT has units of 1/(Degrees Kelvin)
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 
-// 1=>rho=rho(T,Y,z)
+// 1=>rho=rho(T,Y,z) (DISABLED)
 // 2=>Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
 // DrhoDT has units of 1/Temperature.
+//   In general (non-inertial reference frame):
+//   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+//         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
@@ -1619,8 +1623,27 @@ void fortran_parameters() {
  Real visc_coef_temp=NavierStokes::visc_coef;
  pp.get("visc_coef",visc_coef_temp);
 
+ Vector<Real> angular_velocity_vector_temp(3);
  Real angular_velocity_temp=NavierStokes::angular_velocity;
- pp.queryAdd("angular_velocity",angular_velocity_temp);
+ angular_velocity_vector_temp[0]=0.0;
+ angular_velocity_vector_temp[1]=0.0;
+ angular_velocity_vector_temp[2]=angular_velocity_temp;
+
+ bool angular_velocity_in_table=pp.contains("angular_velocity");
+ bool angular_velocity_vector_in_table=pp.contains("angular_velocity_vector");
+
+ if (angular_velocity_vector_in_table==true) {
+  if (angular_velocity_in_table==false) {
+   //do nothing
+  } else
+   amrex::Error("angular_velocity parm conflict");
+
+  pp.getarr("angular_velocity_vector",angular_velocity_vector_temp);
+ } else if (angular_velocity_vector_in_table==false) {
+  pp.queryAdd("angular_velocity",angular_velocity_temp);
+  angular_velocity_vector_temp[2]=angular_velocity_temp;
+ } else
+  amrex::Error("angular_velocity_vector_in_table invalid");
 
  pp.getarr("material_type",NavierStokes::material_type,0,
     NavierStokes::num_materials);
@@ -2337,7 +2360,7 @@ void fortran_parameters() {
   etaS_temp.dataPtr(),
   etaP_temp.dataPtr(),
   &visc_coef_temp,
-  &angular_velocity_temp,
+  angular_velocity_vector_temp.dataPtr(),
   NavierStokes::grid_stretching_parameter.dataPtr(),
   &ioproc);
 
@@ -4236,7 +4259,28 @@ NavierStokes::read_params ()
     pp.queryAdd("yield_alpha",yield_alpha,num_materials);
     pp.queryAdd("yield_temperature",yield_temperature,num_materials);
 
-    pp.queryAdd("angular_velocity",angular_velocity);
+    angular_velocity_vector.resize(3);
+    angular_velocity_vector[0]=0.0;
+    angular_velocity_vector[1]=0.0;
+    angular_velocity_vector[2]=angular_velocity;
+
+    bool angular_velocity_in_table=pp.contains("angular_velocity");
+    bool angular_velocity_vector_in_table=
+      pp.contains("angular_velocity_vector");
+
+    if (angular_velocity_vector_in_table==true) {
+     if (angular_velocity_in_table==false) {
+      //do nothing
+     } else
+      amrex::Error("angular_velocity parm conflict");
+
+     pp.getarr("angular_velocity_vector",angular_velocity_vector);
+    } else if (angular_velocity_vector_in_table==false) {
+     pp.queryAdd("angular_velocity",angular_velocity);
+     angular_velocity_vector[2]=angular_velocity;
+    } else
+     amrex::Error("angular_velocity_vector_in_table invalid");
+
     pp.queryAdd("centrifugal_force_factor",centrifugal_force_factor);
 
     pp.queryAdd("uncoupled_viscosity",uncoupled_viscosity);
@@ -4955,14 +4999,22 @@ NavierStokes::read_params ()
 
     for (int im=0;im<num_materials;im++) {
 
-     if ((override_density[im]!=0)&&
-         (override_density[im]!=1)&& //rho=rho(T,Y,z)
-         (override_density[im]!=2)) {//Boussinesq approximation
+     if (override_density[im]==0) {
+      //do nothing
+     } else if (override_density[im]==1) {
+      std::cout << "num_materials= " << num_materials << '\n';
+      std::cout << "im=" << im << " override_density[im]= " <<
+	     override_density[im] << '\n';
+      amrex::Error("override_density==1 is disabled! ");
+     } else if (override_density[im]==2) {
+      //do nothing (Boussinesq approximation)
+     } else {
       std::cout << "num_materials= " << num_materials << '\n';
       std::cout << "im=" << im << " override_density[im]= " <<
 	     override_density[im] << '\n';
       amrex::Error("override_density invalid (1) ");
      }
+
      if (DrhoDT[im]>0.0)
       amrex::Error("DrhoDT cannot be positive");
 
@@ -4972,14 +5024,14 @@ NavierStokes::read_params ()
       if (ns_is_rigid(im)!=1)
        amrex::Error("ns_is_rigid invalid");
       if (override_density[im]!=0)
-       amrex::Error("override_density invalid");
+       amrex::Error("expecting override_density==0 if material_type==999");
      } else if (material_type[im]==0) {
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[im]>0)&& 
                 (material_type[im]<999)) {
       if (override_density[im]!=0)
-       amrex::Error("override_density invalid");
+       amrex::Error("expecting override_density==0 if compressible material");
       if (ns_is_rigid(im)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else {
@@ -5725,13 +5777,18 @@ NavierStokes::read_params ()
       // check nothing
      } else if ((im>=1)&&(im<=num_materials)) {
       if (material_type[im-1]==0) {
-       if ((override_density[im-1]==1)|| //rho=rho(T,Y,z)
-           (override_density[im-1]==2)) {//Boussinesq approximation
+       if (override_density[im-1]==1) { //rho=rho(T,Y,z) DISABLED
+	std::cout << "override_density==1 DISABLED\n";
+        std::cout << "num_materials= " << num_materials << '\n';
+        std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
+	     override_density[im-1] << '\n';
+        amrex::Error("override_density invalid");
+       } else if (override_density[im-1]==2) {//Boussinesq approximation
         // do nothing
        } else if (override_density[im-1]==0) {
 	// do nothing
        } else {
-	std::cout << "override_density==0,1, or 2 allowed if incomp mat.\n";
+	std::cout << "override_density==0 or 2 allowed if incomp mat.\n";
         std::cout << "num_materials= " << num_materials << '\n';
         std::cout << "im-1=" << im-1 << " override_density[im-1]= " <<
 	     override_density[im-1] << '\n';
@@ -5897,7 +5954,25 @@ NavierStokes::read_params ()
         NUM_CELL_ELASTIC_REFINE << '\n';
      std::cout << "NUM_STATE_TYPE= " << NUM_STATE_TYPE << '\n';
 
-     std::cout << "angular_velocity= " << angular_velocity << '\n';
+     if (angular_velocity_vector_in_table==true) {
+
+      if (angular_velocity_in_table==false) {
+       // do nothing
+      } else
+       amrex::Error("angular_velocity parm conflict");
+
+     } else if (angular_velocity_vector_in_table==false) {
+
+      std::cout << "angular_velocity= " << angular_velocity << '\n';
+
+     } else
+      amrex::Error("angular_velocity_vector_in_table invalid");
+
+     std::cout << "angular_velocity_vector 0..2: " << 
+       angular_velocity_vector[0] << ' ' <<
+       angular_velocity_vector[1] << ' ' <<
+       angular_velocity_vector[2] << '\n';
+
      std::cout << "centrifugal_force_factor= " << 
        centrifugal_force_factor << '\n';
 
@@ -12468,7 +12543,7 @@ void NavierStokes::add_perturbation() {
 
    fort_addnoise(
     &dir,
-    &angular_velocity,  //parameter for fort_addnoise
+    angular_velocity_vector.dataPtr(),  //parameter for fort_addnoise
     &perturbation_mode, //inputs parameter
     &perturbation_eps_temp, //inputs parameter
     &perturbation_eps_vel,  //inputs parameter
@@ -13243,11 +13318,13 @@ void NavierStokes::tensor_extrapolation() {
 
 
 // non-conservative correction to density.
-// if override_density(im)==1,
-// rho_im=rho(z)+rho0 * DrhoDT * (T_im - T0_im)
+// override_density(im)==1, (DISABLED)
 // if override_density(im)=0 or 2, density field is not changed.
 // if override_density==2:
 // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+//   In general (non-inertial reference frame):
+//   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+//         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
 void 
 NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
@@ -13300,8 +13377,9 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
   } else if (DrhoDT[im]!=0.0) {
    if (override_density[im]==0) {
     amrex::Error("DrhoDT mismatch"); 
-   } else if ((override_density[im]==1)||
-              (override_density[im]==2)) {
+   } else if (override_density[im]==1) {
+    amrex::Error("override_density[im]==1 DISABLED");
+   } else if (override_density[im]==2) {
     // do nothing
    } else
     amrex::Error("override_density[im] invalid");
@@ -13309,11 +13387,10 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
    amrex::Error("DrhoDT[im] invalid");
 
   if ((override_density[im]==0)||
-      (override_density[im]==1)|| //rho=rho(T,Y,z)
       (override_density[im]==2)) {//Boussinesq approximation
    // do nothing
   } else 
-   amrex::Error("override_density[im] invalid");
+   amrex::Error("override_density[im] invalid(==1 DISABLED)");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -13349,7 +13426,6 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // declared in: GODUNOV_3D.F90
-     // if override_density[im]==1, then rho_im=rho(T) 
     int fort_im=im+1;
     fort_derive_mom_den(
      &fort_im,
@@ -17938,10 +18014,11 @@ NavierStokes::split_scalar_advection() {
  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
 
  // getStateMOM_DEN declared in: NavierStokes.cpp
- // if override_density(im)==1,
- // rho_im=rho(z)+rho0* DrhoDT * (T_im - T0_im)
  // if override_density(im)=0 or 2, density is not modified:
  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+ //   In general (non-inertial reference frame):
+ //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+ //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  int TENSOR_RECON_MF_local=-1;
