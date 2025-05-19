@@ -1076,7 +1076,7 @@ end subroutine STUB_ICE_SUBSTRATE_DISTANCE
 
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
-  angular_velocity, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
+  angular_velocity_vector, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   centrifugal_force_factor, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   dt, &
   rho_hydrostatic, &
@@ -1085,7 +1085,7 @@ subroutine STUB_correct_pres_rho_hydrostatic( &
 IMPLICIT NONE
 
 integer, INTENT(in) :: i,j,k,level
-real(amrex_real), INTENT(in) :: angular_velocity
+real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
 real(amrex_real), INTENT(in) :: centrifugal_force_factor
 real(amrex_real), INTENT(in) :: dt
 real(amrex_real), INTENT(inout) :: rho_hydrostatic
@@ -1099,11 +1099,11 @@ real(amrex_real), INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
   print *,"dt must be positive"
   stop
  endif
- if (angular_velocity.ge.zero) then
+ if (angular_velocity_vector(3).ge.zero) then
   ! do nothing
  else
-  print *,"angular_velocity should be nonneg (counter clockwise): ", &
-     angular_velocity
+  print *,"angular_velocity_vector should be nonneg (counter clockwise): ", &
+     angular_velocity_vector(3)
   stop
  endif
  if ((centrifugal_force_factor.ge.zero).and. &
@@ -2015,18 +2015,18 @@ integer dir
 
 end subroutine STUB_V0_Coriolis
 
-subroutine STUB_angular_velocity(x,cur_time, &
-   angular_velocity,angular_velocity_custom, &
-   angular_velocity_dot,lever_arm)
+subroutine STUB_angular_velocity_vector(x,cur_time, &
+   angular_velocity_vector,angular_velocity_vector_custom, &
+   angular_velocity_vector_dot,lever_arm)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
-real(amrex_real), INTENT(in) :: angular_velocity
-real(amrex_real), INTENT(out) :: angular_velocity_custom
-real(amrex_real), INTENT(out) :: angular_velocity_dot
+real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
+real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
 real(amrex_real), INTENT(out) :: lever_arm
 
  if (cur_time.ge.0.0d0) then
@@ -2036,11 +2036,11 @@ real(amrex_real), INTENT(out) :: lever_arm
   stop
  endif
 
- angular_velocity_custom=angular_velocity
- angular_velocity_dot=zero
+ angular_velocity_vector_custom=angular_velocity_vector
+ angular_velocity_vector_dot=zero
  lever_arm=zero
 
-end subroutine STUB_angular_velocity
+end subroutine STUB_angular_velocity_vector
 
 
 subroutine STUB_gravity_vector(x,cur_time, &

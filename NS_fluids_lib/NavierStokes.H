@@ -333,6 +333,7 @@ public:
     static Real heatvisc_coef; // heatvisc_coef=(1/(Re Pr))
 
     static Real angular_velocity;  //Omega in Lewis and Nagata (Lappa's book)
+    static Vector<Real> angular_velocity_vector;
 
     static Real viscconst_max;
     static Real viscconst_min;
@@ -2202,8 +2203,11 @@ protected:
      //DrhoDT has units of 1/(Degrees Kelvin)
     static Vector<Real> DrhoDT; // default 0.0
 
-     //1=>rho=rho(T)
+     //1=>rho=rho(T)  (DISABLED)
      //2=>Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+     //   In general (non-inertial reference frame):
+     //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+     //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
     static Vector<int> override_density; // default 0 
     static Vector<Real> viscconst;
     static Vector<Real> viscconst_artificial;

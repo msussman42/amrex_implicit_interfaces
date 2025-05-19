@@ -10301,7 +10301,7 @@ END SUBROUTINE SIMP
        domlo,domhi, &
        xlo,dx, &
        dt, & ! dt_slab
-       angular_velocity, & !intent(in) fort_init_potential
+       angular_velocity_vector, & !intent(in) fort_init_potential
        centrifugal_force_factor, & !intent(in) fort_init_potential
        isweep) &
       bind(c,name='fort_init_potential')
@@ -10315,7 +10315,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: isweep
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt  ! dt_slab
-      real(amrex_real), INTENT(in) :: angular_velocity
+      real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       integer, INTENT(in) :: DIMDEC(presden)
       integer, INTENT(in) :: DIMDEC(state)
@@ -10383,7 +10383,7 @@ END SUBROUTINE SIMP
         call general_hydrostatic_pressure_density( &
           time, &
           i,j,k,level, &
-          angular_velocity, &
+          angular_velocity_vector, &
           centrifugal_force_factor, &
           dt, &
           den_cell, &   !INTENT(out)
@@ -10442,7 +10442,7 @@ END SUBROUTINE SIMP
             call general_hydrostatic_pressure_density( &
              time, &
              i,j,k,level, &
-             angular_velocity, & !intent(in)
+             angular_velocity_vector, & !intent(in)
              centrifugal_force_factor, & !intent(in)
              dt, &        ! intent(in)
              den_cell, &  ! intent(out)

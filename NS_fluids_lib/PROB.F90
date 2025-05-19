@@ -2553,7 +2553,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine general_hydrostatic_pressure_density( &
         time, &
         i,j,k,level, &
-        angular_velocity, &!intent(in) general_hydrostatic_pressure_density
+        angular_velocity_vector, &!intent(in)general_hydrostatic_pressure_density
         centrifugal_force_factor, &!intent(in) "     "
         dt, &
         rho_hydrostatic, &
@@ -2564,9 +2564,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       integer, INTENT(in) :: i,j,k,level
        !general_hydrostatic_pressure_density
-      real(amrex_real), INTENT(in) :: angular_velocity 
-      real(amrex_real) :: angular_velocity_custom
-      real(amrex_real) :: angular_velocity_dot
+      real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+      real(amrex_real) :: angular_velocity_vector_custom(3)
+      real(amrex_real) :: angular_velocity_vector_dot(3)
       real(amrex_real) :: lever_arm
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       real(amrex_real), INTENT(in) :: time
@@ -2617,11 +2617,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           gravity_vector_out(local_dir)*rho_hydrostatic*xcell(local_dir)
        enddo
     
-       if (angular_velocity.ge.zero) then
+       if (angular_velocity_vector(3).ge.zero) then
         ! do nothing
        else
-        print *,"angular_velocity should be nonneg (counter-clockwise): ", &
-           angular_velocity
+        print *,"angular_velocity_vector(3) expect nonneg(counter-clock): ", &
+           angular_velocity_vector(3)
         stop
        endif
 
@@ -2634,17 +2634,18 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       call SUB_angular_velocity(xcell,time, &
-         angular_velocity,angular_velocity_custom, &
-         angular_velocity_dot,lever_arm)
+       call SUB_angular_velocity_vector(xcell,time, &
+         angular_velocity_vector,angular_velocity_vector_custom, &
+         angular_velocity_vector_dot,lever_arm)
 
-       if ((angular_velocity_custom.le.angular_velocity).and. &
-           (angular_velocity_custom.ge.zero).and. &
-           (angular_velocity_dot.ge.zero).and. &
+       if ((angular_velocity_vector_custom(3).le. &
+            angular_velocity_vector(3)).and. &
+           (angular_velocity_vector_custom(3).ge.zero).and. &
+           (angular_velocity_vector_dot(3).ge.zero).and. &
            (lever_arm.ge.zero)) then
         !do nothing
        else
-        print *,"angular_velocity parameters invalid (PROB.F90)"
+        print *,"angular_velocity_vector parameters invalid (PROB.F90)"
         stop
        endif
 
@@ -2656,7 +2657,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  (centrifugal_force_factor.le.one)) then
          pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity_custom**2)*(xcell(1)**2+(xcell(2)+lever_arm)**2)
+           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2+(xcell(2)+lever_arm)**2)
         else
          print *,"expecting 0<=centrifugal_force_factor<=1: ", &
           centrifugal_force_factor
@@ -2669,10 +2670,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"dimension bust"
          stop
         endif
-        if (angular_velocity.eq.zero) then
+        if (angular_velocity_vector(3).eq.zero) then
          ! do nothing
         else
-         print *,"angular_velocity must be 0 for RZ"
+         print *,"angular_velocity_vector(3) must be 0 for RZ"
          stop
         endif
 
@@ -2680,7 +2681,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity_custom**2)*(xcell(1)**2)
+           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2)
 
        else
         print *,"levelrz invalid general hydrostatic pressure density"
@@ -2696,7 +2697,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (is_in_probtype_list().eq.1) then
        call SUB_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
-        angular_velocity, &
+        angular_velocity_vector, &
         centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
@@ -26748,7 +26749,7 @@ end subroutine initialize2d
 
        subroutine fort_addnoise( &
         dir, &
-        angular_velocity, & !INTENT(in): fort_addnoise
+        angular_velocity_vector, & !INTENT(in): fort_addnoise
         perturbation_mode, &
         perturbation_eps_temp, &
         perturbation_eps_vel, &
@@ -26769,7 +26770,7 @@ end subroutine initialize2d
        IMPLICIT NONE
 
       integer, INTENT(in) :: dir
-      real(amrex_real), INTENT(in) :: angular_velocity !fort_addnoise
+      real(amrex_real), INTENT(in) :: angular_velocity_vector(3) !fort_addnoise
       integer, INTENT(in) :: perturbation_mode
       real(amrex_real), INTENT(in) :: perturbation_eps_temp
       real(amrex_real), INTENT(in) :: perturbation_eps_vel

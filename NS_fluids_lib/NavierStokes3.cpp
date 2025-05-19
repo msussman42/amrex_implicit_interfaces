@@ -12504,11 +12504,14 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<num_materials;im++) {
   if (override_density[im]==0) { // Drho/DT=-divu rho
    // check nothing
-  } else if (override_density[im]==1) { // rho=rho(T,Y)
-   // check nothing
+  } else if (override_density[im]==1) { 
+   amrex::Error("override_density==1 DISABLED");  
    
    //DrhoDT has units of 1/(Degrees Kelvin)
    // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+   //   In general (non-inertial reference frame):
+   //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+   //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
   } else if (override_density[im]==2) { 
    // check nothing
   } else

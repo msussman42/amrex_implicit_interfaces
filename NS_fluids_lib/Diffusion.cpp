@@ -282,7 +282,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &level,
    &finest_level,
    &local_visc_coef,
-   &angular_velocity, //fort_hoopimplicit
+   angular_velocity_vector.dataPtr(), //fort_hoopimplicit
    &centrifugal_force_factor, //fort_hoopimplicit
    &uncoupled_viscosity,
    &update_state,
