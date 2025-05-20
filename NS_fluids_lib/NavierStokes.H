@@ -334,6 +334,7 @@ public:
 
     static Real angular_velocity;  //Omega in Lewis and Nagata (Lappa's book)
     static Vector<Real> angular_velocity_vector;
+    static Vector<Real> lever_arm;
 
     static Real viscconst_max;
     static Real viscconst_min;

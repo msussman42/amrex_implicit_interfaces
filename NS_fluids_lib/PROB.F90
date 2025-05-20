@@ -2554,6 +2554,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         time, &
         i,j,k,level, &
         angular_velocity_vector, &!intent(in)general_hydrostatic_pressure_density
+        lever_arm, &!intent(in)general_hydrostatic_pressure_density
         centrifugal_force_factor, &!intent(in) "     "
         dt, &
         rho_hydrostatic, &
@@ -2565,9 +2566,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer, INTENT(in) :: i,j,k,level
        !general_hydrostatic_pressure_density
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+      real(amrex_real), INTENT(in) :: lever_arm(SDIM)
       real(amrex_real) :: angular_velocity_vector_custom(3)
+      real(amrex_real) :: lever_arm_custom(SDIM)
       real(amrex_real) :: angular_velocity_vector_dot(3)
-      real(amrex_real) :: lever_arm
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt
@@ -2610,6 +2612,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! the force is grad p^hydrostatic/rho^hydrostatic
       rho_hydrostatic=fort_denconst(1) 
+      lever_arm_custom=lever_arm
       if (rho_hydrostatic.gt.zero) then
        pres_hydrostatic=zero
        do local_dir=1,SDIM
@@ -2635,14 +2638,17 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        call SUB_angular_velocity_vector(xcell,time, &
-         angular_velocity_vector,angular_velocity_vector_custom, &
-         angular_velocity_vector_dot,lever_arm)
+         angular_velocity_vector, &
+         angular_velocity_vector_custom, &
+         angular_velocity_vector_dot, &
+         lever_arm, &
+         lever_arm_custom)
 
        if ((angular_velocity_vector_custom(3).le. &
             angular_velocity_vector(3)).and. &
            (angular_velocity_vector_custom(3).ge.zero).and. &
            (angular_velocity_vector_dot(3).ge.zero).and. &
-           (lever_arm.ge.zero)) then
+           (lever_arm(2).ge.zero)) then
         !do nothing
        else
         print *,"angular_velocity_vector parameters invalid (PROB.F90)"
@@ -2657,7 +2663,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  (centrifugal_force_factor.le.one)) then
          pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2+(xcell(2)+lever_arm)**2)
+           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2+(xcell(2)+lever_arm_custom(2)**2)
         else
          print *,"expecting 0<=centrifugal_force_factor<=1: ", &
           centrifugal_force_factor
@@ -2698,6 +2704,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call SUB_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
         angular_velocity_vector, &
+        lever_arm, &
         centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
@@ -26750,6 +26757,7 @@ end subroutine initialize2d
        subroutine fort_addnoise( &
         dir, &
         angular_velocity_vector, & !INTENT(in): fort_addnoise
+        lever_arm, & !INTENT(in): fort_addnoise
         perturbation_mode, &
         perturbation_eps_temp, &
         perturbation_eps_vel, &
@@ -26771,6 +26779,7 @@ end subroutine initialize2d
 
       integer, INTENT(in) :: dir
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3) !fort_addnoise
+      real(amrex_real), INTENT(in) :: lever_arm(3) !fort_addnoise
       integer, INTENT(in) :: perturbation_mode
       real(amrex_real), INTENT(in) :: perturbation_eps_temp
       real(amrex_real), INTENT(in) :: perturbation_eps_vel

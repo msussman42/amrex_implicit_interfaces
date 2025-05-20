@@ -460,6 +460,7 @@ stop
         ccetaP, &
         ccvisc_coef, &
         ccangular_velocity_vector, &
+        cclever_arm, &
         ccgrid_stretching_parameter, &
         ioproc) &
       bind(c,name='fort_override')
@@ -647,6 +648,7 @@ stop
 
       real(amrex_real), INTENT(in) :: ccvisc_coef
       real(amrex_real), INTENT(in) :: ccangular_velocity_vector(3)
+      real(amrex_real), INTENT(in) :: cclever_arm(SDIM)
 
 
       character*12 namestr1
@@ -1715,6 +1717,10 @@ stop
       fort_angular_velocity_vector(1)=ccangular_velocity_vector(1)
       fort_angular_velocity_vector(2)=ccangular_velocity_vector(2)
       fort_angular_velocity_vector(3)=ccangular_velocity_vector(3)
+
+      lever_arm(1)=cclever_arm(1)
+      lever_arm(2)=cclever_arm(2)
+      lever_arm(SDIM)=cclever_arm(SDIM)
       
       nelastic=0
       do im=1,num_materials
@@ -1938,6 +1944,7 @@ stop
        print *,"fort_visc_coef= ",fort_visc_coef
 
        print *,"fort_angular_velocity_vector= ",fort_angular_velocity_vector
+       print *,"lever_arm= ",lever_arm
 
        do iten=1,num_interfaces
 

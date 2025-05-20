@@ -145,6 +145,7 @@
 
       real(amrex_real) fort_visc_coef
       real(amrex_real) fort_angular_velocity_vector(3)
+      real(amrex_real) lever_arm(SDIM)
 
       real(amrex_real) fort_grid_stretching_parameter(SDIM)
 

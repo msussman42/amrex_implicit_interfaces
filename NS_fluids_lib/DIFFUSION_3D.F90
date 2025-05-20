@@ -188,6 +188,7 @@ stop
          finest_level, &
          visc_coef, &
          angular_velocity_vector, & !intent(in): fort_hoopimplicit
+         lever_arm, & !intent(in): fort_hoopimplicit
          centrifugal_force_factor, & !intent(in): fort_hoopimplicit
          uncoupled_viscosity, &
          update_state, &
@@ -217,9 +218,10 @@ stop
        integer, INTENT(in) :: finest_level
        integer, INTENT(in) :: rzflag
        real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+       real(amrex_real), INTENT(in) :: lever_arm(SDIM)
        real(amrex_real) :: angular_velocity_vector_custom(3)
+       real(amrex_real) :: lever_arm_custom(SDIM)
        real(amrex_real) :: angular_velocity_vector_dot(3)
-       real(amrex_real) :: lever_arm
        real(amrex_real), INTENT(in) :: centrifugal_force_factor
        real(amrex_real), INTENT(in) :: visc_coef
        integer, INTENT(in) :: uncoupled_viscosity
@@ -776,13 +778,16 @@ stop
           ! pres=pres+half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2+xpos(2)**2)
 
          call SUB_angular_velocity_vector(xpoint,cur_time_slab, &
-           angular_velocity_vector,angular_velocity_vector_custom, &
-           angular_velocity_vector_dot,lever_arm)
+           angular_velocity_vector, &
+           angular_velocity_vector_custom, &
+           angular_velocity_vector_dot, &
+           lever_arm, &
+           lever_arm_custom)
 
          if ((angular_velocity_vector_custom(3).le.angular_velocity_vector(3)).and. &
              (angular_velocity_vector_custom(3).ge.zero).and. &
              (angular_velocity_vector_dot(3).ge.zero).and. &
-             (lever_arm.ge.zero)) then
+             (lever_arm(SDIM).ge.zero)) then
           !do nothing
          else
           print *,"angular_velocity_vector parameters invalid (DIFFUSION_3D.F90) "
@@ -803,7 +808,7 @@ stop
           unp1(1)=unp1(1)+ &
            dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
                two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
-               angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm))
+               angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm_custom(2)))
           unp1(2)=unp1(2)- &
            dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
                two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
@@ -827,7 +832,7 @@ stop
 
           unp1(1)=unp1(1)+ &
             dt*( two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
-                 angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm))
+                 angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm_custom(2)))
           unp1(2)=unp1(2)- &
             dt*( two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
                  angular_velocity_vector_dot(3)*(xpoint(1))  )

@@ -1077,6 +1077,7 @@ end subroutine STUB_ICE_SUBSTRATE_DISTANCE
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
   angular_velocity_vector, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
+  lever_arm, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   centrifugal_force_factor, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   dt, &
   rho_hydrostatic, &
@@ -1086,6 +1087,7 @@ IMPLICIT NONE
 
 integer, INTENT(in) :: i,j,k,level
 real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(in) :: lever_arm(SDIM)
 real(amrex_real), INTENT(in) :: centrifugal_force_factor
 real(amrex_real), INTENT(in) :: dt
 real(amrex_real), INTENT(inout) :: rho_hydrostatic
@@ -2016,8 +2018,11 @@ integer dir
 end subroutine STUB_V0_Coriolis
 
 subroutine STUB_angular_velocity_vector(x,cur_time, &
-   angular_velocity_vector,angular_velocity_vector_custom, &
-   angular_velocity_vector_dot,lever_arm)
+   angular_velocity_vector, &
+   angular_velocity_vector_custom, &
+   angular_velocity_vector_dot, &
+   lever_arm, &
+   lever_arm_custom)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -2025,9 +2030,10 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(in) :: lever_arm(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
-real(amrex_real), INTENT(out) :: lever_arm
+real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -2037,8 +2043,8 @@ real(amrex_real), INTENT(out) :: lever_arm
  endif
 
  angular_velocity_vector_custom=angular_velocity_vector
+ lever_arm_custom=lever_arm
  angular_velocity_vector_dot=zero
- lever_arm=zero
 
 end subroutine STUB_angular_velocity_vector
 
