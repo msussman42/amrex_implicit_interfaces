@@ -3721,8 +3721,11 @@ return
 end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
 
 subroutine CRYOGENIC_TANK_MK_angular_velocity_vector(x,cur_time, &
-   angular_velocity_vector,angular_velocity_vector_custom, &
-   angular_velocity_vector_dot,lever_arm)
+   angular_velocity_vector, &
+   angular_velocity_vector_custom, &
+   angular_velocity_vector_dot, &
+   lever_arm, &
+   lever_arm_custom)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -3730,9 +3733,10 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(in) :: lever_arm(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
+real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
-real(amrex_real), INTENT(out) :: lever_arm
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -3756,8 +3760,9 @@ real(amrex_real), INTENT(out) :: lever_arm
  endif
 
  angular_velocity_vector_custom=angular_velocity_vector
+ lever_arm_custom=lever_arm
  angular_velocity_vector_dot=zero
- lever_arm=radblob8
+ lever_arm_custom(2)=radblob8
  if (cur_time.ge.xblob8) then
   !do nothing
  else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then

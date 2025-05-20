@@ -10302,6 +10302,7 @@ END SUBROUTINE SIMP
        xlo,dx, &
        dt, & ! dt_slab
        angular_velocity_vector, & !intent(in) fort_init_potential
+       lever_arm, & !intent(in) fort_init_potential
        centrifugal_force_factor, & !intent(in) fort_init_potential
        isweep) &
       bind(c,name='fort_init_potential')
@@ -10316,6 +10317,7 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt  ! dt_slab
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+      real(amrex_real), INTENT(in) :: lever_arm(SDIM)
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       integer, INTENT(in) :: DIMDEC(presden)
       integer, INTENT(in) :: DIMDEC(state)
@@ -10384,6 +10386,7 @@ END SUBROUTINE SIMP
           time, &
           i,j,k,level, &
           angular_velocity_vector, &
+          lever_arm, &
           centrifugal_force_factor, &
           dt, &
           den_cell, &   !INTENT(out)
@@ -10443,6 +10446,7 @@ END SUBROUTINE SIMP
              time, &
              i,j,k,level, &
              angular_velocity_vector, & !intent(in)
+             lever_arm, & !intent(in)
              centrifugal_force_factor, & !intent(in)
              dt, &        ! intent(in)
              den_cell, &  ! intent(out)

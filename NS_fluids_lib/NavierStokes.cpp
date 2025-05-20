@@ -247,6 +247,7 @@ int NavierStokes::incremental_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 Vector<Real> NavierStokes::angular_velocity_vector;
+Vector<Real> NavierStokes::lever_arm;
 
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
@@ -1624,10 +1625,16 @@ void fortran_parameters() {
  pp.get("visc_coef",visc_coef_temp);
 
  Vector<Real> angular_velocity_vector_temp(3);
+ Vector<Real> lever_arm_temp(AMREX_SPACEDIM);
  Real angular_velocity_temp=NavierStokes::angular_velocity;
  angular_velocity_vector_temp[0]=0.0;
  angular_velocity_vector_temp[1]=0.0;
  angular_velocity_vector_temp[2]=angular_velocity_temp;
+
+ lever_arm_temp[0]=0.0;
+ lever_arm_temp[1]=0.0;
+ lever_arm_temp[AMREX_SPACEDIM-1]=0.0;
+ pp.queryarr("lever_arm",lever_arm_temp,0,AMREX_SPACEDIM);
 
  bool angular_velocity_in_table=pp.contains("angular_velocity");
  bool angular_velocity_vector_in_table=pp.contains("angular_velocity_vector");
@@ -2361,6 +2368,7 @@ void fortran_parameters() {
   etaP_temp.dataPtr(),
   &visc_coef_temp,
   angular_velocity_vector_temp.dataPtr(),
+  lever_arm_temp.dataPtr(),
   NavierStokes::grid_stretching_parameter.dataPtr(),
   &ioproc);
 
@@ -4264,6 +4272,12 @@ NavierStokes::read_params ()
     angular_velocity_vector[1]=0.0;
     angular_velocity_vector[2]=angular_velocity;
 
+    lever_arm.resize(AMREX_SPACEDIM);
+    lever_arm[0]=0.0;
+    lever_arm[1]=0.0;
+    lever_arm[AMREX_SPACEDIM-1]=0.0;
+    pp.queryarr("lever_arm",lever_arm,0,AMREX_SPACEDIM);
+
     bool angular_velocity_in_table=pp.contains("angular_velocity");
     bool angular_velocity_vector_in_table=
       pp.contains("angular_velocity_vector");
@@ -5972,6 +5986,8 @@ NavierStokes::read_params ()
        angular_velocity_vector[0] << ' ' <<
        angular_velocity_vector[1] << ' ' <<
        angular_velocity_vector[2] << '\n';
+
+     std::cout << "lever_arm= " << lever_arm << '\n';
 
      std::cout << "centrifugal_force_factor= " << 
        centrifugal_force_factor << '\n';
@@ -12544,6 +12560,7 @@ void NavierStokes::add_perturbation() {
    fort_addnoise(
     &dir,
     angular_velocity_vector.dataPtr(),  //parameter for fort_addnoise
+    lever_arm.dataPtr(),  //parameter for fort_addnoise
     &perturbation_mode, //inputs parameter
     &perturbation_eps_temp, //inputs parameter
     &perturbation_eps_vel,  //inputs parameter
