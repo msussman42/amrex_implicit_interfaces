@@ -5987,7 +5987,10 @@ NavierStokes::read_params ()
        angular_velocity_vector[1] << ' ' <<
        angular_velocity_vector[2] << '\n';
 
-     std::cout << "lever_arm= " << lever_arm << '\n';
+     std::cout << "lever_arm= 0..sdim-1:" << 
+       lever_arm[0] << ' ' <<
+       lever_arm[1] << ' ' << 
+       lever_arm[AMREX_SPACEDIM-1] << '\n';
 
      std::cout << "centrifugal_force_factor= " << 
        centrifugal_force_factor << '\n';
@@ -12560,7 +12563,6 @@ void NavierStokes::add_perturbation() {
    fort_addnoise(
     &dir,
     angular_velocity_vector.dataPtr(),  //parameter for fort_addnoise
-    lever_arm.dataPtr(),  //parameter for fort_addnoise
     &perturbation_mode, //inputs parameter
     &perturbation_eps_temp, //inputs parameter
     &perturbation_eps_vel,  //inputs parameter

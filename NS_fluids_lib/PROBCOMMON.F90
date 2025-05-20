@@ -744,17 +744,18 @@ implicit none
       real(amrex_real), INTENT(out) :: V0(SDIM)
       end subroutine TEMPLATE_V0_Coriolis
 
-      subroutine TEMPLATE_angular_velocity_vector(x,cur_time, &
+      subroutine TEMPLATE_angular_velocity_vector( &
+       x,cur_time, &
        angular_velocity_vector, &
        angular_velocity_vector_custom, &
        angular_velocity_vector_dot, &
-       lever_arm, &
+       lever_arm_in, &
        lever_arm_custom)
       use amrex_fort_module, only : amrex_real
       real(amrex_real), INTENT(in) :: x(SDIM)
       real(amrex_real), INTENT(in) :: cur_time
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
-      real(amrex_real), INTENT(out) :: lever_arm(SDIM)
+      real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
       real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
       real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
       real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
@@ -951,7 +952,7 @@ implicit none
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
         angular_velocity_vector, &
-        lever_arm, &
+        lever_arm_in, &
         centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
@@ -960,7 +961,7 @@ implicit none
       use amrex_fort_module, only : amrex_real
       integer, INTENT(in) :: i,j,k,level
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
-      real(amrex_real), INTENT(in) :: lever_arm(SDIM)
+      real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(inout) :: rho_hydrostatic

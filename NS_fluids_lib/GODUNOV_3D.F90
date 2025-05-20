@@ -4160,6 +4160,10 @@ stop
         ! rho=rho(T)
         if (override_density(im_parm).eq.1) then
 
+         print *,"override_density(im_parm).eq.1 is DISABLED:"
+         print *,im_parm,override_density(im_parm)
+         stop
+
          if (fort_material_type(im_parm).eq.0) then
           ! do nothing
          else
@@ -4246,7 +4250,8 @@ stop
                  (override_density(im_parm).eq.2)) then
          momden(D_DECL(i,j,k),im_parm)=rho_base
         else
-         print *,"override_density invalid"
+         print *,"override_density invalid: ",im_parm, &
+          override_density(im_parm)
          stop
         endif
 
