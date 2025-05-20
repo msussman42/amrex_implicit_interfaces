@@ -188,7 +188,6 @@ stop
          finest_level, &
          visc_coef, &
          angular_velocity_vector, & !intent(in): fort_hoopimplicit
-         lever_arm, & !intent(in): fort_hoopimplicit
          centrifugal_force_factor, & !intent(in): fort_hoopimplicit
          uncoupled_viscosity, &
          update_state, &
@@ -218,7 +217,6 @@ stop
        integer, INTENT(in) :: finest_level
        integer, INTENT(in) :: rzflag
        real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
-       real(amrex_real), INTENT(in) :: lever_arm(SDIM)
        real(amrex_real) :: angular_velocity_vector_custom(3)
        real(amrex_real) :: lever_arm_custom(SDIM)
        real(amrex_real) :: angular_velocity_vector_dot(3)
@@ -286,8 +284,14 @@ stop
        integer i,j,k
        integer dir
        integer im
-       real(amrex_real) un(AMREX_SPACEDIM)
-       real(amrex_real) unp1(AMREX_SPACEDIM)
+       real(amrex_real) un(3)
+       real(amrex_real) unp1(3)
+       real(amrex_real) un_bias(3)
+       real(amrex_real) x_bias(3)
+       real(amrex_real) F_coriolis(3)
+       real(amrex_real) F_Omega_dot(3)
+       real(amrex_real) Omega_cross_x(3)
+       real(amrex_real) F_centripetal(3)
        real(amrex_real) RCEN
        real(amrex_real) inverseden
        real(amrex_real) mu_cell
@@ -309,6 +313,9 @@ stop
        real(amrex_real) LStest,LScrit
        integer im_rigid_CL
        real(amrex_real) gravity_vector_out(SDIM)
+
+       un=zero
+       unp1=zero
 
        if (FSI_outer_sweeps.eq.0) then
         im_rigid_CL=num_materials !not used (no elastic materials are clamped)
@@ -362,11 +369,15 @@ stop
         stop
        endif
 
-       if (abs(angular_velocity_vector(3)- &
-               fort_angular_velocity_vector(3)).le.EPS2) then
+       if ((abs(angular_velocity_vector(3)- &
+                fort_angular_velocity_vector(3)).le.EPS2).and. &
+           (abs(angular_velocity_vector(1)- &
+                fort_angular_velocity_vector(1)).le.EPS2).and. &
+           (abs(angular_velocity_vector(2)- & 
+                fort_angular_velocity_vector(2)).le.EPS2)) then
         ! do nothing
        else
-        print *,"angular_velocity_vector or fort_angular_velocity_vector invalid"
+        print *,"angular_velocity_vector or fort_angular_velocity_vector bad"
         print *,"angular_velocity_vector=",angular_velocity_vector
         print *,"fort_angular_velocity_vector=",fort_angular_velocity_vector
         stop
@@ -656,9 +667,13 @@ stop
           else if (is_rigid(im).eq.0) then
            cell_density_denom=cell_density_denom+localF*rho_base
 
-           if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
-               (override_density(im).eq.1)) then ! rho=rho(T,Y)
-            ! do nothing
+           if (override_density(im).eq.0) then
+            !do nothing
+           else if (override_density(im).eq.1) then !rho=rho(T,Y) DISABLED
+            print *,"rho=rho(T,Y) DISABLED im,override_density ",im, &
+             override_density(im)
+            stop
+
             !
             ! NOTE: DrhoDT<=0.0.
             !
@@ -685,7 +700,8 @@ stop
             if (local_temp.gt.zero) then
              ! do nothing
             else
-             print *,"local_temp cannot be <= 0 fort_hoopimplicit(1)"
+             print *,"local_temp cannot be <= 0 fort_hoopimplicit(1): ", &
+              local_temp
              stop
             endif
 
@@ -717,7 +733,7 @@ stop
             DTEMP=DTEMP+localF*rho_base*rho_factor
 
            else
-            print *,"override_density invalid"
+            print *,"override_density invalid: ",im,override_density(im)
             stop
            endif
           else
@@ -775,7 +791,22 @@ stop
           ! R-Theta-Z 
           ! pres=pres+half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2)
           ! X-Y-Z 
-          ! pres=pres+half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2+xpos(2)**2)
+          ! pres=pres+ 
+          !  half*rho*(angular_velocity_vector(3)**2)*(xpos(1)**2+xpos(2)**2)
+          ! in general:
+          !  In general (non-inertial reference frame):
+          !    Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+          !      grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
+          !  grad (\Omega x (x-x0))^{2}/2 =
+          !    - Omega x (Omega x xpos)
+          !  e.g. | i j k     |
+          !       | 0 0 Omega |
+          !       | x y z     | = -Omega y ihat + Omega x jhat
+          ! Omega x (Omega x xpos) = 
+          !     | i      j       k    |
+          !     | 0      0    Omega   |
+          !     | -Om y  Om x   0     | =
+          ! -Omega^2 x ihat - Omega^2 y jhat
 
          call SUB_angular_velocity_vector(xpoint,cur_time_slab, &
            angular_velocity_vector, &
@@ -784,15 +815,42 @@ stop
            lever_arm, &
            lever_arm_custom)
 
-         if ((angular_velocity_vector_custom(3).le.angular_velocity_vector(3)).and. &
+         if ((angular_velocity_vector_custom(3).le. &
+              angular_velocity_vector(3)).and. &
              (angular_velocity_vector_custom(3).ge.zero).and. &
-             (angular_velocity_vector_dot(3).ge.zero).and. &
-             (lever_arm(SDIM).ge.zero)) then
+             (angular_velocity_vector_dot(3).ge.zero)) then
           !do nothing
          else
-          print *,"angular_velocity_vector parameters invalid (DIFFUSION_3D.F90) "
+          print *,"angular_velocity_vector parameters bad (DIFFUSION_3D.F90) "
           stop
          endif
+
+         ! coriolis force:
+         ! -2 omega cross v =
+         !  rhat  theta_hat   zhat 
+         !  0        0      angular_velocity_vector(3)
+         !  u        v         w
+         ! = -2(-angular_vel. v,angular_velocity_vector(3) u)
+
+         un_bias(3)=zero
+         do dir=1,SDIM
+          un_bias(dir)=un(dir)-V_BASE(dir)
+         enddo
+           ! e.g. | i j k     |
+           !      | 0 0 Omega |
+           !      | u v w     | =-v Omega ihat + u Omega jhat
+          call crossprod(angular_velocity_vector_custom,un_bias, &
+           F_coriolis)
+
+          x_bias(3)=zero
+          do dir=1,SDIM
+           x_bias(dir)=xpoint(dir)+lever_arm_custom(dir)
+          enddo
+          call crossprod(angular_velocity_vector_dot,x_bias,F_Omega_dot)
+
+          call crossprod(angular_velocity_vector_custom,x_bias,Omega_cross_x)
+          call crossprod(angular_velocity_vector_custom,Omega_cross_x, &
+           F_centripetal)
 
          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
@@ -802,62 +860,62 @@ stop
            print *,"RCEN invalid: ",RCEN
            stop
           endif
+
+          if ((angular_velocity_vector_custom(1).eq.zero).and. &
+              (angular_velocity_vector_custom(2).eq.zero).and. &
+              (angular_velocity_vector_custom(3).ge.zero)) then
+           !do nothing
+          else
+           print *,"only z component allowed angular_velocity_vector_custom"
+           stop
+          endif
+
            ! Coriolis "force"
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+ &
-           dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
-               two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
-               angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm_custom(2)))
+           dt*(centrifugal_force_factor*(un(2)**2)/RCEN- &
+            two*F_coriolis(1)- &
+            F_omega_dot(1))*(one+DTEMP)
           unp1(2)=unp1(2)- &
            dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-               two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
-               angular_velocity_vector_dot(3)*(xpoint(1)))
+            two*F_coriolis(2)+ &
+            F_omega_dot(2))*(one+DTEMP)
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
-          unp1(1)=unp1(1)+ &
-           dt*DTEMP*centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*RCEN
+          unp1(1)=unp1(1)- &
+           dt*DTEMP*centrifugal_force_factor*F_centripetal(1)
 
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
-          ! assume that RCEN > eps > 0 ?
-          ! coriolis force:
-          ! -2 omega cross v =
-          !  rhat  theta_hat   zhat 
-          !  0        0      angular_velocity_vector(3)
-          !  u        v         w
-          ! = -2(-angular_vel. v,angular_velocity_vector(3) u)
+           
+          do dir=1,SDIM
+           unp1(dir)=unp1(dir)- &
+             dt*(two*F_coriolis(dir)+ &
+                 F_Omega_dot(dir))*(one+DTEMP)
+          enddo
 
-          unp1(1)=unp1(1)+ &
-            dt*( two*angular_velocity_vector_custom(3)*(un(2)-V_BASE(2))+ &
-                 angular_velocity_vector_dot(3)*(xpoint(2)+lever_arm_custom(2)))
-          unp1(2)=unp1(2)- &
-            dt*( two*angular_velocity_vector_custom(3)*(un(1)-V_BASE(1))+ &
-                 angular_velocity_vector_dot(3)*(xpoint(1))  )
-
-          if ((DTEMP.eq.zero).or. &
-              (angular_velocity_vector_custom(3).eq.zero)) then
+          if (DTEMP.eq.zero) then
            ! do nothing
-          else if ((DTEMP.ne.zero).and. &
-                   (angular_velocity_vector_custom(3).gt.zero)) then
+          else if (DTEMP.ne.zero) then
                    
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
-           unp1(1)=unp1(1)+ &
-            dt*DTEMP* &
-            centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*xsten(0,1)
-           unp1(2)=unp1(2)+ &
-            dt*DTEMP* &
-            centrifugal_force_factor*(angular_velocity_vector_custom(3)**2)*xsten(0,2)
+           do dir=1,SDIM
+            unp1(dir)=unp1(dir)- &
+              dt*DTEMP*centrifugal_force_factor*F_centripetal(dir)
+           enddo
+
           else
-           print *,"DTEMP or angular_velocity_vector invalid"
+           print *,"DTEMP invalid"
            print *,"DTEMP=",DTEMP
            print *,"angular_velocity_vector=",angular_velocity_vector
-           print *,"angular_velocity_vector_custom=",angular_velocity_vector_custom
+           print *,"angular_velocity_vector_custom=", &
+            angular_velocity_vector_custom
            stop
           endif
 
