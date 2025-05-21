@@ -226,6 +226,7 @@ ns.shock_timestep=2 2 2
 #ns.visual_nddata_format=1 #visit, amrvis
 #ns.visual_nddata_format=2 #piecewise constant tecplot
 ns.visual_nddata_format=0
+ns.visual_tessellate_vfrac=1
 
 amr.check_int       = 200  # number of timesteps between checkpoints 2D
 #amr.check_int       = 40    # number of timesteps between checkpoints 3D
