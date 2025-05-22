@@ -25512,6 +25512,13 @@ end subroutine initialize2d
           print *,"p_hyd invalid"
           print *,"probtype=",probtype
           print *,"p_hyd=",p_hyd
+          print *,"xpos=",xpos
+          print *,"time=",time
+          print *,"distbatch=",distbatch
+          print *,"num_materials=",num_materials
+          print *,"fort_material_type=",fort_material_type
+          print *,"probhiy=",probhiy 
+          print *,"probhiz=",probhiz 
           stop
          endif
 

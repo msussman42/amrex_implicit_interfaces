@@ -62,10 +62,24 @@ ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 #default is FSI_interval=1.
 #FSI_interval applicable when FSI_flag=2, not when FSI_flag=1
 ns.FSI_interval     = 0 
-#tpce_heatera.vtk (top), tpce_heaterb.vtk (side),
-#tpce_source.vtk, tpce_sink.vtk, 
+#tpce_heatera.vtk (top), 
+#tpce_heaterb.vtk (side),
+#tpce_source.vtk, 
+#tpce_sink.vtk, 
 #tpce_geometry.vtk
-ns.num_local_aux_grids=7
+#zbot_flight_heatera.vtk
+#zbot_flight_heaterb.vtk
+#zbot_flight_inflow_thick.vtk
+#zbot_flight_outflow_thick.vtk
+#zbot_flight_tank_thicknozzles.vtk
+#zbot_flight_inletnozzle_thick.vtk
+#zbot_flight_outletnozzle_thick.vtk
+ns.num_local_aux_grids=7 # thin
+#heatera_coarse.vtk (top), heaterb_coarse.vtk (side),
+#tank_coarse.vtk, sink_coarse.vtk, 
+#nozzlesource_coarse.vtk
+#nozzle_coarse.vtk
+#ns.num_local_aux_grids=6 # thick
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
@@ -83,7 +97,8 @@ ns.num_local_aux_grids=7
 #volume= pi (.127)^2 .102 + (4/3)pi (.127)^3=0.01375 m^3
 ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
-ns.zblob            = 0.0    # Interface location 
+#ns.zblob            = 0.0    # Interface location 
+ns.zblob            = 0.140  # Interface location  parabolic
 ns.radblob          = 0.0    # Not used
 # 64^3 grid (compute1):
 # ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD
@@ -97,7 +112,8 @@ ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
 # TANK GEOMETRY FILES IN 3D have the "vertical direction" as the
 # "y" direction, but the code swaps y and z so that
 # the "z" direction becomes the vertical direction.
-ns.radblob2         = 0.03   # radius of spherical ullage
+#ns.radblob2         = 0.03   # radius of spherical ullage
+ns.radblob2         = 0.0 #parabolic
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
 ns.zblob2           = 0.186
@@ -158,7 +174,7 @@ ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 
 # Adaptive dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
-ns.init_shrink      = 0.01     # scale back initial timestep
+ns.init_shrink      = 1.0     # scale back initial timestep
 ns.change_max=1.01      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
@@ -187,9 +203,9 @@ amr.check_file      = chk  # root name of checkpoint file
 ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
-amr.plot_int        = 200 # number of timesteps between plot files (2D)
+#amr.plot_int        = 200 # number of timesteps between plot files (2D)
 #amr.plot_int        = 10  # number of timesteps between plot files (2D)
-#amr.plot_int        = 1   # number of timesteps between plot files (3D)
+amr.plot_int        = 1   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1
@@ -354,7 +370,8 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 # pressure are given below.
 ns.saturation_temp=33.0 0.0 0.0 0.0 0.0 0.0  # T_ref
 ns.saturation_temp_min=20.28 0.0 0.0 0.0 0.0 0.0
-ns.reference_pressure=33859.5 0.0 0.0 0.0 0.0 0.0
+#ns.reference_pressure=33859.5 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=283149.11510019755 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
