@@ -339,7 +339,8 @@ integer, INTENT(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
      (auxcomp.le.num_aux_expect)) then
-  if (axis_dir.eq.2) then
+  if ((axis_dir.eq.2).or. &
+      (axis_dir.eq.4)) then
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
 
@@ -431,7 +432,7 @@ integer, INTENT(out) :: aux_ncells_max_side
     stop
    endif
   else
-   print *,"axis_dir invalid in CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX"
+   print *,"axis_dir invalid in CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX: ",axis_dir
    stop
   endif
 
@@ -456,7 +457,7 @@ integer :: stat
 
  file_format=1 ! vtk format
 
- if (axis_dir.eq.2) then
+ if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
 
   if (fort_num_local_aux_grids.eq.num_aux_expect) then
 
@@ -568,7 +569,7 @@ integer :: stat
   endif 
 
  else
-  print *,"expecting axis_dir.eq.2: ",axis_dir
+  print *,"expecting axis_dir.eq.2 or 4: ",axis_dir
   stop
  endif
 
@@ -582,6 +583,7 @@ use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), intent(in) :: z
+real(amrex_real) :: z_shift
 real(amrex_real), intent(out) :: temperature
 integer :: idata,index_1,index_2
 
@@ -597,13 +599,30 @@ endif
 
 idata=1
 
-if (parabolic_tinit(idata,index_1)*1.0D-3.ge.z) then
+z_shift=z
+
+if (axis_dir.eq.3) then
+ !do nothing
+else if (axis_dir.eq.4) then
+ ! -0.1 = a (-.05)+b
+ ! 0.1= a(.25)+b
+ ! 0.2=a(.3)  a=2/3
+ ! -0.1=(2/3)(-.05)+b  -.3=(-.1)+3b  3b=-.2  b=-1/15
+ !z=-1/20=>z_shift=-1/30-2/30=-1/10
+ !z=1/4=>z_shift=1/6-1/15=1/10
+ z_shift=(2.0d0/3.0d0)*z-1.0d0/15.0d0  
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if (parabolic_tinit(idata,index_1)*1.0D-3.ge.z_shift) then
  temperature=parabolic_tinit(idata,index_2)
-else if (parabolic_tinit(n_data_temp,index_1)*1.0D-3.le.z) then
+else if (parabolic_tinit(n_data_temp,index_1)*1.0D-3.le.z_shift) then
  temperature=parabolic_tinit(n_data_temp,index_2)
 else
 
- do while ((parabolic_tinit(idata,index_1)*1.0D-3.lt.z).and. &
+ do while ((parabolic_tinit(idata,index_1)*1.0D-3.lt.z_shift).and. &
            (idata.lt.n_data_temp)) 
   idata=idata+1
   if ((parabolic_tinit(idata,index_1).ge. &
@@ -623,8 +642,20 @@ else
 
  temperature=parabolic_tinit(idata-1,index_2)+ &
      (parabolic_tinit(idata,index_2)-parabolic_tinit(idata-1,index_2))* &
-     (z*1.0D+3-parabolic_tinit(idata-1,index_1))/ &
+     (z_shift*1.0D+3-parabolic_tinit(idata-1,index_1))/ &
      (parabolic_tinit(idata,index_1)-parabolic_tinit(idata-1,index_1))
+endif
+
+if (axis_dir.eq.3) then
+ !do nothing
+else if (axis_dir.eq.4) then
+ temperature=temperature-300.0d0
+ if (temperature.lt.20.28d0) then
+  temperature=20.28d0
+ endif
+else
+ print *,"axis_dir invalid"
+ stop
 endif
 
 if (temperature.ge.zero) then
@@ -687,14 +718,65 @@ enddo !dir=1,3
 return
 end subroutine interp_parabolic_xyz
 
+ subroutine read_parabolic_data()
+ use probcommon_module
+ implicit none
+
+ integer :: dir
+ integer :: idata,index_1,index_2
+
+   print *,"reading parabolic_tinit"
+   open(unit=2, file='parabolic_tinit')
+   read(2,*) n_data_temp
+   print *,"n_data_temp=",n_data_temp
+   index_1=1
+   index_2=2
+
+    !temperature K
+    !z mm
+    !data file (T deg K,z mm) -> internal data (z mm,T deg K)
+   do idata=1,n_data_temp
+    read(2,*) parabolic_tinit(idata,index_2),parabolic_tinit(idata,index_1)
+    parabolic_tinit(idata,index_1)=parabolic_tinit(idata,index_1)-60.0d0
+   enddo
+   close(2)
+
+   print *,"reading parabolic_xyz_accel"
+   open(unit=2, file='parabolic_xyz_accel')
+   read(2,*) n_data_xyz(1),n_data_xyz(2),n_data_xyz(3)
+
+   do dir=1,3
+    index_1=2*dir-1
+    index_2=index_1+1
+
+    print *,"dir, n_data_xyz=",dir,n_data_xyz(dir)
+    !time second
+    !accel = alpha * g0
+    do idata=1,n_data_xyz(dir)
+     read(2,*) parabolic_xyz_accel(idata,index_1), &
+               parabolic_xyz_accel(idata,index_2)
+     parabolic_xyz_accel(idata,index_1)=parabolic_xyz_accel(idata,index_1)+ &
+        parabolic_lead_time
+     if (parabolic_xyz_accel(idata,index_1).ge.zero) then
+      !do nothing
+     else
+      print *,"parabolic_xyz_accel(idata,index_1) invalid: ", &
+       parabolic_xyz_accel(idata,index_1)
+      stop
+     endif
+    enddo !idata=1,n_data_xyz(dir)
+
+   enddo !dir=1,3
+
+   close(2)
+
+ return
+ end subroutine read_parabolic_data
 
  ! do any initial preparation needed
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
-
-  integer :: dir
-  integer :: idata,index_1,index_2
 
   num_aux_expect=0
  
@@ -745,13 +827,15 @@ end subroutine interp_parabolic_xyz
 
    ! TPCE
   else if ((axis_dir.eq.1).or. &
-           (axis_dir.eq.2)) then ! heater on top
+           (axis_dir.eq.2).or. &
+           (axis_dir.eq.4)) then ! heater on top
 
    number_of_source_regions=3 ! heater A, inflow, outflow
 
    if (axis_dir.eq.1) then
     num_aux_expect=0
-   else if (axis_dir.eq.2) then
+   else if ((axis_dir.eq.2).or. &
+            (axis_dir.eq.4)) then
 
     if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      num_aux_expect=7
@@ -801,56 +885,22 @@ end subroutine interp_parabolic_xyz
 
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
+   if (axis_dir.eq.2) then
+    !do nothing
+   else if (axis_dir.eq.4) then
+    call read_parabolic_data()
+   else
+    print *,"axis_dir invalid: ",axis_dir
+    stop
+   endif
+
    !Experimental characterization of non-isothermal sloshing in microgravity
    !Monteiro et al 2024
   else if (axis_dir.eq.3) then
    number_of_source_regions=0
    num_aux_expect=0
 
-   print *,"reading parabolic_tinit"
-   open(unit=2, file='parabolic_tinit')
-   read(2,*) n_data_temp
-   print *,"n_data_temp=",n_data_temp
-   index_1=1
-   index_2=2
-
-    !temperature K
-    !z mm
-    !data file (T deg K,z mm) -> internal data (z mm,T deg K)
-   do idata=1,n_data_temp
-    read(2,*) parabolic_tinit(idata,index_2),parabolic_tinit(idata,index_1)
-    parabolic_tinit(idata,index_1)=parabolic_tinit(idata,index_1)-60.0d0
-   enddo
-   close(2)
-
-   print *,"reading parabolic_xyz_accel"
-   open(unit=2, file='parabolic_xyz_accel')
-   read(2,*) n_data_xyz(1),n_data_xyz(2),n_data_xyz(3)
-
-   do dir=1,3
-    index_1=2*dir-1
-    index_2=index_1+1
-
-    print *,"dir, n_data_xyz=",dir,n_data_xyz(dir)
-    !time second
-    !accel = alpha * g0
-    do idata=1,n_data_xyz(dir)
-     read(2,*) parabolic_xyz_accel(idata,index_1), &
-               parabolic_xyz_accel(idata,index_2)
-     parabolic_xyz_accel(idata,index_1)=parabolic_xyz_accel(idata,index_1)+ &
-        parabolic_lead_time
-     if (parabolic_xyz_accel(idata,index_1).ge.zero) then
-      !do nothing
-     else
-      print *,"parabolic_xyz_accel(idata,index_1) invalid: ", &
-       parabolic_xyz_accel(idata,index_1)
-      stop
-     endif
-    enddo !idata=1,n_data_xyz(dir)
-
-   enddo !dir=1,3
-
-   close(2)
+   call read_parabolic_data()
 
   else
    print *,"axis_dir invalid (INIT_CRYOGENIC_TANK_MK_MODULE): ",axis_dir
@@ -903,7 +953,10 @@ end subroutine interp_parabolic_xyz
   real(amrex_real), INTENT(out) :: LS
   real(amrex_real) :: xlo,xhi,ylo,yhi,xcen
 
-  if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+  if ((axis_dir.eq.0).or. &
+      (axis_dir.eq.1).or. &
+      (axis_dir.eq.2).or. &
+      (axis_dir.eq.4)) then
 
    if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
        (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
@@ -932,7 +985,7 @@ end subroutine interp_parabolic_xyz
    endif
 
   else
-   print *,"expecting axis_dir=0,1,or 2 in LS_NOZZLE"
+   print *,"expecting axis_dir=0,1,2, or 4 in LS_NOZZLE"
    stop
   endif
 
@@ -1290,7 +1343,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      print *,"axis_dir invalid: ",axis_dir
      stop
     endif
-   else if (axis_dir.eq.2) then !TPCE e.g. tpce_geometry.vtk
+   else if ((axis_dir.eq.2).or. &
+            (axis_dir.eq.4)) then !TPCE e.g. tpce_geometry.vtk
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1563,7 +1617,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
 
-   else if (axis_dir.eq.3) then
+   else if ((axis_dir.eq.3).or. &
+            (axis_dir.eq.4)) then
 
     do dir=1,SDIM
      VEL(dir)=0.0d0
@@ -2124,7 +2179,9 @@ if ((num_materials.eq.3).and. &
 
   ! temperature
 
-  if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+  if ((axis_dir.eq.0).or. &
+      (axis_dir.eq.1).or. &
+      (axis_dir.eq.2)) then
 
    if (t.eq.0.0d0) then
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
@@ -2135,7 +2192,8 @@ if ((num_materials.eq.3).and. &
     stop
    endif
 
-  else if (axis_dir.eq.3) then
+  else if ((axis_dir.eq.3).or. &
+           (axis_dir.eq.4))  then
    call interp_parabolic_tinit(x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
@@ -2156,6 +2214,8 @@ if ((num_materials.eq.3).and. &
      temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
     else if (axis_dir.eq.3) then
      temperature=295.41d0
+    else if (axis_dir.eq.4) then !LH2
+     temperature=20.0d0
     else
      print *,"axis_dir invalid Pressure sanity check: ",axis_dir
      stop
@@ -2191,7 +2251,8 @@ if ((num_materials.eq.3).and. &
      else if ((axis_dir.eq.0).or. &
               (axis_dir.eq.1).or. &
               (axis_dir.eq.2).or. &
-              (axis_dir.eq.3)) then !parabolic test
+              (axis_dir.eq.3).or. & ! parabolic test
+              (axis_dir.eq.4)) then 
       print *,"mismatch between Pgamma and Pgas"
       print *,"axis_dir=",axis_dir
       print *,"Pgamma=",Pgamma
@@ -2520,7 +2581,10 @@ endif
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+if ((axis_dir.eq.0).or. &
+    (axis_dir.eq.1).or. &
+    (axis_dir.eq.2).or. &
+    (axis_dir.eq.4)) then
 
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
   ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
@@ -2533,7 +2597,8 @@ if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
   T4_probe(1)=0.0d0
   T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
  
-  if (axis_dir.eq.2) then ! TPCE aux files
+  if ((axis_dir.eq.2).or. &
+      (axis_dir.eq.4)) then ! TPCE aux files
    if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
     T1_probe(1)=xblob2
     T1_probe(2)=zblob2
@@ -2574,10 +2639,11 @@ if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
    else if (axis_dir.eq.1) then
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
-   else if (axis_dir.eq.2) then
+   else if ((axis_dir.eq.2).or. &
+            (axis_dir.eq.4)) then
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else
-    print *,"axis_dir invalid"
+    print *,"axis_dir invalid: ",axis_dir
     stop
    endif
   enddo
@@ -2723,7 +2789,8 @@ integer :: im,iregion,dir
    regions_list(1,0)%region_material_id=3 !heater
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
   else if ((axis_dir.eq.1).or. &
-           (axis_dir.eq.2)) then 
+           (axis_dir.eq.2).or. &
+           (axis_dir.eq.4)) then 
    regions_list(1,0)%region_material_id=3 ! heater
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
     ! inflow
@@ -2748,7 +2815,7 @@ integer :: im,iregion,dir
   else if (axis_dir.eq.3) then
    !do nothing
   else
-   print *,"axis_dir invalid"
+   print *,"axis_dir invalid: ",axis_dir
    stop
   endif
 
@@ -2897,7 +2964,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
- else if (axis_dir.eq.2) then
+ else if ((axis_dir.eq.2).or. &
+          (axis_dir.eq.4)) then
 
   if (region_id.eq.1) then ! heater A (top)
    auxcomp=1
@@ -3160,18 +3228,20 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   endif
 
  else if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2)) then !TPCE
+          (axis_dir.eq.2).or. &
+          (axis_dir.eq.4)) then !TPCE
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    called_from_heater_source=1
    if (axis_dir.eq.1) then
     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source)
-   else if (axis_dir.eq.2) then
+   else if ((axis_dir.eq.2).or. &
+            (axis_dir.eq.4)) then
     auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    else
-    print *,"axis_dir invalid"
+    print *,"axis_dir invalid: ",axis_dir
     stop
    endif
 
@@ -3195,6 +3265,24 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    print *,"im invalid"
    stop
   endif
+
+  if ((axis_dir.eq.1).or. &
+      (axis_dir.eq.2)) then
+   !do nothing
+  else if (axis_dir.eq.4) then
+   if (cur_time.le.parabolic_lead_time) then
+    thermal_k=zero
+   else if (cur_time.ge.parabolic_lead_time) then
+    !do nothing
+   else
+    print *,"cur_time invalid ",cur_time
+    stop
+   endif
+  else
+   print *,"axis_dir out of range: ",axis_dir
+   stop
+  endif
+
  else if (axis_dir.eq.3) then !parabolic
   if (cur_time.le.parabolic_lead_time) then
    thermal_k=zero
@@ -3806,7 +3894,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      (axis_dir.eq.1).or. &
      (axis_dir.eq.2)) then
   !do nothing
- else if (axis_dir.eq.3) then
+ else if ((axis_dir.eq.3).or. &
+          (axis_dir.eq.4)) then
   if ((gravity_vector_in(1).eq.zero).and. &
       (gravity_vector_in(SDIM-1).eq.zero).and. &
       (abs(abs(gravity_vector_in(SDIM))-9.8d0).le.0.1d0)) then
@@ -3889,7 +3978,8 @@ if ((num_materials.ge.3).and. &
 
  if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
   !do nothing
- else if (axis_dir.eq.3) then
+ else if ((axis_dir.eq.3).or. &
+          (axis_dir.eq.4)) then
   if (assimilate_in%cur_time.le.parabolic_lead_time) then
    if (cell_flag.eq.-1) then
     call interp_parabolic_tinit(xcrit(SDIM),parabolic_temp)
