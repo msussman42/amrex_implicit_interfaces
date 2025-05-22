@@ -37,6 +37,7 @@ integer, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
 integer, PARAMETER :: ZBOT_FLIGHT_ID=1
 integer, PARAMETER :: TPCE_ID=0
 integer, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
+!integer, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=TPCE_ID
 
 integer :: num_aux_expect
 
@@ -245,7 +246,7 @@ integer :: dir
     else if (part_id.eq.6) then ! nozzle housing
      call check_outside_box(xcell,exterior_BB,LS,MASK)
     else
-     print *,"part_id invalid"
+     print *,"part_id invalid: ",part_id
      stop
     endif
 
@@ -564,6 +565,7 @@ integer :: stat
    endif
 
   else
+   print *,"fort_num_local_aux_grids=",fort_num_local_aux_grids
    print *,"expecting fort_num_local_aux_grids=",num_aux_expect
    stop
   endif 
@@ -654,7 +656,7 @@ else if (axis_dir.eq.4) then
   temperature=20.28d0
  endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
@@ -2022,10 +2024,8 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(out) :: PRES
 real(amrex_real), INTENT(out) :: rho_hyd
-integer simple_hyd_p
+integer, parameter :: simple_hyd_p=1
 integer gravity_dir
-
-simple_hyd_p=1
 
 call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -2054,8 +2054,17 @@ if(fort_material_type(2).eq.0) then
   endif
 
  else if (simple_hyd_p.eq.1) then
+
   rho_hyd=fort_denconst(1)
-  PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(SDIM)-probhiy-probhiy)
+  if (SDIM.eq.2) then
+   PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(SDIM)-probhiy-probhiy)
+  else if (SDIM.eq.3) then
+   PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(SDIM)-probhiz-probhiz)
+  else
+   print *,"SDIM invalid"
+   stop
+  endif
+
  else
   print *,"simple_hyd_p invalid"
   stop
