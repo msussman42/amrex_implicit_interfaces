@@ -159,7 +159,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 #amr.n_cell          = 128 128 128 #3D
 #amr.n_cell          = 64 64 128 # maxlevel=0: 16 cores compute1 #3D
 amr.n_cell          = 32 32 64 # maxlevel=0: 16 cores compute1 #3D
-amr.max_level       = 0 #3D
+amr.max_level       = 2 #3D
+ns.max_level_for_use=0
 
 amr.regrid_int      = 1     # How often to regrid
 #amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
@@ -168,7 +169,7 @@ cg.min_max_grid_size=32
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 2 2 2 # number of buffer cells in error est 
-amr.blocking_factor = 8 2 2 # block factor in grid generation
+amr.blocking_factor = 8 8 8 # block factor in grid generation
 
 amr.grid_eff        = 0.85  # smaller => less boxes
 
