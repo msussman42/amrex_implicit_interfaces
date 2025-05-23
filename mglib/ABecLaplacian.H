@@ -22,6 +22,8 @@ public:
       // on the coarser mg levels.
     Vector<int> cfd_max_grid_size;
 
+    static int min_max_grid_size;
+
     int laplacian_solvability; // 0=> do not project, 1=> project RHS
 
     ABecLaplacian (

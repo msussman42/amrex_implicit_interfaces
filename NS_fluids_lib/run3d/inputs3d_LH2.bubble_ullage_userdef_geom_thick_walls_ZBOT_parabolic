@@ -162,7 +162,8 @@ amr.max_level       = 0 #3D
 
 amr.regrid_int      = 1     # How often to regrid
 #amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
-amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
+amr.max_grid_size   = 16   # 32 is optimal for MPI in 3D
+cg.min_max_grid_size=32
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 2 2 2 # number of buffer cells in error est 
@@ -195,7 +196,7 @@ ns.shock_timestep=2 2 2
 ns.visual_nddata_format=0
 ns.visual_tessellate_vfrac=1
 
-amr.check_int       = 200  # number of timesteps between checkpoints 2D
+amr.check_int       = 400  # number of timesteps between checkpoints 2D
 #amr.check_int       = 10  # number of timesteps between checkpoints 3D
 amr.check_file      = chk  # root name of checkpoint file
 
@@ -205,7 +206,7 @@ ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 #amr.plot_int        = 200 # number of timesteps between plot files (2D)
 #amr.plot_int        = 10  # number of timesteps between plot files (2D)
-amr.plot_int        = 1   # number of timesteps between plot files (3D)
+amr.plot_int        = 400   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1

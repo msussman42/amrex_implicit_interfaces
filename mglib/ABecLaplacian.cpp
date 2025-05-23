@@ -30,6 +30,8 @@ namespace amrex{
 
 int ABecLaplacian::mglib_blocking_factor = 2;
 
+int ABecLaplacian::min_max_grid_size = 32;
+
 int ABecLaplacian::nghostRHS=0;
 int ABecLaplacian::nghostSOLN=1;
 
@@ -976,6 +978,12 @@ ABecLaplacian::ABecLaplacian (
  } else
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
+ ppcg.queryAdd("min_max_grid_size", min_max_grid_size);
+ if (min_max_grid_size>=32) {
+  // do nothing
+ } else
+  amrex::Error("expecting cg.min_max_grid_size>=32");
+
  ppcg.queryAdd("maxiter", CG_def_maxiter);
  ppcg.queryAdd("restart_period", CG_def_restart_period);
  ppcg.queryAdd("v", CG_def_verbose);
@@ -1107,7 +1115,8 @@ ABecLaplacian::ABecLaplacian (
  } // coarsefine=0,...,CG_numlevels_var-1
 
  MG_initialsolution=(MultiFab*) 0; 
- 
+
+  //if (CG_use_mg_precond_at_top==0) then MG_numlevels_var=1 
  for (int level=0;level<MG_numlevels_var;level++) {
 
   if (level==0) {
@@ -1133,12 +1142,19 @@ ABecLaplacian::ABecLaplacian (
    BoxArray one_cgrid(geomarray[level].Domain());
 
    if (cfd_max_grid_size.size()>=1) {
+
     int local_max_grid_size=cfd_max_grid_size[0];
-    if (local_max_grid_size>=16) {
+
+    if (local_max_grid_size<min_max_grid_size)
+     local_max_grid_size=min_max_grid_size;
+
+     //the larger local_max_grid_size, the more effective the
+     //IC precondiioner
+    if (local_max_grid_size>=32) {
      gbox[level]=one_cgrid;
      gbox[level].maxSize(local_max_grid_size);
     } else
-     amrex::Error("local_max_grid_size>=16 required");
+     amrex::Error("local_max_grid_size>=32 required");
    } else
     amrex::Error("cfd_max_grid_size.size() invalid");
 
@@ -2887,6 +2903,8 @@ ABecLaplacian::CG_solve(
        std::cout << "level (mglib)= " << level << '\n';
        std::cout << "mglib_blocking_factor= " << 
          mglib_blocking_factor << '\n';
+       std::cout << "min_max_grid_size= " << 
+         min_max_grid_size << '\n';
        std::cout << "smooth_type= " << smooth_type << '\n';
        std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
        std::cout << "local_presmooth= " << local_presmooth << '\n';
@@ -2907,6 +2925,8 @@ ABecLaplacian::CG_solve(
       std::cout << "level (mglib)= " << level << '\n';
       std::cout << "mglib_blocking_factor= " << 
         mglib_blocking_factor << '\n';
+      std::cout << "min_max_grid_size= " << 
+        min_max_grid_size << '\n';
       std::cout << "smooth_type= " << smooth_type << '\n';
       std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
       std::cout << "local_presmooth= " << local_presmooth << '\n';
