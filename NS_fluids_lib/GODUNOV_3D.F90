@@ -2982,7 +2982,7 @@ stop
 
       if (level.eq.finest_level) then
        if (1.eq.1) then
-        print *,"SUB_gravity_vector sanity check: ",gravity_vector_out
+        print *,"SUB_gravity_vector sanity check: ",time,gravity_vector_out
        endif
       else if ((level.ge.0).and.(level.lt.finest_level)) then
        !do nothing
@@ -3649,7 +3649,7 @@ stop
          endif
         enddo ! dir2=1..sdim
        else
-        print *,"time invalid in fort_estdt"
+        print *,"time invalid in fort_estdt: ",time
         stop
        endif
 
