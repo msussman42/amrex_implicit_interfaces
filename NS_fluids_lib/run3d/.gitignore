@@ -32,6 +32,9 @@ ICE_RESISTANT/
 cavity_surface/
 CRYOGENIC_TANK_TPCE/
 tank_sloshing/
+cylinder_parabolic/
+cylinder_parabolic_nowobble/
+zbot_parabolic/
 FilmBoiling/
 FABRIC_DROP/*
 ZBOT3D/
