@@ -182,8 +182,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
-#amr.n_cell          = 64 64 64 # 8 cores compute1
-amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
+amr.n_cell          = 64 64 64 # 8 cores compute1
+#amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
 #amr.n_cell          = 64 64 64 # 8 core parabolic dx=.2/64=0.003125
 amr.max_level       = 0
 
@@ -228,7 +228,7 @@ ns.shock_timestep=2 2 2
 ns.visual_nddata_format=0
 ns.visual_tessellate_vfrac=1
 
-amr.check_int       = 200  # number of timesteps between checkpoints 2D
+amr.check_int       = 400  # number of timesteps between checkpoints 2D
 #amr.check_int       = 40    # number of timesteps between checkpoints 3D
 amr.check_file      = chk   # root name of checkpoint file
 
@@ -236,7 +236,7 @@ amr.check_file      = chk   # root name of checkpoint file
 ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
-amr.plot_int        = 200 # number of timesteps between plot files (2D)
+amr.plot_int        = 400 # number of timesteps between plot files (2D)
 #amr.plot_int        = 40   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
@@ -392,7 +392,8 @@ ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 ns.saturation_temp=340.0 0.0 0.0 0.0 0.0 0.0  # T_ref parabolic
 ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
 ns.saturation_temp_max=340.0 0.0 0.0 0.0 0.0 0.0 # parabolic
-ns.reference_pressure=101513.36461739511 0.0 0.0 0.0 0.0 0.0
+#ns.reference_pressure=101513.36461739511 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=298892.40247128590 0.0 0.0 0.0 0.0 0.0
 ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
 # Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
 ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
