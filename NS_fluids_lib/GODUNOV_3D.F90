@@ -98,7 +98,7 @@ stop
       else if (LS_clamped.lt.zero) then
        ! do nothing
       else
-       print *,"LS_clamped invalid"
+       print *,"LS_clamped invalid: ",LS_clamped
        stop
       endif
 
@@ -108,6 +108,7 @@ stop
         if (x0(normdir+1).le.EPS2*dx(normdir+1)) then
          delta=zero
         else
+           ! adjust_du is declared in MASS_TRANSFER_3D.F90
          call adjust_du(delta,normdir,x0(normdir+1),map_forward)
         endif
        else if ((normdir.eq.1).or.(normdir.eq.SDIM-1)) then
@@ -115,7 +116,7 @@ stop
          delta=zero
         endif
        else
-        print *,"normdir invalid"
+        print *,"normdir invalid: ",normdir
         stop
        endif
       endif  ! levelrz=1 or 3
@@ -4316,7 +4317,8 @@ stop
      
       real(amrex_real), INTENT(in), target :: umactemp(DIMV(umactemp)) 
       real(amrex_real), pointer :: umactemp_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: umac_displace(DIMV(umac_displace)) 
+      real(amrex_real), INTENT(inout), target :: &
+           umac_displace(DIMV(umac_displace)) 
       real(amrex_real), pointer :: umac_displace_ptr(D_DECL(:,:,:))
       integer, INTENT(in) :: velbc(SDIM,2)
 
@@ -4338,7 +4340,7 @@ stop
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid65"
+       print *,"bfact invalid65: ",bfact
        stop
       endif
  
@@ -4466,7 +4468,7 @@ stop
         if (hx.gt.zero) then
          ! do nothing
         else
-         print *,"xstenMAC bust"
+         print *,"xstenMAC bust: ",hx
          stop
         endif
 
@@ -4537,6 +4539,8 @@ stop
           normdir,dt,map_forward)
 
         if (abs(delta).ge.(one-EPS6)*hx) then
+
+         print *,"WARNING"
          print *,"in: velmac_override"
          print *,"MAC: displacement exceeds grid cell"
          print *,"parameters to check:"
@@ -4558,6 +4562,27 @@ stop
          print *,"SDC_outer_sweeps,ns_time_order ", &
             SDC_outer_sweeps,ns_time_order
          print *,"levelrz=",levelrz
+
+         if (delta.eq.zero) then
+          print *,"delta cannot be 0! ",delta
+          stop
+         else if (delta.le.zero) then
+          delta=-(one-EPS6)*hx
+         else if (delta.ge.zero) then
+          delta=(one-EPS6)*hx
+         else
+          print *,"delta is corrupt: ",delta
+          stop
+         endif
+         
+         if (1.eq.0) then 
+          stop
+         endif
+
+        else if (abs(delta).le.(one-EPS6)*hx) then
+         !do nothing
+        else
+         print *,"delta corrupt: ",delta
          stop
         endif
       

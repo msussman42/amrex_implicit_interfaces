@@ -233,12 +233,14 @@ stop
       subroutine adjust_du(du,normdir,rval,map_forward)
       IMPLICIT NONE
 
-      real(amrex_real) du,rval,disc
-      integer normdir,map_forward
+      real(amrex_real),intent(inout) :: du
+      real(amrex_real),intent(in) :: rval
+      real(amrex_real) disc
+      integer, intent(in) :: normdir,map_forward
 
 
       if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
-       print *,"normdir invalid"
+       print *,"normdir invalid in adjust_du: ",normdir
        stop
       endif
 
@@ -261,7 +263,7 @@ stop
          else if (map_forward.eq.1) then
           disc=one/four+du/(two*rval)
          else
-          print *,"map_forward invalid"
+          print *,"map_forward invalid: ",map_forward
           stop
          endif
 
