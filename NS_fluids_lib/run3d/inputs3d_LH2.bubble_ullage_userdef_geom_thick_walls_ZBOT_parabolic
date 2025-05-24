@@ -176,7 +176,7 @@ amr.grid_eff        = 0.85  # smaller => less boxes
 ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 
 # Adaptive dt
-ns.cfl              = 0.5      # cfl number for hyperbolic system
+ns.cfl              = 0.75      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0     # scale back initial timestep
 ns.change_max=1.01      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
@@ -277,6 +277,7 @@ ns.molar_mass = 0.002016 0.00201588 0.0269815386  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 71.1 0.406 2700
+ns.density_ratio_relaxation_factor=2.0
 ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
@@ -464,7 +465,8 @@ ns.MOFITERMAX_AFTER_PREDICT = 0
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
-ns.EILE_flag        = -1
+#ns.EILE_flag        = -1
+ns.EILE_flag        = 1
 
 ns.MOFITERMAX=30
 ns.tiling=false
