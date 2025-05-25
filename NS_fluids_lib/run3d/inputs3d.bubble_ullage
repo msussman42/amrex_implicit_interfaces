@@ -182,13 +182,14 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
-amr.n_cell          = 64 64 64 # 8 cores compute1
-#amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
+#amr.n_cell          = 64 64 64 # 8 cores compute1
+amr.n_cell          = 32 32 32 # parabolic dx=.2/32=0.00625
 #amr.n_cell          = 64 64 64 # 8 core parabolic dx=.2/64=0.003125
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 16   # 32 is optimal for MPI in 3D
+cg.min_max_grid_size   = 32
 amr.regrid_on_restart=1
 
 ns.multilevel_maxcycle=200
@@ -206,7 +207,8 @@ amr.grid_eff        = 0.7  # smaller => less boxes
 ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 
 # Adaptive dt
-ns.cfl              = 0.5      # cfl number for hyperbolic system
+ns.cfl              = 0.75      # cfl number for hyperbolic system
+#ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
 ns.change_max       = 1.01      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
@@ -250,7 +252,7 @@ amr.file_name_digits=8
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=1
 amr.plotfile_on_restart=1
-#amr.restart        = chk0000800 # Name of the restart checkpoint file
+#amr.restart        = chk00005600 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
 
@@ -306,6 +308,7 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
+ns.density_ratio_relaxation_factor=2.0
 ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
@@ -452,7 +455,8 @@ ns.MOFITERMAX_AFTER_PREDICT = 0
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
-ns.EILE_flag        = -1
+#ns.EILE_flag        = -1
+ns.EILE_flag        = 1
 
 ns.MOFITERMAX=30
 ns.tiling=false
