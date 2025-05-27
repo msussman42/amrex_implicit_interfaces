@@ -10814,6 +10814,8 @@ contains
       real(NOTUS_REAL) objective_NOTUS
       real(NOTUS_REAL) NOTUS_PI
 
+      integer :: NOTUS_worked
+
       integer, PARAMETER :: use_super_cell=1
 
       NOTUS_PI=4.0d0*atan(1.0d0)
@@ -10999,24 +11001,24 @@ contains
         nslope, &
         sdim)
 
+      if (sdim.eq.3) then
+       ksten_low=-1
+       ksten_high=1
+      else if (sdim.eq.2) then
+       ksten_low=0
+       ksten_high=0
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+
       if (use_MilcentLemoine.eq.0) then
 
-       if (sdim.eq.3) then
-        ksten_low=-1
-        ksten_high=1
-       else if (sdim.eq.2) then
-        ksten_low=0
-        ksten_high=0
-       else
-        print *,"sdim invalid"
-        stop
-       endif
-
-         ! inside of multi_rotatefunc
-         ! testcen in absolute coordinate system
-         ! (testcen is the centroid of the intersection of
-         !  the material region with the center cell (super cell if 
-         !  continuous_mof==-1))
+        ! inside of multi_rotatefunc
+        ! testcen in absolute coordinate system
+        ! (testcen is the centroid of the intersection of
+        !  the material region with the center cell (super cell if 
+        !  continuous_mof==-1))
        call multi_find_intercept( &
         tid_in, &
         nMAT_OPT, & ! 1 
@@ -11225,17 +11227,27 @@ contains
         testcen(dir)=testcen(dir)-cencell_cen(dir)
        enddo
 
+        !refcentroid and testcen are both "local"
+        !refcentroidT and testcenT are both "global"
        call RT_transform_offset(refcentroid,cencell_cen,refcentroidT)
        call RT_transform_offset(testcen,cencell_cen,testcenT)
 
       else if (use_MilcentLemoine.eq.1) then
+
+       if (fastflag.eq.1) then
+        !do nothing
+       else
+        print *,"expecting fastflag=1 if use_MilcentLemoine==1"
+        stop
+       endif
 
        if (continuous_mof.eq.STANDARD_MOF) then 
         ! do nothing
        else if (continuous_mof.eq.MOF_TRI_TET) then 
         ! do nothing
        else
-        print *,"continuous_mof invalid if use_MilcentLemoine==1"
+        print *,"continuous_mof invalid if use_MilcentLemoine==1: ", &
+                continuous_mof
         stop
        endif
 
@@ -11324,31 +11336,46 @@ contains
         if (sdim.eq.3) then
          call mof3d_compute_analytic_gradient( &
           local_angles_NOTUS, & !intent(in)
-          local_ref_centroid_NOTUS, & !intent(in)
+          local_ref_centroid_NOTUS, & !intent(in) relative to LL corner.
           local_volume_NOTUS, & !intent(in)
           local_cell_size_NOTUS, & !intent(in)
           local_centroid_NOTUS, & !intent(out)
-          local_gradient_NOTUS) !intent(out)
+          local_gradient_NOTUS) !intent(out) relative to LL corner
         else if (sdim.eq.2) then
          call mof2d_compute_analytic_gradient( &
           local_angles_NOTUS, & !intent(in)
           local_volume_NOTUS, &
           local_cell_size_NOTUS, &
-          local_centroid_NOTUS)  !intent(out)
+          local_centroid_NOTUS)  !intent(out) relative to LL corner
         else
          print *,"sdim invalid"
          stop
         endif
 
+        NOTUS_worked=1
+
         do dir=1,sdim
          local_centroid_NOTUS(dir)= &
                  local_centroid_NOTUS(dir)- &
                  0.5d0*local_cell_size_NOTUS(dir)
-         testcen(dir)=local_centroid_NOTUS(dir)
+         testcen(dir)=local_centroid_NOTUS(dir) !relative of cell centroid !
          if (testcen(dir)**2.ge.zero) then
           !do nothing
          else
-          print *,"testcen(dir) corrupt: ",dir,testcen(dir)
+          print *,"WARNING"
+          print *,"testcen(dir) corrupt (multi_rotatefunc): ",dir,testcen(dir)
+          print *,"local_centroid_NOTUS(dir): ",dir, &
+                  local_centroid_NOTUS(dir)
+          print *,"volcell_vof: ",volcell_vof
+          print *,"local_volume_NOTUS: ",local_volume_NOTUS
+          print *,"refvfrac=",refvfrac
+          print *,"local_refvfrac_NOTUS=",local_refvfrac_NOTUS
+          print *,"refcentroid(dir)=",dir,refcentroid(dir)
+          print *,"local_ref_centroid_NOTUS(dir)=", &
+                  dir,local_ref_centroid_NOTUS(dir)
+          print *,"uncaptured_volume_vof=",uncaptured_volume_vof
+          print *,"dx(dir)=",dir,dx(dir)
+          print *,"bfact=",bfact
           print *,"local_angles_NOTUS: ", &
             local_angles_NOTUS(1),local_angles_NOTUS(2)
           print *,"local_volume_NOTUS: ",local_volume_NOTUS
@@ -11357,21 +11384,94 @@ contains
              dir_local,local_ref_centroid_NOTUS(dir_local)
            print *,"dir_local,local_cell_size_NOTUS ", &
              dir_local,local_cell_size_NOTUS(dir_local)
-          enddo
-          stop
+          enddo !dir_local=1,sdim
+          print *,"local_gradient_NOTUS: ",local_gradient_NOTUS
+!         stop
+          NOTUS_worked=0
          endif
         enddo !dir=1,sdim
 
-        if ((refvfrac(1).ge.0.5d0).and. &
-            (refvfrac(1).lt.1.0d0)) then
+        if (NOTUS_worked.eq.1) then
+
+         if ((refvfrac(1).ge.0.5d0).and. &
+             (refvfrac(1).lt.1.0d0)) then
+          do dir=1,sdim
+           testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
+          enddo
+         else if ((refvfrac(1).gt.0.0d0).and. &
+                  (refvfrac(1).le.0.5d0)) then
+          ! do nothing
+         else
+          print *,"refvfrac(1) invalid: ",refvfrac(1)
+          stop
+         endif
+
+        else if (NOTUS_worked.eq.0) then
+
+         ! inside of multi_rotatefunc
+         ! testcen in absolute coordinate system
+         ! (testcen is the centroid of the intersection of
+         !  the material region with the center cell (super cell if 
+         !  continuous_mof==-1))
+         call multi_find_intercept( &
+          tid_in, &
+          nMAT_OPT, & ! 1 
+          nDOF, & ! sdim-1
+          nEQN, & ! sdim 
+          bfact,dx, &
+          xsten0,nhalf0, &
+          nslope, &  ! intent(in)
+          intercept(1), & ! intent(inout)
+          continuous_mof, &
+          cmofsten, &
+          xtetlist_vof, & !intent(in)
+          nlist_alloc, &
+          nlist_vof, &
+          nmax, &
+          refvfrac(1), &
+          use_initial_guess, &
+          testcen, & !intent(out)
+          fastflag,sdim)
+
+         ! testcen in absolute coordinate system
+         if (fastflag.eq.0) then
+          print *,"expecting fastflag=1"
+          stop
+         else if (fastflag.eq.1) then
+
+          if (continuous_mof.eq.STANDARD_MOF) then !MOF
+           ! (testcen is the centroid of the intersection of
+           !  the material region with the center cell)
+           call fast_cut_cell_intersection( &
+            bfact,dx,xsten0,nhalf0, &
+            nslope, &
+            intercept(1), &
+            volume_cut,testcen,facearea, &
+            xsten0,nhalf0,xtet,shapeflag,sdim) 
+          else
+           print *,"expecting continuous_mof==STANDARD_MOF"
+           stop
+          endif
+
+         else
+          print *,"fastflag invalid multi rotatefunc: ",fastflag
+          stop
+         endif
+
+          ! testcen relative to cell centroid
          do dir=1,sdim
-          testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
+          testcen(dir)=testcen(dir)-cencell_cen(dir)
          enddo
-        else if ((refvfrac(1).gt.0.0d0).and. &
-                 (refvfrac(1).le.0.5d0)) then
-         ! do nothing
+
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          ! do nothing
+         else 
+          print *,"expecting levelrz.eq.COORDSYS_CARTESIAN: ",levelrz
+          stop
+         endif
+
         else
-         print *,"refvfrac(1) invalid: ",refvfrac(1)
+         print *,"NOTUS_worked invalid"
          stop
         endif
 
@@ -11426,13 +11526,15 @@ contains
         stop
        endif
 
+        ! refcentroid is relative to the cell centroid
+        ! testcen is relative to the cell centroid
        do dir=1,sdim
         refcentroidT(dir)=refcentroid(dir)
         testcenT(dir)=testcen(dir)
        enddo
 
       else
-       print *,"use_MilcentLemoine invalid"
+       print *,"use_MilcentLemoine invalid: ",use_MilcentLemoine
        stop
       endif
 
@@ -11444,6 +11546,8 @@ contains
       endif
 
       do dir=1,nEQN
+        !either both refcentroidT and testcenT are global or both are
+        !local.
        ff(dir)=(refcentroidT(dir)-testcenT(dir))
        if (ff(dir)**2.ge.zero) then
         ! do nothing
