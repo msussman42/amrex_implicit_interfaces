@@ -3457,6 +3457,7 @@ stop
       integer im_merge_majority
       integer im_main,im_main_opp
       integer iten
+      integer iten_local
       integer inormal
 
       real(amrex_real) nrmPROBE(SDIM*num_materials)
@@ -3553,23 +3554,24 @@ stop
 
       if ((level.lt.finest_level).and.(level.ge.0)) then
        if (bfact_grid.lt.4) then
-        print *,"bfact_grid invalid in curvstrip(1)"
+        print *,"bfact_grid invalid in curvstrip(1): ",bfact_grid
         stop
        endif
       else if (level.eq.finest_level) then
        if (bfact_grid.lt.2) then
-        print *,"bfact_grid invalid in curvstrip(2)"
+        print *,"bfact_grid invalid in curvstrip(2): ",bfact_grid
         stop
        endif
       else
-       print *,"level invalid"
+       print *,"level invalid: ",level
        stop
       endif
 
       if (unscaled_min_curvature_radius.ge.one) then
        ! do nothing
       else
-       print *,"unscaled_min_curvature radius invalid"
+       print *,"unscaled_min_curvature radius invalid: ", &
+          unscaled_min_curvature_radius
        stop
       endif
 
@@ -4251,6 +4253,13 @@ stop
                im_merge_majority,im_opp,im_main,im_main_opp
              endif
 
+             do iten_local=1,num_interfaces
+              do dirloc=1,SDIM
+               least_squares_normal(iten_local,dirloc)=zero
+              enddo
+              least_squares_normal_wt(iten_local)=zero
+             enddo
+
              ! i1,j1,k1=-ngrow_distance ... ngrow_distance
              do k1=LSstenlo(3),LSstenhi(3)
              do j1=LSstenlo(2),LSstenhi(2)
@@ -4281,7 +4290,51 @@ stop
               enddo
 
               call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
- 
+
+              call get_primary_material(LSCEN_hold_fixed,im_sten_primary)
+              call get_secondary_material(LSCEN_hold_fixed, &
+                 im_sten_primary,im_sten_secondary)
+              do im_wt=1,num_materials
+               do im_opp_wt=im_wt+1,num_materials
+                call get_iten(im_wt,im_opp_wt,iten_local)
+                if ((im_wt.eq.im_sten_primary).or. &
+                    (im_opp_wt.eq.im_sten_primary)) then
+                 if ((im_wt.eq.im_sten_secondary).or. &
+                     (im_opp_wt.eq.im_sten_secondary)) then
+                  wt_local=one
+                 else 
+                  wt_local=0.001d0
+                 endif
+                else
+                 wt_local=0.001d0
+                endif
+                if (LSCEN_hold_fixed(im_wt).ge. &
+                    LSCEN_hold_fixed(im_opp_wt)) then
+                 do dirloc=1,SDIM
+                  n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                 enddo
+                else
+                 do dirloc=1,SDIM
+                  n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                 enddo
+                endif
+                mag_loc=zero
+                do dirloc=1,SDIM
+                 mag_loc=mag_loc+n_loc(dirloc)**2
+                enddo
+                mag_loc=sqrt(mag_loc)
+                if (mag_loc.eq.zero) then
+                 wt_local=zero
+                else if (mag_loc.gt.zero) then
+                 do dirloc=1,SDIM
+                  n_loc(dirloc)=n_loc(dirloc)/mag_loc
+                 enddo
+                else
+                 print *,"mag_loc invalid: ",mag_loc
+                 stop
+                endif
+FIX ME
+
               do im_curv=1,num_materials
 
                lssten(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
