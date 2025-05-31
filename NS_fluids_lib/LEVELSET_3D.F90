@@ -348,6 +348,7 @@ stop
         !3x3x3x num_materials x sdim components
         !closest point normal.
         nrmsten, & !intent(in)
+        least_squares_normal, & !intent(in)
         !scalar (i,j,k)
         vol_sten, & !intent(in)
         curvHT_choice, & !intent(out)
@@ -440,6 +441,8 @@ stop
       real(amrex_real), INTENT(in) :: nrmsten( &
        -1:1,-1:1,-1:1,SDIM*num_materials)
 
+      real(amrex_real),intent(in) :: least_squares_normal(num_interfaces,SDIM)
+
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
       real(amrex_real) nrmtest(SDIM*num_materials)
 
@@ -493,7 +496,9 @@ stop
       real(amrex_real) nmain(SDIM) 
       real(amrex_real) nopp(SDIM) 
       real(amrex_real) nfluid(SDIM) 
+      real(amrex_real) nfluid_least_squares(SDIM) 
       real(amrex_real) nfluid_cen(SDIM) 
+      real(amrex_real) nfluid_cen_alt(SDIM) 
       real(amrex_real) nfluid_def1(SDIM) 
       real(amrex_real) nfluid_def2(SDIM) 
       real(amrex_real) nfluid_def3(SDIM) 
@@ -841,7 +846,19 @@ stop
       if (mag.gt.zero) then
        ! do nothing
       else
-       print *,"nfluid mag became corrupt"
+       print *,"nfluid mag became corrupt (from nrmcenter): ",nfluid
+       stop
+      endif
+
+      do dir2=1,SDIM
+       nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
+      enddo
+      call prepare_normal(nfluid_least_squares,RR,mag,SDIM)
+      if (mag.gt.zero) then
+       ! do nothing
+      else
+       print *,"nfluid_least_squares mag became corrupt: ", &
+        nfluid_least_squares
        stop
       endif
 
@@ -1138,12 +1155,25 @@ stop
         stop
        endif
       enddo ! dir2
+
       RR=one
       call prepare_normal(nfluid,RR,mag,SDIM)
       if (mag.gt.zero) then
        !do nothing
       else
        print *,"nfluid mag became corrupt: ",mag
+       stop
+      endif
+
+      do dir2=1,SDIM
+       nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
+      enddo
+      call prepare_normal(nfluid_least_squares,RR,mag,SDIM)
+      if (mag.gt.zero) then
+       ! do nothing
+      else
+       print *,"nfluid_least_squares mag became corrupt: ", &
+        nfluid_least_squares
        stop
       endif
  
@@ -1153,6 +1183,13 @@ stop
       else
        print *,"nfluid or signside has wrong sign"
        stop
+      endif
+      if (nfluid_least_squares(dircrit)*signside.gt.zero) then
+       !do nothing
+      else
+       print *,"WARNING nfluid_least_squares or signside has wrong sign"
+       print *,"nfluid_least_squares: ",nfluid_least_squares
+!      stop
       endif
 
       n1d=signside
@@ -1426,15 +1463,18 @@ stop
        nfluid_def1(dir2)=nrmcenter(SDIM*(im-1)+dir2)
        nfluid_def2(dir2)=nrmcenter(SDIM*(im_opp-1)+dir2)
         
+         !imhold=im_primary_sten(0,0,0)
        if (imhold.eq.im) then
-        nfluid_cen(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
+        nfluid_cen_alt(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
        else if (imhold.eq.im_opp) then
-        nfluid_cen(dir2)=nrmcenter(SDIM*(im-1)+dir2)
+        nfluid_cen_alt(dir2)=nrmcenter(SDIM*(im-1)+dir2)
        else 
         print *,"either im or im_opp material must be at center"
         print *,"im,im_opp,imhold ",im,im_opp,imhold
         stop
        endif
+
+       nfluid_cen=least_squares_normal(iten,dir2)
 
        if (im3.eq.0) then
         nfluid_def3(dir2)=nfluid_cen(dir2)
@@ -1451,6 +1491,17 @@ stop
       RR=one
 
       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+      if (mag.eq.zero) then
+       do dir2=1,SDIM
+        nfluid_cen(dir2)=nfluid_cen_alt(dir2)
+       enddo
+       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+      else if (mag.gt.zero) then
+       !do nothing
+      else
+       print *,"mag invalid ",mag
+       stop
+      endif
 
       call prepare_normal( &
          nfluid_def3, & !intent(inout)
@@ -3444,7 +3495,8 @@ stop
       real(amrex_real) LSSIDE_merge_fixed(num_materials)
 
       real(amrex_real) xcenter(SDIM)
-      integer dirloc,dircrossing,dirstar
+      integer dirloc
+      integer dircrossing,dirstar
       integer sidestar
       integer at_RZ_axis
 
@@ -3459,6 +3511,15 @@ stop
       integer iten
       integer iten_local
       integer inormal
+      integer im_sten_primary
+      integer im_sten_secondary
+      integer im_wt,im_opp_wt
+      real(amrex_real) :: wt_local
+      real(amrex_real) :: mag_loc
+      real(amrex_real) :: n_loc(SDIM)
+
+      real(amrex_real) least_squares_normal(num_interfaces,SDIM)
+      real(amrex_real) least_squares_normal_wt(num_interfaces)
 
       real(amrex_real) nrmPROBE(SDIM*num_materials)
       real(amrex_real) nrmPROBE_merge(SDIM*num_materials)
@@ -3473,6 +3534,7 @@ stop
       real(amrex_real) curv_cellHT
       real(amrex_real) curv_cellFD
       real(amrex_real) mag,RR
+      real(amrex_real), parameter :: RR_unit=one
       integer itemperature
       integer donate_flag
       integer signcrossing
@@ -4289,6 +4351,21 @@ stop
                vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
               enddo
 
+              RR=one
+              if (levelrz.eq.COORDSYS_CARTESIAN) then
+               ! do nothing
+              else if (levelrz.eq.COORDSYS_RZ) then
+               if (SDIM.ne.2) then
+                print *,"levelrz invalid: ",levelrz
+                stop
+               endif
+              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+               RR=xsten_curv(2*i1,1)
+              else
+               print *,"transformed normal: levelrz invalid: ",levelrz
+               stop
+              endif
+
               call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
 
               call get_primary_material(LSCEN_hold_fixed,im_sten_primary)
@@ -4302,38 +4379,57 @@ stop
                  if ((im_wt.eq.im_sten_secondary).or. &
                      (im_opp_wt.eq.im_sten_secondary)) then
                   wt_local=one
-                 else 
+                 else if ((im_wt.ne.im_sten_secondary).and. &
+                          (im_opp_wt.ne.im_sten_secondary)) then
                   wt_local=0.001d0
+                 else
+                  print *,"im_wt, im_opp_wt invalid"
+                  print *,"im_sten_secondary: ",im_sten_secondary
+                  stop
                  endif
-                else
+                else if ((im_wt.ne.im_sten_primary).and. &
+                         (im_opp_wt.ne.im_sten_primary)) then
                  wt_local=0.001d0
+                else
+                 print *,"im_wt, im_opp_wt invalid"
+                 print *,"im_sten_primary: ",im_sten_primary
+                 stop
                 endif
                 if (LSCEN_hold_fixed(im_wt).ge. &
                     LSCEN_hold_fixed(im_opp_wt)) then
                  do dirloc=1,SDIM
                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                  enddo
-                else
+                else if (LSCEN_hold_fixed(im_wt).le. &
+                         LSCEN_hold_fixed(im_opp_wt)) then
                  do dirloc=1,SDIM
                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
                  enddo
+                else
+                 print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
+                 stop
                 endif
-                mag_loc=zero
-                do dirloc=1,SDIM
-                 mag_loc=mag_loc+n_loc(dirloc)**2
-                enddo
-                mag_loc=sqrt(mag_loc)
+
+                call prepare_normal(n_loc,RR,mag_loc,SDIM)
+
                 if (mag_loc.eq.zero) then
                  wt_local=zero
                 else if (mag_loc.gt.zero) then
-                 do dirloc=1,SDIM
-                  n_loc(dirloc)=n_loc(dirloc)/mag_loc
-                 enddo
+                 !do nothing
                 else
                  print *,"mag_loc invalid: ",mag_loc
                  stop
                 endif
-FIX ME
+
+                do dirloc=1,SDIM
+                 least_squares_normal(iten_local,dirloc)= &
+                  least_squares_normal(iten_local,dirloc)+ &
+                  wt_local*n_loc(dirloc)
+                enddo
+                least_squares_normal_wt(iten_local)= &
+                  least_squares_normal_wt(iten_local)+wt_local
+               enddo !im_opp_wt=im_wt+1,num_materials
+              enddo !im_wt=1,num_materials
 
               do im_curv=1,num_materials
 
@@ -4344,21 +4440,9 @@ FIX ME
                  inormal=(im_curv-1)*SDIM+dirloc
                  nrm_mat(dirloc)=nrm_local_merge(inormal)
                 enddo
-                RR=one
-                if (levelrz.eq.COORDSYS_CARTESIAN) then
-                 ! do nothing
-                else if (levelrz.eq.COORDSYS_RZ) then
-                 if (SDIM.ne.2) then
-                  print *,"levelrz invalid"
-                  stop
-                 endif
-                else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                 RR=xsten_curv(2*i1,1)
-                else
-                 print *,"transformed normal: levelrz invalid"
-                 stop
-                endif
+
                 call prepare_normal(nrm_mat,RR,mag,SDIM)
+
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
                  nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
@@ -4376,8 +4460,30 @@ FIX ME
 
              enddo
              enddo
-             enddo ! i1,j1,k1=LSstenlo,LSstenhi(init nrmsten,lssten,vofsten)
- 
+             enddo ! i1,j1,k1=LSstenlo,LSstenhi
+                   ! (init nrmsten,lssten,vofsten,least_squares_normal)
+
+             do iten_local=1,num_interfaces
+              do dirloc=1,SDIM
+               if (least_squares_normal_wt(iten_local).eq.zero) then
+                least_squares_normal(iten_local,dirloc)=zero
+               else if (least_squares_normal_wt(iten_local).gt.zero) then
+                least_squares_normal(iten_local,dirloc)= &
+                 least_squares_normal(iten_local,dirloc)/ &
+                 least_squares_normal_wt(iten_local)
+               else
+                print *,"least_squares_normal_wt(iten_local) invalid: ", &
+                 least_squares_normal_wt(iten_local)
+                stop
+               endif
+               n_loc(dirloc)=least_squares_normal(iten_local,dirloc)
+              enddo !dirloc=1,sdim
+              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              do dirloc=1,SDIM
+               least_squares_normal(iten_local,dirloc)=n_loc(dirloc)
+              enddo
+             enddo !iten_local=1,num_interfaces
+      
              ! i1,j1,k1=-1..1
              do k1=istenlo(3),istenhi(3)
              do j1=istenlo(2),istenhi(2)
@@ -4427,6 +4533,7 @@ FIX ME
               !3x3x3x num_materials x sdim components
               !closest point normal.
               nrmsten, &
+              least_squares_normal, &
               !scalar (i,j,k)
               vol_sten, &
               curv_cellHT, & !intent(out)
