@@ -475,6 +475,7 @@ stop
       real(amrex_real) n1d
 
       integer iten_13,iten_23
+      integer iten_13_test,iten_23_test
       real(amrex_real) gamma1,gamma2
       real(amrex_real) cos_angle,sin_angle
 
@@ -1042,6 +1043,17 @@ stop
        call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
         user_tension,cos_angle,sin_angle)
 
+       call get_iten(im,im3,iten_13_test)
+       call get_iten(im_opp,im3,iten_23_test)
+
+       if ((iten_13_test.eq.iten_13).and. &
+           (iten_23_test.eq.iten_23)) then
+        !do nothing
+       else
+        print *,"iten_13 or iten_23 invalid: ",iten_13,iten_23
+        stop
+       endif
+
        if (1.eq.0) then
         print *,"TIME, cos_angle, sin_angle: ", &
             time,cos_angle,sin_angle
@@ -1482,8 +1494,29 @@ stop
        if (im3.eq.0) then
         nfluid_def3(dir2)=nfluid_cen(dir2)
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
-        ! nrmcenter is derived from closest point normal and FD normal.
-        nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
+
+        if (im.lt.im3) then
+         nfluid_def3(dir2)= &
+           -ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
+        else if (im.gt.im3) then
+         nfluid_def3(dir2)= &
+           ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
+        else
+         print *,"im or im3 invalid: ",im,im3
+         stop
+        endif
+
+        if (im_opp.lt.im3) then
+         nfluid_def3(dir2)=nfluid_def3(dir2)  &
+           -ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
+        else if (im_opp.gt.im3) then
+         nfluid_def3(dir2)=nfluid_def3(dir2)+ &
+           ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
+        else
+         print *,"im_opp or im3 invalid: ",im_opp,im3
+         stop
+        endif
+
        else
         print *,"im3 invalid: ",im3
         stop
@@ -1494,11 +1527,22 @@ stop
       RR=one
 
       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+
       if (mag.eq.zero) then
+
        do dir2=1,SDIM
         nfluid_cen(dir2)=nfluid_cen_alt(dir2)
        enddo
        call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+       if (im3.eq.0) then
+        nfluid_def3(dir2)=nfluid_cen(dir2)
+       else if ((im3.ge.1).and.(im3.le.num_materials)) then
+        !do nothing
+       else
+        print *,"im3 invalid: ",im3
+        stop
+       endif
+
       else if (mag.gt.zero) then
        !do nothing
       else
@@ -1515,15 +1559,35 @@ stop
       if (mag3.gt.zero) then
        !do nothing
       else if (mag3.eq.zero) then
-       im3=0
+
        do dir2=1,SDIM
-        nfluid_def3(dir2)=nfluid_cen(dir2)
+        ! nrmcenter is derived from closest point normal and FD normal.
+        nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        enddo
+
        call prepare_normal( &
          nfluid_def3, & !intent(inout)
          RR, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
+
+       if (mag3.gt.zero) then
+        !do nothing
+       else if (mag3.eq.zero) then
+        im3=0
+        do dir2=1,SDIM
+         nfluid_def3(dir2)=nfluid_cen(dir2)
+        enddo
+        call prepare_normal( &
+         nfluid_def3, & !intent(inout)
+         RR, & !intent(in)
+         mag3, & !intent(out)
+         SDIM) !intent(in);   im3 material
+       else
+        print *,"mag3 invalid: ",mag3
+        stop
+       endif
+
       else
        print *,"mag3 invalid: ",mag3
        stop
@@ -1562,20 +1626,11 @@ stop
         enddo
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
         if (is_rigid_CL(im3).eq.1) then
-         if (lssten(i,j,k,im_liquid).ge.lssten(i,j,k,im_vapor)) then
-          local_weight=one
-         else if (lssten(i,j,k,im_liquid).le.lssten(i,j,k,im_vapor)) then
-!         local_weight=fort_denconst(im_vapor)/fort_denconst(im_liquid)
-          local_weight=one
-         else
-          print *,"lssten invalid"
-          print *,"im_liquid,lssten: ",im_liquid,lssten(i,j,k,im_liquid)
-          print *,"im_vapor,lssten: ",im_vapor,lssten(i,j,k,im_vapor)
-          stop
-         endif
-         ! nsolid points into the solid
+
+         local_weight=one
+
          do dir2=1,SDIM
-          nsolid_local(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
+          nsolid_local(dir2)=nfluid_def3(dir2)
          enddo
 
          RR=one
@@ -1588,10 +1643,31 @@ stop
          if (mag.gt.zero) then
           !do nothing
          else if (mag.eq.zero) then
-          local_weight=EPS3
+
+          ! nsolid points into the solid
           do dir2=1,SDIM
-           nsolid_local(dir2)=nfluid_def3(dir2) !copied from nrmcenter
+           nsolid_local(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
           enddo
+
+          RR=one
+          call prepare_normal( &
+           nsolid_local, & !intent(inout)
+           RR, & !intent(in)
+           mag, & !intent(out)
+           SDIM) !intent(in)
+
+          if (mag.gt.zero) then
+           !do nothing
+          else if (mag.eq.zero) then
+           local_weight=EPS3
+           do dir2=1,SDIM
+            nsolid_local(dir2)=nfluid_def3(dir2) !copied from nrmcenter
+           enddo
+          else
+           print *,"mag invalid: ",mag
+           stop
+          endif
+
          else
           print *,"mag invalid: ",mag
           stop
@@ -1757,7 +1833,8 @@ stop
 
           dotprod=zero
           do dir2=1,SDIM
-           nfluid(dir2)=nfluid_save(D_DECL(0,0,0),dir2)
+!          nfluid(dir2)=nfluid_save(D_DECL(0,0,0),dir2)
+           nfluid(dir2)=least_squares_normal(iten,dir2)
            dotprod=dotprod+nfluid(dir2)*nsolid_sum(dir2) 
           enddo
            ! nproject=(I-nsolid nsolid^T)nfluid
@@ -2028,7 +2105,10 @@ stop
 
         do dir2=1,SDIM
           ! nmain points from material im_opp into material im.
-         nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
+!        nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
+
+         nmain(dir2)=least_squares_normal(iten,dir2)
+
           ! nsolid_sum points into the solid
           ! nopp points aways from the solid.
          nopp(dir2)=-nsolid_sum(dir2)

@@ -25580,10 +25580,11 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      integer im,im_opp,im_3,iten_13,iten_23
+      integer,intent(in) :: im,im_opp,im_3
+      integer,intent(out) :: iten_13,iten_23
       integer iten
-      real(amrex_real) user_tension(num_interfaces)
-      real(amrex_real) cos_angle,sin_angle
+      real(amrex_real), intent(in) :: user_tension(num_interfaces)
+      real(amrex_real), intent(out) :: cos_angle,sin_angle
 
       if ((im.lt.1).or.(im.gt.num_materials).or. &
           (im_opp.lt.1).or.(im_opp.gt.num_materials).or. &
@@ -25605,6 +25606,7 @@ end subroutine print_visual_descriptor
        if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
         iten_13=2
         iten_23=3
+       ! 12 13 23
        else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
         iten_13=1
         iten_23=2
@@ -25624,30 +25626,35 @@ end subroutine print_visual_descriptor
        if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
         iten_13=2
         iten_23=4
+       ! 12 13 14 23 24 34
        else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.1)) then
         iten_13=1
         iten_23=2
        else if ((im.eq.1).and.(im_opp.eq.3).and.(im_3.eq.2)) then
         iten_13=1
         iten_23=4
+       ! 12 13 14 23 24 34
        else if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.4)) then
         iten_13=3
         iten_23=5
        else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.1)) then
         iten_13=1
         iten_23=3
+       ! 12 13 14 23 24 34
        else if ((im.eq.1).and.(im_opp.eq.4).and.(im_3.eq.2)) then
         iten_13=1
         iten_23=5
        else if ((im.eq.2).and.(im_opp.eq.3).and.(im_3.eq.4)) then
         iten_13=5
         iten_23=6
+       ! 12 13 14 23 24 34
        else if ((im.eq.2).and.(im_opp.eq.4).and.(im_3.eq.3)) then
         iten_13=4
         iten_23=6
        else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.2)) then
         iten_13=4
         iten_23=5
+       ! 12 13 14 23 24 34
        else if ((im.eq.3).and.(im_opp.eq.4).and.(im_3.eq.1)) then
         iten_13=2
         iten_23=3
