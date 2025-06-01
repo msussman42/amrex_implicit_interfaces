@@ -643,6 +643,7 @@ Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
 Vector<Real> NavierStokes::tension;
+Vector<Real> NavierStokes::ice_normal_weight;
 Vector<Real> NavierStokes::tension_init;
 
 Real NavierStokes::unscaled_min_curvature_radius=1.0;
@@ -4034,6 +4035,7 @@ NavierStokes::read_params ()
     constant_density_all_time.resize(num_materials);
 
     tension.resize(num_interfaces);
+    ice_normal_weight.resize(num_interfaces);
     tension_init.resize(num_interfaces);
     tension_slope.resize(num_interfaces);
     tension_T0.resize(num_interfaces);
@@ -4410,9 +4412,12 @@ NavierStokes::read_params ()
 
     pp.getarr("tension",tension,0,num_interfaces);
 
-    for (int iten=0;iten<num_interfaces;iten++)
+    for (int iten=0;iten<num_interfaces;iten++) {
      tension_init[iten]=tension[iten];
+     ice_normal_weight[iten]=1.0;
+    }
 
+    pp.queryarr("ice_normal_weight",ice_normal_weight,0,num_interfaces);
     pp.queryarr("tension_init",tension_init,0,num_interfaces);
 
     if (num_materials>2) {
@@ -5894,6 +5899,8 @@ NavierStokes::read_params ()
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i,tension=" << i << ' ' <<
          tension[i] << '\n';
+      std::cout << "i,ice_normal_weight=" << i << ' ' <<
+         ice_normal_weight[i] << '\n';
       std::cout << "i,tension_init=" << i << ' ' <<
          tension_init[i] << '\n';
      }
@@ -27155,6 +27162,7 @@ NavierStokes::makeStateCurv(int project_option,
      &cur_time_slab,
      &visc_coef,
      &unscaled_min_curvature_radius,
+     ice_normal_weight.dataPtr(),
      &num_curv);
   } // mfi
 } //omp

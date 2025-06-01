@@ -359,6 +359,7 @@ stop
         im3, & !intent(out)
         visc_coef, & !intent(in)
         unscaled_min_curvature_radius, & !intent(in)
+        ice_normal_weight, & !intent(in)
         im, & !intent(in)
         im_opp, & !intent(in)
         iten) !intent(in)
@@ -385,6 +386,7 @@ stop
       integer :: iten_test
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
+      real(amrex_real), INTENT(in) :: ice_normal_weight(num_interfaces)
       real(amrex_real) user_tension(num_interfaces)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: vol_sten
@@ -1189,6 +1191,7 @@ stop
       else
        print *,"WARNING nfluid_least_squares or signside has wrong sign"
        print *,"nfluid_least_squares: ",nfluid_least_squares
+       print *,"dircrit, signside: ",dircrit,signside
 !      stop
       endif
 
@@ -3391,6 +3394,7 @@ stop
        time, &
        visc_coef, &
        unscaled_min_curvature_radius, &
+       ice_normal_weight, &
        num_curv) & ! num_interfaces * CURVCOMP_NCOMP
       bind(c,name='fort_curvstrip')
 
@@ -3420,6 +3424,7 @@ stop
       integer icurv
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
+      real(amrex_real), INTENT(in) :: ice_normal_weight(num_interfaces)
 
       integer, INTENT(in) :: DIMDEC(history_dat)
       integer, INTENT(in) :: DIMDEC(maskcov)
@@ -4544,6 +4549,7 @@ stop
               im3, & !intent(out)
               visc_coef, &
               unscaled_min_curvature_radius, &
+              ice_normal_weight, & !intent(in)
               im_main, & !intent(in)
               im_main_opp, & !intent(in) 
               iten) !intent(in)
