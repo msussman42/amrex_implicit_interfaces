@@ -443,7 +443,8 @@ stop
       real(amrex_real), INTENT(in) :: nrmsten( &
        -1:1,-1:1,-1:1,SDIM*num_materials)
 
-      real(amrex_real),intent(in) :: least_squares_normal(num_interfaces,SDIM)
+      real(amrex_real),intent(in) :: &
+          least_squares_normal(num_interfaces,SDIM)
 
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
       real(amrex_real) nrmtest(SDIM*num_materials)
@@ -491,28 +492,21 @@ stop
       real(amrex_real) VOFTEST(num_materials)
       real(amrex_real) LSTEST_EXTEND
       real(amrex_real) LSMAX
-      real(amrex_real) mag,mag1,mag2,mag3
+      real(amrex_real) mag,mag3
       real(amrex_real) gx
 
       real(amrex_real) nperp(SDIM) 
       real(amrex_real) nghost(SDIM) 
       real(amrex_real) nmain(SDIM) 
       real(amrex_real) nopp(SDIM) 
+      real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
-      real(amrex_real) nfluid_cen(SDIM) 
-      real(amrex_real) nfluid_cen_alt(SDIM) 
-      real(amrex_real) nfluid_def1(SDIM) 
-      real(amrex_real) nfluid_def2(SDIM) 
       real(amrex_real) nfluid_def3(SDIM) 
       real(amrex_real) nfluid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ngrid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) nsolid_sum(SDIM) 
-      real(amrex_real) nsolid_local(SDIM) 
-      real(amrex_real) nsolid_weight
-      real(amrex_real) local_weight
       real(amrex_real) ncurv1_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ncurv2_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) n1
@@ -865,6 +859,10 @@ stop
        stop
       endif
 
+      do dir2=1,SDIM
+       master_normal(dir2)=nfluid_least_squares(dir2)
+      enddo
+
        ! Marangoni force:
        ! (I-nn^T)(grad sigma) delta=
        ! (grad sigma - (grad sigma dot n)n ) delta
@@ -940,7 +938,7 @@ stop
           mgoni_tension(-iofs,-jofs,-kofs))/ &
           (RR*(xsten(2,dir2)-xsten(-2,dir2)))
 
-         dotprod=dotprod+grad_tension(dir2)*nfluid(dir2)
+         dotprod=dotprod+grad_tension(dir2)*master_normal(dir2)
         enddo ! dir2
         ! for the specific case,
         ! tension=sigma_0 + slope*(T-T0),
@@ -951,7 +949,7 @@ stop
         do dir2=1,SDIM
          mgoni_force(dir2)= &
           (grad_tension(dir2)- &
-           nfluid(dir2)*dotprod)*delta_mgoni
+           master_normal(dir2)*dotprod)*delta_mgoni
         enddo
 
       else if (fort_tension_slope(iten).eq.zero) then
@@ -1196,14 +1194,21 @@ stop
        !do nothing
       else
        print *,"nfluid or signside has wrong sign"
+       print *,"dircrit,signside,nfluid ",dircrit,signside,nfluid
        stop
       endif
+
       if (nfluid_least_squares(dircrit)*signside.gt.zero) then
        !do nothing
       else
        print *,"WARNING nfluid_least_squares or signside has wrong sign"
        print *,"nfluid_least_squares: ",nfluid_least_squares
        print *,"dircrit, signside: ",dircrit,signside
+
+       do dir2=1,SDIM
+        master_normal(dir2)=nfluid(dir2)
+       enddo
+
 !      stop
       endif
 
@@ -1470,29 +1475,13 @@ stop
 ! nfluid points into im (outward from im_opp)
 !  (nfluid derived from closest point map and finite differences)
 
-! nfluid_cen is a normal to the im,im_opp interface
-! and points towards the im material.
 
       do dir2=1,SDIM
 
-       nfluid_def1(dir2)=nrmcenter(SDIM*(im-1)+dir2)
-       nfluid_def2(dir2)=nrmcenter(SDIM*(im_opp-1)+dir2)
-        
-         !imhold=im_primary_sten(0,0,0)
-       if (imhold.eq.im) then
-        nfluid_cen_alt(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
-       else if (imhold.eq.im_opp) then
-        nfluid_cen_alt(dir2)=nrmcenter(SDIM*(im-1)+dir2)
-       else 
-        print *,"either im or im_opp material must be at center"
-        print *,"im,im_opp,imhold ",im,im_opp,imhold
-        stop
-       endif
-
-       nfluid_cen=least_squares_normal(iten,dir2)
+        !imhold=im_primary_sten(0,0,0)
 
        if (im3.eq.0) then
-        nfluid_def3(dir2)=nfluid_cen(dir2)
+        nfluid_def3(dir2)=master_normal(dir2)
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if (im.lt.im3) then
@@ -1526,30 +1515,6 @@ stop
 
       RR=one
 
-      call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
-
-      if (mag.eq.zero) then
-
-       do dir2=1,SDIM
-        nfluid_cen(dir2)=nfluid_cen_alt(dir2)
-       enddo
-       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
-       if (im3.eq.0) then
-        nfluid_def3(dir2)=nfluid_cen(dir2)
-       else if ((im3.ge.1).and.(im3.le.num_materials)) then
-        !do nothing
-       else
-        print *,"im3 invalid: ",im3
-        stop
-       endif
-
-      else if (mag.gt.zero) then
-       !do nothing
-      else
-       print *,"mag invalid ",mag
-       stop
-      endif
-
       call prepare_normal( &
          nfluid_def3, & !intent(inout)
          RR, & !intent(in)
@@ -1576,13 +1541,21 @@ stop
        else if (mag3.eq.zero) then
         im3=0
         do dir2=1,SDIM
-         nfluid_def3(dir2)=nfluid_cen(dir2)
+         nfluid_def3(dir2)=master_normal(dir2)
         enddo
         call prepare_normal( &
          nfluid_def3, & !intent(inout)
          RR, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
+
+        if (mag3.gt.zero) then
+         !do nothing
+        else
+         print *,"mag3 invalid"
+         stop
+        endif
+
        else
         print *,"mag3 invalid: ",mag3
         stop
@@ -1590,137 +1563,6 @@ stop
 
       else
        print *,"mag3 invalid: ",mag3
-       stop
-      endif
-
-      call prepare_normal(nfluid_def1,RR,mag1,SDIM) ! im fluid
-      call prepare_normal(nfluid_def2,RR,mag2,SDIM) ! im_opp fluid
-
-      if ((mag1.gt.zero).and. &
-          (mag2.gt.zero).and. &
-          (mag3.gt.zero).and. &
-          (mag.gt.zero)) then
-       ! do nothing
-      else
-       print *,"err:nfluid_def1, nfluid_def2, nfluid_def3, or nfluid_cen"
-       print *,"mag1,mag2,mag3,mag=",mag1,mag2,mag3,mag
-       print *,"nfluid_def1 associated with material im=",im
-       print *,"nfluid_def2 associated with material im_opp=",im_opp
-       print *,"nfluid_def3 associated with material im3=",im3
-       stop
-      endif
-
-      ! nsolid points into the solid
-      nsolid_weight=zero
-      do dir2=1,SDIM
-       nsolid_sum(dir2)=zero
-      enddo
-
-      do k=klo_sten_short,khi_sten_short 
-      do j=-1,1
-      do i=-1,1
-       if (im3.eq.0) then
-        local_weight=EPS3
-        do dir2=1,SDIM
-         nsolid_local(dir2)=nfluid_def3(dir2)
-        enddo
-       else if ((im3.ge.1).and.(im3.le.num_materials)) then
-        if (is_rigid_CL(im3).eq.1) then
-
-         local_weight=one
-
-         do dir2=1,SDIM
-          nsolid_local(dir2)=nfluid_def3(dir2)
-         enddo
-
-         RR=one
-         call prepare_normal( &
-           nsolid_local, & !intent(inout)
-           RR, & !intent(in)
-           mag, & !intent(out)
-           SDIM) !intent(in)
-
-         if (mag.gt.zero) then
-          !do nothing
-         else if (mag.eq.zero) then
-
-          ! nsolid points into the solid
-          do dir2=1,SDIM
-           nsolid_local(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
-          enddo
-
-          RR=one
-          call prepare_normal( &
-           nsolid_local, & !intent(inout)
-           RR, & !intent(in)
-           mag, & !intent(out)
-           SDIM) !intent(in)
-
-          if (mag.gt.zero) then
-           !do nothing
-          else if (mag.eq.zero) then
-           local_weight=EPS3
-           do dir2=1,SDIM
-            nsolid_local(dir2)=nfluid_def3(dir2) !copied from nrmcenter
-           enddo
-          else
-           print *,"mag invalid: ",mag
-           stop
-          endif
-
-         else
-          print *,"mag invalid: ",mag
-          stop
-         endif
-
-        else if (is_rigid_CL(im3).eq.0) then
-         local_weight=EPS3
-         do dir2=1,SDIM
-          nsolid_local(dir2)=nfluid_def3(dir2)
-         enddo
-        else
-         print *,"is_rigid_CL invalid: ",im3,is_rigid_CL(im3)
-         stop
-        endif
-       else
-        print *,"im3 invalid: ",im3
-        stop
-       endif
-       nsolid_weight=nsolid_weight+local_weight
-       do dir2=1,SDIM
-        nsolid_sum(dir2)=nsolid_sum(dir2)+local_weight*nsolid_local(dir2)
-       enddo
-
-      enddo !i
-      enddo !j
-      enddo !k
-
-       !nsolid points into the solid.
-      if (nsolid_weight.gt.zero) then
-       do dir2=1,SDIM
-        nsolid_sum(dir2)=nsolid_sum(dir2)/nsolid_weight
-       enddo
-
-       RR=one
-       call prepare_normal( &
-         nsolid_sum, & !intent(inout)
-         RR, & !intent(in)
-         mag, & !intent(out)
-         SDIM) !intent(in)
-
-       if (mag.gt.zero) then
-        !do nothing
-       else if (mag.eq.zero) then
-        do dir2=1,SDIM
-         nsolid_sum(dir2)=nfluid_def3(dir2)
-        enddo
-       else
-        print *,"mag invalid: ",mag
-        stop
-       endif
-
-      else
-       print *,"nsolid_weight invalid: ",nsolid_weight
        stop
       endif
 
@@ -1752,7 +1594,7 @@ stop
        call prepare_normal(nfluid,RR,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
-         nfluid(dir2)=nfluid_cen(dir2)
+         nfluid(dir2)=master_normal(dir2)
         enddo
        else if (mag.gt.zero) then
         ! do nothing
@@ -1774,7 +1616,7 @@ stop
         ! do nothing
        else if (mag.eq.zero) then
         do dir2=1,SDIM
-         nfluid(dir2)=nfluid_def1(dir2)
+         nfluid(dir2)=master_normal(dir2)
         enddo
        else
         print *,"mag invalid LEVELSET_3D.F90 1551"
@@ -1793,7 +1635,7 @@ stop
         ! do nothing
        else if (mag.eq.zero) then
         do dir2=1,SDIM
-         nfluid(dir2)=nfluid_def2(dir2)
+         nfluid(dir2)=-master_normal(dir2)
         enddo
        else
         print *,"mag invalid LEVELSET_3D.F90 1570"
@@ -1833,13 +1675,11 @@ stop
 
           dotprod=zero
           do dir2=1,SDIM
-!          nfluid(dir2)=nfluid_save(D_DECL(0,0,0),dir2)
-           nfluid(dir2)=least_squares_normal(iten,dir2)
-           dotprod=dotprod+nfluid(dir2)*nsolid_sum(dir2) 
+           dotprod=dotprod+master_normal(dir2)*nfluid_def3(dir2) 
           enddo
            ! nproject=(I-nsolid nsolid^T)nfluid
           do dir2=1,SDIM
-           nproject(dir2)=nfluid(dir2)-dotprod*nsolid_sum(dir2)
+           nproject(dir2)=master_normal(dir2)-dotprod*nfluid_def3(dir2)
           enddo
           RR=one
           call prepare_normal(nproject,RR,mag,SDIM)
@@ -1893,7 +1733,7 @@ stop
             do dir2=1,SDIM
              print *,"dir,x ",dir2,xcenter(dir2)
              print *,"dir,normal pointing into solid ", &
-               dir2,nsolid_sum(dir2)
+               dir2,nfluid_def3(dir2)
              print *,"dir,CL normal pointing into im material ", &
                dir2,nproject(dir2)
             enddo
@@ -2104,14 +1944,11 @@ stop
         LSopp=LSmain
 
         do dir2=1,SDIM
-          ! nmain points from material im_opp into material im.
-!        nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
+         nmain(dir2)=master_normal(dir2)
 
-         nmain(dir2)=least_squares_normal(iten,dir2)
-
-          ! nsolid_sum points into the solid
+          ! nfluid_def3 points into the solid
           ! nopp points aways from the solid.
-         nopp(dir2)=-nsolid_sum(dir2)
+         nopp(dir2)=-nfluid_def3(dir2)
         enddo
 
         if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
@@ -4427,7 +4264,8 @@ stop
 
               call merge_normal(xcenter,time, &
                  LSCEN_hold, &
-                 nrm_local,nrm_local_merge)
+                 nrm_local, & !intent(in)
+                 nrm_local_merge) !intent(out)
 
               call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
               call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
@@ -4468,7 +4306,7 @@ stop
                           (im_opp_wt.ne.im_sten_secondary)) then
                   wt_local=0.001d0
                  else
-                  print *,"im_wt, im_opp_wt invalid"
+                  print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
                   print *,"im_sten_secondary: ",im_sten_secondary
                   stop
                  endif
@@ -4476,7 +4314,7 @@ stop
                          (im_opp_wt.ne.im_sten_primary)) then
                  wt_local=0.001d0
                 else
-                 print *,"im_wt, im_opp_wt invalid"
+                 print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
                  print *,"im_sten_primary: ",im_sten_primary
                  stop
                 endif
@@ -4492,6 +4330,7 @@ stop
                  enddo
                 else
                  print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
+                 print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
                  stop
                 endif
 
@@ -4558,7 +4397,7 @@ stop
                  least_squares_normal_wt(iten_local)
                else
                 print *,"least_squares_normal_wt(iten_local) invalid: ", &
-                 least_squares_normal_wt(iten_local)
+                 iten_local,least_squares_normal_wt(iten_local)
                 stop
                endif
                n_loc(dirloc)=least_squares_normal(iten_local,dirloc)
