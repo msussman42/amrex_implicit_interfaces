@@ -617,15 +617,16 @@ stop
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid85"
+       print *,"bfact invalid85: ",bfact
        stop
       endif
       if (ngrow_distance.lt.4) then
-       print *,"expecting ngrow_distance>=4 in initheightLS"
+       print *,"expecting ngrow_distance>=4 in initheightLS: ",ngrow_distance
        stop
       endif
       if (ngrow_make_distance.ne.ngrow_distance-1) then
        print *,"expecting ngrow_make_distance=ngrow_distance-1 in initheightLS"
+       print *,"ngrow_make_distance: ",ngrow_make_distance
        stop
       endif
       if (im.ge.im_opp) then
@@ -656,7 +657,7 @@ stop
       endif
 
       if ((iten.lt.1).or.(iten.gt.num_interfaces)) then
-       print *,"iten invalid"
+       print *,"iten invalid: ",iten
        stop
       endif
       call get_iten(im,im_opp,iten_test)
@@ -667,7 +668,7 @@ stop
       if (vol_sten.gt.zero) then
        ! do nothing
       else
-       print *,"vol_sten invalid"
+       print *,"vol_sten invalid: ",vol_sten
        stop
       endif
 
@@ -701,7 +702,7 @@ stop
       else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
        kk=side
       else
-       print *,"dircrit invalid"
+       print *,"dircrit invalid(initheightLS): ",dircrit
        stop
       endif
 
@@ -839,12 +840,241 @@ stop
       endif
 
        ! declared in GLOBALUTIL.F90
-      call get_LSNRM_extend(LS_CENTER,nrmcenter,iten,nfluid)
+      call get_LSNRM_extend(LS_CENTER, &
+       nrmcenter, & !intent(in)
+       iten, &
+       nfluid) !intent(out)
       call prepare_normal(nfluid,RR_unit,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
        print *,"nfluid mag became corrupt (from nrmcenter): ",nfluid
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       if (SDIM.ne.2) then
+        print *,"dimension bust"
+        stop
+       endif
+       if (xcenter(1).gt.zero) then
+        !do nothing
+       else
+        print *,"xcenter invalid: ",xcenter
+        stop
+       endif
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+       if (xcenter(1).gt.zero) then
+        !do nothing
+       else
+        print *,"xcenter invalid: ",xcenter
+        stop
+       endif
+      else 
+       print *,"levelrz invalid init height ls 2: ",levelrz
+       stop
+      endif
+
+      im3=0
+      LSMAX=-1.0D+10
+      do k=klo_sten_ht,khi_sten_ht
+      do j=-ngrow_distance,ngrow_distance
+      do i=-ngrow_distance,ngrow_distance
+
+       do imhold=1,num_materials
+        LSTEST(imhold)=lssten(i,j,k,imhold)
+        VOFTEST(imhold)=vofsten(i,j,k,imhold)
+       enddo
+        ! declared in GLOBALUTIL.F90
+       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
+       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
+
+       call get_primary_material(LSTEST,imhold)
+       im_primary_sten(i,j,k)=imhold
+
+       if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
+  
+        if ((imhold.ge.1).and. &
+            (imhold.le.num_materials)) then
+         if ((imhold.ne.im).and. &
+             (imhold.ne.im_opp)) then
+          if (im3.eq.0) then
+           im3=imhold
+           LSMAX=LSTEST(imhold)
+          else if ((im3.ge.1).and.(im3.le.num_materials)) then
+           if (LSTEST(imhold).gt.LSMAX) then
+            im3=imhold
+            LSMAX=LSTEST(imhold)
+           endif
+          else
+           print *,"im3 invalid: ",im3
+           stop
+          endif
+         else if ((imhold.eq.im).or. &
+                  (imhold.eq.im_opp)) then
+          ! do nothing
+         else
+          print *,"imhold invalid: ",imhold
+          stop
+         endif
+        else
+         print *,"imhold invalid: ",imhold
+         stop
+        endif
+       endif ! abs(i)<=1 abs(j)<=1 abs(k)<=1
+      enddo
+      enddo
+      enddo ! i,j,k (-ngrow_distance .. ngrow_distance)
+     
+      cos_angle=zero
+      sin_angle=zero
+      iten_13=0
+      iten_23=0
+      if ((im3.ge.1).and.(im3.le.num_materials)) then
+        ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
+        ! theta_{ik}=0 => material i wets material k.
+        ! im is material "i"  ("fluid" material)
+        ! im_opp is material "j"
+       call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
+        user_tension,cos_angle,sin_angle)
+
+       call get_iten(im,im3,iten_13_test)
+       call get_iten(im_opp,im3,iten_23_test)
+
+       if ((iten_13_test.eq.iten_13).and. &
+           (iten_23_test.eq.iten_23)) then
+        !do nothing
+       else
+        print *,"iten_13 or iten_23 invalid: ",iten_13,iten_23
+        stop
+       endif
+
+       if (1.eq.0) then
+        print *,"TIME, cos_angle, sin_angle: ", &
+            time,cos_angle,sin_angle
+       endif
+
+       if ((sin_angle.ge.zero).and. &
+           (cos_angle.ge.zero)) then
+        angle_im=asin(sin_angle)
+        ! sin_angle=sin(a)  cos_angle=cos(a)
+        ! a=pi-asin(sin_angle)
+        ! sin(pi-asin(sin_angle))=sin(pi)cos(-asin(sin_angle)+
+        !  cos(pi)sin(-asin(sin_angle))=-sin(-asin(sin_angle))=sin_angle
+       else if ((sin_angle.ge.zero).and. &
+                (cos_angle.le.zero)) then
+        angle_im=Pi-asin(sin_angle)
+       else
+        print *,"sin_angle or cos_angle invalid: ",sin_angle,cos_angle
+        stop
+       endif
+      else if (im3.eq.0) then
+       ! do nothing
+      else
+       print *,"im3 invalid: ",im3
+       stop
+      endif
+
+      if (num_materials.eq.1) then
+       print *,"num_materials==1 not supported"
+       stop
+      else if (num_materials.eq.2) then
+       if (im3.ne.0) then
+        print *,"im3 invalid, num_materials=",num_materials
+        print *,"im3=",im3
+        stop
+       endif
+      else if (num_materials.gt.2) then
+       ! do nothing
+      else
+       print *,"num_materials invalid: ",num_materials
+       stop
+      endif
+
+      if (user_tension(iten).eq.zero) then
+
+       gamma1=zero
+       gamma2=zero
+
+      else if (user_tension(iten).gt.zero) then
+
+       if ((im3.ge.1).and.(im3.le.num_materials)) then
+
+        if ((im3.eq.im).or.(im3.eq.im_opp)) then
+         print *,"im3 invalid: ",im,im_opp,im3 
+         stop
+        endif
+
+        if (is_rigid_CL(im3).eq.1) then
+
+         ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
+         ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
+         if (use_DCA.eq.101) then ! GNBC
+          gamma1=half*user_tension(iten)
+          gamma2=half*user_tension(iten)
+         else if (use_DCA.ge.-1) then  ! all other cases.
+          gamma1=half*(one-cos_angle)
+          gamma2=half*(one+cos_angle)
+         else
+          print *,"use_DCA invalid"
+          stop
+         endif 
+
+        else if (is_rigid_CL(im3).eq.0) then
+
+         gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
+           user_tension(iten_13))/user_tension(iten)
+         gamma2=half*(user_tension(iten)+user_tension(iten_23)- &
+           user_tension(iten_13))/user_tension(iten)
+
+        else
+         print *,"is_rigid_CL invalid LEVELSET_3D.F90: ", &
+          im3,is_rigid_CL(im3)
+         stop
+        endif
+
+       else if (im3.eq.0) then
+
+        gamma1=half
+        gamma2=half
+
+       else
+        print *,"im3 invalid: ",im3
+        stop
+       endif
+  
+      else
+       print *,"user_tension coeff invalid"
+       stop
+      endif
+
+      ! first: standard height function technique
+
+! normal points towards "im"
+! n=grad LS/|grad LS|
+
+      imhold=im_primary_sten(0,0,0)
+
+      do dir2=1,SDIM
+        ! nrmcenter: derived from closest point normal and FD normal.
+       if (imhold.eq.im) then
+        nfluid(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
+       else if (imhold.eq.im_opp) then
+        nfluid(dir2)=nrmcenter(SDIM*(im-1)+dir2)
+       else
+        print *,"either im or im_opp material must be at center: ", &
+          im,im_opp,imhold
+        stop
+       endif
+      enddo ! dir2
+
+      call prepare_normal(nfluid,RR_unit,mag,SDIM)
+      if (mag.gt.zero) then
+       !do nothing
+      else
+       print *,"nfluid mag became corrupt: ",mag
        stop
       endif
 
@@ -859,10 +1089,31 @@ stop
         nfluid_least_squares
        stop
       endif
+ 
+       ! signside points towards im 
+      if (nfluid(dircrit)*signside.gt.zero) then
+       !do nothing
+      else
+       print *,"nfluid or signside has wrong sign"
+       print *,"dircrit,signside,nfluid ",dircrit,signside,nfluid
+       stop
+      endif
 
-      do dir2=1,SDIM
-       master_normal(dir2)=nfluid_least_squares(dir2)
-      enddo
+      if (nfluid_least_squares(dircrit)*signside.gt.zero) then
+       do dir2=1,SDIM
+        master_normal(dir2)=nfluid_least_squares(dir2)
+       enddo
+      else
+       print *,"WARNING nfluid_least_squares or signside has wrong sign"
+       print *,"nfluid_least_squares: ",nfluid_least_squares
+       print *,"dircrit, signside: ",dircrit,signside
+
+       do dir2=1,SDIM
+        master_normal(dir2)=nfluid(dir2)
+       enddo
+
+!      stop
+      endif
 
        ! Marangoni force:
        ! (I-nn^T)(grad sigma) delta=
@@ -956,261 +1207,11 @@ stop
       else if (fort_tension_slope(iten).eq.zero) then
        ! do nothing
       else
-       print *,"fort_tension_slope must be non-positive"
+       print *,"fort_tension_slope must be non-positive: ", &
+        fort_tension_slope
        stop
       endif 
 
-      if (levelrz.eq.COORDSYS_CARTESIAN) then
-       ! do nothing
-      else if (levelrz.eq.COORDSYS_RZ) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-       if (xcenter(1).le.zero) then
-        print *,"xcenter invalid"
-        stop
-       endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       if (xcenter(1).le.zero) then
-        print *,"xcenter invalid"
-        stop
-       endif
-      else 
-       print *,"levelrz invalid init height ls 2"
-       stop
-      endif
-
-      im3=0
-      LSMAX=-1.0D+10
-      do k=klo_sten_ht,khi_sten_ht
-      do j=-ngrow_distance,ngrow_distance
-      do i=-ngrow_distance,ngrow_distance
-
-       do imhold=1,num_materials
-        LSTEST(imhold)=lssten(i,j,k,imhold)
-        VOFTEST(imhold)=vofsten(i,j,k,imhold)
-       enddo
-        ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
-       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
-
-       call get_primary_material(LSTEST,imhold)
-       im_primary_sten(i,j,k)=imhold
-
-       if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
-  
-        if ((imhold.ge.1).and.(imhold.le.num_materials)) then
-         if ((imhold.ne.im).and. &
-             (imhold.ne.im_opp)) then
-          if (im3.eq.0) then
-           im3=imhold
-           LSMAX=LSTEST(imhold)
-          else if ((im3.ge.1).and.(im3.le.num_materials)) then
-           if (LSTEST(imhold).gt.LSMAX) then
-            im3=imhold
-            LSMAX=LSTEST(imhold)
-           endif
-          else
-           print *,"im3 invalid: ",im3
-           stop
-          endif
-         else if ((imhold.eq.im).or.(imhold.eq.im_opp)) then
-          ! do nothing
-         else
-          print *,"imhold invalid: ",imhold
-          stop
-         endif
-        else
-         print *,"imhold invalid: ",imhold
-         stop
-        endif
-       endif ! abs(i)<=1 abs(j)<=1 abs(k)<=1
-      enddo
-      enddo
-      enddo ! i,j,k (-ngrow_distance .. ngrow_distance)
-     
-      cos_angle=zero
-      sin_angle=zero
-      iten_13=0
-      iten_23=0
-      if ((im3.ge.1).and.(im3.le.num_materials)) then
-        ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
-        ! theta_{ik}=0 => material i wets material k.
-        ! im is material "i"  ("fluid" material)
-        ! im_opp is material "j"
-       call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
-        user_tension,cos_angle,sin_angle)
-
-       call get_iten(im,im3,iten_13_test)
-       call get_iten(im_opp,im3,iten_23_test)
-
-       if ((iten_13_test.eq.iten_13).and. &
-           (iten_23_test.eq.iten_23)) then
-        !do nothing
-       else
-        print *,"iten_13 or iten_23 invalid: ",iten_13,iten_23
-        stop
-       endif
-
-       if (1.eq.0) then
-        print *,"TIME, cos_angle, sin_angle: ", &
-            time,cos_angle,sin_angle
-       endif
-
-       if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
-        angle_im=asin(sin_angle)
-        ! sin_angle=sin(a)  cos_angle=cos(a)
-        ! a=pi-asin(sin_angle)
-        ! sin(pi-asin(sin_angle))=sin(pi)cos(-asin(sin_angle)+
-        !  cos(pi)sin(-asin(sin_angle))=-sin(-asin(sin_angle))=sin_angle
-       else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
-        angle_im=Pi-asin(sin_angle)
-       else
-        print *,"sin_angle or cos_angle invalid: ",sin_angle,cos_angle
-        stop
-       endif
-      else if (im3.eq.0) then
-       ! do nothing
-      else
-       print *,"im3 invalid: ",im3
-       stop
-      endif
-
-      if (num_materials.eq.1) then
-       print *,"num_materials==1 not supported"
-       stop
-      else if (num_materials.eq.2) then
-       if (im3.ne.0) then
-        print *,"im3 invalid, num_materials=",num_materials
-        print *,"im3=",im3
-        stop
-       endif
-      else if (num_materials.gt.2) then
-       ! do nothing
-      else
-       print *,"num_materials invalid: ",num_materials
-       stop
-      endif
-
-      if (user_tension(iten).eq.zero) then
-
-       gamma1=zero
-       gamma2=zero
-
-      else if (user_tension(iten).gt.zero) then
-
-       if ((im3.ge.1).and.(im3.le.num_materials)) then
-
-        if ((im3.eq.im).or.(im3.eq.im_opp)) then
-         print *,"im3 invalid: ",im,im_opp,im3 
-         stop
-        endif
-
-        if (is_rigid_CL(im3).eq.1) then
-
-         ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
-         ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
-         if (use_DCA.eq.101) then ! GNBC
-          gamma1=half*user_tension(iten)
-          gamma2=half*user_tension(iten)
-         else if (use_DCA.ge.-1) then  ! all other cases.
-          gamma1=half*(one-cos_angle)
-          gamma2=half*(one+cos_angle)
-         else
-          print *,"use_DCA invalid"
-          stop
-         endif 
-
-        else if (is_rigid_CL(im3).eq.0) then
-
-         gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
-           user_tension(iten_13))/user_tension(iten)
-         gamma2=half*(user_tension(iten)+user_tension(iten_23)- &
-           user_tension(iten_13))/user_tension(iten)
-
-        else
-         print *,"is_rigid_CL invalid LEVELSET_3D.F90: ", &
-          im3,is_rigid_CL(im3)
-         stop
-        endif
-
-       else if (im3.eq.0) then
-
-        gamma1=half
-        gamma2=half
-
-       else
-        print *,"im3 invalid: ",im3
-        stop
-       endif
-  
-      else
-       print *,"user_tension coeff invalid"
-       stop
-      endif
-
-      ! first: standard height function technique
-
-! normal points towards "im"
-! n=grad LS/|grad LS|
-
-      imhold=im_primary_sten(0,0,0)
-      do dir2=1,SDIM
-        ! nrmcenter: derived from closest point normal and FD normal.
-       if (imhold.eq.im) then
-        nfluid(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
-       else if (imhold.eq.im_opp) then
-        nfluid(dir2)=nrmcenter(SDIM*(im-1)+dir2)
-       else
-        print *,"either im or im_opp material must be at center: ", &
-          im,im_opp,imhold
-        stop
-       endif
-      enddo ! dir2
-
-      call prepare_normal(nfluid,RR_unit,mag,SDIM)
-      if (mag.gt.zero) then
-       !do nothing
-      else
-       print *,"nfluid mag became corrupt: ",mag
-       stop
-      endif
-
-      do dir2=1,SDIM
-       nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
-      enddo
-      call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
-      if (mag.gt.zero) then
-       ! do nothing
-      else
-       print *,"nfluid_least_squares mag became corrupt: ", &
-        nfluid_least_squares
-       stop
-      endif
- 
-       ! signside points towards im 
-      if (nfluid(dircrit)*signside.gt.zero) then
-       !do nothing
-      else
-       print *,"nfluid or signside has wrong sign"
-       print *,"dircrit,signside,nfluid ",dircrit,signside,nfluid
-       stop
-      endif
-
-      if (nfluid_least_squares(dircrit)*signside.gt.zero) then
-       !do nothing
-      else
-       print *,"WARNING nfluid_least_squares or signside has wrong sign"
-       print *,"nfluid_least_squares: ",nfluid_least_squares
-       print *,"dircrit, signside: ",dircrit,signside
-
-       do dir2=1,SDIM
-        master_normal(dir2)=nfluid(dir2)
-       enddo
-
-!      stop
-      endif
 
       n1d=signside
 
@@ -1550,7 +1551,7 @@ stop
         if (mag3.gt.zero) then
          !do nothing
         else
-         print *,"mag3 invalid"
+         print *,"mag3 invalid: ",mag3
          stop
         endif
 
