@@ -502,7 +502,7 @@ stop
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
-      real(amrex_real) nfluid_def3(SDIM) 
+      real(amrex_real) normal_im3(SDIM) 
       real(amrex_real) nfluid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -527,6 +527,7 @@ stop
       real(amrex_real) temperature_cen(num_materials)
       real(amrex_real) grad_tension(SDIM)
       real(amrex_real) RR
+      real(amrex_real), parameter :: RR_unit=1.0d0
       real(amrex_real) dnrm(SDIM)
       real(amrex_real) dxsten(SDIM)
       integer im_primary_sten( &
@@ -785,7 +786,8 @@ stop
       if (unscaled_min_curvature_radius.ge.one) then
        ! do nothing
       else
-       print *,"unscaled_min_curvature_radius invalid"
+       print *,"unscaled_min_curvature_radius invalid: ", &
+             unscaled_min_curvature_radius
        stop
       endif
 
@@ -838,8 +840,7 @@ stop
 
        ! declared in GLOBALUTIL.F90
       call get_LSNRM_extend(LS_CENTER,nrmcenter,iten,nfluid)
-      RR=one
-      call prepare_normal(nfluid,RR,mag,SDIM)
+      call prepare_normal(nfluid,RR_unit,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
@@ -850,7 +851,7 @@ stop
       do dir2=1,SDIM
        nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
       enddo
-      call prepare_normal(nfluid_least_squares,RR,mag,SDIM)
+      call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
@@ -918,7 +919,7 @@ stop
            if (RR.gt.zero) then
             ! do nothing
            else
-            print *,"RR invalid"
+            print *,"RR invalid: ",RR
             stop
            endif
           else
@@ -1168,8 +1169,7 @@ stop
        endif
       enddo ! dir2
 
-      RR=one
-      call prepare_normal(nfluid,RR,mag,SDIM)
+      call prepare_normal(nfluid,RR_unit,mag,SDIM)
       if (mag.gt.zero) then
        !do nothing
       else
@@ -1180,7 +1180,7 @@ stop
       do dir2=1,SDIM
        nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
       enddo
-      call prepare_normal(nfluid_least_squares,RR,mag,SDIM)
+      call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
@@ -1481,14 +1481,14 @@ stop
         !imhold=im_primary_sten(0,0,0)
 
        if (im3.eq.0) then
-        nfluid_def3(dir2)=master_normal(dir2)
+        normal_im3(dir2)=master_normal(dir2)
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if (im.lt.im3) then
-         nfluid_def3(dir2)= &
+         normal_im3(dir2)= &
            -ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
         else if (im.gt.im3) then
-         nfluid_def3(dir2)= &
+         normal_im3(dir2)= &
            ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
         else
          print *,"im or im3 invalid: ",im,im3
@@ -1496,10 +1496,10 @@ stop
         endif
 
         if (im_opp.lt.im3) then
-         nfluid_def3(dir2)=nfluid_def3(dir2)  &
+         normal_im3(dir2)=normal_im3(dir2)  &
            -ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
         else if (im_opp.gt.im3) then
-         nfluid_def3(dir2)=nfluid_def3(dir2)+ &
+         normal_im3(dir2)=normal_im3(dir2)+ &
            ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
         else
          print *,"im_opp or im3 invalid: ",im_opp,im3
@@ -1513,11 +1513,9 @@ stop
      
       enddo ! dir2=1..sdim
 
-      RR=one
-
       call prepare_normal( &
-         nfluid_def3, & !intent(inout)
-         RR, & !intent(in)
+         normal_im3, & !intent(inout)
+         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1527,12 +1525,12 @@ stop
 
        do dir2=1,SDIM
         ! nrmcenter is derived from closest point normal and FD normal.
-        nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
+        normal_im3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        enddo
 
        call prepare_normal( &
-         nfluid_def3, & !intent(inout)
-         RR, & !intent(in)
+         normal_im3, & !intent(inout)
+         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1541,11 +1539,11 @@ stop
        else if (mag3.eq.zero) then
         im3=0
         do dir2=1,SDIM
-         nfluid_def3(dir2)=master_normal(dir2)
+         normal_im3(dir2)=master_normal(dir2)
         enddo
         call prepare_normal( &
-         nfluid_def3, & !intent(inout)
-         RR, & !intent(in)
+         normal_im3, & !intent(inout)
+         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1590,8 +1588,7 @@ stop
         iten, & !intent(in)
         nfluid) !intent(out)
 
-       RR=one
-       call prepare_normal(nfluid,RR,mag,SDIM)
+       call prepare_normal(nfluid,RR_unit,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          nfluid(dir2)=master_normal(dir2)
@@ -1610,8 +1607,7 @@ stop
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
        enddo
-       RR=one
-       call prepare_normal(nfluid,RR,mag,SDIM)
+       call prepare_normal(nfluid,RR_unit,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1629,8 +1625,7 @@ stop
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im_opp-1)+dir2)
        enddo
-       RR=one
-       call prepare_normal(nfluid,RR,mag,SDIM)
+       call prepare_normal(nfluid,RR_unit,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1675,14 +1670,13 @@ stop
 
           dotprod=zero
           do dir2=1,SDIM
-           dotprod=dotprod+master_normal(dir2)*nfluid_def3(dir2) 
+           dotprod=dotprod+master_normal(dir2)*normal_im3(dir2) 
           enddo
            ! nproject=(I-nsolid nsolid^T)nfluid
           do dir2=1,SDIM
-           nproject(dir2)=master_normal(dir2)-dotprod*nfluid_def3(dir2)
+           nproject(dir2)=master_normal(dir2)-dotprod*normal_im3(dir2)
           enddo
-          RR=one
-          call prepare_normal(nproject,RR,mag,SDIM)
+          call prepare_normal(nproject,RR_unit,mag,SDIM)
 
           if (mag.gt.zero) then
            ! find u dot nproject
@@ -1733,7 +1727,7 @@ stop
             do dir2=1,SDIM
              print *,"dir,x ",dir2,xcenter(dir2)
              print *,"dir,normal pointing into solid ", &
-               dir2,nfluid_def3(dir2)
+               dir2,normal_im3(dir2)
              print *,"dir,CL normal pointing into im material ", &
                dir2,nproject(dir2)
             enddo
@@ -1946,9 +1940,9 @@ stop
         do dir2=1,SDIM
          nmain(dir2)=master_normal(dir2)
 
-          ! nfluid_def3 points into the solid
+          ! normal_im3 points into the solid
           ! nopp points aways from the solid.
-         nopp(dir2)=-nfluid_def3(dir2)
+         nopp(dir2)=-normal_im3(dir2)
         enddo
 
         if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
@@ -2164,8 +2158,7 @@ stop
 
        enddo ! dir2
 
-       RR=one
-       call prepare_normal(n_node1LS,RR,mag,SDIM)
+       call prepare_normal(n_node1LS,RR_unit,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node1LS(dir2)=n_node1(dir2)
@@ -2173,10 +2166,10 @@ stop
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid LEVELSET_3D.F90 2108"
+        print *,"mag invalid LEVELSET_3D.F90 2108: ",mag
         stop
        endif
-       call prepare_normal(n_node2LS,RR,mag,SDIM)
+       call prepare_normal(n_node2LS,RR_unit,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node2LS(dir2)=n_node2(dir2)
@@ -2203,9 +2196,8 @@ stop
         endif
        enddo ! dir2
 
-       RR=one
-       call prepare_normal(n_node1,RR,mag,SDIM)
-       call prepare_normal(n_node2,RR,mag,SDIM)
+       call prepare_normal(n_node1,RR_unit,mag,SDIM)
+       call prepare_normal(n_node2,RR_unit,mag,SDIM)
 
        do dir2=1,SDIM
         n1=n_node1(dir2)
@@ -2306,7 +2298,7 @@ stop
         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
          RR=one
         else
-         print *,"dir2 invalid"
+         print *,"dir2 invalid: ",dir2
          stop
         endif
 
@@ -4093,8 +4085,7 @@ stop
                nrm_mat(dirloc)=nrmPROBE_merge(inormal)
                nrm_test(dirloc)=nrmFD(inormal)
               enddo ! dirloc=1..sdim
-              RR=one
-              call prepare_normal(nrm_test,RR,mag,SDIM)
+              call prepare_normal(nrm_test,RR_unit,mag,SDIM)
 
               ! fix probe normal if it is inconsistent.
               ! iten: im_main,im_main_opp; normal points towards im_main
@@ -4283,7 +4274,7 @@ stop
                 stop
                endif
               else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-               RR=xsten_curv(2*i1,1)
+               RR=abs(xsten_curv(2*i1,1))
               else
                print *,"transformed normal: levelrz invalid: ",levelrz
                stop
