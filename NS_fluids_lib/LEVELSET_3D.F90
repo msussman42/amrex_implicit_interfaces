@@ -447,7 +447,6 @@ stop
           least_squares_normal(num_interfaces,SDIM)
 
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
-      real(amrex_real) nrmtest(SDIM*num_materials)
 
       real(amrex_real) ngrid(SDIM)
 
@@ -503,10 +502,8 @@ stop
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
       real(amrex_real) normal_im3(SDIM) 
-      real(amrex_real) nfluid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) ngrid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ncurv1_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ncurv2_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) n1
@@ -1046,7 +1043,7 @@ stop
        endif
   
       else
-       print *,"user_tension coeff invalid"
+       print *,"user_tension coeff invalid ",iten,user_tension
        stop
       endif
 
@@ -1208,7 +1205,7 @@ stop
        ! do nothing
       else
        print *,"fort_tension_slope must be non-positive: ", &
-        fort_tension_slope
+        iten,fort_tension_slope
        stop
       endif 
 
@@ -1568,42 +1565,6 @@ stop
       do k=klo_sten_short,khi_sten_short 
       do j=-1,1
       do i=-1,1
-
-       do im_sort=1,num_materials
-        LSTEST(im_sort)=lssten(i,j,k,im_sort) 
-       enddo
-
-       ! nfluid is a normal to the im,im_opp interface
-       ! and points towards the im material.
-
-       do imhold=1,num_materials
-        do dir2=1,SDIM
-         nrmtest(SDIM*(imhold-1)+dir2)= &
-           nrmsten(i,j,k,SDIM*(imhold-1)+dir2)
-        enddo
-       enddo ! imhold
-
-       call get_LSNRM_extend( &
-        LSTEST, & !intent(in)
-        nrmtest, & !intent(in)
-        iten, & !intent(in)
-        nfluid) !intent(out)
-
-       call prepare_normal(nfluid,RR_unit,mag,SDIM)
-       if (mag.eq.zero) then
-        do dir2=1,SDIM
-         nfluid(dir2)=master_normal(dir2)
-        enddo
-       else if (mag.gt.zero) then
-        ! do nothing
-       else
-        print *,"mag invalid LEVELSET_3D.F90 1487: ",mag
-        stop
-       endif  
-
-       do dir2=1,SDIM
-        nfluid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
-       enddo
 
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
@@ -2010,7 +1971,6 @@ stop
          print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
         endif
-        ngrid_save(D_DECL(i,j,k),dir2)=ngrid(dir2)
        enddo ! dir2=1..sdim
 
       enddo
