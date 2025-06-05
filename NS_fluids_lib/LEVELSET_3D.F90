@@ -648,7 +648,7 @@ stop
        im_liquid=im_opp
        im_vapor=im
       else
-       print *,"fort_denconst bust: ",fort_denconst(im), &
+       print *,"fort_denconst bust: ",im,im_opp,fort_denconst(im), &
          fort_denconst(im_opp)
        stop
       endif
@@ -885,10 +885,23 @@ stop
         VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
         ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
-       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
+       call get_LS_extend( &
+         LSTEST, & !intent(in)
+         iten, &   !intent(in)
+         lsdata(i,j,k)) !intent(out)
+
+       call get_VOF_extend( &
+         VOFTEST, & !intent(in)
+         iten, &    !intent(in)
+         vofdata(i,j,k)) !intent(out)
 
        call get_primary_material(LSTEST,imhold)
+       if ((imhold.ge.1).and.(imhold.le.num_materials)) then
+        !do nothing
+       else
+        print *,"imhold invalid.  imhold=",imhold
+        stop
+       endif
        im_primary_sten(i,j,k)=imhold
 
        if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
@@ -4246,6 +4259,7 @@ stop
               call get_primary_material(LSCEN_hold_fixed,im_sten_primary)
               call get_secondary_material(LSCEN_hold_fixed, &
                  im_sten_primary,im_sten_secondary)
+
               do im_wt=1,num_materials
                do im_opp_wt=im_wt+1,num_materials
                 call get_iten(im_wt,im_opp_wt,iten_local)
@@ -4328,7 +4342,7 @@ stop
                         (abs(k1).le.ngrow_distance)) then
                 ! do nothing
                else
-                print *,"i1,j1, or k1 invalid"
+                print *,"i1,j1, or k1 invalid: ",i1,j1,k1
                 stop
                endif
 
