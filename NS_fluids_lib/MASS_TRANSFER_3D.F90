@@ -2519,7 +2519,7 @@ stop
        else if (LL.lt.zero) then
         ! do nothing (condensation)
        else
-        print *,"LL invalid"
+        print *,"LL invalid: ",LL
         stop
        endif
 
@@ -2631,6 +2631,9 @@ stop
           call EOS_material(density_probe,massfrac_parm,internal_energy, &
            Pvapor_probe,imattype,im_probe)
 
+           !MDOT_Kassemi is declared in GLOBALUTIL.F90
+           !mdotY=constant * (Pgamma - Pvapor_probe)/sqrt(Tgamma)
+           !Need: c1 [k grad T]dot n/L = c2(Pgamma-Pvapor)/sqrt(Tgamma)
           call MDOT_Kassemi( &
             TSAT_Y_PARMS%accommodation_coefficient, &
             TSAT_Y_PARMS%molar_mass_vapor, &
@@ -2672,6 +2675,7 @@ stop
       end subroutine mdot_from_Y_probe
 
 
+       !mdot=[k grad T] dot n/L
       subroutine mdot_from_T_probe( &
        prescribed_mdot, &
        probe_ok, &
@@ -2716,18 +2720,18 @@ stop
         if (D_MASS.gt.zero) then
          ! do nothing
         else 
-         print *,"D_MASS invalid in mdot_from_T_probe"
+         print *,"D_MASS invalid in mdot_from_T_probe: ",D_MASS
          stop
         endif
        else if (Kassemi_flag.eq.3) then
         if (D_MASS.eq.zero) then
          ! do nothing
         else
-         print *,"D_MASS invalid in mdot_from_T_probe"
+         print *,"D_MASS invalid in mdot_from_T_probe: ",D_MASS
          stop
         endif
        else
-        print *,"Kassemi_flag invalid in mdot_from_T_probe"
+        print *,"Kassemi_flag invalid in mdot_from_T_probe: ",Kassemi_flag
         stop
        endif
 
@@ -2743,7 +2747,7 @@ stop
           T_gamma,Y_gamma, &
           POUT)
         else
-         print *,"probe_ok invalid"
+         print *,"probe_ok invalid: ",probe_ok
          stop
         endif
 
@@ -2753,7 +2757,7 @@ stop
         else if (LL.lt.zero) then
          ! do nothing (condensation)
         else
-         print *,"LL invalid"
+         print *,"LL invalid: ",LL
          stop
         endif
         iprobe_vapor=TSAT_Y_PARMS%iprobe_vapor
@@ -2767,7 +2771,7 @@ stop
           if (wt(iprobe).ge.zero) then
            ! do nothing
           else
-           print *,"wt(iprobe) invalid"
+           print *,"wt(iprobe) invalid: ",iprobe,wt(iprobe)
            stop
           endif
          enddo ! iprobe=1,2
@@ -2780,6 +2784,8 @@ stop
           if (prescribed_mdot.eq.zero) then
            ! do nothing
           else if (prescribed_mdot.gt.zero) then
+           !w=k/(L dx)
+           !mdot=[k grad T] dot n/L
            !mdot=w1 (TS-T)+w2 (TD-T)=w1 TS + w2 TD-(w1+w2)T
            !T=(w1 TS + w2 TD - mdot)/(w1+w2)
            T_gamma=(wt(1)*TEMP_PROBE_source+wt(2)*TEMP_PROBE_dest- &
@@ -2888,7 +2894,7 @@ stop
        if (Y_gamma.eq.one) then
         ! do nothing
        else
-        print *,"expecting Y_gamma==1 for Kassemi model"
+        print *,"expecting Y_gamma==1 for Kassemi model: ",Y_gamma
         stop
        endif
       else
@@ -2896,6 +2902,7 @@ stop
        stop
       endif
 
+       !mdot=[k grad T] dot n/L
       call mdot_from_T_probe( &
        prescribed_mdot, &
        probe_ok, &
@@ -2906,6 +2913,7 @@ stop
        TEMP_PROBE_source, &
        TEMP_PROBE_dest)
 
+       !if Kassemi: mdot=c * (P_gamma - Pvap)/sqrt(T_gamma)
       call mdot_from_Y_probe( &
        prescribed_mdot, &
        probe_ok, &
@@ -7239,7 +7247,7 @@ stop
         stop
        endif
       else
-       print *,"trial_and_error invalid"
+       print *,"trial_and_error invalid: ",trial_and_error
        stop
       endif
 
@@ -7313,6 +7321,7 @@ stop
          endif
         else
          print *,"bracketing interval lost"
+         print *,"probe_ok= ",probe_ok
          print *,"T_gamma a,b,c ", &
           T_gamma_a,T_gamma_b,T_gamma_c
          print *,"Y_gamma a,b,c ", &
@@ -7327,6 +7336,25 @@ stop
          print *," LL ",LL
          print *," Clausius_Clapyron_Tsat ",Clausius_Clapyron_Tsat
          print *," TSAT_base ",TSAT_base
+         print *," TSAT_Y_PARMS%reference_pressure= ", &
+            TSAT_Y_PARMS%reference_pressure
+         print *," TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= ", &
+            TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
+         print *," TSAT_Y_PARMS%thermal_k(1)= ", &
+            TSAT_Y_PARMS%thermal_k(1)
+         print *," TSAT_Y_PARMS%thermal_k(2)= ", &
+            TSAT_Y_PARMS%thermal_k(2)
+         print *," TSAT_Y_PARMS%accommodation_coefficient= ", &
+            TSAT_Y_PARMS%accommodation_coefficient
+         print *," TSAT_Y_PARMS%molar_mass_vapor= ", &
+            TSAT_Y_PARMS%molar_mass_vapor
+         print *," TSAT_Y_PARMS%universal_gas_constant_R= ", &
+            TSAT_Y_PARMS%universal_gas_constant_R
+         print *," TSAT_Y_PARMS%reference_pressure= ", &
+            TSAT_Y_PARMS%reference_pressure
+         print *,"POUT%T_probe(1) ",POUT%T_probe(1)
+         print *,"POUT%T_probe(2) ",POUT%T_probe(2)
+         print *,"prescribed_mdot=",prescribed_mdot
          stop
         endif
 
