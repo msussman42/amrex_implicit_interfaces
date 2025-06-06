@@ -2224,7 +2224,8 @@ if ((num_materials.eq.3).and. &
     else if (axis_dir.eq.3) then
      temperature=295.41d0
     else if (axis_dir.eq.4) then !LH2
-     temperature=20.0d0
+!     temperature=20.0d0
+     temperature=30.0d0
     else
      print *,"axis_dir invalid Pressure sanity check: ",axis_dir
      stop
