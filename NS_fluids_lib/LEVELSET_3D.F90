@@ -769,7 +769,7 @@ stop
        endif
 
       else
-       print *,"initheightLS: levelrz invalid (a)"
+       print *,"initheightLS: levelrz invalid (a): ",levelrz
        stop
       endif
 
@@ -832,7 +832,7 @@ stop
       if (facearea.ge.zero) then
        delta_mgoni=facearea/vol_sten
       else
-       print *,"facearea invalid"
+       print *,"facearea invalid: ",facearea
        stop
       endif
 
@@ -958,6 +958,8 @@ stop
         !do nothing
        else
         print *,"iten_13 or iten_23 invalid: ",iten_13,iten_23
+        print *,"iten_13 or iten_23 invalid(test): ", &
+         iten_13_test,iten_23_test
         stop
        endif
 
@@ -1269,7 +1271,8 @@ stop
       else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else
-       print *,"levelrz invalid just before call to get col ht ls"
+       print *,"levelrz invalid just before call to get col ht ls: ", &
+        levelrz
        stop
       endif 
       xbottom=xsten(2*lmin-1,dircrit)
@@ -1327,7 +1330,7 @@ stop
        else if ((SDIM.eq.2).and.(jtan.eq.3)) then
         !do nothing
        else
-        print *,"sdim or jtan invalid"
+        print *,"sdim or jtan invalid, jtan=",jtan
         stop
        endif
  
@@ -1608,7 +1611,7 @@ stop
          nfluid(dir2)=-master_normal(dir2)
         enddo
        else
-        print *,"mag invalid LEVELSET_3D.F90 1570"
+        print *,"mag invalid LEVELSET_3D.F90 1614: ",mag
         stop
        endif 
        do dir2=1,SDIM
@@ -1625,6 +1628,7 @@ stop
         
         if ((im3.eq.im).or.(im3.eq.im_opp)) then
          print *,"im3 invalid: ",im3 
+         print *,"im,im_opp ",im,im_opp
          stop
         endif
         if (user_tension(iten).eq.zero) then  
@@ -1670,7 +1674,7 @@ stop
             else if (LSTEST_EXTEND.ge.zero) then
              wt=EPS3
             else
-             print *,"LSTEST_EXTEND is NaN"
+             print *,"LSTEST_EXTEND is NaN: ",LSTEST_EXTEND
              stop
             endif
 
@@ -1806,6 +1810,7 @@ stop
               print *,"ZEYU_u_cl ",ZEYU_u_cl
               print *,"im3,iten ",im3,iten
              endif
+
              if (im.eq.im_liquid) then
               cos_angle=cos(ZEYU_thet_d)
              else if (im.eq.im_vapor) then
@@ -1829,6 +1834,11 @@ stop
             cos_angle=one
            else if (cos_angle.lt.-one) then
             cos_angle=-one
+           else if (abs(cos_angle).le.one) then
+            ! do nothing
+           else
+            print *,"invalid cos_angle= ",cos_angle
+            stop
            endif
 
            if (1.eq.0) then
@@ -1837,7 +1847,7 @@ stop
           else if (mag.eq.zero) then
            ! do nothing (nproject has mag=0)
           else
-           print *,"mag cannot be negative"
+           print *,"mag cannot be negative: ",mag
            stop
           endif 
 
@@ -1847,7 +1857,7 @@ stop
          endif 
  
         else
-         print *,"user_tension(iten) cannot be negative"
+         print *,"user_tension(iten) cannot be negative: ",user_tension
          stop
         endif
 
@@ -2068,7 +2078,7 @@ stop
          if (k.eq.0) then
           ! do nothing
          else
-          print *,"k invalid"
+          print *,"k invalid: ",k
           stop
          endif
         else if (SDIM.eq.3) then
@@ -2096,7 +2106,7 @@ stop
        if (wtnode.gt.zero) then
         ! do nothing
        else
-        print *,"wtnode invalid"
+        print *,"wtnode invalid: ",wtnode
         stop
        endif
 
@@ -2107,7 +2117,7 @@ stop
         if (dxsten(dir2).gt.zero) then
          ! do nothing
         else
-         print *,"dxsten invalid"
+         print *,"dxsten invalid: ",dxsten
          stop
         endif
         RR=one
@@ -2204,13 +2214,13 @@ stop
                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           RR=abs(xsten_curv(node_index(1),1))
          else
-          print *,"levelrz invalid initheightLS: RR"
+          print *,"levelrz invalid initheightLS: RR levelrz=",levelrz
           stop
          endif
         else if ((dir2.eq.2).or.(dir2.eq.SDIM)) then
          RR=one
         else
-         print *,"dir2 invalid"
+         print *,"dir2 invalid: ",dir2
          stop
         endif
 
@@ -2226,7 +2236,7 @@ stop
       if (totalwt.gt.zero) then
        ! do nothing
       else
-       print *,"totalwt invalid in initheightLS"
+       print *,"totalwt invalid in initheightLS: ",totalwt
        stop
       endif
 
@@ -2237,7 +2247,7 @@ stop
        if (dxsten(dir2).gt.zero) then
         ! do nothing
        else
-        print *,"dxsten invalid"
+        print *,"dxsten invalid: ",dxsten
         stop
        endif 
       enddo ! dir2
@@ -2251,7 +2261,7 @@ stop
                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           RR=abs(xsten_curv(0,1))
          else
-          print *,"levelrz invalid initheightLS: RR 3"
+          print *,"levelrz invalid initheightLS: RR 3: ",levelrz
           stop
          endif
         else if (dir2.eq.2) then
@@ -2266,7 +2276,7 @@ stop
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           RR=abs(xsten_curv(0,1))
          else
-          print *,"levelrz invalid initheightLS: RR 4"
+          print *,"levelrz invalid initheightLS: RR 4: ",levelrz
           stop
          endif
         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
@@ -2300,7 +2310,7 @@ stop
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         maxcurv=two*maxcurv
        else
-        print *,"initheightLS: levelrz invalid (b)"
+        print *,"initheightLS: levelrz invalid (b): ",levelrz
         stop
        endif
 
@@ -2311,7 +2321,7 @@ stop
        else if (abs(curvFD).le.maxcurv) then
         ! do nothing
        else
-        print *,"curvFD is NaN"
+        print *,"curvFD is NaN: ",curvFD
         stop
        endif
 
@@ -2322,7 +2332,7 @@ stop
        else if (abs(curvHT_choice).le.maxcurv) then
         ! do nothing
        else
-        print *,"curvHT_choice is NaN"
+        print *,"curvHT_choice is NaN: ",curvHT_choice
         stop
        endif
 

@@ -2682,6 +2682,7 @@ stop
        TSAT_Y_PARMS, &
        POUT, &
        T_gamma,Y_gamma, &
+       T_gamma_default, &
        mdotT, &
        TEMP_PROBE_source, &
        TEMP_PROBE_dest)
@@ -2693,6 +2694,7 @@ stop
       type(probe_out_type), INTENT(inout) :: POUT
       real(amrex_real), INTENT(inout) :: T_gamma
       real(amrex_real), INTENT(inout) :: Y_gamma
+      real(amrex_real), INTENT(out) :: T_gamma_default
       real(amrex_real), INTENT(out) :: mdotT
       real(amrex_real), INTENT(out) :: TEMP_PROBE_source
       real(amrex_real), INTENT(out) :: TEMP_PROBE_dest
@@ -2781,6 +2783,16 @@ stop
 
          if (wt(1)+wt(2).gt.zero) then
 
+          T_gamma_default= &
+            (wt(1)*TEMP_PROBE_source+wt(2)*TEMP_PROBE_dest)/(wt(1)+wt(2))
+
+          if (T_gamma_default.gt.zero) then
+           !do nothing
+          else
+           print *,"T_gamma_default invalid: ",T_gamma_default
+           stop
+          endif
+
           if (prescribed_mdot.eq.zero) then
            ! do nothing
           else if (prescribed_mdot.gt.zero) then
@@ -2823,16 +2835,16 @@ stop
          endif 
 
         else
-         print *,"dxprobe_target invalid"
+         print *,"dxprobe_target invalid: ",POUT%dxprobe_target
          stop
         endif
 
        else
-        print *,"D_MASS or den_G invalid"
+        print *,"D_MASS or den_G invalid: ",D_MASS,den_G
         stop
        endif
       else
-       print *,"Y_gamma or YI_min invalid"
+       print *,"Y_gamma or YI_min invalid: ",Y_gamma,YI_min
        stop
       endif
 
@@ -2846,6 +2858,7 @@ stop
        POUT, &
        Y_gamma, &
        T_gamma, &
+       T_gamma_default, &
        mdot_diff)
       IMPLICIT NONE
 
@@ -2855,6 +2868,7 @@ stop
       type(probe_out_type), INTENT(inout) :: POUT
       real(amrex_real), INTENT(inout) :: T_gamma
       real(amrex_real), INTENT(inout) :: Y_gamma
+      real(amrex_real), INTENT(out) :: T_gamma_default
       real(amrex_real), INTENT(out) :: mdot_diff
       real(amrex_real) mdotT
       real(amrex_real) mdotY_top,mdotY_bot,mdotY
@@ -2909,6 +2923,7 @@ stop
        TSAT_Y_PARMS, &
        POUT, &
        T_gamma,Y_gamma, &
+       T_gamma_default, &
        mdotT, &
        TEMP_PROBE_source, &
        TEMP_PROBE_dest)
@@ -2931,11 +2946,11 @@ stop
            (mdotY.le.zero)) then
         mdot_diff=mdotT-mdotY
        else
-        print *,"mdotY invalid"
+        print *,"mdotY invalid: ",mdotY
         stop
        endif
       else
-       print *,"mdotT invalid"
+       print *,"mdotT invalid: ",mdotT
        stop
       endif
 
@@ -7195,6 +7210,7 @@ stop
       real(amrex_real), INTENT(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
       real(amrex_real), INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
       real(amrex_real), INTENT(inout) :: T_gamma_a,T_gamma_b,T_gamma_c
+      real(amrex_real) :: T_gamma_default
       real(amrex_real), INTENT(in) :: TI_min,TI_max
       real(amrex_real), INTENT(in), pointer :: TI_YI_ptr(:,:)
       integer, INTENT(inout) :: TI_YI_counter
@@ -7276,25 +7292,32 @@ stop
        prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
-       Y_gamma_a,T_gamma_a,mdot_diff_a)
+       Y_gamma_a,T_gamma_a, &
+       T_gamma_default, &
+       mdot_diff_a)
 
       call mdot_diff_func( &
        prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
-       Y_gamma_b,T_gamma_b,mdot_diff_b)
+       Y_gamma_b,T_gamma_b, &
+       T_gamma_default, &
+       mdot_diff_b)
 
       call mdot_diff_func( &
        prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
-       Y_gamma_c,T_gamma_c,mdot_diff_c)
+       Y_gamma_c,T_gamma_c, &
+       T_gamma_default, &
+       mdot_diff_c)
 
       call mdot_diff_func( &
        prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
        Y_history,T_history, &
+       T_gamma_default, &
        mdot_diff_history)
 
       call add_to_TI_YI( &
@@ -7309,6 +7332,7 @@ stop
        if (prescribed_mdot.eq.zero) then
 
         if (mdot_diff_a*mdot_diff_b.le.zero) then
+
          if (mdot_diff_a*mdot_diff_c.gt.zero) then
           T_gamma_a=T_gamma_c
           Y_gamma_a=Y_gamma_c
@@ -7319,9 +7343,19 @@ stop
           print *,"mdot_diff_a or mdot_diff_c invalid"
           stop
          endif
+
+        else if (mdot_diff_a*mdot_diff_b.gt.zero) then
+
+         T_gamma_a=T_gamma_default
+         T_gamma_b=T_gamma_default
+         T_gamma_c=T_gamma_default
+         Y_gamma_a=Y_gamma_c
+         Y_gamma_b=Y_gamma_c
+
         else
-         print *,"bracketing interval lost"
+         print *,"bracketing interval corruption"
          print *,"probe_ok= ",probe_ok
+         print *,"T_gamma_default=",T_gamma_default
          print *,"T_gamma a,b,c ", &
           T_gamma_a,T_gamma_b,T_gamma_c
          print *,"Y_gamma a,b,c ", &
@@ -7729,6 +7763,7 @@ stop
       real(amrex_real) x_gamma_a,x_gamma_b,x_gamma_c
       real(amrex_real) Y_gamma_a,Y_gamma_b,Y_gamma_c
       real(amrex_real) T_gamma_a,T_gamma_b,T_gamma_c
+      real(amrex_real) T_gamma_default
       real(amrex_real) T_gamma_a_init,T_gamma_b_init
       real(amrex_real) Y_gamma_a_init,Y_gamma_b_init
       integer fully_saturated
@@ -9523,6 +9558,7 @@ stop
                        TSAT_Y_PARMS, &
                        POUT, &
                        TSAT_correct,Y_predict, &
+                       T_gamma_default, &
                        mdotT_debug, &
                        TEMP_PROBE_source, &
                        TEMP_PROBE_dest)
