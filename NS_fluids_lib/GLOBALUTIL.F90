@@ -3330,7 +3330,7 @@ end subroutine dynamic_contact_angle
  
       end subroutine getGhostVel
 
-! nfree points towards the liquid
+! nfree points towards the liquid (material im)
 ! nsolid points away from the solid 
 ! (nsolid is gradient of psi where psi<0 in solid)
 ! angle=pi => dry  contact=0 => wetting
