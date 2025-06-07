@@ -2458,7 +2458,9 @@ stop
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
-       Y_gamma,T_gamma, &
+       Y_gamma, &
+       T_gamma, &
+       Y_gamma_default, &
        mdotY_top, &
        mdotY_bot, &
        mdotY, &
@@ -2472,6 +2474,7 @@ stop
       type(probe_out_type), INTENT(inout) :: POUT
       real(amrex_real), INTENT(inout) :: Y_gamma
       real(amrex_real), INTENT(inout) :: T_gamma
+      real(amrex_real), INTENT(out) :: Y_gamma_default
       real(amrex_real), INTENT(out) :: mdotY_top,mdotY_bot,mdotY
       real(amrex_real), INTENT(out) :: Y_PROBE_VAPOR
       real(amrex_real) D_MASS
@@ -2501,7 +2504,7 @@ stop
 
        !iprobe=1 source
        !iprobe=2 dest
-       if (probe_ok.eq.1) then ! probes do not depend on TI
+       if (probe_ok.eq.1) then ! probes do not depend on TI,YI
         ! do nothing
        else if (probe_ok.eq.0) then
         call probe_interpolation( &
@@ -2509,7 +2512,7 @@ stop
          T_gamma,Y_gamma, &
          POUT)
        else
-        print *,"probe_ok invalid"
+        print *,"probe_ok invalid: ",probe_ok
         stop
        endif
 
@@ -2537,6 +2540,15 @@ stop
          if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
           Y_PROBE_VAPOR=POUT%Y_probe(iprobe_vapor)
+
+          if (Y_PROBE_VAPOR.ge.zero) then
+           !do nothing
+          else
+           print *,"Y_PROBE_VAPOR invalid: ",Y_PROBE_VAPOR
+           stop
+          endif
+
+          Y_gamma_default=Y_PROBE_VAPOR
 
           if (prescribed_mdot.eq.zero) then
            ! do nothing
@@ -2595,6 +2607,8 @@ stop
          endif
 
         else if (Kassemi_flag.eq.3) then ! Kassemi model
+
+         Y_gamma_default=one
 
          if (prescribed_mdot.eq.zero) then
 
@@ -2663,12 +2677,13 @@ stop
         endif
 
        else
-        print *,"dxprobe_target invalid"
+        print *,"dxprobe_target invalid: ", &
+          POUT%dxprobe_target
         stop
        endif
 
       else
-       print *,"Y_gamma or YI_min invalid"
+       print *,"Y_gamma or YI_min invalid: ",Y_gamma,YI_min
        stop
       endif
 
@@ -2859,6 +2874,7 @@ stop
        Y_gamma, &
        T_gamma, &
        T_gamma_default, &
+       Y_gamma_default, &
        mdot_diff)
       IMPLICIT NONE
 
@@ -2869,6 +2885,7 @@ stop
       real(amrex_real), INTENT(inout) :: T_gamma
       real(amrex_real), INTENT(inout) :: Y_gamma
       real(amrex_real), INTENT(out) :: T_gamma_default
+      real(amrex_real), INTENT(out) :: Y_gamma_default
       real(amrex_real), INTENT(out) :: mdot_diff
       real(amrex_real) mdotT
       real(amrex_real) mdotY_top,mdotY_bot,mdotY
@@ -2935,6 +2952,7 @@ stop
        TSAT_Y_PARMS, &
        POUT, &
        Y_gamma,T_gamma, &
+       Y_gamma_default, &
        mdotY_top, &
        mdotY_bot, &
        mdotY, &
@@ -7211,6 +7229,7 @@ stop
       real(amrex_real), INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
       real(amrex_real), INTENT(inout) :: T_gamma_a,T_gamma_b,T_gamma_c
       real(amrex_real) :: T_gamma_default
+      real(amrex_real) :: Y_gamma_default
       real(amrex_real), INTENT(in) :: TI_min,TI_max
       real(amrex_real), INTENT(in), pointer :: TI_YI_ptr(:,:)
       integer, INTENT(inout) :: TI_YI_counter
@@ -7294,6 +7313,7 @@ stop
        POUT, &
        Y_gamma_a,T_gamma_a, &
        T_gamma_default, &
+       Y_gamma_default, &
        mdot_diff_a)
 
       call mdot_diff_func( &
@@ -7302,6 +7322,7 @@ stop
        POUT, &
        Y_gamma_b,T_gamma_b, &
        T_gamma_default, &
+       Y_gamma_default, &
        mdot_diff_b)
 
       call mdot_diff_func( &
@@ -7310,6 +7331,7 @@ stop
        POUT, &
        Y_gamma_c,T_gamma_c, &
        T_gamma_default, &
+       Y_gamma_default, &
        mdot_diff_c)
 
       call mdot_diff_func( &
@@ -7318,6 +7340,7 @@ stop
        POUT, &
        Y_history,T_history, &
        T_gamma_default, &
+       Y_gamma_default, &
        mdot_diff_history)
 
       call add_to_TI_YI( &
@@ -7349,13 +7372,15 @@ stop
          T_gamma_a=T_gamma_default
          T_gamma_b=T_gamma_default
          T_gamma_c=T_gamma_default
-         Y_gamma_a=Y_gamma_c
-         Y_gamma_b=Y_gamma_c
+         Y_gamma_a=Y_gamma_default
+         Y_gamma_b=Y_gamma_default
+         Y_gamma_c=Y_gamma_default
 
         else
          print *,"bracketing interval corruption"
          print *,"probe_ok= ",probe_ok
          print *,"T_gamma_default=",T_gamma_default
+         print *,"Y_gamma_default=",Y_gamma_default
          print *,"T_gamma a,b,c ", &
           T_gamma_a,T_gamma_b,T_gamma_c
          print *,"Y_gamma a,b,c ", &
@@ -7764,6 +7789,7 @@ stop
       real(amrex_real) Y_gamma_a,Y_gamma_b,Y_gamma_c
       real(amrex_real) T_gamma_a,T_gamma_b,T_gamma_c
       real(amrex_real) T_gamma_default
+      real(amrex_real) Y_gamma_default
       real(amrex_real) T_gamma_a_init,T_gamma_b_init
       real(amrex_real) Y_gamma_a_init,Y_gamma_b_init
       integer fully_saturated
@@ -9568,7 +9594,9 @@ stop
                        probe_ok, &
                        TSAT_Y_PARMS, &
                        POUT, &
-                       Y_predict,TSAT_correct, &
+                       Y_predict, &
+                       TSAT_correct, &
+                       Y_gamma_default, &
                        mdotY_top_debug, &
                        mdotY_bot_debug, &
                        mdotY_debug, &
