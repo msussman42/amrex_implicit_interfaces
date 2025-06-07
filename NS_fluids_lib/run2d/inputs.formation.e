@@ -95,6 +95,7 @@ ns.gravity        = -0.0429    # body force  (gravity in MKS units)
 # material 3 is solid
 # sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
 # 90 degree contact angle:
+ns.ice_normal_weight = 1.0 1.0 1.0
 ns.tension        = 0.3269 0.3269 0.3269 
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 
