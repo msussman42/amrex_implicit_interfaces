@@ -499,9 +499,12 @@ stop
       real(amrex_real) nmain(SDIM) 
       real(amrex_real) nopp(SDIM) 
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
+      real(amrex_real) normal_13(SDIM)
+      real(amrex_real) normal_23(SDIM)
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
       real(amrex_real) normal_im3(SDIM) 
+      real(amrex_real) normal_im3_negate(SDIM) 
       real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ncurv1_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -1118,7 +1121,9 @@ stop
       else
        print *,"WARNING nfluid_least_squares or signside has wrong sign"
        print *,"nfluid_least_squares: ",nfluid_least_squares
+       print *,"nfluid: ",nfluid
        print *,"dircrit, signside: ",dircrit,signside
+       print *,"xcenter: ",xcenter
 
        do dir2=1,SDIM
         master_normal(dir2)=nfluid(dir2)
@@ -1494,16 +1499,21 @@ stop
 
         !imhold=im_primary_sten(0,0,0)
 
+       nghost(dir2)=master_normal(dir2) !initialization
+
+       normal_13(dir2)=least_squares_normal(iten_13,dir2)
+       normal_23(dir2)=least_squares_normal(iten_23,dir2)
+
        if (im3.eq.0) then
         normal_im3(dir2)=master_normal(dir2)
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if (im.lt.im3) then
          normal_im3(dir2)= &
-           -ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
+           -ice_normal_weight(iten_13)*normal_13(dir2)
         else if (im.gt.im3) then
          normal_im3(dir2)= &
-           ice_normal_weight(iten_13)*least_squares_normal(iten_13,dir2)
+           ice_normal_weight(iten_13)*normal_13(dir2)
         else
          print *,"im or im3 invalid: ",im,im3
          stop
@@ -1511,10 +1521,10 @@ stop
 
         if (im_opp.lt.im3) then
          normal_im3(dir2)=normal_im3(dir2)  &
-           -ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
+           -ice_normal_weight(iten_23)*normal_23(dir2)
         else if (im_opp.gt.im3) then
          normal_im3(dir2)=normal_im3(dir2)+ &
-           ice_normal_weight(iten_23)*least_squares_normal(iten_23,dir2)
+           ice_normal_weight(iten_23)*normal_23(dir2)
         else
          print *,"im_opp or im3 invalid: ",im_opp,im3
          stop
@@ -1524,7 +1534,7 @@ stop
         print *,"im3 invalid: ",im3
         stop
        endif
-     
+    
       enddo ! dir2=1..sdim
 
       call prepare_normal( &
@@ -1577,6 +1587,10 @@ stop
        print *,"mag3 invalid: ",mag3
        stop
       endif
+
+      do dir2=1,SDIM
+       normal_im3_negate(dir2)=-normal_im3(dir2)
+      enddo
 
       do k=klo_sten_short,khi_sten_short 
       do j=-1,1
@@ -1855,7 +1869,36 @@ stop
           print *,"use_DCA invalid: ",use_DCA
           stop
          endif 
- 
+
+         if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
+          do dir2=1,SDIM
+           nghost(dir2)=master_normal(dir2)
+          enddo
+         else if (use_DCA.ge.-1) then !non GNBC DCA models.
+          ! nghost points from material im_opp into material im.
+          call ghostnormal( &
+            master_normal, & !intent(in)
+            normal_im3_negate, & !intent(in)
+            cos_angle, & !intent(in)
+            nghost, & !intent(out)
+            nperp) !intent(out)
+         else
+          print *,"use_DCA invalid: ",use_DCA
+          stop
+         endif 
+
+         if (1.eq.1) then
+          print *,"master_normal=",master_normal 
+          print *,"normal_im3=",normal_im3 
+          print *,"normal_im3_negate=",normal_im3_negate 
+          print *,"nproject=",nproject
+          print *,"nghost=",nghost
+          print *,"nperp=",nperp
+          print *,"normal_13=",normal_13
+          print *,"normal_23=",normal_23
+          print *,"ice_normal_weight=",ice_normal_weight
+          print *,"xcenter: ",xcenter
+         endif
         else
          print *,"user_tension(iten) cannot be negative: ",user_tension
          stop
@@ -1924,27 +1967,8 @@ stop
 
         do dir2=1,SDIM
          nmain(dir2)=master_normal(dir2)
-
-          ! normal_im3 points into the solid
-          ! nopp points aways from the solid.
-         nopp(dir2)=-normal_im3(dir2)
+         nopp(dir2)=nghost(dir2)
         enddo
-
-        if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
-         do dir2=1,SDIM
-          nghost(dir2)=nmain(dir2)
-          nopp(dir2)=nmain(dir2)
-         enddo
-        else if (use_DCA.ge.-1) then !non GNBC DCA models.
-          ! nghost points from material im_opp into material im.
-         call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
-         do dir2=1,SDIM
-          nopp(dir2)=nghost(dir2)
-         enddo
-        else
-         print *,"use_DCA invalid: ",use_DCA
-         stop
-        endif 
 
        else
         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
