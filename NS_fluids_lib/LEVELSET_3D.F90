@@ -4288,8 +4288,13 @@ stop
                stop
               endif
 
+              ! FIX_LS_tessellate is declared in MOF.F90
+              ! input : fluids tessellate, solids are embedded
+              ! output: fluids tessellate, solids are embedded,
+              !         and one and only one fluid LS is positive
               call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
 
+               !get_primary_material is declared in GLOBALUTIL.F90
               call get_primary_material(LSCEN_hold_fixed,im_sten_primary)
               call get_secondary_material(LSCEN_hold_fixed, &
                  im_sten_primary,im_sten_secondary)
@@ -4318,19 +4323,43 @@ stop
                  print *,"im_sten_primary: ",im_sten_primary
                  stop
                 endif
-                if (LSCEN_hold_fixed(im_wt).ge. &
-                    LSCEN_hold_fixed(im_opp_wt)) then
+
+                if (is_rigid(im_sten_primary).eq.1) then
+
                  do dirloc=1,SDIM
-                  n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
-                 enddo
-                else if (LSCEN_hold_fixed(im_wt).le. &
-                         LSCEN_hold_fixed(im_opp_wt)) then
-                 do dirloc=1,SDIM
-                  n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
-                 enddo
+                  if (im_sten_primary.eq.im_opp_wt) then
+                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                  else if (im_sten_primary.eq.im_wt) then
+                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                  else
+                   print *,"im_sten_primary invalid: ",im_sten_primary
+                   print *,"im_wt: ",im_wt
+                   print *,"im_opp_wt: ",im_opp_wt
+                   stop
+                  endif
+                 enddo !dirloc=1,SDIM
+
+                else if (is_rigid(im_sten_primary).eq.0) then
+
+                 if (LSCEN_hold_fixed(im_wt).ge. &
+                     LSCEN_hold_fixed(im_opp_wt)) then
+                  do dirloc=1,SDIM
+                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                  enddo
+                 else if (LSCEN_hold_fixed(im_wt).le. &
+                          LSCEN_hold_fixed(im_opp_wt)) then
+                  do dirloc=1,SDIM
+                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                  enddo
+                 else
+                  print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
+                  print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
+                  stop
+                 endif
+
                 else
-                 print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
-                 print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
+                 print *,"is_rigid(im_sten_primary) invalid: ", &
+                   im_sten_primary,is_rigid(im_sten_primary)
                  stop
                 endif
 
