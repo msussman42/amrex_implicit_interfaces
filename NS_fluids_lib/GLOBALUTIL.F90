@@ -29591,10 +29591,8 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: LS(num_materials)
 integer, INTENT(out) :: im_primary
 integer im,imtest
-integer tessellate
+integer, parameter :: tessellate=0
 integer is_rigid_local(num_materials)
-
-tessellate=0
 
 do im=1,num_materials
  is_rigid_local(im)=is_rigid(im)
@@ -29611,7 +29609,7 @@ do im=1,num_materials
   print *,"expecting tessellate==0"
   stop
  else
-  print *,"tessellate invalid38"
+  print *,"tessellate invalid38: ",tessellate
   stop
  endif
 enddo ! im=1..num_materials
@@ -29669,6 +29667,8 @@ else if ((im_primary.ge.1).and. &
  ! do nothing
 else
  print *,"is_rigid or im_primary invalid"
+ print *,"im_primary=",im_primary
+ print *,"is_rigid_local(im_primary)=",is_rigid_local(im_primary)
  stop
 endif
 

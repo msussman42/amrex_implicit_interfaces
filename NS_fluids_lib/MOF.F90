@@ -23165,7 +23165,8 @@ contains
       end subroutine multi_get_volume_grid_and_map
 
        ! input : fluids tessellate, solids are embedded
-       ! output: fluids tessellate and one and only one fluid LS is positive
+       ! output: fluids tessellate, solids are embedded,
+       !         and one and only one fluid LS is positive
       subroutine FIX_LS_tessellate(LS,LS_new)
       use probcommon_module
       use global_utility_module
@@ -23192,7 +23193,7 @@ contains
         print *,"expecting tessellate==0 here"
         stop
        else
-        print *,"tessellate invalid30"
+        print *,"tessellate invalid30: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
