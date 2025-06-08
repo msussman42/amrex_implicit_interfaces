@@ -4306,10 +4306,10 @@ stop
                     (im_opp_wt.eq.im_sten_primary)) then
                  if ((im_wt.eq.im_sten_secondary).or. &
                      (im_opp_wt.eq.im_sten_secondary)) then
-                  wt_local=one
+                  wt_local=one/(one+i1**2+j1**2+k1**2)
                  else if ((im_wt.ne.im_sten_secondary).and. &
                           (im_opp_wt.ne.im_sten_secondary)) then
-                  wt_local=0.001d0
+                  wt_local=0.0001d0
                  else
                   print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
                   print *,"im_sten_secondary: ",im_sten_secondary
@@ -4324,12 +4324,20 @@ stop
                  stop
                 endif
 
+                FIX ME is_rigid(im_wt) or is_rigid(im_opp_wt) => use
+                 solid normal
                 if (is_rigid(im_sten_primary).eq.1) then
 
                  do dirloc=1,SDIM
                   if (im_sten_primary.eq.im_opp_wt) then
                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                   else if (im_sten_primary.eq.im_wt) then
+                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                  else if (LSCEN_hold_fixed(im_wt).ge. &
+                           LSCEN_hold_fixed(im_opp_wt)) then
+                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                  else if (LSCEN_hold_fixed(im_wt).le. &
+                           LSCEN_hold_fixed(im_opp_wt)) then
                    n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
                   else
                    print *,"im_sten_primary invalid: ",im_sten_primary
