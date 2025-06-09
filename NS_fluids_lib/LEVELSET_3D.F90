@@ -349,6 +349,7 @@ stop
         !closest point normal.
         nrmsten, & !intent(in)
         least_squares_normal, & !intent(in)
+        least_squares_normal_material, & !intent(in)
         !scalar (i,j,k)
         vol_sten, & !intent(in)
         curvHT_choice, & !intent(out)
@@ -446,6 +447,9 @@ stop
       real(amrex_real),intent(in) :: &
           least_squares_normal(num_interfaces,SDIM)
 
+      real(amrex_real),intent(in) :: &
+          least_squares_normal_material(num_materials,SDIM)
+
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
 
       real(amrex_real) ngrid(SDIM)
@@ -501,6 +505,7 @@ stop
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) normal_13(SDIM)
       real(amrex_real) normal_23(SDIM)
+      real(amrex_real) normal_33(SDIM)
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
       real(amrex_real) normal_im3(SDIM) 
@@ -1501,32 +1506,55 @@ stop
 
        nghost(dir2)=master_normal(dir2) !initialization
 
-       normal_13(dir2)=least_squares_normal(iten_13,dir2)
-       normal_23(dir2)=least_squares_normal(iten_23,dir2)
-
        if (im3.eq.0) then
+
         normal_im3(dir2)=master_normal(dir2)
+        normal_13(dir2)=master_normal(dir2)
+        normal_23(dir2)=master_normal(dir2)
+        normal_33(dir2)=master_normal(dir2)
+
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
-        if (im.lt.im3) then
-         normal_im3(dir2)= &
-           -ice_normal_weight(iten_13)*normal_13(dir2)
-        else if (im.gt.im3) then
-         normal_im3(dir2)= &
-           ice_normal_weight(iten_13)*normal_13(dir2)
+        normal_13(dir2)=least_squares_normal(iten_13,dir2)
+        normal_23(dir2)=least_squares_normal(iten_23,dir2)
+        normal_33(dir2)=least_squares_normal_material(im3,dir2)
+
+        if ((ice_normal_weight(iten_13).gt.zero).and. &
+            (ice_normal_weight(iten_23).gt.zero)) then
+         !do nothing
         else
-         print *,"im or im3 invalid: ",im,im3
+         print *,"expecting ice_normal_weight>0: ",ice_normal_weight
          stop
         endif
 
-        if (im_opp.lt.im3) then
-         normal_im3(dir2)=normal_im3(dir2)  &
+        if (ice_normal_weight(iten_13).eq. &
+            ice_normal_weight(iten_23)) then
+         normal_im3(dir2)=normal_33(dir2)
+        else if (ice_normal_weight(iten_13).ne. &
+                 ice_normal_weight(iten_23)) then
+         if (im.lt.im3) then
+          normal_im3(dir2)= &
+           -ice_normal_weight(iten_13)*normal_13(dir2)
+         else if (im.gt.im3) then
+          normal_im3(dir2)= &
+           ice_normal_weight(iten_13)*normal_13(dir2)
+         else
+          print *,"im or im3 invalid: ",im,im3
+          stop
+         endif
+
+         if (im_opp.lt.im3) then
+          normal_im3(dir2)=normal_im3(dir2)  &
            -ice_normal_weight(iten_23)*normal_23(dir2)
-        else if (im_opp.gt.im3) then
-         normal_im3(dir2)=normal_im3(dir2)+ &
+         else if (im_opp.gt.im3) then
+          normal_im3(dir2)=normal_im3(dir2)+ &
            ice_normal_weight(iten_23)*normal_23(dir2)
+         else
+          print *,"im_opp or im3 invalid: ",im_opp,im3
+          stop
+         endif
         else
-         print *,"im_opp or im3 invalid: ",im_opp,im3
+         print *,"ice_normal_weight invalid: ",ice_normal_weight
          stop
         endif
 
@@ -1896,6 +1924,7 @@ stop
           print *,"nperp=",nperp
           print *,"normal_13=",normal_13
           print *,"normal_23=",normal_23
+          print *,"normal_33=",normal_33
           print *,"ice_normal_weight=",ice_normal_weight
           print *,"xcenter: ",xcenter
          endif
@@ -3443,6 +3472,9 @@ stop
       real(amrex_real) least_squares_normal(num_interfaces,SDIM)
       real(amrex_real) least_squares_normal_wt(num_interfaces)
 
+      real(amrex_real) least_squares_normal_material(num_materials,SDIM)
+      real(amrex_real) least_squares_normal_material_wt(num_materials)
+
       real(amrex_real) nrmPROBE(SDIM*num_materials)
       real(amrex_real) nrmPROBE_merge(SDIM*num_materials)
       real(amrex_real) LS_PROBE(num_materials)
@@ -4243,6 +4275,13 @@ stop
               least_squares_normal_wt(iten_local)=zero
              enddo
 
+             do im_curv=1,num_materials
+              do dirloc=1,SDIM
+               least_squares_normal_material(im_curv,dirloc)=zero
+              enddo
+              least_squares_normal_material_wt(im_curv)=zero
+             enddo
+
              ! i1,j1,k1=-ngrow_distance ... ngrow_distance
              do k1=LSstenlo(3),LSstenhi(3)
              do j1=LSstenlo(2),LSstenhi(2)
@@ -4416,6 +4455,28 @@ stop
 
               do im_curv=1,num_materials
 
+               wt_local=one/(one+i1**2+j1**2+k1**2)
+               do dirloc=1,SDIM
+                n_loc(dirloc)=nrm_local_merge(dirloc+(im_curv-1)*SDIM)
+               enddo
+               call prepare_normal(n_loc,RR,mag_loc,SDIM)
+               if (mag_loc.eq.zero) then
+                wt_local=zero
+               else if (mag_loc.gt.zero) then
+                !do nothing
+               else
+                print *,"mag_loc invalid: ",mag_loc
+                stop
+               endif
+
+               do dirloc=1,SDIM
+                least_squares_normal_material(im_curv,dirloc)= &
+                  least_squares_normal_material(im_curv,dirloc)+ &
+                  wt_local*n_loc(dirloc)
+               enddo
+               least_squares_normal_material_wt(im_curv)= &
+                 least_squares_normal_material_wt(im_curv)+wt_local
+
                lssten(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
 
                if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
@@ -4466,7 +4527,29 @@ stop
                least_squares_normal(iten_local,dirloc)=n_loc(dirloc)
               enddo
              enddo !iten_local=1,num_interfaces
-      
+     
+             do im_curv=1,num_materials
+              do dirloc=1,SDIM
+               if (least_squares_normal_material_wt(im_curv).eq.zero) then
+                least_squares_normal_material(im_curv,dirloc)=zero
+               else if (least_squares_normal_material_wt(im_curv).gt.zero) then
+                least_squares_normal_material(im_curv,dirloc)= &
+                 least_squares_normal_material(im_curv,dirloc)/ &
+                 least_squares_normal_material_wt(im_curv)
+               else
+                print *,"least_squares_normal_material_wt(im_curv) invalid: ", &
+                 im_curv,least_squares_normal_material_wt(im_curv)
+                stop
+               endif
+               n_loc(dirloc)=least_squares_normal_material(im_curv,dirloc)
+              enddo !dirloc=1,sdim
+              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              do dirloc=1,SDIM
+               least_squares_normal_material(im_curv,dirloc)=n_loc(dirloc)
+              enddo
+             enddo !im_curv=1,num_materials
+
+
              ! i1,j1,k1=-1..1
              do k1=istenlo(3),istenhi(3)
              do j1=istenlo(2),istenhi(2)
@@ -4517,6 +4600,7 @@ stop
               !closest point normal.
               nrmsten, &
               least_squares_normal, &
+              least_squares_normal_material, &
               !scalar (i,j,k)
               vol_sten, &
               curv_cellHT, & !intent(out)
