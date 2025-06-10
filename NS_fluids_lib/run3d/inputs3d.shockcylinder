@@ -56,19 +56,19 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #geometry.prob_hi   =  2.4 0.8 3.2
 #diameter=0.094cm 
 
-amr.n_cell    = 144 96 192
-#amr.n_cell    = 96 192
+amr.n_cell    = 72 48 96
+#amr.n_cell    = 48 96
 
-amr.max_level = 4 # max_level=4 finest
+amr.max_level = 5 # max_level=4 finest
 #ARIENTI
-# max_level_for_use=2  0<t<1e-3
-# max_level_for_use=3  1e-3<t<2.3e-3
-# max_level_for_use=4  t>2.3e-3
-ns.max_level_for_use = 2
+# max_level_for_use=3  0<t<1e-3
+# max_level_for_use=4  1e-3<t<2.3e-3
+# max_level_for_use=5  t>2.3e-3
+ns.max_level_for_use = 3
 
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
-amr.grid_eff        = 0.7   # what constitutes an efficient grid
+amr.n_error_buf     = 2 2 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8 8 8 8 8 8   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
@@ -82,7 +82,8 @@ ns.xslice=0.0 0.0 0.0
 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 16
+cg.min_max_grid_size   = 64
 #amr.restart         = chk0014
 #amr.trace   =1
 
