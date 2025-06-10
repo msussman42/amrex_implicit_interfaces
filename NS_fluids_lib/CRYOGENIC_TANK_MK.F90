@@ -2250,12 +2250,24 @@ if ((num_materials.eq.3).and. &
     LL=get_user_latent_heat(1,room_temperature,1)
 
     if (LL.ne.zero) then
-     call Pgamma_Clausius_Clapyron(Pgamma, &
-            fort_reference_pressure(1), &
-            temperature, &
-            fort_saturation_temp(1), &
-            LL, &
-            TANK_MK_R_UNIV,fort_molar_mass(2))
+      !Pgamma_Clausius_Clapyron is declared in GLOBALUTIL.F90
+      !  Pgamma=PSAT*exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
+      !  PEOS_{gas}=rho R T
+      !  PEOS_{gas}(Tgamma)=P_CC(Tgamma)
+      ! Kassemi model:
+      ! c1 [k grad T](Tgamma) dot n/L=
+      ! c2(Pgamma(Tgamma)-PEOS(Tgamma))/sqrt(Tgamma)
+      ! WARNING: PEOS(rho,T) != P_Multigrid
+      !  i.e the PEOS(rho^np1,T^np1) != P_from_PDE
+      !  P_from_PDE solves Dp/Dt=-rho c^{2} div u
+     call Pgamma_Clausius_Clapyron( &
+        Pgamma, & !intent(out)
+        fort_reference_pressure(1), & !intent(in)
+        temperature, & !intent(in)
+        fort_saturation_temp(1), & !intent(in)
+        LL, & !intent(in)
+        TANK_MK_R_UNIV, & !intent(in)
+        fort_molar_mass(2)) !intent(in)
      if (abs(Pgamma-pressure).le.EPS2*pressure) then
       ! do nothing
      else if ((axis_dir.eq.0).or. &

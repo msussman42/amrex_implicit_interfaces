@@ -797,6 +797,8 @@ int NavierStokes::observe_initial_mdot=0;
 //1=Tanasawa  2=Schrage 3=Kassemi
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
+int NavierStokes::abort_if_T_gamma_unattainable=0;
+
 //ispec=mass_fraction_id[0..2 num_interfaces-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
@@ -4618,6 +4620,8 @@ NavierStokes::read_params ()
     pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
       Tanasawa_or_Schrage_or_Kassemi,2*num_interfaces);
 
+    pp.queryAdd("abort_if_T_gamma_unattainable",abort_if_T_gamma_unattainable);
+
     pp.queryAdd("mass_fraction_id",mass_fraction_id,2*num_interfaces);
 
      // set defaults for "distribute_from_target"
@@ -6179,6 +6183,9 @@ NavierStokes::read_params ()
      std::cout << "observe_initial_mdot" << observe_initial_mdot << '\n';
 
      std::cout << "R_Palmore_Desjardins " << R_Palmore_Desjardins << '\n';
+
+     std::cout << "abort_if_T_gamma_unattainable " << 
+      abort_if_T_gamma_unattainable << '\n';
 
      std::cout << "unscaled_min_curvature_radius=" << 
 	      unscaled_min_curvature_radius << '\n';
@@ -14250,6 +14257,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nden,
      &custom_nucleation_model,
      &do_the_nucleate,
+     &abort_if_T_gamma_unattainable,
      nucleate_pos.dataPtr(),
      &nucleate_pos_size, 
      nucleation_temp.dataPtr(), 
@@ -14333,6 +14341,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &nden,
      &custom_nucleation_model,
      &do_the_nucleate,
+     &abort_if_T_gamma_unattainable,
      nucleate_pos.dataPtr(),
      &nucleate_pos_size, 
      nucleation_temp.dataPtr(), 
