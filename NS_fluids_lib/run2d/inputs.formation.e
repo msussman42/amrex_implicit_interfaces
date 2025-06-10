@@ -8,6 +8,7 @@ stop_time =  1000  # maximum problem time
 # nozzle radius 0.085cm
 # multiply computed effective diameter by 0.085 
 # We expect the run.out file to have 0.499/0.085=5.87
+# (search for "im= 2 diameter= ")
 #
 # The dimensionless radius is 1.0
 # The dimensionless inflow average velocity is 1.0
