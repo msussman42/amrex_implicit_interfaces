@@ -1844,6 +1844,9 @@ protected:
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
+
+    static int abort_if_T_gamma_unattainable; //default=0
+
      // index: 1..2*num_interfaces
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 

@@ -91,6 +91,7 @@ extern "C"
     int* nden,
     int* custom_nucleation_model,
     int* do_the_nucleate,
+    int* abort_if_T_gamma_unattainable,
     Real* nucleate_pos,
     const int* nucleate_pos_size,
     Real* nucleation_temp,

@@ -7201,6 +7201,7 @@ stop
       end subroutine add_to_TI_YI
 
       subroutine advance_TY_gamma( &
+        abort_if_T_gamma_unattainable, &
         prescribed_mdot, &
         TSAT_Y_PARMS, &
         POUT, &
@@ -7224,6 +7225,7 @@ stop
       use mass_transfer_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: abort_if_T_gamma_unattainable
       real(amrex_real), INTENT(in) :: prescribed_mdot
       real(amrex_real), INTENT(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
       real(amrex_real), INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
@@ -7367,7 +7369,8 @@ stop
           stop
          endif
 
-        else if (mdot_diff_a*mdot_diff_b.gt.zero) then
+        else if ((mdot_diff_a*mdot_diff_b.gt.zero).and. &
+                 (abort_if_T_gamma_unattainable.eq.0)) then
 
          T_gamma_a=T_gamma_default
          T_gamma_b=T_gamma_default
@@ -7376,8 +7379,11 @@ stop
          Y_gamma_b=Y_gamma_default
          Y_gamma_c=Y_gamma_default
 
-        else
+        else if (abort_if_T_gamma_unattainable.eq.1) then
          print *,"bracketing interval corruption"
+         print *,"RECOMMENDED INCREASE BOILING TEMPERATURE!(Kassemi model)"
+         print *,"TSAT_Y_PARMS%Clausius_Clapyron_Tsat: ", &
+           TSAT_Y_PARMS%Clausius_Clapyron_Tsat
          print *,"probe_ok= ",probe_ok
          print *,"T_gamma_default=",T_gamma_default
          print *,"Y_gamma_default=",Y_gamma_default
@@ -7414,6 +7420,10 @@ stop
          print *,"POUT%T_probe(1) ",POUT%T_probe(1)
          print *,"POUT%T_probe(2) ",POUT%T_probe(2)
          print *,"prescribed_mdot=",prescribed_mdot
+         stop
+        else
+         print *,"abort_if_T_gamma_unattainable invalid: ", &
+           abort_if_T_gamma_unattainable
          stop
         endif
 
@@ -7470,6 +7480,7 @@ stop
        nden, &
        custom_nucleation_model, &
        do_the_nucleate, &
+       abort_if_T_gamma_unattainable, &
        nucleate_pos, &
        nucleate_pos_size, &
        nucleation_temp, &
@@ -7562,6 +7573,7 @@ stop
       integer, INTENT(in) :: nden
       integer, INTENT(in) :: custom_nucleation_model
       integer, INTENT(in) :: do_the_nucleate
+      integer, INTENT(in) :: abort_if_T_gamma_unattainable
       integer, INTENT(in) :: nucleate_pos_size
       real(amrex_real), target, INTENT(in) :: nucleate_pos(nucleate_pos_size)
       real(amrex_real), target, INTENT(in) :: nucleation_temp(2*num_interfaces)
@@ -9464,6 +9476,7 @@ stop
                        if (fully_saturated.eq.2) then
 
                         call advance_TY_gamma( &
+                         abort_if_T_gamma_unattainable, &
                          prescribed_mdot(iten+ireverse*num_interfaces), &
                          TSAT_Y_PARMS, &
                          POUT, &
@@ -9529,6 +9542,7 @@ stop
                          if (fully_saturated.eq.0) then
 
                           call advance_TY_gamma( &
+                           abort_if_T_gamma_unattainable, &
                            prescribed_mdot(iten+ireverse*num_interfaces), &
                            TSAT_Y_PARMS, &
                            POUT, &
