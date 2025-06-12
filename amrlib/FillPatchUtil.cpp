@@ -143,7 +143,10 @@ void FillPatchSingleLevel (
  physbcf.FillBoundary(level,mf,time,dcomp,scompBC_map,ncomp,bfact);
 }
 
-
+//FillPatchTwoLevels is called from AmrLevel.cpp:
+// AmrLevel::FillPatch
+// AmrLevel::InterpBordersGHOST
+// AmrLevel::InterpBorders
 void FillPatchTwoLevels (
  MultiFab& mf_target,   // target
  Real time,

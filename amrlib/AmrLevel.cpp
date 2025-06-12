@@ -1223,7 +1223,33 @@ AmrLevel::CopyOldToNewPC(int lev_max) {
 
 #endif
 
-
+// The algorithm:
+// 1. robust_coarsen:
+//   (i) for all Boxes in BoxArray:
+//       if box_lo is odd then box_lo--
+//       if box_hi+1 is odd then box_hi++
+//   (ii) return coarsen(BoxArray)
+// 2. find coarsest level needed:
+//     i) l=l^max
+//     ii) Omega^l=Omega^TBF  TBF=To Be Filled
+//     iii) Sigma=Omega^l-Omega^{l,Given}-
+//          Omega^{l,physical BC)
+//     iv)  if Sigma=null then only 1 level fill needed. bottom_level=l
+//     v.a) Omega^{l-1}=robust_coarsen(Omega^{l})
+//     v.b) Sigma=Omega^{l-1}-Omega^{l-1,Given}-
+//                 coarsened(Omega^{l,Given})-
+//                 Omega^{l-1,physical BC}
+//     v.c) if Sigma=null then bottom_level=l-1
+//     v.d) if Sigma<>null then l=l-1 go back to step v.a
+// 3. if l^bottom=l^max then call fill single level
+// 4. if l^bottom<l^max then
+// 4.a)  for l=l^bottom+1,l^max
+// 4.b)   call two level fill using l-1, and l:
+//           inputs: Omega^l
+//                   Data^{l-1}
+//                   old Data^{l}
+//           output: Data^{l}    
+// 4.c) return Data^{TBF}=Data^{l^max}
 void
 AmrLevel::FillPatch (AmrLevel & old,
                      MultiFab& mf,  // data to be filled
@@ -1327,6 +1353,7 @@ AmrLevel::FillPatch (AmrLevel & old,
     local_scompBC_map,
     bfact_fine,
     debug_fillpatch);
+
   } else if (level>0) {
 
    AmrLevel&               clev    = parent->getLevel(level-1);
@@ -1590,6 +1617,10 @@ AmrLevel::FillCoarsePatchGHOST (
 
 }   // FillCoarsePatchGHOST
 
+//Use virtual (aka GHOST) state data information for filling physical
+//boundaries. i.e. The virtual (GHOST) state data holds no actual data, only
+//holds pointers for filling the virtual data.
+//called from NavierStokes3.cpp
 void
 AmrLevel::InterpBordersGHOST (
                      MultiFab& cmf,
@@ -1729,7 +1760,7 @@ AmrLevel::InterpBordersGHOST (
 
 }   // InterpBordersGHOST
 
-
+//called from MacProj.cpp, NavierStokes3.cpp
 void
 AmrLevel::InterpBorders (
                      MultiFab& cmf,
