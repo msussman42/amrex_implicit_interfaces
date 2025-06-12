@@ -761,22 +761,15 @@ AmrCore::AMR_checkInput ()
 
     if (max_level < 0)
         amrex::Error("checkInput: max_level not set");
-    //
+
+    // See AmrMesh::MakeNewGrids
     // 1. Check that blocking_factor is a power of 2 and no smaller than 4.
     // 2. Check that blocking_factor[i+1]<=blocking_factor[i].
-    // 3. Check that blocking_factor[i]>=8 if i<max_level.
-    //    (this last check insures that there are at least 4 coarse 
-    //     (level i) proper nesting cells next to a (level i+1) finer level)
+    // Note: n_proper=1 seems to imply that there is at least a 2 cell
+    // buffer between levels l and l+2
     for (int i = 0; i <= max_level; i++) {
      int k = Old_blockingFactor(i);
      if (i<max_level) {
-      if (k<8) {
-       std::cout << "must have at least 4 proper nesting cells" << '\n';
-       std::cout << "k= " << k << '\n';
-       std::cout << "i= " << i << '\n';
-       std::cout << "max_level= " << max_level << '\n';
-       amrex::Error("must have blocking_factor>=8 if lev<max_level");
-      }
       if (k<Old_blockingFactor(i+1))
        amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
      }
@@ -784,7 +777,7 @@ AmrCore::AMR_checkInput ()
       std::cout << "k= " << k << '\n';
       std::cout << "i= " << i << '\n';
       std::cout << "max_level= " << max_level << '\n';
-      amrex::Error("blocking factor must be 4 or larger on max_level");
+      amrex::Error("blocking factor must be 4 or larger");
      }
 
      while ( k > 0 && (k%2 == 0) )

@@ -28,6 +28,7 @@ struct AmrInfo {
     //! Grid efficiency.
     Real grid_eff = static_cast<Real>(0.7);
     //! Cells required for proper nesting.
+    //SUSSMAN
     int n_proper = 1;
     int use_fixed_upto_level = 0;
     bool use_fixed_coarse_grids = false;
