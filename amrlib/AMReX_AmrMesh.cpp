@@ -533,20 +533,64 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
     Vector<BoxArray> p_n_comp_ba(max_level); //Complement proper nesting domain.
     BoxList p_n, p_n_comp;
 
+     // Conjecture: if the blocking_factor=2^p and refinement ratio=2 then
+     // the number of level "l" proper nesting cells that buffer level
+     // "l+1" must be divisible by 2^{p-1}
+     // i.e. the number of proper nesting cells is
+     //   n_proper * 2^{p-1}
+     //
+     // overall strategy
+     // AMR levels l = 0 ... finest_level  (real physical levels)
+     // MG level   l = absolute coarsest ... -1 (virtual levels)
+     // finest level=lmax
+     //  lmax-1
+     //  lmax-2
+     //  ...
+     //  0     level 0 and above, minimize the blocking factor
+     //  -1    level -1 and below, maximize the blocking factor
+     //  -2
+     //  ...
+     //  absolute coasest
+     //
+     // blocking_factor=4 refinement ratio=2 
+     // n_proper=1=>2 proper nesting cells
+     // example with 2 proper nesting cells:
+     //    level 0   ----------------
+     //    level 1      --------
+     //    level 2        ----
+     //
      // domain:    --------------------
      // lbase:         ------------
      // cdomain:   ----------
      // clbase:      ------ 
      // p_n_comp:  --      --
-     // accrete:   ---    ---
+     // pncaccrete ---    ---
      // p_n:          ----
      // next coarse level:
      // p_n_comp:  ---    ---
      // p_n_comp:  ------        ------  (refine)
      // p_n_comp:  -------      -------  (accrete)
      // pcdomain:  -------------------- (lev lbase+1)
-     // p_n:              ------
+     // p_n:              ------ (tagflag=CLEAR outside p_n)
      //
+     // blocking_factor=2 refinement ratio=2
+     // bf_lev=1  rr_lev=2
+     //
+     // domain:    --------------------
+     // lbase:         ------------
+     // cdomain:   --------------------
+     // clbase:        ------------
+     // p_n_comp:  ----            ----
+     // pncaccrete -----          -----
+     // p_n:            ----------
+     // next coarse level:
+     // pncaccrete -----          -----
+     // pncaccrete ----------                    ---------- (refine)
+     // pncaccrete -----------                  ----------- (accrete)
+     // pcdomain:  ---------------------------------------- (lev lbase+1)
+     // p_n:                  ------------------ (tagflag=CLEAR outside p_n)
+     //
+
     BoxList bl = grids[lbase].simplified_list();
      //bf_lev[i][n] = std::max(1,blocking_factor[i+1][n]/ref_ratio[i][n]);
     bl.coarsen(bf_lev[lbase]);
