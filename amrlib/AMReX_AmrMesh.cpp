@@ -529,15 +529,36 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
     //
     // Construct proper nesting domains.
     //
-    Vector<BoxArray> p_n_ba(max_level); // Proper nesting domain.
-    Vector<BoxArray> p_n_comp_ba(max_level); // Complement proper nesting domain.
+    Vector<BoxArray> p_n_ba(max_level); //Proper nesting domain.
+    Vector<BoxArray> p_n_comp_ba(max_level); //Complement proper nesting domain.
     BoxList p_n, p_n_comp;
 
+     // domain:    --------------------
+     // lbase:         ------------
+     // cdomain:   ----------
+     // clbase:      ------ 
+     // p_n_comp:  --      --
+     // accrete:   ---    ---
+     // p_n:          ----
+     // next coarse level:
+     // p_n_comp:  ---    ---
+     // p_n_comp:  ------        ------  (refine)
+     // p_n_comp:  -------      -------  (accrete)
+     // pcdomain:  -------------------- (lev lbase+1)
+     // p_n:              ------
+     //
     BoxList bl = grids[lbase].simplified_list();
+     //bf_lev[i][n] = std::max(1,blocking_factor[i+1][n]/ref_ratio[i][n]);
     bl.coarsen(bf_lev[lbase]);
+     //SUSSMAN
+     //pc_domain[lbase] = amrex::coarsen(Geom(lbase).Domain(),bf_lev[lbase]);
+     //BoxList bl = grids[lbase].simplified_list();bl.coarsen(bf_lev[lbase])
     p_n_comp.parallelComplementIn(pc_domain[lbase],bl);
     bl.clear();
     p_n_comp.simplify();
+     //AMReX_BoxList.H
+     //AMReX_BoxList.cpp
+     //Grow each Box in the BoxList by size "n_proper"
     p_n_comp.accrete(n_proper);
     if (geom[lbase].isAnyPeriodic()) {
         ProjPeriodic(p_n_comp, pc_domain[lbase], geom[lbase].isPeriodic());
@@ -556,9 +577,11 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
     {
         p_n_comp = p_n_comp_ba[i-1].boxList();
 
-        // Need to simplify p_n_comp or the number of grids can too large for many levels.
+        // Need to simplify p_n_comp or the number of grids can be 
+	// too large for many levels.
         p_n_comp.simplify();
 
+         //rr_lev[i][n] = (ref_ratio[i][n]*bf_lev[i][n])/bf_lev[i+1][n];
         p_n_comp.refine(rr_lev[i-1]);
         p_n_comp.accrete(n_proper);
 
@@ -635,6 +658,7 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
 
         //
         // Coarsen the taglist by blocking_factor/ref_ratio.
+        //bf_lev[i][n] = std::max(1,blocking_factor[i+1][n]/ref_ratio[i][n]);
         //
         int bl_max = 0;
         for (int n=0; n<AMREX_SPACEDIM; n++) {
