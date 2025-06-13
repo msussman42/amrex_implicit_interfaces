@@ -763,21 +763,23 @@ AmrCore::AMR_checkInput ()
         amrex::Error("checkInput: max_level not set");
 
     // See AmrMesh::MakeNewGrids
-    // 1. Check that blocking_factor is a power of 2 and no smaller than 4.
+    // 1. Check that blocking_factor is a power of 2 and no smaller than 2.
     // 2. Check that blocking_factor[i+1]<=blocking_factor[i].
-    // Note: n_proper=1 seems to imply that there is at least a 2 cell
+    // Note: n_proper=1 seems to imply that there is at least a 
+    // blocking_factor/2 cell
     // buffer between levels l and l+2
+    // in general: n_proper * blocking_factor/2
     for (int i = 0; i <= max_level; i++) {
      int k = Old_blockingFactor(i);
      if (i<max_level) {
       if (k<Old_blockingFactor(i+1))
        amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
      }
-     if (k<4) {
+     if (k<2) {
       std::cout << "k= " << k << '\n';
       std::cout << "i= " << i << '\n';
       std::cout << "max_level= " << max_level << '\n';
-      amrex::Error("blocking factor must be 4 or larger");
+      amrex::Error("blocking factor must be 2 or larger");
      }
 
      while ( k > 0 && (k%2 == 0) )
@@ -801,7 +803,7 @@ AmrCore::AMR_checkInput ()
 	}
 
          // the number of coarse grid proper nesting cells for level i+1
-         // is blocking_factor[i]/2
+         // is n_proper * blocking_factor[i]/2
         if ((i>=0)&&(i<=max_level)) {
          if (Old_blockingFactor(i)<2*k)
           amrex::Error("bfact_grid>=2*space_blocking_Factor required");

@@ -13280,24 +13280,24 @@ void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
   amrex::Error("ncomp too big");
  if (ngrowcheck<ngrow)
   amrex::Error("ngrow too big in PCINTERP_fill_borders");
- 
- MultiFab* cmf=nullptr;
 
- if (level==0) {
-  cmf=localMF[idx_MF];
- } else if (level>0) {
-  NavierStokes& ns_coarse=getLevel(level-1);
-  cmf=ns_coarse.localMF[idx_MF];
- } else {
-  cmf=nullptr;
-  amrex::Error("level invalid PCINTERP_fill_borders");
+ Vector<MultiFab*> tower_data;
+ tower_data.resize(level+1);
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_data[ilev]=nullptr;
+ }
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  NavierStokes& ns_coarse=getLevel(ilev);
+  tower_data[ilev]=ns_coarse.localMF[idx_MF];
  }
 
   // uses desc_lstGHOST[index] instead of dest_lst[index]
   // AmrLevel::InterpBordersGHOST is declared in AmrLevel.cpp.
  InterpBordersGHOST(
-    *cmf,
-    *localMF[idx_MF],
+    tower_data,
+    level,
+    ngrow,
     cur_time_slab,
     index,
     scomp,
@@ -13305,6 +13305,8 @@ void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
     ncomp,
     debug_fillpatch);   
 
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data
+		     
 } //end subroutine PCINTERP_fill_borders
 
 
@@ -13321,19 +13323,29 @@ void NavierStokes::PCINTERP_fill_coarse_patch(int idx_MF,
   amrex::Error("ncomp too big");
  if (ngrowcheck<0)
   amrex::Error("ngrowcheck invalid in PCINTERP_fill_coarse_patch");
- 
- NavierStokes& ns_coarse=getLevel(level-1);
- MultiFab* cmf=ns_coarse.localMF[idx_MF];
 
+ Vector<MultiFab*> tower_data;
+ tower_data.resize(level+1);
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_data[ilev]=nullptr;
+ }
+ for (int ilev=0;ilev<=level;ilev++) {
+  NavierStokes& ns_coarse=getLevel(ilev);
+  tower_data[ilev]=ns_coarse.localMF[idx_MF];
+ }
+ 
  FillCoarsePatchGHOST(
-    *cmf,
-    *localMF[idx_MF],
+    tower_data,
+    level,
+    ngrow,
     cur_time_slab,
     index,
     scomp,
     scompBC_map,
     ncomp,
     debug_fillpatch);   
+
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data
 
 } //end subroutine PCINTERP_fill_coarse_patch
 
@@ -13365,23 +13377,22 @@ void NavierStokes::GetStateFromLocal(int idx_MF,int ngrow,
   amrex::Error("ncomp too big");
  if (ngrowcheck<ngrow)
   amrex::Error("ngrow too big in GetStateFromLocal");
- 
- MultiFab* cmf=nullptr;
 
- if (level==0) {
-  cmf=localMF[idx_MF];
- } else if (level>0) {
-  NavierStokes& ns_coarse=getLevel(level-1);
-  cmf=ns_coarse.localMF[idx_MF];
- } else {
-  cmf=nullptr;
-  amrex::Error("level invalid GetStateFromLocal");
+ Vector<MultiFab*> tower_data;
+ tower_data.resize(level+1);
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_data[ilev]=nullptr;
  }
-
+ for (int ilev=0;ilev<=level;ilev++) {
+  NavierStokes& ns_coarse=getLevel(ilev);
+  tower_data[ilev]=ns_coarse.localMF[idx_MF];
+ }
+ 
   // uses desc_lst[index] 
  InterpBorders(
-    *cmf,
-    *localMF[idx_MF],
+    tower_data,
+    level,
+    ngrow,
     cur_time_slab,
     index,
     scomp,
@@ -13389,6 +13400,8 @@ void NavierStokes::GetStateFromLocal(int idx_MF,int ngrow,
     ncomp,
     debug_fillpatch);   
 
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data
+		     
 } //end subroutine GetStateFromLocal
 
 

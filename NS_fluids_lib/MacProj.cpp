@@ -1427,27 +1427,37 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
  if (dcomp!=nsolve)
   amrex::Error("dcomp invalid"); 
 
- MultiFab* cmf=nullptr;
+ Vector<MultiFab*> tower_data;
+ tower_data.resize(level+1);
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_data[ilev]=nullptr;
+ }
 
+ tower_data[level]=localMF[idx_phi];
+ 
  if (level>0) {
   NavierStokes& ns_coarse=getLevel(level-1);
   ns_coarse.localMF[idx_phi]->setBndry(0.0);
   ns_coarse.localMF[idx_phi]->FillBoundary(ns_coarse.geom.periodicity());
-  cmf=ns_coarse.localMF[idx_phi];
+  tower_data[level-1]=ns_coarse.localMF[idx_phi];
  } else if (level==0) {
-  cmf=localMF[idx_phi];
+  //do nothing
  } else
   amrex::Error("level invalid applyBC_LEVEL");
 
+ int ngrow_interp=1;
  InterpBorders(
-   *cmf,
-   *localMF[idx_phi],
+   tower_data,
+   level,
+   ngrow_interp,
    cur_time_slab,
    state_index,
    0,  // scomp=0
    scompBC_map,
    nsolve,
    debug_fillpatch);
+
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data.
 
 }  // subroutine applyBC_LEVEL
 
@@ -1504,6 +1514,15 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
 
   // up the V-cycle
  if ((homflag==0)&&(level>0)) {
+
+  Vector<MultiFab*> tower_data;
+  tower_data.resize(level+1);
+  for (int ilev=0;ilev<=level;ilev++) {
+   tower_data[ilev]=nullptr;
+  }
+
+  tower_data[level]=localMF[idx_phi];
+
   NavierStokes& ns_coarse=getLevel(level-1);
   ns_coarse.localMF[idx_phi]->setBndry(0.0);
   ns_coarse.localMF[idx_phi]->FillBoundary(ns_coarse.geom.periodicity());
@@ -1520,14 +1539,23 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
   if (dcomp!=nsolve)
    amrex::Error("dcomp invalid");
 
-  InterpBorders(*ns_coarse.localMF[idx_phi],
-    *localMF[idx_phi],
-    cur_time_slab,
-    state_index,
-    0,  // scomp=0
-    scompBC_map,
-    nsolve,
-    debug_fillpatch);
+  tower_data[level-1]=ns_coarse.localMF[idx_phi];
+
+  int ngrow_interp=1;
+
+  InterpBorders(
+   tower_data,
+   level,
+   ngrow_interp,
+   cur_time_slab,
+   state_index,
+   0,  // scomp=0
+   scompBC_map,
+   nsolve,
+   debug_fillpatch);
+
+  tower_data.clear(); //removes pointers from vector, but doesn't delete data.
+		      
   interpScalarMAC(ns_coarse.localMF[idx_phi],
                   localMF[idx_phi],nsolve,project_option);
  }

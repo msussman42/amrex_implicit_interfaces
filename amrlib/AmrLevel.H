@@ -374,8 +374,9 @@ public:
 		    int debug_fillpatch);
 
     void InterpBordersGHOST (
-                    MultiFab& cmf,
-                    MultiFab& mf,
+		    Vector<MultiFab*> tower_data,
+		    int level_in,
+		    int ngrow,
                     Real      time,
                     int       index,
                     int       scomp,
@@ -384,8 +385,9 @@ public:
 		    int debug_fillpatch);
 
     void FillCoarsePatchGHOST (
-                    MultiFab& cmf,
-                    MultiFab& mf,
+		    Vector<MultiFab*> tower_data,
+		    int level_in,
+		    int ngrow,
                     Real      time,
                     int       index,
                     int       scomp,
@@ -394,8 +396,9 @@ public:
 		    int debug_fillpatch);
 
     void InterpBorders (
-                    MultiFab& cmf,
-                    MultiFab& mf,
+		    Vector<MultiFab*> tower_data,
+		    int level_in,
+		    int ngrow,
                     Real      time,
                     int       index,
                     int       scomp,
