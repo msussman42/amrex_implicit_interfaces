@@ -1416,24 +1416,28 @@ AmrLevel::FillPatch (AmrLevel & old,
 
 void
 AmrLevel::FillCoarsePatchGHOST (
-                           MultiFab& cmf, // source (scomp..scomp+ncomp-1)
-                           MultiFab& mf,  // dest (scomp..scomp+ncomp-1)
-                           Real      time,
-                           int       index,
-                           int       scomp, //cmf: scomp..scomp+ncomp-1
-                           Vector<int> scompBC_map, // 0..ncomp-1
-                           int       ncomp,
-			   int debug_fillpatch)
+    Vector<MultiFab*> tower_data, //scomp..scomp+ncomp-1
+    int level_in,
+    int ngrow_in,
+    Real      time,
+    int       index,
+    int       scomp, //tower_data: scomp..scomp+ncomp-1
+    Vector<int> scompBC_map, // 0..ncomp-1
+    int       ncomp,
+    int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::FillCoarsePatchGHOST()");
+
+ if (level!=level_in)
+  amrex::Error("level <> level_in");
 
  if (level<=0)
   amrex::Error("level invalid in FillCoarsePatchGHOST");
 
- if (ncomp+scomp>mf.nComp())
-  amrex::Error("ncomp+scomp>mf.nComp()");
- if (ncomp+scomp>cmf.nComp())
-  amrex::Error("ncomp+scomp>cmf.nComp()");
+ if (ncomp+scomp>tower_data[level]->nComp())
+  amrex::Error("ncomp+scomp>tower_data[level]->nComp()");
+ if (ncomp+scomp>tower_data[level-1]->nComp())
+  amrex::Error("ncomp+scomp>tower_data[level-1]->nComp()");
 
  if ((index<0)||(index>=desc_lstGHOST.size()))
   amrex::Error("(index<0)||(index>=desc_lstGHOST.size())");
@@ -1441,22 +1445,27 @@ AmrLevel::FillCoarsePatchGHOST (
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
- int ngrow=mf.nGrow();
- const BoxArray& mf_BA = mf.boxArray();
+ int ngrow=tower_data[level]->nGrow();
+ if (ngrow==ngrow_in) {
+  //do nothing
+ } else
+  amrex::Error("ngrow_in invalid");
+
+ const BoxArray& mf_BA = tower_data[level]->boxArray();
  if (ngrow<0)
   amrex::Error("ngrow<0 in FillCoarsePatchGHOST");
 
- DistributionMapping dm=mf.DistributionMap();
+ DistributionMapping dm=tower_data[level]->DistributionMap();
 
- const BoxArray& cmf_BA=cmf.boxArray();
- DistributionMapping cdm=cmf.DistributionMap();
+ const BoxArray& cmf_BA=tower_data[level-1]->boxArray();
+ DistributionMapping cdm=tower_data[level-1]->DistributionMap();
 
   // because of the proper nesting requirement, no ghost
   // values are needed for cmf_part.
   // cmf_part: 0..ncomp-1
  MultiFab* cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
    MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
- MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
+ MultiFab::Copy(*cmf_part,*tower_data[level-1],scomp,0,ncomp,0);
 
  int                     DComp   = scomp;
  const StateDescriptor&  descGHOST = desc_lstGHOST[index];
@@ -1555,13 +1564,13 @@ AmrLevel::FillCoarsePatchGHOST (
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(mf.boxArray().d_numPts());
+  thread_class::init_d_numPts(tower_data[level]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*tower_data[level],false); mfi.isValid(); ++mfi) {
 
    const Box& tilegrid=mfi.tilebox();
    const Box& dbx = mfi.validbox();
@@ -1585,18 +1594,18 @@ AmrLevel::FillCoarsePatchGHOST (
      local_bcs,bcr);
 	   
    mapper->interp(nudge_time,
-                  crseMF[mfi],
-                  0,  // crse_comp
-		  mf[mfi],
-		  DComp,
-		  ncomp_range,
-		  dbx,
-		  cgeom,
-		  geom,
-		  bcr, // not used.
-                  level-1,level,
-		  bfact_coarse,bfact_fine,
-                  desc_grid_type);
+     crseMF[mfi],
+     0,  // crse_comp
+     (*tower_data[level])[mfi],
+     DComp,
+     ncomp_range,
+     dbx,
+     cgeom,
+     geom,
+     bcr, // not used.
+     level-1,level,
+     bfact_coarse,bfact_fine,
+     desc_grid_type);
   }  // mfi
 } // omp
   thread_class::sync_tile_d_numPts();
@@ -1623,15 +1632,15 @@ AmrLevel::FillCoarsePatchGHOST (
 //called from NavierStokes3.cpp
 void
 AmrLevel::InterpBordersGHOST (
-		     Vector<MultiFab*> tower_data,
-		     int level_in,
-		     int ngrow,
-                     Real      time,
-                     int       index,
-                     int       scomp, // source comp wrt mf
-                     Vector<int> scompBC_map,
-                     int       ncomp,
-		     int debug_fillpatch)
+  Vector<MultiFab*> tower_data,
+  int level_in,
+  int ngrow_in,
+  Real      time,
+  int       index,
+  int       scomp, // source comp wrt tower_data 
+  Vector<int> scompBC_map,
+  int       ncomp,
+  int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::InterpBordersGHOST()");
 
@@ -1648,7 +1657,12 @@ AmrLevel::InterpBordersGHOST (
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
- int ngrow=mf.nGrow();
+ int ngrow=tower_data[level]->nGrow();
+ if (ngrow==ngrow_in) {
+  //do nothing
+ } else
+  amrex::Error("ngrow<>ngrow_in");
+
  const BoxArray& mf_BA = tower_data[level]->boxArray();
 
  if (ngrow<0)
@@ -1767,49 +1781,58 @@ AmrLevel::InterpBordersGHOST (
 //called from MacProj.cpp, NavierStokes3.cpp
 void
 AmrLevel::InterpBorders (
-                     MultiFab& cmf,
-                     MultiFab& mf,
-                     Real      time,
-                     int       index,
-                     int       scomp,
-                     Vector<int> scompBC_map,
-                     int       ncomp,
-		     int debug_fillpatch)
+  Vector<MultiFab*> tower_data,
+  int level_in,
+  int ngrow_in,
+  Real      time,
+  int       index,
+  int       scomp,
+  Vector<int> scompBC_map,
+  int       ncomp,
+  int debug_fillpatch)
 {
  BL_PROFILE("AmrLevel::InterpBorders()");
+
+ if (level!=level_in)
+  amrex::Error("level <> level_in");
 
  if (level<0)
   amrex::Error("level invalid in InterpBorders");
 
- BL_ASSERT(ncomp <= (mf.nComp()-scomp));
+ BL_ASSERT(ncomp <= (tower_data[level]->nComp()-scomp));
 
  BL_ASSERT(0 <= index && index < desc_lst.size());
 
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
 
- int ngrow=mf.nGrow();
- const BoxArray& mf_BA = mf.boxArray();
+ int ngrow=tower_data[level]->nGrow();
+ if (ngrow==ngrow_in) {
+  //do nothing
+ } else
+  amrex::Error("ngrow<>ngrow_in");
+
+ const BoxArray& mf_BA = tower_data[level]->boxArray();
 
  if (ngrow<0)
   amrex::Error("ngrow<0 in InterpBorders");
 
- DistributionMapping dm=mf.DistributionMap();
+ DistributionMapping dm=tower_data[level]->DistributionMap();
 
  MultiFab fmf(mf_BA,dm,ncomp,0,
    MFInfo().SetTag("fmf"),FArrayBoxFactory());
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
- MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
+ MultiFab::Copy(fmf,*tower_data[level],scomp,0,ncomp,0);
 
  MultiFab* cmf_part;
 
  if (level>0) {
-  const BoxArray& cmf_BA=cmf.boxArray();
-  DistributionMapping cdm=cmf.DistributionMap();
+  const BoxArray& cmf_BA=tower_data[level-1]->boxArray();
+  DistributionMapping cdm=tower_data[level-1]->DistributionMap();
   cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
     MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
-  MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
+  MultiFab::Copy(*cmf_part,*tower_data[level-1],scomp,0,ncomp,0);
  }  // level>0
  
  int                     DComp   = scomp;
@@ -1851,7 +1874,7 @@ AmrLevel::InterpBorders (
   if (level==0) {
    amrex::FillPatchSingleLevel(
     level,
-    mf,
+    *tower_data[level],
     nudge_time,
     fmf,
     scomp_data,
@@ -1872,7 +1895,7 @@ AmrLevel::InterpBorders (
 
     // declared in: FillPatchUtil.cpp
    amrex::FillPatchTwoLevels(
-    mf,
+    *tower_data[level],
     nudge_time,
     *cmf_part,
     fmf,
