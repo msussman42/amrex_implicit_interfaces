@@ -104,6 +104,12 @@ AmrMesh::InitAmrMesh (int max_level_in, const Vector<int>& n_cell_in,
     }
 
     pp.queryAdd("n_proper",n_proper);
+
+    if (n_proper==1) {
+     //do nothing
+    } else
+     amrex::Error("expecting n_proper=1");
+
     pp.queryAdd("grid_eff",grid_eff);
     int cnt = pp.countval("n_error_buf");
     if (cnt > 0) {

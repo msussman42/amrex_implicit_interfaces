@@ -1623,8 +1623,9 @@ AmrLevel::FillCoarsePatchGHOST (
 //called from NavierStokes3.cpp
 void
 AmrLevel::InterpBordersGHOST (
-                     MultiFab& cmf,
-                     MultiFab& mf,
+		     Vector<MultiFab*> tower_data,
+		     int level_in,
+		     int ngrow,
                      Real      time,
                      int       index,
                      int       scomp, // source comp wrt mf
@@ -1634,10 +1635,13 @@ AmrLevel::InterpBordersGHOST (
 {
  BL_PROFILE("AmrLevel::InterpBordersGHOST()");
 
+ if (level!=level_in)
+  amrex::Error("level <> level_in");
+
  if (level<0)
   amrex::Error("level invalid in InterpBordersGHOST");
 
- BL_ASSERT(ncomp<=(mf.nComp()-scomp));
+ BL_ASSERT(ncomp<=(tower_data[level]->nComp()-scomp));
 
  BL_ASSERT((0<=index)&&(index<desc_lstGHOST.size()));
 
@@ -1645,27 +1649,27 @@ AmrLevel::InterpBordersGHOST (
   amrex::Error("scompBC_map has invalid size");
 
  int ngrow=mf.nGrow();
- const BoxArray& mf_BA = mf.boxArray();
+ const BoxArray& mf_BA = tower_data[level]->boxArray();
 
  if (ngrow<0)
   amrex::Error("ngrow<0 in InterpBordersGHOST");
 
- DistributionMapping dm=mf.DistributionMap();
+ DistributionMapping dm=tower_data[level]->DistributionMap();
 
  MultiFab fmf(mf_BA,dm,ncomp,0,
    MFInfo().SetTag("fmf"),FArrayBoxFactory());
 
   // dstmf,srcmf,srccomp,dstcomp,ncomp,ngrow
- MultiFab::Copy(fmf,mf,scomp,0,ncomp,0);
+ MultiFab::Copy(fmf,*tower_data[level],scomp,0,ncomp,0);
 
  MultiFab* cmf_part;
 
  if (level>0) {
-  const BoxArray& cmf_BA=cmf.boxArray();
-  DistributionMapping cdm=cmf.DistributionMap();
+  const BoxArray& cmf_BA=tower_data[level-1]->boxArray();
+  DistributionMapping cdm=tower_data[level-1]->DistributionMap();
   cmf_part=new MultiFab(cmf_BA,cdm,ncomp,0,
    MFInfo().SetTag("cmf_part"),FArrayBoxFactory());
-  MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
+  MultiFab::Copy(*cmf_part,*tower_data[level-1],scomp,0,ncomp,0);
  }  // level>0
  
  int DComp = scomp;
@@ -1708,7 +1712,7 @@ AmrLevel::InterpBordersGHOST (
 
    amrex::FillPatchSingleLevel(
     level,
-    mf,
+    *tower_data[level],
     nudge_time,
     fmf,
     scomp_data,
@@ -1729,7 +1733,7 @@ AmrLevel::InterpBordersGHOST (
    StateDataPhysBCFunctGHOST cbc(cstatedata,cgeom);
 
    amrex::FillPatchTwoLevels(
-    mf,
+    *tower_data[level],
     nudge_time,
     *cmf_part,
     fmf,
