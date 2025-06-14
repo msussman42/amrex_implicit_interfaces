@@ -1411,7 +1411,7 @@ AmrLevel::FillPatch (AmrLevel & old,
  } else
   amrex::Error("ncomp sanity check failed");
 
-}   // FillPatch
+}   // end subroutine AmrLevel::FillPatch
 
 
 void
@@ -1981,24 +1981,30 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
+ Vector<StateDataPhysBCFunct*> tower_physbc;
  Vector<MultiFab*> tower_data;
  Vector<StateData*> tower_state_data;
  Vector<const Geometry*> tower_geom;
  Vector<Real> tower_nudge_time;
  Vector<int> tower_best_index;
+ Vector<int> tower_bfact;
 
+ tower_physbc.resize(level+1);
  tower_data.resize(level+1);
  tower_state_data.resize(level+1);
  tower_geom.resize(level+1);
  tower_nudge_time.resize(level+1);
  tower_best_index.resize(level+1);
+ tower_bfact.resize(level+1);
 
  for (int ilev=0;ilev<=level;ilev++) {
+  tower_physbc[ilev]=nullptr;
   tower_data[ilev]=nullptr;
   tower_state_data[ilev]=nullptr;
   tower_geom[ilev]=nullptr;
   tower_nudge_time[ilev]=0.0;
   tower_best_index[ilev]=0;
+  tower_bfact[ilev]=0;
  }
 
  tower_data[level]=&mf;
@@ -2007,6 +2013,11 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  tower_state_data[level]->get_time_index(time,
    tower_nudge_time[level],
    tower_best_index[level]);
+ tower_bfact[level]=parent->Space_blockingFactor(level);
+
+ tower_physbc[level]=new StateDataPhysBCFunct(
+   *tower_state_data[level],
+   *tower_geom[level]);
 
  for (int ilev=0;ilev<level;ilev++) {
   AmrLevel& clev = parent->getLevel(ilev);
@@ -2017,14 +2028,12 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    tower_best_index[ilev]);
 
   tower_data[ilev]=&(tower_state_data[ilev]->newData(tower_best_index[ilev]));
+  tower_bfact[ilev]=parent->Space_blockingFactor(ilev);
+
+  tower_physbc[ilev]=new StateDataPhysBCFunct(
+   *tower_state_data[ilev],
+   *tower_geom[ilev]);
  }
-
- int bfact_coarse=parent->Space_blockingFactor(level-1);
-
-
- StateDataPhysBCFunct physbc_coarse(
-   *(tower_state_data[level-1]),
-   *(tower_geom[level-1]));
 
   //pdomain will be different depending on whether the state variable
   //is cell centered or staggared.
@@ -2053,8 +2062,6 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
  const BoxArray& mf_BA = tower_data[level]->boxArray();
  DistributionMapping dm=tower_data[level]->DistributionMap();
-
- int bfact_fine=parent->Space_blockingFactor(level);
 
  desc.check_inRange(scompBC_map, ncomp);
 
@@ -2095,7 +2102,9 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     amrex::Error("ngrow invalid");
    }
 
-   crseBA.set(j,mapper->CoarseBox(grow_bx,bfact_coarse,bfact_fine,
+   crseBA.set(j,mapper->CoarseBox(grow_bx,
+     tower_bfact[level-1],
+     tower_bfact[level],
      desc_grid_type));
   }
 
@@ -2120,9 +2129,9 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     0, // dstcomp
     ncomp_range,
     *tower_geom[level-1],
-    physbc_coarse,
+    *tower_physbc[level-1],
     local_scompBC_map,
-    bfact_coarse,
+    tower_bfact[level-1],
     debug_fillpatch);
 
   Vector< BCRec > local_bcs;
@@ -2230,7 +2239,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
                   *tower_geom[level],
 		  bcr,
                   level-1,level,
-		  bfact_coarse,bfact_fine,
+		  tower_bfact[level-1],
+                  tower_bfact[level],
                   desc_grid_type);
 
 
@@ -2257,13 +2267,11 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
   tower_data[level]->FillBoundary(DComp,ncomp_range,geom.periodicity());
 
-  StateDataPhysBCFunct physbc_fine(
-	(*tower_state_data[level]),
-	(*tower_geom[level]));
-  physbc_fine.FillBoundary(level,
+  tower_physbc[level]->FillBoundary(level,
     *tower_data[level],
     tower_nudge_time[level],DComp,
-    local_scompBC_map,ncomp_range,bfact_fine);
+    local_scompBC_map,ncomp_range,
+    tower_bfact[level]);
 
   DComp += ncomp_range;
  } // igroup=0..ranges.size()-1
@@ -2276,6 +2284,11 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  tower_data.clear(); //removes pointers from vector, but doesn't delete data
  tower_state_data.clear();
  tower_geom.clear();
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  delete tower_physbc[ilev];
+ }
+ tower_physbc.clear();
 
 }   // FillCoarsePatch
 

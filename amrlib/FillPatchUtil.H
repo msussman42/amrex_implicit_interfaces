@@ -31,11 +31,31 @@ namespace amrex
       MultiFab& fmf, 
       int scomp, int dcomp, int ncomp,
       const Geometry& cgeom, const Geometry& fgeom, 
-      PhysBCFunctBaseSUSSMAN& cbc, PhysBCFunctBaseSUSSMAN& fbc,
-      Interpolater* mapper, const Vector<BCRec>& bcs,
+      PhysBCFunctBaseSUSSMAN& cbc, 
+      PhysBCFunctBaseSUSSMAN& fbc,
+      Interpolater* mapper, 
+      const Vector<BCRec>& global_bcs,
       Vector<int> scompBC_map,
       int levelc,int levelf,
       int bfactc,int bfactf, 
+      int grid_type,
+      int debug_fillpatch);
+
+//SUSSMAN
+    void FillPatchTower (
+      int top_level,
+      MultiFab& mf_target, //target
+      Real time,
+      Vector<MultiFab*> tower_data,
+      int scomp, 
+      int dcomp, 
+      int ncomp,
+      Vector<const Geometry*> tower_geom,
+      Vector<PhysBCFunctBaseSUSSMAN*> tower_physbc,
+      Interpolater* mapper, 
+      const Vector<BCRec>& bcs,
+      Vector<int> scompBC_map,
+      Vector<int> tower_bfact,
       int grid_type,
       int debug_fillpatch);
 
