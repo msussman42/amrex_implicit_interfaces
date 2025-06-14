@@ -1981,21 +1981,54 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- AmrLevel&               clev    = parent->getLevel(level-1);
- const Geometry&         cgeom   = clev.geom;
+ Vector<MultiFab*> tower_data;
+ Vector<StateData*> tower_state_data;
+ Vector<const Geometry*> tower_geom;
+ Vector<Real> tower_nudge_time;
+ Vector<int> tower_best_index;
+
+ tower_data.resize(level+1);
+ tower_state_data.resize(level+1);
+ tower_geom.resize(level+1);
+ tower_nudge_time.resize(level+1);
+ tower_best_index.resize(level+1);
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_data[ilev]=nullptr;
+  tower_state_data[ilev]=nullptr;
+  tower_geom[ilev]=nullptr;
+  tower_nudge_time[ilev]=0.0;
+  tower_best_index[ilev]=0;
+ }
+
+ tower_data[level]=&mf;
+ tower_state_data[level]=&state[index];
+ tower_geom[level]=&geom;
+ tower_state_data[level]->get_time_index(time,
+   tower_nudge_time[level],
+   tower_best_index[level]);
+
+ for (int ilev=0;ilev<level;ilev++) {
+  AmrLevel& clev = parent->getLevel(ilev);
+  tower_state_data[ilev] = &(clev.state[index]);
+  tower_geom[ilev]=&(clev.geom);
+  tower_state_data[ilev]->get_time_index(time,
+   tower_nudge_time[ilev],
+   tower_best_index[ilev]);
+
+  tower_data[ilev]=&(tower_state_data[ilev]->newData(tower_best_index[ilev]));
+ }
+
  int bfact_coarse=parent->Space_blockingFactor(level-1);
- StateData& cstatedata = clev.state[index];
 
- Real nudge_time;
- int best_index;
- cstatedata.get_time_index(time,nudge_time,best_index);
 
- MultiFab& cmf=cstatedata.newData(best_index);
- StateDataPhysBCFunct physbc_coarse(cstatedata,cgeom);
+ StateDataPhysBCFunct physbc_coarse(
+   *(tower_state_data[level-1]),
+   *(tower_geom[level-1]));
 
   //pdomain will be different depending on whether the state variable
   //is cell centered or staggared.
- const Box& pdomain = state[index].getDomain();
+ const Box& pdomain = tower_state_data[level]->getDomain();
  const int* pdomlo = pdomain.loVect();
  const int* pdomhi = pdomain.hiVect();
 
@@ -2018,8 +2051,8 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    amrex::Error("dir,desc_grid_type breakdown");
  } //dir=0..sdim-1
 
- const BoxArray&         mf_BA   = mf.boxArray();
- DistributionMapping dm=mf.DistributionMap();
+ const BoxArray& mf_BA = tower_data[level]->boxArray();
+ DistributionMapping dm=tower_data[level]->DistributionMap();
 
  int bfact_fine=parent->Space_blockingFactor(level);
 
@@ -2080,12 +2113,13 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   amrex::FillPatchSingleLevel(
     level-1,
     crseMF, // data to be filled 0..ncomp_range-1
-    nudge_time,
-    cmf,  // level-1 data (smf); scomp_local...scomp_local+ncomp_range-1
+    tower_nudge_time[level-1],
+    //level-1 data (smf); scomp_local...scomp_local+ncomp_range-1
+    *tower_data[level-1], 
     scomp_local,
     0, // dstcomp
     ncomp_range,
-    cgeom,
+    *tower_geom[level-1],
     physbc_coarse,
     local_scompBC_map,
     bfact_coarse,
@@ -2106,7 +2140,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(mf,false); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*(tower_data[level]),false); mfi.isValid(); ++mfi) {
 
    const Box& tilegrid=mfi.tilebox();
    const Box& dbx = mfi.validbox();
@@ -2129,7 +2163,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    amrex::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
      local_bcs,bcr);
 
-   const Box& mf_local_box=mf[mfi].box();
+   const Box& mf_local_box=(*tower_data[level])[mfi].box();
 
    Box dbx_test=dbx;
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -2172,7 +2206,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     std::cout << "mfi.index()= " << mfi.index() << '\n';
    }
 
-   Array4<Real> const& mf_array=mf[mfi].array();
+   Array4<Real> const& mf_array=(*tower_data[level])[mfi].array();
    const Dim3 lo3=amrex::lbound(grow_bx);
    const Dim3 hi3=amrex::ubound(grow_bx);
    for (int n=0;n<ncomp_range;++n) {
@@ -2185,15 +2219,15 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    }
    }
 
-   mapper->interp(nudge_time,
+   mapper->interp(tower_nudge_time[level-1],
                   crseMF[mfi],
                   0,  // crse_comp
-		  mf[mfi],
+		  (*tower_data[level])[mfi],
 		  DComp,
 		  ncomp_range,
 		  grow_bx,
-		  cgeom,
-		  geom,
+                  *tower_geom[level-1],
+                  *tower_geom[level],
 		  bcr,
                   level-1,level,
 		  bfact_coarse,bfact_fine,
@@ -2221,10 +2255,14 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
   thread_class::reconcile_d_numPts(LOOP_FILLCOARSEPATCH,"FillCoarsePatch");
 
-  mf.FillBoundary(DComp,ncomp_range,geom.periodicity());
+  tower_data[level]->FillBoundary(DComp,ncomp_range,geom.periodicity());
 
-  StateDataPhysBCFunct physbc_fine(state[index],geom);
-  physbc_fine.FillBoundary(level,mf,nudge_time,DComp,
+  StateDataPhysBCFunct physbc_fine(
+	(*tower_state_data[level]),
+	(*tower_geom[level]));
+  physbc_fine.FillBoundary(level,
+    *tower_data[level],
+    tower_nudge_time[level],DComp,
     local_scompBC_map,ncomp_range,bfact_fine);
 
   DComp += ncomp_range;
@@ -2234,6 +2272,10 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   //do nothing
  } else
   amrex::Error("expecting DComp==dcomp+ncomp");
+
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data
+ tower_state_data.clear();
+ tower_geom.clear();
 
 }   // FillCoarsePatch
 
