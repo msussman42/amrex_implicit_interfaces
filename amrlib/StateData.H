@@ -253,7 +253,7 @@ private:
 
 //PhysBCFunctBaseSussman declared in:
 // amrex_implicit_interfaces/amrex-master/Src/Base/
-//    PhysBCFunctSUSSMAN.[H|cpp]
+//    PhysBCFunctSUSSMAN.H
 //
 class StateDataPhysBCFunctGHOST
     : public PhysBCFunctBaseSUSSMAN

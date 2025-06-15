@@ -1267,14 +1267,16 @@ AmrLevel::FillPatch (AmrLevel & old,
  //
  if (level<0)
   amrex::Error("level invalid in FillPatch");
+
  BL_ASSERT(ncomp <= (mf.nComp()-dcomp));
  BL_ASSERT(0 <= index && index < desc_lst.size());
 
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
 
- for (int icomp=0;icomp<ncomp;icomp++)
+ for (int icomp=0;icomp<ncomp;icomp++) {
   scompBC_map[icomp]=scomp+icomp;
+ }
 
  int                     DComp   = dcomp;
  const StateDescriptor&  desc    = old.desc_lst[index];
@@ -1291,6 +1293,90 @@ AmrLevel::FillPatch (AmrLevel & old,
 
  int ncomp_sanity_check=0;
 
+ Vector<StateDataPhysBCFunct*> tower_physbc;
+ Vector<PhysBCFunctBaseSUSSMAN*> tower_physbc_base;
+ Vector<MultiFab*> tower_data;
+ Vector<StateData*> tower_state_data;
+ Vector<const Geometry*> tower_geom;
+ Vector<Real> tower_nudge_time;
+ Vector<int> tower_best_index;
+ Vector<int> tower_bfact;
+
+ tower_physbc.resize(level+1);
+ tower_data.resize(level+1);
+ tower_state_data.resize(level+1);
+ tower_geom.resize(level+1);
+ tower_nudge_time.resize(level+1);
+ tower_best_index.resize(level+1);
+ tower_bfact.resize(level+1);
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_physbc[ilev]=nullptr;
+  tower_data[ilev]=nullptr;
+  tower_state_data[ilev]=nullptr;
+  tower_geom[ilev]=nullptr;
+  tower_nudge_time[ilev]=0.0;
+  tower_best_index[ilev]=0;
+  tower_bfact[ilev]=0;
+ }
+
+ tower_state_data[level]=&old.state[index];
+ tower_geom[level]=&old.geom;
+  //nudge_time=time_array[best_index]
+  //0<=best_index<=bfact_time_order
+ tower_state_data[level]->get_time_index(time,
+  tower_nudge_time[level],
+  tower_best_index[level]);
+ tower_data[level]=
+   &(tower_state_data[level]->newData(tower_best_index[level]));
+ tower_bfact[level]=parent->Space_blockingFactor(level);
+
+ tower_physbc[level]=new StateDataPhysBCFunct(
+  *tower_state_data[level],
+  *tower_geom[level]);
+
+ if (tower_data[level]->DistributionMap()==old.DistributionMap()) {
+  // do nothing
+ } else {
+  amrex::Error("tower_data->DistributionMap()!=old.DistributionMap()");
+ }
+ if (tower_data[level]->boxArray().CellEqual(old.boxArray())) {
+  // do nothing
+ } else {
+  amrex::Error("tower_data->boxArray().CellEqual(old.boxArray()) failed");
+ }
+
+ for (int ilev=0;ilev<level;ilev++) {
+  AmrLevel& clev = parent->getLevel(ilev);
+  tower_state_data[ilev] = &(clev.state[index]);
+  tower_geom[ilev]=&(clev.geom);
+  tower_state_data[ilev]->get_time_index(time,
+   tower_nudge_time[ilev],
+   tower_best_index[ilev]);
+
+  tower_data[ilev]=&(tower_state_data[ilev]->newData(tower_best_index[ilev]));
+  tower_bfact[ilev]=parent->Space_blockingFactor(ilev);
+
+  if (tower_data[ilev]->DistributionMap()==clev.DistributionMap()) {
+   // do nothing
+  } else {
+   amrex::Error("tower_data->DistributionMap()!=clev.DistributionMap()");
+  }
+  if (tower_data[ilev]->boxArray().CellEqual(clev.boxArray())) {
+   // do nothing
+  } else {
+   amrex::Error("tower_data->boxArray().CellEqual(clev.boxArray()) failed");
+  }
+
+  tower_physbc[ilev]=new StateDataPhysBCFunct(
+   *tower_state_data[ilev],
+   *tower_geom[ilev]);
+ }
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_physbc_base.push_back(tower_physbc[ilev]);
+ }
+
  for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range = ranges[igroup].first;
   const int     ncomp_range = ranges[igroup].second;
@@ -1303,29 +1389,6 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   ncomp_sanity_check+=ncomp_range;
 
-  Real nudge_time;
-  int best_index;
-  StateData& fstatedata = old.state[index];
-   //nudge_time=time_array[best_index]
-   //0<=best_index<=bfact_time_order
-  fstatedata.get_time_index(time,nudge_time,best_index);
-
-  MultiFab& fmf=fstatedata.newData(best_index);
-
-  if (fmf.DistributionMap()==old.DistributionMap()) {
-   // do nothing
-  } else {
-   amrex::Error("fmf.DistributionMap()!=old.DistributionMap()");
-  }
-  if (fmf.boxArray().CellEqual(old.boxArray())) {
-   // do nothing
-  } else {
-   amrex::Error("fmf.boxArray().CellEqual(old.boxArray()) failed");
-  }
-
-  const Geometry& fgeom = old.geom;
-  StateDataPhysBCFunct fbc(fstatedata,fgeom);
-
   Vector<int> local_scompBC_map;
   local_scompBC_map.resize(ncomp_range);
   for (int isub=0;isub<ncomp_range;isub++)
@@ -1333,74 +1396,27 @@ AmrLevel::FillPatch (AmrLevel & old,
 
   int scomp_local=scomp_range+scomp;
 
-  if (level==0) {
-
     // This routine is NOT in the "Base" directory, instead it is in the
     // present directory in the file: FillPatchUtil.cpp.
     // We are fooled into thinking this is a amrex routine since the
     // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
     // block.
-   amrex::FillPatchSingleLevel(
+  amrex::FillPatchTower(
     level,
     mf,  // data to be filled
-    nudge_time,
-    fmf, // old data at the current level.
+    tower_nudge_time[level],
+    tower_data,
     scomp_local, //absolute within the state (fmf)
     DComp,
     ncomp_range,
-    fgeom,
-    fbc,
-    local_scompBC_map,
-    bfact_fine,
-    debug_fillpatch);
-
-  } else if (level>0) {
-
-   AmrLevel&               clev    = parent->getLevel(level-1);
-   const Geometry&         cgeom   = clev.geom;
-   int bfact_coarse=parent->Space_blockingFactor(level-1);
-   StateData& cstatedata = clev.state[index];
-   MultiFab& cmf=cstatedata.newData(best_index);
-
-   if (cmf.DistributionMap()==clev.DistributionMap()) {
-    // do nothing
-   } else {
-    amrex::Error("cmf.DistributionMap()!=clev.DistributionMap()");
-   }
-   if (cmf.boxArray().CellEqual(clev.boxArray())) {
-    // do nothing
-   } else {
-    amrex::Error("cmf.boxArray().CellEqual(clev.boxArray()) failed");
-   }
-   StateDataPhysBCFunct cbc(cstatedata,cgeom);
-
-    // This routine is NOT in the "Base" directory, instead it is in the
-    // present directory in the file: FillPatchUtil.cpp.
-    // We are fooled into thinking this is a amrex routine since the
-    // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
-    // block.
-   amrex::FillPatchTwoLevels(
-    mf,   // data to be filled
-    nudge_time,
-    cmf,  // new data at the previous level
-    fmf,  // old data at the current level
-    scomp_local,
-    DComp,
-    ncomp_range,
-    cgeom,
-    fgeom,
-    cbc,
-    fbc,
+    tower_geom,
+    tower_physbc_base,
     mapper,
     desc.getBCs(),  // global_bcs
     local_scompBC_map,
-    level-1,level,
-    bfact_coarse,bfact_fine,
+    tower_bfact,
     desc_grid_type,
-    debug_fillpatch);  
-     
-  } else 
-   amrex::Error("level invalid");
+    debug_fillpatch);
 
   DComp += ncomp_range;
 
@@ -1410,6 +1426,16 @@ AmrLevel::FillPatch (AmrLevel & old,
   //do nothing
  } else
   amrex::Error("ncomp sanity check failed");
+
+ tower_data.clear(); //removes pointers from vector, but doesn't delete data
+ tower_state_data.clear();
+ tower_geom.clear();
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  delete tower_physbc[ilev];
+ }
+ tower_physbc.clear();
+ tower_physbc_base.clear();
 
 }   // end subroutine AmrLevel::FillPatch
 
@@ -1982,6 +2008,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  const int* domhi = domain.hiVect();
 
  Vector<StateDataPhysBCFunct*> tower_physbc;
+ Vector<PhysBCFunctBaseSUSSMAN*> tower_physbc_base;
  Vector<MultiFab*> tower_data;
  Vector<StateData*> tower_state_data;
  Vector<const Geometry*> tower_geom;
@@ -2007,12 +2034,12 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   tower_bfact[ilev]=0;
  }
 
- tower_data[level]=&mf;
  tower_state_data[level]=&state[index];
  tower_geom[level]=&geom;
  tower_state_data[level]->get_time_index(time,
    tower_nudge_time[level],
    tower_best_index[level]);
+ tower_data[level]=&mf;
  tower_bfact[level]=parent->Space_blockingFactor(level);
 
  tower_physbc[level]=new StateDataPhysBCFunct(
@@ -2033,6 +2060,10 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   tower_physbc[ilev]=new StateDataPhysBCFunct(
    *tower_state_data[ilev],
    *tower_geom[ilev]);
+ }
+
+ for (int ilev=0;ilev<=level;ilev++) {
+  tower_physbc_base.push_back(tower_physbc[ilev]);
  }
 
   //pdomain will be different depending on whether the state variable
@@ -2119,27 +2150,30 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 
   int scomp_local=scomp_range+scomp;
 
-  amrex::FillPatchSingleLevel(
-    level-1,
-    crseMF, // data to be filled 0..ncomp_range-1
-    tower_nudge_time[level-1],
-    //level-1 data (smf); scomp_local...scomp_local+ncomp_range-1
-    *tower_data[level-1], 
-    scomp_local,
-    0, // dstcomp
-    ncomp_range,
-    *tower_geom[level-1],
-    *tower_physbc[level-1],
-    local_scompBC_map,
-    tower_bfact[level-1],
-    debug_fillpatch);
-
   Vector< BCRec > local_bcs;
   const Vector< BCRec> & global_bcs=desc.getBCs();
 
   local_bcs.resize(ncomp_range);
   for (int isub=0;isub<ncomp_range;isub++)
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
+
+  amrex::FillPatchTower(
+    level-1,
+    crseMF, // data to be filled 0..ncomp_range-1
+    tower_nudge_time[level-1],
+    //level-1 data (smf); scomp_local...scomp_local+ncomp_range-1
+    tower_data, 
+    scomp_local,
+    0, // dstcomp
+    ncomp_range,
+    tower_geom,
+    tower_physbc_base,
+    mapper,
+    global_bcs,
+    local_scompBC_map,
+    tower_bfact,
+    desc_grid_type,
+    debug_fillpatch);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -2289,6 +2323,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   delete tower_physbc[ilev];
  }
  tower_physbc.clear();
+ tower_physbc_base.clear();
 
 }   // FillCoarsePatch
 
