@@ -11,6 +11,8 @@ namespace amrex {
 class PhysBCFunctBaseSUSSMAN {
 public:
 
+    PhysBCFunctBaseSUSSMAN () {}
+
     virtual void FillBoundary (
       int level,
       MultiFab& mf, 
@@ -25,34 +27,6 @@ public:
 
 inline PhysBCFunctBaseSUSSMAN::~PhysBCFunctBaseSUSSMAN () {}
 
-class PhysBCFunctSUSSMAN
-    : public PhysBCFunctBaseSUSSMAN
-{
-public:
-
-    PhysBCFunctSUSSMAN () {}
-
-    virtual ~PhysBCFunctSUSSMAN () {}
-
-    PhysBCFunctSUSSMAN (
-      const Geometry& geom);
-
-    void define (
-      const Geometry& geom);
-
-    virtual void FillBoundary (
-      int level,
-      MultiFab& mf, 
-      Real time,
-      int dcomp,
-      Vector<int> scompBC_map,
-      int ncomp, 
-      int bfact) override;
-
-    using PhysBCFunctBaseSUSSMAN::FillBoundary;
-private:
-    Geometry m_geom;
-};
 
 }
 #endif
