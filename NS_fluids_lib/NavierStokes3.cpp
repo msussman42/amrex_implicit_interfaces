@@ -13271,7 +13271,8 @@ void NavierStokes::PCINTERP_fill_bordersALL(int idx_MF,
 
 
 void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
-  int scomp,int ncomp,int index,Vector<int> scompBC_map) {
+  int scomp,int ncomp,int index,
+  Vector<int> scompBC_map) {
 
  int ncompcheck=localMF[idx_MF]->nComp();
  int ngrowcheck=localMF[idx_MF]->nGrow();

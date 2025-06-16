@@ -365,7 +365,7 @@ public:
     //
 
     void FillPatch (AmrLevel & old,
-                    MultiFab& mf,
+                    MultiFab& mf_to_be_filled,
                     int       dcomp,
                     Real      time,
                     int       index,
