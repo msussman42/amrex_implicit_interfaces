@@ -461,10 +461,18 @@ void FillPatchTower (
 
  BL_PROFILE("FillPatchTower");
 
- if (top_level>=0) {
+ if ((top_level>=0)&&(top_level<=finest_top_level)) {
   //do nothing
  } else
   amrex::Error("top_level invalid");
+
+ if ((tower_data.size()==finest_top_level+1)&&
+     (tower_geom.size()==finest_top_level+1)&&
+     (tower_physbc.size()==finest_top_level+1)&&
+     (tower_bfact.size()==finest_top_level+1)) {
+  //do nothing
+ } else
+  amrex::Error("tower size() invalid");
 
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
@@ -500,30 +508,7 @@ void FillPatchTower (
    tower_bfact[top_level],
    debug_fillpatch);
 
- } else if (top_level==1) {
-
-  FillPatchTwoLevels(
-   mf_target,
-   time, 
-   *tower_data[top_level-1],
-   *tower_data[top_level],
-   scomp, 
-   dcomp, 
-   ncomp,
-   *tower_geom[top_level-1],
-   *tower_geom[top_level],
-   *tower_physbc[top_level-1],
-   *tower_physbc[top_level],
-   mapper,
-   global_bcs,
-   scompBC_map,
-   top_level-1,top_level,
-   tower_bfact[top_level-1],
-   tower_bfact[top_level],
-   grid_type,
-   debug_fillpatch);
-
- } else if (top_level>=2) {
+ } else if (top_level>=1) {
 
   int ngrow = mf_target.nGrow();
   const IntVect& ngrow_vec=mf_target.nGrowVect();	   
@@ -610,6 +595,8 @@ void FillPatchTower (
       *tower_geom[top_level-1]);
   
     FillPatchTower(
+     called_from_regrid,
+     finest_top_level,
      top_level-1,
      mf_crse_patch, // target data (coarse)
      time, 
