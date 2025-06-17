@@ -43,6 +43,8 @@ namespace amrex
 
 //SUSSMAN
     void FillPatchTower (
+      int called_from_regrid,
+      int finest_top_level,
       int top_level,
       MultiFab& mf_target, //target
       Real time,
