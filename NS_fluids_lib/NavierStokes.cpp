@@ -11060,7 +11060,9 @@ NavierStokes::init(
     
    for (int part_iter=0;part_iter<ncomp_part.size();part_iter++) { 
      //FillPatch is declared in amrlib/AmrLevel.cpp
+    int called_from_regrid=1;
     FillPatch(
+       called_from_regrid,
        old,
        S_new,
        scomp_part[part_iter],
@@ -25854,7 +25856,9 @@ MultiFab* NavierStokes::getState (
    ngrow,MFInfo().SetTag("mf getState"),FArrayBoxFactory());
 
   //FillPatch is declared in amrlib/AmrLevel.cpp
- FillPatch(*this,*mf,0,time,State_Type,scomp,ncomp,debug_fillpatch);
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,*this,*mf,0,time,State_Type,
+           scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -25888,7 +25892,9 @@ MultiFab* NavierStokes::getStateSolid (
  MultiFab* mf = new MultiFab(state[Solid_State_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateSolid"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,Solid_State_Type,scomp,ncomp,debug_fillpatch);
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,*this,*mf,0,time,Solid_State_Type,
+	   scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -25967,7 +25973,9 @@ MultiFab* NavierStokes::getStateTensor (
    MultiFab* mf = new MultiFab(state[Tensor_Type].boxArray(),dmap,ncomp,
     ngrow,MFInfo().SetTag("mf getStateTensor"),FArrayBoxFactory());
 
-   FillPatch(*this,*mf,0,time,Tensor_Type,scomp,ncomp,debug_fillpatch);
+   int called_from_regrid=0;
+   FillPatch(called_from_regrid,*this,*mf,0,time,Tensor_Type,
+	     scomp,ncomp,debug_fillpatch);
 
    ParallelDescriptor::Barrier();
 
@@ -26049,7 +26057,9 @@ MultiFab* NavierStokes::getStateRefineDensity (
     ngrow,MFInfo().SetTag("mf getRefineDensity"),FArrayBoxFactory());
 
    for (int im_comp=im_comp_start;im_comp<=im_comp_end;im_comp++) {
-    FillPatch(*this,*mf,
+    int called_from_regrid=0;
+    FillPatch(called_from_regrid,
+              *this,*mf,
 	      (im_comp-im_comp_start)*ENUM_NUM_REFINE_DENSITY_TYPE,
 	      time,Refine_Density_Type,
 	      im_comp*ENUM_NUM_REFINE_DENSITY_TYPE,
@@ -26093,7 +26103,10 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,
    ngrow,MFInfo().SetTag("mf getStateDist"),FArrayBoxFactory());
 
   // scomp=0
- FillPatch(*this,*mf,0,time,LS_Type,0,num_materials*(AMREX_SPACEDIM+1),debug_fillpatch);
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,
+	   *this,*mf,0,time,LS_Type,
+	   0,num_materials*(AMREX_SPACEDIM+1),debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -26127,7 +26140,9 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
  MultiFab* mf = new MultiFab(state[DIV_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getStateDIV_DATA"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,DIV_Type,scomp,ncomp,debug_fillpatch);
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,*this,*mf,0,time,DIV_Type,
+           scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
@@ -27260,7 +27275,9 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
   ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
 
   //scomp_dest=0 scomp_source=0 ncomp=1
- FillPatch(*this,*mf,0,time,Umac_Type+dir,0,1,debug_fillpatch);
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,*this,*mf,0,time,Umac_Type+dir,
+           0,1,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
