@@ -1250,7 +1250,8 @@ AmrLevel::CopyOldToNewPC(int lev_max) {
 //           output: Data^{l}    
 // 4.c) return Data^{TBF}=Data^{l^max}
 void
-AmrLevel::FillPatch (AmrLevel & old,
+AmrLevel::FillPatch (int called_from_regrid,
+                     AmrLevel & old,
                      MultiFab& mf_to_be_filled,
                      int       dcomp,
                      Real      time,
@@ -1415,6 +1416,8 @@ AmrLevel::FillPatch (AmrLevel & old,
     // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
     // block.
   amrex::FillPatchTower(
+    called_from_regrid,
+    level,
     level,
     mf_to_be_filled, 
     tower_nudge_time[level],
@@ -1647,8 +1650,13 @@ AmrLevel::FillCoarsePatchGHOST (
 
     // ngrow_in=0
     // This is data_to_be_filled.
-  MultiFab crseMF(crseBA,dm,ncomp_range,0,
-	MFInfo().SetTag("crseMF"),FArrayBoxFactory());
+  MultiFab crseMF(
+    crseBA,
+    dm,
+    ncomp_range,
+    0,
+    MFInfo().SetTag("crseMF"),
+    FArrayBoxFactory());
 
   int dcomp_data=scomp+scomp_range;
 
@@ -1669,7 +1677,11 @@ AmrLevel::FillCoarsePatchGHOST (
   for (int isub=0;isub<ncomp_range;isub++)
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
+  int called_from_regrid=1; //disable the sanity check for number of levels
+
   amrex::FillPatchTower(
+    called_from_regrid, 
+    level,
     level-1,
     crseMF, // data to be filled 0..ncomp_range-1
     tower_nudge_time[level-1],
@@ -1993,7 +2005,11 @@ AmrLevel::InterpBordersGHOST (
   for (int isub=0;isub<ncomp_range;isub++)
    local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
+  int called_from_regrid=0;
+
   amrex::FillPatchTower(
+    called_from_regrid,
+    level,
     level,
     mf_to_be_filled,
     tower_nudge_time[level],
@@ -2197,7 +2213,11 @@ AmrLevel::InterpBorders (
   for (int isub=0;isub<ncomp_range;isub++)
    local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
+  int called_from_regrid=0;
+
   amrex::FillPatchTower(
+    called_from_regrid,
+    level,
     level,
     mf_to_be_filled,
     tower_nudge_time[level],
@@ -2450,7 +2470,11 @@ AmrLevel::FillCoarsePatch (MultiFab& mf_to_be_filled,
   for (int isub=0;isub<ncomp_range;isub++)
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
+  int called_from_regrid=1;  //force sanity check to be disabled
+
   amrex::FillPatchTower(
+    called_from_regrid,
+    level,
     level-1,
     crseMF, // data to be filled 0..ncomp_range-1
     tower_nudge_time[level-1],

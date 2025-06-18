@@ -1433,13 +1433,15 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
   tower_data[ilev]=nullptr;
  }
 
- tower_data[level]=localMF[idx_phi];
- 
+ for (int ilev=0;ilev<=level;ilev++) {
+  NavierStokes& ns_coarse=getLevel(ilev);
+  tower_data[ilev]=ns_coarse.localMF[idx_phi];
+ }
+
  if (level>0) {
   NavierStokes& ns_coarse=getLevel(level-1);
   ns_coarse.localMF[idx_phi]->setBndry(0.0);
   ns_coarse.localMF[idx_phi]->FillBoundary(ns_coarse.geom.periodicity());
-  tower_data[level-1]=ns_coarse.localMF[idx_phi];
  } else if (level==0) {
   //do nothing
  } else
@@ -1492,8 +1494,12 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
   amrex::Error("invalid ngrow");
 
   // down the V-cycle
- if (homflag==1) 
+ if (homflag==1) {
   setVal_localMF(idx_phi,0.0,0,nsolve,1);
+ } else if (homflag==0) {
+  //do nothing
+ } else
+  amrex::Error("homflag invalid");
 
  localMF[idx_phi]->setBndry(0.0);
 
@@ -1521,7 +1527,10 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
    tower_data[ilev]=nullptr;
   }
 
-  tower_data[level]=localMF[idx_phi];
+  for (int ilev=0;ilev<=level;ilev++) {
+   NavierStokes& ns_coarse=getLevel(ilev);
+   tower_data[ilev]=ns_coarse.localMF[idx_phi];
+  }
 
   NavierStokes& ns_coarse=getLevel(level-1);
   ns_coarse.localMF[idx_phi]->setBndry(0.0);
@@ -1538,8 +1547,6 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
   }
   if (dcomp!=nsolve)
    amrex::Error("dcomp invalid");
-
-  tower_data[level-1]=ns_coarse.localMF[idx_phi];
 
   int ngrow_interp=1;
 
@@ -1558,7 +1565,10 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
 		      
   interpScalarMAC(ns_coarse.localMF[idx_phi],
                   localMF[idx_phi],nsolve,project_option);
- }
+ } else if ((homflag==1)||(level==0)) {
+  //do nothing
+ } else
+  amrex::Error("homflag or level invalid");
  
  MultiFab::Copy(*pbdry,*localMF[idx_phi],0,0,nsolve,1);
 

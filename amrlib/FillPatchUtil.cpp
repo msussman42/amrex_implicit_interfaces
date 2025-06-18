@@ -564,15 +564,28 @@ void FillPatchTower (
     }
    } // i
 
-    // find coarsen( mf_target intersect complement(fmf) within fdomain_g ).
+    // find coarsen( mf_target intersect complement(fmf.ba) within fdomain_g ).
     // the valid region of fpc encompass the mf_target grow regions, but the
     // boxes of fpc are disjoint.
     // "TheFPinfo" is declared in "AMReX_FabArrayBase.H"
+    // in: FabArrayBase::FPinfo::FPinfo,
+    /*
+    for (int i = iboxlo; i <= iboxhi; ++i) {
+        Box bx = dstba_simplified[i];
+        bx.grow(m_dstng);
+        bx &= m_dstdomain;    
+        BoxList const& leftover = srcba_simplified.complementIn(bx);
+        if (leftover.isNotEmpty()) {
+            bl.join(leftover);
+        }
+    }
+    */
+ 
    const FabArrayBase::FPinfo& fpc = 
     FabArrayBase::TheFPinfo(
-      *tower_data[top_level], 
-      mf_target, 
-      ngrow_vec, 
+      *tower_data[top_level], //source
+      mf_target, //dest
+      ngrow_vec, //ngrow_vec=mf_target.nGrowVect();
       coarsener,//type InterpolatorBoxCoarsener, derived from BoxConverter
       *tower_geom[top_level],
       *tower_geom[top_level-1],
@@ -585,9 +598,31 @@ void FillPatchTower (
     // fill the fine level target.
    } else if (empty_flag==false) {
 
+    if (called_from_regrid==1) {
+     //check nothing
+    } else if (called_from_regrid==0) {
+     if (ngrow>=2) {
+      //check nothing
+     } else if ((ngrow==0)||(ngrow==1)) {
+      if (finest_top_level==top_level) {
+       //do nothing
+      } else {
+       std::cout << "ngrow= " << ngrow << '\n';
+       std::cout << "finest_top_level=" << finest_top_level << '\n';
+       std::cout << "top_level=" << top_level << '\n';
+       amrex::Error("expecting empty_flag==true");
+      }
+     } else
+      amrex::Error("ngrow invalid");
+    } else
+     amrex::Error("called_from_regrid invalid");
+
+     //ngrow=0
     MultiFab mf_crse_patch(
         fpc.ba_crse_patch,
-        fpc.dm_patch,ncomp,0,
+        fpc.dm_patch,
+        ncomp,
+        0,
 	MFInfo().SetTag("mf_crse_patch"),
 	*fpc.fact_crse_patch);
 
