@@ -364,7 +364,8 @@ public:
     // Interpolate from coarse level to the valid area in dest.
     //
 
-    void FillPatch (AmrLevel & old,
+    void FillPatch (int called_from_regrid,
+                    AmrLevel & old,
                     MultiFab& mf_to_be_filled,
                     int       dcomp,
                     Real      time,
