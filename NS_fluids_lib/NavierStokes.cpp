@@ -13510,17 +13510,17 @@ void NavierStokes::check_grid_places() {
 
  int bfact_fine_min=0;
  if ((level>=0)&&(level<finest_level)) {
-  bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
-  if (bfact_grid<4)
-   amrex::Error("we must have blocking factor at least 4(1)");
-  if (bfact_fine_min<4)
-   amrex::Error("bfact_fine_min<4");
+  bfact_fine_min=((bfact_SEM<2) ? 2 : bfact_SEM);
+  if (bfact_grid<2)
+   amrex::Error("we must have blocking factor at least 2(1)");
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
  } else if (level==finest_level) {
-  bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
-  if (bfact_grid<4)
-   amrex::Error("we must have blocking factor at least 4(1)");
-  if (bfact_fine_min<4)
-   amrex::Error("bfact_fine_min<4");
+  bfact_fine_min=((bfact_SEM<2) ? 2 : bfact_SEM);
+  if (bfact_grid<2)
+   amrex::Error("we must have blocking factor at least 2(1)");
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
  } else
   amrex::Error("level invalid");
 
@@ -13538,11 +13538,11 @@ void NavierStokes::check_grid_places() {
  }
 
  if ((level>=0)&&(level<finest_level)) {
-  if (bfact_fine_min<4)
-   amrex::Error("bfact_fine_min<4");
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
  } else if (level==finest_level) {
-  if (bfact_fine_min<4)
-   amrex::Error("bfact_fine_min<4");
+  if (bfact_fine_min<2)
+   amrex::Error("bfact_fine_min<2");
  } else
   amrex::Error("level invalid");
 

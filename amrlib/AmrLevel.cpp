@@ -1476,6 +1476,23 @@ AmrLevel::FillCoarsePatchGHOST (
  if (level<=0)
   amrex::Error("level invalid in FillCoarsePatchGHOST");
 
+ if (tower_data[level]->nGrow()==ngrow_in) {
+  //do nothing
+ } else {
+  std::cout << "scomp=" << scomp << '\n';
+  std::cout << "ncomp=" << ncomp << '\n';
+  std::cout << "ngrow_in=" << ngrow_in << '\n';
+  std::cout << "tower_data[level]->nGrow()=" << 
+    tower_data[level]->nGrow() << '\n';
+  for (int ilev2=0;ilev2<=level;ilev2++) {
+   std::cout << "tower_data[ilev2]->nGrow()=" << 
+    tower_data[ilev2]->nGrow() << '\n';
+   std::cout << "tower_data[ilev2]->nComp()=" << 
+     tower_data[ilev2]->nComp() << '\n';
+  }
+  amrex::Error("tower_data nGrow invalid FillCoarsePatchGHOST");
+ }
+
  for (int ilev=0;ilev<=level;ilev++) {
   if (tower_data[ilev]->nComp()>=scomp+ncomp) {
    //do nothing
@@ -1487,14 +1504,14 @@ AmrLevel::FillCoarsePatchGHOST (
      tower_data[ilev]->nComp() << '\n';
    amrex::Error("tower_data nComp invalid");
   }
-  if (tower_data[ilev]->nGrow()==ngrow_in) {
+  if (tower_data[ilev]->nGrow()>=0) {
    //do nothing
   } else {
    std::cout << "ilev=" << ilev << '\n';
    std::cout << "ngrow_in=" << ngrow_in << '\n';
    std::cout << "tower_data[ilev]->nGrow()=" << 
      tower_data[ilev]->nGrow() << '\n';
-   amrex::Error("tower_data nGrow invalid");
+   amrex::Error("tower_data nGrow invalid FillCoarsePatchGHOST");
   }
  }
 
@@ -1856,6 +1873,24 @@ AmrLevel::InterpBordersGHOST (
  if (level<0)
   amrex::Error("level invalid in InterpBordersGHOST");
 
+
+ if (tower_data[level]->nGrow()==ngrow_in) {
+  //do nothing
+ } else {
+  std::cout << "scomp=" << scomp << '\n';
+  std::cout << "ncomp=" << ncomp << '\n';
+  std::cout << "ngrow_in=" << ngrow_in << '\n';
+  std::cout << "tower_data[level]->nGrow()=" << 
+    tower_data[level]->nGrow() << '\n';
+  for (int ilev2=0;ilev2<=level;ilev2++) {
+   std::cout << "tower_data[ilev2]->nGrow()=" << 
+    tower_data[ilev2]->nGrow() << '\n';
+   std::cout << "tower_data[ilev2]->nComp()=" << 
+     tower_data[ilev2]->nComp() << '\n';
+  }
+  amrex::Error("tower_data nGrow invalid InterpBordersGHOST");
+ }
+
  for (int ilev=0;ilev<=level;ilev++) {
   if (tower_data[ilev]->nComp()>=scomp+ncomp) {
    //do nothing
@@ -1867,14 +1902,22 @@ AmrLevel::InterpBordersGHOST (
      tower_data[ilev]->nComp() << '\n';
    amrex::Error("tower_data nComp invalid");
   }
-  if (tower_data[ilev]->nGrow()==ngrow_in) {
+  if (tower_data[ilev]->nGrow()>=0) {
    //do nothing
   } else {
    std::cout << "ilev=" << ilev << '\n';
+   std::cout << "scomp=" << scomp << '\n';
+   std::cout << "ncomp=" << ncomp << '\n';
    std::cout << "ngrow_in=" << ngrow_in << '\n';
    std::cout << "tower_data[ilev]->nGrow()=" << 
      tower_data[ilev]->nGrow() << '\n';
-   amrex::Error("tower_data nGrow invalid");
+   for (int ilev2=0;ilev2<=level;ilev2++) {
+    std::cout << "tower_data[ilev2]->nGrow()=" << 
+     tower_data[ilev2]->nGrow() << '\n';
+    std::cout << "tower_data[ilev2]->nComp()=" << 
+     tower_data[ilev2]->nComp() << '\n';
+   }
+   amrex::Error("tower_data nGrow invalid InterpBordersGHOST");
   }
  }
 
@@ -2064,6 +2107,23 @@ AmrLevel::InterpBorders (
  if (level<0)
   amrex::Error("level invalid in InterpBorders");
 
+ if (tower_data[level]->nGrow()==ngrow_in) {
+  //do nothing
+ } else {
+  std::cout << "scomp=" << scomp << '\n';
+  std::cout << "ncomp=" << ncomp << '\n';
+  std::cout << "ngrow_in=" << ngrow_in << '\n';
+  std::cout << "tower_data[level]->nGrow()=" << 
+    tower_data[level]->nGrow() << '\n';
+  for (int ilev2=0;ilev2<=level;ilev2++) {
+   std::cout << "tower_data[ilev2]->nGrow()=" << 
+    tower_data[ilev2]->nGrow() << '\n';
+   std::cout << "tower_data[ilev2]->nComp()=" << 
+     tower_data[ilev2]->nComp() << '\n';
+  }
+  amrex::Error("tower_data nGrow invalid InterpBorders");
+ }
+
  for (int ilev=0;ilev<=level;ilev++) {
   if (tower_data[ilev]->nComp()>=scomp+ncomp) {
    //do nothing
@@ -2075,14 +2135,14 @@ AmrLevel::InterpBorders (
      tower_data[ilev]->nComp() << '\n';
    amrex::Error("tower_data nComp invalid");
   }
-  if (tower_data[ilev]->nGrow()==ngrow_in) {
+  if (tower_data[ilev]->nGrow()>=0) {
    //do nothing
   } else {
    std::cout << "ilev=" << ilev << '\n';
    std::cout << "ngrow_in=" << ngrow_in << '\n';
    std::cout << "tower_data[ilev]->nGrow()=" << 
      tower_data[ilev]->nGrow() << '\n';
-   amrex::Error("tower_data nGrow invalid");
+   amrex::Error("tower_data nGrow invalid InterpBorders");
   }
  }
 

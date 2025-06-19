@@ -3569,7 +3569,7 @@ stop
       endif
 
       if ((level.lt.finest_level).and.(level.ge.0)) then
-       if (bfact_grid.lt.4) then
+       if (bfact_grid.lt.2) then
         print *,"bfact_grid invalid in curvstrip(1): ",bfact_grid
         stop
        endif
