@@ -57,7 +57,7 @@ ns.projection_pressure_scale=100.0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 4 4 4 4 4    # number of buffer cells in error est
+amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 ns.enable_spectral=0
 amr.time_blocking_factor=1
