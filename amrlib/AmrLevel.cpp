@@ -1415,7 +1415,9 @@ AmrLevel::FillPatch (int called_from_regrid,
     // We are fooled into thinking this is a amrex routine since the
     // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
     // block.
+  int ngrow_root=mf_to_be_filled.nGrow();
   amrex::FillPatchTower(
+    ngrow_root,
     called_from_regrid,
     level,
     level,
@@ -1695,8 +1697,10 @@ AmrLevel::FillCoarsePatchGHOST (
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
   int called_from_regrid=1; //disable the sanity check for number of levels
+  int ngrow_root=crseMF.nGrow();
 
   amrex::FillPatchTower(
+    ngrow_root,
     called_from_regrid, 
     level,
     level-1,
@@ -2049,8 +2053,10 @@ AmrLevel::InterpBordersGHOST (
    local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   int called_from_regrid=0;
+  int ngrow_root=mf_to_be_filled.nGrow();
 
   amrex::FillPatchTower(
+    ngrow_root,
     called_from_regrid,
     level,
     level,
@@ -2274,8 +2280,10 @@ AmrLevel::InterpBorders (
    local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   int called_from_regrid=0;
+  int ngrow_root=mf_to_be_filled.nGrow();
 
   amrex::FillPatchTower(
+    ngrow_root,
     called_from_regrid,
     level,
     level,
@@ -2531,8 +2539,10 @@ AmrLevel::FillCoarsePatch (MultiFab& mf_to_be_filled,
    local_bcs[isub]=global_bcs[local_scompBC_map[isub]]; 
 
   int called_from_regrid=1;  //force sanity check to be disabled
+  int ngrow_root=crseMF.nGrow();
 
   amrex::FillPatchTower(
+    ngrow_root,
     called_from_regrid,
     level,
     level-1,

@@ -6072,6 +6072,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! do nothing
        else 
         print *,"material_present_flag invalid"
+        print *,"im=",im
+        print *,"material_present_flag(im)= ", &
+          material_present_flag(im)
         stop
        endif
         

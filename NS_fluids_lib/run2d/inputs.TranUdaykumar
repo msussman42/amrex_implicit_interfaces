@@ -100,16 +100,17 @@ amr.n_cell    = 32 128
 amr.max_level =  3
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
-amr.grid_eff        = 0.7   # what constitutes an efficient grid
+amr.n_error_buf     = 2 2 2 2 2 2  # number of buffer cells in error est
+amr.grid_eff        = 0.9   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 8 8 8 8 8   # block factor in grid generation
+amr.blocking_factor = 2 2 2 2 2 2 2   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100     # 5 for movies. 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 16
+cg.min_max_grid_size=64
 #amr.restart         = chk04600
 #amr.trace   =1
 
@@ -124,8 +125,8 @@ mac.mac_abs_tol    = 1.0e-12
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
-ns.shock_timestep=2 2 2 2 #INCOMPRESSIBLE
-#ns.shock_timestep=2 1 1 1 #COMPRESSIBLE
+#ns.shock_timestep=2 2 2 2 #INCOMPRESSIBLE
+ns.shock_timestep=2 1 1 1 #COMPRESSIBLE
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
 ns.change_max=1.01    # scale back initial timestep
@@ -177,8 +178,8 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 # material_type=1 EOS_tait
-ns.material_type=0 0 0 0 #INCOMPRESSIBLE
-#ns.material_type=0 36 36 36 #COMPRESSIBLE
+#ns.material_type=0 0 0 0 #INCOMPRESSIBLE
+ns.material_type=0 36 36 36 #COMPRESSIBLE
 ns.material_conservation_form=0 0 0 0
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
@@ -221,16 +222,19 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 #ns.viscoelastic_model=0 0 7 7 #BIOFILM ELASTIC BALL
 #ns.viscoelastic_model=0 0 0 #INELASTIC BALL
 #ns.viscoelastic_model=0 0 7 #ELASTIC BALL
-#ns.viscoelastic_model=0 3 3 #COMPRESSIBLE
-ns.viscoelastic_model=0 7 7 #INCOMPRESSIBLE
+ns.viscoelastic_model=0 3 3 #COMPRESSIBLE
+#ns.viscoelastic_model=0 7 7 #INCOMPRESSIBLE
 
 ns.yield_stress=0.0 1.50e+10 1.51e+10
 
 #fluid, steel, tungsten, biofilm
-ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10
+#ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10 #COMPRESSIBLE
+ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
 ns.yield_alpha=1.2 1.17 1.0 1.2
-ns.yield_n=1.0e+10 22.0 80.0 1.0e+10
-ns.yield_m=20.0 340.0 68.0 20.0
+#ns.yield_n=1.0e+10 22.0 80.0 1.0e+10 #COMPRESSIBLE
+ns.yield_n=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
+#ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE
+ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE
 ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
 
@@ -262,13 +266,16 @@ ns.xblob=0.0
 
 #ns.yblob=5000.0
 #ns.zblob=9850.0
+#Tungsten rod: yblob-half*radblob3 < y < yblob+half*radblob3
+#Tungsten rod: 5.1 < y < 10.1
 ns.yblob=7.6 # y coordinate of midpoint of rod relative to domain BOTTOM
 ns.zblob=1021.87  # depth of sphere (unused)
 ns.radblob=0.2  # x radius of Tungsten rod 2mm
 #jetting_plate_dist declared in GLOBALDIST.F90
-ns.radblob2=2.9  # substrate thickness
+ns.radblob2=2.9  # substrate thickness (steel plate thickness)
 ns.radblob3=5.0  # rod height
-ns.yblob2=3.5    # yblob2+yblob < y < yblob2+yblob+thickness
+#Steel plate: 10.4 < y < 13.3
+ns.yblob2=2.8    # yblob2+yblob < y < yblob2+yblob+thickness
 ns.xblob2=2.0    # substrate radius -xblob2 < r < xblob2
 ns.denfact=1.0
 ns.velfact=0.0
