@@ -4366,8 +4366,8 @@ stop
        stop
       endif
       if ((level.ge.0).and.(level.lt.finest_level)) then
-       if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.4) then
-        print *,"blocking factor should be at least 4"
+       if (fabhi(normdir+1)-fablo(normdir+1)+1.lt.2) then
+        print *,"blocking factor should be at least 2"
         print *,"level,finest_level ",level,finest_level
         stop
        endif
