@@ -6409,7 +6409,7 @@ stop
        stop
       endif
       if ((level.ge.0).and.(level.lt.finest_level)) then
-       if (bfact_grid.lt.4) then
+       if (bfact_grid.lt.2) then
         print *,"bfact_grid invalid in fort_marangoniforce: ",bfact_grid
         stop
        endif
