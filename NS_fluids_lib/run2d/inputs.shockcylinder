@@ -2,9 +2,14 @@
 #(shock moves in the x-direction)
 #shockdrop.F90
 #This inputs file: shock moves in the y-direction
+#4 cores in 2d
+#64 cores in 3d
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  5.0e-3  # maximum problem time
+# max_level_for_use=3  0<t<1e-3
+# max_level_for_use=4  1e-3<t<2.3e-3
+# max_level_for_use=5  t>2.3e-3
+stop_time =  1.0e-3  # maximum problem time
 
 # 32x24x8 mm^3 -> 24x8x32
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
@@ -59,7 +64,7 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #amr.n_cell    = 72 48 96 
 amr.n_cell    = 48 96
 
-amr.max_level = 5 # max_level=4 finest
+amr.max_level = 5 # max_level=5 finest
 #ARIENTI
 # max_level_for_use=3  0<t<1e-3
 # max_level_for_use=4  1e-3<t<2.3e-3
@@ -68,9 +73,9 @@ ns.max_level_for_use = 3
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2 2 2   # number of buffer cells in error est
-amr.grid_eff        = 0.8   # what constitutes an efficient grid
+amr.grid_eff        = 0.9   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 8 8 8 8 8 8   # block factor in grid generation
+amr.blocking_factor = 2 2 2 2 2 2 2 2   # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 ns.visual_nddata_format=1 # native AMReX
@@ -102,8 +107,8 @@ mac.mac_abs_tol    = 1.0e-9
 # length of domain=3.2 
 # time of traversal: 3.2/148000=2.2e-5
 # shock_timestep=2 1 cfl=0.75  0<t<2.2e-5
-# shock_timestep=2 2 cfl=0.25  t>2.2e-5
-ns.shock_timestep=2 2
+# shock_timestep=2 2 cfl=0.75  t>2.2e-5
+ns.shock_timestep=2 1
 ns.cfl            = 0.75      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 1e-08   # Sep 16, 2018
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts

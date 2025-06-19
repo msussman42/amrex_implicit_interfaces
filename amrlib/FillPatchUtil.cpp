@@ -441,6 +441,7 @@ void FillPatchTwoLevels (
 
 //SUSSMAN
 void FillPatchTower (
+ int ngrow_root,
  int called_from_regrid,
  int finest_top_level,
  int top_level,
@@ -514,6 +515,11 @@ void FillPatchTower (
   const IntVect& ngrow_vec=mf_target.nGrowVect();	   
  
   int do_the_interp=0;
+
+  if (ngrow_root>=0) {
+   //do nothing
+  } else
+   amrex::Error("ngrow_root invalid");
 
   if (ngrow>0) {
    do_the_interp=1;
@@ -601,13 +607,13 @@ void FillPatchTower (
     if (called_from_regrid==1) {
      //check nothing
     } else if (called_from_regrid==0) {
-     if (ngrow>=2) {
+     if (ngrow_root>=2) {
       //check nothing
-     } else if ((ngrow==0)||(ngrow==1)) {
+     } else if ((ngrow_root==0)||(ngrow_root==1)) {
       if (finest_top_level==top_level) {
        //do nothing
       } else {
-       std::cout << "ngrow= " << ngrow << '\n';
+       std::cout << "ngrow_root= " << ngrow_root << '\n';
        std::cout << "finest_top_level=" << finest_top_level << '\n';
        std::cout << "top_level=" << top_level << '\n';
        amrex::Error("expecting empty_flag==true");
@@ -630,6 +636,7 @@ void FillPatchTower (
       *tower_geom[top_level-1]);
   
     FillPatchTower(
+     ngrow_root,
      called_from_regrid,
      finest_top_level,
      top_level-1,

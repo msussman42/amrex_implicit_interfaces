@@ -43,6 +43,7 @@ namespace amrex
 
 //SUSSMAN
     void FillPatchTower (
+      int ngrow_root,
       int called_from_regrid,
       int finest_top_level,
       int top_level,

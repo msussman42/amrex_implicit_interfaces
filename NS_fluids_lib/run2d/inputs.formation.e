@@ -70,8 +70,9 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 200  # 200 for production run
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 1024
-#amr.restart         = chk13600
+amr.max_grid_size   = 16
+cg.min_max_grid_size   = 64
+#amr.restart         = chk10800
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
