@@ -869,12 +869,14 @@ end subroutine nozzle2d
        !jetting_plate_dist is called from soliddist.
        !soliddist is called from materialdistsolid.
        !dist<0 in the plate.
-      subroutine jetting_plate_dist(x,y,z,dist,solid_id,for_clamped)
+      subroutine jetting_plate_dist(x,y,z,dist,solid_id, &
+             for_clamped,clamp_width)
       use global_utility_module
       IMPLICIT NONE
       integer, INTENT(in) :: for_clamped
       integer, INTENT(in) :: solid_id !=1 or 2
       real(amrex_real), INTENT(in) :: x,y,z
+      real(amrex_real), INTENT(in) :: clamp_width
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real) :: aspect,offset,distplate,hugedist
       real(amrex_real) :: dist_left,dist_right
@@ -896,6 +898,13 @@ end subroutine nozzle2d
 !      offset=2.54d0
        offset=radblob2 ! thickness of substrate 
        offset_biofilm=offset ! thickness of biofilm
+
+       if ((clamp_width.gt.zero).and.(clamp_width.le.offset)) then
+        !do nothing
+       else
+        print *,"clamp_width invalid: ",clamp_width
+        stop
+       endif
 
        distplate=yblob2
 
@@ -927,11 +936,11 @@ end subroutine nozzle2d
           yblob+distplate+local_offset+height_shift, &
           dist)
         else if (for_clamped.eq.1) then
-         call squaredist(x,y,-aspect-offset,-aspect+offset, &
+         call squaredist(x,y,-aspect-clamp_width,-aspect+clamp_width, &
           yblob+distplate+height_shift, &
           yblob+distplate+local_offset+height_shift, &
           dist_left)
-         call squaredist(x,y,aspect-offset,aspect+offset, &
+         call squaredist(x,y,aspect-clamp_width,aspect+clamp_width, &
           yblob+distplate+height_shift, &
           yblob+distplate+local_offset+height_shift, &
           dist_right)

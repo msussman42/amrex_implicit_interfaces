@@ -329,7 +329,7 @@ integer :: backing_id !=3 or 2
   if (probtype.eq.42) then
    backing_id=3
   else if (probtype.eq.46) then
-   backing_id=2
+   backing_id=2 !steel
   else
    print *,"probtype invalid"
    stop
@@ -361,6 +361,10 @@ integer :: backing_id !=3 or 2
     !substrate vertical: yblob+distplate < z < yblob+distplate+radblob2
     ! (biofilm is on the bottom)
     ! 
+    !for_clamped=1 (solid_id=1 => steel plate)
+    !height_shift=0
+    !local_offset=radblob2
+    !aspect=xblob2
    solid_id=1
    call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
    LS=-LS
