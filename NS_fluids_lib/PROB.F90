@@ -7930,6 +7930,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(out) :: dist(:)
       real(amrex_real) x,y,z
+      real(amrex_real) clamp_width
       integer imaterial
       real(amrex_real) distline
       real(amrex_real) distcircle
@@ -8252,7 +8253,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC).or. &
                  (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
          solid_id=1
-         call jetting_plate_dist(x,y,z,dist(backing_id),solid_id,for_clamped)
+         call jetting_plate_dist(x,y,z,dist(backing_id),solid_id, &
+                 for_clamped,clamp_width)
          dist(backing_id)=-dist(backing_id) !now:dist(backing_id)>0 in plate.
          dist(1)=min(dist(1),-dist(backing_id))
          if (num_materials.eq.3) then
@@ -8260,7 +8262,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (num_materials.eq.4) then
           solid_id=2
           call jetting_plate_dist(x,y,z, &
-            dist(biofilm_id),solid_id,for_clamped)
+            dist(biofilm_id),solid_id, &
+            for_clamped,clamp_width)
           dist(biofilm_id)=-dist(biofilm_id)
           dist(1)=min(dist(1),-dist(biofilm_id))
          else

@@ -1341,6 +1341,7 @@ end subroutine nozzle2d
       real(amrex_real) half_zblob2
       real(amrex_real) factor_zblob
       real(amrex_real) diamblob
+      real(amrex_real) clamp_width
       integer i,j,iSphere
       integer :: solid_id !1=substrate 2=biofilm
       integer :: backing_id
@@ -1380,6 +1381,8 @@ end subroutine nozzle2d
         stop
        endif
       endif
+
+      clamp_width=zero
 
       igeom=1
 
@@ -1473,7 +1476,7 @@ end subroutine nozzle2d
         stop
        endif
 
-       call jetting_plate_dist(x,y,z,dist,solid_id,for_clamped)
+       call jetting_plate_dist(x,y,z,dist,solid_id,for_clamped,clamp_width)
 
        ! soliddist
       else if (probtype.eq.bubbleInPackedColumn) then

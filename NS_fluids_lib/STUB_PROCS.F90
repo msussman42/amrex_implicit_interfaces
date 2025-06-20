@@ -316,6 +316,7 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS
 real(amrex_real), INTENT(out) :: vel(SDIM)
 real(amrex_real), INTENT(out) :: temperature
+real(amrex_real) :: clamp_width
 integer, INTENT(out) :: prescribed_flag
 integer dir
 integer, parameter :: for_clamped=1
@@ -342,6 +343,8 @@ integer :: backing_id !=3 or 2
    stop
   endif
 
+  clamp_width=zero
+
   LS=CLAMPED_NO_WHERE_LS
   do dir=1,SDIM
    vel(dir)=zero
@@ -366,7 +369,8 @@ integer :: backing_id !=3 or 2
     !local_offset=radblob2
     !aspect=xblob2
    solid_id=1
-   call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
+   call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id, &
+          for_clamped,clamp_width)
    LS=-LS
    if (LS.ge.zero) then
     LS=99999.0d0
@@ -381,7 +385,8 @@ integer :: backing_id !=3 or 2
      !do nothing
     else if (num_materials.eq.4) then
      solid_id=2
-     call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id,for_clamped)
+     call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id, &
+            for_clamped,clamp_width)
      LS=-LS
      if (LS.ge.zero) then
       LS=99999.0d0
