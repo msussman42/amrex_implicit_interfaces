@@ -327,12 +327,23 @@ integer :: backing_id !=3 or 2
      ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
      ((probtype.eq.46).and.(axis_dir.eq.11))) then
 
+  clamp_width=radblob2  !thickness of substrate
+  if (clamp_width.gt.xblob2/10.0d0) then
+   clamp_width=xblob2/10.0d0 !xblob2 is substrate radius
+  endif
+  if (clamp_width.gt.zero) then
+   ! do nothing
+  else
+   print *,"clamp_width invalid: ",clamp_width
+   stop
+  endif
+
   if (probtype.eq.42) then
    backing_id=3
   else if (probtype.eq.46) then
    backing_id=2 !steel
   else
-   print *,"probtype invalid"
+   print *,"probtype invalid: ",probtype
    stop
   endif
 
@@ -342,8 +353,6 @@ integer :: backing_id !=3 or 2
    print *,"expecting num_materials.ge.3: ",num_materials
    stop
   endif
-
-  clamp_width=zero
 
   LS=CLAMPED_NO_WHERE_LS
   do dir=1,SDIM

@@ -8229,6 +8229,17 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
                ((probtype.eq.46).and.(axis_dir.eq.11))) then  
 
+       clamp_width=radblob2  !thickness of substrate
+       if (clamp_width.gt.xblob2/10.0d0) then
+        clamp_width=xblob2/10.0d0 !xblob2 is substrate radius
+       endif
+       if (clamp_width.gt.zero) then
+        ! do nothing
+       else
+        print *,"clamp_width invalid: ",clamp_width
+        stop
+       endif
+
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (probtype.eq.42) then
         ball_id=2
