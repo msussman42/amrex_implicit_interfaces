@@ -899,10 +899,13 @@ end subroutine nozzle2d
        offset=radblob2 ! thickness of substrate 
        offset_biofilm=offset ! thickness of biofilm
 
-       if ((clamp_width.gt.zero).and.(clamp_width.le.offset)) then
+       if ((clamp_width.gt.zero).and. &
+           (clamp_width.le.offset*(one+EPS4))) then
         !do nothing
        else
         print *,"clamp_width invalid: ",clamp_width
+        print *,"radblob2= ",radblob2 !substrate thickness
+        print *,"xblob2= ",xblob2 !substrate radius
         stop
        endif
 
@@ -910,7 +913,7 @@ end subroutine nozzle2d
 
        if (radblob2.eq.zero) then
         dist=hugedist !no plate
-       else if (radblob2.gt.zero) then
+       else if (radblob2.gt.zero) then !radblob2=substrate thickness
 
         if (solid_id.eq.1) then
          height_shift=zero
@@ -1382,8 +1385,6 @@ end subroutine nozzle2d
        endif
       endif
 
-      clamp_width=zero
-
       igeom=1
 
       hugedist=99999.0
@@ -1473,6 +1474,17 @@ end subroutine nozzle2d
         solid_id=2
        else
         print *,"im invalid in soliddist: ",im
+        stop
+       endif
+
+       clamp_width=radblob2  !thickness of substrate
+       if (clamp_width.gt.xblob2/10.0d0) then
+        clamp_width=xblob2/10.0d0 !xblob2 is substrate radius
+       endif
+       if (clamp_width.gt.zero) then
+        ! do nothing
+       else
+        print *,"clamp_width invalid: ",clamp_width
         stop
        endif
 
