@@ -505,6 +505,8 @@ stop
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) normal_13(SDIM)
       real(amrex_real) normal_23(SDIM)
+      real(amrex_real) normal_11(SDIM)
+      real(amrex_real) normal_22(SDIM)
       real(amrex_real) normal_33(SDIM)
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) nfluid_least_squares(SDIM) 
@@ -1506,6 +1508,9 @@ stop
 
        nghost(dir2)=master_normal(dir2) !initialization
 
+       normal_11(dir2)=least_squares_normal_material(im,dir2)
+       normal_22(dir2)=least_squares_normal_material(im_opp,dir2)
+
        if (im3.eq.0) then
 
         normal_im3(dir2)=master_normal(dir2)
@@ -1530,29 +1535,12 @@ stop
         if (ice_normal_weight(iten_13).eq. &
             ice_normal_weight(iten_23)) then
          normal_im3(dir2)=normal_33(dir2)
-        else if (ice_normal_weight(iten_13).ne. &
-                 ice_normal_weight(iten_23)) then
-         if (im.lt.im3) then
-          normal_im3(dir2)= &
-           -ice_normal_weight(iten_13)*normal_13(dir2)
-         else if (im.gt.im3) then
-          normal_im3(dir2)= &
-           ice_normal_weight(iten_13)*normal_13(dir2)
-         else
-          print *,"im or im3 invalid: ",im,im3
-          stop
-         endif
-
-         if (im_opp.lt.im3) then
-          normal_im3(dir2)=normal_im3(dir2)  &
-           -ice_normal_weight(iten_23)*normal_23(dir2)
-         else if (im_opp.gt.im3) then
-          normal_im3(dir2)=normal_im3(dir2)+ &
-           ice_normal_weight(iten_23)*normal_23(dir2)
-         else
-          print *,"im_opp or im3 invalid: ",im_opp,im3
-          stop
-         endif
+        else if ((ice_normal_weight(iten_13).eq.one).and. &
+                 (ice_normal_weight(iten_23).eq.zero)) then
+         normal_im3(dir2)=-normal_11(dir2)
+        else if ((ice_normal_weight(iten_13).eq.zero).and. &
+                 (ice_normal_weight(iten_23).eq.one)) then
+         normal_im3(dir2)=-normal_22(dir2)
         else
          print *,"ice_normal_weight invalid: ",ice_normal_weight
          stop
@@ -1635,7 +1623,7 @@ stop
          nfluid(dir2)=master_normal(dir2)
         enddo
        else
-        print *,"mag invalid LEVELSET_3D.F90 1551"
+        print *,"mag invalid LEVELSET_3D.F90 1551: ",mag
         stop
        endif 
        do dir2=1,SDIM
@@ -2026,19 +2014,39 @@ stop
        imhold=im_primary_sten(i,j,k)
 
        do dir2=1,SDIM 
-        n1=ncurv1_save(D_DECL(i,j,k),dir2)
-        n2=ncurv2_save(D_DECL(i,j,k),dir2)
+        n1=ncurv1_save(D_DECL(i,j,k),dir2) !master_normal
+        n2=ncurv2_save(D_DECL(i,j,k),dir2) !nghost
         if (im3.eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
         else if (is_rigid_CL(im3).eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
         else if (is_rigid_CL(im3).eq.1) then
          if (imhold.eq.im3) then
-          ngrid(dir2)=n2
+          ngrid(dir2)=n2 !nghost
          else if ((imhold.ne.im3).and. &
                   (imhold.ge.1).and. &
                   (imhold.le.num_materials)) then 
-          ngrid(dir2)=n1
+          if (ice_normal_weight(iten_13).eq. &
+              ice_normal_weight(iten_23)) then
+           ngrid(dir2)=n1
+          else if ((ice_normal_weight(iten_13).eq.one).and. &
+                   (ice_normal_weight(iten_23).eq.zero)) then
+           if (imhold.eq.im_opp) then
+            ngrid(dir2)=n2 !nghost
+           else
+            ngrid(dir2)=n1
+           endif
+          else if ((ice_normal_weight(iten_13).eq.zero).and. &
+                   (ice_normal_weight(iten_23).eq.one)) then
+           if (imhold.eq.im) then
+            ngrid(dir2)=n2 !nghost
+           else
+            ngrid(dir2)=n1
+           endif
+          else
+           print *,"ice_normal_weight invalid: ",ice_normal_weight
+           stop
+          endif
          else
           print *,"imhold invalid: ",imhold
           stop
