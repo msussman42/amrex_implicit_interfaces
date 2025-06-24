@@ -158,8 +158,11 @@ fork_job(int fork_id) {
   } else
    amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
 
- } else
+ } else {
+  std::cout << "local_LSA_nsteps_power_method= " << 
+    local_LSA_nsteps_power_method <<'\n';
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+ }
 
  pp.queryAdd("strt_time",strt_time);
  pp.queryAdd("stop_time",stop_time);
@@ -228,18 +231,32 @@ fork_job(int fork_id) {
 //LSA_steps=max_step-initial_levelSteps
   if ((LSA_steps>0)&&(LSA_steps<9999)) {
    //do nothing
-  } else
+  } else {
+   std::cout << "max_step= " << max_step << '\n';
+   std::cout << "initial_levelSteps= " << initial_levelSteps << '\n';
+   std::cout << "LSA_steps= " << LSA_steps << '\n';
    amrex::Error("LSA: expecting 0<LSA_steps<9999");
+  }
 
   Real time_scale=local_fixed_dt*LSA_steps;
 //ABEL OKOJUNO: compare_time_scale=stop_time-initial_cumTime;
   if (std::abs(compare_time_scale-time_scale)<=1.0e-4*time_scale) {
    //do nothing
-  } else
+  } else {
+   std::cout << "stop_time= " << stop_time <<'\n';
+   std::cout << "initial_cumTime= " << initial_cumTime <<'\n';
+   std::cout << "compare_time_scale= " << compare_time_scale <<'\n';
+   std::cout << "initial_levelSteps= " << initial_levelSteps <<'\n';
+   std::cout << "max_step= " << max_step <<'\n';
+   std::cout << "LSA_steps=max_step-initial_levelSteps= " << LSA_steps <<'\n';
    amrex::Error("LSA: need |compare_time_scale-time_scale|<eps");
+  }
 
- } else
+ } else {
+  std::cout << "local_LSA_nsteps_power_method= " << 
+    local_LSA_nsteps_power_method <<'\n';
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+ }
 
 //ABEL OKOJUNO:
 //1. read in the "steady data" at time t0: data(t0)
@@ -352,7 +369,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, June 21, 2025, 16:11pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, June 24, 2025, 13:11pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
