@@ -996,7 +996,7 @@ stop
        SUB_SUMINT=>FABRIC_DROP_SUMINT
        SUB_OVERRIDE_TAGFLAG=>FABRIC_DROP_OVERRIDE_TAGFLAG
 
-      else if (probtype.eq.3001) then
+      else if (probtype.eq.3001) then !shockdrop
 
        SUB_INIT_MODULE=>shockdrop_init
        SUB_LS=>shockdrop_LS
@@ -2041,8 +2041,15 @@ stop
        ! above: probtype.eq.110
       else if ((probtype.eq.1).and. &
                ((axis_dir.eq.150).or. &
-                (axis_dir.eq.151))) then
-      
+                (axis_dir.eq.151).or. &
+                (axis_dir.eq.152).or. &
+                (axis_dir.eq.153))) then
+     
+       print *,"this code might be obsolete"
+       print *,"probtype=",probtype
+       print *,"axis_dir=",axis_dir
+       stop
+
        call shockdrop_init()
       
       else if (probtype.eq.401) then

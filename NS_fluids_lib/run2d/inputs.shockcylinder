@@ -61,7 +61,7 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #geometry.prob_hi   =  2.4 0.8 3.2
 #diameter=0.094cm
 
-#amr.n_cell    = 72 48 96 
+#amr.n_cell    = 72 48 96
 amr.n_cell    = 48 96
 
 amr.max_level = 5 # max_level=5 finest
@@ -88,7 +88,7 @@ ns.xslice=0.0 0.0 0.0
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
-cg.min_max_grid_size   = 64
+cg.min_max_grid_size   = 96
 #amr.restart         = chk56400
 #amr.trace   =1
 
