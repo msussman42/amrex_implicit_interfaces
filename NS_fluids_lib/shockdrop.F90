@@ -64,6 +64,260 @@ real(amrex_real) :: time_data(n_data) !ms
 
 CONTAINS
 
+
+subroutine N_wave_solution(time,x,y,z,T_o,Mn1,shockAngle,stateIndex,preState,postState,dState_dt)
+use probcommon_module
+IMPLICIT NONE
+
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) time
+      real(amrex_real) x,y,z
+      real(amrex_real) deltaP,T_o,shockAngle,shockAngle2
+      real(amrex_real) P1,T1,Gamma,GammaP1,c1,e1,rho1
+      real(amrex_real) M1,Mn1,Mn2
+      real(amrex_real) Db,Rb,Lb,Fw
+      real(amrex_real) U2,V2,rho2,e2,P2,T2
+      real(amrex_real) vn,vt
+      real(amrex_real) preState,postState,dState_dt
+      integer stateIndex
+
+      real(amrex_real) factor1
+
+      real(amrex_real) dRho_dt,dP_dt,dE_dt,dU_dt,dV_dt,dT_dt
+
+      !Bullet dimensions
+      Db = 0.42d0 * 2.8d0 !Diameter
+      Rb = Db/2.0d0 !Radius
+      Lb = 1.128d0 / 2.0d0 !ogival length of bullet
+
+      !Shape factor
+      Fw = Rb / Lb ** 0.25
+
+      !Farfield Mach
+      M1 = radblob2
+
+      !Pre-shock conditions
+      P1 = inflow_pressure
+      T1 = fort_tempconst(2)
+      Gamma = 1.4d0
+      GammaP1 = Gamma + 1.0d0
+!      call SOUNDSQR_air(T1,c1)
+      c1=sqrt(c1)
+
+      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
+
+      P2 = P1 + deltaP
+
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      shockAngle = asin(Mn1/M1)
+
+      T_o = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.31)**0.25
+      T_o = T_o / zblob4
+
+      rho1 = fort_denconst(2)
+      T1 = fort_tempconst(2)
+!      call INTERNAL_air(rho1,T1,e1)
+!      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
+!      call INTERNAL_air(rho2,T2,e2)
+!      call vnpostshock_air(T1,Mn1,vn)
+      vt=c1*radblob2*cos(shockAngle)
+      V2 = 0.0d0
+      U2 = Mn1 * c1 - vn
+      e2=e2+0.5d0*(U2*U2+V2*V2)
+
+      factor1 = radblob4
+
+      dP_dt = 2.0d0 * (P1 - P2)  / T_o  * factor1
+      dRho_dt = 2.0d0 * (rho1 - rho2) / T_o  * factor1
+      dE_dt = 2.0d0 * (e1 - e2) / T_o  * factor1
+      dU_dt = 2.0d0 * (0.0d0 - U2) / T_o  * factor1
+      dV_dt = 2.0d0 * (0.0d0 - V2) / T_o  * factor1
+      dT_dt = 2.0d0 * (T1 - T2) / T_o  * factor1
+
+
+      if(stateIndex.eq.1)then
+         preState = 0.0d0
+         postState = U2 + 0.0d0
+         dState_dt = dU_dt
+      else if(stateIndex.eq.2)then
+         preState = 0.0d0
+         postState = V2 + 0.0d0
+         dState_dt = dV_dt
+      else if(stateIndex.eq.3)then
+         preState = rho1
+         postState = rho2
+         dState_dt = dRho_dt
+      else if(stateIndex.eq.4)then
+         preState = e1
+         postState = e2
+         dState_dt = dE_dt
+      else if(stateIndex.eq.5)then
+         preState = T1
+         postState = T2
+         dState_dt = dT_dt
+      else if(stateIndex.eq.6)then
+         preState = inflow_pressure
+         postState = p2
+         dState_dt = dP_dt
+      else
+         print*,'invalided stateIndex n wave'
+         stop
+      end if
+
+return
+end subroutine N_wave_solution
+
+
+!This routine is for PROB 394 -- don't call outside without care
+subroutine N_wave_solution1(time,x,y,z,shockAngle,Mn1)
+use probcommon_module
+IMPLICIT NONE
+
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) time
+      real(amrex_real) x,y,z
+      real(amrex_real) deltaP,T_o,shockAngle,dpdt
+
+      real(amrex_real) P1,T1,Gamma,GammaP1,c1
+      real(amrex_real) M1,Mn1
+      real(amrex_real) Db,Lb,Rb,Fw
+
+      real(amrex_real) P2,T2
+
+      !Bullet dimensions
+      Db = 0.42d0 * 2.8d0 !Diameter
+      Rb = Db/2.0d0 !Radius
+      Lb = 1.128d0 / 2.0d0 !ogival length of bullet
+
+      !Shape factor
+      Fw = Rb / Lb ** 0.25
+
+      !Farfield Mach
+      M1 = radblob2
+
+      !Pre-shock conditions
+      P1 = inflow_pressure
+
+      T1 = fort_tempconst(2)
+      Gamma = 1.4d0
+      GammaP1 = Gamma + 1.0d0
+!      call SOUNDSQR_air(T1,c1)
+      c1=sqrt(c1)
+
+      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
+
+      P2 = P1 + deltaP
+
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      shockAngle = asin(Mn1/M1)
+
+return
+end subroutine N_wave_solution1
+
+subroutine N_wave_solution2(time,x,y,z,T_o,Mn1,shockAngle,stateIndex,preState,postState,dState_dt)
+use probcommon_module
+IMPLICIT NONE
+      
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) time    
+      real(amrex_real) x,y,z
+      real(amrex_real) deltaP,T_o,shockAngle,shockAngle2
+      real(amrex_real) P1,T1,Gamma,GammaP1,c1,e1,rho1
+      real(amrex_real) M1,Mn1,Mn2
+      real(amrex_real) Db,Rb,Lb,Fw
+      real(amrex_real) U2,V2,rho2,e2,P2,T2
+      real(amrex_real) vn,vt
+      real(amrex_real) preState,postState,dState_dt
+      integer stateIndex
+
+      real(amrex_real) factor1
+             
+      real(amrex_real) dRho_dt,dP_dt,dE_dt,dU_dt,dV_dt,dT_dt
+
+      !Bullet dimensions
+      Db = 0.42d0 * 1.8d0 !Diameter
+      Rb = Db/2.0d0 !Radius
+      Lb = 1.128d0 / 2.0d0 !ogival length of bullet
+
+      !Shape factor
+      Fw = Rb / Lb ** 0.25
+
+      !Farfield Mach
+      M1 = radblob2
+
+      !Pre-shock conditions
+      P1 = inflow_pressure
+      T1 = fort_tempconst(2)
+      Gamma = 1.4d0
+      GammaP1 = Gamma + 1.0d0
+!      call SOUNDSQR_air(T1,c1)
+      c1=sqrt(c1)
+
+      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.5)**(-.75)
+
+      P2 = P1 + deltaP
+
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      shockAngle = asin(Mn1/M1)
+
+      T_o = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.5)**0.25
+      T_o = T_o / 4.0d0
+
+      rho1 = fort_denconst(2)
+      T1 = fort_tempconst(2)
+!      call INTERNAL_air(rho1,T1,e1)
+!      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
+!      call INTERNAL_air(rho2,T2,e2)
+!      call vnpostshock_air(T1,Mn1,vn)
+      vt=c1*radblob2*cos(shockAngle)
+      U2=c1*radblob2-vn*sin(shockAngle)-vt*cos(shockAngle)
+      V2=-vn*cos(shockAngle)+vt*sin(shockAngle)
+      e2=e2+0.5d0*(U2*U2+V2*V2)
+
+      factor1 = 1.0d0
+
+      dP_dt = 2.0d0 * (P1 - P2)  / T_o  * factor1
+      dRho_dt = 2.0d0 * (rho1 - rho2) / T_o  * factor1
+      dE_dt = 2.0d0 * (e1 - e2) / T_o  * factor1
+      dU_dt = 2.0d0 * (0.0d0 - U2) / T_o  * factor1
+      dV_dt = 2.0d0 * (0.0d0 - V2) / T_o  * factor1
+      dT_dt = 2.0d0 * (T1 - T2) / T_o  * factor1
+
+
+      if(stateIndex.eq.1)then
+         preState = 0.0d0
+         postState = U2 + 0.0d0
+         dState_dt = dU_dt
+      else if(stateIndex.eq.2)then
+         preState = 0.0d0
+         postState = V2 + 0.0d0
+         dState_dt = dV_dt
+      else if(stateIndex.eq.3)then
+         preState = rho1
+         postState = rho2
+         dState_dt = dRho_dt
+      else if(stateIndex.eq.4)then
+         preState = e1
+         postState = e2
+         dState_dt = dE_dt
+      else if(stateIndex.eq.5)then
+         preState = T1
+         postState = T2
+         dState_dt = dT_dt
+      else if(stateIndex.eq.6)then
+         preState = inflow_pressure
+         postState = p2
+         dState_dt = dP_dt
+      else
+         print*,'invalided stateIndex n wave'
+         stop
+      end if
+
+
+return
+end subroutine N_wave_solution2
+
+
 subroutine recompute_globals(time)
 use probcommon_module
 use global_utility_module
@@ -221,6 +475,8 @@ else if (axis_dir.eq.152) then
   stop
  endif
  shockdrop_VEL0=shockdrop_VEL1+vel_data(idata)*1.0D+2
+else if (axis_dir.eq.153) then
+ !do nothing (Arienti shock sphere)
 else
  print *,"axis_dir invalid: ",axis_dir
  stop
@@ -262,6 +518,8 @@ else if (axis_dir.eq.152) then
   read(2,*) time_data(idata),vel_data(idata)
  enddo
  close(2)
+else if (axis_dir.eq.153) then
+ !do nothing (shock sphere ARIENTI)
 else
  print *,"axis_dir invalid: ",axis_dir
  stop
@@ -508,10 +766,11 @@ return
 end subroutine shockdrop_gas_temperature
 
 
-! probtype=1 in the inputs file
+! probtype="shockdrop_PROB_TYPE" in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
 ! axis_dir=152 shock cylinder
+! axis_dir=153 Arienti shock sphere
 ! LS>0 upstream of the shock  z>zblob2
 ! LS<0 downstream of the shock z<zblob2
 SUBROUTINE shockdrop_shockLS(x,y,z,LS)
@@ -541,10 +800,11 @@ endif
 return
 END SUBROUTINE shockdrop_shockLS
 
-! probtype=1 in the inputs file
+! probtype="shockdrop_PROB_TYPE" in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
 ! axis_dir=152 shock cylinder
+! axis_dir=153 Arienti shock sphere
 ! LS>0 in the drop
 subroutine shockdrop_dropLS(x,y,z,LS)
 use probcommon_module
@@ -590,8 +850,19 @@ else if (axis_dir.eq.152) then ! shock cylinder
   print *,"dimension bust"
   stop
  endif
+else if (axis_dir.eq.153) then ! Arienti shock sphere
+ if (SDIM.eq.2) then
+  mag=(x-xblob3)**2+(y-yblob3)**2
+  LS=radblob3-sqrt(mag) 
+ else if (SDIM.eq.3) then
+  mag=(x-xblob3)**2+(y-yblob3)**2+(z-zblob3)**2
+  LS=radblob3-sqrt(mag) 
+ else 
+  print *,"dimension bust"
+  stop
+ endif
 else
- print *,"axis_dir invalid in shockdrop_dropLS"
+ print *,"axis_dir invalid in shockdrop_dropLS: ",axis_dir
  stop
 endif
 

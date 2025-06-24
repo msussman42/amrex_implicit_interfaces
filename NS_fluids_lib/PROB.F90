@@ -27298,8 +27298,20 @@ end subroutine initialize2d
          print *,"test problem from Zuzio et al"
         else if (axis_dir.eq.150) then
          print *,"shock drop interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
         else if (axis_dir.eq.151) then
          print *,"shock column interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
+        else if (axis_dir.eq.152) then
+         print *,"shock cylinder interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
+        else if (axis_dir.eq.153) then
+         print *,"shock sphere interaction problem (Arienti)"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
         else
          print *,"axis_dir invalid probtype=1"
          stop
@@ -27425,8 +27437,20 @@ end subroutine initialize2d
          print *,"Zuzio test problem"
         else if (axis_dir.eq.150) then
          print *,"shock drop interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
         else if (axis_dir.eq.151) then
          print *,"shock column interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
+        else if (axis_dir.eq.152) then
+         print *,"shock cylinder interaction problem"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
+        else if (axis_dir.eq.153) then
+         print *,"shock sphere interaction problem (Arienti)"
+         print *,"this code obsolete? ",probtype,axis_dir
+         stop
         else
          print *,"axis_dir invalid shear probtype axis_dir ", &
           probtype,axis_dir
