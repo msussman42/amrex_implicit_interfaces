@@ -276,6 +276,10 @@ fork_job(int fork_id) {
   } else if ((LSA_current_step>=1)&&
              (LSA_current_step<=local_LSA_nsteps_power_method)) {
    amrex::ParallelDescriptor::Barrier();
+    //level_steps=initial_levelSteps
+    //cumtime=initial_cumTime
+    //computeNewDt(dt_AMR)
+    //setTimeLevel(cumtime,dt_AMR)
    amrptr->rewindTimeStep(stop_time,LSA_current_step,
     initial_cumTime,initial_levelSteps);
    amrex::ParallelDescriptor::Barrier();
@@ -369,7 +373,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, June 24, 2025, 16:31pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, June 25, 2025, 13:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

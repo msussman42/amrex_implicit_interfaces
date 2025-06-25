@@ -1576,8 +1576,10 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
     if ((LSA_current_step>=0)&&
         (LSA_current_step<=LSA_nsteps_power_method)) {
      //do nothing
-    } else
+    } else {
+     std::cout << "LSA_current_step=" << LSA_current_step << '\n';
      amrex::Error("LSA_current_step invalid");
+    }
 
     const double run_strt = ParallelDescriptor::second() ;
 
@@ -1602,9 +1604,9 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
 
      // check dt on all the levels.
     if (level_steps[0] > 0) {
-         // in AmrLevel.H: virtual void computeNewDt
-         // NavierStokes::computeNewDt
-        amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
+     // in AmrLevel.H: virtual void computeNewDt
+     // NavierStokes::computeNewDt
+     amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
     } else if (level_steps[0]==0) {
      // do nothing since initial dt already calculated 
      // NavierStokes::computeInitialDt

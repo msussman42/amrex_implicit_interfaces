@@ -1282,6 +1282,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      LSA_perturbations_switch=false; 
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
       //save t^n data
+      //LSA_save_state_data is declared in NavierStokes.cpp
+      //LSA_save_state_data calls NavierStokes::init_boundary
       LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
@@ -1380,8 +1382,11 @@ Real NavierStokes::advance(Real time,Real dt) {
 //      LSA_default_eigenvector(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
-     } else
+     } else {
+      std::cout << "parent->levelSteps(0)=" << parent->levelSteps(0) << '\n';
+      std::cout << "parent->LSA_max_step=" << parent->LSA_max_step << '\n';
       amrex::Error("parent->LSA_max_step invalid");
+     }
 
     } else if ((parent->LSA_current_step>=1)&&
                (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
@@ -1393,8 +1398,11 @@ Real NavierStokes::advance(Real time,Real dt) {
 //          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
-     } else
+     } else {
+      std::cout << "parent->levelSteps(0)=" << parent->levelSteps(0) << '\n';
+      std::cout << "parent->LSA_max_step=" << parent->LSA_max_step << '\n';
       amrex::Error("parent->LSA_max_step invalid");
+     }
 
     } else 
      amrex::Error("parent->LSA_current_step invalid");
@@ -3001,6 +3009,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // TENSOR ADVECTION (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
       // extrapolates Q at the end.
+      // LSA_perturbations_switch, LSA_EVEC forcing included too.
       tensor_advection_updateALL();
 
       if (step_through_data==1) {
@@ -12408,6 +12417,7 @@ void NavierStokes::veldiffuseALL() {
    // make_heat_source calls GODUNOV_3D.F90::fort_heatsource which
    // calls PROB.F90::get_local_heat_source
    // The same temperature increment is added to all of the materials.
+   // LSA_perturbations_switch, LSA_EVEC forcing included too.
    ns_level.make_heat_source();  // updates S_new
 
    ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
@@ -12629,6 +12639,7 @@ void NavierStokes::veldiffuseALL() {
   // register_mark=unew (1 ghost cell)
  SET_STOKES_MARK(REGISTER_MARK_MF);
 
+ // LSA_perturbations_switch, LSA_EVEC forcing included too.
  user_defined_momentum_forceALL(
    REGISTER_MARK_MF, //velocity
    BOUSSINESQ_TEMP_MF); //temperature
