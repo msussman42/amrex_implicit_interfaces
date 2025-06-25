@@ -6261,6 +6261,8 @@ void NavierStokes::process_potential_force_face(
  if (LSA_perturbations_switch==false) { 
   dendata=getStateDen(1,cur_time_slab);
   ncomp_mgoni=num_materials*num_state_material;
+
+  //append to dendata the level set perturbation
  } else if (LSA_perturbations_switch==true) { 
   MultiFab* local_dendata=getStateDen(1,cur_time_slab);
   ncomp_mgoni+=num_materials;
@@ -6277,6 +6279,7 @@ void NavierStokes::process_potential_force_face(
     local_cell_mf,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
+   //dst,src,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(*dendata,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
     num_materials*num_state_material,num_materials,1);
   delete local_dendata;
