@@ -1277,7 +1277,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     LSA_perturbations_switch=false; 
    } else if (parent->LSA_nsteps_power_method>=1) {
 
-    if (parent->LSA_current_step==0) {
+    if (parent->LSA_current_step==0) { //initialize non perturbed state.
 
      LSA_perturbations_switch=false; 
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
@@ -1287,29 +1287,45 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
       //do nothing
-     } else
+     } else {
+      std::cout << "parent->levelSteps(0)=" <<
+        parent->levelSteps(0) << '\n';
+      std::cout << "parent->initial_levelSteps=" <<
+        parent->initial_levelSteps << '\n';
       amrex::Error("parent->initial_levelSteps invalid");
+     }
 
     } else if ((parent->LSA_current_step>=1)&&
                (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
 
-     LSA_perturbations_switch=true; 
-
      if (parent->levelSteps(0)==parent->initial_levelSteps) {
+      LSA_perturbations_switch=true; 
       //restore t^n data
       LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
       CopyNewToOldALL();
      } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
-      //do nothing
-     } else
+      LSA_perturbations_switch=false; 
+     } else {
+      std::cout << "parent->levelSteps(0)=" <<
+        parent->levelSteps(0) << '\n';
+      std::cout << "parent->initial_levelSteps=" <<
+        parent->initial_levelSteps << '\n';
       amrex::Error("parent->initial_levelSteps invalid");
+     }
 
-    } else 
+    } else {
+     std::cout << "parent->LSA_current_step=" <<
+        parent->LSA_current_step << '\n';
+     std::cout << "parent->LSA_nsteps_power_method=" <<
+        parent->LSA_nsteps_power_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
+    }
 
-   } else 
+   } else {
+    std::cout << "parent->LSA_nsteps_power_method=" <<
+       parent->LSA_nsteps_power_method << '\n';
     amrex::Error("parent->LSA_nsteps_power_method invalid");
-
+   }
 
    interface_touch_flag=1; //advance
 
@@ -1347,9 +1363,16 @@ Real NavierStokes::advance(Real time,Real dt) {
     if (parent->LSA_nsteps_power_method==0) {
      //do nothing
     } else if (parent->LSA_nsteps_power_method>=1) {
+     std::cout << "parent->LSA_current_step=" <<
+        parent->LSA_current_step << '\n';
+     std::cout << "parent->LSA_nsteps_power_method=" <<
+       parent->LSA_nsteps_power_method << '\n';
      amrex::Error("advance_status==0 invalid for LSA: reduce fixed_dt");
-    } else
+    } else {
+     std::cout << "parent->LSA_nsteps_power_method=" <<
+       parent->LSA_nsteps_power_method << '\n';
      amrex::Error("parent->LSA_nsteps_power_method invalid");
+    }
 
     dt_new=0.5*dt_new;
      //copy component "0" to components 1..bfact_time_order.
@@ -1363,14 +1386,16 @@ Real NavierStokes::advance(Real time,Real dt) {
      ns_level.setTimeLevel(lower_slab_time,dt_new);
     }
     parent->setDt(dt_new);
-   } else
+   } else {
+    std::cout << "advance_status= " << advance_status << '\n';
     amrex::Error("advance_status invalid");
+   }
 
    delete_array(MASKCOEF_MF);
    delete_array(MASK_NBR_MF);
 
    if (parent->LSA_nsteps_power_method==0) {
-    //do nothing
+    //do nothing (no LSA)
    } else if (parent->LSA_nsteps_power_method>=1) {
 
     if (parent->LSA_current_step==0) {
@@ -1404,11 +1429,19 @@ Real NavierStokes::advance(Real time,Real dt) {
       amrex::Error("parent->LSA_max_step invalid");
      }
 
-    } else 
+    } else {
+     std::cout << "parent->LSA_current_step=" <<
+      parent->LSA_current_step << '\n';
+     std::cout << "parent->LSA_nsteps_power_method=" <<
+      parent->LSA_nsteps_power_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
+    }
 
-   } else 
+   } else { 
+    std::cout << "parent->LSA_nsteps_power_method=" <<
+      parent->LSA_nsteps_power_method << '\n';
     amrex::Error("parent->LSA_nsteps_power_method invalid");
+   }
 
   } while (advance_status==0);
 
@@ -3010,6 +3043,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // second half of D^{upside down triangle}/Dt
       // extrapolates Q at the end.
       // LSA_perturbations_switch, LSA_EVEC forcing included too.
+      // LSA_EVEC=TCHAR * normalizedLINF(T^perturb-T^noperturb)
+      // Tnp1=Tn + dt * LSA_EVEC
       tensor_advection_updateALL();
 
       if (step_through_data==1) {
@@ -12418,6 +12453,8 @@ void NavierStokes::veldiffuseALL() {
    // calls PROB.F90::get_local_heat_source
    // The same temperature increment is added to all of the materials.
    // LSA_perturbations_switch, LSA_EVEC forcing included too.
+   // LSA_EVEC=TEMPCHAR * normalizedLINF(TEMP^perturb-TEMP^noperturb)
+   // TEMPnp1=TEMPn + dt * LSA_EVEC
    ns_level.make_heat_source();  // updates S_new
 
    ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
@@ -12639,7 +12676,9 @@ void NavierStokes::veldiffuseALL() {
   // register_mark=unew (1 ghost cell)
  SET_STOKES_MARK(REGISTER_MARK_MF);
 
- // LSA_perturbations_switch, LSA_EVEC forcing included too.
+// LSA_perturbations_switch, LSA_EVEC forcing included too.
+// LSA_EVEC=UCHAR * normalizedLINF(U^perturb-U^noperturb)
+// Unp1=Un + dt * LSA_EVEC
  user_defined_momentum_forceALL(
    REGISTER_MARK_MF, //velocity
    BOUSSINESQ_TEMP_MF); //temperature

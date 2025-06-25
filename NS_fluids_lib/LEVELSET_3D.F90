@@ -8209,7 +8209,8 @@ stop
       integer im_left_tension,im_right_tension
       integer im_fluid_micro,im_solid_micro
 
-      real(amrex_real) gradh,gradh_tension
+      real(amrex_real) gradh
+      real(amrex_real) gradh_tension !fort_init_physics_vars
       real(amrex_real) sign_test
       real(amrex_real) one_over_mu
       real(amrex_real) localvisc(num_materials)
@@ -15828,7 +15829,8 @@ stop
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
-               xstenMAC_center,time, &
+               xstenMAC_center, &
+               time, &
                LSleft,LSright, &
                gradh_tension, &
                im_opp,im, &
@@ -15843,7 +15845,8 @@ stop
                LSleft,LSright, &
                gradh_gravity, &
                im_opp_gravity,im_gravity, &
-               im_left_gravity,im_right_gravity)
+               im_left_gravity, &
+               im_right_gravity)
 
              if (gradh_tension.ne.zero) then
 
@@ -15892,7 +15895,7 @@ stop
               endif
 
              else if (gradh_tension.eq.zero) then
-               ! do nothing
+              ! do nothing
              else
               print *,"gradh_tension bust: ",gradh_tension
               stop
@@ -15909,6 +15912,7 @@ stop
                stop
               endif
 
+               !im_gravity<im_opp_gravity
               LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
               LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
              
@@ -15934,7 +15938,7 @@ stop
                  den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
                  den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
                 else
-                 print *,"gradh_gravity invalid"
+                 print *,"gradh_gravity (LSleft_grav) invalid: ",gradh_gravity
                  stop
                 endif 
                else if (LSright_grav.gt.zero) then
@@ -15942,7 +15946,7 @@ stop
                  den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
                  den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
                 else
-                 print *,"gradh_gravity invalid"
+                 print *,"gradh_gravity (LSright_grav) invalid: ",gradh_gravity
                  stop
                 endif 
                else
@@ -16036,15 +16040,22 @@ stop
               if (elastic_interface_fixed.eq.0) then
 
                if (LSA_perturbations_switch.eq.1) then
-
+                 ! perturbations only at t=t^{restart}.
+                 ! u^np1=u^n - dt delta_phi grad H
                  ! phi_t + u dot grad phi = 0  |grad phi|=1
-                 ! u=-delta phi grad phi
-                 ! phi_t - delta phi =0
-                 ! phi_t = \delta phi
-                 ! if imL < imR => gradh=-1
-                 ! if imL > imR => gradh=1
+                 ! u^np1=-dt delta_phi grad phi
+                 ! phi_t - dt delta_phi =0
+                 ! phi_t = dt delta_phi
+                 ! phi^np1=phi^n + dt^2 delta_phi
+                 ! delta_phi=dx * normalizedLINF(phi^perturb-phi^no_pert)/dt
+                 ! if im_gravity_L < im_gravity_R => 
+                 !  im_gravity_L=im_gravity =>
+                 !  gradh=-1
+                 ! if im_gravity_L > im_gravity_R => 
+                 !  im_gravity_R=im_gravity =>
+                 !  gradh=1
                  ! im_gravity<im_opp_gravity
-                 ! i.e. gradh=grad h_{im_gravity}
+                 ! i.e. gradh=grad h(LS_{im_gravity})
                 evec_comp=num_materials*num_state_material+im_gravity
                 evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
                            mgoni(D_DECL(i,j,k),evec_comp))
@@ -16066,7 +16077,8 @@ stop
                else if (LSA_perturbations_switch.eq.0) then
                 !do nothing
                else
-                print *,"LSA_perturbations_switch invalid"
+                print *,"LSA_perturbations_switch invalid: ", &
+                 LSA_perturbations_switch
                 stop
                endif
 
