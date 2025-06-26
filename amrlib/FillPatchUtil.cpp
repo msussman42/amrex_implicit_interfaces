@@ -258,14 +258,9 @@ void FillPatchTwoLevels (
   Box fdomain = fgeom.Domain();
   fdomain.convert(mf_target.boxArray().ixType());
 
-  Box fdomain_g(fdomain);
-  for (int i = 0; i < AMREX_SPACEDIM; ++i) {
-   if (fgeom.isPeriodic(i)) {
-    fdomain_g.grow(i,ngrow);
-   }
-  } // i
-
     // find coarsen( mf_target intersect complement(fmf) within fdomain_g ).
+    // note: fdomain_g is local to TheFPinfo and 
+    // fdomain_g=fdomain.grow(ngrow) in the periodic directions.
     // the valid region of fpc encompass the mf_target grow regions, but the
     // boxes of fpc are disjoint.
     // "TheFPinfo" is declared in "AMReX_FabArrayBase.H"
@@ -280,13 +275,18 @@ void FillPatchTwoLevels (
   bool empty_flag=fpc.ba_crse_patch.empty();
 
   if (empty_flag==true) {
-          // do nothing, no data on the coarse level is needed to
-          // fill the fine level target.
+   // do nothing, no data on the coarse level is needed to
+   // fill the fine level target.
   } else if (empty_flag==false) {
 
-   MultiFab mf_crse_patch(fpc.ba_crse_patch,fpc.dm_patch,ncomp,0,
-		  MFInfo().SetTag("mf_crse_patch"),
-		  *fpc.fact_crse_patch);
+     //ngrow=0
+   MultiFab mf_crse_patch(
+     fpc.ba_crse_patch,
+     fpc.dm_patch,
+     ncomp,
+     0,
+     MFInfo().SetTag("mf_crse_patch"),
+     *fpc.fact_crse_patch);
 
    mf_crse_patch.setDomainBndry(std::numeric_limits<Real>::quiet_NaN(),cgeom);
    
@@ -563,14 +563,9 @@ void FillPatchTower (
    Box fdomain = tower_geom[top_level]->Domain();
    fdomain.convert(mf_target.boxArray().ixType());
 
-   Box fdomain_g(fdomain);
-   for (int i = 0; i < AMREX_SPACEDIM; ++i) {
-    if (tower_geom[top_level]->isPeriodic(i)) {
-     fdomain_g.grow(i,ngrow);
-    }
-   } // i
-
     // find coarsen( mf_target intersect complement(fmf.ba) within fdomain_g ).
+    // note: fdomain_g is local to TheFPinfo and 
+    // fdomain_g=fdomain.grow(ngrow) in the periodic directions.
     // the valid region of fpc encompass the mf_target grow regions, but the
     // boxes of fpc are disjoint.
     // "TheFPinfo" is declared in "AMReX_FabArrayBase.H"
@@ -612,121 +607,162 @@ void FillPatchTower (
      } else if ((ngrow_root==0)||(ngrow_root==1)) {
       if (finest_top_level==top_level) {
        //do nothing
-      } else {
-       std::cout << "ngrow_root= " << ngrow_root << '\n';
-       std::cout << "finest_top_level=" << finest_top_level << '\n';
-       std::cout << "top_level=" << top_level << '\n';
-       amrex::Error("expecting empty_flag==true");
-      }
+      } else if (finest_top_level>top_level) {
+       int periodic_flag=0;
+       for (int i = 0; i < AMREX_SPACEDIM; ++i) {
+        if (tower_geom[top_level]->isPeriodic(i)) {
+         periodic_flag++;
+        }
+       } // i
+       if ((ngrow_root==0)||(periodic_flag>0)) {
+        // do nothing
+       } else if ((ngrow_root==1)&&(periodic_flag==0)) {
+        std::cout << "ngrow_root= " << ngrow_root << '\n';
+        std::cout << "finest_top_level=" << finest_top_level << '\n';
+        std::cout << "top_level=" << top_level << '\n';
+        amrex::Error("expecting empty_flag==true");
+       } else
+        amrex::Error("expecting ngrow_root=0 or 1 and periodic_flag>=0");
+      } else
+       amrex::Error("expecting finest_top_level>top_level");
      } else
       amrex::Error("ngrow invalid");
     } else
      amrex::Error("called_from_regrid invalid");
 
-     //ngrow=0
-    MultiFab mf_crse_patch(
-        fpc.ba_crse_patch,
-        fpc.dm_patch,
-        ncomp,
-        0,
+    int ba_crse_patch_ok=1;
+
+    for (int gridno=0;gridno<fpc.ba_crse_patch.size();gridno++) {
+     const Box& cbox=fpc.ba_crse_patch[gridno];
+     for (int i = 0; i < AMREX_SPACEDIM; ++i) {
+      if (cbox.length(i)==0) {
+       ba_crse_patch_ok=0;
+       if ((ngrow_root==0)||
+           (finest_top_level==top_level)) { 
+        std::cout << "ngrow_root= " << ngrow_root << '\n';
+        std::cout << "finest_top_level=" << finest_top_level << '\n';
+        std::cout << "top_level=" << top_level << '\n';
+        std::cout << "i=" << i << '\n';
+        std::cout << fpc.ba_crse_patch << '\n';
+        amrex::Error("cbox.length error");
+       }
+      }
+     }
+    }
+    
+    if (ba_crse_patch_ok==1) {
+ 
+      //ngrow=0
+     MultiFab mf_crse_patch(
+         fpc.ba_crse_patch,
+         fpc.dm_patch,
+         ncomp,
+         0,
 	MFInfo().SetTag("mf_crse_patch"),
 	*fpc.fact_crse_patch);
 
-    mf_crse_patch.setDomainBndry(std::numeric_limits<Real>::quiet_NaN(),
-      *tower_geom[top_level-1]);
-  
-    FillPatchTower(
-     ngrow_root,
-     called_from_regrid,
-     finest_top_level,
-     top_level-1,
-     mf_crse_patch, // target data (coarse)
-     time, 
-     tower_data, 
-     scomp, 
-     0,   // dst_comp
-     ncomp, 
-     tower_geom, 
-     tower_physbc,
-     mapper,
-     global_bcs,
-     scompBC_map,
-     tower_bfact,
-     grid_type,
-     debug_fillpatch);
+     mf_crse_patch.setDomainBndry(std::numeric_limits<Real>::quiet_NaN(),
+       *tower_geom[top_level-1]);
+   
+     FillPatchTower(
+      ngrow_root,
+      called_from_regrid,
+      finest_top_level,
+      top_level-1,
+      mf_crse_patch, // target data (coarse)
+      time, 
+      tower_data, 
+      scomp, 
+      0,   // dst_comp
+      ncomp, 
+      tower_geom, 
+      tower_physbc,
+      mapper,
+      global_bcs,
+      scompBC_map,
+      tower_bfact,
+      grid_type,
+      debug_fillpatch);
 
-    MultiFab mf_fine_patch(fpc.ba_fine_patch,fpc.dm_patch,ncomp,0,
-       MFInfo().SetTag("mf_fine_patch"),
-       *fpc.fact_fine_patch);
+     MultiFab mf_fine_patch(fpc.ba_fine_patch,fpc.dm_patch,ncomp,0,
+        MFInfo().SetTag("mf_fine_patch"),
+        *fpc.fact_fine_patch);
 
-    Vector< BCRec > local_bcs;
-    local_bcs.resize(ncomp);
-    for (int i=0;i<ncomp;i++)
-     local_bcs[i]=global_bcs[scompBC_map[i]]; 
-    
-    bool cellcen = fpc.ba_crse_patch.ixType().cellCentered();
-    if ((cellcen!=true)&&(cellcen!=false))
-     amrex::Error("cellcen bust");
+     Vector< BCRec > local_bcs;
+     local_bcs.resize(ncomp);
+     for (int i=0;i<ncomp;i++)
+      local_bcs[i]=global_bcs[scompBC_map[i]]; 
+     
+     bool cellcen = fpc.ba_crse_patch.ixType().cellCentered();
+     if ((cellcen!=true)&&(cellcen!=false))
+      amrex::Error("cellcen bust");
 
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(mf_fine_patch.boxArray().d_numPts());
+     if (thread_class::nthreads<1)
+      amrex::Error("thread_class::nthreads invalid");
+     thread_class::init_d_numPts(mf_fine_patch.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel if (cellcen)
 #endif
 {
-    for (MFIter mfi(mf_fine_patch,false); mfi.isValid(); ++mfi) {
-     const Box& tilegrid=mfi.tilebox();
+     for (MFIter mfi(mf_fine_patch,false); mfi.isValid(); ++mfi) {
+      const Box& tilegrid=mfi.tilebox();
 
-     int tid_current=0;
+      int tid_current=0;
 #ifdef _OPENMP
-     tid_current = omp_get_thread_num();
+      tid_current = omp_get_thread_num();
 #endif
-     if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
-      // do nothing
-     } else
-      amrex::Error("tid_current invalid");
+      if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+       // do nothing
+      } else
+       amrex::Error("tid_current invalid");
 
-     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     FArrayBox& sfab=mf_crse_patch[mfi];
-     FArrayBox& dfab=mf_fine_patch[mfi];
-     const Box& dbx = dfab.box();
+      FArrayBox& sfab=mf_crse_patch[mfi];
+      FArrayBox& dfab=mf_fine_patch[mfi];
+      const Box& dbx = dfab.box();
 
-     Vector<BCRec> bcr(ncomp);
-     int src_comp_bcs=0;
-     int dest_comp_bcr=0;
-     amrex::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,
-      local_bcs,bcr);
-  	   
-      // parameter "dfab" used to correspond to mf_target.
-     mapper->interp(time,
-       sfab, // source
-       0,
-       dfab, //dest; dest BoxArray is disjoint from the existing fine.
-       0,    //was dcomp
-       ncomp,
-       dbx,
-       *tower_geom[top_level-1],
-       *tower_geom[top_level],
-       bcr,
-       top_level-1,
-       top_level,
-       tower_bfact[top_level-1],
-       tower_bfact[top_level],
-       grid_type);
-    } // mfi
+      Vector<BCRec> bcr(ncomp);
+      int src_comp_bcs=0;
+      int dest_comp_bcr=0;
+      amrex::setBC(dbx,fdomain,src_comp_bcs,dest_comp_bcr,ncomp,
+       local_bcs,bcr);
+   	   
+       // parameter "dfab" used to correspond to mf_target.
+      mapper->interp(time,
+        sfab, // source
+        0,
+        dfab, //dest; dest BoxArray is disjoint from the existing fine.
+        0,    //was dcomp
+        ncomp,
+        dbx,
+        *tower_geom[top_level-1],
+        *tower_geom[top_level],
+        bcr,
+        top_level-1,
+        top_level,
+        tower_bfact[top_level-1],
+        tower_bfact[top_level],
+        grid_type);
+     } // mfi
 } // omp
-    thread_class::sync_tile_d_numPts();
-    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-    thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP,"FillPatchTower");
+     thread_class::sync_tile_d_numPts();
+     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
+     thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP,"FillPatchTower");
 
-    ParallelDescriptor::Barrier();
-    // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
-    mf_target.ParallelCopy(mf_fine_patch, 0, dcomp, ncomp, IntVect{0}, 
-      ngrow_vec,tower_geom[top_level]->periodicity());
-    ParallelDescriptor::Barrier();
+     ParallelDescriptor::Barrier();
+     // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
+     mf_target.ParallelCopy(mf_fine_patch, 0, dcomp, ncomp, IntVect{0}, 
+       ngrow_vec,tower_geom[top_level]->periodicity());
+     ParallelDescriptor::Barrier();
+
+    } else if (ba_crse_patch_ok==0) {
+
+     //do nothing
+
+    } else
+     amrex::Error("ba_crse_patch_ok invalid");
 
    } else {
     amrex::Error("empty_flag invalid");
