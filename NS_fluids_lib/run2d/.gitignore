@@ -97,4 +97,5 @@ translate/
 checkerboard/
 hopf_bifurcation/
 CTML_DROP/
+growthrate/
 *.mod
