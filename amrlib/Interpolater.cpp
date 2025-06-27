@@ -72,10 +72,23 @@ Interpolater::BoxCoarsener (int bfactc,int bfactf,int grid_type)
 }
 
 Box
-InterpolaterBoxCoarsener::doit (const Box& fine) const
-{
-    return mapper->CoarseBox(fine,bfactc,bfactf,grid_type);
-}
+InterpolaterBoxCoarsener::doit (const Box& fine) const {
+
+ Box crse;
+ if (fine.isEmpty()) {
+  std::cout << "fine=" << fine << '\n';
+  amrex::Error("fine.isEmpty()");
+ } else	{
+  crse=mapper->CoarseBox(fine,bfactc,bfactf,grid_type);
+  if (crse.isEmpty()) {
+   std::cout << "crse=" << crse << '\n';
+   amrex::Error("crse.isEmpty()");
+  } else {
+   //do nothing
+  }
+ }
+ return crse;
+} //end subroutine doit
 
 BoxConverter*
 InterpolaterBoxCoarsener::clone () const

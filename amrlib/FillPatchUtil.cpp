@@ -552,8 +552,15 @@ void FillPatchTower (
 
 //*mapper is derived from class Interpolater.
 //Inside of Interpolater:
-// virtual InterpolaterBoxCoarsener BoxCoarsener (int bfactc,int bfactf,
-//   int grid_type);
+//virtual InterpolaterBoxCoarsener BoxCoarsener (int bfactc,int bfactf,
+//  int grid_type);
+//
+//Box
+//InterpolaterBoxCoarsener::doit (const Box& fine) const
+//{
+//    return mapper->CoarseBox(fine,bfactc,bfactf,grid_type);
+//}
+//
    const InterpolaterBoxCoarsener& coarsener = 
      mapper->BoxCoarsener(
        tower_bfact[top_level-1],
@@ -568,7 +575,8 @@ void FillPatchTower (
     // fdomain_g=fdomain.grow(ngrow) in the periodic directions.
     // the valid region of fpc encompass the mf_target grow regions, but the
     // boxes of fpc are disjoint.
-    // "TheFPinfo" is declared in "AMReX_FabArrayBase.H"
+    // "TheFPinfo" is declared in "AMReX_FabArrayBase.H" and
+    // "AMReX_FabArrayBase.cpp"
     // in: FabArrayBase::FPinfo::FPinfo,
     /*
     for (int i = iboxlo; i <= iboxhi; ++i) {
