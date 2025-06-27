@@ -511,8 +511,10 @@ void FillPatchTower (
 
  } else if (top_level>=1) {
 
-  int ngrow = mf_target.nGrow();
-  const IntVect& ngrow_vec=mf_target.nGrowVect();	   
+  IntVect ngrow_vec(AMREX_SPACEDIM);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   ngrow_vec[dir]=ngrow_root;
+  }
  
   int do_the_interp=0;
 
@@ -521,14 +523,22 @@ void FillPatchTower (
   } else
    amrex::Error("ngrow_root invalid");
 
-  if (ngrow>0) {
+  if (ngrow_root>0) {
    do_the_interp=1;
-  } else if (ngrow==0) {
+  } else if (ngrow_root==0) {
    // do nothing
   } else {
-   amrex::Error("ngrow invalid");
+   amrex::Error("ngrow_root invalid");
   }
 
+  if (finest_top_level>top_level) {
+   do_the_interp=1;
+  } else if (finest_top_level==top_level) {
+   //do nothing
+  } else {
+   amrex::Error("finest_top_level invalid");
+  }
+ 
   if (do_the_interp==0) {
    if (mf_target.boxArray()!=
        tower_data[top_level]->boxArray()) {
@@ -594,7 +604,7 @@ void FillPatchTower (
     FabArrayBase::TheFPinfo(
       *tower_data[top_level], //source
       mf_target, //dest
-      ngrow_vec, //ngrow_vec=mf_target.nGrowVect();
+      ngrow_vec, //ngrow_vec=IntVect filled with ngrow_root
       coarsener,//type InterpolatorBoxCoarsener, derived from BoxConverter
       *tower_geom[top_level],
       *tower_geom[top_level-1],
@@ -607,37 +617,6 @@ void FillPatchTower (
     // fill the fine level target.
    } else if (empty_flag==false) {
 
-    if (called_from_regrid==1) {
-     //check nothing
-    } else if (called_from_regrid==0) {
-     if (ngrow_root>=2) {
-      //check nothing
-     } else if ((ngrow_root==0)||(ngrow_root==1)) {
-      if (finest_top_level==top_level) {
-       //do nothing
-      } else if (finest_top_level>top_level) {
-       int periodic_flag=0;
-       for (int i = 0; i < AMREX_SPACEDIM; ++i) {
-        if (tower_geom[top_level]->isPeriodic(i)) {
-         periodic_flag++;
-        }
-       } // i
-       if ((ngrow_root==0)||(periodic_flag>0)) {
-        // do nothing
-       } else if ((ngrow_root==1)&&(periodic_flag==0)) {
-        std::cout << "ngrow_root= " << ngrow_root << '\n';
-        std::cout << "finest_top_level=" << finest_top_level << '\n';
-        std::cout << "top_level=" << top_level << '\n';
-        amrex::Error("expecting empty_flag==true");
-       } else
-        amrex::Error("expecting ngrow_root=0 or 1 and periodic_flag>=0");
-      } else
-       amrex::Error("expecting finest_top_level>top_level");
-     } else
-      amrex::Error("ngrow invalid");
-    } else
-     amrex::Error("called_from_regrid invalid");
-
     int ba_crse_patch_ok=1;
 
     for (int gridno=0;gridno<fpc.ba_crse_patch.size();gridno++) {
@@ -645,29 +624,25 @@ void FillPatchTower (
      for (int i = 0; i < AMREX_SPACEDIM; ++i) {
       if (cbox.length(i)==0) {
        ba_crse_patch_ok=0;
-       if ((ngrow_root==0)||
-           (finest_top_level==top_level)) { 
-        std::cout << "ngrow_root= " << ngrow_root << '\n';
-        std::cout << "finest_top_level=" << finest_top_level << '\n';
-        std::cout << "top_level=" << top_level << '\n';
-        std::cout << "i=" << i << '\n';
-        std::cout << fpc.ba_crse_patch << '\n';
-        amrex::Error("cbox.length error");
-       }
+       std::cout << "ngrow_root= " << ngrow_root << '\n';
+       std::cout << "finest_top_level=" << finest_top_level << '\n';
+       std::cout << "top_level=" << top_level << '\n';
+       std::cout << "i=" << i << '\n';
+       std::cout << fpc.ba_crse_patch << '\n';
+       amrex::Error("cbox.length error");
       }
      }
     }
     
     if (ba_crse_patch_ok==1) {
  
-      //ngrow=0
      MultiFab mf_crse_patch(
-         fpc.ba_crse_patch,
-         fpc.dm_patch,
-         ncomp,
-         0,
-	MFInfo().SetTag("mf_crse_patch"),
-	*fpc.fact_crse_patch);
+       fpc.ba_crse_patch,
+       fpc.dm_patch,
+       ncomp,
+       ngrow_root,
+       MFInfo().SetTag("mf_crse_patch"),
+       *fpc.fact_crse_patch);
 
      mf_crse_patch.setDomainBndry(std::numeric_limits<Real>::quiet_NaN(),
        *tower_geom[top_level-1]);
@@ -692,9 +667,13 @@ void FillPatchTower (
       grid_type,
       debug_fillpatch);
 
-     MultiFab mf_fine_patch(fpc.ba_fine_patch,fpc.dm_patch,ncomp,0,
-        MFInfo().SetTag("mf_fine_patch"),
-        *fpc.fact_fine_patch);
+     MultiFab mf_fine_patch(
+       fpc.ba_fine_patch,
+       fpc.dm_patch,
+       ncomp,
+       0,
+       MFInfo().SetTag("mf_fine_patch"),
+       *fpc.fact_fine_patch);
 
      Vector< BCRec > local_bcs;
      local_bcs.resize(ncomp);
@@ -777,7 +756,7 @@ void FillPatchTower (
    }
   } else if (do_the_interp==0) {
    // do nothing, mf and fmf have same boxarray's and dmaps and
-   // ngrow==0
+   // ngrow_root==0
   } else
    amrex::Error("do_the_interp invalid");
 
