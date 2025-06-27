@@ -1416,7 +1416,7 @@ AmrLevel::FillPatch (int called_from_regrid,
     // code in FillPatchUtil.cpp is hidden within a "namespace amrex"
     // block.
   int ngrow_root=mf_to_be_filled.nGrow();
-  amrex::FillPatchTower(
+  amrex::FillPatchTower( //calling from FillPatch.
     ngrow_root,
     called_from_regrid,
     level,
@@ -1699,7 +1699,7 @@ AmrLevel::FillCoarsePatchGHOST (
   int called_from_regrid=1; //disable the sanity check for number of levels
   int ngrow_root=crseMF.nGrow();
 
-  amrex::FillPatchTower(
+  amrex::FillPatchTower( //calling from FillCoarsePatchGHOST
     ngrow_root,
     called_from_regrid, 
     level,
@@ -2055,7 +2055,7 @@ AmrLevel::InterpBordersGHOST (
   int called_from_regrid=0;
   int ngrow_root=mf_to_be_filled.nGrow();
 
-  amrex::FillPatchTower(
+  amrex::FillPatchTower( //calling from InterpBordersGHOST
     ngrow_root,
     called_from_regrid,
     level,
@@ -2282,7 +2282,7 @@ AmrLevel::InterpBorders (
   int called_from_regrid=0;
   int ngrow_root=mf_to_be_filled.nGrow();
 
-  amrex::FillPatchTower(
+  amrex::FillPatchTower( //calling from InterpBorders
     ngrow_root,
     called_from_regrid,
     level,
@@ -2541,7 +2541,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf_to_be_filled,
   int called_from_regrid=1;  //force sanity check to be disabled
   int ngrow_root=crseMF.nGrow();
 
-  amrex::FillPatchTower(
+  amrex::FillPatchTower( //calling from FillCoarsePatch
     ngrow_root,
     called_from_regrid,
     level,

@@ -1835,7 +1835,27 @@ FabArrayBase::FPinfo::FPinfo (const FabArrayBase& srcfa,
         bx.grow(m_dstng);
         bx &= m_dstdomain;
         BoxList const& leftover = srcba_simplified.complementIn(bx);
+
         if (leftover.isNotEmpty()) {
+//SUSSMAN
+if (1==0) {
+if (bx.isEmpty()) {
+ std::cout << "i=" << i << '\n';
+ std::cout << "m_dstng=" << m_dstng << '\n';
+ std::cout << "m_dstdomain=" << m_dstdomain << '\n';
+ std::cout << "srcba_simplified=" << srcba_simplified << '\n';
+ std::cout << "leftover=" << leftover << '\n';
+ std::cout << "dstba_simplified[i]=" << dstba_simplified[i] << '\n';
+ std::cout << "bx empty box " << bx << '\n';
+ amrex::Error("bx.isEmpty()");
+}
+for (Box const& b : leftover) {
+ if (b.isEmpty()) {
+  std::cout << "b (from leftover) empty box " << b << '\n';
+  amrex::Error("b.isEmpty()");
+ }
+}
+}
             bl.join(leftover);
         }
     }
@@ -1843,6 +1863,15 @@ FabArrayBase::FPinfo::FPinfo (const FabArrayBase& srcfa,
     if (parallel_ci) {
         amrex::AllGatherBoxes(bl.data());
     }
+//SUSSMAN
+if (1==0) {
+for (Box const& b : bl) {
+ if (b.isEmpty()) {
+  std::cout << "bl empty box " << b << '\n';
+  amrex::Error("b.isEmpty()");
+ }
+}
+}
 
     if (bl.isEmpty()) { return; }
 
