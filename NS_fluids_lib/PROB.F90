@@ -30321,10 +30321,13 @@ end subroutine initialize2d
           enddo 
          enddo ! im
 
-         call groupmofBC(time,dir2,side, &
-          uboundary, &
-          uwall, &
-          xsten,nhalf,dx,bfact)
+         call groupmofBC( &
+          time, & !intent(in)
+          dir2, & !intent(in)
+          side, & !intent(in)
+          uboundary, & !intent(out)
+          uwall, & !intent(in)
+          xsten,nhalf,dx,bfact) !intent(in)
 
          voffluid_wall=zero
          vofsolid_wall=zero
