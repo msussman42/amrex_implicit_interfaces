@@ -160,7 +160,7 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
  endif
 
  if (SDIM.eq.2) then
-  box_ylo=-substrate_height-radblob3
+  box_ylo=-substrate_height-radblob
   box_yhi=substrate_height+radblob3
   call squaredist(x(1),x(2),box_xlo,box_xhi, &
      box_ylo,box_yhi,LS(1))
@@ -195,7 +195,7 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
 
   !dist<0 inside the square
   !water below the ice
-  box_zlo=-substrate_height-radblob3
+  box_zlo=-substrate_height-radblob
   box_zhi=substrate_height+radblob3
   call cubedist(box_xlo,box_xhi, &
      box_ylo,box_yhi, &

@@ -98,15 +98,15 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 #amr.n_cell=64 64 48  # XYZ
-amr.n_cell=32 32  # RZ
-amr.max_level = 0
+amr.n_cell=16 16  # RZ
+amr.max_level = 1
 # water, gas, ice, substrate
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
-amr.grid_eff        = 0.8   # what constitutes an efficient grid
+amr.n_error_buf     = 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
 ns.ns_tiling=false
-amr.blocking_factor = 8 8 8 8   # block factor in grid generation
+amr.blocking_factor = 2 2 2 2   # block factor in grid generation
 amr.check_int       = 500 # 500 (check_int=10 for testing)
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
@@ -114,8 +114,8 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 500 # 500  (plot_int=10 for testing)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
-#amr.max_grid_size   = 1024
+amr.max_grid_size   = 16
+cg.min_max_grid_size=64
 amr.file_name_digits=7
 #amr.restart         = chk0003500
 #amr.trace   =1
@@ -147,10 +147,12 @@ ns.gravity        = -980.0   # cgs
 # TRIPLE POINT LIQUID-GAS-ICE 
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
+# theta_L=18 degrees growth rate: sigma_LI=sigma_LG (1-cos(18 deg))
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
-ns.radblob9=0.5 # transition time from tension_init to tension.
-ns.tension=72.8 72.8 72.8 72.8 143.1 72.8
-ns.tension_init=72.8 0.0 72.8 72.8 143.1 72.8 #wetting
+ns.radblob9=0.0 # transition time from tension_init to tension.
+ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
+ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
+ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)

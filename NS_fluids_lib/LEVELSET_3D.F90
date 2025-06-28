@@ -1524,11 +1524,13 @@ stop
         normal_23(dir2)=least_squares_normal(iten_23,dir2)
         normal_33(dir2)=least_squares_normal_material(im3,dir2)
 
-        if ((ice_normal_weight(iten_13).gt.zero).and. &
-            (ice_normal_weight(iten_23).gt.zero)) then
+        if ((ice_normal_weight(iten_13).ge.zero).and. &
+            (ice_normal_weight(iten_23).ge.zero).and. &
+            (ice_normal_weight(iten_13)+ &
+             ice_normal_weight(iten_23).gt.zero)) then
          !do nothing
         else
-         print *,"expecting ice_normal_weight>0: ",ice_normal_weight
+         print *,"expecting ice_normal_weight>=0: ",ice_normal_weight
          stop
         endif
 
@@ -1904,6 +1906,7 @@ stop
          endif 
 
          if (1.eq.1) then
+          print *,"im,im_opp,im3: ",im,im_opp,im3
           print *,"master_normal=",master_normal 
           print *,"normal_im3=",normal_im3 
           print *,"normal_im3_negate=",normal_im3_negate 
