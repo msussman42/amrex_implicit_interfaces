@@ -19269,13 +19269,13 @@ void NavierStokes::project_right_hand_side(
 
    if (ones_sum_global[icolor]>=1.0) {
 
-    if (verbose>0) {
+    if (verbose>1) {
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "prj_rhs,icolor="<<icolor<<" ones_sum_global="<<
        ones_sum_global[icolor]<<" singular_patch_flag="<<
        singular_patch_flag[icolor]<<'\n';
      }
-    } //verbose>0
+    } //verbose>1
 
    } else
     amrex::Error("ones_sum_global[icolor] invalid");
@@ -19334,14 +19334,14 @@ void NavierStokes::project_right_hand_side(
 
      if (ones_sum_global[icolor]>=1.0) {
 
-      if (verbose>0) {
+      if (verbose>1) {
        if (ParallelDescriptor::IOProcessor()) {
         std::cout << "prj_rhs, icolor=" << icolor << '\n';
         std::cout << "prj_rhs, coef=" << coef[icolor] << '\n';
         std::cout << "prj_rhs, ones_sum_global=" << 
          ones_sum_global[icolor] << '\n';
        } 
-      } // verbose>0
+      } // verbose>1
 
       coef[icolor]=-coef[icolor]/ones_sum_global[icolor];
 
@@ -19372,13 +19372,13 @@ void NavierStokes::project_right_hand_side(
     } else
      amrex::Error("singular_patch_flag[icolor] invalid");
 
-    if (verbose>0) {
+    if (verbose>1) {
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "project_right_hand_side, coef=" << coef[icolor] << '\n';
       std::cout << "project_right_hand_side, denom=" << 
          ones_sum_global[icolor] << '\n';
      } 
-    } // verbose>0
+    } // verbose>1
 
    } // icolor=0..color_ONES_count-1
 
