@@ -38,7 +38,7 @@
 # substrate = material 4
 # species variable where water is collected as vapor.
 max_step  = 9999999    # maximum timestep
-#max_step  = 2    # maximum timestep
+#max_step  = 100    # maximum timestep
 
 stop_time = 50  
 
@@ -151,8 +151,9 @@ ns.gravity        = -980.0   # cgs
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
 ns.radblob9=0.0 # transition time from tension_init to tension.
 ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
-ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
-ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting
+ns.tension     =72.8 0.0  72.8 72.8 143.1 72.8
+#ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
+#ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
@@ -291,14 +292,13 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-#ns.explicit_viscosity_dt=1
+ns.explicit_viscosity_dt=1
 #Artificial viscosity should be enough so that the explicity_viscosity_dt
 #constraint makes a difference.
 #dx=1/32
 #tension=72.8e-2
-#ns.viscconst=0.018 0.00017 0.018 0.018 # dimensional
-ns.viscconst=0.018 0.018 0.18 0.18 # dimensional
-ns.uncoupled_viscosity=1 # div(mu grad u)
+ns.viscconst=0.018 0.00017 10.0 10.0 # dimensional
+ns.uncoupled_viscosity=0 # uncoupled_viscosity=1 => div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0
