@@ -10890,6 +10890,8 @@ END SUBROUTINE SIMP
       if ((SDIM.eq.2).and. &
           (probtype.eq.41).and. &
           (axis_dir.eq.4)) then
+       print *,"this code is obsolete"
+       stop
        local_Z_dir=SDIM-1
        local_R_dir=0
        local_num_cells=fdomhi(local_Z_dir+1)-fdomlo(local_Z_dir+1)+1

@@ -70,7 +70,7 @@ return
 end subroutine MEHDI_SS_LS
 
 ! initial velocity is zero
-subroutine MITSUHIRO_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
+subroutine MEHDI_SHOCK_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
@@ -104,12 +104,12 @@ do dir=1,SDIM
 enddo
 
 return 
-end subroutine MITSUHIRO_LS_VEL
+end subroutine MEHDI_SHOCK_LS_VEL
 
 ! this routine used if pressure boundary conditions are prescribed,
 ! since only top wall is "outflow" (outflow in quotes since ice shrinks when
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
-subroutine MITSUHIRO_PRES(x,t,LS,PRES)
+subroutine MEHDI_SHOCK_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
@@ -121,11 +121,11 @@ real(amrex_real), INTENT(out) :: PRES
 PRES=zero
 
 return 
-end subroutine MITSUHIRO_PRES
+end subroutine MEHDI_SHOCK_PRES
 
 
 
-subroutine MITSUHIRO_STATE(x,t,LS,STATE,bcflag)
+subroutine MEHDI_SHOCK_STATE(x,t,LS,STATE,bcflag)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -166,10 +166,10 @@ else
 endif
  
 return
-end subroutine MITSUHIRO_STATE
+end subroutine MEHDI_SHOCK_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_LS_BC(xwall,xghost,t,LS, &
+subroutine MEHDI_SHOCK_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -184,18 +184,18 @@ real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call MITSUHIRO_LS(xghost,t,LS)
+ call MEHDI_SHOCK_LS(xghost,t,LS)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine MITSUHIRO_LS_BC
+end subroutine MEHDI_SHOCK_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
-subroutine MITSUHIRO_VEL_BC(xwall,xghost,t,LS, &
+subroutine MEHDI_SHOCK_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -216,7 +216,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call MITSUHIRO_LS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
+ call MEHDI_SHOCK_LS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx)
  VEL=local_VEL(veldir)
 
 else
@@ -225,10 +225,10 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_VEL_BC
+end subroutine MEHDI_SHOCK_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_PRES_BC(xwall,xghost,t,LS, &
+subroutine MEHDI_SHOCK_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx)
 use probcommon_module
 IMPLICIT NONE
@@ -245,7 +245,7 @@ real(amrex_real), INTENT(in) :: dx(SDIM)
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call MITSUHIRO_PRES(xghost,t,LS,PRES)
+ call MEHDI_SHOCK_PRES(xghost,t,LS,PRES)
 
 else
  print *,"dir or side invalid"
@@ -253,10 +253,10 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_PRES_BC
+end subroutine MEHDI_SHOCK_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine MITSUHIRO_STATE_BC(xwall,xghost,t,LS, &
+subroutine MEHDI_SHOCK_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
 use probcommon_module
 use global_utility_module
@@ -282,7 +282,7 @@ if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call MITSUHIRO_STATE(xghost,t,LS,local_STATE,local_bcflag)
+ call MEHDI_SHOCK_STATE(xghost,t,LS,local_STATE,local_bcflag)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  call get_primary_material(LS,im_crit)
@@ -294,9 +294,9 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_STATE_BC
+end subroutine MEHDI_SHOCK_STATE_BC
 
-subroutine MITSUHIRO_HEATSOURCE(im,VFRAC,time,x,temp, &
+subroutine MEHDI_SHOCK_HEATSOURCE(im,VFRAC,time,x,temp, &
      heat_source,den,CV,dt)
 use probcommon_module
 IMPLICIT NONE
@@ -319,6 +319,6 @@ else
 endif
 
 return
-end subroutine MITSUHIRO_HEATSOURCE
+end subroutine MEHDI_SHOCK_HEATSOURCE
 
-end module MITSUHIRO_MELTING_module
+end module MEHDI_SHOCK_SPHERE

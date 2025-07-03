@@ -1735,6 +1735,7 @@ end subroutine nozzle2d
 ! sphere impact on flat surface (dist >0 in fluid)
 ! soliddist - falling sphere
       else if ((probtype.eq.531).and.(SDIM.eq.2)) then  
+
        if (axis_dir.eq.0) then
         dist=sqrt( (x-xblob)**2+(y-yblob)**2 ) -radblob
        else if (axis_dir.eq.1) then ! it should never come to this
@@ -1750,49 +1751,6 @@ end subroutine nozzle2d
        ! dist<0 in the solid
        ! dist>0 in the fluid 
        ! in: soliddist, turbulent cylindrical pipe
-      else if ((probtype.eq.41).and.(axis_dir.eq.5)) then
-       if (SDIM.eq.2) then
-        dist=radblob-sqrt((y-yblob)**2)
-       else if (SDIM.eq.3) then
-        dist=radblob-sqrt((y-yblob)**2+(z-zblob)**2) 
-       else
-        print *,"dimension bust"
-        stop
-       endif 
-      else if ((probtype.eq.41).and. &
-               (axis_dir.eq.0).and.(SDIM.eq.3)) then
-! x is free stream direction
-       if (levelrz.eq.COORDSYS_CARTESIAN) then 
-        dist=zblob2-sqrt(y**2+z**2)
-       else
-        print *,"levelrz invalid soliddist"
-        stop
-       endif
-
-! pipe problem  soliddist: dist>0 fluid
-      else if ((probtype.eq.41).and. &
-               (SDIM.eq.2)) then  
-
-         ! axis_dir=4 comparison with LSA
-       if (axis_dir.eq.4) then
-        dist=99999.0
-       else
-        pipexlo=problox
-        pipexhi=probhix
-        if ((axis_dir.eq.1).or.(axis_dir.eq.2)) then
-         pipexlo=zero
-         pipexhi=two*radblob3
-        endif
- 
-        if (x.lt.pipexlo) then
-         dist=pipexlo-x
-        else if (x.gt.pipexhi) then
-         dist=x-pipexhi
-        else
-         dist=-min( x-pipexlo, pipexhi-x )
-        endif
-        dist=-dist
-       endif  ! axis_dir<> 4
 
 ! soliddist: dist>0 in fluid 2d or 3d
       else if (probtype.eq.59) then  ! inputs.block_ice_melt
