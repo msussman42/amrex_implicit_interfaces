@@ -1113,11 +1113,6 @@ stop
          uu=max(abs(uu),abs(adv_vel))
          uu=max(abs(uu),abs(advbot))
         endif
-        if (probtype.eq.41) then ! pipe flow
-         uu=max(abs(uu),abs(adv_vel))
-         uu=max(abs(uu),abs(advbot))
-         uu=max(abs(uu),abs(vinletgas))
-        endif
        endif
        
        if (dir.eq.0) then
@@ -3398,159 +3393,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end function myfact
 
-
-      subroutine get_pipe_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
-      use global_utility_module
-      use geometry_intersect_module
-
-      IMPLICIT NONE
-
-      integer bfact,nhalf
-      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-
-      integer, parameter :: nhalf2=1
-      real(amrex_real) xsten2(-nhalf2:nhalf2,SDIM)
-
-      real(amrex_real) dx(SDIM)
-      real(amrex_real) cenbc(num_materials,SDIM)
-      real(amrex_real) vfrac(num_materials)
-      integer im
-
-      integer dir2,i1,j1,k1,k1lo,k1hi
-      real(amrex_real) centroid(num_materials,SDIM)
-      real(amrex_real) lsgrid(D_DECL(3,3,3),num_materials)
-      real(amrex_real) distbatch(num_materials)
-      real(amrex_real) facearea(num_materials)
-      real(amrex_real) pipexlo,pipexhi,vfrac_sum
-      real(amrex_real) EBVOFTOL
-      integer isten
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif
-      if (nhalf.lt.3) then
-       print *,"nhalf invalid get pipe vfrac"
-       stop
-      endif
-
-      if ((probtype.eq.41).and.(axis_dir.eq.4)) then
-       if (rigid_count().ne.0) then
-        print *,"solid not allowed for comparison with LSA"
-        stop
-       endif
-      else
-       if (rigid_count().eq.0) then
-        print *,"solid missing for pipe"
-        stop
-       endif
-      endif
-
-      if (probtype.eq.41) then
-       ! do nothing
-      else
-       print *,"probtype invalid in get pipe vfrac"
-       stop
-      endif
-
-      pipexlo=problox
-      pipexhi=probhix
-      if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2).or. &
-          (axis_dir.eq.3)) then
-       pipexlo=zero
-       pipexhi=two*radblob3
-      endif
-
-      if (SDIM.eq.2) then
-       k1lo=0
-       k1hi=0
-      else if (SDIM.eq.3) then
-       k1lo=-1
-       k1hi=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      do k1=k1lo,k1hi
-      do j1=-1,1
-      do i1=-1,1
-       do isten=-1,1
-        dir2=1
-        xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
-        dir2=2
-        xsten2(isten,dir2)=xsten(isten+2*j1,dir2)
-        if (SDIM.eq.3) then
-         dir2=SDIM
-         xsten2(isten,dir2)=xsten(isten+2*k1,dir2)
-        endif
-       enddo ! isten
-
-       call inletpipedist(xsten2(0,1),xsten2(0,2),xsten2(0,SDIM),distbatch)
-       do im=1,num_materials
-        lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
-       enddo
-      enddo
-      enddo
-      enddo
-      EBVOFTOL=VOFTOL
-      call getvolumebatch(bfact,dx,xsten,nhalf, &
-        lsgrid,vfrac, &
-        facearea,centroid,EBVOFTOL,SDIM)
-      do im=1,num_materials
-       do dir2=1,SDIM
-        cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
-       enddo
-      enddo
-
-      if (rigid_exists().eq.1) then
-
-       if ((axis_dir.ge.0).and.(axis_dir.le.4)) then
-
-        if ((xsten(0,1).lt.pipexlo).or.(xsten(0,1).gt.pipexhi)) then
-         do im=1,num_materials
-          vfrac(im)=zero
-          do dir2=1,SDIM
-           cenbc(im,dir2)=zero
-          enddo
-          if (is_rigid(im).eq.1) then
-           vfrac(im)=one
-          endif
-         enddo !im=1..nat
-        endif
-       else if (axis_dir.eq.5) then
-        ! do nothing
-       else
-        print *,"axis_dir invalid"
-        stop
-       endif
-      else if (rigid_exists().eq.0) then
-       ! do nothing
-      else
-       print *,"rigid exists bust"
-       stop
-      endif
-
-       ! kluge
-      vfrac_sum=zero
-      do im=1,num_materials
-       if (is_rigid(im).eq.0) then
-        vfrac_sum=vfrac_sum+vfrac(im)
-       else if (is_rigid(im).eq.1) then
-        ! do nothing
-       else
-        print *,"is_rigid(im) invalid"
-        stop
-       endif
-      enddo ! im=1..num_materials
-      if (vfrac_sum.lt.VOFTOL) then
-       vfrac(1)=one
-       vfrac(2)=zero
-      endif
-
-      return
-      end subroutine get_pipe_vfrac
 
          ! nslope points into the solid
          ! materialdistsolid: dist>0 in solid
@@ -9334,8 +9176,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (dist2.lt.dist) then
          dist=dist2
         endif 
-       else if (probtype.eq.3) then
-        dist=xblob+radblob*cos(two*Pi*y/yblob)-x
        else if (probtype.eq.4) then
         call rtdist(x,y,dist)
        else if (probtype.eq.7) then
@@ -10918,9 +10758,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (probtype.eq.9) then  ! xlo, groupmofBC, 2D
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xlo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then ! xlo
          call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)   
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
@@ -10980,9 +10817,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if (probtype.eq.41) then ! xlo 3D
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xlo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then ! xlo
          call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
@@ -11030,9 +10864,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! xhi, groupmofbc, 2D
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xhi
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then ! xhi
          call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
@@ -11095,9 +10926,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then  ! ylo 2D
          call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! ylo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.72) then
          if (abs(x-xblob).gt.radblob) then
@@ -11187,9 +11015,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! top (y=yhi)  y=ymax wall
-        else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.540) then  ! Rieber problem y=yhi
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
@@ -11619,9 +11444,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.9) then  ! xlo, groupLSBC, 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if (probtype.eq.41) then ! xlo, groupLSBC, 2d
-          call inletpipedist(x,y,z,LS)
-          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then ! xlo
           call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
@@ -11649,9 +11471,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL)
-         else if (probtype.eq.41) then ! xlo 3D, grouplsbc
-          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
@@ -11706,9 +11525,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.539) then ! xhi, sup injector
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if (probtype.eq.41) then  ! xhi
-          call inletpipedist(x,y,z,LS)
-          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.202) then ! xhi, liquidlens, grouplsbc
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
@@ -11756,9 +11572,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! ylo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
-          call check_lsbc_extrap(LS,LSWALL)
-         else if (probtype.eq.41) then ! ylo
-          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.72) then
           local_LS=abs(x-xblob)-radblob
@@ -11848,9 +11661,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           enddo
           call check_lsbc_extrap(LS,LSWALL)
           ! top y=ymax wall
-         else if (probtype.eq.41) then
-          call inletpipedist(x,y,z,LS)
-          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.540) then  ! Rieber problem y=yhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
@@ -16255,14 +16065,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               velcell(veldir)=zero
             else if (probtype.eq.51) then
               velcell(veldir)=zero
+! xlo, velx 3D
             else if (probtype.eq.50) then
               if ((z.lt.zblob-radblob).or.(z.gt.zblob+radblob).or. &
                   (y.lt.yblob-radblob).or.(y.gt.yblob+radblob)) then
                velcell(veldir)=zero
               endif
 ! xlo, velx 3D
-            else if (probtype.eq.41) then 
-             velcell(veldir)=zero
             endif
 ! microfluidics problem horizontal vel xlo inflow
             if (probtype.eq.5700) then  ! xvel,xlo
@@ -16293,9 +16102,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            else if (SDIM.eq.2) then
   
 ! xlo wall vertical pipe velocity
-            if (probtype.eq.41) then
-             velcell(veldir)=zero
-            else if (probtype.eq.532) then ! xlo,yvel
+            if (probtype.eq.532) then ! xlo,yvel
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
             else if (probtype.eq.802) then ! dissolution, xlo,vely
              print *,"802 obsolete"
@@ -16432,8 +16239,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                      (yblob10.ne.zero)) then
              velcell(veldir)=x*yblob10/xblob10
 ! ylo vertical velocity
-            else if (probtype.eq.41) then
-             call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if (probtype.eq.72) then
              call vapordist(xsten,nhalf,dx,bfact,dist)
              if (dist.ge.zero) then
@@ -16535,10 +16340,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                !  zlo,velx
              call velread_bc_point(x,y,z,dir,veldir,0,time,velcell(dir))
             endif
-! wall gas pipe horizontal velocity (velx) z=zlo 
-           else if (probtype.eq.41) then
-            print *,"modify for pipe 3d"
-            stop
            endif
   
 ! zlo face, y velocity
@@ -16694,8 +16495,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if ((probtype.eq.36).and.(yblob10.ne.zero)) then
              velcell(veldir)=yblob10
 ! xhi wall vertical pipe velocity
-            else if (probtype.eq.41) then
-             velcell(veldir)=zero
             else if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell) ! yvel,xhi
             else if (probtype.eq.32) then 
@@ -16815,8 +16614,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               velcell(veldir)=-abs(advbot)
              endif
 ! yhi vertical velocity
-            else if (probtype.eq.41) then
-             call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if (probtype.eq.72) then
    
             else if (probtype.eq.62) then
@@ -17252,7 +17049,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: x,y,z
       real(amrex_real), INTENT(inout) :: ADVwall_in
       real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real) pipexlo,pipexhi
       real(amrex_real) rhohydro
       real(amrex_real) base_pres
       real(amrex_real) VOF(num_materials)
@@ -17768,61 +17564,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           endif
 
-          if (probtype.eq.41) then ! presBDRYCOND 2D yhi
-           pipexlo=problox
-           pipexhi=probhix
-           if ((axis_dir.eq.1).or.(axis_dir.eq.2).or.(axis_dir.eq.3)) then
-            pipexlo=zero
-            pipexhi=two*radblob3
-           endif
-
-           if (axis_dir.eq.0) then
-            ! do nothing
-           else if (axis_dir.eq.1) then
-
-            if (x.lt.pipexlo) then
-             ADV=zero
-            else if (x.lt.xblob) then
-             ADV=fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
-            else
-             ADV= &
-              fort_denconst(2)*abs(gravity_vector_out(gravity_dir))* &
-              (xblob-pipexlo)+ &
-              fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-xblob) 
-            endif
-
-           else if (axis_dir.eq.2) then
-
-            if (x.lt.pipexlo) then
-             ADV=zero
-            else if (x.lt.xblob-radblob2) then
-             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
-            else if (x.lt.xblob+radblob2) then
-             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(xblob-radblob2-pipexlo)+ &
-                 fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(x-xblob+radblob2) 
-            else
-             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(xblob-radblob2-pipexlo)+ &
-                 fort_denconst(2)*abs(gravity_vector_out(gravity_dir))*(two*radblob2)+ & 
-                 fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-xblob-radblob2) 
-            endif
-
-           else if (axis_dir.eq.3) then
-
-            if (x.lt.pipexlo) then
-             ADV=zero
-            else 
-             ADV=fort_denconst(1)*abs(gravity_vector_out(gravity_dir))*(x-pipexlo)
-            endif
-
-           else if (axis_dir.eq.4) then
-            ! do nothing 
-           else
-            print *,"axis_dir invalid for pipe problem"
-            stop
-           endif  
-  
-           ! above, probtype=41 below supnozzle yhi - presBDRYCOND
-          else if (probtype.eq.539) then
+           ! below supnozzle yhi - presBDRYCOND
+          if (probtype.eq.539) then
            ADV=outflow_pressure
           endif  
 
@@ -27557,45 +27300,6 @@ end subroutine initialize2d
 !         z_vel=zero
 
            ! in: fort_initvelocity (2D)
-         else if ((probtype.eq.3).or. &
-                  (probtype.eq.41)) then
-
-          if ((axis_dir.eq.0).or. &
-              (axis_dir.eq.1).or. &
-              (axis_dir.eq.2).or. &
-              (axis_dir.eq.3)) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-
-           ! in: fort_initvelocity (2D)
-          else if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-!          z_vel=zero
-          else if (axis_dir.eq.4) then
-
-           if (1.eq.0) then
-            call get_pipe_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc) 
-            if (vfracbatch(1).gt.zero) then
-             dist=half
-            else
-             dist=-half
-            endif
-           else
-            call inletpipedist(x,y,z,distbatch)   
-            dist=distbatch(1)
-           endif
-  
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)!time=0
-           y_vel=velcell(2)
-           x_vel=zero
-          else
-           print *,"axis_dir invalid initvel axis_dir=",axis_dir
-           stop
-          endif
-
 ! rotate
          else if (probtype.eq.5) then
           print *,"this problem obsolete"
@@ -27842,19 +27546,8 @@ end subroutine initialize2d
            endif
           endif
 
-! pipe setup at t=0
+! setup at t=0
 ! in: fort_initvelocity, 3D
-         else if (probtype.eq.41) then
-          if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-           z_vel=velcell(SDIM)
-          else
-           print *,"this problem not ready for 3d yet"
-           stop
-          endif
-
 ! wave
          else if (probtype.eq.13) then
           print *,"option obsolete"
