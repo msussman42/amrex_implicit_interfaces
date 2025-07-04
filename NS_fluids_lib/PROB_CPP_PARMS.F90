@@ -714,7 +714,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=25
+      probtype_list_size=26
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -741,6 +741,7 @@ stop
       used_probtypes(23)=426 ! KOUROSH_CTML_DROP
       used_probtypes(24)=3001 ! shockdrop
       used_probtypes(25)=41  ! MITSUHIRO_PIPE
+      used_probtypes(26)=3  ! MITSUHIRO_PIPE
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
@@ -965,7 +966,8 @@ stop
        SUB_VARIABLE_SURFACE_TENSION=> &
             MITSUHIRO_MELTING_VARIABLE_SURFACE_TENSION
 
-      else if (probtype.eq.41) then
+      else if ((probtype.eq.41).or. &
+               (probtype.eq.3)) then
 
        SUB_INIT_MODULE=>INIT_MITSUHIRO_PIPE_MODULE
        SUB_LS=>MITSUHIRO_PIPE_LS
@@ -976,9 +978,7 @@ stop
        SUB_VEL_BC=>MITSUHIRO_PIPE_VEL_BC
        SUB_PRES_BC=>MITSUHIRO_PIPE_PRES_BC
        SUB_STATE_BC=>MITSUHIRO_PIPE_STATE_BC
-       SUB_HEATSOURCE=>MITSUHIRO_PIPE_HEATSOURCE
-       SUB_VARIABLE_SURFACE_TENSION=> &
-            MITSUHIRO_PIPE_VARIABLE_SURFACE_TENSION
+       SUB_CFL_HELPER=>MITSUHIRO_PIPE_CFL_HELPER
 
       else if (probtype.eq.915) then
 

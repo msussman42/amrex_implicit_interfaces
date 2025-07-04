@@ -1333,7 +1333,6 @@ end subroutine nozzle2d
       real(amrex_real) radcross,dist2,radpt
       real(amrex_real) hugedist,dist3,dist4
       real(amrex_real) radx,radshrink
-      real(amrex_real) pipexlo,pipexhi
       real(amrex_real) zmin,zmax
       real(amrex_real) angle_x,angle_y
       real(amrex_real), PARAMETER :: stub_zero=zero

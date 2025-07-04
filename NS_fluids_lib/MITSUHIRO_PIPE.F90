@@ -21,7 +21,7 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==41 (see run2d/inputs.MITSUHIRO_block_ice_melt)
+! probtype==41 or probtype==3 (see run2d/inputs.growthrate.LSA)
 module MITSUHIRO_PIPE_module
 use amrex_fort_module, only : amrex_real
 
@@ -31,44 +31,63 @@ real(amrex_real) :: DEF_VAPOR_GAMMA
 
 contains
 
-subroutine inletpipedist(x,y,z,dist)
+subroutine pipedist(x,y,z,dist,nmat)
+use probcommon_module
 use global_utility_module
-use global_distance_module
 
 IMPLICIT NONE
 
-integer im
-real(amrex_real), INTENT(out) :: dist(num_materials)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(out) :: dist(nmat)
 real(amrex_real), INTENT(in) :: x,y,z
-real(amrex_real) ht,rr,initial_time
+real(amrex_real) ht,rr
+real(amrex_real) pipexlo,pipexhi
 integer im_solid_pipe
 
 if (SDIM.eq.2) then
  if (abs(z-y).le.EPS2) then
   ! do nothing
  else
-  print *,"z<>y in inletpipedist"
+  print *,"z<>y in pipedist (x,y,z): ",x,y,z
   stop
  endif
+else if (SDIM.eq.3) then
+ !checking nothing
+else
+ print *,"dimension bust"
+ stop
 endif
 
 im_solid_pipe=im_solid_primary()
 
-initial_time=zero
+if ((im_solid_pipe.eq.0).or. &
+    (im_solid_pipe.eq.nmat)) then
+ !do nothing
+else
+ print *,"expecting im_solid_pipe=0 or nmat: ",im_solid_pipe,nmat
+ stop
+endif
 
-if (probtype.eq.41) then
+if ((probtype.eq.41).or.(probtype.eq.3)) then
  ! do nothing
 else
- print *,"probtype invalid for inlet pipedist"
+ print *,"probtype invalid for pipedist: ",probtype
  stop
 endif
 
 if ((axis_dir.lt.0).or.(axis_dir.gt.5)) then
- print *,"axis dir invalid for pipe problem"
+ print *,"axis dir invalid for pipe problem: ",axis_dir
  stop
 endif
 
-if (axis_dir.eq.0) then
+if (probtype.eq.3) then
+
+ dist(1)=xblob+radblob*cos(two*Pi*y/yblob)-x
+
+else if (axis_dir.eq.0) then
+
+ print *,"this code is obsolete"
+ stop
 
  if (SDIM.eq.2) then
   dist(1)=xblob+radblob*cos(two*Pi*y/yblob)-x
@@ -106,82 +125,127 @@ else if ((axis_dir.eq.1).or. &
 
 else if (axis_dir.eq.4) then
 
- dist(1)=abs(x)-xblob-radblob*sin(two*Pi*y/yblob)
- dist(1)=-dist(1)
+ dist(1)=-abs(x)+xblob+radblob*sin(two*Pi*y/yblob)
 
-else if (axis_dir.eq.5) then
+else if (axis_dir.eq.5) then ! all gas
 
  dist(1)=-99999.0
 
 else 
- print *,"axis dir invalid"
+ print *,"axis dir invalid: ",axis_dir
  stop
 endif
 
 dist(2)=-dist(1)
-do im=3,num_materials
- dist(im)=-99999.0
-enddo
+
+if (nmat.eq.2) then
+ !do nothing
+else if (nmat.eq.3) then
+ dist(nmat)=-99999.0
+else
+ print *,"expecting num_materials=2 or 3 pipe_dist: ",nmat
+ stop
+endif
 
   ! axis_dir=4 is the comparison with Linear Stability Analysis
-if (axis_dir.ne.4) then
- if ((im_solid_pipe.lt.1).or. &
-     (im_solid_pipe.gt.num_materials)) then
-  print *,"im_solid_pipe invalid 2"
+if (axis_dir.eq.4) then
+ if (nmat.eq.2) then
+  !do nothing
+ else
+  print *,"expecting nmat==2: ",nmat
   stop
  endif
-   ! in inlet_pipe_dist; positive in solid
- call materialdistsolid(x,y,z,dist(im_solid_pipe),initial_time, &
-  im_solid_pipe)
+else if ((axis_dir.eq.0).or. &
+         (axis_dir.eq.1).or. & 
+         (axis_dir.eq.2).or. & 
+         (axis_dir.eq.3).or. & 
+         (axis_dir.eq.5)) then
+
+ if (im_solid_pipe.eq.3) then
+  !do nothing
+ else
+  print *,"im_solid_pipe invalid 2: ",im_solid_pipe
+  stop
+ endif
+
+ if (axis_dir.eq.5) then
+
+  if (SDIM.eq.2) then
+   dist(im_solid_pipe)=-radblob+sqrt((y-yblob)**2)
+  else if (SDIM.eq.3) then
+   dist(im_solid_pipe)=-radblob+sqrt((y-yblob)**2+(z-zblob)**2) 
+  else
+   print *,"dimension bust"
+   stop
+  endif 
+
+ else if ((axis_dir.eq.0).and.(SDIM.eq.3)) then
+
+! x is free stream direction
+  if (levelrz.eq.COORDSYS_CARTESIAN) then 
+   dist(im_solid_pipe)=-zblob2+sqrt(y**2+z**2)
+  else
+   print *,"levelrz invalid MITSUHIRO_PIPE"
+   stop
+  endif
+
+ else   
+
+  pipexlo=problox
+  pipexhi=probhix
+  if ((axis_dir.eq.1).or. &
+      (axis_dir.eq.2).or. &
+      (axis_dir.eq.3)) then
+   pipexlo=zero
+   pipexhi=two*radblob3
+  endif
+ 
+  if (x.lt.pipexlo) then
+   dist(im_solid_pipe)=pipexlo-x
+  else if (x.gt.pipexhi) then
+   dist(im_solid_pipe)=x-pipexhi
+  else
+   dist(im_solid_pipe)=-min( x-pipexlo, pipexhi-x )
+  endif
+
+ endif
+
+else
+ print *,"axis_dir invalid in pipedist: ",axis_dir
+ stop
 endif
 
 return
-end subroutine inletpipedist
+end subroutine pipedist
 
-subroutine get_pipe_velocity(xsten,nhalf,dx,bfact,vel,time)
+subroutine get_pipe_velocity(x,y,z,dx,vel,time,nmat)
+use probcommon_module
 use global_utility_module
 
 IMPLICIT NONE
 
-integer, INTENT(in) :: nhalf,bfact
-real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-real(amrex_real) x,y,z,r
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x,y,z
+real(amrex_real) r,zlocal
 real(amrex_real), INTENT(in) :: time
 real(amrex_real), INTENT(in) :: dx(SDIM)
-real(amrex_real) cenbc(num_materials,SDIM)
 real(amrex_real), INTENT(out) :: vel(SDIM)
-real(amrex_real) VOF(num_materials)
+real(amrex_real) dist(nmat)
 integer dir2
-integer im_solid_pipe
 real(amrex_real) x_vel,y_vel,z_vel
 
-im_solid_pipe=im_solid_primary()
-
-if (nhalf.lt.3) then
- print *,"nhalf invalid get pipe velocity"
- stop
-endif
-if (bfact.lt.1) then
- print *,"bfact invalid200"
- stop
-endif
-
-if (probtype.eq.41) then
+if ((probtype.eq.41).or.(probtype.eq.3)) then
  ! do nothing
 else 
  print *,"probtype invalid in get pipe velocity"
  stop
 endif
 
-x=xsten(0,1)
-y=xsten(0,2)
-z=xsten(0,SDIM)
-
 if (SDIM.eq.2) then
  if (abs(z-y).le.EPS2) then
   ! do nothing
  else
-  print *,"z<>y line 4073"
+  print *,"z<>y line 4073: ",x,y,z
   stop
  endif
 endif
@@ -195,12 +259,12 @@ do dir2=1,SDIM
  vel(dir2)=zero
 enddo
 
-call get_pipe_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)  
+call pipedist(x,y,z,dist,nmat)
 
   ! axis_dir=4 is LSA comparison
 if (axis_dir.eq.4) then
 
- if (VOF(1).gt.zero) then
+ if (dist(1).ge.zero) then
   if (time.gt.zero) then
    vel(SDIM)=vinletgas
   else if (time.eq.zero) then
@@ -208,11 +272,11 @@ if (axis_dir.eq.4) then
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
- else if ((VOF(1).eq.zero).and.(VOF(2).gt.zero)) then
+ else if (dist(1).le.zero) then
   if (time.gt.zero) then
    vel(SDIM)=advbot
   else if (time.eq.zero) then
@@ -220,20 +284,24 @@ if (axis_dir.eq.4) then
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
- endif
-else if (axis_dir.eq.3) then
- if ((im_solid_pipe.lt.1).or. &
-     (im_solid_pipe.gt.num_materials)) then
-  print *,"im_solid_pipe invalid 2.9"
+ else
+  print *,"dist(1) corrupt: ",dist(1)
   stop
  endif
- if (VOF(im_solid_pipe).gt.zero) then
+else if (axis_dir.eq.3) then
+ if (nmat.eq.3) then
+  !do nothing
+ else
+  print *,"expecting nmat==3: ",nmat
+  stop
+ endif
+ if (dist(nmat).ge.zero) then
   vel(SDIM)=zero
- else if (z.ge.VOFTOL*dx(SDIM)) then !y=z if 2D
+ else if (z.ge.EPS2*dx(SDIM)) then !y=z if 2D
   if (time.gt.zero) then
    vel(SDIM)=vinletgas
   else if (time.eq.zero) then
@@ -241,11 +309,11 @@ else if (axis_dir.eq.3) then
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
- else if (z.le.VOFTOL*dx(SDIM)) then ! y=z if 2D
+ else if (z.le.EPS2*dx(SDIM)) then ! y=z if 2D
   if (time.gt.zero) then
    vel(SDIM)=advbot
   else if (time.eq.zero) then
@@ -253,24 +321,28 @@ else if (axis_dir.eq.3) then
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
+ else
+  print *,"z corrupt: ",z
+  stop
  endif
 
 else if ((axis_dir.eq.0).or. &
          (axis_dir.eq.1).or. &
          (axis_dir.eq.2)) then
 
- if ((im_solid_pipe.lt.1).or. &
-     (im_solid_pipe.gt.num_materials)) then
-  print *,"im_solid_pipe invalid 3"
+ if (nmat.eq.3) then
+  !do nothing
+ else
+  print *,"expecting nmat==3: ",nmat
   stop
  endif
- if (VOF(im_solid_pipe).gt.zero) then
+ if (dist(nmat).ge.zero) then
   vel(SDIM)=zero
- else if (VOF(1).gt.zero) then
+ else if (dist(1).ge.zero) then
   if (time.gt.zero) then
    vel(SDIM)=vinletgas
   else if (time.eq.zero) then
@@ -278,11 +350,11 @@ else if ((axis_dir.eq.0).or. &
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
- else if ((VOF(1).eq.zero).and.(VOF(2).gt.zero)) then
+ else if (dist(1).le.zero) then
   if (time.gt.zero) then
    vel(SDIM)=advbot
   else if (time.eq.zero) then
@@ -290,10 +362,13 @@ else if ((axis_dir.eq.0).or. &
   else
    print *,"time invalid in get pipe velocity"
    print *,"time= ",time
-   print *,"vof1,vof2 ",VOF(1),VOF(2)
+   print *,"dist= ",dist
    print *,"axis_dir ",axis_dir
    stop
   endif
+ else
+  print *,"dist(1) corrupt: ",dist(1)
+  stop
  endif
 
  ! above: axis_dir=0,1,2 (and above that 3,4)
@@ -301,14 +376,15 @@ else if ((axis_dir.eq.0).or. &
 else if (axis_dir.eq.5) then
 
  if (SDIM.eq.3) then
-  ! do nothing
+  r = sqrt(y*y+z*z)
+  zlocal=z
  else if (SDIM.eq.2) then
-  z=zero
+  r = sqrt(y*y)
+  zlocal=zero
  else
   print *,"dimension bust"
   stop
  endif
- r = sqrt(y*y+z*z)
 
  if (r.gt.radblob) then
   x_vel=zero
@@ -317,23 +393,23 @@ else if (axis_dir.eq.5) then
  endif
  y_vel=zero
  z_vel=zero
- if((z-0.3)**2+(y-0.3)**2+(x-0.5)**2.le.0.4)then
+ if((zlocal-0.3)**2+(y-0.3)**2+(x-0.5)**2.le.0.4)then
    x_vel = .3d0
    y_vel = .4d0
    z_vel = -.2d0
- else if((z+0.3)**2+(y-1.7)**2+(x-5.5)**2.le.0.4)then
+ else if((zlocal+0.3)**2+(y-1.7)**2+(x-5.5)**2.le.0.4)then
    x_vel = -.3d0
    y_vel = -.4d0
    z_vel = .2d0
- else if((z-0.9)**2+(y)**2+(x-1.5)**2.le.1.)then
+ else if((zlocal-0.9)**2+(y)**2+(x-1.5)**2.le.1.)then
    x_vel = -x_vel
    y_vel = -y_vel
    z_vel = -z_vel 
- else if((z+0.9)**2+(y)**2+(x-3.5)**2.le.1.)then
+ else if((zlocal+0.9)**2+(y)**2+(x-3.5)**2.le.1.)then
    x_vel = -y_vel
    y_vel = -x_vel
    z_vel = -z_vel 
- else if((z)**2+(y)**2+(x-2.5)**2.le.0.1)then
+ else if((zlocal)**2+(y)**2+(x-2.5)**2.le.0.1)then
    x_vel = -z_vel
    y_vel = -y_vel
    z_vel = -x_vel 
@@ -344,7 +420,7 @@ else if (axis_dir.eq.5) then
   vel(SDIM)=z_vel
  endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid get_pipe_velocity axis_dir:",axis_dir
  stop
 endif
 
@@ -352,7 +428,50 @@ return
 end subroutine get_pipe_velocity
 
 
+! dir=velocity component
+subroutine MITSUHIRO_PIPE_CFL_HELPER(time,dir,uu,dx)
+use probcommon_module
+implicit none
+integer, INTENT(in) :: dir
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: uu
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
+real(amrex_real) utest
+
+
+if ((dir.lt.0).or.(dir.ge.SDIM)) then
+ print *,"dir invalid: ",dir
+ stop
+endif
+
+if (dir.eq.0) then
+ ! do nothing
+else if (dir.eq.1) then
+ ! do nothing
+else if ((dir.eq.2).and.(SDIM.eq.3)) then
+ ! do nothing
+else
+ print *,"dir invalid MITSUHIRO_PIPE_CFL_HELPER: ",dir
+ stop
+endif
+
+if ((probtype.eq.41).or.(probtype.eq.3)) then
+ if (dir.eq.adv_dir-1) then
+  utest=abs(adv_vel)
+  uu=max(abs(uu),abs(utest))
+  utest=abs(advbot)
+  uu=max(abs(uu),abs(utest))
+  utest=abs(vinletgas)
+  uu=max(abs(uu),abs(utest))
+ endif
+else
+ print *,"expecting probtype=41,3:",probtype
+ stop
+endif
+
+return
+end subroutine MITSUHIRO_PIPE_CFL_HELPER
 
 
   ! do any initial preparation needed
@@ -363,50 +482,6 @@ IMPLICIT NONE
 
 return
 end subroutine INIT_MITSUHIRO_PIPE_MODULE
-
-! Phi>0 in the solid
-subroutine MITSUHIRO_substrateLS(x,Phi) 
-use probcommon_module
-implicit none
-real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
-real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
-
-real(amrex_real) substrate_height
-
-if (SDIM.eq.2) then
- if (abs(zblob2-yblob2).le.EPS14) then
-  substrate_height=zblob2  ! substrate thickness
- else
-  print *,"zblob2 or yblob2 invalid (they should be the same) 2D"
-  print *,"zblob2,yblob2   = ",zblob2,yblob2
-  stop
- endif
-else if (SDIM.eq.3) then
- substrate_height=zblob2  ! substrate thickness
-else
- print *,"dimension bust"
- stop
-endif
-
-if (abs(x(SDIM)).le.1.0D+20) then
- Phi=substrate_height-x(SDIM)
-else
- print *,"x(SDIM) invalid"
- stop
-endif
-
-end subroutine MITSUHIRO_substrateLS
-
-! ice + water thickness = total height = radblob
-! radius of ice block = radblob4 (if radblob4==0, then default to radblob/2)
-! water thickness = radblob3  usually radblob3 << radlob (initial water
-! is "seed" for starting the melting process)
-!   ---------
-!   | ice   |
-!   ---------
-!   |water  |
-!-------------------
-!   substrate
 
  ! fluids tessellate the domain, solids are immersed. 
 subroutine MITSUHIRO_PIPE_LS(x,t,LS,nmat)
@@ -426,55 +501,9 @@ real(amrex_real), INTENT(out) :: LS(nmat)
    stop
   endif
 
-if (probtype.eq.41) then
+if ((probtype.eq.41).or.(probtype.eq.3)) then
 
- if (axis_dir.eq.5) then
-  if (SDIM.eq.2) then
-   dist=radblob-sqrt((y-yblob)**2)
-  else if (SDIM.eq.3) then
-   dist=radblob-sqrt((y-yblob)**2+(z-zblob)**2) 
-  else
-   print *,"dimension bust"
-   stop
-  endif 
- else if ((axis_dir.eq.0).and.(SDIM.eq.3)) then
-! x is free stream direction
-  if (levelrz.eq.COORDSYS_CARTESIAN) then 
-   dist=zblob2-sqrt(y**2+z**2)
-  else
-   print *,"levelrz invalid MITSUHIRO_PIPE"
-   stop
-  endif
-
-! pipe problem  soliddist: dist>0 fluid
- else if (SDIM.eq.2) then  
-
-   ! axis_dir=4 comparison with LSA
-  if (axis_dir.eq.4) then
-   dist=99999.0
-  else
-   pipexlo=problox
-   pipexhi=probhix
-   if ((axis_dir.eq.1).or.(axis_dir.eq.2)) then
-    pipexlo=zero
-    pipexhi=two*radblob3
-   endif
- 
-   if (x.lt.pipexlo) then
-    dist=pipexlo-x
-   else if (x.gt.pipexhi) then
-    dist=x-pipexhi
-   else
-    dist=-min( x-pipexlo, pipexhi-x )
-   endif
-   dist=-dist
-  endif  ! axis_dir<> 4
-
-! pipe - vapordist 2D or 3D
-       else if (probtype.eq.41) then
-        call inletpipedist(x,y,z,distbatch)
-        dist=distbatch(1)
-
+ call pipedist(x(1),x(2),x(SDIM),LS,nmat)
 
 else
  print *,"probtype invalid: ",probtype
@@ -526,6 +555,17 @@ do dir=1,SDIM
  VEL(dir)=zero
 enddo
 
+if (velsolid_flag.eq.1) then
+ !do nothing
+else if (velsolid_flag.eq.0) then
+
+ call get_pipe_velocity(x(1),x(2),x(SDIM),dx,VEL,t,nmat)
+
+else
+ print *,"velsolid_flag in MITSUHIRO_PIPE_VEL invalid: ",velsolid_flag
+ stop
+endif
+
 return 
 end subroutine MITSUHIRO_PIPE_VEL
 
@@ -535,6 +575,7 @@ end subroutine MITSUHIRO_PIPE_VEL
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
 subroutine MITSUHIRO_PIPE_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: nmat
@@ -542,6 +583,10 @@ real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: PRES
+real(amrex_real) :: pipexlo,pipexhi
+integer :: gravity_dir
+
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -550,6 +595,65 @@ else
  stop
 endif
 PRES=zero
+
+if ((probtype.eq.41).or.(probtype.eq.3)) then ! presBDRYCOND 2D yhi
+
+ pipexlo=problox
+ pipexhi=probhix
+ if ((axis_dir.eq.1).or.(axis_dir.eq.2).or.(axis_dir.eq.3)) then
+  pipexlo=zero
+  pipexhi=two*radblob3
+ endif
+
+ if (axis_dir.eq.0) then
+  ! do nothing
+ else if (axis_dir.eq.1) then
+
+  if (x(1).lt.pipexlo) then
+   PRES=zero
+  else if (x(1).lt.xblob) then
+   PRES=fort_denconst(2)*abs(gravity_vector(gravity_dir))*(x(1)-pipexlo)
+  else
+   PRES= &
+    fort_denconst(2)*abs(gravity_vector(gravity_dir))* &
+    (xblob-pipexlo)+ &
+    fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x(1)-xblob) 
+  endif
+
+ else if (axis_dir.eq.2) then
+
+  if (x(1).lt.pipexlo) then
+   PRES=zero
+  else if (x(1).lt.xblob-radblob2) then
+   PRES=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x(1)-pipexlo)
+  else if (x(1).lt.xblob+radblob2) then
+   PRES=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(xblob-radblob2-pipexlo)+ &
+       fort_denconst(2)*abs(gravity_vector(gravity_dir))*(x(1)-xblob+radblob2) 
+  else
+   PRES=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(xblob-radblob2-pipexlo)+ &
+       fort_denconst(2)*abs(gravity_vector(gravity_dir))*(two*radblob2)+ & 
+       fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x(1)-xblob-radblob2) 
+  endif
+
+ else if (axis_dir.eq.3) then
+
+  if (x(1).lt.pipexlo) then
+   PRES=zero
+  else 
+   PRES=fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x(1)-pipexlo)
+  endif
+
+ else if (axis_dir.eq.4) then
+  ! do nothing 
+ else
+  print *,"axis_dir invalid for pipe problem"
+  stop
+ endif  
+
+else
+ print *,"probtype invalid for pipe problem"
+ stop
+endif  
 
 return 
 end subroutine MITSUHIRO_PIPE_PRES
@@ -582,9 +686,10 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
-if ((num_materials.eq.4).and. &
-    (num_state_material.ge.3).and. & ! density, temperature, vapor spec
-    (probtype.eq.41)) then
+if ((num_materials.ge.2).and. &
+    (num_state_material.ge.2).and. & ! density, temperature, vapor spec
+    ((probtype.eq.41).or. &
+     (probtype.eq.3))) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
@@ -596,8 +701,6 @@ if ((num_materials.eq.4).and. &
    print *,"t invalid"
    stop
   endif
-   ! always assume Dirichlet boundary condition at zlo for temperature.
-  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+ENUM_TEMPERATUREVAR+1),im,bcflag)
 
    ! initial species in inputs?
   do n=1,num_species_var
@@ -768,113 +871,5 @@ endif
 
 return
 end subroutine MITSUHIRO_PIPE_STATE_BC
-
-subroutine MITSUHIRO_PIPE_HEATSOURCE(im,VFRAC,time,x, &
-     xsten,nhalf,temp, &
-     heat_source,den,CV,dt,nmat)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: nmat
-integer, INTENT(in) :: im
-real(amrex_real), INTENT(in) :: VFRAC(nmat)
-real(amrex_real), INTENT(in) :: time
-integer, INTENT(in) :: nhalf
-real(amrex_real), INTENT(in) :: x(SDIM)
-real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-real(amrex_real), INTENT(in) :: temp(nmat)
-real(amrex_real), INTENT(in) :: den(nmat)
-real(amrex_real), INTENT(in) :: CV(nmat)
-real(amrex_real), INTENT(in) :: dt
-real(amrex_real), INTENT(out) :: heat_source
-
-if (nmat.eq.num_materials) then
- ! do nothing
-else
- print *,"nmat invalid"
- stop
-endif
-
-if ((num_materials.eq.4).and.(probtype.eq.41)) then
- heat_source=zero
-else
- print *,"num_materials or probtype invalid"
- stop
-endif
-
-return
-end subroutine MITSUHIRO_PIPE_HEATSOURCE
-
-subroutine MITSUHIRO_PIPE_VARIABLE_SURFACE_TENSION( &
-  xpos, &
-  time, &
-  iten, &
-  temperature, &
-  tension)
-use probcommon_module
-use global_utility_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: iten
-real(amrex_real), INTENT(in) :: time,temperature
-real(amrex_real), INTENT(in) :: xpos(SDIM)
-real(amrex_real), INTENT(inout) :: tension
-real(amrex_real) :: theta
-
- if ((iten.ge.1).and.(iten.le.num_interfaces)) then
-  ! do nothing
- else
-  print *,"iten invalid: ",iten
-  stop
- endif
- if (temperature.gt.0.0d0) then
-  ! do nothing
- else
-  print *,"temperature invalid: ",temperature
-  stop
- endif
- if (time.ge.0.0d0) then
-  ! do nothing
- else
-  print *,"time invalid: ",time
-  stop
- endif
- if (tension.ge.0.0d0) then
-  ! do nothing
- else
-  print *,"tension invalid: ",tension
-  stop
- endif
-
- if (probtype.eq.41) then
-   if (radblob9.eq.zero) then
-    !do nothing
-   else if (radblob9.gt.zero) then
-    if (time.eq.zero) then
-     tension=fort_tension_init(iten)
-    else if ((time.ge.zero).and. &
-             (time.le.radblob9)) then
-     tension=fort_tension_init(iten)
-    else if (time.ge.two*radblob9) then
-     tension=fort_tension(iten)
-    else if ((time.ge.radblob9).and. &
-             (time.le.two*radblob9)) then
-     theta=(time-radblob9)/radblob9
-     tension=(one-theta)*fort_tension_init(iten)+ &
-             theta*fort_tension(iten)
-    else
-     print *,"time invalid: ",time
-     stop
-    endif
-   else
-    print *,"radblob9 invalid: ",radblob9
-    stop
-   endif
- else
-  print *,"unexpected probtype: ",probtype
-  stop
- endif
-
-end subroutine MITSUHIRO_PIPE_VARIABLE_SURFACE_TENSION
 
 end module MITSUHIRO_PIPE_module
