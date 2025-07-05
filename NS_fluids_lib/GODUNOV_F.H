@@ -435,6 +435,34 @@ extern "C"
     Real* ughosty,AMREX_ARLIM_P(ughostylo),AMREX_ARLIM_P(ughostyhi), 
     Real* ughostz,AMREX_ARLIM_P(ughostzlo),AMREX_ARLIM_P(ughostzhi) );
 
+   void fort_default_evec(
+    int* level,
+    int* finest_level,
+    int* scomp_size,
+    int* ncomp_size,
+    int* State_Type,
+    int* LS_Type,
+    int* DIV_Type,
+    int* Solid_State_Type,
+    int* Tensor_Type,
+    int* Refine_Density_Type,
+    int* ncomp_total,
+    int* scomp_array,
+    int* ncomp_array,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* time,
+    Real* cell_evec,
+    AMREX_ARLIM_P(cell_eveclo),AMREX_ARLIM_P(cell_evechi), 
+    Real* velx,
+    AMREX_ARLIM_P(velxlo),AMREX_ARLIM_P(velxhi), 
+    Real* vely,
+    AMREX_ARLIM_P(velylo),AMREX_ARLIM_P(velyhi), 
+    Real* velz,
+    AMREX_ARLIM_P(velzlo),AMREX_ARLIM_P(velzhi) );
 
    void fort_stefansolver(
     int* project_option,

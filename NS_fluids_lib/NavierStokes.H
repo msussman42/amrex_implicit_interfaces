@@ -279,6 +279,8 @@ public:
 
     void LSA_save_state_data(int cell_mf,int face_mf,int control_flag_in);
     void LSA_save_state_dataALL(int cell_mf,int face_mf,int control_flag_in);
+    void LSA_default_eigenvector(int cell_mf,int face_mf);
+    void LSA_default_eigenvectorALL(int cell_mf,int face_mf);
 
     void allocate_maccoefALL(int project_option,int nsolve,
 	int create_hierarchy,Real dt_maccoef); //-1,0,1
