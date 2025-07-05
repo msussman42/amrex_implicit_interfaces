@@ -11199,6 +11199,112 @@ void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf,
 
 } //end subroutine LSA_save_state_dataALL
 
+
+void NavierStokes::LSA_default_eigenvector(int cell_mf,int face_mf) {
+
+ std::string local_caller_string="LSA_default_eigenvector";
+
+ int finest_level=parent->finestLevel();
+ int local_control_flag=NULL_CONTROL;
+ int ncomp_total=0;
+ Vector<int> scomp;
+ Vector<int> ncomp;
+ init_boundary(
+   local_control_flag,
+   cell_mf,
+   ncomp_total,
+   scomp,ncomp);
+
+ if (localMF[cell_mf]->nComp()==ncomp_total) {
+  //do nothing
+ } else
+  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+
+ bool use_tiling=ns_tiling;
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[cell_mf]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[cell_mf],use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+  const Real* dx = geom.CellSize();
+
+  FArrayBox& velx=(*localMF[face_mf])[mfi]; 
+  FArrayBox& vely=(*localMF[face_mf+1])[mfi]; 
+  FArrayBox& velz=(*localMF[face_mf+AMREX_SPACEDIM-1])[mfi]; 
+  FArrayBox& cell_evec=(*localMF[cell_mf])[mfi]; 
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  int scomp_size=scomp.size();
+  int ncomp_size=ncomp.size();
+
+   // in: GODUNOV_3D.F90
+  fort_default_evec( 
+   &level,
+   &finest_level,
+   &scomp_size,
+   &ncomp_size,
+   &State_Type,
+   &LS_Type,
+   &DIV_Type,
+   &Solid_State_Type,
+   &Tensor_Type,
+   &Refine_Density_Type,
+   &ncomp_total,
+   scomp.dataPtr(),
+   ncomp.dataPtr(),
+   tilelo,tilehi,
+   fablo,fabhi,&bfact,
+   xlo,dx,
+   &dt_slab,
+   &cur_time_slab,
+   cell_evec.dataPtr(),
+   ARLIM(cell_evec.loVect()),ARLIM(cell_evec.hiVect()),
+   velx.dataPtr(),
+   ARLIM(velx.loVect()),ARLIM(velx.hiVect()),
+   vely.dataPtr(),
+   ARLIM(vely.loVect()),ARLIM(vely.hiVect()),
+   velz.dataPtr(),
+   ARLIM(velz.loVect()),ARLIM(velz.hiVect()));
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_INIT_EVEC,"fort_default_evec"); 
+  //thread_class::sync_tile_d_numPts(),
+  //ParallelDescriptor::ReduceRealSum
+  //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
+
+} // end subroutine LSA_default_eigenvector
+
+void NavierStokes::LSA_default_eigenvectorALL(int cell_mf,int face_mf) {
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.LSA_default_eigenvector(cell_mf,face_mf);
+ } //ilev
+ 
+
+} //end subroutine LSA_default_eigenvectorALL
+
+
+
 // init a new level that did not exist on the previous step.
 // NavierStokes::init is called from: AmrCore::regrid
 //  AmrLevel* a = (*levelbld)(*this,lev,geom[lev],

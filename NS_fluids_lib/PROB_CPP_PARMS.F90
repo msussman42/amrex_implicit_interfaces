@@ -779,6 +779,7 @@ stop
       SUB_CFL_HELPER=>STUB_CFL_HELPER
       SUB_correct_pres_rho_hydrostatic=>STUB_correct_pres_rho_hydrostatic
       SUB_ASSIMILATE=>STUB_ASSIMILATE
+      SUB_INIT_EVAL=>STUB_INIT_EVAL
       SUB_SUMINT=>STUB_SUMINT
       SUB_USER_DEFINED_FORCE=>STUB_USER_DEFINED_FORCE
       SUB_check_vel_rigid=>STUB_check_vel_rigid

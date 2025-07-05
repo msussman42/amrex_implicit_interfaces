@@ -1281,6 +1281,65 @@ integer, INTENT(inout) :: nodemap(3)
 return
 end subroutine STUB_ORDER_NODES
 
+subroutine STUB_INIT_EVAL( &
+  i,j,k,dir, &
+  xpoint,cur_time, &
+  scomp_size, &
+  ncomp_size, &
+  State_Type, &
+  LS_Type, &
+  DIV_Type, &
+  Solid_State_Type, &
+  Tensor_Type, &
+  Refine_Density_Type, &
+  ncomp_total, &
+  scomp_array, &
+  ncomp_array, &
+  local_cell_evec, &
+  local_velx, &
+  local_vely, &
+  local_velz)
+use amrex_fort_module, only : amrex_real
+
+integer, INTENT(in) :: i,j,k,dir
+real(amrex_real), INTENT(in) :: xpoint(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+integer, INTENT(in) :: scomp_size
+integer, INTENT(in) :: ncomp_size
+integer, INTENT(in) :: State_Type
+integer, INTENT(in) :: LS_Type
+integer, INTENT(in) :: DIV_Type
+integer, INTENT(in) :: Solid_State_Type
+integer, INTENT(in) :: Tensor_Type
+integer, INTENT(in) :: Refine_Density_Type
+integer, INTENT(in) :: ncomp_total
+integer, INTENT(in) :: scomp_array(scomp_size)
+integer, INTENT(in) :: ncomp_array(ncomp_size)
+real(amrex_real), INTENT(inout) :: local_cell_evec(ncomp_total)
+real(amrex_real), INTENT(inout) :: local_velx
+real(amrex_real), INTENT(inout) :: local_vely
+real(amrex_real), INTENT(inout) :: local_velz
+
+integer dir_local
+
+if (dir.eq.-1) then
+ do dir_local=1,ncomp_total
+  local_cell_evec(dir_local)=zero
+ enddo
+else if (dir.eq.0) then
+ local_velx=zero
+else if (dir.eq.1) then
+ local_vely=zero
+else if ((dir.eq.2).and.(SDIM.eq.3)) then
+ local_velz=zero
+else
+ print *,"dir invalid in STUB_INIT_EVAL: ",dir
+ stop
+endif
+
+return
+end subroutine STUB_INIT_EVAL
+
 
 subroutine STUB_ASSIMILATE( &
   assimilate_in,assimilate_out,i,j,k,cell_flag)
