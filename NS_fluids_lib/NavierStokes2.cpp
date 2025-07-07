@@ -6279,7 +6279,7 @@ void NavierStokes::process_potential_force_face(
     local_cell_mf,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
-   //LSA_EVEC=dx * normalizedLINF(phi^perturb-phi^no_pert)/dt
+   //LSA_EVEC=evec_delta * dx * normalizedLINF(phi^perturb-phi^no_pert)/dt
    //dst,src,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(*dendata,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
     num_materials*num_state_material,num_materials,1);
