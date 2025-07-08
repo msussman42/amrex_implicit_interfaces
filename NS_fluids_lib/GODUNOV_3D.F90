@@ -12366,11 +12366,16 @@ stop
                expan_new(D_DECL(i,j,k),1) + &
                expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*crit_weight/total_weight
              else
-              print *,"crit_weight invalid"
+              print *,"crit_weight invalid: ",crit_weight
               stop
              endif
+            else if (total_weight.eq.zero) then
+             print *,"total_weight=0 warning (fort_distributeexpansion): ", &
+               total_weight
+             print *,"increase error_buf to remove the warning"
             else
-             print *,"total_weight invalid"
+             print *,"total_weight invalid (fort_distributeexpansion): ", &
+               total_weight
              stop
             endif
 
@@ -12436,11 +12441,16 @@ stop
                expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)* &
                crit_weight/total_weight
              else
-              print *,"crit_weight invalid"
+              print *,"crit_weight invalid: ",crit_weight
               stop
              endif
+            else if (total_weight.eq.zero) then
+             print *,"total_weight=0 warning B(fort_distributeexpansion): ", &
+               total_weight
+             print *,"increase error_buf to remove the warning"
             else
-             print *,"total_weight invalid"
+             print *,"total_weight invalid B(fort_distributeexpansion): ", &
+               total_weight
              stop
             endif
 
@@ -12674,6 +12684,7 @@ stop
           enddo
             
           total_weight=zero
+
           do k_n=stenlo(3),stenhi(3)
           do j_n=stenlo(2),stenhi(2)
           do i_n=stenlo(1),stenhi(1)
@@ -12705,7 +12716,7 @@ stop
           if (total_weight.ge.zero) then
            ! do nothing
           else
-           print *,"total_weight invalid"
+           print *,"total_weight invalid(fort_accept_weight): ",total_weight
            stop
           endif
 
@@ -12740,6 +12751,7 @@ stop
           enddo
             
           total_weight=zero
+
           do k_n=stenlo(3),stenhi(3)
           do j_n=stenlo(2),stenhi(2)
           do i_n=stenlo(1),stenhi(1)
@@ -12770,7 +12782,7 @@ stop
           if (total_weight.ge.zero) then
            ! do nothing
           else
-           print *,"total_weight invalid"
+           print *,"total_weight invalid(fort_accept_weight):",total_weight
            stop
           endif
 

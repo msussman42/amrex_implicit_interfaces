@@ -6665,6 +6665,13 @@ stop
        ! Guard against division zero in the weight calculation
       eps=dxmaxLS*EPS4
 
+      if (eps.gt.zero) then
+       !do nothing
+      else
+       print *,"eps invalid: ",eps
+       stop
+      endif
+
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow_distance,-1)
@@ -6693,7 +6700,8 @@ stop
          endif
   
          call get_iten(im,im_opp,iten)
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+         LL= &
+          get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
 
          if (LL.ne.zero) then
   
@@ -6829,7 +6837,8 @@ stop
                else if (total_weight.eq.zero) then
                 ! do nothing
                else
-                print *,"total_weight invalid"
+                print *,"total_weight invalid fort_extend_burning_vel: ", &
+                  total_weight
                 stop
                endif
               endif ! min(|ls_w|,|ls_i|)<extension width
@@ -6976,6 +6985,13 @@ stop
        ! Guard against division zero in the weight calculation
       eps=dxmaxLS*1.0E-4
 
+      if (eps.gt.zero) then
+       !do nothing
+      else
+       print *,"expecting eps>0: ",eps
+       stop
+      endif
+
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1)
@@ -7115,7 +7131,7 @@ stop
           else if (total_weight.eq.zero) then
            ! do nothing
           else
-           print *,"total_weight invalid"
+           print *,"total_weight invalid fort_extend_drag: ",total_weight
            stop
           endif
          else if (abs(ls_local(im)).gt.extensionwidth) then

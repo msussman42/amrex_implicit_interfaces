@@ -11305,6 +11305,58 @@ void NavierStokes::LSA_default_eigenvectorALL(int cell_mf,int face_mf) {
 
 } //end subroutine LSA_default_eigenvectorALL
 
+
+void NavierStokes::LSA_eigenvector(
+ int unperturb_cell_mf,int unperturb_face_mf,
+ int cell_mf,int face_mf) {
+
+ std::string local_caller_string="LSA_eigenvector";
+
+ int finest_level=parent->finestLevel();
+
+ int local_control_flag=NULL_CONTROL;
+ int ncomp_total=0;
+ Vector<int> scomp;
+ Vector<int> ncomp;
+ init_boundary(
+   local_control_flag,
+   cell_mf,
+   ncomp_total,
+   scomp,ncomp);
+
+ if (localMF[cell_mf]->nComp()==ncomp_total) {
+  //do nothing
+ } else
+  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+
+ for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
+   //ngrow=0
+  localMF[cell_mf]->minus(*localMF[unperturb_cell_mf],scomp,1,0);
+ }
+ for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
+    //scomp parameter=0
+    //nghost=0
+  localMF[face_mf+scomp]->minus(*localMF[unperturb_face_mf+scomp],0,1,0);
+ } 
+
+} // end subroutine LSA_eigenvector
+
+void NavierStokes::LSA_eigenvectorALL(
+ int unperturb_cell_mf,int unperturb_face_mf,
+ int cell_mf,int face_mf) {
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.LSA_eigenvector(unperturb_cell_mf,unperturb_face_mf,
+    cell_mf,face_mf);
+ } //ilev
+ 
+ LSA_normalize_eigenvectorALL(cell_mf,face_mf);
+
+} //end subroutine LSA_eigenvectorALL
+
+
 void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
   Vector<Real> cell_max,Vector<Real> face_max,
   int isweep) {
@@ -11337,48 +11389,34 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
   amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
 
  Vector<Real> scale_parm(ncomp_total);
- for (int dir=0;dir<ncomp_total;dir++)
+ for (int dir=0;dir<ncomp_total;dir++) {
   scale_parm[dir]=0.0;
+ }
  
- Real evec_delta=0.01;
-
  for (int isec=0;isec<scomp_section.size();isec++) {
   if (isec==State_Type) {
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
-    scale_parm[scomp_section[isec]+dir]=evec_delta*velocity_scale;
+    scale_parm[scomp_section[isec]+dir]=velocity_scale;
    }
    for (int im=0;im<num_materials;im++) {
     scale_parm[scomp_section[isec]+STATECOMP_STATES+
-      im*num_state_material+ENUM_DENVAR]=denconst[im]*evec_delta;
-    scale_parm[scomp_section[isec]+STATECOMP_STATES+
-      im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im]*evec_delta;
-    for (int ispec=0;ispec<num_species_var;ispec++)
-     scale_parm[scomp_section[isec]+STATECOMP_STATES+
-      im*num_state_material+ENUM_SPECIESVAR+ispec]=evec_delta;
+      im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im];
    } //im=0 .. nmat-1
   } else if (isec==LS_Type) {
    for (int im=0;im<num_materials;im++) {
-    scale_parm[scomp_section[isec]+im]=evec_delta*dx_finest[0]/dt_slab;
+    scale_parm[scomp_section[isec]+im]=dx_finest[0]/dt_slab;
    }
   } else if (isec==DIV_Type) {
    //do nothing
   } else if (isec==Solid_State_Type) {
    //do nothing
   } else if (isec==Tensor_Type) {
-   for (int dir=0;dir<ncomp[isec];dir++) {
-    scale_parm[scomp_section[isec]+dir]=evec_delta;
-   }
+   //do nothing
   } else if (isec==Refine_Density_Type) {
-   int nparts=im_refine_density_map.size();
-   for (int ipart=0;ipart<nparts;ipart++) {
-    int im=im_refine_density_map[ipart];
-    for (int dir=0;dir<ENUM_NUM_REFINE_DENSITY_TYPE;dir++) {
-     scale_parm[scomp_section[isec]+
-      ipart*ENUM_NUM_REFINE_DENSITY_TYPE+dir]=evec_delta*denconst[im];
-    }
-   } //for (int ipart=0;ipart<nparts;ipart++) 
+   //do nothing
   } else
    amrex::Error("isec invalid");
+
  } // for (int isec=0;isec<scomp_section.size();isec++)
 
  if (isweep==0) {
