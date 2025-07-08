@@ -1419,9 +1419,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
       LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
-//      LSA_eigenvectorALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
-//          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
-//      LSA_normalize_eigenvectorALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+      LSA_eigenvectorALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
+          LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else {

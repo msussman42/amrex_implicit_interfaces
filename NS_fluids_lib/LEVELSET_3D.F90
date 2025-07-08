@@ -16044,6 +16044,7 @@ stop
 
                if (LSA_perturbations_switch.eq.1) then
                  ! perturbations only at t=t^{restart}.
+                 ! delta_phi=O(h/dt)
                  ! u^np1=u^n - dt delta_phi grad H
                  ! phi_t + u dot grad phi = 0  |grad phi|=1
                  ! u^np1=-dt delta_phi grad phi
@@ -16073,7 +16074,8 @@ stop
                   local_face(FACECOMP_FACECUT+1)* &
                   local_face(FACECOMP_FACEDEN+1)
                 else
-                 print *,"local_face(FACECOMP_FACECUT+1) invalid"
+                 print *,"local_face(FACECOMP_FACECUT+1) invalid: ", &
+                   local_face(FACECOMP_FACECUT+1)
                  stop
                 endif
 
