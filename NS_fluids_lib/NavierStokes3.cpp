@@ -3042,9 +3042,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // TENSOR ADVECTION (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
       // extrapolates Q at the end.
-      // LSA_perturbations_switch, LSA_EVEC forcing included too.
-      // LSA_EVEC=TCHAR * normalizedLINF(T^perturb-T^noperturb)
-      // Tnp1=Tn + dt * LSA_EVEC
       tensor_advection_updateALL();
 
       if (step_through_data==1) {
@@ -12676,6 +12673,8 @@ void NavierStokes::veldiffuseALL() {
   // register_mark=unew (1 ghost cell)
  SET_STOKES_MARK(REGISTER_MARK_MF);
 
+// user_defined_momentum_forceALL is declared in: Diffusion.cpp
+//
 // LSA_perturbations_switch, LSA_EVEC forcing included too.
 // LSA_EVEC=UCHAR * normalizedLINF(U^perturb-U^noperturb)
 // Unp1=Un + dt * LSA_EVEC
