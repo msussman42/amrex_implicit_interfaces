@@ -434,6 +434,30 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
 } // omp
  ns_reconcile_d_num(LOOP_USER_DEFINED_MOM_FORCE,"user_defined_mom_force");
 
+ if (LSA_perturbations_switch==false) { 
+  //do nothing
+ } else if (LSA_perturbations_switch==true) { 
+  int local_control_flag=NULL_CONTROL;
+  int local_cell_mf=-1;
+  int ncomp_total=0;
+  Vector<int> scomp;
+  Vector<int> ncomp;
+  init_boundary(
+    local_control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
+
+   //dst+=a*src
+   //dst,a,src,srccomp,dstcomp,numcomp,nghost
+  int dstcomp=STATECOMP_VEL;
+  MultiFab::Saxpy(U_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
+    scomp[State_Type]+dstcomp,dstcomp,AMREX_SPACEDIM,0);
+
+ } else
+  amrex::Error("LSA_perturbations_switch invalid");
+
+
 }  // end subroutine user_defined_momentum_force
 
 

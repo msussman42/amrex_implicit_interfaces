@@ -11312,8 +11312,6 @@ void NavierStokes::LSA_eigenvector(
 
  std::string local_caller_string="LSA_eigenvector";
 
- int finest_level=parent->finestLevel();
-
  int local_control_flag=NULL_CONTROL;
  int ncomp_total=0;
  Vector<int> scomp;
@@ -11329,14 +11327,15 @@ void NavierStokes::LSA_eigenvector(
  } else
   amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
 
- for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
+ for (int scomp_loop=0;scomp_loop<localMF[cell_mf]->nComp();scomp_loop++) {
    //ngrow=0
-  localMF[cell_mf]->minus(*localMF[unperturb_cell_mf],scomp,1,0);
+  localMF[cell_mf]->minus(*localMF[unperturb_cell_mf],scomp_loop,1,0);
  }
- for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
+ for (int scomp_loop=0;scomp_loop<AMREX_SPACEDIM;scomp_loop++) {
     //scomp parameter=0
     //nghost=0
-  localMF[face_mf+scomp]->minus(*localMF[unperturb_face_mf+scomp],0,1,0);
+  localMF[face_mf+scomp_loop]->
+     minus(*localMF[unperturb_face_mf+scomp_loop],0,1,0);
  } 
 
 } // end subroutine LSA_eigenvector
@@ -12796,6 +12795,30 @@ void NavierStokes::make_heat_source() {
  }  // mfi  
 } // omp
  ns_reconcile_d_num(LOOP_HEATSOURCE,"make_heat_source");
+
+ if (LSA_perturbations_switch==false) { 
+  //do nothing
+ } else if (LSA_perturbations_switch==true) { 
+  int local_control_flag=NULL_CONTROL;
+  int local_cell_mf=-1;
+  int ncomp_total=0;
+  Vector<int> scomp;
+  Vector<int> ncomp;
+  init_boundary(
+    local_control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
+  for (int im=0;im<num_materials;im++) {
+    //dst+=a*src
+    //dst,a,src,srccomp,dstcomp,numcomp,nghost
+   int dstcomp=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
+   MultiFab::Saxpy(S_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
+    scomp[State_Type]+dstcomp,dstcomp,1,0);
+  } //im=0 ... nmat-1 
+
+ } else
+  amrex::Error("LSA_perturbations_switch invalid");
 
 }   // end subroutine make_heat_source
 
