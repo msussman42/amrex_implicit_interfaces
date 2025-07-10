@@ -27871,7 +27871,14 @@ end subroutine circleww
 
 subroutine JohnsonCookSoftening( &
  base_yield_stress, &
- T,TM,T0,alpha,ref_eps_p,eps_p,n,yield_stress)
+ T, &
+ TM, & !yield_temperature
+ T0, & !tempconst
+ alpha, &
+ ref_eps_p, & !ref_plastic_strain
+ eps_p, & !plastic_strain_old
+ n, & !yield_n 
+ yield_stress)
 use probcommon_module
 IMPLICIT NONE
 
@@ -27883,7 +27890,7 @@ real(amrex_real), INTENT(out) :: yield_stress
 if (base_yield_stress.gt.zero) then
  !do nothing
 else
- print *,"base_yield_stress invalid"
+ print *,"base_yield_stress invalid: ",base_yield_stress
  stop
 endif
 if (T.le.TM) then
@@ -27906,6 +27913,22 @@ if (T.lt.T0) then
 else if (eps_p.lt.ref_eps_p) then
  yield_stress=base_yield_stress
 else if ((T.ge.T0).and.(eps_p.ge.ref_eps_p)) then
+  ! note: (13) from Tran and Udaykumar, have 
+  ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
+  ! Precisely, see 
+  ! Camacho and Ortiz (1997) (31), (33), and just below (33)
+  ! Also for heating due to fracture: see (16) for Camacho and Ortiz:
+  ! "beta (dot W)^p"
+  ! see also:
+  ! "Plasticity induced heating in the fracture
+  !  and cutting of metals"
+  ! From Zehnder, Potdar, and Bhalla:
+  ! rho c T_t = div(k grad T) - alpha(3 lambda + 2 mu)T0 eps_dot_kk +
+  !   beta sigma_ij eps_dot^p_ij
+  ! 3 lambda + 2mu = 3(bulk modulus)
+  ! reference [5] from that paper:
+  ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
+  ! Cambridge University Press, 1992.
  yield_stress=base_yield_stress*(one- &
   ((T-T0)/(TM-T0))**alpha)* &
   (one+eps_p/ref_eps_p)**(one/n)
@@ -29077,6 +29100,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! "S" from Maire et al corresponds to "Aadvect" times the 
    ! shear modulus.
    ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
+   ! note: (13) from Tran and Udaykumar, have 
+   ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
    call JohnsonCookSoftening( &
     yield_stress, &
     cell_temperature, &
