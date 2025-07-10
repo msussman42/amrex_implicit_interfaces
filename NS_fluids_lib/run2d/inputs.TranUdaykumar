@@ -225,16 +225,17 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 ns.viscoelastic_model=0 3 3 #COMPRESSIBLE
 #ns.viscoelastic_model=0 7 7 #INCOMPRESSIBLE
 
+#fluid, steel, tungsten, biofilm "base_yield_stress"
 ns.yield_stress=0.0 1.50e+10 1.51e+10
 
 #fluid, steel, tungsten, biofilm
-#ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10 #COMPRESSIBLE
-ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
+ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10 #COMPRESSIBLE
+#ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
 ns.yield_alpha=1.2 1.17 1.0 1.2
-#ns.yield_n=1.0e+10 22.0 80.0 1.0e+10 #COMPRESSIBLE
-ns.yield_n=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
-#ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE
-ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE
+ns.yield_n=1.0e+10 22.0 80.0 1.0e+10 #COMPRESSIBLE
+#ns.yield_n=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
+ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE
+#ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE
 ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
 

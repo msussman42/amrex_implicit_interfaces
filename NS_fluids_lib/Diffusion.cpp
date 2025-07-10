@@ -1282,6 +1282,8 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    //declared in: GODUNOV_3D.F90
+   //for E: div( u dot tau )
+   //for e: grad u : tau
   fort_visctensorheat(
    &nsolve,
    &nstate,
