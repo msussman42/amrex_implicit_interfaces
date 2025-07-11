@@ -26,7 +26,17 @@ enddo
 return
 end subroutine mod_bessel_first_kind
 
- 
+! c=f(k)  k=wave number  0< k r_0 < 1
+! page 5860 section 6.5 Popinet 2009  
+! u_t = N(u) + F   (1)
+! N(u) is a nonlinear differential operator.
+! given a base state in which N(u_base)+F=0, we perturb the base state
+! u_perturb=u_base + du e^{beta t} and plug back into (1).
+! beta du e^{beta t} = grad N(u_base) du e^{beta t} + O(du^2)
+! define A=grad N(u_base)
+! beta du = A du + O(du^2)
+! Objective: find the eigenvector "du" with the largest eigenvalue |Re beta|
+! advantage of the power method: no need to explicitly find "A"
 program rayleigh_capillary_growth
 real*8 density,r0,sigma,k,x,I_0,I_1,c,c2
 integer i
