@@ -279,6 +279,9 @@ extern "C"
     Real* zmac,AMREX_ARLIM_P(zmaclo),AMREX_ARLIM_P(zmachi),
     Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
     Real* tensor_old,AMREX_ARLIM_P(toldlo),AMREX_ARLIM_P(toldhi),
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+    Real* dedt,AMREX_ARLIM_P(dedtlo),AMREX_ARLIM_P(dedthi),
+    int* nstate,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -288,6 +291,7 @@ extern "C"
     Real* polymer_factor,
     Real* elastic_viscosity,
     Real* yield_stress,
+    Real* mechanical_to_thermal,
     int* irz,
     const int* bcrec);
 

@@ -8614,6 +8614,9 @@ stop
        zmac,DIMS(zmac), &
        tnew,DIMS(tnew), &
        told,DIMS(told), & !ngrow=1
+       snew,DIMS(snew), &
+       dedt,DIMS(dedt), &
+       nstate, &
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
@@ -8623,6 +8626,7 @@ stop
        polymer_factor, &
        elastic_viscosity, &
        yield_stress, &
+       mechanical_to_thermal, &
        irz, &
        bc) &
       bind(c,name='fort_updatetensor')
@@ -8631,6 +8635,7 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: nstate
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: im_critical
@@ -8645,6 +8650,8 @@ stop
       integer, INTENT(in) :: DIMDEC(zmac)
       integer, INTENT(in) :: DIMDEC(tnew)
       integer, INTENT(in) :: DIMDEC(told)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(dedt)
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       integer :: growlo(3), growhi(3)
@@ -8688,6 +8695,15 @@ stop
         told(DIMV(told),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
+
+      real(amrex_real), INTENT(inout), target :: &
+              snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+              dedt(DIMV(dedt))
+      real(amrex_real), pointer :: dedt_ptr(D_DECL(:,:,:))
+
       real(amrex_real) :: cell_temperature
 
       integer :: i,j,k
@@ -8700,6 +8716,7 @@ stop
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
       real(amrex_real), INTENT(in) :: yield_stress
+      real(amrex_real), INTENT(in) :: mechanical_to_thermal
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -8711,6 +8728,13 @@ stop
       integer, parameter :: remove_checkerboard=1
 
       tnew_ptr=>tnew
+      snew_ptr=>snew
+      dedt_ptr=>dedt
+
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid: ",nstate
+       stop
+      endif
 
       if (irz.ne.levelrz) then
        print *,"irz invalid"
@@ -8741,6 +8765,12 @@ stop
        ! do nothing
       else
        print *,"yield_stress invalid: ",yield_stress
+       stop
+      endif
+      if (mechanical_to_thermal.ge.zero) then
+       ! do nothing
+      else
+       print *,"mechanical_to_thermal invalid: ",mechanical_to_thermal
        stop
       endif
 
@@ -8807,6 +8837,9 @@ stop
 
       told_ptr=>told
       call checkbound_array(fablo,fabhi,told_ptr,1,-1)
+
+      call checkbound_array(fablo,fabhi,snew_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,dedt_ptr,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
