@@ -2105,6 +2105,8 @@ protected:
 
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
     static Vector<Real> yield_stress; // viscoelastic parameter
+    static Vector<Real> mechanical_to_thermal; // viscoelastic parameter
+
      // for freezing:
      // 1. nonlinear advection
      // 2. calculate mass flux at the liquid/ice interface

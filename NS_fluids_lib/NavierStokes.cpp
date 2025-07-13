@@ -549,8 +549,9 @@ Vector<int> NavierStokes::les_model; // def=0
 Vector<int> NavierStokes::store_elastic_data;//def=0,0...num_materials-1
 Vector<int> NavierStokes::store_refine_density_data;//def=0,0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
-Vector<Real> NavierStokes::yield_stress; // def=0
-Vector<Real> NavierStokes::static_damping_coefficient; // def=0
+Vector<Real> NavierStokes::yield_stress; // def=0.0
+Vector<Real> NavierStokes::mechanical_to_thermal; // def=0.0
+Vector<Real> NavierStokes::static_damping_coefficient; // def=0.0
 
 Vector<Real> NavierStokes::Carreau_alpha; // def=1
 Vector<Real> NavierStokes::Carreau_beta; // def=0
@@ -1491,11 +1492,13 @@ void fortran_parameters() {
 
  Vector<Real> elastic_viscosity_temp;
  Vector<Real> yield_stress_temp;
+ Vector<Real> mechanical_to_thermal_temp;
  Vector<Real> elastic_time_temp;
  Vector<int> viscoelastic_model_temp;
 
  elastic_viscosity_temp.resize(NavierStokes::num_materials);
  yield_stress_temp.resize(NavierStokes::num_materials);
+ mechanical_to_thermal_temp.resize(NavierStokes::num_materials);
  elastic_time_temp.resize(NavierStokes::num_materials);
  viscoelastic_model_temp.resize(NavierStokes::num_materials);
 
@@ -1506,6 +1509,7 @@ void fortran_parameters() {
 
   elastic_viscosity_temp[im]=0.0;
   yield_stress_temp[im]=0.0;
+  mechanical_to_thermal_temp[im]=0.0;
   elastic_time_temp[im]=0.0;
   viscoelastic_model_temp[im]=0;
 
@@ -1519,6 +1523,8 @@ void fortran_parameters() {
   yield_stress_temp[im]=elastic_viscosity_temp[im];
  }
  pp.queryAdd("yield_stress",yield_stress_temp,
+   NavierStokes::num_materials);
+ pp.queryAdd("mechanical_to_thermal",mechanical_to_thermal_temp,
    NavierStokes::num_materials);
 
  pp.queryAdd("elastic_time",elastic_time_temp,NavierStokes::num_materials);
@@ -2331,6 +2337,7 @@ void fortran_parameters() {
   viscosity_state_model_temp.dataPtr(),
   elastic_viscosity_temp.dataPtr(),
   yield_stress_temp.dataPtr(),
+  mechanical_to_thermal_temp.dataPtr(),
   elastic_time_temp.dataPtr(),
   viscoelastic_model_temp.dataPtr(),
   NavierStokes::store_elastic_data.dataPtr(),
@@ -3615,6 +3622,7 @@ NavierStokes::read_params ()
 
     elastic_viscosity.resize(num_materials);
     yield_stress.resize(num_materials);
+    mechanical_to_thermal.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
     store_elastic_data.resize(num_materials);
     store_refine_density_data.resize(num_materials);
@@ -3622,6 +3630,7 @@ NavierStokes::read_params ()
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
      yield_stress[im]=0.0;
+     mechanical_to_thermal[im]=0.0;
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
      store_refine_density_data[im]=0;
@@ -3632,6 +3641,7 @@ NavierStokes::read_params ()
      yield_stress[im]=elastic_viscosity[im];
     }
     pp.queryAdd("yield_stress",yield_stress,num_materials);
+    pp.queryAdd("mechanical_to_thermal",mechanical_to_thermal,num_materials);
 
     viscoelastic_model.resize(num_materials);
     for (int i=0;i<num_materials;i++)
@@ -5383,6 +5393,8 @@ NavierStokes::read_params ()
       amrex::Error("elastic_time/elastic_viscosity invalid read_params");
      if (yield_stress[i]<0.0)
       amrex::Error("yield_stress invalid read_params");
+     if (mechanical_to_thermal[i]<0.0)
+      amrex::Error("mechanical_to_thermal invalid read_params");
 
      // (1/L) eps=0.01
      // 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
@@ -5511,6 +5523,8 @@ NavierStokes::read_params ()
        std::cout << "etaS=etaL0-etaP0= " << etaS[i] << '\n';
        std::cout << "elastic_viscosity= " << elastic_viscosity[i] << '\n';
        std::cout << "yield_stress= " << yield_stress[i] << '\n';
+       std::cout << "mechanical_to_thermal= " << 
+         mechanical_to_thermal[i] << '\n';
        std::cout << "store_elastic_data= " << store_elastic_data[i] << '\n';
        std::cout << "elastic_time= " << elastic_time[i] << '\n';
       }
@@ -13282,12 +13296,19 @@ void NavierStokes::tensor_advection_update() {
  debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
+ if (localMF[CELL_DEDT_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
  debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
  if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
   amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=STATE_NCOMP;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
 
  MultiFab* EOSdata=getStateDen(1,cur_time_slab);
 
@@ -13403,6 +13424,9 @@ void NavierStokes::tensor_advection_update() {
        FArrayBox& tendata=(*tendata_mf)[mfi];
        FArrayBox& eosfab=(*EOSdata)[mfi];
 
+       FArrayBox& snewfab=S_new[mfi];
+       FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
+
        Vector<int> velbc=getBCArray(State_Type,gridno,
         STATECOMP_VEL,STATE_NCOMP_VEL);
 
@@ -13440,6 +13464,9 @@ void NavierStokes::tensor_advection_update() {
          tensor_source_mf_fab.dataPtr(),
          ARLIM(tensor_source_mf_fab.loVect()),
          ARLIM(tensor_source_mf_fab.hiVect()),
+         snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+         DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
+         &nstate,
          tilelo,tilehi,
          fablo,fabhi,
          &bfact, 
@@ -13449,6 +13476,7 @@ void NavierStokes::tensor_advection_update() {
          &polymer_factor[im],
          &elastic_viscosity[im],
          &yield_stress[im],
+         &mechanical_to_thermal[im],
          &NS_geometry_coord,
          velbc.dataPtr());
        } else {
