@@ -27970,6 +27970,7 @@ subroutine point_updatetensor( &
  polymer_factor, &
  elastic_viscosity, &
  yield_stress, &
+ plastic_work, &
  irz, &
  bc) 
 
@@ -28059,6 +28060,7 @@ real(amrex_real) one_over_den_local
 real(amrex_real) r_hoop
 
 real(amrex_real) plastic_strain_old,plastic_strain_dot
+real(amrex_real), intent(out) :: plastic_work
 
 integer force_unity_determinant
 integer unity_det
@@ -28817,6 +28819,7 @@ enddo
 
 plastic_strain_old=told(ENUM_NUM_TENSOR_TYPE_BASE+1)
 plastic_strain_dot=zero
+plastic_work=zero
 
 Q(2,1)=Q(1,2)
 Q(3,1)=Q(1,3)
@@ -29111,9 +29114,10 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     fort_ref_plastic_strain(im_critical+1), &
     plastic_strain_old, &
     fort_yield_n(im_critical+1), &
-    gamma_not)
+    gamma_not) !"yield_stress" intent(out)
  
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
+    !magA=sqrt(A:A)
    f_plastic=magA-Y_plastic_parm_scaled
    do ii=1,3
    do jj=1,3
@@ -29123,15 +29127,33 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
      Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
+      !CamachoOrtiz1995 equation (31)
+      !sigma/g = (f_plastic+Y_plastic_parm_scaled)/Y_plastic_parm_scaled
+      ! = f_plastic/Y_plastic_parm_scaled + 1 = magA/Y_plastic_parm_scaled
      plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
        ((f_plastic/Y_plastic_parm_scaled+one)** &
        fort_yield_m(im_critical+1)-one)
+
+      ! (16) from Camacho and Ortiz.
+      ! just below (11) in Tran and Udaykumar.
+      ! !magA=sqrt(A:A)
+     plastic_work=fort_mechanical_to_thermal(im_critical+1)* &
+        plastic_strain_dot*magA*sqrt(3.0d0/2.0d0)*elastic_viscosity
+
      if (plastic_strain_dot.ge.zero) then
       !do nothing
      else
       print *,"plastic_strain_dot out of range ",plastic_strain_dot
       stop
      endif
+     if (plastic_work.ge.zero) then
+      !do nothing
+     else
+      print *,"plastic_work out of range ",plastic_work
+      stop
+     endif
+
+
     else
      print *,"f_plastic or NP_dotdot_D invalid"
      print *,"f_plastic=",f_plastic
