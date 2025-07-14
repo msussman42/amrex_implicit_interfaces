@@ -8717,6 +8717,7 @@ stop
       real(amrex_real), INTENT(in) :: elastic_viscosity
       real(amrex_real), INTENT(in) :: yield_stress
       real(amrex_real), INTENT(in) :: mechanical_to_thermal
+      real(amrex_real) :: plastic_work
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -9081,6 +9082,7 @@ stop
          polymer_factor, &
          elastic_viscosity, &
          yield_stress, &
+         plastic_work, &
          irz, &
          bc) 
 
