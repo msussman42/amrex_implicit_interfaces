@@ -8718,6 +8718,9 @@ stop
       real(amrex_real), INTENT(in) :: yield_stress
       real(amrex_real), INTENT(in) :: mechanical_to_thermal
       real(amrex_real) :: plastic_work
+      real(amrex_real) :: plastic_work_average
+      real(amrex_real) :: plastic_work_weight
+      integer :: tcomp
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -8849,6 +8852,9 @@ stop
       do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       plastic_work_average=zero
+       plastic_work_weight=zero
 
        krefine=0
 #if (AMREX_SPACEDIM==3)
@@ -9086,6 +9092,16 @@ stop
          irz, &
          bc) 
 
+        if (plastic_work.ge.zero) then
+         !do nothing
+        else
+         print *,"plastic_work invalid: ",plastic_work
+         stop
+        endif
+
+        plastic_work_average=plastic_work_average+plastic_work
+        plastic_work_weight=plastic_work_weight+one
+
         do dir_local=1,ENUM_NUM_TENSOR_TYPE
          tnew(D_DECL(i,j,k), &
           (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)= &
@@ -9098,6 +9114,23 @@ stop
        enddo !krefine
 #endif
 
+       if (plastic_work_weight.gt.zero) then
+        plastic_work_average=plastic_work_average/plastic_work_weight
+        tcomp=STATECOMP_STATES+im_critical*num_state_material+ &
+         ENUM_TEMPERATUREVAR+1
+         ! rho cv DT/Dt = beta W_p^dot
+        if (dedt(D_DECL(i,j,k)).ge.zero) then
+         snew(D_DECL(i,j,k),tcomp)=snew(D_DECL(i,j,k),tcomp)+dt* &
+          plastic_work_average*dedt(D_DECL(i,j,k))
+        else
+         print *,"dedt(D_DECL(i,j,k)) invalid: ",dedt(D_DECL(i,j,k))
+         stop
+        endif
+       else
+        print *,"plastic_work_weight invalid: ",plastic_work_weight
+        stop
+       endif
+ 
       enddo !i
       enddo !j
       enddo !k

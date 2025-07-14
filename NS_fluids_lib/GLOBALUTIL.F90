@@ -29153,7 +29153,6 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
       stop
      endif
 
-
     else
      print *,"f_plastic or NP_dotdot_D invalid"
      print *,"f_plastic=",f_plastic
