@@ -227,6 +227,7 @@ ns.viscoelastic_model=0 3 3 #COMPRESSIBLE
 
 #fluid, steel, tungsten, biofilm "base_yield_stress"
 ns.yield_stress=0.0 1.50e+10 1.51e+10
+ns.mechanical_to_thermal=0.0 0.9 0.9
 
 #fluid, steel, tungsten, biofilm
 ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10 #COMPRESSIBLE
