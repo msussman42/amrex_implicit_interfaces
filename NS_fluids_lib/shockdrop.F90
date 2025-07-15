@@ -10,6 +10,7 @@
 #include "AMReX_ArrayLim.H"
 #include "EXTRAP_COMP.H"
 
+! MARCO USES inputs3d.nwave probtype=395
 #define shockdrop_PROB_TYPE 3001
 
 #if (AMREX_SPACEDIM==3)
