@@ -597,7 +597,7 @@ stop
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin invalid"
+       print *,"dxmin invalid: ",dxmin
        stop
       endif
 
@@ -612,15 +612,15 @@ stop
       totaludotn=zero
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid initheightLS"
+       print *,"level invalid initheightLS: ",level
        stop
       endif
       if ((side.ne.1).and.(side.ne.-1)) then
-       print *,"side invalid"
+       print *,"side invalid: ",side
        stop
       endif
       if ((signside.ne.1).and.(signside.ne.-1)) then
-       print *,"signside invalid"
+       print *,"signside invalid: ",signside
        stop
       endif
       if (bfact.lt.1) then
@@ -641,7 +641,7 @@ stop
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid31"
+       print *,"im invalid31: ",im
        stop
       endif
       if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
@@ -695,7 +695,7 @@ stop
        klo_sten_ht=0
        khi_sten_ht=0
       else
-       print *,"dimension bust"
+       print *,"dimension bust: ",SDIM
        stop
       endif
 
@@ -774,7 +774,8 @@ stop
        if (xcenter(1).gt.zero) then
         ! do nothing
        else
-        print *,"expectimg xcenter(1)>0 for RZ or RT initheightLS"
+        print *,"expecting xcenter(1)>0 for RZ or RT initheightLS: ", &
+          xcenter(1)
         stop
        endif
 
@@ -863,7 +864,7 @@ stop
        ! do nothing
       else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
-        print *,"dimension bust"
+        print *,"dimension bust: ",SDIM
         stop
        endif
        if (xcenter(1).gt.zero) then
@@ -1000,7 +1001,7 @@ stop
       endif
 
       if (num_materials.eq.1) then
-       print *,"num_materials==1 not supported"
+       print *,"num_materials==1 not supported: ",num_materials
        stop
       else if (num_materials.eq.2) then
        if (im3.ne.0) then
@@ -1040,7 +1041,7 @@ stop
           gamma1=half*(one-cos_angle)
           gamma2=half*(one+cos_angle)
          else
-          print *,"use_DCA invalid"
+          print *,"use_DCA invalid: ",use_DCA
           stop
          endif 
 
@@ -1158,7 +1159,7 @@ stop
           else if (local_index(dir2).eq.0) then
            local_x(dir2)=xsten(0,dir2)
           else
-           print *,"local_index invalid"
+           print *,"local_index invalid: ",local_index
            stop
           endif
          enddo !dir2=1,SDIM
@@ -1205,7 +1206,7 @@ stop
           kofs=1
           RR=one
          else
-          print *,"dir2 invalid"
+          print *,"dir2 invalid: ",dir2
           stop
          endif 
 
@@ -1262,7 +1263,7 @@ stop
        itan=1
        jtan=2
       else
-       print *,"dircrit invalid"
+       print *,"dircrit invalid: ",dircrit
        stop
       endif
 
@@ -1275,7 +1276,7 @@ stop
         do while (xsten(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
          if (2*lmin.gt.2*ngrow_distance+1) then
-          print *,"lmin too big"
+          print *,"lmin too big: ",lmin
           stop
          endif
         enddo
@@ -1301,7 +1302,7 @@ stop
         ! do nothing
        else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
-         print *,"dimension bust"
+         print *,"dimension bust: ",SDIM
          stop
         endif
         if (itan.eq.1) then ! vertical columns
@@ -1316,10 +1317,11 @@ stop
          !do nothing
         else
          print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
+         print *,"xsten=",xsten
          stop
         endif
        else
-        print *,"levelrz invalid initheight ls 4"
+        print *,"levelrz invalid initheight ls 4: ",levelrz
         stop
        endif
       
@@ -1369,13 +1371,13 @@ stop
          if (kcell.eq.0) then
           ! do nothing
          else
-          print *,"expecting kcell=0"
+          print *,"expecting kcell=0: ",kcell
           stop
          endif
         else if (SDIM.eq.3) then
          ! do nothing
         else
-         print *,"SDIM invalid"
+         print *,"SDIM invalid: ",SDIM
          stop
         endif 
 
@@ -1905,7 +1907,7 @@ stop
           stop
          endif 
 
-         if (1.eq.1) then
+         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
           print *,"im,im_opp,im3: ",im,im_opp,im3
           print *,"master_normal=",master_normal 
           print *,"normal_im3=",normal_im3 
@@ -2102,7 +2104,7 @@ stop
          cell_lo(dir2)=0
          cell_hi(dir2)=1
         else
-         print *,"node_index invalid"
+         print *,"node_index invalid: ",node_index
          stop
         endif
        enddo ! dir2=1..sdim
@@ -2127,6 +2129,9 @@ stop
           pm_val=one
          else
           print *,"cell_lo or cell_hi invalid"
+          print *,"cell_index ",cell_index
+          print *,"cell_lo ",cell_lo
+          print *,"cell_hi ",cell_hi
           stop
          endif
 
@@ -2148,7 +2153,7 @@ stop
         else if (SDIM.eq.3) then
          ! do nothing
         else
-         print *,"dimension bust"
+         print *,"dimension bust: ",SDIM
          stop
         endif
         imhold=im_primary_sten(i,j,k)
@@ -2194,7 +2199,7 @@ stop
         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
          ! do nothing
         else
-         print *,"dir2 invalid"
+         print *,"dir2 invalid: ",dir2
          stop
         endif
         gx=two/(RR*wtnode*dxsten(dir2))
@@ -2225,7 +2230,7 @@ stop
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid LEVELSET_3D.F90 2119"
+        print *,"mag invalid LEVELSET_3D.F90 2119: ",mag
         stop
        endif
        
@@ -2333,7 +2338,7 @@ stop
           RR=one
          else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
-           print *,"dimension bust"
+           print *,"dimension bust: ",SDIM
            stop
           endif
           RR=one
@@ -2367,7 +2372,7 @@ stop
         else if (SDIM.eq.3) then
          maxcurv=two*maxcurv
         else
-         print *,"sdim invalid"
+         print *,"sdim invalid: ",SDIM
          stop
         endif     
        else if ((levelrz.eq.COORDSYS_RZ).or. &
