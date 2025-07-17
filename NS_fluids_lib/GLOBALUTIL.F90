@@ -21638,7 +21638,7 @@ end subroutine print_visual_descriptor
       if (rhobar.ge.0.001) then
        !do nothing
       else
-       print *,"rhobar invalid in eos tait rho"
+       print *,"rhobar invalid in eos tait rho: ",rhobar
        stop
       endif
 
@@ -21647,13 +21647,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        !do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid: ",rho
        stop
       endif
       if (internal_energy.gt.zero) then
        !do nothing
       else
-       print *,"e invalid"
+       print *,"e invalid (internal_energy) ",internal_energy
        stop
       endif
 
@@ -23519,12 +23519,65 @@ end subroutine print_visual_descriptor
 !
 ! for SF6, R=56.92 m^2/(s^2 K)=0.05692D+7 cm^2/(s^2 K)
 
+        !see ``A level set approach to Eulerian-Lagrangian Coupling''
+        !Arienti, Hung, Morano, Shepherd
+        !see Appendix C ``perfect gas analytical solutions''
+        !Joeseph E. Shepherd
+        !The dynamics and thermodynamics of Compressible Flow
+        !Ascher H. Shapiro
+        !material_type=5
+      subroutine postshock_air(Mn,rho1,T1,rho2,T2,P2)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: Mn,rho1,T1
+      real(amrex_real), intent(out) :: rho2,T2,P2
+      real(amrex_real) :: cv,gamma_constant,gap1,R,P1,Msq,omega
+
+      ! check compatibility with gas EOS
+      if (Mn.ge.1d0) then
+       ! do nothing
+      else
+       print *,"ERROR - postshock_air: Mn",Mn
+       stop
+      endif
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+
+      gap1 = one+gamma_constant
+      Msq=Mn*Mn
+      P1=R*rho1*T1
+      rho2=rho1/((gamma_constant-one)/gap1+two/gap1/Msq)
+      P2=P1*(one+two*gamma_constant/gap1*(Msq-one))
+      T2=P2/rho2/R
+
+      return
+      end subroutine postshock_air
+
+      subroutine vnpostshock_air(T1,Mn,vn)
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: T1,Mn
+      real(amrex_real), intent(out) :: vn
+      real(amrex_real) :: cn
+      REAL_T cv,gamma_constant,R,omega,cp
+
+      call air_parms(R,cp,cv,gamma_constant,omega)
+
+      cn=sqrt(gamma_constant*R*T1)
+      vn=cn*(Mn-two/(gamma_constant+one)*(Mn-one/Mn))
+
+      return
+      end subroutine vnpostshock_air
+
         !material_type=5
       subroutine EOS_air(rho,internal_energy,pressure)
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,internal_energy,gamma_constant,pressure
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: pressure
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,omega
 
       call air_parms(R,cp,cv,gamma_constant,omega)
