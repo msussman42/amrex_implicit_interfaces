@@ -65,16 +65,22 @@ real(amrex_real) :: time_data(n_data) !ms
 
 CONTAINS
 
-
+!stateIndex=1 U
+!stateIndex=2 V
+!stateIndex=3 rho
+!stateIndex=4 e
+!stateIndex=5 T
+!stateIndex=6 p
 subroutine N_wave_solution(time,x,y,z,T_o,Mn1,shockAngle,stateIndex,preState,postState,dState_dt)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
       real(amrex_real) dx(SDIM)
       real(amrex_real) time
       real(amrex_real) x,y,z
       real(amrex_real) deltaP,T_o,shockAngle,shockAngle2
-      real(amrex_real) P1,T1,Gamma,GammaP1,c1,e1,rho1
+      real(amrex_real) P1,T1,Gamma_constant,GammaP1,c1,e1,rho1
       real(amrex_real) M1,Mn1,Mn2
       real(amrex_real) Db,Rb,Lb,Fw
       real(amrex_real) U2,V2,rho2,e2,P2,T2
@@ -100,16 +106,18 @@ IMPLICIT NONE
       !Pre-shock conditions
       P1 = inflow_pressure
       T1 = fort_tempconst(2)
-      Gamma = 1.4d0
-      GammaP1 = Gamma + 1.0d0
-!      call SOUNDSQR_air(T1,c1)
+      Gamma_constant = 1.4d0
+      GammaP1 = Gamma_constant + 1.0d0
+      rho1=fort_denconst(2)
+      call INTERNAL_air(rho1,T1,e1)
+      call SOUNDSQR_air(rho1,e1,c1)
       c1=sqrt(c1)
 
-      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
+      deltaP = P1 * 2.0**(0.25) * Gamma_constant*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
 
       P2 = P1 + deltaP
 
-      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma_constant) + 1.0d0) ** 0.5
       shockAngle = asin(Mn1/M1)
 
       T_o = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.31)**0.25
@@ -117,10 +125,10 @@ IMPLICIT NONE
 
       rho1 = fort_denconst(2)
       T1 = fort_tempconst(2)
-!      call INTERNAL_air(rho1,T1,e1)
-!      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
-!      call INTERNAL_air(rho2,T2,e2)
-!      call vnpostshock_air(T1,Mn1,vn)
+      call INTERNAL_air(rho1,T1,e1)
+      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
+      call INTERNAL_air(rho2,T2,e2)
+      call vnpostshock_air(T1,Mn1,vn)
       vt=c1*radblob2*cos(shockAngle)
       V2 = 0.0d0
       U2 = Mn1 * c1 - vn
@@ -179,10 +187,11 @@ IMPLICIT NONE
       real(amrex_real) x,y,z
       real(amrex_real) deltaP,T_o,shockAngle,dpdt
 
-      real(amrex_real) P1,T1,Gamma,GammaP1,c1
+      real(amrex_real) P1,T1,Gamma_constant,GammaP1,c1
       real(amrex_real) M1,Mn1
       real(amrex_real) Db,Lb,Rb,Fw
 
+      real(amrex_real) rho1,e1
       real(amrex_real) P2,T2
 
       !Bullet dimensions
@@ -200,16 +209,18 @@ IMPLICIT NONE
       P1 = inflow_pressure
 
       T1 = fort_tempconst(2)
-      Gamma = 1.4d0
-      GammaP1 = Gamma + 1.0d0
-!      call SOUNDSQR_air(T1,c1)
+      rho1 = fort_denconst(2)
+      call INTERNAL_air(rho1,T1,e1)
+      Gamma_constant = 1.4d0
+      GammaP1 = Gamma_constant + 1.0d0
+      call SOUNDSQR_air(rho1,e1,c1)
       c1=sqrt(c1)
 
-      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
+      deltaP = P1 * 2.0**(0.25) * Gamma_constant*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
 
       P2 = P1 + deltaP
 
-      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma_constant) + 1.0d0) ** 0.5
       shockAngle = asin(Mn1/M1)
 
 return
@@ -223,7 +234,7 @@ IMPLICIT NONE
       real(amrex_real) time    
       real(amrex_real) x,y,z
       real(amrex_real) deltaP,T_o,shockAngle,shockAngle2
-      real(amrex_real) P1,T1,Gamma,GammaP1,c1,e1,rho1
+      real(amrex_real) P1,T1,Gamma_constant,GammaP1,c1,e1,rho1
       real(amrex_real) M1,Mn1,Mn2
       real(amrex_real) Db,Rb,Lb,Fw
       real(amrex_real) U2,V2,rho2,e2,P2,T2
@@ -249,16 +260,18 @@ IMPLICIT NONE
       !Pre-shock conditions
       P1 = inflow_pressure
       T1 = fort_tempconst(2)
-      Gamma = 1.4d0
-      GammaP1 = Gamma + 1.0d0
-!      call SOUNDSQR_air(T1,c1)
+      Gamma_constant = 1.4d0
+      GammaP1 = Gamma_constant + 1.0d0
+      rho1=fort_denconst(2)
+      call INTERNAL_air(rho1,T1,e1)
+      call SOUNDSQR_air(rho1,e1,c1)
       c1=sqrt(c1)
 
-      deltaP = P1 * 2.0**(0.25) * Gamma*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.5)**(-.75)
+      deltaP = P1 * 2.0**(0.25) * Gamma_constant*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.5)**(-.75)
 
       P2 = P1 + deltaP
 
-      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma) + 1.0d0) ** 0.5
+      Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma_constant) + 1.0d0) ** 0.5
       shockAngle = asin(Mn1/M1)
 
       T_o = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.5)**0.25
@@ -266,10 +279,10 @@ IMPLICIT NONE
 
       rho1 = fort_denconst(2)
       T1 = fort_tempconst(2)
-!      call INTERNAL_air(rho1,T1,e1)
-!      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
-!      call INTERNAL_air(rho2,T2,e2)
-!      call vnpostshock_air(T1,Mn1,vn)
+      call INTERNAL_air(rho1,T1,e1)
+      call postshock_air(Mn1,rho1,T1,rho2,T2,P2)
+      call INTERNAL_air(rho2,T2,e2)
+      call vnpostshock_air(T1,Mn1,vn)
       vt=c1*radblob2*cos(shockAngle)
       U2=c1*radblob2-vn*sin(shockAngle)-vt*cos(shockAngle)
       V2=-vn*cos(shockAngle)+vt*sin(shockAngle)
@@ -346,7 +359,16 @@ shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 ! shockdrop_M0=3.0
 ! shockdrop_M0=1.17
 ! shockdrop_M0=1.0017
-shockdrop_M0=vinletgas
+if ((axis_dir.eq.150).or. &
+    (axis_dir.eq.151).or. &
+    (axis_dir.eq.152)) then
+ shockdrop_M0=vinletgas
+else if (axis_dir.eq.153) then
+ shockdrop_M0=radblob2
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
 
 if (shockdrop_M0.gt.one) then
  !do nothing
@@ -355,8 +377,18 @@ else
  stop
 endif
 
-shockdrop_T0=278.0d0 !tempconst(2)
-shockdrop_DEN0=0.00125335272d0 !denconst(2)
+if ((axis_dir.eq.150).or. &
+    (axis_dir.eq.151).or. &
+    (axis_dir.eq.152)) then
+ shockdrop_T0=278.0d0 !tempconst(2)
+ shockdrop_DEN0=0.00125335272d0 !denconst(2)
+else if (axis_dir.eq.153) then
+ shockdrop_T0=300.0d0 !tempconst(2)
+ shockdrop_DEN0=0.00102 !denconst(2)
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
 
 if (abs(shockdrop_DEN0-fort_denconst(2)).le.EPS6) then
  !do nothing
@@ -692,10 +724,44 @@ if (ls_local.ge.zero) then ! liquid
  pres=shockdrop_P0
 else
  call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
- if (ls_local.ge.zero) then  ! upstream (above the approaching shock)
-  pres=shockdrop_P0
+
+ if ((axis_dir.eq.150).or. &
+     (axis_dir.eq.151).or. &
+     (axis_dir.eq.152)) then
+  if (ls_local.ge.zero) then  ! upstream (above the approaching shock)
+   pres=shockdrop_P0
+  else
+   pres=shockdrop_P1
+  endif
+
+ else if (axis_dir.eq.153) then !Arienti shock sphere
+
+    !stateIndex=6 p
+  call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,6,p1,p2,dpdt)
+  rho1=fort_denconst(2)
+  call INTERNAL_air(rho1,fort_tempconst(2),e1)
+  call SOUNDSQR_air(rho1,e1,c1sqr)
+  Tcross = (x(1) - (xblob2))/(sqrt(c1sqr)*Mn)
+  Tcross2 = Tcross + To
+  Tcross3 = Tcross2 + To * xblob4
+
+  if (t.lt.Tcross) then
+   ! pre-shock conditions
+   pres = inflow_pressure
+  else if (t.lt.Tcross2) then
+   ! post-shock conditions
+   pres = p2 + dpdt * (t-Tcross)
+  else if (t.lt.Tcross3) then
+   ! re-compression
+   p2  = p2 + dpdt * (Tcross2-Tcross)
+   pres = p2 - dpdt * (t-Tcross2) / (2.0*xblob4)*yblob4
+  else
+   pres = inflow_pressure
+  endif
+
  else
-  pres=shockdrop_P1
+  print *,"axis_dir invalid: ",axis_dir
+  stop
  endif
 endif 
 
@@ -724,11 +790,46 @@ if (LS.ge.zero) then ! liquid
  den=shockdrop_DEN0
 else
  call shockdrop_shockLS(x,y,z,LS)
- if (LS.ge.zero) then  ! upstream (above the shock)
-  den=shockdrop_DEN0
+
+ if ((axis_dir.eq.150).or. &
+     (axis_dir.eq.151).or. &
+     (axis_dir.eq.152)) then
+
+  if (LS.ge.zero) then  ! upstream (above the shock)
+   den=shockdrop_DEN0
+  else
+   den=shockdrop_DEN1
+  endif
+
+ else if (axis_dir.eq.153) then !Arienti shock sphere
+
+  call N_wave_solution(t,x,y,z,To,Mn,shockAngle,3, &
+    preState,postState,dState_dt)
+  rho1=fort_denconst(2)
+  call INTERNAL_air(rho1,fort_tempconst(2),e1)
+  call SOUNDSQR_air(rho1,e1,c1sqr)
+  Tcross = (x - (xblob2))/(sqrt(c1sqr)*Mn)
+  Tcross2 = Tcross + To
+  Tcross3 = Tcross2 + To * xblob4
+  if(t.lt.Tcross) then
+   ! pre-shock conditions
+   den = preState
+  else if (t.lt.Tcross2)then
+   ! post-shock conditions
+   den = postState + dState_dt * (time-Tcross)
+  else if (t.lt.Tcross3)then
+   ! re-compression
+   den = postState + dState_dt * (Tcross2-Tcross)
+   den = den - dState_dt * (time-Tcross2) / (2.0*xblob4)*yblob4
+  else
+   den = preState
+  endif
+
  else
-  den=shockdrop_DEN1
+  print *,"axis_dir invalid: ",axis_dir
+  stop
  endif
+
 endif 
 
 return
@@ -792,7 +893,13 @@ endif
 if ((axis_dir.eq.150).or. &
     (axis_dir.eq.151).or. &
     (axis_dir.eq.152)) then
+
+! downstream vel>0    shock-->   upstream vel=0
+! in shock frame of reference:
+! (subsonic)downstream<-   shock vel=0  (supersonic)upstream <--
  LS=z-zblob2
+else if (axis_dir.eq.153) then !Arienti shock sphere
+ LS=x-xblob2
 else
  print *,"axis_dir invalid: ",axis_dir
  stop
@@ -1158,7 +1265,7 @@ enddo !dir=1..sdim
 if ((num_materials.ge.2).and. &
     (probtype.eq.shockdrop_PROB_TYPE)) then
 
- if ((axis_dir.ge.150).and.(axis_dir.le.152)) then
+ if ((axis_dir.ge.150).and.(axis_dir.le.153)) then
 
   ii=0
   jj=0
@@ -1201,6 +1308,9 @@ if ((num_materials.ge.2).and. &
   else if (axis_dir.eq.152) then
    !shock cylinder
    P_diff=zero
+  else if (axis_dir.eq.153) then
+   !shock sphere (Arienti)
+   P_diff=zero
   else
    print *,"axis_dir invalid: ",axis_dir
    stop
@@ -1211,19 +1321,36 @@ if ((num_materials.ge.2).and. &
    mag=mag+(local_x(SDIM)-zblob)**2
   endif
   mag=sqrt(mag)
-  if (mag.gt.100.d0*radblob) then
-   !do nothing
-  else if (mag.ge.zero) then
+
+  if ((axis_dir.eq.150).or. &
+      (axis_dir.eq.151).or. &
+      (axis_dir.eq.152)) then
+
+   if (mag.gt.100.d0*radblob) then
+    !do nothing
+   else if (mag.ge.zero) then
+    if ((LS_LIQUID.ge.zero).or.(F_LIQUID.ge.0.1d0)) then
+     rflag=1.0d0
+     tagflag=1
+    endif
+    if (P_diff.ge.0.01d0) then
+     rflag=1.0d0
+     tagflag=1
+    endif
+   else
+    print *,"mag invalid shockdrop.F90: ",mag
+    stop
+   endif
+
+  else if (axis_dir.eq.153) then
+
    if ((LS_LIQUID.ge.zero).or.(F_LIQUID.ge.0.1d0)) then
     rflag=1.0d0
     tagflag=1
    endif
-   if (P_diff.ge.0.01d0) then
-    rflag=1.0d0
-    tagflag=1
-   endif
+
   else
-   print *,"mag invalid shockdrop.F90: ",mag
+   print *,"axis_dir invalid shockdrop.F90: ",axis_dir
    stop
   endif
 
