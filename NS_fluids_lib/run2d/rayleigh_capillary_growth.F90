@@ -29,14 +29,21 @@ end subroutine mod_bessel_first_kind
 ! c=f(k)  k=wave number  0< k r_0 < 1
 ! page 5860 section 6.5 Popinet 2009  
 ! u_t = N(u) + F   (1)
-! N(u) is a nonlinear differential operator.
+! N(u) is a nonlinear differential operator.  After discretization,
+! N(u) is some complication nonlinear function of u where
+! "u" is a vector in R^{d} and N is a vector function also in R^{d}.
 ! given a base state in which N(u_base)+F=0, we perturb the base state
 ! u_perturb=u_base + du e^{beta t} and plug back into (1).
 ! beta du e^{beta t} = grad N(u_base) du e^{beta t} + O(du^2)
-! define A=grad N(u_base)
+! define A=grad N(u_base)  A is a "Jacobian matrix" with dimensions
+! d \Times d.  A_{ij}=\partial N_{i}/\partial u_{j}.
 ! beta du = A du + O(du^2)
 ! Objective: find the eigenvector "du" with the largest eigenvalue |Re beta|
 ! advantage of the power method: no need to explicitly find "A"
+! Disadvantages of the "non intrusive Linear Stability Analysis" method:
+! 1. N(u) might not have a continuous derivative or second derivative.
+! 2. max |\lambda(A)| might have a real part that is less than or equal to
+! zero.
 program rayleigh_capillary_growth
 real*8 density,r0,sigma,k,x,I_0,I_1,c,c2
 integer i

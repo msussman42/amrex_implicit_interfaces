@@ -158,6 +158,13 @@ fork_job(int fork_id) {
   } else
    amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
 
+  std::string local_restart_file;
+  ppamr.queryAdd("restart",local_restart_file);
+  if (!local_restart_file.empty() && local_restart_file != "init") {
+   //do nothing
+  } else
+   amrex::Error("Power method LSA requires restart from base state");
+
  } else {
   std::cout << "local_LSA_nsteps_power_method= " << 
     local_LSA_nsteps_power_method <<'\n';
@@ -165,6 +172,7 @@ fork_job(int fork_id) {
  }
 
  pp.queryAdd("strt_time",strt_time);
+  //stop_time is initialized to -1.0 above.
  pp.queryAdd("stop_time",stop_time);
 
  pp.queryAdd("sleepsec",sleepsec);
@@ -172,6 +180,8 @@ fork_job(int fork_id) {
  if (strt_time < 0.0)
   amrex::Abort("MUST SPECIFY a non-negative strt_time");
 
+  //stop_time is initialized to -1.0 above.
+  //max_step is initialized to -1 above.
  if (max_step < 0 && stop_time < 0.0) {
   amrex::Abort(
    "Exiting because neither max_step nor stop_time is non-negative.");
@@ -373,7 +383,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, July 17, 2025, 18:20pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, July 18, 2025, 17:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
