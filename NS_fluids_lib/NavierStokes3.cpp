@@ -1404,6 +1404,8 @@ Real NavierStokes::advance(Real time,Real dt) {
       //save t^{n+1} data
       LSA_save_state_dataALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,SAVE_CONTROL);
       LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
+       //The most dangerous mode should be insensitive to the initial 
+       //guess.
       LSA_default_eigenvectorALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
