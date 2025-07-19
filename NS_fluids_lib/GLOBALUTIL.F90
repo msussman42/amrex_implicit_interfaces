@@ -23532,7 +23532,7 @@ end subroutine print_visual_descriptor
 
       real(amrex_real), intent(in) :: Mn,rho1,T1
       real(amrex_real), intent(out) :: rho2,T2,P2
-      real(amrex_real) :: cv,gamma_constant,gap1,R,P1,Msq,omega
+      real(amrex_real) :: cp,cv,gamma_constant,gap1,R,P1,Msq,omega
 
       ! check compatibility with gas EOS
       if (Mn.ge.1d0) then
@@ -24046,32 +24046,41 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      real(amrex_real) rho,temperature,internal_energy,gamma_constant
+      real(amrex_real), intent(in) :: rho,internal_energy
+      real(amrex_real), intent(out) :: temperature
+      real(amrex_real) gamma_constant
       real(amrex_real) cp,cv,R,omega
 
-    
       call air_parms(R,cp,cv,gamma_constant,omega)
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       ! do nothing
+      else
+       print *,"rho invalid: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       ! do nothing
+      else
+       print *,"internal energy invalid: ",internal_energy
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       ! do nothing
+      else
+       print *,"cv invalid: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       ! do nothing
+      else
+       print *,"cp invalid: ",cp
        stop
       endif
 
       temperature=internal_energy/cv
 
       return
-      end subroutine
+      end subroutine TEMPERATURE_air
 
 
       subroutine TEMPERATURE_simple_air(rho,temperature,internal_energy)
