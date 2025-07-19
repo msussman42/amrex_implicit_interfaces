@@ -78,9 +78,9 @@ IMPLICIT NONE
 
       real(amrex_real), intent(in) :: time
       real(amrex_real), intent(in) :: x,y,z
-      real(amrex_real) deltaP,shockAngle2
+      real(amrex_real) deltaP
       real(amrex_real) P1,T1,Gamma_constant,GammaP1,c1,e1,rho1
-      real(amrex_real) M1,Mn2
+      real(amrex_real) M1
       real(amrex_real) Db,Rb,Lb,Fw
       real(amrex_real) U2,V2,rho2,e2,P2,T2
       real(amrex_real) vn,vt
@@ -182,11 +182,12 @@ end subroutine N_wave_solution
 !This routine is for PROB 394 -- don't call outside without care
 subroutine N_wave_solution1(time,x,y,z,shockAngle,Mn1)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
       real(amrex_real), intent(in) :: time
       real(amrex_real), intent(in) :: x,y,z
-      real(amrex_real) deltaP,T_o,dpdt
+      real(amrex_real) deltaP
       real(amrex_real), intent(out) :: shockAngle
       real(amrex_real), intent(out) :: Mn1
 
@@ -195,7 +196,7 @@ IMPLICIT NONE
       real(amrex_real) Db,Lb,Rb,Fw
 
       real(amrex_real) rho1,e1
-      real(amrex_real) P2,T2
+      real(amrex_real) P2
 
       !Bullet dimensions
       Db = 0.42d0 * 2.8d0 !Diameter
@@ -231,13 +232,14 @@ end subroutine N_wave_solution1
 
 subroutine N_wave_solution2(time,x,y,z,T_o,Mn1,shockAngle,stateIndex,preState,postState,dState_dt)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
       
       real(amrex_real), intent(in) :: time    
       real(amrex_real), intent(in) :: x,y,z
-      real(amrex_real) deltaP,shockAngle2
+      real(amrex_real) deltaP
       real(amrex_real) P1,T1,Gamma_constant,GammaP1,c1,e1,rho1
-      real(amrex_real) M1,Mn2
+      real(amrex_real) M1
       real(amrex_real) Db,Rb,Lb,Fw
       real(amrex_real) U2,V2,rho2,e2,P2,T2
       real(amrex_real) vn,vt
@@ -598,6 +600,7 @@ end subroutine shockdrop_init
 subroutine shockdrop_velocity(x,t,ls,vel, &
   velsolid_flag,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: nmat
@@ -609,6 +612,9 @@ real(amrex_real) :: ls_local
 real(amrex_real), INTENT(out) :: vel(SDIM)
 integer dir
 integer, INTENT(in) :: velsolid_flag
+real(amrex_real) :: To,Mn,shockAngle,preState,x_vel,dudt,alpha,vn
+real(amrex_real) :: rho1,e1,c1sqr,c1,u1,u2
+real(amrex_real) :: Tcross,Tcross2,Tcross3
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -687,7 +693,7 @@ else
 
   else if (t.gt.zero) then
 
-   call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,1,u1,u2,du_dt)
+   call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,1,u1,u2,dudt)
    rho1=fort_denconst(2)
    call INTERNAL_air(rho1,fort_tempconst(2),e1)
    call SOUNDSQR_air(rho1,e1,c1sqr)
@@ -700,11 +706,11 @@ else
     vel(1) = u1
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    vel(1) = u2 + du_dt * (t-Tcross)
+    vel(1) = u2 + dudt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
-    u2 = u2 + du_dt * (Tcross2-Tcross)
-    vel(1) = u2 - du_dt * (t-Tcross2)/(2.0*xblob4)*yblob4
+    u2 = u2 + dudt * (Tcross2-Tcross)
+    vel(1) = u2 - dudt * (t-Tcross2)/(2.0*xblob4)*yblob4
    else
     vel(1) = u1
    endif
@@ -770,6 +776,7 @@ end subroutine shockdrop_LS
 
 subroutine shockdrop_pressure(x,t,ls,pres,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: nmat
@@ -778,6 +785,9 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: ls(nmat)
 real(amrex_real) :: ls_local
 real(amrex_real), INTENT(out) :: pres
+real(amrex_real) :: To,Mn,shockAngle,p1,p2,dpdt
+real(amrex_real) :: rho1,e1,c1sqr
+real(amrex_real) :: Tcross,Tcross2,Tcross3
 
 
 if (num_materials.eq.nmat) then
@@ -840,19 +850,55 @@ end subroutine shockdrop_pressure
 
 subroutine shockdrop_gas_density(t,x,y,z,den)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 real(amrex_real), intent(in) :: t,x,y,z
 real(amrex_real), intent(out) :: den
 real(amrex_real) LS
+real(amrex_real) :: To,Mn,shockAngle,vn,alpha,preState,postState,dState_dt
+real(amrex_real) :: rho1,e1,c1sqr,c1,T1,T2,rho2,e2,vt,U2,V2,P2
+real(amrex_real) :: Tcross,Tcross2,Tcross3
+real(amrex_real) :: dx_local(SDIM)
+integer :: dir,ilev
 
 if (SDIM.eq.2) then
  if (abs(z-y).le.1.0E-3) then
   !do nothing
- else
+ else 
   print *,"expecting z=y shockdrop_gas_density"
   stop
  endif
 endif
+
+if (fort_finest_level.ge.0) then
+ !do nothing
+else
+ print *,"fort_finest_level invalid: ",fort_finest_level
+ stop
+endif
+
+do dir=1,SDIM
+ if (fort_n_cell(dir).gt.0) then
+  if (problen_array(dir).gt.zero) then
+   dx_local(dir)=problen_array(dir)/fort_n_cell(dir)
+   do ilev=1,fort_finest_level
+    dx_local(dir)=dx_local(dir)/two
+   enddo
+   if (dx_local(dir).gt.zero) then
+    !do nothing
+   else
+    print *,"dx_local invalid: ",dir,dx_local(dir)
+    stop
+   endif
+  else
+   print *,"problen_array invalid: ",dir,problen_array(dir)
+   stop
+  endif
+ else
+  print *,"fort_n_cell invalid: ",dir,fort_n_cell(dir)
+  stop
+ endif
+enddo  !dir=1..sdim
 
 call shockdrop_dropLS(x,y,z,LS)
 if (LS.ge.zero) then ! liquid
@@ -885,9 +931,9 @@ else if (LS.le.zero) then !gas
    vt=c1*radblob2*cos(shockAngle)
    U2= Mn * c1  - vn
    V2= 0.0d0
-   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx(1))/datan(1d0))
+   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(1))/datan(1d0))
    den=rho1*alpha+rho2*(1d0-alpha)
-FIX ME
+
   else if (t.gt.zero) then
 
    call N_wave_solution(t,x,y,z,To,Mn,shockAngle,3, &
@@ -903,11 +949,11 @@ FIX ME
     den = preState
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    den = postState + dState_dt * (time-Tcross)
+    den = postState + dState_dt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
     den = postState + dState_dt * (Tcross2-Tcross)
-    den = den - dState_dt * (time-Tcross2) / (2.0*xblob4)*yblob4
+    den = den - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
    else
     den = preState
    endif
@@ -933,10 +979,17 @@ end subroutine shockdrop_gas_density
 
 subroutine shockdrop_gas_temperature(t,x,y,z,temp)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 real(amrex_real), intent(in) :: t,x,y,z
 real(amrex_real), intent(out) :: temp
 real(amrex_real) LS
+real(amrex_real) :: To,Mn,shockAngle,vn,alpha,preState,postState,dState_dt
+real(amrex_real) :: rho1,e1,c1sqr,c1,T1,T2,rho2,e2,vt,U2,V2,P2
+real(amrex_real) :: Tcross,Tcross2,Tcross3
+real(amrex_real) :: den
+real(amrex_real) :: dx_local(SDIM)
+integer :: dir,ilev
 
 if (SDIM.eq.2) then
  if (abs(z-y).le.1.0E-3) then
@@ -947,16 +1000,113 @@ if (SDIM.eq.2) then
  endif
 endif
 
-call shockdrop_dropLS(x,y,z,LS)
-if (LS.ge.zero) then ! liquid
- temp=shockdrop_T0
+if (fort_finest_level.ge.0) then
+ !do nothing
 else
- call shockdrop_shockLS(x,y,z,LS)
- if (LS.ge.zero) then  ! upstream (above the shock)
-  temp=shockdrop_T0
+ print *,"fort_finest_level invalid: ",fort_finest_level
+ stop
+endif
+
+do dir=1,SDIM
+ if (fort_n_cell(dir).gt.0) then
+  if (problen_array(dir).gt.zero) then
+   dx_local(dir)=problen_array(dir)/fort_n_cell(dir)
+   do ilev=1,fort_finest_level
+    dx_local(dir)=dx_local(dir)/two
+   enddo
+   if (dx_local(dir).gt.zero) then
+    !do nothing
+   else
+    print *,"dx_local invalid: ",dir,dx_local(dir)
+    stop
+   endif
+  else
+   print *,"problen_array invalid: ",dir,problen_array(dir)
+   stop
+  endif
  else
-  temp=shockdrop_T1
+  print *,"fort_n_cell invalid: ",dir,fort_n_cell(dir)
+  stop
  endif
+enddo  !dir=1..sdim
+
+call shockdrop_dropLS(x,y,z,LS)
+
+if (LS.ge.zero) then ! liquid
+
+ temp=shockdrop_T0
+
+else if (LS.le.zero) then !gas
+
+ call shockdrop_shockLS(x,y,z,LS)
+
+ if ((axis_dir.eq.150).or. &
+     (axis_dir.eq.151).or. &
+     (axis_dir.eq.152)) then
+
+  if (LS.ge.zero) then  ! upstream (above the shock)
+   temp=shockdrop_T0
+  else
+   temp=shockdrop_T1
+  endif
+
+ else if (axis_dir.eq.153) then !Arienti shock sphere
+
+  if (t.eq.zero) then
+
+   call N_wave_solution1(t,x,y,z,shockAngle,Mn)
+   rho1=fort_denconst(2)
+   T1=fort_tempconst(2)
+   call INTERNAL_air(rho1,T1,e1)
+   call SOUNDSQR_air(rho1,e1,c1sqr)
+   c1=sqrt(c1sqr)
+   call postshock_air(Mn,rho1,T1,rho2,T2,P2)
+   call INTERNAL_air(rho2,T2,e2)
+   call vnpostshock_air(T1,Mn,vn)
+   vt=c1*radblob2*cos(shockAngle)
+   U2= Mn * c1  - vn
+   V2= 0.0d0
+   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(1))/datan(1d0))
+   den=rho1*alpha+rho2*(1d0-alpha)
+   call TEMPERATURE_air(den,temp,e1*alpha+e2*(1d0-alpha))
+
+  else if (t.gt.zero) then
+
+   call N_wave_solution(t,x,y,z,To,Mn,shockAngle,5, &
+    preState,postState,dState_dt)
+   rho1=fort_denconst(2)
+   call INTERNAL_air(rho1,fort_tempconst(2),e1)
+   call SOUNDSQR_air(rho1,e1,c1sqr)
+   Tcross = (x - (xblob2))/(sqrt(c1sqr)*Mn)
+   Tcross2 = Tcross + To
+   Tcross3 = Tcross2 + To * xblob4
+   if(t.lt.Tcross) then
+    ! pre-shock conditions
+    temp = preState
+   else if (t.lt.Tcross2)then
+    ! post-shock conditions
+    temp = postState + dState_dt * (t-Tcross)
+   else if (t.lt.Tcross3)then
+    ! re-compression
+    temp = postState + dState_dt * (Tcross2-Tcross)
+    temp = temp - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
+   else
+    temp = preState
+   endif
+
+  else
+   print *,"t invalid: ",t
+   stop
+  endif
+
+ else
+  print *,"axis_dir invalid: ",axis_dir
+  stop
+ endif
+
+else
+ print *,"LS invalid: ",LS
+ stop
 endif 
 
 return
@@ -1130,7 +1280,7 @@ if ((num_materials.eq.2).and. &
    call shockdrop_gas_temperature(t,x(1),x(2),x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
-   print *,"im out of range"
+   print *,"im out of range: ",im
    stop
   endif
 
