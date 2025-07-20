@@ -875,7 +875,9 @@ end subroutine MITSUHIRO_PIPE_STATE_BC
 
 subroutine MITSUHIRO_PIPE_INIT_EVAL( &
   i,j,k,dir, &
-  xpoint,cur_time, &
+  xpoint, &
+  dx, &
+  cur_time, &
   scomp_size, &
   ncomp_size, &
   State_Type, &
@@ -892,9 +894,12 @@ subroutine MITSUHIRO_PIPE_INIT_EVAL( &
   local_vely, &
   local_velz)
 use amrex_fort_module, only : amrex_real
+use probcommon_module
+use global_utility_module
 
 integer, INTENT(in) :: i,j,k,dir
 real(amrex_real), INTENT(in) :: xpoint(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 integer, INTENT(in) :: scomp_size
 integer, INTENT(in) :: ncomp_size
@@ -913,11 +918,40 @@ real(amrex_real), INTENT(inout) :: local_vely
 real(amrex_real), INTENT(inout) :: local_velz
 
 integer dir_local
+integer ls_comp
+real(amrex_real) :: perturb_val
+
+if (scomp_array(State_Type+1).eq.0) then
+ !do nothing
+else
+ print *,"expecting: scomp_array(State_Type+1).eq.0; ", &
+    State_Type,scomp_array(State_Type+1)
+ stop
+endif
+
+if (State_Type.eq.0) then
+ !do nothing
+else
+ print *,"expecting State_Type==0: ",State_Type
+ stop
+endif
 
 if (dir.eq.-1) then
  do dir_local=1,ncomp_total
   local_cell_evec(dir_local)=zero
  enddo
+
+ if ((probtype.eq.41).and.(axis_dir.eq.4)) then
+  perturb_val=dx(1)*sin(two*Pi*xpoint(SDIM)/yblob)
+  ls_comp=scomp_array(LS_Type+1)+1
+  local_cell_evec(ls_comp)=perturb_val
+  local_cell_evec(ls_comp+1)=-perturb_val
+ else
+  print *,"expecting probtype=41: ",probtype
+  print *,"expecting axis_dir=4: ",axis_dir
+  stop
+ endif
+ 
 else if (dir.eq.0) then
  local_velx=zero
 else if (dir.eq.1) then

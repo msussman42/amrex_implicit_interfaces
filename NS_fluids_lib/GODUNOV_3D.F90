@@ -21417,7 +21417,9 @@ stop
 
         call SUB_INIT_EVAL( &
           i,j,k,dir, &
-          xpoint,cur_time, &
+          xpoint, &
+          dx, &
+          cur_time, &
           scomp_size, &
           ncomp_size, &
           State_Type, &
