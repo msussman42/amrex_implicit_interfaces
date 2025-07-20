@@ -1283,7 +1283,9 @@ end subroutine STUB_ORDER_NODES
 
 subroutine STUB_INIT_EVAL( &
   i,j,k,dir, &
-  xpoint,cur_time, &
+  xpoint, &
+  dx, &
+  cur_time, &
   scomp_size, &
   ncomp_size, &
   State_Type, &
@@ -1303,6 +1305,7 @@ use amrex_fort_module, only : amrex_real
 
 integer, INTENT(in) :: i,j,k,dir
 real(amrex_real), INTENT(in) :: xpoint(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 integer, INTENT(in) :: scomp_size
 integer, INTENT(in) :: ncomp_size
