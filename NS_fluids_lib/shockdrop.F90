@@ -688,7 +688,7 @@ else
    call SOUNDSQR_air(rho1,e1,c1sqr)
    c1=sqrt(c1sqr)
    vel(1)=(1d0-alpha)*(Mn*c1 - vn)
-   vel(2)=0.0d0
+   vel(2)=zero
    vel(SDIM)=zero
 
   else if (t.gt.zero) then
@@ -1211,7 +1211,7 @@ else if (axis_dir.eq.153) then ! Arienti shock sphere
   mag=(x-xblob3)**2+(y-yblob3)**2+(z-zblob3)**2
   LS=radblob3-sqrt(mag) 
  else 
-  print *,"dimension bust"
+  print *,"dimension bust: ",SDIM
   stop
  endif
 else

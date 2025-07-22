@@ -1,0 +1,205 @@
+# Arienti, Wenzel, Guildenbeher, Beresh
+# Simulation and Analysis of Droplet Aerobreakup in a Ballistic Wave System
+# AIAA 2025
+# drop bag breakup in crossflow
+#
+max_step  = 180000     # maximum timestep
+stop_time =  1.0 # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =-0.0000 -0.06666666666666 -0.06666666666666
+#geometry.prob_hi   = 0.4000  0.06666666666666  0.06666666666666  # units of cm
+#geometry.is_periodic = 0 1 1
+geometry.prob_lo   =-0.0000 -0.06666666666666 
+geometry.prob_hi   = 0.4000  0.06666666666666 # units of cm
+geometry.is_periodic = 0 1 
+
+# continuous_mof=0 regular MOF
+# continuous_mof=1 CMOF
+ns.continuous_mof=1
+ns.MOFITERMAX=30
+# EILE_flag=-1 Weymouth and Yue
+# EILE_flag=1 alternate EI-LE
+ns.EILE_flag=1
+ns.ns_tiling=false
+
+ns.projection_pressure_scale=1.0e+6
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-10  # the coarsest coarsening of level 0 in old version;  
+                      # level 0 in the new version.
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.num_materials=2
+ns.num_species_var=0
+
+ns.post_init_pressure_solve=0
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.minimum_relative_error=1.0e-24
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+
+#amr.n_cell    = 48 16 16
+amr.n_cell    = 48 16
+amr.max_level =  5 #3 
+ns.max_level_for_use = 5
+
+amr.regrid_int      = 1      # how often to regrid
+amr.regrid_on_restart  = 1
+amr.n_error_buf     = 2 2 1 1 1 1 1 1 1   # number of buffer cells in error est
+
+amr.grid_eff        = 0.85  # what constitutes an efficient grid
+DistributionMapping.strategy        = KNAPSACK
+#DistributionMapping.strategy        = SFC
+amr.blocking_factor = 2 2 2 2 2 2 2 2   # block factor in grid generation
+
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+ns.visual_nddata_format=1 # native AMReX
+amr.plot_int        = 0     # 50
+#amr.slice_int       = 100     # 50
+# e.g. slice_dir==1 => look at Y line of data
+ns.slice_dir=1 # 0..sdim-1
+ns.xslice=0.0 0.0 0.0
+
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+cg.min_max_grid_size   = 96
+#amr.restart         = chk00425
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-9
+
+ns.shock_timestep=2 1
+ns.cfl            = 0.75      # cfl number for hyperbolic system
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
+
+#REMARK: MINMOD USED BY ARIENTI FOR BOTH GAS AND LIQUID.
+
+ns.visc_coef      = 1.0
+ns.gravity        = 0.0  # must be nonzero, otherwise not used.
+ns.tension        = 72.0
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=153 # shock sphere
+ns.vorterr=1.0e+10 1.0e+10
+ns.rgasinlet=0.
+ns.vinletgas=0.
+ns.twall=0.1
+ns.advbot=10000. 
+ns.adv_vel=10000. # inflow of air from the side at t=0
+ns.adv_dir=1      # inflow in x-direction
+
+ns.num_divu_outer_sweeps=2
+
+# This code is now overridden: shockdrop.F90
+# on each level, and for each uncovered cell, code computes:
+# sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
+ns.pressure_error_flag=1 # look at pressure variation
+ns.pressure_error_cutoff=1.0e+6 0.01
+
+# May 17:
+# for water: material_type=7 EOS_tait_rho (base density is denconst(1))
+# for air: material_type=5 EOS_air
+# WATER COMPRESSIBLE: make material_type(1)=7
+# GALINSTAN COMPRESSIBLE: make material_type(1)=34
+ns.material_conservation_form=1 1
+ns.material_type=7 5 
+#ns.material_type=12 5 
+
+#ns.stiffCP=4.1855e+7 10.07e+6
+#ns.stiffCV=4.1855e+7 7.2e+6
+#ns.R_Palmore_Desjardins=8.31446261815324e+7  #ergs/(mol K)
+#ns.molar_mass=18.02 28.9 #g/mol
+
+ns.heatviscconst= 16.5e5  2400.  # g/(cm s^2)
+#ns.viscconst=0.0089 0.000018706  # is air 10 times smaller ?g/(cm s)
+ns.viscconst=0.0089 0.000038706  # g/(cm s)
+ns.denconst=0.999   0.00102  # @84.1 kPa
+ns.density_ceiling=10.0 1.0
+ns.density_floor=0.1 0.0001
+ns.speciesviscconst=0.0 0.0758
+ns.tempconst=300. 300. 
+
+ns.inflow_pressure= 878380.0 
+#ns.outflow_pressure = 1514260.42973874
+ns.outflow_pressure=3468112.
+
+# bullet's center
+ns.xblob=-0.03 
+ns.yblob=0.
+ns.zblob=0.
+ns.radblob=0.215 # cap radius (cm)
+
+ns.xblob2=0.01 # initial shock vertex position. Initialize outside of domain (<0)
+ns.yblob2=0.5 # shock angle for probtype 392, unused for 394
+ns.zblob2=0.015   # length of bullet's cylinder
+#domain length in the x direction is .4 cm.
+#speed of sound in air is 34300 cm/s
+#approximate time to clear the domain is 0.4/34300=12 microseconds
+ns.radblob2=4.5 # inlet Mach number
+ns.xblob3=0.08  # initial drop position
+ns.yblob3=0.0  # initial drop position
+ns.zblob3=0.0  # initial drop position
+ns.radblob3=96.0e-4 # drop radius
+
+ns.xblob4=1.0 #This parameter is now defines the re-compression process
+              #If xblob4=1, the recompression occurs over the same amount of time as
+              #the N-wave period T_o. If xblob4=2, the recompression will occur over
+              #a duration of 2T_o. If xblob4=0, the recompression process will instead
+              #be a recompression shock.
+
+ns.radblob4=0.65
+ns.zblob4=8.0 #This is the reduction factor for T_o. 8.0 means T_o is reduced by a factor of 8.
+ns.yblob4=0.430769231 #This is the gradient reduction factor. It should be 2.0*(radblob4-0.5)/radblob4
+
+#ns.probtype=395
+ns.probtype=3001
+
+ns.denfact=1.0
+ns.velfact=0.0
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+prescribe_temperature_outflow=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+#ns.lo_bc          = 1 0 0
+#ns.hi_bc          = 1 0 0
+ns.lo_bc          = 1 0 
+ns.hi_bc          = 1 0 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# select form of FAB output: default is IEEE
+#        ASCII  (this is very slow)
+#	 NATIVE (native binary form on machine)
+#        IEEE   (default, this is portable)
+#fab.format =  IEEE
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
