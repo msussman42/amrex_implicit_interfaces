@@ -345,6 +345,7 @@ use global_utility_module
 IMPLICIT NONE
 real(amrex_real), intent(in) :: time
 real(amrex_real) test_pres
+real(amrex_real) water_pressure
 integer :: idata
 
 !some remarks:
@@ -457,13 +458,41 @@ shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 
 !shock_vel0-shock_vel1=M0 * C0 - M1 * C1
 
+ !general_hydrostic_pressure is declared in GLOBALUTIL.F90
 call general_hydrostatic_pressure(test_pres)
-if (abs(test_pres-shockdrop_P0)/test_pres.gt.EPS3) then
- print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
- print *,"test_pres=",test_pres
- print *,"shockdrop_P0=",shockdrop_P0
+
+if (probtype.eq.shockdrop_PROB_TYPE) then
+
+ if ((axis_dir.eq.150).or. &
+     (axis_dir.eq.151).or. &
+     (axis_dir.eq.152)) then
+  if (abs(test_pres-shockdrop_P0)/test_pres.gt.EPS3) then
+   print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
+   print *,"test_pres=",test_pres
+   print *,"shockdrop_P0=",shockdrop_P0
+   print *,"shockdrop_gamma=",shockdrop_gamma
+   print *,"shockdrop_cv=",shockdrop_cv
+   print *,"shockdrop_DEN0=",shockdrop_DEN0
+   print *,"shockdrop_T0=",shockdrop_T0
+   print *,"fort_denconst(1)=",fort_denconst(1)
+   print *,"fort_tempconst(1)=",fort_tempconst(1)
+   call EOS_tait_rho(fort_denconst(1),fort_tempconst(1),water_pressure)
+   print *,"pressure from EOS_tait_rho: ",water_pressure
+   print *,"gravity_vector=",gravity_vector
+   stop
+  endif
+ else if (axis_dir.eq.153) then
+  !check nothing
+ else
+  print *,"axis_dir invalid: ",axis_dir
+  stop
+ endif
+
+else
+ print *,"probtype invalid:",probtype
  stop
 endif
+
 if (fort_material_type(2).ne.5) then
  print *,"only material_type=5 supported for gas for this problem"
  print *,"fort_material_type(2)=",fort_material_type(2)
