@@ -18926,11 +18926,11 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  int bfact=parent->Space_blockingFactor(level);
 
  if (level==max_level-1) {
-  if (n_error_buf<2)
-   amrex::Error("amr.n_error_buf<2 on level==max_level-1");
+  if (n_error_buf<1)
+   amrex::Error("amr.n_error_buf<1 on level==max_level-1");
  } else if ((level>=0)&&(level<max_level-1)) {
-  if (n_error_buf<2)
-   amrex::Error("amr.n_error_buf<2 on level<max_level-1");
+  if (n_error_buf<1)
+   amrex::Error("amr.n_error_buf<1 on level<max_level-1");
  } else
   amrex::Error("level invalid in errorEst");
 
