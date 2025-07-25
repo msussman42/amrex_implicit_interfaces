@@ -118,10 +118,11 @@ ns.xblob5=0.0           # wall vertical gas velocity (x=xhi)
 ns.xblob=1.0                  # base position of gas/liquid interface
 #ns.yblob=10.0                # wave length of perturbation
 #ns.yblob=19.634954            # wave length of perturbation (2*H)
-ns.yblob=72.0
+#ns.yblob=72.0 #yblob=72 if non-intrusive LSA
+ns.yblob=9.0  #wave length=2 pi/(.7/r0)=2*pi*r0/.7  L=72/NINT(72/lambda)
 ns.zblob=0.0
-#ns.radblob=0.1               # perturbation 
-ns.radblob=0.0               # perturbation 
+#radblob=0.0 if non-intrusive LSA
+ns.radblob=0.1 # perturbation 
 ns.denfact=1.0
 # velfact=0 => vinletgas (liquid inflow), advbot (gas inflow)
 ns.velfact=0.0 # pressure gradient in z direction (streamwise direction) 

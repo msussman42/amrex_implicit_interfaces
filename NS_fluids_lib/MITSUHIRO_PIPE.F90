@@ -87,6 +87,8 @@ if (probtype.eq.3) then
 else if (axis_dir.eq.0) then
 
  print *,"this code is obsolete"
+ print *,"probtype=",probtype
+ print *,"axis_dir=",axis_dir
  stop
 
  if (SDIM.eq.2) then
@@ -942,6 +944,17 @@ if (dir.eq.-1) then
  enddo
 
  if ((probtype.eq.41).and.(axis_dir.eq.4)) then
+   !wave length="yblob" (which is the height of the cylinder)
+   !initially, a vertical cylinder of liquid with 
+   !radius "xblob=1"
+   !Remark: In our power method implementation, the matrix "A" is
+   !the Jacobian matrix \partial f(u) / \partial u.
+   !we approximate "A v" as 
+   !A v \approx (f(ubase+epsilon*v)-f(ubase))/epsilon
+   !f is a vector in R^N
+   !ubase "          "
+   !v     "          "
+   !epsilon is a scalar
   perturb_val=dx(1)*sin(two*Pi*xpoint(SDIM)/yblob)
   ls_comp=scomp_array(LS_Type+1)+1
   local_cell_evec(ls_comp)=perturb_val
