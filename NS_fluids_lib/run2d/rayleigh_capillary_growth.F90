@@ -44,6 +44,9 @@ end subroutine mod_bessel_first_kind
 ! 1. N(u) might not have a continuous derivative or second derivative.
 ! 2. max |\lambda(A)| might have a real part that is less than or equal to
 ! zero.
+! growth_rate^2 = I_1(k*r0)*k*r0*(1-k*r0)/(I_0(k*r0))
+! anecdotedly, k r0 = .7 is the critical value.
+! wave length = 2 pi/(.7/r0)=2*pi*r0/.7
 program rayleigh_capillary_growth
 real*8 density,r0,sigma,k,x,I_0,I_1,c,c2
 integer i
@@ -52,7 +55,7 @@ density=1.0d0
 r0=1.0d0
 sigma=1.0d0
 do i=0,100
- k=i/100.0d0
+ k=(i/100.0d0)/r0
  x=k*r0
  call mod_bessel_first_kind(x,0,I_0)
  call mod_bessel_first_kind(x,1,I_1)
