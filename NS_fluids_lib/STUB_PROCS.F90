@@ -390,9 +390,12 @@ integer :: backing_id !=3 or 2
     stop
    endif
    if (LS.lt.zero) then
+
     if (num_materials.eq.3) then
      !do nothing
     else if (num_materials.eq.4) then
+
+      !biofilm thickness=radblob4
      solid_id=2
      call jetting_plate_dist(x(1),x(2),x(SDIM),LS,solid_id, &
             for_clamped,clamp_width)
@@ -405,6 +408,7 @@ integer :: backing_id !=3 or 2
       print *,"LS is NAN STUB_PROCS.F90 ",LS,solid_id
       stop
      endif
+
     else
      print *,"num_materials invalid: ",num_materials
      stop

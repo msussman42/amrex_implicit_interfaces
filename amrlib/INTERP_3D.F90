@@ -266,6 +266,10 @@ stop
 !      call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
        call gridsten_level(xsten,i,j,k,levelc,nhalf)
 
+       FIX ME
+       pass a flag "abort_if_uninit" 
+       if (i,j,k) outside the domain, then "abort_if_uninit=false"
+
         ! sum F_fluid=1  sum F_solid <= 1
        call make_vfrac_sum_ok_base( &
          cmofsten, &

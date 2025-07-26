@@ -890,14 +890,23 @@ end subroutine nozzle2d
        ! near a flat plate.
        !   or
        ! impact of steel ball against flat plate.
+       ! for probtype==46 and axis_dir==11,
+       ! the Tungsten is material 3 and its vertical length is "radblob3"
       if ((probtype.eq.42).or. &
           ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
-          ((probtype.eq.46).and.(axis_dir.eq.11))) then
+          ((probtype.eq.46).and.(axis_dir.eq.11))) then !TranUdaykumar
        aspect=xblob2
 
 !      offset=2.54d0
        offset=radblob2 ! thickness of substrate 
-       offset_biofilm=offset ! thickness of biofilm
+       if (radblob4.eq.zero) then
+        offset_biofilm=offset ! thickness of biofilm
+       else if (radblob4.gt.zero) then
+        offset_biofilm=radblob4
+       else
+        print *,"radblob4 invalid: ",radblob4
+        stop
+       endif
 
        if ((clamp_width.gt.zero).and. &
            (clamp_width.le.offset*(one+EPS4))) then
@@ -905,6 +914,7 @@ end subroutine nozzle2d
        else
         print *,"clamp_width invalid: ",clamp_width
         print *,"radblob2= ",radblob2 !substrate thickness
+        print *,"radblob4= ",radblob4 !biofilm thickness
         print *,"xblob2= ",xblob2 !substrate radius
         stop
        endif
@@ -913,6 +923,12 @@ end subroutine nozzle2d
 
        if (radblob2.eq.zero) then
         dist=hugedist !no plate
+        if (solid_id.eq.1) then
+         !do nothing
+        else 
+         print *,"expecting solid_id=1 if radblob2=0: ",solid_id
+         stop
+        endif
        else if (radblob2.gt.zero) then !radblob2=substrate thickness
 
         if (solid_id.eq.1) then
