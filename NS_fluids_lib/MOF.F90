@@ -18404,6 +18404,13 @@ contains
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       print *,"xsten= ",xsten
+       print *,"nhalf= ",nhalf
+       print *,"continuous_mof=",continuous_mof
+       print *,"bfact=",bfact
+       print *,"dx=",dx
+       print *,"tessellate=",tessellate
+       print *,"mofdata=",mofdata
        stop
       else
        print *,"voffluid is NaN: ",voffluid

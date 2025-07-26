@@ -23090,7 +23090,7 @@ end subroutine print_visual_descriptor
        if (probloy.eq.zero) then
         !do nothing
        else
-        print *,"probloy must be 0 for cavitation problem"
+        print *,"probloy must be 0 for cavitation problem:",probloy
         stop
        endif
 

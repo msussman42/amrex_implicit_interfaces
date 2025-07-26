@@ -112,9 +112,11 @@ ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-11
 
+#see subroutine jetting_plate_dist
 ns.xblob2=88.9  # radius of plate
 ns.yblob2=13.0  # distance between center of jwl and bottom of plate
 ns.radblob2=2.54  # thickness of plate (2.54 in Wardlaws description)
+ns.radblob4=2.54  # thickness of biofilm if num_materials=4
 
 # 1=always take sound speed into account
 # 2=never take sound speed into account

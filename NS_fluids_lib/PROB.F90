@@ -7777,6 +7777,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          !1=liquid 2=JWL 3=substrate 4=biofilm
         else if ((FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC).or. &
                  (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
+          !radblob2=thickness
          solid_id=1
          call jetting_plate_dist(x,y,z,dist(backing_id),solid_id, &
                  for_clamped,clamp_width)
@@ -7785,6 +7786,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (num_materials.eq.3) then
           !do nothing
          else if (num_materials.eq.4) then
+           !radblob4=thickness
           solid_id=2
           call jetting_plate_dist(x,y,z, &
             dist(biofilm_id),solid_id, &
@@ -9433,6 +9435,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         else if (axis_dir.eq.11) then
 
+          ! radblob3 is the length of the Tungstun rod.
           ! negative in the square
          call squaredist(x,y,-radblob,radblob, &
            yblob-half*radblob3,yblob+half*radblob3,dist)
@@ -27400,6 +27403,8 @@ end subroutine initialize2d
                    (axis_dir.eq.11)) then
            if (num_materials.ge.3) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
+             !steel sphere or if num_materials=3, then
+             !the Tungsten
             if (vfracbatch(num_materials).gt.zero) then ! steel sphere
              y_vel=advbot
             else

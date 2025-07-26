@@ -790,7 +790,7 @@ stop
 
       if ((probtype.eq.42).or. &
           ((probtype.eq.46).and.(axis_dir.eq.10)).or. &
-          ((probtype.eq.46).and.(axis_dir.eq.11))) then
+          ((probtype.eq.46).and.(axis_dir.eq.11))) then !TranUdaykumar
 
        if (probtype.eq.42) then
         backing_id=3
@@ -811,7 +811,8 @@ stop
                 (FSI_flag(backing_id).eq.FSI_RIGID_NOTPRESCRIBED)) then
         SUB_clamped_LS_no_scale=>STUB_clamped_LS_jetting_or_cav
        else
-        print *,"FSI_flag(backing_id) invalid: ",FSI_flag(backing_id)
+        print *,"FSI_flag(backing_id) invalid: ", &
+             backing_id,FSI_flag(backing_id)
         stop
        endif
 

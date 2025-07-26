@@ -176,6 +176,13 @@ ns.viscconst=0.0001 10.0 10.0 10.0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
+#For TranUdaykumar problem:
+#gas, steel backing, Tungsten
+#(PROB.F90):
+#radblob3 is the length of the Tungstun rod.
+#negative in the square
+#call squaredist(x,y,-radblob,radblob, &
+# yblob-half*radblob3,yblob+half*radblob3,dist)
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 # material_type=1 EOS_tait
 #ns.material_type=0 0 0 0 #INCOMPRESSIBLE
