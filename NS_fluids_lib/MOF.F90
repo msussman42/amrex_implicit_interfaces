@@ -18363,10 +18363,17 @@ contains
                 (mofdata(vofcomp).lt.one)) then
         ! do nothing
        else
+        print *,"make_vfrac_sum_ok_base"
+        print *,"continuous_mof=",continuous_mof
+        print *,"dx=",dx
+        print *,"xsten= ",xsten
+        print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+        print *,"tessellate=",tessellate
         print *,"mofdata(vofcomp) invalid 2"
         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
         print *,"im,num_materials,ngeom_recon,sdim ", &
                 im,num_materials,ngeom_recon,sdim
+        print *,"mofdata= ",mofdata
         print *,"put breakpoint here to see the caller"
         stop
        endif
@@ -18405,6 +18412,7 @@ contains
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
        print *,"xsten= ",xsten
+       print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
        print *,"nhalf= ",nhalf
        print *,"continuous_mof=",continuous_mof
        print *,"bfact=",bfact
@@ -18656,7 +18664,9 @@ contains
         mofdatavalid(dir+vofcomp-1)=mofdata(dir+vofcomp-1)
        enddo
       enddo ! im=1..num_materials
-      if (voffluid.le.zero) then
+      if (voffluid.gt.zero) then
+       !do nothing
+      else
        print *,"vacuum bust in make_vfrac_sum_ok_copy"
        print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
@@ -18664,6 +18674,11 @@ contains
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
        print *,"tessellate=",tessellate
+       print *,"continuous_mof=",continuous_mof
+       print *,"dx=",dx
+       print *,"xsten=",xsten
+       print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+       print *,"mofdata=",mofdata
        stop
       endif
 

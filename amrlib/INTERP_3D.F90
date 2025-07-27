@@ -153,11 +153,14 @@ stop
               fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
       real(amrex_real), INTENT(in) :: problo(SDIM)
       real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
+      integer crse_growlo(3),crse_growhi(3)
       integer growlo(3),growhi(3)
       integer stenlo(3),stenhi(3)
       real(amrex_real) wt(SDIM)
 
       integer :: grid_index(SDIM)
+      integer :: data_needed
+
       integer, parameter :: grid_level=-1
 
       integer i,j,k
@@ -242,47 +245,22 @@ stop
 
       nmax=POLYGON_LIST_MAX
 
-      call growntilebox(clo,chi,clo,chi,growlo,growhi,0)
+      call growntilebox(clo,chi,clo,chi,crse_growlo,crse_growhi,0)
+      call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
-      do k=growlo(3),growhi(3)
-      do j=growlo(2),growhi(2)
-      do i=growlo(1),growhi(1)
+      do dir=1,SDIM
+       if ((2*clo(dir).le.flo(dir)).and. &
+           (2*(chi(dir)+1).ge.fhi(dir)+1)) then
+        !do nothing
+       else
+        print *,"clo,chi,flo,fhi mismatch: ",clo,chi,flo,fhi 
+        stop
+       endif
+      enddo !dir=1,sdim
 
-       do im=1,num_materials
-        vofcomp_old=(im-1)*ngeom_raw+1
-        vofcomp_new=(im-1)*ngeom_recon+1
-        mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
-        do dir=1,SDIM
-         mofdata(vofcomp_new+dir)=datamof(D_DECL(i,j,k),vofcomp_old+dir)
-          !slope=0
-         mofdata(vofcomp_new+SDIM+1+dir)=zero
-        enddo
-
-          ! order=0
-        mofdata(vofcomp_new+SDIM+1)=zero
-
-       enddo  ! im
-
-!      call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
-       call gridsten_level(xsten,i,j,k,levelc,nhalf)
-
-       FIX ME
-       pass a flag "abort_if_uninit" 
-       if (i,j,k) outside the domain, then "abort_if_uninit=false"
-
-        ! sum F_fluid=1  sum F_solid <= 1
-       call make_vfrac_sum_ok_base( &
-         cmofsten, &
-         xsten,nhalf, &
-         continuous_mof, &
-         bfact_coarse,dxc, &
-         tessellate, & !=0
-         mofdata,SDIM)
-
-       do im=1,num_materials
-        vofcomp_new=(im-1)*ngeom_recon+1
-        vof_super(im)=mofdata(vofcomp_new)
-       enddo
+      do k=crse_growlo(3),crse_growhi(3)
+      do j=crse_growlo(2),crse_growhi(2)
+      do i=crse_growlo(1),crse_growhi(1)
 
        grid_index(1)=i
        grid_index(2)=j
@@ -290,34 +268,89 @@ stop
         grid_index(SDIM)=k
        endif
 
-       call multimaterial_MOF( &
-         tid_in, &
-         bfact_coarse,dxc,xsten,nhalf, &
-         mof_verbose, &
-         use_ls_data, & ! use_ls_data=0
-         LS_stencil, &
-         geom_xtetlist(1,1,1,tid_in+1), &
-         geom_xtetlist(1,1,1,tid_in+1), &
-         nmax, &
-         nmax, &
-         mofdata, & !intent(inout)
-         vof_super, &
-         multi_centroidA, &
-         continuous_mof, & ! continuous_mof=STANDARD_MOF
-         cmofsten, &
-         grid_index, &
-         grid_level, & !grid_level=-1
-         SDIM)
+        ! coarse cell ic covers 2*ic and 2*ic+1
+       data_needed=1
+       do dir=1,SDIM
+        if ((2*grid_index(dir)+1.ge.growlo(dir)).and. &
+            (2*grid_index(dir).le.growhi(dir))) then
+         !do nothing
+        else
+         data_needed=0
+        endif
+       enddo !dir=1,SDIM
 
-       do dir=1,num_materials*ngeom_recon
-        datarecon(D_DECL(i,j,k),dir)=mofdata(dir)
-       enddo
+       if (data_needed.eq.1) then
+
+        do im=1,num_materials
+         vofcomp_old=(im-1)*ngeom_raw+1
+         vofcomp_new=(im-1)*ngeom_recon+1
+         mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
+         do dir=1,SDIM
+          mofdata(vofcomp_new+dir)=datamof(D_DECL(i,j,k),vofcomp_old+dir)
+           !slope=0
+          mofdata(vofcomp_new+SDIM+1+dir)=zero
+         enddo
+
+           ! order=0
+         mofdata(vofcomp_new+SDIM+1)=zero
+
+        enddo  ! im
+
+!       call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
+        call gridsten_level(xsten,i,j,k,levelc,nhalf)
+
+         ! sum F_fluid=1  sum F_solid <= 1
+        call make_vfrac_sum_ok_base( &
+          cmofsten, &
+          xsten,nhalf, &
+          continuous_mof, &
+          bfact_coarse,dxc, &
+          tessellate, & !=0
+          mofdata,SDIM)
+
+        do im=1,num_materials
+         vofcomp_new=(im-1)*ngeom_recon+1
+         vof_super(im)=mofdata(vofcomp_new)
+        enddo
+
+        call multimaterial_MOF( &
+          tid_in, &
+          bfact_coarse,dxc,xsten,nhalf, &
+          mof_verbose, &
+          use_ls_data, & ! use_ls_data=0
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          geom_xtetlist(1,1,1,tid_in+1), &
+          nmax, &
+          nmax, &
+          mofdata, & !intent(inout)
+          vof_super, &
+          multi_centroidA, &
+          continuous_mof, & ! continuous_mof=STANDARD_MOF
+          cmofsten, &
+          grid_index, &
+          grid_level, & !grid_level=-1
+          SDIM)
+
+        do dir=1,num_materials*ngeom_recon
+         datarecon(D_DECL(i,j,k),dir)=mofdata(dir)
+        enddo
+
+       else if (data_needed.eq.0) then
+
+        do dir=1,num_materials*ngeom_recon
+         datarecon(D_DECL(i,j,k),dir)=zero
+        enddo
+
+       else
+        print *,"data_needed invalid: ",data_needed
+        stop
+       endif
 
       enddo
       enddo
       enddo ! i,j,k
 
-      call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
       do kfine=growlo(3),growhi(3)
       do jfine=growlo(2),growhi(2)
@@ -365,7 +398,37 @@ stop
               stop
              endif
              if (testwt.gt.zero) then
- 
+
+              grid_index(1)=ic
+              grid_index(2)=jc
+              if (SDIM.eq.3) then
+               grid_index(SDIM)=kc
+              endif
+
+              data_needed=1
+              do dir=1,SDIM
+               if ((2*grid_index(dir)+1.ge.growlo(dir)).and. &
+                   (2*grid_index(dir).le.growhi(dir))) then
+                !do nothing
+               else
+                data_needed=0
+               endif
+              enddo !dir=1,SDIM
+
+              if (data_needed.eq.1) then
+               !do nothing
+              else
+               print *,"data_needed bust"
+               print *,"grid_index=",grid_index
+               print *,"ifine,jfine,kfine ",ifine,jfine,kfine
+               print *,"growlo ",growlo
+               print *,"growhi ",growhi
+               print *,"crse_growlo ",crse_growlo
+               print *,"crse_growhi ",crse_growhi
+               print *,"wt=",wt
+               print *,"testwt=",testwt
+               stop
+              endif
               n_overlap=n_overlap+1
 
               do dir=1,num_materials*ngeom_recon
