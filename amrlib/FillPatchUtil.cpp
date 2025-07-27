@@ -684,6 +684,20 @@ void FillPatchTower (
      if ((cellcen!=true)&&(cellcen!=false))
       amrex::Error("cellcen bust");
 
+     if (1==0) {
+      std::cout << "called_from_regrid=" << called_from_regrid << '\n';
+      std::cout << "finest_top_level=" << finest_top_level << '\n';
+      std::cout << "top_level=" << top_level << '\n';
+      std::cout << "ngrow_root=" << ngrow_root << '\n';
+      std::cout << "fpc.ba_crse_patch=" << fpc.ba_crse_patch << '\n';
+      std::cout << "fpc.ba_crse_patch.minimalBox()=" << 
+	      fpc.ba_crse_patch.minimalBox() << '\n';
+      std::cout << "fpc.ba_fine_patch.minimalBox()=" << 
+	      fpc.ba_fine_patch.minimalBox() << '\n';
+      std::cout << "mf_target.boxArray().minimalBox()=" << 
+	      mf_target.boxArray().minimalBox() << '\n';
+     }
+
      if (thread_class::nthreads<1)
       amrex::Error("thread_class::nthreads invalid");
      thread_class::init_d_numPts(mf_fine_patch.boxArray().d_numPts());
@@ -709,6 +723,13 @@ void FillPatchTower (
       FArrayBox& sfab=mf_crse_patch[mfi];
       FArrayBox& dfab=mf_fine_patch[mfi];
       const Box& dbx = dfab.box();
+
+      if (1==0) {
+       std::cout << "dfab.box()=" << dfab.box() << '\n';
+       std::cout << "sfab.box()=" << sfab.box() << '\n';
+       std::cout << "ncomp=" << ncomp << '\n';
+       std::cout << "grid_type=" << grid_type << '\n';
+      }
 
       Vector<BCRec> bcr(ncomp);
       int src_comp_bcs=0;
