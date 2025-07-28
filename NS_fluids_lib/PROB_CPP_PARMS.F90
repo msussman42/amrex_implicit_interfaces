@@ -202,6 +202,8 @@ stop
         mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
         mof_ordering_local(im)=1 ! tessellating
+       else if (local_FSI_flag.eq.FSI_ICE_EULERIAN_ELASTIC) then
+        mof_ordering_local(im)=1 ! tessellating
        else if (local_FSI_flag.eq.FSI_EULERIAN_ELASTIC) then
         mof_ordering_local(im)=1 ! tessellating
        else
@@ -233,6 +235,8 @@ stop
         else if (local_FSI_flag.eq.FSI_SHOELE_CTML) then  
          mof_ordering_local(im)=1  ! non-tessellating
         else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then 
+         mof_ordering_local(im)=1  ! tessellating
+        else if (local_FSI_flag.eq.FSI_ICE_EULERIAN_ELASTIC) then 
          mof_ordering_local(im)=1  ! tessellating
         else if (local_FSI_flag.eq.FSI_EULERIAN_ELASTIC) then 
          mof_ordering_local(im)=1  ! tessellating

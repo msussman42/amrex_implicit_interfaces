@@ -1031,6 +1031,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_FLUID_NODES_INIT=7
 // FSI_EULERIAN_ELASTIC=8
 // FSI_ICE_STATIC=9
+// FSI_ICE_EULERIAN_ELASTIC=10
 Vector<int> NavierStokes::FSI_flag; 
 
 Vector<int> NavierStokes::CTML_max_num_nodes_list;
@@ -2068,6 +2069,7 @@ void fortran_parameters() {
        (NavierStokes::FSI_flag[im]==FSI_ICE_STATIC)||
        (NavierStokes::FSI_flag[im]==FSI_ICE_NODES_INIT)||
        (NavierStokes::FSI_flag[im]==FSI_EULERIAN_ELASTIC)||
+       (NavierStokes::FSI_flag[im]==FSI_ICE_EULERIAN_ELASTIC)||
        (NavierStokes::FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)) {
     //do nothing
    } else
@@ -7438,6 +7440,8 @@ int NavierStokes::is_singular_coeff(int im) {
    local_is_singular_coeff=1; //extend pressure into this region
   } else if (FSI_flag[im]==FSI_EULERIAN_ELASTIC) {  
    local_is_singular_coeff=1; //extend pressure into this region
+  } else if (FSI_flag[im]==FSI_ICE_EULERIAN_ELASTIC) {  
+   local_is_singular_coeff=1; //extend pressure into this region
   } else if (FSI_flag[im]==FSI_PRESCRIBED_PROBF90) { 
    local_is_singular_coeff=1; //extend pressure
   } else if (FSI_flag[im]==FSI_PRESCRIBED_NODES) { 
@@ -10520,6 +10524,7 @@ NavierStokes::initData () {
   //FSI_ICE_STATIC
   //FSI_RIGID_NOTPRESCRIBED
   //FSI_EULERIAN_ELASTIC
+  //FSI_ICE_EULERIAN_ELASTIC
  } else if (read_from_CAD()==0) {
   // do nothing
  } else
