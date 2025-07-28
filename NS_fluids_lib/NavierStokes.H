@@ -390,6 +390,7 @@ public:
      // FSI_FLUID_NODES_INIT=7
      // FSI_EULERIAN_ELASTIC=8
      // FSI_ICE_STATIC=9
+     // FSI_ICE_EULERIAN_ELASTIC=10
      
     static Vector<int> FSI_flag; 
 
