@@ -711,6 +711,7 @@ stop
       else
        print *,"im_FSI_rigid invalid? ",im_FSI_rigid
        print *,"im_FSI_elastic invalid? ",im_FSI_elastic
+       print *,"im_ice invalid? ",im_ice
        print *,"num_materials: ",num_materials
        print *,"im_primary: ",im_primary
        stop

@@ -17,6 +17,7 @@
 #SBATCH -t 14-00:00:00
 #SBATCH --output=run.out
 #SBATCH --error=run.err
+#SBATCH --open-mode=append
 #SBATCH --exclusive
 
 
