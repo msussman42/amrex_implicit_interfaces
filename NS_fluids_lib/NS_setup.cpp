@@ -2960,6 +2960,8 @@ NavierStokes::sum_integrated_quantities (
    }
   }
 
+   //ibase=DRAGCOMP_IQ_BODYFORCE+3*(im_test-1)+dir
+   //localsum(ibase)=localsum(ibase)+gravvector(dir)
   local_counter=0;
   for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {

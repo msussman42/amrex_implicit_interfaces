@@ -7955,7 +7955,7 @@ stop
 ! mask=1 at interior cells, physical border cells, and fine-fine border cells.
 ! mask=0 at coarse-fine border cells.
 ! mask has 3 ghost cells.
-
+!FIX ME
       subroutine fort_init_physics_vars( &
        caller_string, &
        caller_string_len, &
