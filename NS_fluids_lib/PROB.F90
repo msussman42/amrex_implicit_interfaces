@@ -305,17 +305,17 @@ stop
           (complement_flag.eq.1)) then
        ! do nothing
       else
-       print *,"complement_flag invalid"
+       print *,"complement_flag invalid: ",complement_flag
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid: ",num_state_base
        stop
       endif
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
-       print *,"nden invalid"
+       print *,"nden invalid: ",nden
        stop
       endif
 
@@ -443,7 +443,8 @@ stop
         elasticmaskpart=zero
        endif
 
-      else if (im_FSI_elastic.eq.im_primary) then
+      else if ((im_FSI_elastic.eq.im_primary).and. &
+               (im_ice.ne.im_primary)) then
 
        ireverse=-1
        elasticmask=zero
@@ -453,7 +454,8 @@ stop
        endif
 
       else if ((im_FSI_rigid.ne.im_primary).and. &
-               (im_FSI_elastic.ne.im_primary)) then
+               ((im_FSI_elastic.ne.im_primary).or. &
+                (im_ice.eq.im_primary))) then
 
        if ((im_FSI_rigid.lt.0).or. &
            (im_FSI_rigid.gt.num_materials).or. &
@@ -7347,7 +7349,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       if (is_ice(im_dest).ne.1) then
-       print *,"is_ice invalid"
+       print *,"is_ice invalid: ",im_dest,is_ice(im_dest)
        stop
       endif
       dist=-9999.0d0
