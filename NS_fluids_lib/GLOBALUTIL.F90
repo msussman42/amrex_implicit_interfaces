@@ -15145,6 +15145,43 @@ end subroutine print_visual_descriptor
       return
       end function is_ice_or_FSI_rigid_material
 
+      function is_ice_or_FSI_rigid_material_project(im) &
+      bind(c,name='is_ice_or_FSI_rigid_material_project')
+
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer :: is_ice_or_FSI_rigid_material_project
+      integer, INTENT(in) :: im
+      integer :: elastic_flag
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid (is_ice_or_FSI_rigid_material_project): ",im
+       stop
+      endif
+
+      is_ice_or_FSI_rigid_material_project=0
+
+      elastic_flag=is_FSI_elastic(im)
+
+      if (((is_ice(im).eq.1).and. &
+           (elastic_flag.eq.0)).or. &
+          (is_FSI_rigid(im).eq.1)) then
+       is_ice_or_FSI_rigid_material_project=1
+      else if (((is_ice(im).eq.0).or. &
+                (elastic_flag.eq.1)).and. &
+               (is_FSI_rigid(im).eq.0)) then
+       is_ice_or_FSI_rigid_material_project=0
+      else
+       print *,"is_ice or is_FSI_rigid or elastic_flag bad"
+       stop
+      endif
+
+      return
+      end function is_ice_or_FSI_rigid_material_project
+
+
       function fort_is_lag_part_base(FSI_flag_local,im) &
       bind(c,name='fort_is_lag_part_base')
       use probcommon_module

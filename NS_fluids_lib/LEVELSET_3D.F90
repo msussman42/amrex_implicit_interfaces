@@ -7955,7 +7955,6 @@ stop
 ! mask=1 at interior cells, physical border cells, and fine-fine border cells.
 ! mask=0 at coarse-fine border cells.
 ! mask has 3 ghost cells.
-!FIX ME
       subroutine fort_init_physics_vars( &
        caller_string, &
        caller_string_len, &
@@ -9450,8 +9449,9 @@ stop
           endif
 
            ! neither adjoining cell is a solid cell.
-           ! All adjoining cells are either "fluid" cells or
-           ! "ice" cells,
+           ! All adjoining cells are either 
+           ! "fluid" cells, or
+           ! "ice" cells, or
            ! "FSI_rigid" cells, or
            ! "FSI_EULERIAN_ELASTIC" cells.
          else if (solid_present_flag.eq.0) then
@@ -9468,9 +9468,7 @@ stop
 
            if ((is_ice_or_FSI_rigid_material(implus_majority).eq.1).and. &
                (is_ice_or_FSI_rigid_material(imminus_majority).eq.1)) then
-            facevisc_local=zero
-            localvisc_minus(imminus_majority)=zero
-            localvisc_plus(implus_majority)=zero
+            !do nothing
            else if ((is_ice_or_FSI_rigid_material(implus_majority).eq.1).and. &
                     (is_ice_or_FSI_rigid_material(imminus_majority).eq.0)) then
             !do nothing
@@ -10654,7 +10652,7 @@ stop
          endif
 
          if (is_ice_or_FSI_rigid_material(implus_majority).eq.1) then
-          null_viscosity=1
+          ! do nothing
          else if (is_ice_or_FSI_rigid_material(implus_majority).eq.0) then
           ! do nothing
          else
@@ -15109,7 +15107,7 @@ stop
                  if ((beta.eq.-one).or.(beta.eq.one)) then
                    ! do nothing
                  else
-                  print *,"beta invalid"
+                  print *,"beta invalid: ",beta
                   stop
                  endif
 
@@ -15185,15 +15183,19 @@ stop
                typeright=NINT(typefab(D_DECL(i,j,k)))
                colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
                colorright=NINT(colorfab(D_DECL(i,j,k)))
-               if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
-                   (typeright.ge.1).and.(typeright.le.num_materials)) then
 
-                 !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
-                if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).or. &
-                    (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+               if ((typeleft.ge.1).and. &
+                   (typeleft.le.num_materials).and. &
+                   (typeright.ge.1).and. &
+                   (typeright.le.num_materials)) then
 
-                 if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).and. &
-                     (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+                 !is_ice_or_FSI_rigid_material_project=1 
+                 !if "is_ice" or "is_FSI_rigid" and not elastic.
+                if ((is_ice_or_FSI_rigid_material_project(typeleft).eq.1).or. &
+                    (is_ice_or_FSI_rigid_material_project(typeright).eq.1)) then
+
+                 if ((is_ice_or_FSI_rigid_material_project(typeleft).eq.1).and. &
+                     (is_ice_or_FSI_rigid_material_project(typeright).eq.1)) then
                   if (LSleft(typeleft).ge.LSright(typeright)) then  
                    typeface=typeleft
                    colorface=colorleft
@@ -15201,23 +15203,24 @@ stop
                    typeface=typeright
                    colorface=colorright
                   else
-                   print *,"LSleft or LSright bust"
+                   print *,"LSleft or LSright bust: ",LSleft(typeleft), &
+                     LSright(typeright)
                    stop
                   endif
-                 else if (is_ice_or_FSI_rigid_material(typeleft).eq.1) then
+                 else if (is_ice_or_FSI_rigid_material_project(typeleft).eq.1) then
                   typeface=typeleft
                   colorface=colorleft
-                 else if (is_ice_or_FSI_rigid_material(typeright).eq.1) then
+                 else if (is_ice_or_FSI_rigid_material_project(typeright).eq.1) then
                   typeface=typeright
                   colorface=colorright
                  else
-                  print *,"typeleft or typeright bust"
+                  print *,"typeleft or typeright bust: ",typeleft,typeright
                   stop
                  endif
 
                   ! is_ice==1 or
                   ! is_FSI_rigid==1 
-                 if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
+                 if (is_ice_or_FSI_rigid_material_project(typeface).eq.1) then
                   if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                     ! declared in: GLOBALUTIL.F90
                    call get_rigid_velocity( &
@@ -15249,33 +15252,35 @@ stop
                   else if (colorface.eq.0) then
                    ! do nothing
                   else
-                   print *,"colorface invalid"
+                   print *,"colorface invalid: ",colorface
                    stop
                   endif 
                  else
-                  print *,"is_ice or is_FSI_rigid bust"
+                  print *,"is_ice or is_FSI_rigid or is_elastic bust"
                   stop
                  endif
 
-                else if ((is_ice(typeleft).eq.0).and. &
-                         (is_ice(typeright).eq.0).and. &
+                else if (((is_ice(typeleft).eq.0).or. &
+                          (is_FSI_elastic(typeleft).eq.1)).and. &
+                         ((is_ice(typeright).eq.0).or. &
+                          (is_FSI_elastic(typeright).eq.1)).and. &
                          (is_FSI_rigid(typeleft).eq.0).and. &
                          (is_FSI_rigid(typeright).eq.0)) then
                  ! do nothing
                 else
-                 print *,"is_ice or is_FSI_rigid invalid"
+                 print *,"is_ice or is_FSI_rigid or is_elastic invalid"
                  stop
                 endif
 
                else
-                print *,"typeleft or typeright invalid"
+                print *,"typeleft or typeright invalid: ",typeleft,typeright
                 stop
                endif
 
               else if (num_colors.eq.0) then
                ! do nothing
               else
-               print *,"num_colors invalid"
+               print *,"num_colors invalid: ",num_colors
                stop
               endif 
 
@@ -16899,15 +16904,18 @@ stop
         typeright=NINT(typefab(D_DECL(i,j,k)))
         colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
         colorright=NINT(colorfab(D_DECL(i,j,k)))
-        if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
-            (typeright.ge.1).and.(typeright.le.num_materials)) then
+
+        if ((typeleft.ge.1).and. &
+            (typeleft.le.num_materials).and. &
+            (typeright.ge.1).and. &
+            (typeright.le.num_materials)) then
 
           !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
-         if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).or. &
-             (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+         if ((is_ice_or_FSI_rigid_material_project(typeleft).eq.1).or. &
+             (is_ice_or_FSI_rigid_material_project(typeright).eq.1)) then
 
-          if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).and. &
-              (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+          if ((is_ice_or_FSI_rigid_material_project(typeleft).eq.1).and. &
+              (is_ice_or_FSI_rigid_material_project(typeright).eq.1)) then
            if (LSleft(typeleft).ge.LSright(typeright)) then  
             typeface=typeleft
             colorface=colorleft
@@ -16915,23 +16923,25 @@ stop
             typeface=typeright
             colorface=colorright
            else
-            print *,"LSleft or LSright bust"
+            print *,"LSleft or LSright bust: ",LSleft(typeleft), &
+              LSright(typeright)
             stop
            endif
-          else if (is_ice_or_FSI_rigid_material(typeleft).eq.1) then
+          else if (is_ice_or_FSI_rigid_material_project(typeleft).eq.1) then
            typeface=typeleft
            colorface=colorleft
-          else if (is_ice_or_FSI_rigid_material(typeright).eq.1) then
+          else if (is_ice_or_FSI_rigid_material_project(typeright).eq.1) then
            typeface=typeright
            colorface=colorright
           else
-           print *,"typeleft or typeright bust"
+           print *,"typeleft or typeright bust: ",typeleft,typeright
            stop
           endif
 
-           ! is_ice==1 or
+           ! ((is_ice==1).and.(! elastic)) or
            ! is_FSI_rigid==1 
-          if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
+          if (is_ice_or_FSI_rigid_material_project(typeface).eq.1) then
+
            if ((colorface.ge.1).and.(colorface.le.num_colors)) then
              ! declared in: GLOBALUTIL.F90
             call get_rigid_velocity( &
@@ -16951,26 +16961,28 @@ stop
            else if (colorface.eq.0) then
             ! do nothing
            else
-            print *,"colorface invalid"
+            print *,"colorface invalid: ",colorface
             stop
            endif 
           else
-           print *,"is_ice or is_FSI_rigid bust"
+           print *,"is_ice or is_FSI_rigid or is_elastic bust"
            stop
           endif
 
-         else if ((is_ice(typeleft).eq.0).and. &
-                  (is_ice(typeright).eq.0).and. &
+         else if (((is_ice(typeleft).eq.0).or. &
+                   (is_FSI_elastic(typeleft).eq.1)).and. &
+                  ((is_ice(typeright).eq.0).or. &
+                   (is_FSI_elastic(typeright).eq.1)).and. &
                   (is_FSI_rigid(typeleft).eq.0).and. &
                   (is_FSI_rigid(typeright).eq.0)) then
           ! do nothing
          else
-          print *,"is_ice or is_FSI_rigid invalid"
+          print *,"is_ice or is_FSI_rigid or is_elastic invalid"
           stop
          endif
 
         else
-         print *,"typeleft or typeright invalid"
+         print *,"typeleft or typeright invalid: ",typeleft,typeright
          stop
         endif
 
@@ -17108,8 +17120,9 @@ stop
 
        if ((typeface.ge.1).and.(typeface.le.num_materials)) then
 
-         !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
-        if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
+         !is_ice_or_FSI_rigid_material_project=1 
+         !if "is_ice" or "is_FSI_rigid" and not elastic
+        if (is_ice_or_FSI_rigid_material_project(typeface).eq.1) then
 
          if ((colorface.ge.1).and.(colorface.le.num_colors)) then
           ! declared in: GLOBALUTIL.F90
@@ -17133,20 +17146,21 @@ stop
          else if (colorface.eq.0) then
           ! do nothing
          else
-          print *,"colorface invalid"
+          print *,"colorface invalid: ",colorface
           stop
          endif 
 
-        else if ((is_ice(typeface).eq.0).and. &
+        else if (((is_ice(typeface).eq.0).or. &
+                  (is_FSI_elastic(typeface).eq.1)).and. &
                  (is_FSI_rigid(typeface).eq.0)) then
          ! do nothing
         else
-         print *,"is_ice or is_FSI_rigid invalid"
+         print *,"is_ice or is_FSI_rigid or is_elastic invalid"
          stop
         endif
 
        else
-        print *,"typeface invalid"
+        print *,"typeface invalid: ",typeface
         stop
        endif
 

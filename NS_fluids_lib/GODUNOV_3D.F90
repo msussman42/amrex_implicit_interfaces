@@ -12043,7 +12043,8 @@ stop
          endif
 
          if ((is_rigid(im_primary).eq.0).and. &
-             (is_FSI_elastic(im_primary).eq.0).and. &
+             ((is_FSI_elastic(im_primary).eq.0).or. &
+              (is_ice(im_primary).eq.1)).and. &
              (is_FSI_rigid(im_primary).eq.0)) then
 
            ! first tag donor cells (tag=one)
@@ -12163,15 +12164,17 @@ stop
            stop
           endif
 
-         !in the prescribed solid.
+          !in the prescribed solid.
          else if ((is_rigid(im_primary).eq.1).or. &
-                  (is_FSI_elastic(im_primary).eq.1).or. &
+                  ((is_FSI_elastic(im_primary).eq.1).and. &
+                   (is_ice(im_primary).eq.0)).or. &
                   (is_FSI_rigid(im_primary).eq.1)) then 
           ! do nothing (tag initialized to 0, neither donor nor receiver)
          else
           print *,"is_rigid(im_primary) invalid or"
           print *,"is_FSI_rigid(im_primary) invalid or "
-          print *,"is_FSI_elastic(im_primary) invalid "
+          print *,"is_FSI_elastic(im_primary) invalid or "
+          print *,"is_ice(im_primary) invalid "
           stop
          endif 
 

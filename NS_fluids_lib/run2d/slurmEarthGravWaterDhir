@@ -9,6 +9,7 @@
 #SBATCH -t 03:59:00
 #SBATCH --output=run.out
 #SBATCH --error=run.err
+#SBATCH --open-mode=append
 
 # other partitions:
 # backfill, backfill2, genacc_q

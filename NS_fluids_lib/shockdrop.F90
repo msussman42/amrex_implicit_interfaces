@@ -122,6 +122,16 @@ IMPLICIT NONE
       Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma_constant) + 1.0d0) ** 0.5
       shockAngle = asin(Mn1/M1)
 
+       ! ANALYTICAL STUDY OF SONIC BOOM FROM SUPERSONIC PROJECTILES
+       ! Gottlieb and Ritzel
+       ! Marco Arienti's formulation used a more arcane formulation from
+       ! this paper:
+       ! Ballistic Wave from Projectiles and Vehicles of Simple Geometry
+       ! Varnier and Le Pape
+       ! It is more intuitive to have:
+       ! T_o= 2^(1/4) ....
+       ! and
+       ! Fw=Diameter_b/Lb ** 0.25
       T_o = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.31)**0.25
       T_o = T_o / zblob4
 
