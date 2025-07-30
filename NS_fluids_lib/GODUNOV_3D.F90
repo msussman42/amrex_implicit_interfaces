@@ -11858,6 +11858,8 @@ stop
         im_ice=0
        else
         print *,"is_ice invalid"
+        print *,"im_dest,im_source,is_ice(im_dest),is_ice(im_source) ", &
+          im_dest,im_source,is_ice(im_dest),is_ice(im_source)
         stop
        endif
        if (im_ice.eq.0) then
@@ -11975,6 +11977,8 @@ stop
           im_ice=0
          else
           print *,"is_ice invalid"
+          print *,"im_source,im_dest,is_ice(im_source),is_ice(im_dest) ", &
+           im_source,im_dest,is_ice(im_source),is_ice(im_dest)
           stop
          endif
 
@@ -12175,6 +12179,9 @@ stop
           print *,"is_FSI_rigid(im_primary) invalid or "
           print *,"is_FSI_elastic(im_primary) invalid or "
           print *,"is_ice(im_primary) invalid "
+          print *,"im_primary,is_rigid,is_FSI_elastic,is_ice,is_FSI_rigid ", &
+           im_primary,is_rigid(im_primary),is_FSI_elastic(im_primary), &
+           is_ice(im_primary),is_FSI_rigid(im_primary)
           stop
          endif 
 

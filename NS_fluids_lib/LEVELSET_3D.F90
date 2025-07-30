@@ -9480,6 +9480,12 @@ stop
             !do nothing
            else
             print *,"implus_majority or imminus_majority invalid"
+            print *,"implus_majority,imminus_majority ", &
+             implus_majority,imminus_majority
+            print *,"is_ice_or_FSI_rigid_material(implus_majority) ", &
+             is_ice_or_FSI_rigid_material(implus_majority)
+            print *,"is_ice_or_FSI_rigid_material(imminus_majority) ", &
+             is_ice_or_FSI_rigid_material(imminus_majority)
             stop
            endif
 
@@ -10657,6 +10663,9 @@ stop
           ! do nothing
          else
           print *,"is_ice_or_FSI_rigid_material invalid:fort_init_physics_vars"
+          print *,"implus_majority ",implus_majority
+          print *,"is_ice_or_FSI_rigid_material(implus_majority) ", &
+             is_ice_or_FSI_rigid_material(implus_majority)
           stop
          endif
 
@@ -15257,6 +15266,12 @@ stop
                   endif 
                  else
                   print *,"is_ice or is_FSI_rigid or is_elastic bust"
+                  print *,"typeface ",typeface
+                  print *,"is_ice(typeface) ",is_ice(typeface)
+                  print *,"is_FSI_elastic(typeface) ", &
+                    is_FSI_elastic(typeface)
+                  print *,"is_FSI_rigid(typeface) ", &
+                    is_FSI_rigid(typeface)
                   stop
                  endif
 
@@ -15269,6 +15284,17 @@ stop
                  ! do nothing
                 else
                  print *,"is_ice or is_FSI_rigid or is_elastic invalid"
+                 print *,"typeleft, typeright: ",typeleft,typeright
+                 print *,"is_ice(typeleft) ",is_ice(typeleft)
+                 print *,"is_FSI_elastic(typeleft) ", &
+                  is_FSI_elastic(typeleft)
+                 print *,"is_ice(typeright) ",is_ice(typeright)
+                 print *,"is_FSI_elastic(typeright) ", &
+                  is_FSI_elastic(typeright)
+                 print *,"is_FSI_rigid(typeleft) ", &
+                  is_FSI_rigid(typeleft)
+                 print *,"is_FSI_rigid(typeright) ", &
+                  is_FSI_rigid(typeright)
                  stop
                 endif
 
@@ -16966,6 +16992,12 @@ stop
            endif 
           else
            print *,"is_ice or is_FSI_rigid or is_elastic bust"
+           print *,"typeface ",typeface
+           print *,"is_ice(typeface) ",is_ice(typeface)
+           print *,"is_FSI_elastic(typeface) ", &
+             is_FSI_elastic(typeface)
+           print *,"is_FSI_rigid(typeface) ", &
+             is_FSI_rigid(typeface)
            stop
           endif
 
@@ -16978,6 +17010,17 @@ stop
           ! do nothing
          else
           print *,"is_ice or is_FSI_rigid or is_elastic invalid"
+          print *,"typeleft, typeright: ",typeleft,typeright
+          print *,"is_ice(typeleft) ",is_ice(typeleft)
+          print *,"is_FSI_elastic(typeleft) ", &
+           is_FSI_elastic(typeleft)
+          print *,"is_ice(typeright) ",is_ice(typeright)
+          print *,"is_FSI_elastic(typeright) ", &
+           is_FSI_elastic(typeright)
+          print *,"is_FSI_rigid(typeleft) ", &
+           is_FSI_rigid(typeleft)
+          print *,"is_FSI_rigid(typeright) ", &
+           is_FSI_rigid(typeright)
           stop
          endif
 
@@ -17156,6 +17199,12 @@ stop
          ! do nothing
         else
          print *,"is_ice or is_FSI_rigid or is_elastic invalid"
+         print *,"typeface ",typeface
+         print *,"is_ice(typeface) ",is_ice(typeface)
+         print *,"is_FSI_elastic(typeface) ", &
+           is_FSI_elastic(typeface)
+         print *,"is_FSI_rigid(typeface) ", &
+           is_FSI_rigid(typeface)
          stop
         endif
 
