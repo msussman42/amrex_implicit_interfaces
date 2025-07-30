@@ -15175,6 +15175,8 @@ end subroutine print_visual_descriptor
        is_ice_or_FSI_rigid_material_project=0
       else
        print *,"is_ice or is_FSI_rigid or elastic_flag bad"
+       print *,"im,is_ice(im),elastic_flag,is_FSI_rigid(im) ", &
+         im,is_ice(im),elastic_flag,is_FSI_rigid(im)
        stop
       endif
 
@@ -15901,6 +15903,8 @@ end subroutine print_visual_descriptor
        is_rigid_CL=0
       else
        print *,"is_rigid, FSI_elastic,or is_ice_or_FSI_rigid_material invalid"
+       print *,"im,is_rigid,is_FSI_elastic,is_ice_or_FSI_rigid_material ", &
+        im,is_rigid(im),is_FSI_elastic(im),is_ice_or_FSI_rigid_material(im)
        stop
       endif
 

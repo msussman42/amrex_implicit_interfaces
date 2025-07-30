@@ -388,6 +388,9 @@ stop
        im_ice=im_primary
       else
        print *,"is_ice invalid"
+       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+       print *,"is_ice(im) ",is_ice(im)
+       print *,"is_ice(im_opp) ",is_ice(im_opp)
        stop
       endif
      
@@ -405,6 +408,9 @@ stop
        im_FSI_rigid=im_primary
       else
        print *,"is_FSI_rigid invalid"
+       print *,"im,im_opp ",im,im_opp
+       print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
+       print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
        stop
       endif
 
@@ -422,6 +428,9 @@ stop
        im_FSI_elastic=im_primary
       else
        print *,"is_FSI_elastic invalid"
+       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+       print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
+       print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
        stop
       endif
 
@@ -443,6 +452,7 @@ stop
         elasticmaskpart=zero
        endif
 
+       ! a "non-ice" elastic material.
       else if ((im_FSI_elastic.eq.im_primary).and. &
                (im_ice.ne.im_primary)) then
 
@@ -501,23 +511,32 @@ stop
               ! do nothing
              else
               print *,"is_ice(im_tertiary) invalid"
+              print *,"im_tertiary ",im_tertiary
+              print *,"is_ice(im_tertiary): ",is_ice(im_tertiary)
               stop
              endif
             else if (is_FSI_elastic(im_tertiary).eq.1) then
              ! do nothing
             else
              print *,"is_FSI_elastic(im_tertiary) invalid"
+             print *,"im_tertiary ",im_tertiary
+             print *,"is_FSI_elastic(im_tertiary): ", &
+              is_FSI_elastic(im_tertiary)
              stop
             endif
            else if (is_FSI_rigid(im_tertiary).eq.1) then
             ! do nothing
            else
             print *,"is_FSI_rigid(im_tertiary) invalid"
+            print *,"im_tertiary ",im_tertiary
+            print *,"is_FSI_rigid(im_tertiary): ", &
+             is_FSI_rigid(im_tertiary)
             stop
            endif
           else
            print *,"is_rigid(im_tertiary) invalid"
            print *,"contradiction with: get_tertiary_material"
+           print *,"im_tertiary ",im_tertiary
            print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
            stop
           endif
@@ -535,7 +554,7 @@ stop
         else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
          ! do nothing
         else
-         print *,"LL invalid"
+         print *,"LL invalid: ",LL
          stop
         endif
 
@@ -693,7 +712,7 @@ stop
          endif
 
         else
-         print *,"ireverse invalid"
+         print *,"ireverse invalid: ",ireverse
          stop
         endif
  
@@ -7342,11 +7361,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer, INTENT(in) :: im_source,im_dest
 
       if ((im_source.lt.1).or.(im_source.gt.num_materials)) then
-       print *,"im_source invalid"
+       print *,"im_source invalid: ",im_source
        stop
       endif
       if ((im_dest.lt.1).or.(im_dest.gt.num_materials)) then
-       print *,"im_dest invalid"
+       print *,"im_dest invalid: ",im_dest
        stop
       endif
       if (is_ice(im_dest).ne.1) then
