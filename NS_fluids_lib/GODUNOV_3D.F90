@@ -8720,7 +8720,12 @@ stop
       real(amrex_real) :: plastic_work
       real(amrex_real) :: plastic_work_average
       real(amrex_real) :: plastic_work_weight
+      real(amrex_real) :: current_vfrac
+      real(amrex_real) :: current_temperature
+      real(amrex_real) :: current_dedt_term
+      real(amrex_real) :: current_TM
       integer :: tcomp
+      integer :: vofcomp
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -8802,7 +8807,7 @@ stop
       endif
 
       if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
-       print *,"im_critical invalid27"
+       print *,"im_critical invalid27: ",im_critical
        stop
       endif
       if (ncomp_visc.ne.3*num_materials) then
@@ -8855,6 +8860,32 @@ stop
 
        plastic_work_average=zero
        plastic_work_weight=zero
+
+       tcomp=STATECOMP_STATES+im_critical*num_state_material+ &
+         ENUM_TEMPERATUREVAR+1
+
+       vofcomp=STATECOMP_MOF+im_critical*ngeom_raw+1
+
+       current_vfrac=snew(D_DECL(i,j,k),vofcomp)
+
+        ! rho cv DT/Dt = beta W_p^dot
+       current_temperature=snew(D_DECL(i,j,k),tcomp)
+       current_dedt_term=fort_denconst(im_critical+1)* &
+             fort_stiffCV(im_critical+1)
+       current_TM=fort_yield_temperature(im_critical+1)
+       if (current_TM.gt.zero) then
+        !do nothing
+       else
+        print *,"current_TM invalid: ",current_TM
+        stop
+       endif
+
+       if (current_dedt_term.gt.zero) then
+        current_dedt_term=one/current_dedt_term
+       else
+        print *,"current_dedt_term invalid: ",current_dedt_term
+        stop
+       endif
 
        krefine=0
 #if (AMREX_SPACEDIM==3)
@@ -9116,14 +9147,22 @@ stop
 
        if (plastic_work_weight.gt.zero) then
         plastic_work_average=plastic_work_average/plastic_work_weight
-        tcomp=STATECOMP_STATES+im_critical*num_state_material+ &
-         ENUM_TEMPERATUREVAR+1
          ! rho cv DT/Dt = beta W_p^dot
-        if (dedt(D_DECL(i,j,k)).ge.zero) then
-         snew(D_DECL(i,j,k),tcomp)=snew(D_DECL(i,j,k),tcomp)+dt* &
-          plastic_work_average*dedt(D_DECL(i,j,k))
+        if (current_dedt_term.ge.zero) then
+
+         if ((current_vfrac.gt.zero).and. &
+             (current_vfrac.le.one+0.1d0)) then
+          snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
+            plastic_work_average*current_dedt_term
+         else if (current_vfrac.eq.zero) then
+          !do nothing
+         else
+          print *,"current_vfrac invalid: ",current_vfrac
+          stop
+         endif
+
         else
-         print *,"dedt(D_DECL(i,j,k)) invalid: ",dedt(D_DECL(i,j,k))
+         print *,"current_dedt_term invalid: ",current_dedt_term
          stop
         endif
        else
