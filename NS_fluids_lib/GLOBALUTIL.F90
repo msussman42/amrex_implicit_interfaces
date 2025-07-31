@@ -27998,6 +27998,19 @@ real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p
 real(amrex_real), INTENT(in) :: eps_p,n
 real(amrex_real), INTENT(out) :: yield_stress
 
+if (ref_eps_p.ge.zero) then
+ !do nothing
+else
+ print *,"ref_eps_p invalid ",ref_eps_p
+ stop
+endif
+if (eps_p.ge.zero) then
+ !do nothing
+else
+ print *,"eps_p invalid ",eps_p
+ stop
+endif
+
 if (base_yield_stress.gt.zero) then
  !do nothing
 else
@@ -28006,8 +28019,15 @@ else
 endif
 if (T.le.TM) then
  !do nothing
+else if (T.ge.TM) then
+ print *,"T.ge.TM !"
+ print *,"T=",T
+ print *,"TM=",TM
+ print *,"ref_eps_p=",ref_eps_p
+ print *,"eps_p=",eps_p
+ stop
 else
- print *,"T>TM!",T,TM
+ print *,"T and/or TM corruption: ",T,TM
  stop
 endif
 if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
@@ -28016,6 +28036,13 @@ if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
  !do nothing
 else
  print *,"Johnson Cook Softening parameters corrupt"
+ print *,"eps_p ",eps_p
+ print *,"ref_eps_p ",ref_eps_p
+ print *,"T ",T
+ print *,"TM ",TM
+ print *,"T0 ",T0
+ print *,"n ",n
+ print *,"alpha ",alpha
  stop
 endif
 
@@ -28040,11 +28067,19 @@ else if ((T.ge.T0).and.(eps_p.ge.ref_eps_p)) then
   ! reference [5] from that paper:
   ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
   ! Cambridge University Press, 1992.
- yield_stress=base_yield_stress*(one- &
-  ((T-T0)/(TM-T0))**alpha)* &
-  (one+eps_p/ref_eps_p)**(one/n)
+  ! if T=TM then yield_stress=0
+ if (T.ge.TM) then
+  yield_stress=zero
+ else if ((T.le.TM).and.(T.ge.zero)) then
+  yield_stress=base_yield_stress*(one- &
+   ((T-T0)/(TM-T0))**alpha)* &
+   (one+eps_p/ref_eps_p)**(one/n)
+ else
+  print *,"T or TM invalid: ",T,TM
+  stop
+ endif
 else
- print *,"T or eps_p invalid"
+ print *,"T or eps_p invalid: ",T,eps_p
  stop
 endif
 
