@@ -120,7 +120,7 @@ ns.gravity        = 0.0  # must be nonzero, otherwise not used.
 ns.tension        = 72.8  #water
 ns.sum_interval   = 1        # timesteps between computing mass 
 
-ns.axis_dir=152 #shock cylinder
+ns.axis_dir=154 #shock cylinder 152 or 154
 ns.vorterr=1.0e+10 1.0e+10
 ns.rgasinlet=1.57
 # MACH number of shock.

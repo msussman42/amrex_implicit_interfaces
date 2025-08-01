@@ -379,7 +379,8 @@ shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 ! shockdrop_M0=1.0017
 if ((axis_dir.eq.150).or. &
     (axis_dir.eq.151).or. &
-    (axis_dir.eq.152)) then
+    (axis_dir.eq.152).or. &
+    (axis_dir.eq.154)) then
  shockdrop_M0=vinletgas
 else if (axis_dir.eq.153) then
  shockdrop_M0=radblob2 !far field Mach
@@ -397,7 +398,8 @@ endif
 
 if ((axis_dir.eq.150).or. &
     (axis_dir.eq.151).or. &
-    (axis_dir.eq.152)) then
+    (axis_dir.eq.152).or. &
+    (axis_dir.eq.154)) then
  shockdrop_T0=278.0d0 !tempconst(2)
  shockdrop_DEN0=0.00125335272d0 !denconst(2)
 else if (axis_dir.eq.153) then
@@ -475,7 +477,8 @@ if (probtype.eq.shockdrop_PROB_TYPE) then
 
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
   if (abs(test_pres-shockdrop_P0)/test_pres.gt.EPS3) then
    print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
    print *,"test_pres=",test_pres
@@ -554,6 +557,8 @@ else if (axis_dir.eq.152) then
   stop
  endif
  shockdrop_VEL0=shockdrop_VEL1+vel_data(idata)*1.0D+2
+else if (axis_dir.eq.154) then
+ !do nothing (Arienti shock cylinder but not compare with experiments)
 else if (axis_dir.eq.153) then
  !do nothing (Arienti shock sphere)
 else
@@ -597,6 +602,8 @@ else if (axis_dir.eq.152) then
   read(2,*) time_data(idata),vel_data(idata)
  enddo
  close(2)
+else if (axis_dir.eq.154) then
+ !do nothing
 else if (axis_dir.eq.153) then
  !do nothing (shock sphere ARIENTI)
 else
@@ -689,7 +696,8 @@ if (ls_local.ge.zero) then
  ! shock is approaching with speed: shockdrop_VEL0
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
   vel(1)=advbot ! velocity in the "periodic" direction
  else if (axis_dir.eq.153) then !Arienti shock sphere
   !do nothing
@@ -705,7 +713,8 @@ else
  ! downstream: v=-shockdrop_VEL1
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
 
   if (ls_local.ge.zero) then  ! upstream (above the shock)
    vel(SDIM)=zero
@@ -844,7 +853,8 @@ else
 
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
 
   if (ls_local.ge.zero) then  ! upstream (above the approaching shock)
    pres=shockdrop_P0
@@ -947,7 +957,8 @@ else if (LS.le.zero) then !gas
 
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
 
   if (LS.ge.zero) then  ! upstream (above the shock)
    den=shockdrop_DEN0
@@ -1081,7 +1092,8 @@ else if (LS.le.zero) then !gas
 
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
-     (axis_dir.eq.152)) then
+     (axis_dir.eq.152).or. &
+     (axis_dir.eq.154)) then
 
   if (LS.ge.zero) then  ! upstream (above the shock)
    temp=shockdrop_T0
@@ -1155,7 +1167,7 @@ end subroutine shockdrop_gas_temperature
 ! probtype="shockdrop_PROB_TYPE" in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
-! axis_dir=152 shock cylinder
+! axis_dir=152,154 shock cylinder
 ! axis_dir=153 Arienti shock sphere
 ! LS>0 upstream of the shock  z>zblob2
 ! LS<0 downstream of the shock z<zblob2
@@ -1176,7 +1188,8 @@ endif
 
 if ((axis_dir.eq.150).or. &
     (axis_dir.eq.151).or. &
-    (axis_dir.eq.152)) then
+    (axis_dir.eq.152).or. &
+    (axis_dir.eq.154)) then
 
 ! downstream vel>0    shock-->   upstream vel=0
 ! in shock frame of reference:
@@ -1195,7 +1208,7 @@ END SUBROUTINE shockdrop_shockLS
 ! probtype="shockdrop_PROB_TYPE" in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
-! axis_dir=152 shock cylinder
+! axis_dir=152,154 shock cylinder
 ! axis_dir=153 Arienti shock sphere
 ! LS>0 in the drop
 subroutine shockdrop_dropLS(x,y,z,LS)
@@ -1231,7 +1244,8 @@ else if (axis_dir.eq.151) then ! shock column
   print *,"dimension bust"
   stop
  endif
-else if (axis_dir.eq.152) then ! shock cylinder
+else if ((axis_dir.eq.152).or. &
+         (axis_dir.eq.154)) then ! shock cylinder
  if (SDIM.eq.2) then
   mag=(x-xblob)**2+(y-yblob)**2
   LS=radblob-sqrt(mag) 
@@ -1549,7 +1563,7 @@ enddo !dir=1..sdim
 if ((num_materials.ge.2).and. &
     (probtype.eq.shockdrop_PROB_TYPE)) then
 
- if ((axis_dir.ge.150).and.(axis_dir.le.153)) then
+ if ((axis_dir.ge.150).and.(axis_dir.le.154)) then
 
   ii=0
   jj=0
@@ -1592,6 +1606,9 @@ if ((num_materials.ge.2).and. &
   else if (axis_dir.eq.152) then
    !shock cylinder
    P_diff=zero
+  else if (axis_dir.eq.154) then
+   !shock cylinder
+   P_diff=zero
   else if (axis_dir.eq.153) then
    !shock sphere (Arienti)
    P_diff=zero
@@ -1608,7 +1625,8 @@ if ((num_materials.ge.2).and. &
 
   if ((axis_dir.eq.150).or. &
       (axis_dir.eq.151).or. &
-      (axis_dir.eq.152)) then
+      (axis_dir.eq.152).or. &
+      (axis_dir.eq.154)) then
 
    if (mag.gt.100.d0*radblob) then
     !do nothing
