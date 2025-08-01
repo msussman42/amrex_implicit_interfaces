@@ -781,6 +781,7 @@ Vector<Real> NavierStokes::disjoining_pressure_cell_width;
 // 6=evaporation/condensation (Palmore and Desjardins, JCP 2019)
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
+Vector<int> NavierStokes::force_Y_probe_zero;
 
 // mdot=n_gamma dot [k grad T]/[h]=
 //      n_gamma dot (rho_g D grad Y_V)/(Y_gamma-1)
@@ -4038,6 +4039,7 @@ NavierStokes::read_params ()
     disjoining_pressure_cell_width.resize(2*num_interfaces);
 
     freezing_model.resize(2*num_interfaces);
+    force_Y_probe_zero.resize(2*num_interfaces);
     prescribed_mdot.resize(2*num_interfaces);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
 
@@ -4139,6 +4141,9 @@ NavierStokes::read_params ()
 
      freezing_model[i]=0;
      freezing_model[i+num_interfaces]=0;
+
+     force_Y_probe_zero[i]=0;
+     force_Y_probe_zero[i+num_interfaces]=0;
 
      prescribed_mdot[i]=0.0;
      prescribed_mdot[i+num_interfaces]=0.0;
@@ -4627,6 +4632,7 @@ NavierStokes::read_params ()
       disjoining_pressure_cell_width,2*num_interfaces);
 
     pp.queryAdd("freezing_model",freezing_model,2*num_interfaces);
+    pp.queryAdd("force_Y_probe_zero",force_Y_probe_zero,2*num_interfaces);
     pp.queryAdd("prescribed_mdot",prescribed_mdot,2*num_interfaces);
 
     pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
@@ -6338,6 +6344,11 @@ NavierStokes::read_params ()
        freezing_model[i] << '\n';
       std::cout << "freezing_model i+num_interfaces=" << 
        i+num_interfaces << "  " << freezing_model[i+num_interfaces] << '\n';
+
+      std::cout << "force_Y_probe_zero i=" << i << "  " << 
+       force_Y_probe_zero[i] << '\n';
+      std::cout << "force_Y_probe_zero i+num_interfaces=" << 
+       i+num_interfaces << "  " << force_Y_probe_zero[i+num_interfaces] << '\n';
 
       std::cout << "prescribed_mdot i=" << i << "  " << 
        prescribed_mdot[i] << '\n';
@@ -14625,6 +14636,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
+     force_Y_probe_zero.dataPtr(),
      prescribed_mdot.dataPtr(),
      &observe_initial_mdot,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
@@ -14709,6 +14721,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
+     force_Y_probe_zero.dataPtr(),
      prescribed_mdot.dataPtr(),
      &observe_initial_mdot,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),

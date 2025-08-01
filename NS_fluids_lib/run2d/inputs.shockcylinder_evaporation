@@ -1,0 +1,262 @@
+#Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
+#(shock moves in the x-direction)
+#shockdrop.F90
+#This inputs file: shock moves in the y-direction
+#4 cores in 2d
+#64 cores in 3d
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+# max_level_for_use=3  0<t<1e-3
+# max_level_for_use=4  1e-3<t<2.3e-3
+# max_level_for_use=5  t>2.3e-3
+stop_time =  1.0e-3  # maximum problem time
+
+# 32x24x8 mm^3 -> 24x8x32
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+
+geometry.prob_lo   =  -0.8 0.0
+geometry.prob_hi   =  0.8 3.2
+
+#geometry.prob_lo   =  0.0 -0.8 0.0
+#geometry.prob_hi   =  2.4 0.8 3.2
+
+geometry.is_periodic = 0 0
+#geometry.is_periodic = 1 0 0
+
+# continuous_mof=0 regular MOF
+# continuous_mof=1 CMOF
+ns.continuous_mof=1
+ns.MOFITERMAX=30
+# EILE_flag=-1 Weymouth and Yue
+# EILE_flag=1 alternate EI-LE
+ns.EILE_flag=1
+ns.ns_tiling=false
+
+# May 17: for shockdrop_M=3.0, make this 1.0e+12
+#ns.projection_pressure_scale=1.0e+12
+#Sep 16, 2018 (larger dimensions)
+ns.projection_pressure_scale=1.0e+6
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.num_materials=2
+ns.num_species_var=0
+
+ns.post_init_pressure_solve=0
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.minimum_relative_error=1.0e-24
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+#geometry.prob_lo   =  0.0 -0.8 0.0 
+#geometry.prob_hi   =  2.4 0.8 3.2
+#diameter=0.094cm
+
+#amr.n_cell    = 72 48 96
+amr.n_cell    = 48 96
+
+amr.max_level = 5 # max_level=5 finest
+#ARIENTI
+# max_level_for_use=3  0<t<1e-3
+# max_level_for_use=4  1e-3<t<2.3e-3
+# max_level_for_use=5  t>2.3e-3
+ns.max_level_for_use = 3
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2 2 2   # number of buffer cells in error est
+amr.grid_eff        = 0.9   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 2 2 2 2 2 2 2 2   # block factor in grid generation
+amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+ns.visual_nddata_format=1 # native AMReX
+amr.plot_int        = 100     # 50
+#amr.slice_int       = 100     # 50
+# e.g. slice_dir==1 => look at Y line of data
+ns.slice_dir=1 # 0..sdim-1
+ns.xslice=0.0 0.0 0.0
+
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+cg.min_max_grid_size   = 96
+#amr.restart         = chk56400
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-9
+
+# May 17:
+# 1=always take sound speed into account
+# 2=never take sound speed into account
+# 0=take sound speed into account at t=0 only if compressible material
+# LIQUID COMPRESSIBLE: make shock_timestep(1)=1
+# ARIENTI:
+# sound speed in air c=148000
+# length of domain=3.2 
+# time of traversal: 3.2/148000=2.2e-5
+# shock_timestep=2 1 cfl=0.75  0<t<2.2e-5
+# shock_timestep=2 2 cfl=0.75  t>2.2e-5
+ns.shock_timestep=2 1
+ns.cfl            = 0.75      # cfl number for hyperbolic system
+#ns.fixed_dt	  = 1e-08   # Sep 16, 2018
+#ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
+ns.visc_coef      = 1.0    # coef of viscosity
+ns.gravity        = 0.0  # must be nonzero, otherwise not used.
+#ns.tension        = 718.0 #Galinstan
+ns.tension        = 72.8  #water
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=152 #shock cylinder
+ns.vorterr=1.0e+10 1.0e+10
+ns.rgasinlet=1.57
+# MACH number of shock.
+#ns.vinletgas=1.0534 #water (We=12.6  Re=1600)
+#ns.vinletgas=1.1478 #Galinstan (We=10.2 Re=4900)
+#Initialization (water):
+ns.vinletgas=1.0017
+ns.twall=0.1
+#Arienti, Ballard, Sussman, Mazumdar, Wagner, Farias, Guildenbecher
+#(shock moves in the x-direction)
+#This inputs file: shock moves in the z-direction
+ns.advbot=0.0
+#ns.advbot=1200.0  #cylinder velocity in "x" direction (water)
+#ns.advbot=400.0  #cylinder velocity in "x" direction (Galinstan)
+ns.adv_vel=0.0
+ns.adv_dir=1
+ns.tempconst=278.0 278.0
+ns.num_divu_outer_sweeps=2
+# This code is now overridden: shockdrop.F90
+# on each level, and for each uncovered cell, code computes:
+# sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
+ns.pressure_error_flag=1 # look at pressure variation
+ns.pressure_error_cutoff=1.0e+6 0.01
+# May 17:
+# for water: material_type=7 EOS_tait_rho (base density is denconst(1))
+# for air: material_type=5 EOS_air
+# WATER COMPRESSIBLE: make material_type(1)=7
+# GALINSTAN COMPRESSIBLE: make material_type(1)=34
+ns.material_conservation_form=1 1 0
+ns.material_type=7 5
+#ns.material_type_interface=0
+#liquid gas
+ns.stiffCP=4.1855e+7 10.07e+6
+ns.stiffCV=4.1855e+7 7.2e+6
+#R=2.87e+6 ergs/(K g)
+ns.R_Palmore_Desjardins=8.31446261815324e+7  #ergs/(mol K)
+ns.molar_mass=18.02 28.9 #g/mol
+
+ns.heatviscconst=0.0 0.0
+#ns.heatviscconst=58000.0 2400.0 #evaporation water-air
+#ns.heatviscconst=1558632.0 2400.0 #evaporation Galinstan-air
+#1->2   2->1
+ns.latent_heat=2.26e+10 0.0 #evaporation ergs/g
+# V_I=uL dot nlv - mdot/rhoL nlv  distribute_from_target=0
+# V_I=uV dot nvl - mdot/rhoV nvl  distribute_from_target=1
+#
+# 0=distribute to the destination material (def)
+# 1=distribute to the source material.
+ns.distribute_from_target = 0 0 # 2 * num_interfaces components
+# the liquid-gas/vapor is not in a sealed tank.
+ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
+ns.constant_density_all_time=0 0 # expansion 1..nmat
+ns.constant_volume_mdot=0 0 # expansion 1..2 nten
+#ns.constant_volume_mdot=-1 0 # sealed
+#evap: freezing_model=6 Palmore and Desjardins 
+#mdot_from_T_probe
+#mdot_from_Y_probe
+#(kL(Tprobe_L - TI)-kG(TI-Tprobe_G))/(L dprobe)= 
+#rhoG*D*(YI(TI)-Yprobe))/((1-YI(TI)) dprobe)
+#let x=TI
+#f(x)=(kL(Tprobe_L - x)-kG(x-Tprobe_G))/(L)-
+#  rhoG*D*(YI(x)-Yprobe))/((1-YI(x)))
+#suppose Yprobe=0 then 
+#f(0)=(kL Tprobe_L+kG Tprobe_G)/L >0  (YI(0)=0)
+#f(TSAT)=(kL(Tprobe_L-TSAT)-kG(TSAT-Tprobe_G))/L-
+#  infinity < 0
+# f'(x)=(-kL-kG)/L-rhoG*D*YI'(x)/(1-YI(x))^{2}
+#YI'(x)>0 => f'(x) < 0  0<=x<=TSAT
+#in the code, usually,
+#(1) TI_a=saturation_temp_min TI_b=saturation_temp_max
+#(2) repeatedly call advance_TY_gamma (bisection method)
+ns.freezing_model=6 0
+# 1..2*nten
+ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3=Kassemi 0=Palmore and Desjardins
+ns.mass_fraction_id=1 0  # 1.. 2 nten
+ns.force_Y_probe_zero = 1 0
+ns.saturation_temp = 574.0 0.0  # CODY ~ T_gamma = 373.15 K
+ns.saturation_temp_min = 273.0 0.0
+ns.saturation_temp_max=574.0 0.0 #evaporation
+#ns.observe_initial_mdot=0 #evaporation
+#ns_prescribed_mdot = 0.0 0.0 #evaporation
+ns.reference_pressure=1.0e+6 0.0 #evaporation
+ns.accommodation_coefficient=1.0 0.0 #evaporation
+#(rho C)_t + div(rho C) = div (rho D grad C)
+ns.speciesviscconst=0.1 0.1 #evaporation
+ns.speciesconst=0.0 0.0 #evaporation Yprobe=0
+ns.speciesreactionrate=0.0 0.0 #evaporation
+ns.species_molar_mass=18.02 #evaporation
+
+# May 17:
+# a non-zero gas viscosity will work fine too.
+ns.viscconst=0.01 0.000187  #water
+#ns.viscconst=0.0266667 0.000187  #Galinstan
+ns.denconst=1.0 0.00125335272 #water
+#ns.denconst=6.4 0.00125335272 #Galinstan
+ns.density_ceiling=10.0 1.0
+ns.density_floor=0.1 0.0001
+#xblob=0 is default value since the cylinder extends the full x-axis in 3D
+#xblob=0 in 2D since the x-axis in 2d is the y-axis in 3d.
+ns.xblob=0.0 
+ns.yblob=1.2
+ns.zblob=0.0
+#ns.yblob=0.0
+#ns.zblob=1.2
+# zblob2 is the initial position of the shock.
+ns.zblob2=1.0
+ns.radblob=0.047 #0.94 mm diameter
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=3001
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+prescribe_temperature_outflow=1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 1
+ns.hi_bc          = 3 2
+#ns.lo_bc          = 0 3 1
+#ns.hi_bc          = 0 3 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

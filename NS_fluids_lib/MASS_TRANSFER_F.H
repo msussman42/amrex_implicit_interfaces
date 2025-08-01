@@ -119,6 +119,7 @@ extern "C"
     Real* saturation_temp_min,
     Real* saturation_temp_max,
     int* freezing_model,
+    int* force_Y_probe_zero,
     Real* prescribed_mdot,
     int* observe_initial_mdot,
     int* Tanasawa_or_Schrage_or_Kassemi,
