@@ -91,6 +91,7 @@ stop
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
        integer :: Tanasawa_or_Schrage_or_Kassemi
+       integer :: force_Y_probe_zero
        real(amrex_real) :: accommodation_coefficient
        real(amrex_real) :: reference_pressure
        real(amrex_real) :: universal_gas_constant_R
@@ -2539,7 +2540,14 @@ stop
          den_G=TSAT_Y_PARMS%den_G
          if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
-          Y_PROBE_VAPOR=POUT%Y_probe(iprobe_vapor)
+          if (TSAT_Y_PARMS%force_Y_probe_zero.eq.0) then
+           Y_PROBE_VAPOR=POUT%Y_probe(iprobe_vapor)
+          else if (TSAT_Y_PARMS%force_Y_probe_zero.eq.1) then
+           Y_PROBE_VAPOR=zero
+          else
+           print *,"TSAT_Y_PARMS%force_Y_probe_zero invalid"
+           stop
+          endif
 
           if (Y_PROBE_VAPOR.ge.zero) then
            !do nothing
@@ -7524,6 +7532,7 @@ stop
        saturation_temp_min, &
        saturation_temp_max, &
        freezing_model, &
+       force_Y_probe_zero, &
        prescribed_mdot, &
        observe_initial_mdot, &
        Tanasawa_or_Schrage_or_Kassemi, &
@@ -7621,6 +7630,7 @@ stop
       real(amrex_real), INTENT(in) :: saturation_temp_min(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp_max(2*num_interfaces)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
+      integer, INTENT(in) :: force_Y_probe_zero(2*num_interfaces)
       real(amrex_real), INTENT(in) :: prescribed_mdot(2*num_interfaces)
       integer, INTENT(in) :: observe_initial_mdot
       integer, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
@@ -7757,6 +7767,7 @@ stop
       real(amrex_real) C_w0
       integer, target :: local_freezing_model
       integer local_Tanasawa_or_Schrage_or_Kassemi
+      integer local_force_Y_probe_zero
       integer distribute_from_targ
       integer vofcomp_source,vofcomp_dest
       real(amrex_real) Fsource,Fdest ! used for the hydrate model
@@ -8137,6 +8148,8 @@ stop
              local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
              local_Tanasawa_or_Schrage_or_Kassemi= &
                Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces)
+             local_force_Y_probe_zero= &
+               force_Y_probe_zero(iten+ireverse*num_interfaces)
 
              if (ireverse.eq.0) then
               im_source=im
@@ -8968,8 +8981,12 @@ stop
 
                    do while (TSAT_converge.eq.0) 
 
+                    TSAT_Y_PARMS%force_Y_probe_zero= &
+                      local_force_Y_probe_zero
+
                     TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
                           local_Tanasawa_or_Schrage_or_Kassemi
+
                     TSAT_Y_PARMS%accommodation_coefficient= &
                           accommodation_coefficient(iten+ireverse*num_interfaces) 
 

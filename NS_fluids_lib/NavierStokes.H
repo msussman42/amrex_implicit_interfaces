@@ -1841,6 +1841,7 @@ protected:
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<int> freezing_model;
+    static Vector<int> force_Y_probe_zero;
      // mdot=n_gamma dot [k grad T]/[h]=
      //      n_gamma dot (rho_g D grad Y_V)/(Y_gamma-1)
      // mdot units: kg/(m^2 s)
