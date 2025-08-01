@@ -5840,10 +5840,10 @@ NavierStokes::read_params ()
         amrex::Error("override_density invalid (2)");
        }
       } else if (material_type[im-1]==999) {
-       if (override_density[im]!=0)
+       if (override_density[im-1]!=0)
         amrex::Error("override_density invalid");
       } else if (material_type[im-1]>=1) {
-       if (override_density[im]!=0)
+       if (override_density[im-1]!=0)
         amrex::Error("override_density invalid");
       } else
        amrex::Error("material_type[im-1] invalid");
