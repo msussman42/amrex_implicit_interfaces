@@ -10081,7 +10081,8 @@ stop
                 stop
                endif
               else
-               print *,"local_Tsat(ireverse) should be positive"
+               print *,"local_Tsat(ireverse) should be positive: ", &
+                  ireverse,local_Tsat(ireverse)
                stop
               endif
 
