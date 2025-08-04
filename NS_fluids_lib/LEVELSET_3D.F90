@@ -5587,8 +5587,19 @@ stop
          stop
         endif
 
-        call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-         vol,cencell,SDIM)
+        call Box_volumeFAST( &
+         bfact, &
+         dx,xsten,nhalf, &
+         vol, &
+         cencell, &
+         SDIM)
+
+        if (vol.gt.zero) then
+         !do nothing
+        else
+         print *,"vol invalid: ",vol
+         stop
+        endif
 
         mass=zero
         do im=1,num_materials
@@ -5638,7 +5649,7 @@ stop
         if ((mass.gt.zero).and.(mass.le.1.0D+20)) then
          ! do nothing
         else
-         print *,"mass: floating point bust"
+         print *,"mass: floating point bust: ",mass
          stop
         endif
 
@@ -5788,6 +5799,7 @@ stop
               stop
              endif
 
+              ! ic=ic_base+BLB_MATRIX+1
               ! blob_matrix
              do veltype=1,3
               do irow=1,2*SDIM
@@ -5806,6 +5818,13 @@ stop
                enddo ! icol
               enddo ! irow
              enddo ! veltype=1..3 (blob_matrix)
+
+             if (ic-ic_base.eq.BLB_RHS+1) then
+              !do nothing
+             else
+              print *,"ic-ic_base.eq.BLB_RHS+1 failed"
+              stop
+             endif
 
               ! blob_RHS
              do veltype=1,3
@@ -5832,6 +5851,13 @@ stop
                ic=ic+1
               enddo ! irow=1..2*sdim
              enddo ! veltype=1..3
+
+             if (ic-ic_base.eq.BLB_VEL+1) then
+              !do nothing
+             else
+              print *,"ic-ic_base.eq.BLB_VEL+1 failed"
+              stop
+             endif
 
              ic=ic_base+BLB_INT_MOM+1  
 
@@ -5863,6 +5889,13 @@ stop
               ic=ic+1
              enddo ! irow=1..2 * sdim
 
+             if (ic-ic_base.eq.BLB_ENERGY+1) then
+              !do nothing
+             else
+              print *,"ic-ic_base.eq.BLB_ENERGY+1 failed"
+              stop
+             endif
+
               ! blob_energy
              dotprod=zero
              do dir=1,SDIM
@@ -5871,6 +5904,13 @@ stop
              dotprod=dotprod*local_interior_wt(veltype)
              level_blobdata(ic)=level_blobdata(ic)+half*mass*dotprod
              ic=ic+1
+
+             if (ic-ic_base.eq.BLB_MASS_VEL+1) then
+              !do nothing
+             else
+              print *,"ic-ic_base.eq.BLB_MASS_VEL+1 failed"
+              stop
+             endif
 
               ! blob_mass_for_velocity
              do veltype=1,3
