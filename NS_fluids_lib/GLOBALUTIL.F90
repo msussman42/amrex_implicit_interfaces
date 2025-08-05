@@ -28089,6 +28089,11 @@ end subroutine JohnsonCookSoftening
   ! called from fort_updatetensor() and fort_update_particle_tensor()
   ! in GODUNOV_3D.F90
   ! vel is the advective velocity
+  ! Plastic algorithm resource: 
+  ! An extension of the radial return algorithm to account for rate-dependent
+  ! effects in frictional contact and visco-plasticity.
+  ! Journal of Materials Processing Technology 
+  ! author: Jean-Philippe Ponthot 1998
 subroutine point_updatetensor( &
  i,j,k, &
  irefine,jrefine,krefine, &
@@ -29264,14 +29269,25 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  
    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
     !magA=sqrt(A:A)
+    !assume G=1 Tr(A)=0
+    !=> f_plastic=sqrt(2/3)f   (see equation (2) from Ponthot)
    f_plastic=magA-Y_plastic_parm_scaled
    do ii=1,3
    do jj=1,3
 
     if ((f_plastic.lt.zero).or. &
         ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
+
      Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
+
+     !NP=A/sqrt(A:A)  (NP : NP=1)
     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
+
+      !Anew-Aold=sqrt(2/3) sigma_v A/sqrt(A:A) - A=
+      !NP sqrt(A:A)(sqrt(2/3) sigma_v/sqrt(A:A)-1)=
+      !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
+      !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
+      !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
      Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
       !CamachoOrtiz1995 equation (31)
       !sigma/g = (f_plastic+Y_plastic_parm_scaled)/Y_plastic_parm_scaled
