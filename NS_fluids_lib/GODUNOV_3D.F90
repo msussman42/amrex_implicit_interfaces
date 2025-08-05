@@ -9093,6 +9093,7 @@ stop
 
         !point_updatetensor is declared in: GLOBALUTIL.F90
         call point_updatetensor( &
+         xsten,nhalf, &
          i,j,k, &
          irefine,jrefine,krefine, &
          level, &

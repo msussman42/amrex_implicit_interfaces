@@ -27981,6 +27981,12 @@ return
 end subroutine circleww
 
 subroutine JohnsonCookSoftening( &
+ xsten,nhalf, &
+ i,j,k, &
+ irefine,jrefine,krefine, &
+ level, &
+ finest_level, &
+ im_critical, &  ! 0<=im_critical<=num_materials-1
  base_yield_stress, &
  T, &
  TM, & !yield_temperature
@@ -27993,6 +27999,12 @@ subroutine JohnsonCookSoftening( &
 use probcommon_module
 IMPLICIT NONE
 
+integer, intent(in) :: nhalf
+real(amrex_real), intent(in) :: xsten(-nhalf:nhalf,SDIM)
+integer, intent(in) :: i,j,k
+integer, intent(in) :: irefine,jrefine,krefine
+integer, intent(in) :: level,finest_level
+integer, intent(in) :: im_critical
 real(amrex_real), INTENT(in) :: base_yield_stress
 real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p
 real(amrex_real), INTENT(in) :: eps_p,n
@@ -28025,6 +28037,13 @@ else if (T.ge.TM) then
  print *,"TM=",TM
  print *,"ref_eps_p=",ref_eps_p
  print *,"eps_p=",eps_p
+ print *,"i,j,k= ",i,j,k
+ print *,"irefine,jrefine,krefine= ",irefine,jrefine,krefine
+ print *,"level,finest_level= ",level,finest_level
+ print *,"im_critical(0...nmat-1)=",im_critical
+ print *,"nhalf ",nhalf
+ print *,"xsten(0,1) xsten(0,2) xsten(0,sdim) ",xsten(0,1),xsten(0,2), &
+         xsten(0,SDIM)
  stop
 else
  print *,"T and/or TM corruption: ",T,TM
@@ -28095,6 +28114,7 @@ end subroutine JohnsonCookSoftening
   ! Journal of Materials Processing Technology 
   ! author: Jean-Philippe Ponthot 1998
 subroutine point_updatetensor( &
+ xsten_in,nhalf_in, &
  i,j,k, &
  irefine,jrefine,krefine, &
  level, &
@@ -28128,6 +28148,8 @@ subroutine point_updatetensor( &
 use probcommon_module
 IMPLICIT NONE
 
+integer, intent(in) :: nhalf_in
+real(amrex_real), intent(in) :: xsten_in(-nhalf_in:nhalf_in,SDIM)
 integer, INTENT(in) :: i,j,k
 integer, INTENT(in) :: irefine,jrefine,krefine
 integer, INTENT(in) :: level
@@ -29257,6 +29279,12 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    ! note: (13) from Tran and Udaykumar, have 
    ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
    call JohnsonCookSoftening( &
+    xsten_in,nhalf_in, &
+    i,j,k, &
+    irefine,jrefine,krefine, &
+    level, &
+    finest_level, &
+    im_critical, &  ! 0<=im_critical<=num_materials-1
     yield_stress, &
     cell_temperature, &
     fort_yield_temperature(im_critical+1), &
