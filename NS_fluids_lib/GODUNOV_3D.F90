@@ -5172,6 +5172,12 @@ stop
           distribute_from_target, &
           complement_flag)
 
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !  AND 
+          ! given material has already been processed.
+          !
           ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
           ! this routine: fort_init_elasticmask_and_elasticmaskpart
          call get_elasticmask_and_elasticmaskpart( &
@@ -5231,6 +5237,11 @@ stop
           stop
          endif
 
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !  AND 
+          ! given material has already been processed.
          if (dir.eq.0) then
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
@@ -17974,6 +17985,8 @@ stop
          is_solid_face=2
         else if ((fluid_vfrac_face.ge.VOFTOL_AREAFRAC).and. &
                  (fluid_vfrac_face.le.one+EPS1)) then
+          !xface_local=0 in "is_rigid" materials, clamped regions,
+          !and no penetration physical boundaries.
          xface_local=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
          if ((xface_local.ge.zero).and.(xface_local.le.half)) then
           xface_local=zero

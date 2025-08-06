@@ -5926,6 +5926,8 @@ void NavierStokes::increment_potential_force() {
     // (gravity and surface tension)
     // u+=facegrav 
    fort_addgravity(
+     &FSI_outer_sweeps,
+     &num_FSI_outer_sweeps,
      &dt_slab,
      &cur_time_slab,
      &level,
