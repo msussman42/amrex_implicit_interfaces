@@ -11883,7 +11883,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        FSI_outer_sweeps, &
        xsten,nhalf, &
        level,finest_level, &
-       cc, &
+       cc, & !intent(in)
        cc_elasticmask, & !intent(in)
        cc_elasticmaskpart, & !intent(in)
        cc_group, &  ! intent(out)
@@ -12016,7 +12016,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
          if (num_FSI_outer_sweeps.eq.1) then
-          cc_group=cc*cc_elasticmask
+          if (FSI_outer_sweeps.eq.0) then
+           cc_group=cc*cc_elasticmask
+          else
+           print *,"expecting FSI_outer_sweeps==0: ",FSI_outer_sweeps
+           stop
+          endif
          else if ((num_FSI_outer_sweeps.gt.1).and. &
                   (FSI_outer_sweeps.ge.1).and. &
                   (FSI_outer_sweeps.lt. &

@@ -8732,6 +8732,11 @@ stop
           stop
          endif
 
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !  AND 
+          ! given material has already been processed.
           ! in: fort_init_physics_vars
          local_face(FACECOMP_ELASTICMASK+1)=one
          local_face(FACECOMP_ELASTICMASKPART+1)=one
@@ -14944,6 +14949,8 @@ stop
 
            fluid_volface=fluid_volface/volface
 
+            !fluid_volface=0 in "is_rigid" materials, clamped regions,
+            !and no penetration physical boundaries.
            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                (local_face(FACECOMP_FACECUT+1).le.half)) then
             fluid_volface=zero
@@ -15019,6 +15026,11 @@ stop
            else if ((is_solid_face.eq.0).or. &
                     (face_velocity_override.eq.0)) then
 
+             ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+             !
+             ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+             !  AND 
+             ! given material has already been processed.
             test_current_elasticmask= &
                  xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
          
@@ -15523,6 +15535,11 @@ stop
            stop
           endif
 
+           ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+           !
+           ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+           !  AND 
+           ! given material has already been processed.
           if (local_face(FACECOMP_ELASTICMASK+1).eq.zero) then
            !use_face_pres=0 ! do not use div(up)
           else if ((local_face(FACECOMP_ELASTICMASK+1).gt.zero).and. &
@@ -15785,6 +15802,8 @@ stop
            stop
           endif
 
+           !AFACE=0 in "is_rigid" materials, clamped regions,
+           !and no penetration physical boundaries.
           AFACE=local_face(FACECOMP_FACECUT+1)
           if ((AFACE.ge.zero).and.(AFACE.le.half)) then
            AFACE=zero
@@ -15960,6 +15979,8 @@ stop
               pgrad_tension=-dt*tension_scaled*local_face(FACECOMP_CURV+1)* &
                       gradh_tension/hx
 
+               !pgrad_tension=0 in "is_rigid" materials, clamped regions,
+               !and no penetration physical boundaries.
               if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                   (local_face(FACECOMP_FACECUT+1).le.half)) then
                pgrad_tension=zero
@@ -16048,6 +16069,8 @@ stop
                stop
               endif
       
+               !incremental_gravity=0 in "is_rigid" materials, clamped regions,
+               !and no penetration physical boundaries.
               if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                   (local_face(FACECOMP_FACECUT+1).le.half)) then
                incremental_gravity=zero
@@ -16141,6 +16164,8 @@ stop
                            mgoni(D_DECL(i,j,k),evec_comp))
                 pgrad_LSA=-dt*evec*gradh_gravity/hx
 
+                 !pgrad_LSA=0 in "is_rigid" materials, clamped regions,
+                 !and no penetration physical boundaries.
                 if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                     (local_face(FACECOMP_FACECUT+1).le.half)) then
                  pgrad_LSA=zero
@@ -16210,6 +16235,9 @@ stop
                   stop
                  endif
 
+                  !inremental_gravity=0 in "is_rigid" materials, 
+                  !clamped regions,
+                  !and no penetration physical boundaries.
                  if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                      (local_face(FACECOMP_FACECUT+1).le.half)) then
                   incremental_gravity=zero
@@ -18414,15 +18442,26 @@ stop
 
             if (project_option_is_validF(project_option).eq.1) then
 
+              ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+              !
+              ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+              !  AND 
+              ! given material has already been processed.
              if (dir.eq.0) then
+               !cc=0 in "is_rigid" materials, clamped regions,
+               !and no penetration physical boundaries.
               cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_elasticmask=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
               cc_elasticmaskpart=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
              else if (dir.eq.1) then
+               !cc=0 in "is_rigid" materials, clamped regions,
+               !and no penetration physical boundaries.
               cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_elasticmask=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
               cc_elasticmaskpart=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
+               !cc=0 in "is_rigid" materials, clamped regions,
+               !and no penetration physical boundaries.
               cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_elasticmask=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
               cc_elasticmaskpart=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)

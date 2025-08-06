@@ -10527,6 +10527,8 @@ END SUBROUTINE SIMP
 ! called from:
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
       subroutine fort_addgravity( &
+       FSI_outer_sweeps, &
+       num_FSI_outer_sweeps, &
        dt, &
        cur_time, &
        level, &
@@ -10547,6 +10549,8 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(in) :: cur_time
       integer, INTENT(in) :: level
@@ -10578,6 +10582,8 @@ END SUBROUTINE SIMP
       integer ii,jj,kk
 
       real(amrex_real) local_cut
+      real(amrex_real) cc_elasticmask
+      real(amrex_real) cc_elasticmaskpart
       real(amrex_real) local_macnew
 
       real(amrex_real) gravity_increment
@@ -10610,13 +10616,13 @@ END SUBROUTINE SIMP
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid in addgravity"
+       print *,"dt invalid in addgravity: ",dt
        stop
       endif
       if (cur_time.ge.zero) then
        ! do nothing
       else
-       print *,"cur_time invalid in addgravity"
+       print *,"cur_time invalid in addgravity: ",cur_time
        stop
       endif
 
@@ -10647,13 +10653,66 @@ END SUBROUTINE SIMP
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
 
+         !local_cut=0 in "is_rigid" materials, clamped regions,
+         !and no penetration physical boundaries.
        local_cut=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
        if ((local_cut.ge.zero).and.(local_cut.le.half)) then
         local_cut=zero
        else if ((local_cut.ge.half).and.(local_cut.le.one)) then
         ! do nothing
        else
-        print *,"local_cut invalid"
+        print *,"local_cut invalid: ",local_cut
+        stop
+       endif
+        ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+        !
+        ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+        !  AND 
+        ! given material has already been processed.
+       cc_elasticmask=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+       if ((cc_elasticmask.ge.zero).and. &
+           (cc_elasticmask.le.half)) then
+        cc_elasticmask=zero
+       else if ((cc_elasticmask.ge.half).and. &
+                (cc_elasticmask.le.one)) then
+        cc_elasticmask=one
+       else
+        print *,"cc_elasticmask invalid: ",cc_elasticmask
+        stop
+       endif
+
+       cc_elasticmaskpart=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
+       if ((cc_elasticmaskpart.ge.zero).and. &
+           (cc_elasticmaskpart.le.half)) then
+        cc_elasticmaskpart=zero
+       else if ((cc_elasticmaskpart.ge.half).and. &
+                (cc_elasticmaskpart.le.one)) then
+        cc_elasticmaskpart=one
+       else
+        print *,"cc_elasticmaskpart invalid: ",cc_elasticmaskpart
+        stop
+       endif
+
+       if (num_FSI_outer_sweeps.eq.1) then
+        if (FSI_outer_sweeps.eq.0) then
+         local_cut=local_cut*cc_elasticmask
+        else
+         print *,"expecting FSI_outer_sweeps==0: ",FSI_outer_sweeps
+         stop
+        endif
+       else if ((num_FSI_outer_sweeps.gt.1).and. &
+                (FSI_outer_sweeps.ge.1).and. &
+                (FSI_outer_sweeps.lt. &
+                 min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
+        local_cut=local_cut*cc_elasticmaskpart
+       else if ((num_FSI_outer_sweeps.gt.1).and. &
+                (FSI_outer_sweeps.eq.0)) then
+        !do nothing
+       else
+        print *,"num_FSI_outer_sweeps or FSI_outer_sweeps invalid"
+        print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
+        print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
+        print *,"NFSI_LIMIT: ",NFSI_LIMIT
         stop
        endif
 
@@ -11826,27 +11885,36 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
 
+          !maskcov=1 if cell at the finest level.
+          !maskcov=0 if cell is covered.
          maskleft=maskcov(D_DECL(i-ii,j-jj,k-kk))
          maskright=maskcov(D_DECL(i,j,k))
          if ((maskleft.eq.one).and.(maskright.eq.one)) then
-          maskface=1
+          maskface=1 !not covered
          else if ((maskleft.eq.one).and.(maskright.eq.zero)) then
-          maskface=0
+          maskface=0 !covered
          else if ((maskleft.eq.zero).and.(maskright.eq.one)) then
-          maskface=0
+          maskface=0 !covered
          else if ((maskleft.eq.zero).and.(maskright.eq.zero)) then
-          maskface=0
+          maskface=0 !covered
          else
-          print *,"maskleft or maskright invalid"
+          print *,"maskleft or maskright invalid: ",maskleft,maskright
           stop
          endif
 
          call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
 
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          !  AND 
+          ! given material has already been processed.
          if (dir.eq.0) then
           local_dest=xdest(D_DECL(i,j,k))
           local_src=xsrc(D_DECL(i,j,k))
           local_gp=xgp(D_DECL(i,j,k))
+           !AL=0 in "is_rigid" materials, clamped regions,
+           !and no penetration physical boundaries.
           AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_elastic=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
           AL_elasticpart=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
@@ -11855,6 +11923,8 @@ END SUBROUTINE SIMP
           local_dest=ydest(D_DECL(i,j,k))
           local_src=ysrc(D_DECL(i,j,k))
           local_gp=ygp(D_DECL(i,j,k))
+           !AL=0 in "is_rigid" materials, clamped regions,
+           !and no penetration physical boundaries.
           AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_elastic=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
           AL_elasticpart=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
@@ -11863,6 +11933,8 @@ END SUBROUTINE SIMP
           local_dest=zdest(D_DECL(i,j,k))
           local_src=zsrc(D_DECL(i,j,k))
           local_gp=zgp(D_DECL(i,j,k))
+           !AL=0 in "is_rigid" materials, clamped regions,
+           !and no penetration physical boundaries.
           AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_elastic=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
           AL_elasticpart=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
@@ -11957,6 +12029,8 @@ END SUBROUTINE SIMP
          if (local_wt(veldir).ge.zero) then
 
           if (local_wt(veldir).eq.zero) then
+            !maskface=1 => not covered
+            !maskface=0 => covered
            if ((local_gp.eq.zero).or.(maskface.eq.0).or.(1.eq.0)) then
             local_dest=local_src
            else if ((local_gp.ne.zero).and.(maskface.eq.1)) then
