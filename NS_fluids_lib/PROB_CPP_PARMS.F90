@@ -2072,7 +2072,8 @@ stop
                ((axis_dir.eq.150).or. &
                 (axis_dir.eq.151).or. &
                 (axis_dir.eq.152).or. &
-                (axis_dir.eq.153))) then
+                (axis_dir.eq.153).or. &
+                (axis_dir.eq.154))) then
      
        print *,"this code might be obsolete"
        print *,"probtype=",probtype
