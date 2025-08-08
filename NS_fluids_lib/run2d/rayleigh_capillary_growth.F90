@@ -54,6 +54,15 @@ integer i
 density=1.0d0
 r0=1.0d0
 sigma=1.0d0
+
+k=0.7
+x=k*r0
+call mod_bessel_first_kind(x,0,I_0)
+call mod_bessel_first_kind(x,1,I_1)
+c2=sigma*I_1*x*(1.0d0-x*x)/(density*(r0**3)*I_0)
+c=sqrt(c2)
+print *,"specific data at a single point: k,c ",k,c
+
 do i=0,100
  k=(i/100.0d0)/r0
  x=k*r0
