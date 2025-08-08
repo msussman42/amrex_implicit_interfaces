@@ -3,7 +3,8 @@
       IMPLICIT NONE
 
       integer, PARAMETER :: firstline=1
-      integer, PARAMETER :: lastline=4
+      integer, PARAMETER :: lastline=6774
+      real*8, PARAMETER :: r0=1.0d0
       Real*8 :: AA
       Real*8 :: A(2,2)
       Real*8 :: B(2)
@@ -42,7 +43,21 @@
       print *,"last point: ",tdata,cendata
       close(17)
 
-      do fit_type=0,2
+      do fit_type=0,3
+
+       print *,"---------------------------------------"
+       if (fit_type.eq.0) then
+        print *,"y=a+bx"
+       else if (fit_type.eq.1) then
+        print *,"log y = log a + b log x  (y=a x^b)"
+       else if (fit_type.eq.2) then
+        print *,"log y= log a + b x    y=a e^(bx)"
+       else if (fit_type.eq.3) then
+        print *,"log (y-r0) = log a + b x    y=r0+a e^(bx)"
+       else
+        print *,"fit_type inalid"
+        stop
+       endif
 
        do j=1,2
        do k=1,2
@@ -65,6 +80,9 @@
         else if (fit_type.eq.2) then
          ! log y= log a + b x    y=a e^(bx)
          cendata=log(cendata)
+        else if (fit_type.eq.3) then
+         ! log (y-r0)= log a + b x    y=r0+a e^(bx)
+         cendata=log(cendata-r0)
         else
          print *,"fit_type invalid"
          stop
@@ -122,6 +140,7 @@
         print *,"estimated standard dev of e^X(1): ", &
           max(abs(exp(X(1)+sd_1)-AA),abs(exp(X(1)-sd_1)-AA))
        endif
+       print *,"---------------------------------------"
       enddo
 
       END PROGRAM
