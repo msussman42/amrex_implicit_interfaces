@@ -14304,7 +14304,7 @@ stop
        endif
 
        if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid(OP_UNEW or OP_UMAC)"
+        print *,"ncphys invalid(OP_UNEW or OP_UMAC): ",ncphys
         stop
        endif
 
@@ -14613,7 +14613,7 @@ stop
                    (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC)) then
            local_vel_old_MAC=zero
           else
-           print *,"operation_flag invalid13"
+           print *,"operation_flag invalid13: ",operation_flag
            stop
           endif
 
@@ -14651,12 +14651,12 @@ stop
            if (velbc_boundary.eq.INT_DIR) then
              ! mask=0 coarse/fine
             if (mask_coarsefine(side_boundary).eq.0) then
-             in_the_bulk=0
+             in_the_bulk=0 !coarse/fine
              ! mask=1 fine/fine
             else if (mask_coarsefine(side_boundary).eq.1) then
-             ! do nothing
+             ! do nothing fine/fine
             else
-             print *,"mask_coarsefine invalid"
+             print *,"mask_coarsefine invalid: ",mask_coarsefine
              stop
             endif
            else if ((velbc_boundary.eq.EXT_DIR).or. &
@@ -14665,11 +14665,11 @@ stop
                     (velbc_boundary.eq.FOEXTRAP)) then
             in_the_bulk=0
            else
-            print *,"velbc_boundary invalid"
+            print *,"velbc_boundary invalid: ",velbc_boundary
             stop
            endif
           else
-           print *,"side_boundary invalid"
+           print *,"side_boundary invalid: ",side_boundary
            stop
           endif
 
@@ -14745,7 +14745,8 @@ stop
             vel_clamped(dir2)=zero
            enddo
           else
-           print *,"homogeneous_rigid_velocity invalid"
+           print *,"homogeneous_rigid_velocity invalid: ", &
+            homogeneous_rigid_velocity
            stop
           endif
 
@@ -15286,7 +15287,8 @@ stop
                     ! declared in: GLOBALUTIL.F90
                    call get_rigid_velocity( &
                     FSI_prescribed_flag, & !intent(out) (ice touches substrate)
-                    colorface,dir+1,uedge_rigid, &
+                    colorface,dir+1, &
+                    uedge_rigid, &
                     xstenMAC_center, &
                     blob_array, &
                     blob_array_size,num_colors) 
@@ -16781,7 +16783,7 @@ stop
       levelPC_ptr=>levelPC
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small: ",bfact
        stop
       endif
       if ((level.gt.finest_level).or.(level.lt.0)) then
@@ -16973,7 +16975,7 @@ stop
          at_RZ_face=1
         endif
        else
-        print *,"levelrz invalid fort_project_to_rigid_velocity"
+        print *,"levelrz invalid fort_project_to_rigid_velocity: ",levelrz
         stop
        endif 
 
@@ -17005,6 +17007,7 @@ stop
             (typeright.le.num_materials)) then
 
           !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
+          !Elastic materials are not updated here.
          if ((is_ice_or_FSI_rigid_material_project(typeleft).eq.1).or. &
              (is_ice_or_FSI_rigid_material_project(typeright).eq.1)) then
 
