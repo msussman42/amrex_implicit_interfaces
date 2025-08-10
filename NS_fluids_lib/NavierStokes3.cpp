@@ -12162,10 +12162,11 @@ void NavierStokes::avgDownALL_TENSOR() {
 void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
  int elastic_force_mac_grid=1;
+
  if (viscoelastic_force_only==1) {
-  elastic_force_mac_grid=0;
+  elastic_force_mac_grid=0; //only u_new updated
  } else if (viscoelastic_force_only==0) {
-  //do nothing
+  elastic_force_mac_grid=1; //umac_new and u_new updated
  } else
   amrex::Error("viscoelastic_force_only has invalid value");
 
@@ -12259,6 +12260,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 	 //    NavierStokes2.cpp
 	 // CELL_GRID_ELASTIC_FORCE -> fort_elastic_force ->
 	 // tensor_Heaviside
+         //if elastic_force_mac_grid==1 => umac_new and u_new are updated.
+         //if elastic_force_mac_grid==0 => only u_new is updated.
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
          ns_level.CELL_GRID_ELASTIC_FORCE(im,elastic_force_mac_grid);
@@ -12300,6 +12303,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
     SPECTRAL_ORDER_AVGDOWN);
 
+   //if elastic_force_mac_grid==1 => umac_new and u_new are updated.
+   //if elastic_force_mac_grid==0 => only u_new is updated.
   if (elastic_force_mac_grid==1) {
 
    make_MAC_velocity_consistentALL();
@@ -12316,15 +12321,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
     amrex::Error("REGISTER_MARK_MF invalid ncomp");
    if (localMF[REGISTER_MARK_MF]->nGrow()<1)
     amrex::Error("REGISTER_MARK_MF invalid ngrow");
-
-    // umacnew+=INTERP_TO_MAC(unew-register_mark)  
-    // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
-   if (elastic_force_mac_grid==1) {
-    //do nothing
-   } else if (elastic_force_mac_grid==0) {
-    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
-   } else
-    amrex::Error("elastic_force_mac_grid invalid");
 
     // register_mark=unew
    SET_STOKES_MARK(REGISTER_MARK_MF);

@@ -1771,6 +1771,8 @@ void NavierStokes::avgDownEdge_localMF(
 
 } // end subroutine avgDownEdge_localMF
 
+//if elastic_force_mac_grid==1 => umac_new and u_new are updated.
+//if elastic_force_mac_grid==0 => only u_new is updated.
 void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
   int elastic_force_mac_grid) {
 
@@ -1922,7 +1924,6 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
 
     // declared in: GODUNOV_3D.F90
    fort_elastic_force(
-     &elastic_force_mac_grid,
      &im_viscoelastic, // 0..num_materials-1
      &partid, //0..num_materials_viscoelastic-1
      &force_dir, // force_dir=0,1,..sdim-1  
