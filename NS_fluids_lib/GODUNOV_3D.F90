@@ -19537,7 +19537,6 @@ stop
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
        ! the configuration tensor is extrapolated in:
       subroutine fort_elastic_force( &
-       elastic_force_mac_grid, &
        im_viscoelastic, & ! 0..num_materials-1
        partid, & ! 0..num_materials_viscoelastic-1
        force_dir, & ! 0..sdim-1
@@ -19582,7 +19581,6 @@ stop
  
       IMPLICIT NONE
 
-      integer, INTENT(in) :: elastic_force_mac_grid 
       integer, INTENT(in) :: im_viscoelastic !0..num_materials-1
       integer, INTENT(in) :: partid !0..num_materials_viscoelastic-1
 
@@ -19777,15 +19775,6 @@ stop
        print *,"bfact invalid"
        stop
       endif
-
-      if (elastic_force_mac_grid.eq.1) then
-       ! force used in pressure solve
-      else if (elastic_force_mac_grid.eq.0) then
-       ! force only used for visualization
-      else
-       print *,"elastic_force_mac_grid inalid"
-       stop
-      endif 
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
       if (dxmaxLS.gt.zero) then

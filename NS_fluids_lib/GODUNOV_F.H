@@ -905,7 +905,6 @@ extern "C"
      int* homflag);
 
    void fort_elastic_force(
-     int* elastic_force_mac_grid,
      int* im_viscoelastic, // 0..num_materials-1
      int* partid, // 0..num_materials_viscoelastic-1
      int* force_dir, //0..sdim-1
