@@ -11622,8 +11622,10 @@ stop
       real(amrex_real) DXMAXLS,cutoff
       real(amrex_real) Eforce_conservative
       real(amrex_real) Eforce_non_conservative
+      real(amrex_real) Eforce_non_conservative_EOS
       real(amrex_real) divu_cell_center
       real(amrex_real) pres_cell_center
+      real(amrex_real) pres_cell_center_EOS
 
       real(amrex_real) KE_diff
 
@@ -12939,8 +12941,10 @@ stop
 
         Eforce_conservative=zero
         Eforce_non_conservative=zero
+        Eforce_non_conservative_EOS=zero
         divu_cell_center=zero
         pres_cell_center=zero
+        pres_cell_center_EOS=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -13116,6 +13120,70 @@ stop
 
         enddo ! dir=0..sdim-1 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) div(up)
 
+        if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
+         ! do nothing
+        else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then
+
+         if (is_compressible_mat(im_majority).eq.1) then
+          imattype=fort_material_type(im_majority)
+          ibase=(im_majority-1)*num_state_material
+          rho=dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
+          TEMPERATURE=dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
+          if (rho.gt.zero) then
+           ! do nothing
+          else
+           print *,"density underflow"
+           print *,"i,j,k,im_majority,rho ",i,j,k,im_majority,rho
+           stop
+          endif
+          if (TEMPERATURE.gt.zero) then
+           ! do nothing
+          else
+           print *,"temperature underflow: ",TEMPERATURE
+           stop
+          endif
+          call init_massfrac_parm(rho,massfrac_parm,im_majority)
+          do ispec=1,num_species_var
+           massfrac_parm(ispec)= &
+            dendest(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+ispec)
+           if (massfrac_parm(ispec).ge.zero) then
+            ! do nothing
+           else
+            print *,"massfrac_parm invalid: ",ispec,massfrac_parm(ispec)
+            stop
+           endif
+          enddo ! ispec=1..num_species_var
+           !INTERNAL_material is declared in GLOBALUTIL.F90
+          call INTERNAL_material( &
+           rho, & !intent(in)
+           massfrac_parm, & !intent(in)
+           TEMPERATURE, & !intent(in)
+           internal_e, & !intent(out)
+           imattype,im_majority) !intent(in)
+          call EOS_material(rho,massfrac_parm, &
+           internal_e, &
+           pres_cell_center_EOS, &
+           imattype,im_majority)
+
+          if (pres_cell_center_EOS.gt.zero) then
+           !do nothing
+          else
+           print *,"pres_cell_center_EOS invalid: ",pres_cell_center_EOS
+           stop
+          endif
+
+         else if (is_compressible_mat(im_majority).eq.0) then
+          !do nothing
+         else
+          print *,"is_compressible_mat(im_majority) invalid"
+          stop
+         endif
+
+        else
+         print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL(2): ",energyflag
+         stop
+        endif
+
         if ((use_face_pres_cen.eq.0).or. &
             (use_face_pres_cen.eq.1)) then 
          ! do nothing
@@ -13134,8 +13202,10 @@ stop
 
           Eforce_conservative=zero
           Eforce_non_conservative=zero
+          Eforce_non_conservative_EOS=zero
           divu_cell_center=zero
           pres_cell_center=zero
+          pres_cell_center_EOS=zero
 
           rhs(D_DECL(i,j,k),1)=zero
 
@@ -13158,6 +13228,8 @@ stop
           endif
 
           Eforce_non_conservative=-divu_cell_center*pres_cell_center/dencell
+          Eforce_non_conservative_EOS= &
+            -divu_cell_center*pres_cell_center_EOS/dencell
 
 ! -dt div(up)/rho
           if (is_compressible_mat(im_majority).eq.0) then
@@ -13167,7 +13239,16 @@ stop
             if (is_rigid_CL(im_majority).eq.0) then
              rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
             else if (is_rigid_CL(im_majority).eq.1) then
-             rhs(D_DECL(i,j,k),1)=zero
+
+             if (is_FSI_elastic(im_majority).eq.1) then
+              rhs(D_DECL(i,j,k),1)=Eforce_non_conservative_EOS
+             else if (is_FSI_elastic(im_majority).eq.0) then
+              rhs(D_DECL(i,j,k),1)=zero
+             else
+              print *,"is_FSI_elastic(im_majority) invalid"
+              stop
+             endif
+
             else
              print *,"is_rigid_CL invalid: ", &
                im_majority,is_rigid_CL(im_majority)
@@ -13206,6 +13287,8 @@ stop
            ! 3. E^proj=E^advect-div(up)=e^advect+rho UCELL^2^advect/2-div(up)
            ! 4. e^proj+rho UCELL^2^proj/2=E^proj=E^advect-div(up)
            ! 5. e^proj=e^advect+rho UCELL^2^advect/2-rho UCELL^2^proj/2-div(up)
+           ! FSI_outer_sweeps==
+           !   min(num_FSI_outer_sweeps,NFSI_LIMIT)-1
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
            do im=1,num_materials
@@ -13328,7 +13411,30 @@ stop
                 endif
          
                else if (is_rigid_CL(im).eq.1) then
-                !do nothing
+
+                if ((im.eq.im_majority).and. &
+                    (is_FSI_elastic(im_majority).eq.1)) then
+
+                 if (Eforce_non_conservative_EOS.ge.zero) then
+                  ! e=e^*-dt div(up)/rho
+                  internal_e=internal_e+Eforce_non_conservative_EOS
+                 else if (Eforce_non_conservative_EOS.lt.zero) then
+                  internal_e=internal_e/ &
+                   (one-Eforce_non_conservative_EOS/internal_e)
+                 else
+                  print *,"Eforce_non_conservative_EOS invalid: ", &
+                   Eforce_non_conservative_EOS
+                  stop
+                 endif
+
+                else if ((im.ne.im_majority).or. &
+                         (is_FSI_elastic(im_majority).eq.0)) then
+                 !do nothing
+                else
+                 print *,"im or is_FSI_elastic(im_majority) invalid"
+                 stop
+                endif
+
                else
                 print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
                 stop

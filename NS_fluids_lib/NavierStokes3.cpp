@@ -2396,8 +2396,11 @@ void NavierStokes::nucleation_code_segment(
  int operation_flag=OP_GATHER_MDOT;
  int coarsest_level=0;
 
+ int use_mac_velocity=0;
+
   //calling from: NavierStokes::nucleation_code_segment()
  ColorSumALL( 
+   use_mac_velocity,
    operation_flag, //=OP_GATHER_MDOT
    tessellate, //=1
    coarsest_level,
@@ -3519,10 +3522,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           int local_tessellate=3;
           int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
+          int use_mac_velocity=0;
+
           // for each blob, find sum_{F>=1/2} pressure * vol and
  	  // sum_{F>=1/2} vol.
           // calling from: NavierStokes::do_the_advance()
           ColorSumALL(
+           use_mac_velocity,
            operation_flag, // =OP_GATHER_MDOT
            local_tessellate, //=3
            coarsest_level,
@@ -6855,6 +6861,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSumALL(
+ int use_mac_velocity,
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // 1 or 3
  int coarsest_level,
@@ -7059,6 +7066,26 @@ NavierStokes::ColorSumALL(
 
  } else
   amrex::Error("operation_flag invalid");
+
+ if (use_mac_velocity==1) {
+
+  // save a copy of the State_Type cell velocity since it will be
+  // overwritten by the mass weighted MAC velocity interpolant.
+  getStateALL(1,cur_time_slab,STATECOMP_VEL,
+   STATE_NCOMP_VEL,HOLD_VELOCITY_COLORSUM_MF);
+
+  int dest_idx=-1; // we put the interpolant in State_Type so that the
+                   // command MultiFab* velmf=ns_level.getState( ... 
+                   // gets the interpolated data.  We have to restore
+                   // HOLD_VELOCITY_DATA_MF at the end.  Note: this should
+                   // be done after getStateVISC_ALL() since the WALE model
+		   // for eddy viscosity depends on the velocity.
+  VELMAC_TO_CELLALL(dest_idx);
+
+ } else if (use_mac_velocity==0) {
+  //do nothing
+ } else
+  amrex::Error("use_mac_velocity invalid");
 
  for (int sweep_num=0;sweep_num<num_sweeps;sweep_num++) {
 
@@ -7477,6 +7504,17 @@ NavierStokes::ColorSumALL(
    amrex::Error("operation_flag invalid");
 
  } // sweep_num=0..1
+
+ if (use_mac_velocity==1) {
+  ParallelDescriptor::Barrier();
+   //ngrow=1
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,HOLD_VELOCITY_COLORSUM_MF,
+   0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+  delete_array(HOLD_VELOCITY_COLORSUM_MF);
+ } else if (use_mac_velocity==0) {
+  //do nothing
+ } else
+  amrex::Error("use_mac_velocity invalid");
 
  if (verbose>=2) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -10090,8 +10128,12 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int tessellate=1;
   int operation_flag=OP_GATHER_MDOT;
+
+  int use_mac_velocity=1;
+
    //calling from: NavierStokes::multiphase_project
   ColorSumALL(
+     use_mac_velocity,
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=1
      coarsest_level,
