@@ -901,6 +901,7 @@ protected:
      );
 
     void ColorSumALL(
+     int use_mac_velocity,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate,  // =1 or 3
      int coarsest_level,

@@ -16035,8 +16035,11 @@ NavierStokes::phase_change_redistributeALL() {
  int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
  int tessellate=3;
  int operation_flag=OP_GATHER_MDOT; 
+ int use_mac_velocity=0;
+
   //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
+  use_mac_velocity,
   operation_flag, // =OP_GATHER_MDOT
   tessellate,  //=3
   coarsest_level,
@@ -16057,6 +16060,7 @@ NavierStokes::phase_change_redistributeALL() {
 
   //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
+  use_mac_velocity,
   operation_flag, //=OP_SCATTER_MDOT
   tessellate,  //=3
   coarsest_level,
@@ -24806,8 +24810,11 @@ NavierStokes::post_init_state () {
  int tessellate=1;
  int operation_flag=OP_GATHER_MDOT;
 
+ int use_mac_velocity=0;
+
   //calling from: NavierStokes::post_init_state()
  ColorSumALL(
+  use_mac_velocity,
   operation_flag, //=OP_GATHER_MDOT
   tessellate,  //=1
   coarsest_level,

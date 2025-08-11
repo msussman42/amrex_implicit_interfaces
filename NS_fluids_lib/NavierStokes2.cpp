@@ -3235,8 +3235,11 @@ void NavierStokes::project_to_rigid_velocityALL() {
 
  int tessellate=1;
  int operation_flag=OP_GATHER_MDOT;
+ int use_mac_velocity=0;
+
   //calling from: void NavierStokes::project_to_rigid_velocityALL() 
  ColorSumALL(
+    use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
     tessellate, //=1
     coarsest_level,
