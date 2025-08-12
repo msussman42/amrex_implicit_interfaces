@@ -9253,6 +9253,10 @@ stop
       real(amrex_real) wt_local
       real(amrex_real) xcorner(SDIM)
       real(amrex_real) xcorner2(SDIM)
+      real(amrex_real) band_offset
+      real(amrex_real) dxmaxLS
+
+      real(amrex_real), parameter :: FSI_band_cells=1.0d0
 
       k1low=0
       k1high=0
@@ -9267,6 +9271,13 @@ stop
       endif
 
       tnew_ptr=>tnew
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+       ! see also:
+       ! H_offset and H_radius in subroutine fort_elastic_force
+       ! LS_shift in subroutine check_added_mass
+       ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
+      band_offset=FSI_band_cells*dxmaxLS
 
       if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
        ! do nothing
@@ -9318,10 +9329,10 @@ stop
        call get_primary_material(LS_local,im_local)
 
        if ((im_local.eq.im_critical+1).and. &
-           (LS_local(im_critical+1).ge.zero)) then
+           (LS_local(im_critical+1).ge.band_offset)) then
         ! do nothing
        else if ((im_local.ne.im_critical+1).or. &
-                (LS_local(im_critical+1).lt.zero)) then
+                (LS_local(im_critical+1).lt.band_offset)) then
 
         if ((im_local.ge.1).and. &
             (im_local.le.num_materials)) then
@@ -9360,7 +9371,7 @@ stop
            enddo
            call get_primary_material(LS_sten,im_sten)
            if ((im_sten.eq.im_critical+1).and. &
-               (LS_sten(im_critical+1).ge.zero)) then
+               (LS_sten(im_critical+1).ge.band_offset)) then
             call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
 
             krefine2=0
@@ -9406,12 +9417,13 @@ stop
             enddo !krefine2
 #endif
            else if ((im_sten.ne.im_critical+1).or. &
-                    (LS_sten(im_critical+1).lt.zero)) then
+                    (LS_sten(im_critical+1).lt.band_offset)) then
             ! do nothing
            else
             print *,"im_sten or LS_sten invalid"
             print *,"im_sten: ",im_sten
             print *,"im_critical: ",im_critical
+            print *,"band_offset: ",band_offset
             print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
             stop
            endif
@@ -13018,6 +13030,81 @@ stop
 
       return
       end subroutine fort_aggressive
+
+
+      subroutine fort_over_under_shoots( &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       scomp, &
+       ncomp, &
+       mf,DIMS(mf)) &
+      bind(c,name='fort_over_under_shoots')
+
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: DIMDEC(mf)
+      integer, INTENT(in) :: scomp
+      integer, INTENT(in) :: ncomp
+      real(amrex_real), INTENT(inout), target :: mf(DIMV(mf),scomp+ncomp)
+      real(amrex_real), pointer :: mf_ptr(D_DECL(:,:,:),:)
+      integer growlo(3),growhi(3)
+      integer i,j,k,n
+      integer im,ispec
+      integer spec_comp
+      real(amrex_real) :: val
+
+      mf_ptr=>mf
+
+      call checkbound_array(fablo,fabhi,mf_ptr,1,-1)
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+      do n=1,ncomp
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+        val=mf(D_DECL(i,j,k),n+scomp)
+        if (abs(val).ge.zero) then
+         if (num_species_var.eq.0) then
+          !do nothing
+         else if (num_species_var.gt.0) then
+          do im=1,num_materials
+          do ispec=1,num_species_var
+           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+             ENUM_SPECIESVAR+ispec
+           if (spec_comp.eq.scomp+n) then
+            if (val.ge.zero) then
+             !do nothing
+            else if (val.lt.zero) then
+             mf(D_DECL(i,j,k),n+scomp)=zero
+            else
+             print *,"val corrupt(1): ",val
+             print *,"i,j,k,n,scomp,ncomp ",i,j,k,n,scomp,ncomp
+             stop
+            endif
+           endif
+          enddo !ispec
+          enddo !im
+         else
+          print *,"num_species_var invalid: ",num_species_var
+          stop
+         endif
+            
+        else
+         print *,"val corrupt: ",val
+         print *,"i,j,k,n,scomp,ncomp ",i,j,k,n,scomp,ncomp
+         stop
+        endif
+       enddo
+       enddo
+       enddo ! i,j,k
+      enddo ! n
+
+      return
+      end subroutine fort_over_under_shoots
+
 
        ! "coarray fortran"  (MPI functionality built in)
        ! masknbr=1.0 in the interior
