@@ -17605,6 +17605,53 @@ void NavierStokes::aggressive_debug(
 
 } // end subroutine aggressive_debug
 
+
+void NavierStokes::correct_over_under_shoots(
+  MultiFab& mf,
+  int scomp,
+  int ncomp) {
+
+ bool use_tiling=ns_tiling;
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mf.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(mf,use_tiling); mfi.isValid(); ++mfi) {
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = mfi.validbox();
+
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+
+  FArrayBox& mffab=mf[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   // declared in GODUNOV_3D.F90
+  fort_over_under_shoots(
+    tilelo,tilehi,
+    fablo,fabhi,
+    &scomp,
+    &ncomp,
+    mffab.dataPtr(),ARLIM(mffab.loVect()),ARLIM(mffab.hiVect()));
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_OVER_UNDER,"fort_over_under_shoots");
+
+} // end subroutine correct_over_under_shoots
+
+
+
 void
 NavierStokes::synchronize_flux_register(int operation_flag,
  int spectral_loop) {
@@ -26178,6 +26225,9 @@ void NavierStokes::putState_list(
    // dst,src,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(S_new,*localMF[idx_MF],scomp_localMF,scomp[ilist],
 		 ncomp[ilist],0); 
+
+  correct_over_under_shoots(S_new,scomp[ilist],ncomp[ilist]);
+
   scomp_localMF+=ncomp[ilist];
  }
  if (scomp_localMF!=ncomp_list)

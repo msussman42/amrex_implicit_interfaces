@@ -738,6 +738,8 @@ protected:
       int dir,
       Real warning_cutoff);
 
+    void correct_over_under_shoots(MultiFab& mf,int scomp,int ncomp);
+
     void FillBoundaryTENSOR(MultiFab* mf,int sc,int dir);
 
     Box growntileboxTENSOR(
