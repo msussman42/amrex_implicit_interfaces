@@ -13059,6 +13059,15 @@ stop
 
       mf_ptr=>mf
 
+      if ((scomp+ncomp.le.STATE_NCOMP).and. &
+          (scomp.ge.0).and. &
+          (ncomp.ge.1)) then
+       !do nothing
+      else
+       print *,"scomp or ncomp invalid: ",scomp,ncomp
+       stop
+      endif
+
       call checkbound_array(fablo,fabhi,mf_ptr,1,-1)
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
       do n=1,ncomp

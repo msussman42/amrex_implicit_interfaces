@@ -7507,7 +7507,7 @@ NavierStokes::ColorSumALL(
 
  if (use_mac_velocity==1) {
   ParallelDescriptor::Barrier();
-   //ngrow=1
+   //dest,source,scomp,dcomp,ncomp,ngrow
   Copy_array(GET_NEW_DATA_OFFSET+State_Type,HOLD_VELOCITY_COLORSUM_MF,
    0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
   delete_array(HOLD_VELOCITY_COLORSUM_MF);
