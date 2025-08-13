@@ -17613,6 +17613,18 @@ void NavierStokes::correct_over_under_shoots(
 
  bool use_tiling=ns_tiling;
 
+ if (mf.nComp()==STATE_NCOMP) {
+  //do nothing
+ } else
+  amrex::Error("mf.nComp()==STATE_NCOMP failed");
+
+ if ((scomp+ncomp<=STATE_NCOMP)&&
+     (scomp>=0)&&
+     (ncomp>=1)) {
+  //do nothing
+ } else
+  amrex::Error("scomp or ncomp invalid");
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(mf.boxArray().d_numPts());
