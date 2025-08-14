@@ -643,6 +643,36 @@ endif
 return
 end subroutine shockdrop_init
 
+subroutine setup_stream(dir_stream,dir_transverse)
+use probcommon_module
+
+integer, intent(out) :: dir_stream,dir_transverse
+
+ if (SDIM.eq.3) then
+  dir_stream=1
+  dir_transverse=2
+ else if (SDIM.eq.2) then
+  if ((axis_dir.eq.150).or. &
+      (axis_dir.eq.151).or. &
+      (axis_dir.eq.152).or. &
+      (axis_dir.eq.154)) then
+   dir_stream=1
+   dir_transverse=2
+  else if (axis_dir.eq.153) then !Arienti shock sphere
+   dir_stream=2
+   dir_transverse=1
+  else
+   print *,"axis_dir invalid: ",axis_dir
+   stop
+  endif
+ else
+  print *,"dimension bust: ",SDIM
+  stop
+ endif
+
+return
+end subroutine setup_stream
+
 subroutine shockdrop_velocity(x,t,ls,vel, &
   velsolid_flag,dx,nmat)
 use probcommon_module
@@ -661,6 +691,9 @@ integer, INTENT(in) :: velsolid_flag
 real(amrex_real) :: To,Mn,shockAngle,preState,x_vel,dudt,alpha,vn
 real(amrex_real) :: rho1,e1,c1sqr,c1,u1,u2
 real(amrex_real) :: Tcross,Tcross2,Tcross3
+integer :: dir_stream,dir_transverse
+
+call setup_stream(dir_stream,dir_transverse)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -688,7 +721,8 @@ do dir=1,SDIM
  vel(dir)=zero
 enddo
 
-call shockdrop_dropLS(x(1),x(2),x(SDIM),ls_local)
+call shockdrop_dropLS(x(dir_stream),x(dir_transverse),x(SDIM),ls_local)
+
 if (ls_local.ge.zero) then
  ! do nothing in y/z direction (drop is upstream from shock and
  ! stationary in the "upstream frame of reference")
@@ -698,7 +732,7 @@ if (ls_local.ge.zero) then
      (axis_dir.eq.151).or. &
      (axis_dir.eq.152).or. &
      (axis_dir.eq.154)) then
-  vel(1)=advbot ! velocity in the "periodic" direction
+  vel(dir_stream)=advbot ! velocity in the "periodic" direction
  else if (axis_dir.eq.153) then !Arienti shock sphere
   !do nothing
  else
@@ -707,7 +741,7 @@ if (ls_local.ge.zero) then
  endif
 
 else
- call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
+ call shockdrop_shockLS(x(dir_stream),x(dir_transverse),x(SDIM),ls_local)
  ! in shock frame of reference:
  ! upstream: v=-shockdrop_VEL0
  ! downstream: v=-shockdrop_VEL1
@@ -728,39 +762,40 @@ else
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
-   call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,1,preState,x_vel,dudt)
-   alpha=0.5d0*(1d0+0.5d0*datan(200.5*ls_local/dx(1))/datan(1d0))
+   call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,preState,x_vel,dudt)
+   alpha=0.5d0*(1d0+0.5d0*datan(200.5*ls_local/dx(dir_stream))/datan(1d0))
    call vnpostshock_air(fort_tempconst(2),Mn,vn)
    rho1=fort_denconst(2)
    call INTERNAL_air(rho1,fort_tempconst(2),e1)
    call SOUNDSQR_air(rho1,e1,c1sqr)
    c1=sqrt(c1sqr)
-   vel(1)=(1d0-alpha)*(Mn*c1 - vn)
-   vel(2)=zero
-   vel(SDIM)=zero
-
+   vel(dir_stream)=(1d0-alpha)*(Mn*c1 - vn)
+   vel(dir_transverse)=zero
+   if (SDIM.eq.3) then
+    vel(SDIM)=zero
+   endif
   else if (t.gt.zero) then
 
-   call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,1,u1,u2,dudt)
+   call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,u1,u2,dudt)
    rho1=fort_denconst(2)
    call INTERNAL_air(rho1,fort_tempconst(2),e1)
    call SOUNDSQR_air(rho1,e1,c1sqr)
-   Tcross = (x(1) - (xblob2) + 0.5d0*dx(1))/(sqrt(c1sqr)*Mn)
+   Tcross = (x(dir_stream) - (xblob2) + 0.5d0*dx(dir_stream))/(sqrt(c1sqr)*Mn)
    Tcross2 = Tcross + To
    Tcross3 = Tcross2 + To * xblob4
       
    if(t.lt.Tcross) then
     ! pre-shock conditions
-    vel(1) = u1
+    vel(dir_stream) = u1
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    vel(1) = u2 + dudt * (t-Tcross)
+    vel(dir_stream) = u2 + dudt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
     u2 = u2 + dudt * (Tcross2-Tcross)
-    vel(1) = u2 - dudt * (t-Tcross2)/(2.0*xblob4)*yblob4
+    vel(dir_stream) = u2 - dudt * (t-Tcross2)/(2.0*xblob4)*yblob4
    else
-    vel(1) = u1
+    vel(dir_stream) = u1
    endif
 
   else
@@ -808,6 +843,9 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
+integer :: dir_stream,dir_transverse
+
+call setup_stream(dir_stream,dir_transverse)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -816,7 +854,7 @@ else
  stop
 endif
 
-call shockdrop_dropLS(x(1),x(2),x(SDIM),LS(1))
+call shockdrop_dropLS(x(dir_stream),x(dir_transverse),x(SDIM),LS(1))
 LS(2)=-LS(1)
 
 return
@@ -836,7 +874,9 @@ real(amrex_real), INTENT(out) :: pres
 real(amrex_real) :: To,Mn,shockAngle,p1,p2,dpdt
 real(amrex_real) :: rho1,e1,c1sqr
 real(amrex_real) :: Tcross,Tcross2,Tcross3
+integer :: dir_stream,dir_transverse
 
+call setup_stream(dir_stream,dir_transverse)
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -845,11 +885,11 @@ else
  stop
 endif
 
-call shockdrop_dropLS(x(1),x(2),x(SDIM),ls_local)
+call shockdrop_dropLS(x(dir_stream),x(dir_transverse),x(SDIM),ls_local)
 if (ls_local.ge.zero) then ! liquid
  pres=shockdrop_P0
 else
- call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
+ call shockdrop_shockLS(x(dir_stream),x(dir_transverse),x(SDIM),ls_local)
 
  if ((axis_dir.eq.150).or. &
      (axis_dir.eq.151).or. &
@@ -865,11 +905,11 @@ else
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
     !stateIndex=6 p
-  call N_wave_solution(t,x(1),x(2),x(SDIM),To,Mn,shockAngle,6,p1,p2,dpdt)
+  call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,6,p1,p2,dpdt)
   rho1=fort_denconst(2)
   call INTERNAL_air(rho1,fort_tempconst(2),e1)
   call SOUNDSQR_air(rho1,e1,c1sqr)
-  Tcross = (x(1) - (xblob2))/(sqrt(c1sqr)*Mn)
+  Tcross = (x(dir_stream) - (xblob2))/(sqrt(c1sqr)*Mn)
   Tcross2 = Tcross + To
   Tcross3 = Tcross2 + To * xblob4
 
@@ -909,15 +949,9 @@ real(amrex_real) :: rho1,e1,c1sqr,c1,T1,T2,rho2,e2,vt,U2,V2,P2
 real(amrex_real) :: Tcross,Tcross2,Tcross3
 real(amrex_real) :: dx_local(SDIM)
 integer :: dir,ilev
+integer :: dir_stream,dir_transverse
 
-if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-3) then
-  !do nothing
- else 
-  print *,"expecting z=y shockdrop_gas_density"
-  stop
- endif
-endif
+call setup_stream(dir_stream,dir_transverse)
 
 if (fort_finest_level.ge.0) then
  !do nothing
@@ -981,7 +1015,7 @@ else if (LS.le.zero) then !gas
    vt=c1*radblob2*cos(shockAngle)
    U2= Mn * c1  - vn
    V2= 0.0d0
-   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(1))/datan(1d0))
+   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(dir_stream))/datan(1d0))
    den=rho1*alpha+rho2*(1d0-alpha)
 
   else if (t.gt.zero) then
@@ -1040,15 +1074,9 @@ real(amrex_real) :: Tcross,Tcross2,Tcross3
 real(amrex_real) :: den
 real(amrex_real) :: dx_local(SDIM)
 integer :: dir,ilev
+integer :: dir_stream,dir_transverse
 
-if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-3) then
-  !do nothing
- else
-  print *,"expecting z=y shockdrop_gas_temperature"
-  stop
- endif
-endif
+call setup_stream(dir_stream,dir_transverse)
 
 if (fort_finest_level.ge.0) then
  !do nothing
@@ -1117,7 +1145,7 @@ else if (LS.le.zero) then !gas
    vt=c1*radblob2*cos(shockAngle)
    U2= Mn * c1  - vn
    V2= 0.0d0
-   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(1))/datan(1d0))
+   alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(dir_stream))/datan(1d0))
    den=rho1*alpha+rho2*(1d0-alpha)
    call TEMPERATURE_air(den,temp,e1*alpha+e2*(1d0-alpha))
 
@@ -1177,15 +1205,6 @@ IMPLICIT NONE
 real(amrex_real),INTENT(in) :: x,y,z
 real(amrex_real),INTENT(out) :: LS
 
-if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-3) then
-  !do nothing
- else
-  print *,"z<>y error shockdrop_shockLS"
-  stop
- endif
-endif
-
 if ((axis_dir.eq.150).or. &
     (axis_dir.eq.151).or. &
     (axis_dir.eq.152).or. &
@@ -1217,15 +1236,6 @@ IMPLICIT NONE
 real(amrex_real),INTENT(in) :: x,y,z
 real(amrex_real),INTENT(out) :: LS
 real(amrex_real) mag
-
-if (SDIM.eq.2) then
- if (abs(z-y).le.1.0E-3) then
-  !do nothing
- else
-  print *,"z<>y error shockdrop_dropLS"
-  stop
- endif
-endif
 
 if (axis_dir.eq.150) then ! shock drop
  mag=(x-xblob)**2+(y-yblob)**2
@@ -1288,6 +1298,9 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
 integer im,ibase,n
+integer :: dir_stream,dir_transverse
+
+call setup_stream(dir_stream,dir_transverse)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1312,7 +1325,7 @@ if ((num_materials.eq.2).and. &
   if (im.eq.1) then
    !do nothing
   else if (im.eq.2) then
-   call shockdrop_gas_density(t,x(1),x(2),x(SDIM),STATE(ibase+ENUM_DENVAR+1))
+   call shockdrop_gas_density(t,x(dir_stream),x(dir_transverse),x(SDIM),STATE(ibase+ENUM_DENVAR+1))
   else
    print *,"im out of range"
    stop
@@ -1330,7 +1343,7 @@ if ((num_materials.eq.2).and. &
   if (im.eq.1) then
    !do nothing
   else if (im.eq.2) then
-   call shockdrop_gas_temperature(t,x(1),x(2),x(SDIM), &
+   call shockdrop_gas_temperature(t,x(dir_stream),x(dir_transverse),x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
    print *,"im out of range: ",im
@@ -1533,6 +1546,9 @@ real(amrex_real), dimension(SDIM) :: local_delta
 real(amrex_real) :: F_LIQUID,LS_LIQUID,LS_SHOCK,P_diff,mag
 integer :: dir
 integer :: ii,jj,kk
+integer :: dir_stream,dir_transverse
+
+call setup_stream(dir_stream,dir_transverse)
 
 if (nhalf.lt.3) then
  print *,"nhalf invalid shock drop override tagflag"
@@ -1579,7 +1595,7 @@ if ((num_materials.ge.2).and. &
 
   rflag=0.0d0
   tagflag=0
-  call shockdrop_shockLS(local_x(1),local_x(2),local_x(SDIM),LS_SHOCK)
+  call shockdrop_shockLS(local_x(dir_stream),local_x(dir_transverse),local_x(SDIM),LS_SHOCK)
   LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
   F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
   if (time.eq.zero) then
@@ -1617,7 +1633,7 @@ if ((num_materials.ge.2).and. &
    stop
   endif
 
-  mag=(local_x(2)-yblob)**2
+  mag=(local_x(dir_transverse)-yblob)**2
   if (AMREX_SPACEDIM.eq.3) then
    mag=mag+(local_x(SDIM)-zblob)**2
   endif
