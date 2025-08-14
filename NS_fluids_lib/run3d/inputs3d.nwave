@@ -4,9 +4,15 @@
 # drop bag breakup in crossflow
 #
 max_step  = 180000     # maximum timestep
-stop_time =  1.0 # maximum problem time
+stop_time =  100.0e-6 # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
+#
+#
+#geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+#geometry.prob_lo   =0.0 -0.0000
+#geometry.prob_hi   =0.06666666666666  0.4000   # units of cm
+#geometry.is_periodic = 0 0
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =-0.0000 -0.06666666666666 -0.06666666666666
 geometry.prob_hi   = 0.4000  0.06666666666666  0.06666666666666  # units of cm
@@ -46,7 +52,7 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
 amr.n_cell    = 192 64 64
-#amr.n_cell    = 192 64
+#amr.n_cell    = 32 192
 amr.max_level = 3
 ns.max_level_for_use = 3
 
@@ -145,6 +151,9 @@ ns.radblob=0.215 # cap radius (cm)
 ns.xblob2=0.01 # initial shock vertex position. Initialize outside of domain (<0)
 ns.yblob2=0.5 # shock angle for probtype 392, unused for 394
 ns.zblob2=0.015   # length of bullet's cylinder
+#domain length in the x direction is .4 cm.
+#speed of sound in air is 34300 cm/s
+#approximate time to clear the domain is 0.4/34300=12 microseconds
 ns.radblob2=4.5 # inlet Mach number
 ns.xblob3=0.08  # initial drop position
 ns.yblob3=0.0  # initial drop position
@@ -177,6 +186,8 @@ ns.v = 1
 prescribe_temperature_outflow=1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
+#ns.lo_bc          = 3 1
+#ns.hi_bc          = 3 1 
 ns.lo_bc          = 1 0 0
 ns.hi_bc          = 1 0 0
 
