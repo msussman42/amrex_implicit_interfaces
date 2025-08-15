@@ -3,7 +3,7 @@ amr.max_grid_size   = 20
 cg.min_max_grid_size=128
 
 # grid : 4 * 7 = 28
-amr.plot_int    = 50
+amr.plot_int    = 500    # 50
 ns.sum_interval = 50     # timesteps between computing mass
 
 # microlayer contact angle (radians): 50 degrees            
@@ -37,8 +37,25 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   = 0 0.0
 geometry.prob_hi   = 2.0 3.0 
 ns.EILE_flag=-1
+#NOTE:
+#bubble pinch off frequency might not equilibrate until the 3rd or 4th
+#ejection.
+#(see "nucleation_period" below)
+#in GNUmakefile if particles:
+#USE_PARTICLES=TRUE ("PARTICLES" appears in the executable name)
+#in GNUmakefile if no particles:
+#USE_PARTICLES=FALSE
+#MOF
+#ns.continuous_mof=0
+#CMOF or particle CMOF
 ns.continuous_mof=1
 ns.MOFITERMAX=30
+#MOF or CMOF
+ns.MOFITERMAX_AFTER_PREDICT=30
+#MOF or CMOF with particles
+#ns.MOFITERMAX_AFTER_PREDICT=0
+#MOF or CMOF or CMOF w/particles; no machine learning
+ns.mof_decision_tree_learning=0
 ns.temperatureface_flag=0   # 0=use LS  1=use VOF
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
@@ -75,7 +92,7 @@ godunov.printMinMax=0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_nddata_format=1 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
+ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
 amr.max_level =  0
 ns.ns_tiling=false
