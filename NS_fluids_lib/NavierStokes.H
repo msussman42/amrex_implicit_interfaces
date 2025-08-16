@@ -315,6 +315,8 @@ public:
 
     void manage_FSI_data();
 
+    void extend_FSI_data(int im_critical); //1<=im_critical<=num_materials
+
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
 
@@ -632,7 +634,7 @@ protected:
      int nsolve);
 
     void tensor_extrapolation();
-    void tensor_advection_update();
+    void tensor_advection_update(int im);
     void tensor_advection_updateALL();
 
     void level_init_elasticmask_and_elasticmaskpart();

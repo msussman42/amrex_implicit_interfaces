@@ -902,51 +902,128 @@ void NavierStokes::tensor_advection_updateALL() {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-    //ngrow=1
-   ns_level.getState_localMF(HOLD_VELOCITY_DATA_MF,
-     1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
-  }
+  int partid_test=0;
 
-   // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
-   // 1. find all velocity derivatives at faces.
-   // 2. interpolate derivatives from faces to cells using 1-sided
-   //    interpolation in the case that e.g. lsleft(im_primary)>=0
-   //    but lsright(im_primary)<0.
-   //    (im_primary is the main material in the cell, lspoint(im_primary)>=0)
-   // init_gradu_tensorALL declared in NavierStokes2.cpp
-  int do_alloc=0;
-  int simple_AMR_BC_flag_viscosity=1;
-  init_gradu_tensorALL(
-    HOLD_VELOCITY_DATA_MF,
-    do_alloc,
-    CELLTENSOR_MF,
-    FACETENSOR_MF,
-    simple_AMR_BC_flag_viscosity);
+  for (int im=0;im<num_materials;im++) {
 
-  allocate_array(0,DERIVE_TENSOR_NCOMP,-1,HOLD_GETSHEAR_DATA_MF);
+   if (ns_is_rigid(im)==0) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   // get std::sqrt(2 D:D),D,grad U 
-   // DERIVE_TENSOR_MAG: std::sqrt(2 * D : D)
-   // DERIVE_TENSOR_RATE_DEFORM: D11,D12,D13,D21,D22,D23,D31,D32,D33
-   // DERIVE_TENSOR_GRAD_VEL: ux,uy,uz,vx,vy,vz,wx,wy,wz
-   int only_scalar=0; 
-   int destcomp=0;
-   int ngrow_zero=0;
-   ns_level.level_getshear(
-       ns_level.localMF[HOLD_GETSHEAR_DATA_MF],
-       ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-       only_scalar,destcomp,ngrow_zero);
-  }
+    if (store_elastic_data[im]==1) {
 
-   // tensor_advection_update is declared in: NavierStokes.cpp
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.tensor_advection_update();
-  }
+     int partid=0;
+     while ((im_viscoelastic_map[partid]!=im)&&
+ 	    (partid<im_viscoelastic_map.size())) {
+      partid++;
+     }
+
+     if (partid==partid_test) {
+      //do nothing
+     } else
+      amrex::Error("partid invalid");
+
+     partid_test++;
+
+     if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
+
+      if (fort_built_in_elastic_model(&elastic_viscosity[im],
+       	                              &viscoelastic_model[im])==1) {
+
+       getStateALL(1,cur_time_slab,STATECOMP_VEL,
+         STATE_NCOMP_VEL,HOLD_VELOCITY_ELASTIC_MF);
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         ns_level.getStateMAC_localMF(HOLD_VELOCITY_ELASTIC_FACE_MF+dir,1,
+          dir,cur_time_slab);
+        }
+       }
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.extend_FSI_data(im+1);
+       }
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+         //ngrow=1
+        ns_level.getState_localMF(HOLD_VELOCITY_DATA_MF,
+          1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+       }
+
+       // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
+       // 1. find all velocity derivatives at faces.
+       // 2. interpolate derivatives from faces to cells using 1-sided
+       //    interpolation in the case that e.g. lsleft(im_primary)>=0
+       //    but lsright(im_primary)<0.
+       //    (im_primary is the main material in the cell, 
+       //      lspoint(im_primary)>=0)
+       // init_gradu_tensorALL declared in NavierStokes2.cpp
+       int do_alloc=0;
+       int simple_AMR_BC_flag_viscosity=1;
+       init_gradu_tensorALL(
+        HOLD_VELOCITY_DATA_MF,
+        do_alloc,
+        CELLTENSOR_MF,
+        FACETENSOR_MF,
+        simple_AMR_BC_flag_viscosity);
+
+       allocate_array(0,DERIVE_TENSOR_NCOMP,-1,HOLD_GETSHEAR_DATA_MF);
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        // get std::sqrt(2 D:D),D,grad U 
+        // DERIVE_TENSOR_MAG: std::sqrt(2 * D : D)
+        // DERIVE_TENSOR_RATE_DEFORM: D11,D12,D13,D21,D22,D23,D31,D32,D33
+        // DERIVE_TENSOR_GRAD_VEL: ux,uy,uz,vx,vy,vz,wx,wy,wz
+        int only_scalar=0; 
+        int destcomp=0;
+        int ngrow_zero=0;
+        ns_level.level_getshear(
+           ns_level.localMF[HOLD_GETSHEAR_DATA_MF],
+           ns_level.localMF[HOLD_VELOCITY_DATA_MF],
+           only_scalar,destcomp,ngrow_zero);
+       }
+
+       // tensor_advection_update is declared in: NavierStokes.cpp
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.tensor_advection_update(im);
+       }
+
+       delete_array(HOLD_GETSHEAR_DATA_MF);
+       delete_array(HOLD_VELOCITY_DATA_MF);
+       delete_array(CELLTENSOR_MF);
+       delete_array(FACETENSOR_MF);
+
+       Copy_array(GET_NEW_DATA_OFFSET+State_Type,HOLD_VELOCITY_ELASTIC_MF,
+         0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+       delete_array(HOLD_VELOCITY_ELASTIC_MF);
+
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+        Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,
+          HOLD_VELOCITY_ELASTIC_FACE_MF+dir,0,0,1,0);
+        delete_array(HOLD_VELOCITY_ELASTIC_FACE_MF+dir);
+       }
+
+      } else
+       amrex::Error("fort_built_in_elastic_model invalid");
+
+     } else
+      amrex::Error("partid invalid");
+
+    } else if (store_elastic_data[im]==0) {
+     //do nothing
+    } else
+     amrex::Error("store_elastic_data[im] invalid");
+
+   } else if (ns_is_rigid(im)==1) {
+    //do nothing
+   } else
+    amrex::Error("ns_is_rigid(im) invalid");
+
+  } //im=0...nmat-1
+
   avgDownALL_TENSOR();
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -954,11 +1031,6 @@ void NavierStokes::tensor_advection_updateALL() {
    ns_level.tensor_extrapolation();
   }
   avgDownALL_TENSOR();
-
-  delete_array(HOLD_GETSHEAR_DATA_MF);
-  delete_array(HOLD_VELOCITY_DATA_MF);
-  delete_array(CELLTENSOR_MF);
-  delete_array(FACETENSOR_MF);
 
  } else if (num_materials_viscoelastic==0) {
   // do nothing
@@ -14076,6 +14148,132 @@ void NavierStokes::manage_FSI_data() {
   amrex::Error("expecting num_FSI_outer_sweeps>=2 and <= num_materials");
 
 } // end subroutine manage_FSI_data()
+
+void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
+
+ int finest_level=parent->finestLevel();
+
+ std::string local_caller_string="extend_FSI_data";
+
+ bool use_tiling=ns_tiling;
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ resize_levelset(3,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,3,local_caller_string);
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ resize_mask_nbr(1);
+
+ const Real* dx = geom.CellSize();
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ngrow=2
+    //Umac_Type+dir
+    //getStateMAC_localMF is declared in NavierStokes2.cpp
+    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
+  getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,2,dir,cur_time_slab);
+ } // dir=0 ... sdim-1
+ getState_localMF(FSI_CELL_VELOCITY_MF,
+    1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+
+
+ if (localMF[FSI_CELL_VELOCITY_MF]->nGrow()>=1) {
+  //do nothing
+ } else
+  amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nGrow()<1");
+
+ if (localMF[FSI_CELL_VELOCITY_MF]->nComp()==AMREX_SPACEDIM) {
+  //do nothing
+ } else
+  amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nComp()!=sdim");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(S_new,use_tiling);mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   int gridno=mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+   const Real* xlo = grid_loc[gridno].lo();
+   
+   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+
+   FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
+   if (FSIvelMAC.nComp()!=1)
+    amrex::Error("FSIvelMAC.nComp() invalid");
+   FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
+   if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
+    amrex::Error("FSIvelCELL.nComp() invalid");
+
+   // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
+
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
+   fort_extend_elastic_velocity(
+      &im_critical, //1<=im_critical<=num_materials
+      &dir, //dir=0,1,2
+      velbc.dataPtr(),  
+      &cur_time_slab, 
+      xlo,dx,
+      // mask=tag if not covered by level+1 or outside the domain.
+      maskcoeffab.dataPtr(),
+      ARLIM(maskcoeffab.loVect()),ARLIM(maskcoeffab.hiVect()),
+      lsfab.dataPtr(),
+      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+      FSIvelMAC.dataPtr(),
+      ARLIM(FSIvelMAC.loVect()),ARLIM(FSIvelMAC.hiVect()), 
+      FSIvelCELL.dataPtr(dir),
+      ARLIM(FSIvelCELL.loVect()),ARLIM(FSIvelCELL.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &level,&finest_level,
+      &NS_geometry_coord,
+      domlo,domhi);
+  } // mfi
+} // omp
+  ns_reconcile_d_num(LOOP_EXTEND_VEL,"fort_extend_elastic_velcity");
+
+  MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+  MultiFab::Copy(S_new,*localMF[FSI_CELL_VELOCITY_MF],
+     dir,STATECOMP_VEL+dir,1,1);
+
+ } // dir=0..sdim-1
+ delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+ delete_localMF(FSI_CELL_VELOCITY_MF,1);
+
+} // end subroutine extend_FSI_data()
 
 
 void NavierStokes::prepare_advect_vars(Real time) {
