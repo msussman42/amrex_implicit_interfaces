@@ -330,6 +330,22 @@ namespace amrex{
         const int* domlo,const int* domhi);
 
 
+      void fort_extend_elastic_velocity(
+        int* im_critical, // 1<=im_critical<=num_materials
+        int* dir, //dir=0,1,2
+        int* velbc,
+        Real* time,
+        const Real* xlo,const Real* dx,
+        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+        Real* levelPC,AMREX_ARLIM_P(levelPClo),AMREX_ARLIM_P(levelPChi),
+        Real* velMAC,AMREX_ARLIM_P(velMAClo),AMREX_ARLIM_P(velMAChi), 
+        Real* velCELL,AMREX_ARLIM_P(velCELLlo),AMREX_ARLIM_P(velCELLhi), 
+        const int* tilelo,const int* tilehi,
+        const int* fablo,const int* fabhi,
+        int* bfact,
+        int* level,int* finest_level,
+        const int* rz_flag,
+        const int* domlo,const int* domhi);
 
       void fort_mac_to_cell(
         int* ns_time_order,

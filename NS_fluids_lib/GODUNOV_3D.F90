@@ -9256,7 +9256,7 @@ stop
       real(amrex_real) band_offset
       real(amrex_real) dxmaxLS
 
-      real(amrex_real), parameter :: FSI_band_cells=1.0d0
+      real(amrex_real), parameter :: FSI_band_cells=0.0d0
 
       k1low=0
       k1high=0

@@ -13280,7 +13280,7 @@ void NavierStokes::update_SEM_delta_force(
 
 // called from:
 //  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
-void NavierStokes::tensor_advection_update() {
+void NavierStokes::tensor_advection_update(int im) {
 
  std::string local_caller_string="tensor_advection_update";
 
@@ -13332,209 +13332,201 @@ void NavierStokes::tensor_advection_update() {
 
  int partid_test=0;
 
- for (int im=0;im<num_materials;im++) {
+ if (ns_is_rigid(im)==0) {
 
-  if (ns_is_rigid(im)==0) {
+  if (store_elastic_data[im]==1) {
 
-   if (store_elastic_data[im]==1) {
-
-    int partid=0;
-    while ((im_viscoelastic_map[partid]!=im)&&
-	   (partid<im_viscoelastic_map.size())) {
+   int partid=0;
+   while ((im_viscoelastic_map[partid]!=im)&&
+          (partid<im_viscoelastic_map.size())) {
      partid++;
-    }
+   }
 
-    if (partid==partid_test) {
-     //do nothing
-    } else
-     amrex::Error("partid invalid");
+   if (partid==partid_test) {
+    //do nothing
+   } else
+    amrex::Error("partid invalid");
 
-    partid_test++;
+   partid_test++;
 
-    if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
+   if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
 
-     if (fort_built_in_elastic_model(&elastic_viscosity[im],
-      	                             &viscoelastic_model[im])==1) {
+    if (fort_built_in_elastic_model(&elastic_viscosity[im],
+     	                             &viscoelastic_model[im])==1) {
 
-      int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
+     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
 
-       //CELL_VISC_MATERIAL_MF is build in NavierStokes::getStateVISC_ALL()
-       //  1. CELL_VISC_MATERIAL(im)=viscconst(im)  (def) im=1..num_materials
-       //  2. CELL_VISC_MATERIAL(num_materials+im)=viscoelastic_coeff *
-       //     visc_coef  (def) im=1..num_materials
-       //     e.g. viscoelastic_coef=elastic_viscosity/(modtime+dt)
-       //  3. CELL_VISC_MATERIAL(2*num_materials+im)=modtime
-       //getStateVISC_ALL is called from:
-       //  NavierStokes::writeTECPLOT_File
-       //  NavierStokes::init_gradu_tensor_and_material_visc_ALL
-      int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
-      if (ncomp_visc!=3*num_materials) {
-       std::cout << "ncomp= " <<
-        localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << 
-	   num_materials << '\n';
-       amrex::Error("cell_visc_material ncomp invalid(6)");
-      }
+      //CELL_VISC_MATERIAL_MF is build in NavierStokes::getStateVISC_ALL()
+      //  1. CELL_VISC_MATERIAL(im)=viscconst(im)  (def) im=1..num_materials
+      //  2. CELL_VISC_MATERIAL(num_materials+im)=viscoelastic_coeff *
+      //     visc_coef  (def) im=1..num_materials
+      //     e.g. viscoelastic_coef=elastic_viscosity/(modtime+dt)
+      //  3. CELL_VISC_MATERIAL(2*num_materials+im)=modtime
+      //getStateVISC_ALL is called from:
+      //  NavierStokes::writeTECPLOT_File
+      //  NavierStokes::init_gradu_tensor_and_material_visc_ALL
+     int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
+     if (ncomp_visc!=3*num_materials) {
+      std::cout << "ncomp= " <<
+       localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << 
+          num_materials << '\n';
+      amrex::Error("cell_visc_material ncomp invalid(6)");
+     }
 
-      MultiFab* tensor_source_mf=
-       getStateTensor(1,scomp_tensor,ENUM_NUM_TENSOR_TYPE_REFINE,cur_time_slab);
+     MultiFab* tensor_source_mf=
+      getStateTensor(1,scomp_tensor,ENUM_NUM_TENSOR_TYPE_REFINE,cur_time_slab);
 
-      debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,local_caller_string);
+     debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,local_caller_string);
 
-      MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
-      if (tendata_mf->nGrow()==0) {
-       // do nothing
-      } else
-       amrex::Error("tendata_mf invalid nGrow()");
-      if (tendata_mf->nComp()==DERIVE_TENSOR_NCOMP) {
-       // do nothing
-      } else
-       amrex::Error("tendata_mf invalid nComp()");
+     MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
+     if (tendata_mf->nGrow()==0) {
+      // do nothing
+     } else
+      amrex::Error("tendata_mf invalid nGrow()");
+     if (tendata_mf->nComp()==DERIVE_TENSOR_NCOMP) {
+      // do nothing
+     } else
+      amrex::Error("tendata_mf invalid nComp()");
      
-      if (thread_class::nthreads<1)
-       amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(tensor_source_mf->boxArray().d_numPts());
+     if (thread_class::nthreads<1)
+      amrex::Error("thread_class::nthreads invalid");
+     thread_class::init_d_numPts(tensor_source_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-      for (MFIter mfi(*tensor_source_mf,use_tiling); mfi.isValid(); ++mfi) {
+     for (MFIter mfi(*tensor_source_mf,use_tiling); mfi.isValid(); ++mfi) {
 
-       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-       const int gridno = mfi.index();
-       const Box& tilegrid = mfi.tilebox();
-       const Box& fabgrid = grids[gridno];
-       const int* tilelo=tilegrid.loVect();
-       const int* tilehi=tilegrid.hiVect();
-       const int* fablo=fabgrid.loVect();
-       const int* fabhi=fabgrid.hiVect();
-       int bfact=parent->Space_blockingFactor(level);
+      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+      const int gridno = mfi.index();
+      const Box& tilegrid = mfi.tilebox();
+      const Box& fabgrid = grids[gridno];
+      const int* tilelo=tilegrid.loVect();
+      const int* tilehi=tilegrid.hiVect();
+      const int* fablo=fabgrid.loVect();
+      const int* fabhi=fabgrid.hiVect();
+      int bfact=parent->Space_blockingFactor(level);
 
-       const Real* xlo = grid_loc[gridno].lo();
+      const Real* xlo = grid_loc[gridno].lo();
 
-       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-       FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
-       FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
+      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+      FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
+      FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
 
-       int dir=0;
-       FArrayBox& xmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
-       dir=1;
-       FArrayBox& ymacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
-       dir=AMREX_SPACEDIM-1;
-       FArrayBox& zmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
+      int dir=0;
+      FArrayBox& xmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
+      dir=1;
+      FArrayBox& ymacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
+      dir=AMREX_SPACEDIM-1;
+      FArrayBox& zmacfab=(*localMF[TRANSPORT_REGISTER_FACE_MF+dir])[mfi];
 
-       FArrayBox& tensor_new_fab=Tensor_new[mfi];
+      FArrayBox& tensor_new_fab=Tensor_new[mfi];
 
-       if (tensor_new_fab.nComp()==NUM_CELL_ELASTIC_REFINE) {
-        //do nothing
-       } else
-        amrex::Error("tensor_new_fab.nComp() invalid");
+      if (tensor_new_fab.nComp()==NUM_CELL_ELASTIC_REFINE) {
+       //do nothing
+      } else
+       amrex::Error("tensor_new_fab.nComp() invalid");
 
-       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
+      FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
 
-       if (tensor_source_mf_fab.nComp()==ENUM_NUM_TENSOR_TYPE_REFINE) {
-        //do nothing
-       } else
-        amrex::Error("tensor_source_mf_fab.nComp() invalid");
+      if (tensor_source_mf_fab.nComp()==ENUM_NUM_TENSOR_TYPE_REFINE) {
+       //do nothing
+      } else
+       amrex::Error("tensor_source_mf_fab.nComp() invalid");
 
-       FArrayBox& tendata=(*tendata_mf)[mfi];
-       FArrayBox& eosfab=(*EOSdata)[mfi];
+      FArrayBox& tendata=(*tendata_mf)[mfi];
+      FArrayBox& eosfab=(*EOSdata)[mfi];
 
-       FArrayBox& snewfab=S_new[mfi];
-       FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
+      FArrayBox& snewfab=S_new[mfi];
+      FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
 
-       Vector<int> velbc=getBCArray(State_Type,gridno,
-        STATECOMP_VEL,STATE_NCOMP_VEL);
+      Vector<int> velbc=getBCArray(State_Type,gridno,
+       STATECOMP_VEL,STATE_NCOMP_VEL);
 
-       int tid_current=ns_thread();
-       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-        amrex::Error("tid_current invalid");
-       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+      int tid_current=ns_thread();
+      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+       amrex::Error("tid_current invalid");
+      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-       if (fort_built_in_elastic_model(&elastic_viscosity[im],
- 			            &viscoelastic_model[im])==1) {
-        // declared in: GODUNOV_3D.F90
-        fort_updatetensor(
-         &level,
-         &finest_level,
-         &im,
-         &ncomp_visc,
-         viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-         one_over_den_fab.dataPtr(),
-	 ARLIM(one_over_den_fab.loVect()),
-	 ARLIM(one_over_den_fab.hiVect()),
-         tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
-         eosfab.dataPtr(),
-         ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-         dx,xlo,
-         velfab.dataPtr(),
-         ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-         xmacfab.dataPtr(),
-         ARLIM(xmacfab.loVect()),ARLIM(xmacfab.hiVect()),
-         ymacfab.dataPtr(),
-         ARLIM(ymacfab.loVect()),ARLIM(ymacfab.hiVect()),
-         zmacfab.dataPtr(),
-         ARLIM(zmacfab.loVect()),ARLIM(zmacfab.hiVect()),
-         tensor_new_fab.dataPtr(scomp_tensor),
-         ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
-         tensor_source_mf_fab.dataPtr(),
-         ARLIM(tensor_source_mf_fab.loVect()),
-         ARLIM(tensor_source_mf_fab.hiVect()),
-         snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-         DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
-         &nstate,
-         tilelo,tilehi,
-         fablo,fabhi,
-         &bfact, 
-         &dt_slab,//updatetensor
-         &elastic_time[im],
-         &viscoelastic_model[im],
-         &polymer_factor[im],
-         &elastic_viscosity[im],
-         &yield_stress[im],
-         &mechanical_to_thermal[im],
-         &NS_geometry_coord,
-         velbc.dataPtr());
-       } else {
-	std::cout << "illegal: store_elastic_data==1 and visc_model==4\n";
-        amrex::Error("fort_built_in_elastic_model invalid");
-       }
-      }  // mfi
+      if (fort_built_in_elastic_model(&elastic_viscosity[im],
+       		            &viscoelastic_model[im])==1) {
+       // declared in: GODUNOV_3D.F90
+       fort_updatetensor(
+        &level,
+        &finest_level,
+        &im,
+        &ncomp_visc,
+        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+        one_over_den_fab.dataPtr(),
+        ARLIM(one_over_den_fab.loVect()),
+        ARLIM(one_over_den_fab.hiVect()),
+        tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
+        eosfab.dataPtr(),
+        ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+        dx,xlo,
+        velfab.dataPtr(),
+        ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+        xmacfab.dataPtr(),
+        ARLIM(xmacfab.loVect()),ARLIM(xmacfab.hiVect()),
+        ymacfab.dataPtr(),
+        ARLIM(ymacfab.loVect()),ARLIM(ymacfab.hiVect()),
+        zmacfab.dataPtr(),
+        ARLIM(zmacfab.loVect()),ARLIM(zmacfab.hiVect()),
+        tensor_new_fab.dataPtr(scomp_tensor),
+        ARLIM(tensor_new_fab.loVect()),ARLIM(tensor_new_fab.hiVect()),
+        tensor_source_mf_fab.dataPtr(),
+        ARLIM(tensor_source_mf_fab.loVect()),
+        ARLIM(tensor_source_mf_fab.hiVect()),
+        snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+        DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
+        &nstate,
+        tilelo,tilehi,
+        fablo,fabhi,
+        &bfact, 
+        &dt_slab,//updatetensor
+        &elastic_time[im],
+        &viscoelastic_model[im],
+        &polymer_factor[im],
+        &elastic_viscosity[im],
+        &yield_stress[im],
+        &mechanical_to_thermal[im],
+        &NS_geometry_coord,
+        velbc.dataPtr());
+      } else {
+       std::cout << "illegal: store_elastic_data==1 and visc_model==4\n";
+       amrex::Error("fort_built_in_elastic_model invalid");
+      }
+     }  // mfi
 } // omp
-      ns_reconcile_d_num(LOOP_UPDATETENSOR,"tensor_advection_update");
+     ns_reconcile_d_num(LOOP_UPDATETENSOR,"tensor_advection_update");
 
-      delete tensor_source_mf;
-     } else {
-      std::cout << "illegal: store_elastic_data==1 and \n";
-      std::cout << "fort_built_in_elastic_model!=1";
-      amrex::Error("fort_built_in_elastic_model or store_elastic_data invalid");
-     }
-    } else
-     amrex::Error("partid could not be found: tensor_advection_update");
-
-   } else if (store_elastic_data[im]==0) {
-
-    if (viscoelastic_model[im]==0) {
-     // do nothing
+     delete tensor_source_mf;
     } else {
-     amrex::Error("viscoelastic_model[im] invalid");
+     std::cout << "illegal: store_elastic_data==1 and \n";
+     std::cout << "fort_built_in_elastic_model!=1";
+     amrex::Error("fort_built_in_elastic_model or store_elastic_data invalid");
     }
-
    } else
-    amrex::Error("store_elastic_data[im] invalid");
+    amrex::Error("partid could not be found: tensor_advection_update");
 
-  } else if (ns_is_rigid(im)==1) {
+  } else if (store_elastic_data[im]==0) {
 
-   // do nothing
+   amrex::Error("expecting store_elastic_data[im]==1");
 
   } else
-   amrex::Error("ns_is_rigid invalid");
+   amrex::Error("store_elastic_data[im] invalid");
 
- } // im=0..num_materials-1
+ } else if (ns_is_rigid(im)==1) {
+
+  amrex::Error("expecting ns_is_rigid==0");
+
+ } else
+  amrex::Error("ns_is_rigid invalid");
 
  delete EOSdata;
 
- if (partid_test==num_materials_viscoelastic) {
+ if (partid_test<=num_materials_viscoelastic) {
   // do nothing
  } else
   amrex::Error("partid_test invalid");
