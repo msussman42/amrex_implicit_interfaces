@@ -13330,8 +13330,6 @@ void NavierStokes::tensor_advection_update(int im) {
 
  const Real* dx = geom.CellSize();
 
- int partid_test=0;
-
  if (ns_is_rigid(im)==0) {
 
   if (store_elastic_data[im]==1) {
@@ -13342,12 +13340,10 @@ void NavierStokes::tensor_advection_update(int im) {
      partid++;
    }
 
-   if (partid==partid_test) {
+   if (partid<im_viscoelastic_map.size()) {
     //do nothing
    } else
     amrex::Error("partid invalid");
-
-   partid_test++;
 
    if ((partid>=0)&&(partid<im_viscoelastic_map.size())) {
 
@@ -13455,7 +13451,7 @@ void NavierStokes::tensor_advection_update(int im) {
        fort_updatetensor(
         &level,
         &finest_level,
-        &im,
+        &im, // 0<=im<nmat
         &ncomp_visc,
         viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
         one_over_den_fab.dataPtr(),
@@ -13525,11 +13521,6 @@ void NavierStokes::tensor_advection_update(int im) {
   amrex::Error("ns_is_rigid invalid");
 
  delete EOSdata;
-
- if (partid_test<=num_materials_viscoelastic) {
-  // do nothing
- } else
-  amrex::Error("partid_test invalid");
 
 }   // end subroutine tensor_advection_update
 

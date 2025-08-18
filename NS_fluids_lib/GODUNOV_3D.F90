@@ -9274,8 +9274,7 @@ stop
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
        ! see also:
-       ! H_offset and H_radius in subroutine fort_elastic_force
-       ! LS_shift in subroutine check_added_mass
+       ! H_radius in subroutine fort_elastic_force
        ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
       band_offset=FSI_band_cells*dxmaxLS
 

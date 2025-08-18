@@ -937,12 +937,70 @@ void NavierStokes::tensor_advection_updateALL() {
          ns_level.getStateMAC_localMF(HOLD_VELOCITY_ELASTIC_FACE_MF+dir,1,
           dir,cur_time_slab);
         }
+       } //for (int ilev=finest_level;ilev>=level;ilev--)
+
+
+       if (step_through_data==1) {
+        int basestep_debug=nStep();
+        parent->writeDEBUG_PlotFile(
+         basestep_debug,
+         SDC_outer_sweeps,
+         slab_step,
+         divu_outer_sweeps);
+        std::cout << "press any number then enter: before extend_FSI_data \n";
+        std::cout << "im+1 = " << im+1 << '\n';
+        std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+        std::cout << "dt_slab= " << dt_slab << '\n';
+        std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+        std::cout << "num_divu_outer_sweeps= " << 
+          num_divu_outer_sweeps << '\n';
+        std::cout << "slab_step= " << 
+          slab_step << '\n';
+        std::cout << "SDC_outer_sweeps= " << 
+          SDC_outer_sweeps << '\n';
+        std::cout << "FSI_outer_sweeps= " << 
+          FSI_outer_sweeps << '\n';
+        std::cout << "num_FSI_outer_sweeps= " << 
+           num_FSI_outer_sweeps << '\n';
+        std::cout << "NFSI_LIMIT= " << 
+           NFSI_LIMIT << '\n';
+        int n_input;
+        std::cin >> n_input;
        }
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.extend_FSI_data(im+1);
        }
+
+       if (step_through_data==1) {
+        int basestep_debug=nStep();
+        parent->writeDEBUG_PlotFile(
+         basestep_debug,
+         SDC_outer_sweeps,
+         slab_step,
+         divu_outer_sweeps);
+        std::cout << "press any number then enter: after extend_FSI_data \n";
+        std::cout << "im+1 = " << im+1 << '\n';
+        std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+        std::cout << "dt_slab= " << dt_slab << '\n';
+        std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+        std::cout << "num_divu_outer_sweeps= " << 
+          num_divu_outer_sweeps << '\n';
+        std::cout << "slab_step= " << 
+          slab_step << '\n';
+        std::cout << "SDC_outer_sweeps= " << 
+          SDC_outer_sweeps << '\n';
+        std::cout << "FSI_outer_sweeps= " << 
+          FSI_outer_sweeps << '\n';
+        std::cout << "num_FSI_outer_sweeps= " << 
+           num_FSI_outer_sweeps << '\n';
+        std::cout << "NFSI_LIMIT= " << 
+           NFSI_LIMIT << '\n';
+        int n_input;
+        std::cin >> n_input;
+       }
+
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -14160,8 +14218,13 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- resize_levelset(3,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,3,local_caller_string);
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("ngrow_make_distance!=ngrow_distance-1");
+ if (ngrow_distance<4)
+  amrex::Error("ngrow_distance<4");
+
+ resize_levelset(ngrow_distance,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
@@ -14175,11 +14238,11 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow=2
     //Umac_Type+dir
     //getStateMAC_localMF is declared in NavierStokes2.cpp
     //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
-  getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,2,dir,cur_time_slab);
+  getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
+     dir,cur_time_slab);
  } // dir=0 ... sdim-1
  getState_localMF(FSI_CELL_VELOCITY_MF,
     1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
