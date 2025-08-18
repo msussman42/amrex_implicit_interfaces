@@ -17544,8 +17544,7 @@ stop
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
        ! see also:
-       ! H_offset and H_radius in subroutine fort_elastic_force
-       ! LS_shift in subroutine check_added_mass
+       ! H_radius in subroutine fort_elastic_force
        ! FSI_band_cells in subroutine fort_extrapolate_tensor
        ! in: fort_manage_elastic_velocity
       extend_offset=FSI_extend_cells*dxmaxLS
@@ -18352,9 +18351,9 @@ stop
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
        ! see also:
-       ! H_offset and H_radius in subroutine fort_elastic_force
-       ! LS_shift in subroutine check_added_mass
+       ! H_radius in subroutine fort_elastic_force
        ! FSI_band_cells in subroutine fort_extrapolate_tensor
+       ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
        ! in: fort_extend_elastic_velocity
       extend_offset=elastic_extend_cells*dxmaxLS
 
@@ -18381,11 +18380,23 @@ stop
        stop
       endif
 
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance!=ngrow_distance-1 fort_extend_elastic_vel"
+       print *,"ngrow_make_distance: ",ngrow_make_distance
+       stop
+      endif
 
-      call checkbound_array1(fablo,fabhi,velMAC_ptr,0,dir)
+      if (ngrow_distance.ge.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid: ",ngrow_distance
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,velMAC_ptr,ngrow_distance,dir)
       call checkbound_array1(fablo,fabhi,velCELL_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,levelPC_ptr,3,-1)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
 
       if (fort_material_type(im_critical).eq.0) then
@@ -18404,8 +18415,8 @@ stop
       k1low=0
       k1high=0
       if (SDIM.eq.3) then
-       k1low=-2
-       k1high=2
+       k1low=-ngrow_make_distance
+       k1high=ngrow_make_distance
       else if (SDIM.eq.2) then
        ! do nothing
       else
@@ -18538,8 +18549,8 @@ stop
             wtsum=zero
 
             do k1=k1low,k1high
-            do j1=-2,2
-            do i1=-2,2
+            do j1=-ngrow_make_distance,ngrow_make_distance
+            do i1=-ngrow_make_distance,ngrow_make_distance
 
              local_wt=zero
              local_vel=zero
@@ -18812,18 +18823,6 @@ stop
 
       return
       end subroutine fort_extend_elastic_velocity
-
-
-
-
-
-
-
-
-
-
-
-
 
 
       ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)
