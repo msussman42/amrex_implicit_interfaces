@@ -452,14 +452,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   amrex::Error("normdir_here invalid (prior to loop)");
 
  // delete_advect_vars() called in NavierStokes::do_the_advance
- // delete_transport_vars() called in NavierStokes::do_the_advance
  // right after increment_face_velocityALL. 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
   ns_level.prepare_advect_vars(prev_time_slab);
-  // initialize TRANSPORT_REGISTER_FACE_MF
-  ns_level.prepare_transport_vars(vel_time_slab);
  }
 
 #ifdef AMREX_PARTICLES
@@ -897,6 +894,8 @@ void NavierStokes::deallocate_SDC() {
 // Second half of D^{upside down triangle}/Dt
 void NavierStokes::tensor_advection_updateALL() {
 
+ std::string local_caller_string="tensor_advection_updateALL";
+
  int finest_level=parent->finestLevel();
 
  if ((num_materials_viscoelastic>=1)&&
@@ -1020,6 +1019,7 @@ void NavierStokes::tensor_advection_updateALL() {
        int do_alloc=0;
        int simple_AMR_BC_flag_viscosity=1;
        init_gradu_tensorALL(
+        local_caller_string,
         HOLD_VELOCITY_DATA_MF,
         do_alloc,
         CELLTENSOR_MF,
@@ -1043,10 +1043,21 @@ void NavierStokes::tensor_advection_updateALL() {
            only_scalar,destcomp,ngrow_zero);
        }
 
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+         // initialize TRANSPORT_REGISTER_FACE_MF
+        ns_level.prepare_transport_vars(cur_time_slab);
+       }
+
        // tensor_advection_update is declared in: NavierStokes.cpp
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.tensor_advection_update(im);
+       }
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        ns_level.delete_transport_vars();
        }
 
        delete_array(HOLD_GETSHEAR_DATA_MF);
@@ -3212,7 +3223,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        NavierStokes& ns_level=getLevel(ilev);
        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        ns_level.delete_advect_vars();
-       ns_level.delete_transport_vars();
        // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        // delete_advect_vars() called twice in NavierStokes::do_the_advance
        ns_level.prepare_advect_vars(cur_time_slab);
@@ -8872,6 +8882,8 @@ void NavierStokes::residual_correction_form(
   int energyflag,
   int project_option,int nsolve) {
 
+ std::string local_caller_string="residual_correction_form";
+
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -8897,6 +8909,7 @@ void NavierStokes::residual_correction_form(
   int simple_AMR_BC_flag_viscosity=0;
    // apply_pressure_grad declared in NavierStokes2.cpp
   apply_pressure_grad(
+   local_caller_string,
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
    homflag_residual_correction_form,//unused except for:SOLVETYPE_VISC,HEAT
@@ -9106,6 +9119,7 @@ void NavierStokes::relaxLEVEL(
   int simple_AMR_BC_flag_viscosity=1;
 
   apply_pressure_grad(
+   local_caller_string,
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
    homflag_down_V2,
@@ -11707,6 +11721,7 @@ void NavierStokes::multiphase_project(int project_option) {
      int simple_AMR_BC_flag=0;
      int simple_AMR_BC_flag_viscosity=0;
      ns_level.apply_pressure_grad(
+      local_caller_string,
       simple_AMR_BC_flag,
       simple_AMR_BC_flag_viscosity,
       homflag_outer_iter_pressure2,
@@ -12100,6 +12115,7 @@ void NavierStokes::multiphase_project(int project_option) {
     int do_alloc=1;
     int simple_AMR_BC_flag_viscosity=1;
     init_gradu_tensorALL(
+     local_caller_string,
      HOLD_VELOCITY_DATA_MF,//deleted at end of init_gradu_tensorALL(do_alloc=1)
      do_alloc,
      CELLTENSOR_MF,
@@ -13342,6 +13358,7 @@ void NavierStokes::veldiffuseALL() {
 
    int simple_AMR_BC_flag_viscosity=1;
    init_gradu_tensorALL(
+     local_caller_string,
      VISCHEAT_SOURCE_MF, //this is velocity right after viscous solver.
      do_alloc,
      CELLTENSOR_MF,
@@ -13900,6 +13917,8 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
 
 void NavierStokes::push_back_state_register(int idx_MF,Real time) {
 
+ std::string local_caller_string="push_back_state_register";
+
  int nsolve=AMREX_SPACEDIM;
 
  int state_index;
@@ -13933,7 +13952,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
  if (snew_mf->nComp()!=nsolve)
   amrex::Error("snew_mf->nComp() invalid");
 
- check_for_NAN(snew_mf);
+ check_for_NAN(local_caller_string,snew_mf);
 
  MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolve,1);
  delete snew_mf;

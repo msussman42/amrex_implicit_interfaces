@@ -14165,6 +14165,7 @@ end subroutine print_visual_descriptor
        ! datatype=1 tensor face
        ! datatype=2 tensor cell
       subroutine aggressive_worker( &
+       fort_caller_string, &
        datatype, &
        warning_cutoff, &
        tilelo,tilehi, &
@@ -14185,6 +14186,8 @@ end subroutine print_visual_descriptor
        critical_cutoff_high)  ! e.g. 1.0D+30
 
       IMPLICIT NONE
+  
+      CHARACTER(:), ALLOCATABLE, intent(in) :: fort_caller_string
 
       integer, INTENT(in) :: datatype
       real(amrex_real), INTENT(in) :: warning_cutoff
@@ -14283,6 +14286,7 @@ end subroutine print_visual_descriptor
        endif
 
        if (verbose.eq.2) then
+        print *,"fort_caller_string=",fort_caller_string
         print *,"using gdb, put a break statement here to see the caller"
         print *,"AGGRESSIVE WORKER gridno,ngrid,level,finest_level= ", &
          gridno,ngrid,level,finest_level
@@ -14383,6 +14387,7 @@ end subroutine print_visual_descriptor
          val=mf(D_DECL(i,j,k),n+scomp)
 
          if (val.ge.critical_cutoff_high) then
+          print *,"fort_caller_string=",fort_caller_string
           print *,"val.ge.critical_cutoff_high ",val,critical_cutoff_high
           print *,"val overflow val,dir,i,j,k,n,scomp ", &
            val,dir,i,j,k,n,scomp
@@ -14396,6 +14401,7 @@ end subroutine print_visual_descriptor
                   (val.gt.critical_cutoff_low)) then
           ! do nothing
          else if (val.le.critical_cutoff_low) then
+          print *,"fort_caller_string=",fort_caller_string
           print *,"val.le.critical_cutoff_low ",val,critical_cutoff_low
           print *,"val out of bounds val,dir,i,j,k,n,scomp ", &
            val,dir,i,j,k,n,scomp
@@ -14406,6 +14412,7 @@ end subroutine print_visual_descriptor
           enddo
           stop
          else
+          print *,"fort_caller_string=",fort_caller_string
           print *,"val undefined val,dir,i,j,k,n,scomp ", &
            val,dir,i,j,k,n,scomp
           print *,"bfact,level,finest_level ",bfact,level,finest_level
@@ -14466,6 +14473,7 @@ end subroutine print_visual_descriptor
         endif
 
         if (verbose.eq.2) then
+         print *,"fort_caller_string=",fort_caller_string
          print *,"n+scomp,max_interior,sum_interior,n_interior ", &
           n+scomp,max_interior,sum_interior,n_interior
          print *,"n+scomp,max_singlelayer,sum_singlelayer,n_singlelayer ", &
@@ -28087,12 +28095,13 @@ else if ((T.ge.T0).and.(eps_p.ge.ref_eps_p)) then
   ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
   ! Cambridge University Press, 1992.
   ! if T=TM then yield_stress=0
+  ! note: alpha ~ 1.2  n>20
  if (T.ge.TM) then
   yield_stress=zero
  else if ((T.le.TM).and.(T.ge.zero)) then
   yield_stress=base_yield_stress*(one- &
    ((T-T0)/(TM-T0))**alpha)* &
-   (one+eps_p/ref_eps_p)**(one/n)
+   (one+eps_p/ref_eps_p)**(one/n) !eps_p ~ plastic_strain_old
  else
   print *,"T or TM invalid: ",T,TM
   stop
@@ -29320,6 +29329,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
       !CamachoOrtiz1995 equation (31)
       !sigma/g = (f_plastic+Y_plastic_parm_scaled)/Y_plastic_parm_scaled
       ! = f_plastic/Y_plastic_parm_scaled + 1 = magA/Y_plastic_parm_scaled
+      !m >= 68
      plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
        ((f_plastic/Y_plastic_parm_scaled+one)** &
        fort_yield_m(im_critical+1)-one)

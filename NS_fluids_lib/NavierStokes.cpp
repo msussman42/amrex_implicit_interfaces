@@ -9560,7 +9560,7 @@ void NavierStokes::ns_header_msg_level(
        std::cout << "check_for_NAN(S_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(S_new_coarse);
+      check_for_NAN(local_caller_string,S_new_coarse);
      }
 
       //ngrow=0
@@ -9585,7 +9585,7 @@ void NavierStokes::ns_header_msg_level(
        std::cout << "check_for_NAN(Solid_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(Solid_new_coarse);
+      check_for_NAN(local_caller_string,Solid_new_coarse);
      }
 
       //ngrow=0
@@ -9602,7 +9602,7 @@ void NavierStokes::ns_header_msg_level(
        std::cout << "check_for_NAN(LS_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(LS_new_coarse);
+      check_for_NAN(local_caller_string,LS_new_coarse);
      }
 
      for (int partid=0;partid<nparts;partid++) {
@@ -12179,7 +12179,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
 }//omp
     ns_reconcile_d_num(LOOP_MAKETENSOR,"make_viscoelastic_tensor");
 
-    check_for_NAN(localMF[VISCOTEN_MF]);
+    check_for_NAN(local_caller_string,localMF[VISCOTEN_MF]);
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -17496,6 +17496,7 @@ void NavierStokes::check_value_max_level(int id,MultiFab* mf,
 // datatype=1 tensor face
 // datatype=2 tensor cell
 void NavierStokes::aggressive_debug(
+  const std::string& caller_string,
   int datatype,
   int force_check,
   MultiFab* mf,
@@ -17503,6 +17504,9 @@ void NavierStokes::aggressive_debug(
   int ngrow,
   int dir,
   Real warning_cutoff) {
+
+ std::string local_caller_string="aggressive_debug";
+ local_caller_string=caller_string+local_caller_string;
 
  if (((verbose==0)||(verbose==1))&&(force_check==0)) {
   // do nothing
@@ -17562,6 +17566,8 @@ void NavierStokes::aggressive_debug(
 
     // declared in GODUNOV_3D.F90
    fort_aggressive(
+    local_caller_string.c_str(),
+    local_caller_string.size(),
     &datatype,
     &warning_cutoff,
     tilelo,tilehi,
@@ -21315,6 +21321,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int do_alloc=1; 
   //ux,vx,wx,uy,vy,wy,uz,vz,wz
  init_gradu_tensorALL(
+   local_caller_string,
    HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
    do_alloc,
    CELLTENSOR_MF,

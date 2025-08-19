@@ -1329,6 +1329,7 @@ void NavierStokes::applyALL(
   int simple_AMR_BC_flag=0;
   int simple_AMR_BC_flag_viscosity=0;
   ns_level.apply_pressure_grad(
+   local_caller_string,
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
    homflag,
@@ -1596,6 +1597,7 @@ void NavierStokes::applyGradALL(
 
    //NavierStokes::apply_pressure_grad is declared in: NavierStokes2.cpp
   ns_level.apply_pressure_grad(
+   local_caller_string,
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
    homflag,
@@ -2185,6 +2187,7 @@ void NavierStokes::update_SEM_forces(int project_option,
    int simple_AMR_BC_flag=0;
    int simple_AMR_BC_flag_viscosity=0;
    apply_pressure_grad(
+    local_caller_string,
     simple_AMR_BC_flag,
     simple_AMR_BC_flag_viscosity,
     homflag,energyflag,
@@ -2227,6 +2230,7 @@ void NavierStokes::update_SEM_forces(int project_option,
    int simple_AMR_BC_flag=0;
    int simple_AMR_BC_flag_viscosity=0;
    apply_pressure_grad(
+    local_caller_string,
     simple_AMR_BC_flag,
     simple_AMR_BC_flag_viscosity,
     homflag,energyflag,

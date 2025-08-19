@@ -3738,6 +3738,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
 // do_alloc=1 => allocate variable
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
+ const std::string& caller_string,
  int idx_vel, //source velocity. 
               //allocated if do_alloc==1.
               //deleted if do_alloc==1.
@@ -3747,6 +3748,7 @@ void NavierStokes::init_gradu_tensorALL(
  int simple_AMR_BC_flag_viscosity) {
 
  std::string local_caller_string="init_gradu_tensorALL";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
 
@@ -3779,6 +3781,7 @@ void NavierStokes::init_gradu_tensorALL(
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
   int homflag=0;
   ns_level.init_gradu_tensor(
+    local_caller_string,
     homflag,
     idx_vel,
     idx_cell,
@@ -3853,6 +3856,7 @@ void NavierStokes::init_gradu_tensorALL(
 // itensor_iter=0 face grad U
 // itensor_iter=1 cell grad U
 void NavierStokes::doit_gradu_tensor(
+ const std::string& caller_string,
  int homflag,
  int idx_vel,
  int idx_cell,
@@ -3863,6 +3867,7 @@ void NavierStokes::doit_gradu_tensor(
  int simple_AMR_BC_flag_viscosity) {
 
  std::string local_caller_string="doit_gradu_tensor";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level = parent->finestLevel();
 
@@ -4130,17 +4135,19 @@ void NavierStokes::doit_gradu_tensor(
    std::cout << "itensor_iter= " << itensor_iter << '\n';
   }
   std::fflush(NULL);
-  check_for_NAN(localMF[idx_vel]);
+  check_for_NAN(local_caller_string,localMF[idx_vel]);
 
   if (itensor_iter==1) {  // cell grad U
    datatype=2;
-   check_for_NAN_TENSOR(datatype,localMF[idx_cell]);
+   check_for_NAN_TENSOR(local_caller_string,datatype,localMF[idx_cell]);
   } else if (itensor_iter==0) { // face grad U
    datatype=1;
-   check_for_NAN_TENSOR(datatype,localMF[idx_face]);
+   check_for_NAN_TENSOR(local_caller_string,datatype,localMF[idx_face]);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    check_for_NAN_TENSOR_base(datatype,localMF[LSTENSOR_MF],dir,dir);
-    check_for_NAN_TENSOR_base(datatype,localMF[MASKSOLIDTENSOR_MF],dir,dir);
+    check_for_NAN_TENSOR_base(local_caller_string,
+      datatype,localMF[LSTENSOR_MF],dir,dir);
+    check_for_NAN_TENSOR_base(local_caller_string,
+      datatype,localMF[MASKSOLIDTENSOR_MF],dir,dir);
    }
   } else
    amrex::Error("itensor_iter invalid");
@@ -4306,6 +4313,7 @@ void NavierStokes::FillBoundaryTENSOR(
 
 // called from apply_pressure_grad, init_gradu_tensorALL
 void NavierStokes::init_gradu_tensor(
+ const std::string& caller_string,
  int homflag,
  int idx_vel,
  int idx_cell,
@@ -4313,6 +4321,7 @@ void NavierStokes::init_gradu_tensor(
  int simple_AMR_BC_flag_viscosity) {
 
  std::string local_caller_string="init_gradu_tensor";
+ local_caller_string=caller_string+local_caller_string;
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -4363,6 +4372,7 @@ void NavierStokes::init_gradu_tensor(
  for (spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
    // NavierStokes::doit_gradu_tensor is declared in NavierStokes2.cpp
   doit_gradu_tensor(
+   local_caller_string,
    homflag,
    idx_vel,
    idx_cell,
@@ -4378,6 +4388,7 @@ void NavierStokes::init_gradu_tensor(
  itensor_iter=1;  // tensor cell
  spectral_loop=0;
  doit_gradu_tensor(
+   local_caller_string,
    homflag,
    idx_vel,
    idx_cell,
@@ -4401,6 +4412,7 @@ void NavierStokes::init_gradu_tensor(
 // face_weight=0 at embedded solid faces and on 
 // the domain boundary where pressure has a Neumann BC.
 void NavierStokes::apply_pressure_grad(
+  const std::string& caller_string,
   int simple_AMR_BC_flag,
   int simple_AMR_BC_flag_viscosity,
   int homflag,
@@ -4412,6 +4424,7 @@ void NavierStokes::apply_pressure_grad(
   Real dt_pressure_grad) {
 
  std::string local_caller_string="apply_pressure_grad";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level = parent->finestLevel();
 
@@ -4566,6 +4579,7 @@ void NavierStokes::apply_pressure_grad(
 
    // NavierStokes::init_gradu_tensor is declared in NavierStokes2.cpp
   init_gradu_tensor(
+    local_caller_string,
     homflag,
     pboth_mf,
     LOCAL_CELLTENSOR_MF, //should not be allocated at this point
@@ -4725,9 +4739,9 @@ void NavierStokes::apply_pressure_grad(
     std::cout << "energyflag= " << energyflag << '\n';
    }
    std::fflush(NULL);
-   check_for_NAN(localMF[pboth_mf]);
+   check_for_NAN(local_caller_string,localMF[pboth_mf]);
    for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-    check_for_NAN(localMF[gp_mf+data_dir]);
+    check_for_NAN(local_caller_string,localMF[gp_mf+data_dir]);
    }
   } else if (check_nan==0) {
    // do nothing
@@ -5005,6 +5019,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL(
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  init_gradu_tensorALL(
+   local_caller_string,
    HOLD_VELOCITY_DATA_MF, //alloc and delete since do_alloc==1
    do_alloc,
    CELLTENSOR_MF,
@@ -7656,8 +7671,13 @@ bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
 // datatype=0 normal
 // datatype=1 tensor face
 // datatype=2 tensor cell
-void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
+void NavierStokes::check_for_NAN_TENSOR_base(
+  const std::string& caller_string,
+  int datatype,MultiFab* mf,
   int sc,int dir) {
+
+ std::string local_caller_string="check_for_NAN_TENSOR_base";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
  int ncomp=mf->nComp();
@@ -7672,6 +7692,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
  std::fflush(NULL);
 
  if (contains_nanTENSOR(mf,datatype,sc,dir)==true) {
+  std::cout << "local_caller_string= " << local_caller_string << '\n';
   std::cout << "sc= " << sc << '\n';
   std::cout << "dir= " << dir << '\n';
   std::cout << "ncomp= " << ncomp << '\n';
@@ -7688,6 +7709,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
  int ngrow_tensor=0;
  Real warning_cutoff=1.0e+30;
  aggressive_debug(
+  local_caller_string,
   datatype,
   force_check,
   mf,
@@ -7705,7 +7727,12 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
 // datatype=0 normal
 // datatype=1 face grad U
 // datatype=2 cell grad U
-void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf) {
+void NavierStokes::check_for_NAN_TENSOR(
+  const std::string& caller_string,
+  int datatype,MultiFab* mf) {
+
+ std::string local_caller_string="check_for_NAN_TENSOR";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -7734,7 +7761,7 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf) {
    else
     amrex::Error("sc invalid");
 
-   check_for_NAN_TENSOR_base(datatype,mf,sc,dir);
+   check_for_NAN_TENSOR_base(local_caller_string,datatype,mf,sc,dir);
  }  // sc=0...AMREX_SPACEDIM_SQR-1
 
  
@@ -7743,7 +7770,12 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf) {
 } // subroutine check_for_NAN_TENSOR
 
 
-void NavierStokes::check_for_NAN(MultiFab* mf) {
+void NavierStokes::check_for_NAN(
+  const std::string& caller_string,
+  MultiFab* mf) {
+
+ std::string local_caller_string="check_for_NAN";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
  int scomp=0;
@@ -7792,6 +7824,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf) {
  int dir=-1;
  Real warning_cutoff=1.0e+30;
  aggressive_debug(
+  local_caller_string,
   datatype,
   force_check,
   mf,
@@ -7930,18 +7963,18 @@ void NavierStokes::output_zones(
   amrex::Error("refine_density_ncomp invalid");
 
 
- check_for_NAN(localMF[MASKSEM_MF]);
- check_for_NAN(velmf);
- check_for_NAN(localMF[SLOPE_RECON_MF]);
- check_for_NAN(presmf);
- check_for_NAN(divmf);
- check_for_NAN(div_data);
- check_for_NAN(denmf);
- check_for_NAN(mom_denmf);
+ check_for_NAN(local_caller_string,localMF[MASKSEM_MF]);
+ check_for_NAN(local_caller_string,velmf);
+ check_for_NAN(local_caller_string,localMF[SLOPE_RECON_MF]);
+ check_for_NAN(local_caller_string,presmf);
+ check_for_NAN(local_caller_string,divmf);
+ check_for_NAN(local_caller_string,div_data);
+ check_for_NAN(local_caller_string,denmf);
+ check_for_NAN(local_caller_string,mom_denmf);
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-  check_for_NAN(viscoelasticmf);
+  check_for_NAN(local_caller_string,viscoelasticmf);
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
@@ -7949,20 +7982,20 @@ void NavierStokes::output_zones(
 
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
-  check_for_NAN(refine_density_mf);
+  check_for_NAN(local_caller_string,refine_density_mf);
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
   amrex::Error("num_materials_compressible invalid");
 
 
- check_for_NAN(lsdistmf);
- check_for_NAN(viscmf);
- check_for_NAN(conductmf);
- check_for_NAN(magtracemf);
- check_for_NAN(elasticforcemf);
+ check_for_NAN(local_caller_string,lsdistmf);
+ check_for_NAN(local_caller_string,viscmf);
+ check_for_NAN(local_caller_string,conductmf);
+ check_for_NAN(local_caller_string,magtracemf);
+ check_for_NAN(local_caller_string,elasticforcemf);
     //ux,vx,wx,uy,vy,wy,uz,vz,wz
- check_for_NAN(gradvelocitymf);
+ check_for_NAN(local_caller_string,gradvelocitymf);
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -8091,37 +8124,37 @@ void NavierStokes::output_zones(
     maskSEM_minus->ParallelCopy(*localMF[MASKSEM_MF],0,0,
      1,0,0,geom.periodicity());
 
-    check_for_NAN(maskSEM_minus);
+    check_for_NAN(local_caller_string,maskSEM_minus);
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
     velmfminus->ParallelCopy(*velmf,0,0,
      STATE_NCOMP_VEL+STATE_NCOMP_PRES,1,1,geom.periodicity());
 
-    check_for_NAN(velmfminus);
+    check_for_NAN(local_caller_string,velmfminus);
  
     vofmfminus->ParallelCopy(*localMF[SLOPE_RECON_MF],0,0,
      num_materials*ngeom_recon,1,1,geom.periodicity());
 
-    check_for_NAN(vofmfminus);
+    check_for_NAN(local_caller_string,vofmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     presmfminus->ParallelCopy(*presmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(presmfminus);
+    check_for_NAN(local_caller_string,presmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     divmfminus->ParallelCopy(*divmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(divmfminus);
+    check_for_NAN(local_caller_string,divmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     div_data_minus->ParallelCopy(*div_data,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(div_data_minus);
+    check_for_NAN(local_caller_string,div_data_minus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     denmfminus->ParallelCopy(*denmf,0,0,nden,
@@ -8131,8 +8164,8 @@ void NavierStokes::output_zones(
     mom_denmfminus->ParallelCopy(*mom_denmf,0,0,num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(denmfminus);
-    check_for_NAN(mom_denmfminus);
+    check_for_NAN(local_caller_string,denmfminus);
+    check_for_NAN(local_caller_string,mom_denmfminus);
 
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
@@ -8140,7 +8173,7 @@ void NavierStokes::output_zones(
      viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
       elastic_ncomp,
       1,1,geom.periodicity()); 
-     check_for_NAN(viscoelasticmfminus);
+     check_for_NAN(local_caller_string,viscoelasticmfminus);
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
@@ -8153,7 +8186,7 @@ void NavierStokes::output_zones(
      refine_density_mfminus->ParallelCopy(*refine_density_mf,0,0,
       refine_density_ncomp,
       1,1,geom.periodicity()); 
-     check_for_NAN(refine_density_mfminus);
+     check_for_NAN(local_caller_string,refine_density_mfminus);
     } else if (num_materials_compressible==0) {
      // do nothing
     } else
@@ -8163,25 +8196,25 @@ void NavierStokes::output_zones(
     lsdistmfminus->ParallelCopy(*lsdistmf,0,0,num_materials*(1+AMREX_SPACEDIM),
      1,1,geom.periodicity()); 
 
-    check_for_NAN(lsdistmfminus);
+    check_for_NAN(local_caller_string,lsdistmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     viscmfminus->ParallelCopy(*viscmf,0,0,num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(viscmfminus);
+    check_for_NAN(local_caller_string,viscmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     conductmfminus->ParallelCopy(*conductmf,0,0,num_materials,
                    1,1,geom.periodicity());
 
-    check_for_NAN(conductmfminus);
+    check_for_NAN(local_caller_string,conductmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     magtracemfminus->ParallelCopy(*magtracemf,0,0,5*num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(magtracemfminus);
+    check_for_NAN(local_caller_string,magtracemfminus);
  
     ParallelDescriptor::Barrier();
 
@@ -8189,7 +8222,7 @@ void NavierStokes::output_zones(
     elasticforcemfminus->ParallelCopy(*elasticforcemf,0,0,AMREX_SPACEDIM,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(elasticforcemfminus);
+    check_for_NAN(local_caller_string,elasticforcemfminus);
  
     ParallelDescriptor::Barrier();
 
@@ -8198,13 +8231,13 @@ void NavierStokes::output_zones(
     gradvelocitymfminus->ParallelCopy(*gradvelocitymf,0,0,AMREX_SPACEDIM_SQR,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(gradvelocitymfminus);
+    check_for_NAN(local_caller_string,gradvelocitymfminus);
  
     ParallelDescriptor::Barrier();
 
     towermfminus->setVal(0.0,0,PLOTCOMP_NCOMP,1);
 
-    check_for_NAN(towermfminus);
+    check_for_NAN(local_caller_string,towermfminus);
 
     ParallelDescriptor::Barrier();
 
@@ -8407,33 +8440,33 @@ void NavierStokes::output_zones(
     ParallelDescriptor::Barrier();
 
     MultiFab* maskSEM_minus=localMF[MASKSEM_MF];
-    check_for_NAN(maskSEM_minus);
+    check_for_NAN(local_caller_string,maskSEM_minus);
 
     MultiFab* velmfminus=velmf;
-    check_for_NAN(velmfminus);
+    check_for_NAN(local_caller_string,velmfminus);
  
     MultiFab* vofmfminus=localMF[SLOPE_RECON_MF];
-    check_for_NAN(vofmfminus);
+    check_for_NAN(local_caller_string,vofmfminus);
 
     MultiFab* presmfminus=presmf;
-    check_for_NAN(presmfminus);
+    check_for_NAN(local_caller_string,presmfminus);
 
     MultiFab* divmfminus=divmf;
-    check_for_NAN(divmfminus);
+    check_for_NAN(local_caller_string,divmfminus);
 
     MultiFab* div_data_minus=div_data;
-    check_for_NAN(div_data_minus);
+    check_for_NAN(local_caller_string,div_data_minus);
 
     MultiFab* denmfminus=denmf;
     MultiFab* mom_denmfminus=mom_denmf;
 
-    check_for_NAN(denmfminus);
-    check_for_NAN(mom_denmfminus);
+    check_for_NAN(local_caller_string,denmfminus);
+    check_for_NAN(local_caller_string,mom_denmfminus);
 
     MultiFab* viscoelasticmfminus=viscoelasticmf;
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
-     check_for_NAN(viscoelasticmfminus);
+     check_for_NAN(local_caller_string,viscoelasticmfminus);
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
@@ -8443,32 +8476,32 @@ void NavierStokes::output_zones(
     MultiFab* refine_density_mfminus=refine_density_mf;
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
-     check_for_NAN(refine_density_mfminus);
+     check_for_NAN(local_caller_string,refine_density_mfminus);
     } else if (num_materials_compressible==0) {
      // do nothing
     } else
      amrex::Error("num_materials_compressible invalid:writeTECPLOT_File");
 
     MultiFab* lsdistmfminus=lsdistmf;
-    check_for_NAN(lsdistmfminus);
+    check_for_NAN(local_caller_string,lsdistmfminus);
 
     MultiFab* viscmfminus=viscmf;
-    check_for_NAN(viscmfminus);
+    check_for_NAN(local_caller_string,viscmfminus);
 
     MultiFab* conductmfminus=conductmf;
-    check_for_NAN(conductmfminus);
+    check_for_NAN(local_caller_string,conductmfminus);
 
     MultiFab* magtracemfminus=magtracemf;
-    check_for_NAN(magtracemfminus);
+    check_for_NAN(local_caller_string,magtracemfminus);
  
     MultiFab* elasticforcemfminus=elasticforcemf;
-    check_for_NAN(elasticforcemfminus);
+    check_for_NAN(local_caller_string,elasticforcemfminus);
 
     MultiFab* gradvelocitymfminus=gradvelocitymf;
-    check_for_NAN(gradvelocitymfminus);
+    check_for_NAN(local_caller_string,gradvelocitymfminus);
 
     MultiFab* towermf=localMF[MULTIFAB_TOWER_PLT_MF];
-    check_for_NAN(towermf);
+    check_for_NAN(local_caller_string,towermf);
  
     ParallelDescriptor::Barrier();
 
@@ -8726,8 +8759,8 @@ void NavierStokes::Sanity_output_zones(
     ncomp,0,0,geom.periodicity());
 
    if ((data_dir>=-1)&&(data_dir<=5)) {
-    check_for_NAN(datamf);
-    check_for_NAN(datamfminus);
+    check_for_NAN(local_caller_string,datamf);
+    check_for_NAN(local_caller_string,datamfminus);
    } else
     amrex::Error("data_dir invalid");
  
