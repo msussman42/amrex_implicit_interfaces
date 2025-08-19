@@ -30,6 +30,8 @@ namespace amrex{
 void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
 
+ std::string local_caller_string="diffuse_hoopALL";
+
  int finest_level=parent->finestLevel();
 
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
@@ -101,6 +103,7 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
  int simple_AMR_BC_flag_viscosity=1; 
  int do_alloc=0;
  init_gradu_tensorALL(
+   local_caller_string,
    idx_vel,
    do_alloc,
    CELLTENSOR_MF,
@@ -1209,6 +1212,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  int simple_AMR_BC_flag=1; 
  int simple_AMR_BC_flag_viscosity=1; 
  apply_pressure_grad(
+  local_caller_string,
   simple_AMR_BC_flag, 
   simple_AMR_BC_flag_viscosity, 
   homflag,energyflag,

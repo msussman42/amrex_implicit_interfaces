@@ -9162,11 +9162,12 @@ stop
          ! rho cv DT/Dt = beta W_p^dot
         if (current_dedt_term.ge.zero) then
 
-         if ((current_vfrac.gt.zero).and. &
+         if ((current_vfrac.ge.half).and. &
              (current_vfrac.le.one+0.1d0)) then
           snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
             plastic_work_average*current_dedt_term
-         else if (current_vfrac.eq.zero) then
+         else if ((current_vfrac.ge.zero).and. &
+                  (current_vfrac.le.half)) then
           !do nothing
          else
           print *,"current_vfrac invalid: ",current_vfrac
@@ -12948,6 +12949,8 @@ stop
       end subroutine fort_accept_weight
 
       subroutine fort_aggressive( &
+       caller_string, &
+       caller_string_len, &
        datatype, &
        warning_cutoff, &
        tilelo,tilehi, &
@@ -12967,10 +12970,15 @@ stop
        mf,DIMS(mf)) &
       bind(c,name='fort_aggressive')
 
+      use ISO_C_BINDING, ONLY: C_CHAR,C_INT
       use global_utility_module
 
       IMPLICIT NONE
 
+      CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
+      integer(C_INT), INTENT(in), VALUE :: caller_string_len
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      integer :: fort_caller_string_len
       integer, INTENT(in) :: datatype
       real(amrex_real), INTENT(in) :: warning_cutoff
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -12989,6 +12997,13 @@ stop
       real(amrex_real), pointer :: mf_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: critical_cutoff_low
       real(amrex_real) :: critical_cutoff_high
+      integer i
+
+      allocate(CHARACTER(caller_string_len) :: fort_caller_string)
+      do i=1,caller_string_len
+       fort_caller_string(i:i)=caller_string(i)
+      enddo
+      fort_caller_string_len=caller_string_len
 
       mf_ptr=>mf
 
@@ -13004,6 +13019,7 @@ stop
        ! do nothing
       else if ((verbose.eq.2).or.(force_check.eq.1)) then
        call aggressive_worker( &
+        fort_caller_string, &
         datatype, &
         warning_cutoff, &
         tilelo,tilehi, &
@@ -13026,6 +13042,8 @@ stop
        print *,"verbose invalid"
        stop
       endif
+
+      deallocate(fort_caller_string)
 
       return
       end subroutine fort_aggressive
@@ -13489,8 +13507,18 @@ stop
       real(amrex_real) :: temperature_clamped
       real(amrex_real) :: local_temperature
       integer :: prescribed_flag
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      integer :: fort_caller_string_len
 
 ! fort_vfrac_split code starts here
+
+      fort_caller_string_len=5
+      allocate(CHARACTER(fort_caller_string_len) :: fort_caller_string)
+      fort_caller_string(1:1)='v'
+      fort_caller_string(2:2)='f'
+      fort_caller_string(3:3)='r'
+      fort_caller_string(4:4)='a'
+      fort_caller_string(5:5)='c'
 
       LS_ptr=>LS
       den_ptr=>den
@@ -13883,6 +13911,7 @@ stop
  
       warning_cutoff=two
       call aggressive_worker( &
+       fort_caller_string, &
        datatype, &
        warning_cutoff, &
        tilelo,tilehi, &
@@ -13905,6 +13934,7 @@ stop
 
       warning_cutoff=1.0e+15
       call aggressive_worker( &
+       fort_caller_string, &
        datatype, & 
        warning_cutoff, &
        tilelo,tilehi, &

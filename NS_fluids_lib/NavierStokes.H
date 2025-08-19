@@ -684,6 +684,7 @@ protected:
     void init_splitting_force_SDC();
 
     void init_gradu_tensor(
+     const std::string& caller_string,
      int homflag,
      int idx_vel,
      int idx_cell,
@@ -691,6 +692,7 @@ protected:
      int simple_AMR_BC_flag_viscosity);
 
     void doit_gradu_tensor(
+     const std::string& caller_string,
      int homflag,
      int idx_vel,
      int idx_cell,
@@ -704,6 +706,7 @@ protected:
       const std::string& caller_string);
 
     void init_gradu_tensorALL(
+     const std::string& caller_string,
      int idx,
      int do_alloc,
      int idx_cell,
@@ -732,6 +735,7 @@ protected:
 		int scomp,int ncomp,int ngrow,Real max_value);
 
     void aggressive_debug(
+      const std::string& caller_string,
       int datatype,
       int force_check,
       MultiFab* mf,
@@ -750,10 +754,13 @@ protected:
     bool contains_nanTENSOR(MultiFab* mf,
       int datatype,int scomp,int dir);
 
-    void check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
+    void check_for_NAN_TENSOR_base(const std::string& caller_string,
+      int datatype,MultiFab* mf,
       int sc,int dir);
-    void check_for_NAN_TENSOR(int datatype,MultiFab* mf);
-    void check_for_NAN(MultiFab* mf);
+    void check_for_NAN_TENSOR(const std::string& caller_string,
+     int datatype,MultiFab* mf);
+    void check_for_NAN(const std::string& caller_string,
+     MultiFab* mf);
 
     void split_scalar_advection(); 
     void split_scalar_advectionALL();
@@ -1133,6 +1140,7 @@ void diffuse_hoop(int idx_vel,int idx_thermal,
  int idx_force,int update_state);
 
 void apply_pressure_grad(
+ const std::string& caller_string,
  int simple_AMR_BC_flag,
  int simple_AMR_BC_flag_viscosity,
  int homflag,
