@@ -28150,6 +28150,7 @@ subroutine point_updatetensor( &
  polymer_factor, &
  elastic_viscosity, &
  yield_stress, &
+ hardening_coefficient, &
  plastic_work, &
  irz, &
  bc) 
@@ -28198,6 +28199,7 @@ integer, INTENT(in) :: viscoelastic_model
 real(amrex_real), INTENT(in) :: polymer_factor
 real(amrex_real), INTENT(in) :: elastic_viscosity
 real(amrex_real), INTENT(in) :: yield_stress
+real(amrex_real), INTENT(in) :: hardening_coefficient
 integer, INTENT(in) :: bc(SDIM,2,SDIM)
 integer, INTENT(in) :: irz
 integer ii,jj,kk
@@ -28231,6 +28233,7 @@ real(amrex_real) dxj(3,3)
 real(amrex_real) signcoeff
 real(amrex_real) weightcoeff
 real(amrex_real) total_weight
+real(amrex_real) weight_prev
 
 integer dir_local
 
@@ -28279,6 +28282,12 @@ if (yield_stress.gt.zero) then
  ! do nothing
 else
  print *,"yield_stress out of range: ",yield_stress
+ stop
+endif
+if (hardening_coefficient.ge.zero) then 
+ ! do nothing
+else
+ print *,"hardening_coefficient out of range: ",hardening_coefficient
  stop
 endif
 if (cell_temperature.gt.zero) then 
@@ -29325,14 +29334,28 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
       !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
       !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
       !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
-     Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
+
+     weight_prev=hardening_coefficient/(three*elastic_viscosity)
+
+     Aadvect(ii,jj)= &
+       (weight_prev*magA+Y_plastic_parm_scaled)*NP(ii,jj)/ &
+       (weight_prev+one)
+
       !CamachoOrtiz1995 equation (31)
       !sigma/g = (f_plastic+Y_plastic_parm_scaled)/Y_plastic_parm_scaled
       ! = f_plastic/Y_plastic_parm_scaled + 1 = magA/Y_plastic_parm_scaled
       !m >= 68
-     plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
+      !we use Tran and Udaykumar
+     if (1.eq.0) then
+      plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
        ((f_plastic/Y_plastic_parm_scaled+one)** &
        fort_yield_m(im_critical+1)-one)
+     else if (1.eq.1) then
+      plastic_strain_dot=sqrt(f_plastic/(three*(one+weight_prev)))/dt
+     else
+      print *,"corruption (plastic_strain_dot)"
+      stop
+     endif
 
       ! (16) from Camacho and Ortiz.
       ! just below (11) in Tran and Udaykumar.

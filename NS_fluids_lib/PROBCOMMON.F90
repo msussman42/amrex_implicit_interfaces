@@ -253,6 +253,7 @@ implicit none
 ! fort_mechanical_to_thermal added July 13, 2025
 ! fort_stiff_sound_speed added March 30, 2025
 ! Johnson Cook Softening parameters added April 08, 2025
+! fort_hardening_coefficient added August 20, 2025
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

@@ -8637,6 +8637,7 @@ stop
        polymer_factor, &
        elastic_viscosity, &
        yield_stress, &
+       hardening_coefficient, &
        mechanical_to_thermal, &
        irz, &
        bc) &
@@ -8727,6 +8728,7 @@ stop
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
       real(amrex_real), INTENT(in) :: yield_stress
+      real(amrex_real), INTENT(in) :: hardening_coefficient
       real(amrex_real), INTENT(in) :: mechanical_to_thermal
       real(amrex_real) :: plastic_work
       real(amrex_real) :: plastic_work_average
@@ -8785,6 +8787,12 @@ stop
        ! do nothing
       else
        print *,"yield_stress invalid: ",yield_stress
+       stop
+      endif
+      if (hardening_coefficient.ge.zero) then
+       ! do nothing
+      else
+       print *,"hardening_coefficient invalid: ",hardening_coefficient
        stop
       endif
       if (mechanical_to_thermal.ge.zero) then
@@ -9131,6 +9139,7 @@ stop
          polymer_factor, &
          elastic_viscosity, &
          yield_stress, &
+         hardening_coefficient, &
          plastic_work, &
          irz, &
          bc) 

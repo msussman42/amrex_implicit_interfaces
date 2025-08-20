@@ -143,6 +143,7 @@ namespace amrex{
        int*  viscosity_state_model,
        Real* elastic_viscosity,
        Real* yield_stress,
+       Real* hardening_coefficient,
        Real* mechanical_to_thermal,
        Real* elastic_time,
        int* viscoelastic_model,
