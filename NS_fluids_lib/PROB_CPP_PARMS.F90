@@ -424,6 +424,7 @@ stop
         ccviscosity_state_model, &
         ccelastic_viscosity, &
         ccyield_stress, &
+        cchardening_coefficient, &
         ccmechanical_to_thermal, &
         ccelastic_time, &
         ccviscoelastic_model, &
@@ -604,6 +605,7 @@ stop
       integer, INTENT(in) :: ccviscosity_state_model(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccelastic_viscosity(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccyield_stress(ccnum_materials)
+      real(amrex_real), INTENT(in) :: cchardening_coefficient(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccmechanical_to_thermal(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccelastic_time(ccnum_materials)
       integer, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
@@ -1704,6 +1706,7 @@ stop
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
        fort_yield_stress(im)=ccyield_stress(im)
+       fort_hardening_coefficient(im)=cchardening_coefficient(im)
        fort_mechanical_to_thermal(im)=ccmechanical_to_thermal(im)
        fort_elastic_time(im)=ccelastic_time(im)
        fort_viscoelastic_model(im)=ccviscoelastic_model(im)
@@ -1918,6 +1921,8 @@ stop
          fort_viscosity_state_model(im)
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)
         print *,"im,fort_yield_stress ",im,fort_yield_stress(im)
+        print *,"im,fort_hardening_coefficient ",im, &
+         fort_hardening_coefficient(im)
         print *,"im,fort_mechanical_to_thermal ",im, &
          fort_mechanical_to_thermal(im)
         print *,"im,fort_elastic_time ",im,fort_elastic_time(im)

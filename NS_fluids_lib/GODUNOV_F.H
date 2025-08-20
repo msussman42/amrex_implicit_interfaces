@@ -300,6 +300,7 @@ extern "C"
     Real* polymer_factor,
     Real* elastic_viscosity,
     Real* yield_stress,
+    Real* hardening_coefficient,
     Real* mechanical_to_thermal,
     int* irz,
     const int* bcrec);

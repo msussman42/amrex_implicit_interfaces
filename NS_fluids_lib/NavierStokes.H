@@ -2120,6 +2120,7 @@ protected:
 
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
     static Vector<Real> yield_stress; // viscoelastic parameter
+    static Vector<Real> hardening_coefficient; // viscoelastic parameter
     static Vector<Real> mechanical_to_thermal; // viscoelastic parameter
 
      // for freezing:
