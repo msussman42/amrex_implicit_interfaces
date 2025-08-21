@@ -404,6 +404,7 @@ stop
         ccstiff_sound_speed, &
         ccref_plastic_strain, &
         ccref_plastic_strain_dot, &
+        ccJohnson_Cook_C, &
         ccyield_m, &
         ccyield_n, &
         ccyield_alpha, &
@@ -580,6 +581,7 @@ stop
       real(amrex_real), INTENT(in) :: ccstiff_sound_speed(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccref_plastic_strain(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccref_plastic_strain_dot(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccJohnson_Cook_C(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccyield_m(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccyield_n(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccyield_alpha(ccnum_materials)
@@ -1665,6 +1667,7 @@ stop
        fort_stiff_sound_speed(im)=ccstiff_sound_speed(im)
        fort_ref_plastic_strain(im)=ccref_plastic_strain(im)
        fort_ref_plastic_strain_dot(im)=ccref_plastic_strain_dot(im)
+       fort_Johnson_Cook_C(im)=ccJohnson_Cook_C(im)
        fort_yield_m(im)=ccyield_m(im)
        fort_yield_n(im)=ccyield_n(im)
        fort_yield_alpha(im)=ccyield_alpha(im)
@@ -1891,6 +1894,7 @@ stop
         print *,"im,stiff_sound_speed ",im,fort_stiff_sound_speed(im)
         print *,"im,ref_plastic_strain ",im,fort_ref_plastic_strain(im)
         print *,"im,ref_plastic_strain_dot ",im,fort_ref_plastic_strain_dot(im)
+        print *,"im,Johnson_Cook_C ",im,fort_Johnson_Cook_C(im)
         print *,"im,yield_m ",im,fort_yield_m(im)
         print *,"im,yield_n ",im,fort_yield_n(im)
         print *,"im,yield_alpha ",im,fort_yield_alpha(im)

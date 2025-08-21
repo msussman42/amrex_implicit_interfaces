@@ -123,6 +123,7 @@ namespace amrex{
        Real* stiff_sound_speed,
        Real* ref_plastic_strain,
        Real* ref_plastic_strain_dot,
+       Real* Johnson_Cook_C,
        Real* yield_m,
        Real* yield_n,
        Real* yield_alpha,
