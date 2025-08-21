@@ -27999,9 +27999,13 @@ subroutine JohnsonCookSoftening( &
  T, &
  TM, & !yield_temperature
  T0, & !tempconst
- alpha, &
+ alpha, &  !fort_yield_alpha
  ref_eps_p, & !ref_plastic_strain
+ ref_dot_eps_p, & !ref_plastic_strain_dot
+ Johnson_Cook_C, & !fort_Johnson_Cook_C
+ hardening_coeff, & ! hardening_coefficient
  eps_p, & !plastic_strain_old
+ dot_eps_p, & !dot_plastic_strain
  n, & !yield_n 
  yield_stress)
 use probcommon_module
@@ -28014,8 +28018,10 @@ integer, intent(in) :: irefine,jrefine,krefine
 integer, intent(in) :: level,finest_level
 integer, intent(in) :: im_critical
 real(amrex_real), INTENT(in) :: base_yield_stress
-real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p
-real(amrex_real), INTENT(in) :: eps_p,n
+real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p,ref_dot_eps_p
+real(amrex_real), INTENT(in) :: Johnson_Cook_C
+real(amrex_real), INTENT(in) :: hardening_coeff
+real(amrex_real), INTENT(in) :: eps_p,dot_eps_p,n
 real(amrex_real), INTENT(out) :: yield_stress
 
 if (ref_eps_p.ge.zero) then
@@ -28030,6 +28036,32 @@ else
  print *,"eps_p invalid ",eps_p
  stop
 endif
+
+if (ref_dot_eps_p.ge.zero) then
+ !do nothing
+else
+ print *,"ref_dot_eps_p invalid ",ref_dot_eps_p
+ stop
+endif
+if (dot_eps_p.ge.zero) then
+ !do nothing
+else
+ print *,"dot_eps_p invalid ",dot_eps_p
+ stop
+endif
+if (hardening_coeff.ge.zero) then
+ !do nothing
+else
+ print *,"hardening_coeff invalid ",hardening_coeff
+ stop
+endif
+if (Johnson_Cook_C.ge.zero) then
+ !do nothing
+else
+ print *,"Johnson_Cook_C ",Johnson_Cook_C
+ stop
+endif
+
 
 if (base_yield_stress.gt.zero) then
  !do nothing
@@ -28059,12 +28091,14 @@ else
 endif
 if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
     (alpha.gt.zero).and.(ref_eps_p.gt.zero).and. &
-    (eps_p.ge.zero).and.(n.ge.one)) then
+    (ref_dot_eps_p.gt.zero).and. &
+    (eps_p.ge.zero).and.(n.gt.zero)) then
  !do nothing
 else
  print *,"Johnson Cook Softening parameters corrupt"
  print *,"eps_p ",eps_p
  print *,"ref_eps_p ",ref_eps_p
+ print *,"ref_dot_eps_p ",ref_dot_eps_p
  print *,"T ",T
  print *,"TM ",TM
  print *,"T0 ",T0
@@ -28073,41 +28107,47 @@ else
  stop
 endif
 
+yield_stress=base_yield_stress+hardening_coeff*(eps_p**n)
+if (dot_eps_p.lt.ref_dot_eps_p) then
+ !do nothing
+else if (dot_eps_p.ge.ref_dot_eps_p) then
+ yield_stress=yield_stress*(one+Johnson_Cook_C*log(dot_eps_p/ref_dot_eps_p))
+else
+ print *,"dot_eps_p invalid: ",dot_eps_p
+ stop
+endif
+
 if (T.lt.T0) then
- yield_stress=base_yield_stress
-else if (eps_p.lt.ref_eps_p) then
- yield_stress=base_yield_stress
-else if ((T.ge.T0).and.(eps_p.ge.ref_eps_p)) then
-  ! note: (13) from Tran and Udaykumar, have 
-  ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
-  ! Precisely, see 
-  ! Camacho and Ortiz (1997) (31), (33), and just below (33)
-  ! Also for heating due to fracture: see (16) for Camacho and Ortiz:
-  ! "beta (dot W)^p"
-  ! see also:
-  ! "Plasticity induced heating in the fracture
-  !  and cutting of metals"
-  ! From Zehnder, Potdar, and Bhalla:
-  ! rho c T_t = div(k grad T) - alpha(3 lambda + 2 mu)T0 eps_dot_kk +
-  !   beta sigma_ij eps_dot^p_ij
-  ! 3 lambda + 2mu = 3(bulk modulus)
-  ! reference [5] from that paper:
-  ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
-  ! Cambridge University Press, 1992.
-  ! if T=TM then yield_stress=0
-  ! note: alpha ~ 1.2  n>20
+ !do nothing
+else if (T.ge.T0) then
+ ! note: (13) from Tran and Udaykumar, have 
+ ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
+ ! see also
+ ! Camacho and Ortiz (1997) (31), (33), and just below (33)
+ ! Also for heating due to fracture: see (16) for Camacho and Ortiz:
+ ! "beta (dot W)^p"
+ ! see also:
+ ! "Plasticity induced heating in the fracture
+ !  and cutting of metals"
+ ! From Zehnder, Potdar, and Bhalla:
+ ! rho c T_t = div(k grad T) - alpha(3 lambda + 2 mu)T0 eps_dot_kk +
+ !   beta sigma_ij eps_dot^p_ij
+ ! 3 lambda + 2mu = 3(bulk modulus)
+ ! reference [5] from that paper:
+ ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
+ ! Cambridge University Press, 1992.
+ ! if T=TM then yield_stress=0
+ ! note: alpha ~ 1.2
  if (T.ge.TM) then
   yield_stress=zero
  else if ((T.le.TM).and.(T.ge.zero)) then
-  yield_stress=base_yield_stress*(one- &
-   ((T-T0)/(TM-T0))**alpha)* &
-   (one+eps_p/ref_eps_p)**(one/n) !eps_p ~ plastic_strain_old
+  yield_stress=yield_stress*(one-((T-T0)/(TM-T0))**alpha) 
  else
   print *,"T or TM invalid: ",T,TM
   stop
  endif
 else
- print *,"T or eps_p invalid: ",T,eps_p
+ print *,"T invalid: ",T
  stop
 endif
 
@@ -28247,6 +28287,7 @@ real(amrex_real) r_hoop
 real(amrex_real) plastic_strain_old,plastic_strain_dot
 real(amrex_real), intent(out) :: plastic_work
 
+integer Johnson_iter
 integer force_unity_determinant
 integer unity_det
 
@@ -29265,10 +29306,21 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  call project_A_to_positive_definite_or_traceless(Aadvect, &
          viscoelastic_model,polymer_factor,unity_det)
 
+  ! "Deborah number" relaxation 
+  ! e.g. D^{triangle}/Dt A = -(1/De) (A-I)
  if (DErelaxation_model.eq.1) then
   ! do nothing
  else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !plastic model
+   !Aadvect corresponds to "s" in Tran and Udaykumar
   if (DErelaxation_model.eq.0) then
+
+    ! now Aadvect = s_{trial} (Tran and Udaykumar)
+   do ii=1,3
+   do jj=1,3
+    Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
+   enddo
+   enddo
+
    magA=zero
    do ii=1,3
    do jj=1,3
@@ -29291,100 +29343,123 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensorMAC(ii,jj)
    enddo
    enddo
-   ! "S" from Maire et al corresponds to "Aadvect" times the 
-   ! shear modulus.
-   ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
-   ! note: (13) from Tran and Udaykumar, have 
-   ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
-   call JohnsonCookSoftening( &
-    xsten_in,nhalf_in, &
-    i,j,k, &
-    irefine,jrefine,krefine, &
-    level, &
-    finest_level, &
-    im_critical, &  ! 0<=im_critical<=num_materials-1
-    yield_stress, &
-    cell_temperature, &
-    fort_yield_temperature(im_critical+1), &
-    fort_tempconst(im_critical+1), &
-    fort_yield_alpha(im_critical+1), &
-    fort_ref_plastic_strain(im_critical+1), &
-    plastic_strain_old, &
-    fort_yield_n(im_critical+1), &
-    gamma_not) !"yield_stress" intent(out)
- 
-   Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
-    !magA=sqrt(A:A)
-    !assume G=1 Tr(A)=0
-    !=> f_plastic=sqrt(2/3)f   (see equation (2) from Ponthot)
-   f_plastic=magA-Y_plastic_parm_scaled
-   do ii=1,3
-   do jj=1,3
 
-    if ((f_plastic.lt.zero).or. &
-        ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
 
-     Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensorMAC_traceless(ii,jj) 
+   do Johnson_iter=0,1
 
-     !NP=A/sqrt(A:A)  (NP : NP=1)
-    else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
-
-      !Anew-Aold=sqrt(2/3) sigma_v A/sqrt(A:A) - A=
-      !NP sqrt(A:A)(sqrt(2/3) sigma_v/sqrt(A:A)-1)=
-      !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
-      !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
-      !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
-
-     weight_prev=hardening_coefficient/(three*elastic_viscosity)
-
-     Aadvect(ii,jj)= &
-       (weight_prev*magA+Y_plastic_parm_scaled)*NP(ii,jj)/ &
-       (weight_prev+one)
-
-      !CamachoOrtiz1995 equation (31)
-      !sigma/g = (f_plastic+Y_plastic_parm_scaled)/Y_plastic_parm_scaled
-      ! = f_plastic/Y_plastic_parm_scaled + 1 = magA/Y_plastic_parm_scaled
-      !m >= 68
-      !we use Tran and Udaykumar
-     if (1.eq.0) then
-      plastic_strain_dot=fort_ref_plastic_strain_dot(im_critical+1)* &
-       ((f_plastic/Y_plastic_parm_scaled+one)** &
-       fort_yield_m(im_critical+1)-one)
-     else if (1.eq.1) then
-      plastic_strain_dot=sqrt(f_plastic/(three*(one+weight_prev)))/dt
-     else
-      print *,"corruption (plastic_strain_dot)"
-      stop
-     endif
-
-      ! (16) from Camacho and Ortiz.
-      ! just below (11) in Tran and Udaykumar.
-      ! !magA=sqrt(A:A)
-     plastic_work=fort_mechanical_to_thermal(im_critical+1)* &
-        plastic_strain_dot*magA*sqrt(3.0d0/2.0d0)*elastic_viscosity
-
-     if (plastic_strain_dot.ge.zero) then
-      !do nothing
-     else
-      print *,"plastic_strain_dot out of range ",plastic_strain_dot
-      stop
-     endif
-     if (plastic_work.ge.zero) then
-      !do nothing
-     else
-      print *,"plastic_work out of range ",plastic_work
-      stop
-     endif
-
+    if (Johnson_iter.eq.0) then
+     plastic_strain_dot=zero
+    else if (Johnson_iter.eq.1) then
+     !do nothing
     else
-     print *,"f_plastic or NP_dotdot_D invalid"
-     print *,"f_plastic=",f_plastic
-     print *,"NP_dotdot_D=",NP_dotdot_D
+     print *,"Johnson_iter invalid"
      stop
     endif
 
-   enddo !jj=1,3
-   enddo !ii=1,3
+    ! "S" from Maire et al corresponds to "Aadvect" times the 
+    ! shear modulus.
+    ! see: Udaykumar, Tran, Belk, Vanden JCP 2003
+    ! note: (13) from Tran and Udaykumar, have 
+    ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
+    call JohnsonCookSoftening( &
+     xsten_in,nhalf_in, &
+     i,j,k, &
+     irefine,jrefine,krefine, &
+     level, &
+     finest_level, &
+     im_critical, &  ! 0<=im_critical<=num_materials-1
+     yield_stress, &
+     cell_temperature, &
+     fort_yield_temperature(im_critical+1), &
+     fort_tempconst(im_critical+1), &
+     fort_yield_alpha(im_critical+1), &
+     fort_ref_plastic_strain(im_critical+1), &
+     fort_ref_plastic_strain_dot(im_critical+1), &
+     fort_Johnson_Cook_C(im_critical+1), &
+     hardening_coefficient, &
+     plastic_strain_old, &
+     plastic_strain_dot, &
+     fort_yield_n(im_critical+1), &
+     gamma_not) !"yield_stress" intent(out)
+  
+    Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
+     !magA=sqrt(A:A)
+     !assume G=1 Tr(A)=0
+     !=> f_plastic=sqrt(2/3)f   (see equation (2) from Ponthot)
+    f_plastic=magA-Y_plastic_parm_scaled
+
+    do ii=1,3
+    do jj=1,3
+
+     if ((f_plastic.lt.zero).or. &
+         ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
+
+      plastic_strain_dot=zero
+      plastic_work=zero
+
+      !NP=A/sqrt(A:A)  (NP : NP=1)
+     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
+
+       !Anew-Aold=sqrt(2/3) sigma_v A/sqrt(A:A) - A=
+       !NP sqrt(A:A)(sqrt(2/3) sigma_v/sqrt(A:A)-1)=
+       !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
+       !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
+       !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
+
+       ! hardening_coefficient = h (Tran and Udaykumar)
+      weight_prev=hardening_coefficient/(three*elastic_viscosity)
+
+       ! Tran and Udaykumar:
+       ! psi=(magA-sqrt(2/3) sigma_{v}^{0})/(2 G (1+h/(3G)))
+      Aadvect(ii,jj)= &
+        (weight_prev*magA+Y_plastic_parm_scaled)*NP(ii,jj)/ &
+        (weight_prev+one)
+
+        !https://www.brown.edu/Departments/Engineering/Courses/En1750/Notes/Plasticity/Plasticity.htm
+        !search for "hardening"
+        !Y(\bar{eps}^{p})=Y_{0} + h \bar{eps}^{p}
+        !see "K" in the table under the wikipedia cite 
+        !"Strain hardening exponent"
+        !stainless steel=1275 MPa
+        !copper=325 MPa
+        !Table 3 Tran and Udaykumar:
+        !B=177MPa n=0.12 C=0.016 m=1.0 Tungsten 
+        !B=569MPa n=0.22 C=0.003 m=1.17 Steel
+        !f_plastic=magA-sqrt(2/3) sigma_{v}^{0}
+        !sigma_{v}^{1}=sigma_{v}^{0}+dt \sqrt{2/3} h\Gamma
+      plastic_strain_dot=sqrt(f_plastic/(three*(one+weight_prev)))/dt
+
+       ! (16) from Camacho and Ortiz.
+       ! just below (11) in Tran and Udaykumar.
+       ! !magA=sqrt(A:A)
+      plastic_work=fort_mechanical_to_thermal(im_critical+1)* &
+         plastic_strain_dot*magA*sqrt(3.0d0/2.0d0)*elastic_viscosity
+
+      if (plastic_strain_dot.ge.zero) then
+       !do nothing
+      else
+       print *,"plastic_strain_dot out of range ",plastic_strain_dot
+       stop
+      endif
+      if (plastic_work.ge.zero) then
+       !do nothing
+      else
+       print *,"plastic_work out of range ",plastic_work
+       stop
+      endif
+
+     else
+      print *,"f_plastic or NP_dotdot_D invalid"
+      print *,"f_plastic=",f_plastic
+      print *,"NP_dotdot_D=",NP_dotdot_D
+      stop
+     endif
+
+    enddo !jj=1,3
+    enddo !ii=1,3
+
+   enddo ! Johnson_iter=0,1
+
   else
    print *,"DErelaxation_model invalid: ",DErelaxation_model
    stop

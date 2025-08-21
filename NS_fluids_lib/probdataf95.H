@@ -107,6 +107,7 @@
 
       real(amrex_real) fort_ref_plastic_strain(MAX_NUM_MATERIALS)
       real(amrex_real) fort_ref_plastic_strain_dot(MAX_NUM_MATERIALS)
+      real(amrex_real) fort_Johnson_Cook_C(MAX_NUM_MATERIALS)
       real(amrex_real) fort_yield_m(MAX_NUM_MATERIALS)
       real(amrex_real) fort_yield_n(MAX_NUM_MATERIALS)
       real(amrex_real) fort_yield_alpha(MAX_NUM_MATERIALS)

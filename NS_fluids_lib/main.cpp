@@ -383,7 +383,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, August 20, 2025, 18:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, August 21, 2025, 18:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

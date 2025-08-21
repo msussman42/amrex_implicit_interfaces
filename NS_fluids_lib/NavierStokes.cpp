@@ -902,21 +902,24 @@ Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 Vector<Real> NavierStokes::stiff_sound_speed; // def=3.0e+10 cm/s
      //steel:base yield=1.5
+     //      C=.003
      //      ref_plastic_strain=0.001
      //      ref_plastic_strain_dot=1.0
      //      m=340
-     //      n=22
+     //      n=0.22
      //      yield_alpha=1.17
      //      yield_temperature=1777 Kelvin
      //Tungsten:base yield=1.51
+     //         C=.016
      //         ref_plastic_strain=0.0001
      //         ref_plastic_strain_dot=1.0
      //         m=68
-     //         n=80
+     //         n=0.12
      //         yield_alpha=1.0
      //         yield_temperature=1723 Kelvin
 Vector<Real> NavierStokes::ref_plastic_strain;
 Vector<Real> NavierStokes::ref_plastic_strain_dot;
+Vector<Real> NavierStokes::Johnson_Cook_C; 
 Vector<Real> NavierStokes::yield_m;
 Vector<Real> NavierStokes::yield_n;
 Vector<Real> NavierStokes::yield_alpha;
@@ -1579,6 +1582,7 @@ void fortran_parameters() {
 
  Vector<Real> ref_plastic_straintemp(NavierStokes::num_materials);
  Vector<Real> ref_plastic_strain_dottemp(NavierStokes::num_materials);
+ Vector<Real> Johnson_Cook_Ctemp(NavierStokes::num_materials);
  Vector<Real> yield_mtemp(NavierStokes::num_materials);
  Vector<Real> yield_ntemp(NavierStokes::num_materials);
  Vector<Real> yield_alphatemp(NavierStokes::num_materials);
@@ -1683,8 +1687,9 @@ void fortran_parameters() {
 
   ref_plastic_straintemp[im]=0.001;
   ref_plastic_strain_dottemp[im]=1.0;
+  Johnson_Cook_Ctemp[im]=0.0;
   yield_mtemp[im]=68.0;
-  yield_ntemp[im]=80.0;
+  yield_ntemp[im]=1.0;
   yield_alphatemp[im]=1.17;
   yield_temperaturetemp[im]=1777.0;
 
@@ -1770,6 +1775,8 @@ void fortran_parameters() {
  pp.queryAdd("ref_plastic_strain",ref_plastic_straintemp,
     NavierStokes::num_materials);
  pp.queryAdd("ref_plastic_strain_dot",ref_plastic_strain_dottemp,
+    NavierStokes::num_materials);
+ pp.queryAdd("Johnson_Cook_C",Johnson_Cook_Ctemp,
     NavierStokes::num_materials);
  pp.queryAdd("yield_m",yield_mtemp,
     NavierStokes::num_materials);
@@ -2327,6 +2334,7 @@ void fortran_parameters() {
   stiff_sound_speedtemp.dataPtr(),
   ref_plastic_straintemp.dataPtr(),
   ref_plastic_strain_dottemp.dataPtr(),
+  Johnson_Cook_Ctemp.dataPtr(),
   yield_mtemp.dataPtr(),
   yield_ntemp.dataPtr(),
   yield_alphatemp.dataPtr(),
@@ -3928,6 +3936,7 @@ NavierStokes::read_params ()
 
     ref_plastic_strain.resize(num_materials);
     ref_plastic_strain_dot.resize(num_materials);
+    Johnson_Cook_C.resize(num_materials);
     yield_m.resize(num_materials);
     yield_n.resize(num_materials);
     yield_alpha.resize(num_materials);
@@ -4269,8 +4278,9 @@ NavierStokes::read_params ()
 
      ref_plastic_strain[i]=0.001;
      ref_plastic_strain_dot[i]=1.0;
+     Johnson_Cook_C[i]=0.0;
      yield_m[i]=68.0;
-     yield_n[i]=80.0;
+     yield_n[i]=1.0;
      yield_alpha[i]=1.17;
      yield_temperature[i]=1777.0;
 
@@ -4295,6 +4305,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("ref_plastic_strain",ref_plastic_strain,num_materials);
     pp.queryAdd("ref_plastic_strain_dot",ref_plastic_strain_dot,num_materials);
+    pp.queryAdd("Johnson_Cook_C",Johnson_Cook_C,num_materials);
     pp.queryAdd("yield_m",yield_m,num_materials);
     pp.queryAdd("yield_n",yield_n,num_materials);
     pp.queryAdd("yield_alpha",yield_alpha,num_materials);
@@ -6100,6 +6111,8 @@ NavierStokes::read_params ()
         ref_plastic_strain[i] << '\n';
       std::cout << "ref_plastic_strain_dot i=" << i << " " << 
         ref_plastic_strain_dot[i] << '\n';
+      std::cout << "Johnson_Cook_C i=" << i << " " << 
+        Johnson_Cook_C[i] << '\n';
       std::cout << "yield_m i=" << i << " " << 
         yield_m[i] << '\n';
       std::cout << "yield_n i=" << i << " " << 
