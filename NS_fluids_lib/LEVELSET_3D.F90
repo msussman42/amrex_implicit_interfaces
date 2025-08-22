@@ -1034,16 +1034,8 @@ stop
 
          ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
          ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
-         if (use_DCA.eq.101) then ! GNBC
-          gamma1=half*user_tension(iten)
-          gamma2=half*user_tension(iten)
-         else if (use_DCA.ge.-1) then  ! all other cases.
-          gamma1=half*(one-cos_angle)
-          gamma2=half*(one+cos_angle)
-         else
-          print *,"use_DCA invalid: ",use_DCA
-          stop
-         endif 
+         gamma1=half*(one-cos_angle)
+         gamma2=half*(one+cos_angle)
 
         else if (is_rigid_CL(im3).eq.0) then
 
@@ -1811,11 +1803,8 @@ stop
            else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
                     (use_DCA.le.108)) then
             if (use_DCA.eq.101) then
-             ! do nothing (GNBC model) since initheightLS handles only
-             ! those models in which tangential wall velocity is input,
-             ! and dynamic angle is output.
-             ! FOR THE OPPOSITE CASE (angle is input, and wall velocity is
-             ! output), one sets ns.law_of_the_wall=2.
+              !GNBC model prescribes static angle.
+             ZEYU_thet_d=acos(cos_angle)
 
              ! cases 2,...,8 for Zeyu's code.
              ! case 2 Jiang 1970 ...
@@ -1890,22 +1879,13 @@ stop
           stop
          endif 
 
-         if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
-          do dir2=1,SDIM
-           nghost(dir2)=master_normal(dir2)
-          enddo
-         else if (use_DCA.ge.-1) then !non GNBC DCA models.
-          ! nghost points from material im_opp into material im.
-          call ghostnormal( &
+         ! nghost points from material im_opp into material im.
+         call ghostnormal( &
             master_normal, & !intent(in)
             normal_im3_negate, & !intent(in)
             cos_angle, & !intent(in)
             nghost, & !intent(out)
             nperp) !intent(out)
-         else
-          print *,"use_DCA invalid: ",use_DCA
-          stop
-         endif 
 
          if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
           print *,"im,im_opp,im3: ",im,im_opp,im3
