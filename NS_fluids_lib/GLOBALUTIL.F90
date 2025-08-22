@@ -1837,7 +1837,7 @@ contains
          else if (abs(LS_sten(im_fluid)).ge.LOW%dxmin*GNBC_RADIUS) then
           ! do nothing
          else
-          print *,"LS_sten became corrupt"
+          print *,"LS_sten became corrupt: ",im_fluid,LS_sten(im_fluid)
           stop
          endif
         else
@@ -1845,7 +1845,7 @@ contains
          stop
         endif
        else
-        print *,"im_primary_sten invalid"
+        print *,"im_primary_sten invalid: ",im_primary_sten
         stop
        endif
        do im=1,num_materials*(1+SDIM)
@@ -29306,6 +29306,62 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  call project_A_to_positive_definite_or_traceless(Aadvect, &
          viscoelastic_model,polymer_factor,unity_det)
 
+ !if NN_MAIRE_ABGRALL:
+ !Maire and Abgrall paper:
+ !  W=(grad V - (grad V)^T)/2  (grad V)_{ij} = v_{j,i} = jacobian_{ji}
+ !  W_ij=(v_{j,i}-v_{i,j})/2
+ !Tran and Udaykumar:
+ !  Omega=-W    Omega_ij=(v_i,j - v_j,i)/2
+ !Maire and Abgrall
+ ! S_t=2 G(D0-Dp)-SW+WS
+ !Tran and Udaykumar:
+ ! S_t=2 G(Dbar-Dp)-S Omega + OMEGA S
+ !
+ !then Smult_left=Smult_right=I-dt W=I+dt OMEGA
+ !DQ/Dt=2(D0-D^P)+QW-WQ=
+ !      2(D0-D^P)+OMEGA Q - Q OMEGA
+ !   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
+ !grad U_{ij} = U_{j,i}
+ !W=(grad V - grad V^T)/2
+ !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
+ !Q^{n+1}=(I-dt WLEFT)Q^{n}(I-dt WRIGHT^T)=
+ !        Q^{n}-dt WLEFT Q - dt Q WRIGHT^T + 
+ !        dt^2 WLEFT Q WRIGHT^T \approx
+ !        Q^{n}-dt WLEFT Q + dt Q WRIGHT
+ do ii=1,3
+ do jj=1,3
+   !SA=S_left * A
+  SA(ii,jj)=zero
+  do kk=1,3
+   SA(ii,jj)=SA(ii,jj)+Smult_left(ii,kk)*Aadvect(kk,jj)
+  enddo
+ enddo
+ enddo
+ 
+ do ii=1,3
+ do jj=1,3
+   !SAS=S_left * A * S_right^T
+  SAS(ii,jj)=zero
+
+  do kk=1,3
+   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
+  enddo
+  Q(ii,jj)=SAS(ii,jj)
+  Aadvect(ii,jj)=SAS(ii,jj)
+
+ enddo  ! jj=1..3
+ enddo  ! ii=1..3
+
+  !NOTE: gradU already has hoop terms built in.
+ if (SDIM.eq.3) then
+  ! do nothing
+ else if (SDIM.eq.2) then
+  ! do nothing
+ else
+  print *,"dimension bust"
+  stop
+ endif
+
   ! "Deborah number" relaxation 
   ! e.g. D^{triangle}/Dt A = -(1/De) (A-I)
  if (DErelaxation_model.eq.1) then
@@ -29343,7 +29399,6 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensorMAC(ii,jj)
    enddo
    enddo
-
 
    do Johnson_iter=0,1
 
@@ -29475,62 +29530,13 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   print *,"viscoelastic_model invalid: ",viscoelastic_model
   stop
  endif
- 
- !if NN_MAIRE_ABGRALL:
- !Maire and Abgrall paper:
- !  W=(grad V - (grad V)^T)/2  (grad V)_{ij} = v_{j,i} = jacobian_{ji}
- !  W_ij=(v_{j,i}-v_{i,j})/2
- !Tran and Udaykumar:
- !  Omega=-W    Omega_ij=(v_i,j - v_j,i)/2
- !Maire and Abgrall
- ! S_t=2 G(D0-Dp)-SW+WS
- !Tran and Udaykumar:
- ! S_t=2 G(Dbar-Dp)-S Omega + OMEGA S
- !
- !then Smult_left=Smult_right=I-dt W=I+dt OMEGA
- !DQ/Dt=2(D0-D^P)+QW-WQ=
- !      2(D0-D^P)+OMEGA Q - Q OMEGA
- !   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
- !grad U_{ij} = U_{j,i}
- !W=(grad V - grad V^T)/2
- !W_{ij}=(V_{j,i}-V_{i,j})/2=-OMEGA (see Tran and Udaykumar)
- !Q^{n+1}=(I-dt WLEFT)Q^{n}(I-dt WRIGHT^T)=
- !        Q^{n}-dt WLEFT Q - dt Q WRIGHT^T + 
- !        dt^2 WLEFT Q WRIGHT^T \approx
- !        Q^{n}-dt WLEFT Q + dt Q WRIGHT
+
  do ii=1,3
  do jj=1,3
-   !SA=S_left * A
-  SA(ii,jj)=zero
-  do kk=1,3
-   SA(ii,jj)=SA(ii,jj)+Smult_left(ii,kk)*Aadvect(kk,jj)
-  enddo
+  Q(ii,jj)=Aadvect(ii,jj)
  enddo
  enddo
  
- do ii=1,3
- do jj=1,3
-   !SAS=S_left * A * S_right^T
-  SAS(ii,jj)=zero
-
-  do kk=1,3
-   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
-  enddo
-  Q(ii,jj)=SAS(ii,jj)
-
- enddo  ! jj=1..3
- enddo  ! ii=1..3
-
-  !NOTE: gradU already has hoop terms built in.
- if (SDIM.eq.3) then
-  ! do nothing
- else if (SDIM.eq.2) then
-  ! do nothing
- else
-  print *,"dimension bust"
-  stop
- endif
-
   ! Q=S A S^T at this stage
  unity_det=0
  call project_A_to_positive_definite_or_traceless(Q, &
@@ -29676,8 +29682,6 @@ tnew(ENUM_NUM_TENSOR_TYPE_BASE+1)=plastic_strain_old+dt*plastic_strain_dot
 
 return
 end subroutine point_updatetensor
-
-
 
 
 subroutine doit(problo,probhi,ncell,dx,tstop)
