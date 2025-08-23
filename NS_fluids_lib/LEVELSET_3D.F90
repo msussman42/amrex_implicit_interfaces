@@ -349,6 +349,7 @@ stop
         !closest point normal.
         nrmsten, & !intent(in)
         least_squares_normal, & !intent(in)
+        least_squares_normal_triple, & !intent(in)
         least_squares_normal_material, & !intent(in)
         !scalar (i,j,k)
         vol_sten, & !intent(in)
@@ -446,6 +447,9 @@ stop
 
       real(amrex_real),intent(in) :: &
           least_squares_normal(num_interfaces,SDIM)
+
+      real(amrex_real),intent(in) :: &
+          least_squares_normal_triple(num_interfaces,SDIM)
 
       real(amrex_real),intent(in) :: &
           least_squares_normal_material(num_materials,SDIM)
@@ -1097,11 +1101,11 @@ stop
        nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
       enddo
       call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
-      if (mag.gt.zero) then
+      if (mag.ge.zero) then
        ! do nothing
       else
        print *,"nfluid_least_squares mag became corrupt: ", &
-        nfluid_least_squares
+        mag,nfluid_least_squares
        stop
       endif
  
@@ -1505,50 +1509,100 @@ stop
        normal_11(dir2)=least_squares_normal_material(im,dir2)
        normal_22(dir2)=least_squares_normal_material(im_opp,dir2)
 
-       if (im3.eq.0) then
+      enddo !dir2=1..sdim
 
+      if (im3.eq.0) then
+
+       do dir2=1,SDIM
         normal_im3(dir2)=master_normal(dir2)
         normal_13(dir2)=master_normal(dir2)
         normal_23(dir2)=master_normal(dir2)
         normal_33(dir2)=master_normal(dir2)
+       enddo !dir2=1..sdim
 
-       else if ((im3.ge.1).and.(im3.le.num_materials)) then
+      else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
+       if (is_rigid_CL(im3).eq.1) then
+
+        do dir2=1,SDIM
+         nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
+        enddo
+        call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
+        if (mag.ge.zero) then
+         ! do nothing
+        else
+         print *,"nfluid_least_squares mag became corrupt(2): ", &
+          mag,nfluid_least_squares
+         stop
+        endif
+        if (nfluid_least_squares(dircrit)*signside.gt.zero) then
+         ! set DEBUG_DYNAMIC_CONTACT_ANGLE in PROBCOMMON.F90
+         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
+          print *,"switching master_normal (old) ",master_normal
+         endif
+         do dir2=1,SDIM
+          master_normal(dir2)=nfluid_least_squares(dir2)
+         enddo
+         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
+          print *,"switching master_normal (new) ",master_normal
+         endif
+        else if (nfluid_least_squares(dircrit)*signside.le.zero) then
+         !do nothing
+        else
+         print *,"corruption (nfluid_least_squares):",nfluid_least_squares
+         print *,"dircrit,signside ",dircrit,signside
+         stop
+        endif
+
+       else if (is_rigid_CL(im3).eq.0) then
+        ! do nothing
+       else
+        print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
+        print *,im3,is_rigid_CL(im3)
+        stop
+       endif
+
+       do dir2=1,SDIM
         normal_13(dir2)=least_squares_normal(iten_13,dir2)
         normal_23(dir2)=least_squares_normal(iten_23,dir2)
         normal_33(dir2)=least_squares_normal_material(im3,dir2)
+       enddo !dir2=1..sdim
 
-        if ((ice_normal_weight(iten_13).ge.zero).and. &
-            (ice_normal_weight(iten_23).ge.zero).and. &
-            (ice_normal_weight(iten_13)+ &
-             ice_normal_weight(iten_23).gt.zero)) then
-         !do nothing
-        else
-         print *,"expecting ice_normal_weight>=0: ",ice_normal_weight
-         stop
-        endif
-
-        if (ice_normal_weight(iten_13).eq. &
-            ice_normal_weight(iten_23)) then
-         normal_im3(dir2)=normal_33(dir2)
-        else if ((ice_normal_weight(iten_13).eq.one).and. &
-                 (ice_normal_weight(iten_23).eq.zero)) then
-         normal_im3(dir2)=-normal_11(dir2)
-        else if ((ice_normal_weight(iten_13).eq.zero).and. &
-                 (ice_normal_weight(iten_23).eq.one)) then
-         normal_im3(dir2)=-normal_22(dir2)
-        else
-         print *,"ice_normal_weight invalid: ",ice_normal_weight
-         stop
-        endif
-
+       if ((ice_normal_weight(iten_13).ge.zero).and. &
+           (ice_normal_weight(iten_23).ge.zero).and. &
+           (ice_normal_weight(iten_13)+ &
+            ice_normal_weight(iten_23).gt.zero)) then
+        !do nothing
        else
-        print *,"im3 invalid: ",im3
+        print *,"expecting ice_normal_weight>=0: ",ice_normal_weight
         stop
        endif
-    
-      enddo ! dir2=1..sdim
 
+       if (ice_normal_weight(iten_13).eq. &
+           ice_normal_weight(iten_23)) then
+        do dir2=1,SDIM
+         normal_im3(dir2)=normal_33(dir2)
+        enddo !dir2=1..sdim
+       else if ((ice_normal_weight(iten_13).eq.one).and. &
+                (ice_normal_weight(iten_23).eq.zero)) then
+        do dir2=1,SDIM
+         normal_im3(dir2)=-normal_11(dir2)
+        enddo !dir2=1..sdim
+       else if ((ice_normal_weight(iten_13).eq.zero).and. &
+                (ice_normal_weight(iten_23).eq.one)) then
+        do dir2=1,SDIM
+         normal_im3(dir2)=-normal_22(dir2)
+        enddo !dir2=1..sdim
+       else
+        print *,"ice_normal_weight invalid: ",ice_normal_weight
+        stop
+       endif
+
+      else
+       print *,"im3 invalid: ",im3
+       stop
+      endif
+    
       call prepare_normal( &
          normal_im3, & !intent(inout)
          RR_unit, & !intent(in)
@@ -3462,11 +3516,15 @@ stop
       integer im_sten_secondary
       integer im_wt,im_opp_wt
       real(amrex_real) :: wt_local
+      real(amrex_real) :: wt_local_triple
       real(amrex_real) :: mag_loc
       real(amrex_real) :: n_loc(SDIM)
 
       real(amrex_real) least_squares_normal(num_interfaces,SDIM)
       real(amrex_real) least_squares_normal_wt(num_interfaces)
+
+      real(amrex_real) least_squares_normal_triple(num_interfaces,SDIM)
+      real(amrex_real) least_squares_normal_triple_wt(num_interfaces)
 
       real(amrex_real) least_squares_normal_material(num_materials,SDIM)
       real(amrex_real) least_squares_normal_material_wt(num_materials)
@@ -3495,6 +3553,8 @@ stop
       real(amrex_real) mgoni_force(SDIM)
 
       integer im3
+      integer im3_local
+      integer im3_loop
 
       real(amrex_real) LSCEN_hold(num_materials)
       real(amrex_real) LSCEN_hold_merge(num_materials)
@@ -4267,8 +4327,10 @@ stop
              do iten_local=1,num_interfaces
               do dirloc=1,SDIM
                least_squares_normal(iten_local,dirloc)=zero
+               least_squares_normal_triple(iten_local,dirloc)=zero
               enddo
               least_squares_normal_wt(iten_local)=zero
+              least_squares_normal_triple_wt(iten_local)=zero
              enddo
 
              do im_curv=1,num_materials
@@ -4334,6 +4396,38 @@ stop
               call get_secondary_material(LSCEN_hold_fixed, &
                  im_sten_primary,im_sten_secondary)
 
+              im3_local=0
+              do im3_loop=1,num_materials
+               if ((im3_loop.ne.im_sten_primary).and. &
+                   (im3_loop.ne.im_sten_secondary)) then
+                if (im3_local.eq.0) then
+                 im3_local=im3_loop
+                else if ((im3_local.ge.1).and. &
+                         (im3_local.le.num_materials)) then
+                 if (abs(LSCEN_hold_fixed(im3_loop)).le. &
+                     abs(LSCEN_hold_fixed(im3_local))) then
+                  im3_local=im3_loop
+                 endif
+                else
+                 print *,"im3_local invalid: ",im3_local
+                 stop
+                endif
+               endif
+              enddo !im3_loop=1,num_materials
+
+              if (im3_local.eq.0) then
+               wt_local_triple=0.0001d0
+              else if ((im3_local.ge.1).and. &
+                       (im3_local.le.num_materials).and. &
+                       (im3_local.ne.im_sten_primary).and. &
+                       (im3_local.ne.im_sten_secondary)) then
+               wt_local_triple=one/ &
+                (one+(four*LSCEN_hold_fixed(im3_local)/dx(1))**4)
+              else
+               print *,"im3_local invalid: ",im3_local
+               stop
+              endif
+              
               do im_wt=1,num_materials
                do im_opp_wt=im_wt+1,num_materials
                 call get_iten(im_wt,im_opp_wt,iten_local)
@@ -4443,9 +4537,15 @@ stop
                  least_squares_normal(iten_local,dirloc)= &
                   least_squares_normal(iten_local,dirloc)+ &
                   wt_local*n_loc(dirloc)
+                 least_squares_normal_triple(iten_local,dirloc)= &
+                  least_squares_normal_triple(iten_local,dirloc)+ &
+                  wt_local_triple*wt_local*n_loc(dirloc)
                 enddo
                 least_squares_normal_wt(iten_local)= &
                   least_squares_normal_wt(iten_local)+wt_local
+                least_squares_normal_triple_wt(iten_local)= &
+                  least_squares_normal_triple_wt(iten_local)+ &
+                  wt_local_triple*wt_local
                enddo !im_opp_wt=im_wt+1,num_materials
               enddo !im_wt=1,num_materials
 
@@ -4504,6 +4604,7 @@ stop
                    ! (init nrmsten,lssten,vofsten,least_squares_normal)
 
              do iten_local=1,num_interfaces
+
               do dirloc=1,SDIM
                if (least_squares_normal_wt(iten_local).eq.zero) then
                 least_squares_normal(iten_local,dirloc)=zero
@@ -4521,6 +4622,25 @@ stop
               call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
               do dirloc=1,SDIM
                least_squares_normal(iten_local,dirloc)=n_loc(dirloc)
+              enddo
+
+              do dirloc=1,SDIM
+               if (least_squares_normal_triple_wt(iten_local).eq.zero) then
+                least_squares_normal_triple(iten_local,dirloc)=zero
+               else if (least_squares_normal_triple_wt(iten_local).gt.zero) then
+                least_squares_normal_triple(iten_local,dirloc)= &
+                 least_squares_normal_triple(iten_local,dirloc)/ &
+                 least_squares_normal_triple_wt(iten_local)
+               else
+                print *,"least_squares_normal_triple_wt(iten_local) invalid:", &
+                 iten_local,least_squares_normal_triple_wt(iten_local)
+                stop
+               endif
+               n_loc(dirloc)=least_squares_normal_triple(iten_local,dirloc)
+              enddo !dirloc=1,sdim
+              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              do dirloc=1,SDIM
+               least_squares_normal_triple(iten_local,dirloc)=n_loc(dirloc)
               enddo
              enddo !iten_local=1,num_interfaces
      
@@ -4596,6 +4716,7 @@ stop
               !closest point normal.
               nrmsten, &
               least_squares_normal, &
+              least_squares_normal_triple, &
               least_squares_normal_material, &
               !scalar (i,j,k)
               vol_sten, &
