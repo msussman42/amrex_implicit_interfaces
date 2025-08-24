@@ -1525,7 +1525,11 @@ stop
        if (is_rigid_CL(im3).eq.1) then
 
         do dir2=1,SDIM
-         nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
+         if (1.eq.1) then
+          nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
+         else
+          nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
+         endif
         enddo
         call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
         if (mag.ge.zero) then
@@ -1982,7 +1986,7 @@ stop
       do i=-1,1
 
        do imhold=1,num_materials
-        LSTEST(imhold)=lssten(i,j,k,imhold)
+        LSTEST(imhold)=lssten(i,j,k,imhold) !lssten is intent(in)
        enddo
 
        ! FTEN=gamma1 K1 grad H1 + gamma2 K2 grad H2=
@@ -2020,8 +2024,8 @@ stop
 
        else if (is_rigid_CL(im3).eq.1) then
 
-        call get_LS_extend(LSTEST,iten,LSmain)
-        LSopp=LSmain
+        LSmain=LSTEST(im)
+        LSopp=LSTEST(im_opp)
 
         do dir2=1,SDIM
          nmain(dir2)=master_normal(dir2)
@@ -2048,60 +2052,6 @@ stop
        dnrm(dir2)=zero
       enddo
 
-      do k=klo_sten_short,khi_sten_short
-      do j=-1,1
-      do i=-1,1
-
-       imhold=im_primary_sten(i,j,k)
-
-       do dir2=1,SDIM 
-        n1=ncurv1_save(D_DECL(i,j,k),dir2) !master_normal
-        n2=ncurv2_save(D_DECL(i,j,k),dir2) !nghost
-        if (im3.eq.0) then
-         ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid_CL(im3).eq.0) then
-         ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid_CL(im3).eq.1) then
-         if (imhold.eq.im3) then
-          ngrid(dir2)=n2 !nghost
-         else if ((imhold.ne.im3).and. &
-                  (imhold.ge.1).and. &
-                  (imhold.le.num_materials)) then 
-          if (ice_normal_weight(iten_13).eq. &
-              ice_normal_weight(iten_23)) then
-           ngrid(dir2)=n1
-          else if ((ice_normal_weight(iten_13).eq.one).and. &
-                   (ice_normal_weight(iten_23).eq.zero)) then
-           if (imhold.eq.im_opp) then
-            ngrid(dir2)=n2 !nghost
-           else
-            ngrid(dir2)=n1
-           endif
-          else if ((ice_normal_weight(iten_13).eq.zero).and. &
-                   (ice_normal_weight(iten_23).eq.one)) then
-           if (imhold.eq.im) then
-            ngrid(dir2)=n2 !nghost
-           else
-            ngrid(dir2)=n1
-           endif
-          else
-           print *,"ice_normal_weight invalid: ",ice_normal_weight
-           stop
-          endif
-         else
-          print *,"imhold invalid: ",imhold
-          stop
-         endif
-        else
-         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
-         stop
-        endif
-       enddo ! dir2=1..sdim
-
-      enddo
-      enddo
-      enddo ! i,j,k=-1 ... 1
-
       do dir2=1,SDIM
        xsten_curv(-2,dir2)=xsten(-2,dir2)
        xsten_curv(2,dir2)=xsten(2,dir2)
@@ -2112,6 +2062,7 @@ stop
 
       totalwt=zero
 
+       !put normals on the cell corners.
       do knode=klo_sten_short,khi_sten_short,2
       do jnode=-1,1,2
       do inode=-1,1,2
@@ -2177,7 +2128,7 @@ stop
          n_node1(dir2)=n_node1(dir2)+ncurv1_save(D_DECL(i,j,k),dir2)
          n_node2(dir2)=n_node2(dir2)+ncurv2_save(D_DECL(i,j,k),dir2)
 
-        enddo ! dir2
+        enddo ! dir2=1..sdim
 
         if (SDIM.eq.2) then
          if (k.eq.0) then
@@ -2192,13 +2143,39 @@ stop
          print *,"dimension bust: ",SDIM
          stop
         endif
+
         imhold=im_primary_sten(i,j,k)
+
         if (imhold.eq.im3) then
+
          im3_present_node=1
+
         else if ((imhold.ne.im3).and. &
                  (imhold.ge.1).and. &
                  (imhold.le.num_materials)) then 
-         ! do nothing
+
+         if (ice_normal_weight(iten_13).eq. &
+             ice_normal_weight(iten_23)) then
+          !do nothing
+         else if ((ice_normal_weight(iten_13).eq.one).and. &
+                  (ice_normal_weight(iten_23).eq.zero)) then
+          if (imhold.eq.im_opp) then
+           im3_present_node=1
+          else
+           !do nothing
+          endif
+         else if ((ice_normal_weight(iten_13).eq.zero).and. &
+                   (ice_normal_weight(iten_23).eq.one)) then
+          if (imhold.eq.im) then
+           im3_present_node=1
+          else
+           !do nothing
+          endif
+         else
+          print *,"ice_normal_weight invalid: ",ice_normal_weight
+          stop
+         endif
+
         else
          print *,"imhold invalid: ",imhold
          stop
@@ -2271,11 +2248,12 @@ stop
        endif
        
        do dir2=1,SDIM
-        n_node1(dir2)=n_node1LS(dir2)
-       
+
         if (im3.eq.0) then
+         n_node1(dir2)=n_node1LS(dir2)
          n_node2(dir2)=n_node2LS(dir2)
         else if (is_rigid_CL(im3).eq.0) then
+         n_node1(dir2)=n_node1LS(dir2)
          n_node2(dir2)=n_node2LS(dir2)
         else if (is_rigid_CL(im3).eq.1) then
          ! do nothing
@@ -2283,7 +2261,8 @@ stop
          print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
         endif
-       enddo ! dir2
+
+       enddo ! dir2=1..sdim
 
        call prepare_normal(n_node1,RR_unit,mag,SDIM)
        call prepare_normal(n_node2,RR_unit,mag,SDIM)
@@ -2447,10 +2426,14 @@ stop
        stop
       endif
 
-      if (1.eq.0) then
-       print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
-       print *,"dircrit,side,signside ",dircrit,side,signside
-       print *,"im3,curvFD,curvHT_choice ",im3,curvFD,curvHT_choice
+      if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
+       if (im3.ne.0) then
+        print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
+        print *,"dircrit,side,signside ",dircrit,side,signside
+        print *,"gamma1,gamma2 ",gamma1,gamma2
+        print *,"maxcurv: ",maxcurv
+        print *,"im3,curvFD,curvHT_choice ",im3,curvFD,curvHT_choice
+       endif
       endif
 
       return
