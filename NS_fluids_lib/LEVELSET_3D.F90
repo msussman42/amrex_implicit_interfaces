@@ -1641,6 +1641,8 @@ stop
          !do nothing
         else
          print *,"mag3 invalid: ",mag3
+         print *,"normal_im3: ",normal_im3
+         print *,"master_normal: ",master_normal
          stop
         endif
 
@@ -4417,11 +4419,23 @@ stop
               enddo !im3_loop=1,num_materials
 
               if (im3_local.eq.0) then
+               if (num_materials.eq.2) then
+                !do nothing
+               else
+                print *,"expecting num_materials=2: ",num_materials
+                stop
+               endif
                wt_local_triple_base=0.0001d0
               else if ((im3_local.ge.1).and. &
                        (im3_local.le.num_materials).and. &
                        (im3_local.ne.im_sten_primary).and. &
                        (im3_local.ne.im_sten_secondary)) then
+               if (num_materials.gt.2) then
+                !do nothing
+               else
+                print *,"expecting num_materials>2: ",num_materials
+                stop
+               endif
                wt_local_triple_base=one/ &
                 (one+(four*LSCEN_hold_fixed(im3_local)/dx(1))**4)
               else
