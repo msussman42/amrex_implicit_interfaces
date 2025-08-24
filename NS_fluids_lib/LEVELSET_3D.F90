@@ -3517,6 +3517,7 @@ stop
       integer im_wt,im_opp_wt
       real(amrex_real) :: wt_local
       real(amrex_real) :: wt_local_triple
+      real(amrex_real) :: wt_local_triple_base
       real(amrex_real) :: mag_loc
       real(amrex_real) :: n_loc(SDIM)
 
@@ -4416,12 +4417,12 @@ stop
               enddo !im3_loop=1,num_materials
 
               if (im3_local.eq.0) then
-               wt_local_triple=0.0001d0
+               wt_local_triple_base=0.0001d0
               else if ((im3_local.ge.1).and. &
                        (im3_local.le.num_materials).and. &
                        (im3_local.ne.im_sten_primary).and. &
                        (im3_local.ne.im_sten_secondary)) then
-               wt_local_triple=one/ &
+               wt_local_triple_base=one/ &
                 (one+(four*LSCEN_hold_fixed(im3_local)/dx(1))**4)
               else
                print *,"im3_local invalid: ",im3_local
@@ -4436,9 +4437,11 @@ stop
                  if ((im_wt.eq.im_sten_secondary).or. &
                      (im_opp_wt.eq.im_sten_secondary)) then
                   wt_local=one/(one+i1**2+j1**2+k1**2)
+                  wt_local_triple=wt_local_triple_base
                  else if ((im_wt.ne.im_sten_secondary).and. &
                           (im_opp_wt.ne.im_sten_secondary)) then
                   wt_local=0.0001d0
+                  wt_local_triple=0.0001d0
                  else
                   print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
                   print *,"im_sten_secondary: ",im_sten_secondary
@@ -4447,6 +4450,7 @@ stop
                 else if ((im_wt.ne.im_sten_primary).and. &
                          (im_opp_wt.ne.im_sten_primary)) then
                  wt_local=0.0001d0
+                 wt_local_triple=0.0001d0
                 else
                  print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
                  print *,"im_sten_primary: ",im_sten_primary
