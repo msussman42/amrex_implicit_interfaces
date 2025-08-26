@@ -1525,11 +1525,7 @@ stop
        if (is_rigid_CL(im3).eq.1) then
 
         do dir2=1,SDIM
-         if (1.eq.1) then
-          nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
-         else
-          nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
-         endif
+         nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
         enddo
         call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
         if (mag.ge.zero) then
@@ -3587,6 +3583,9 @@ stop
       integer local_mask
       integer ihist
       real(amrex_real) ZEYU_thet_d,ZEYU_u_cl
+
+      real(amrex_real), parameter :: weight_power=4.0d0
+
       integer test_for_post_restart
    
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
@@ -4419,8 +4418,9 @@ stop
                 print *,"expecting num_materials>2: ",num_materials
                 stop
                endif
-               wt_local_triple_base=one/ &
-                (one+(four*LSCEN_hold_fixed(im3_local)/dx(1))**4)
+               LCEN=LSCEN_hold_fixed(im3_local)
+               LCEN=abs(LCEN)
+               wt_local_triple_base=one/(one+(four*LCEN/dx(1))**weight_power)
               else
                print *,"im3_local invalid: ",im3_local
                stop
@@ -4433,7 +4433,11 @@ stop
                     (im_opp_wt.eq.im_sten_primary)) then
                  if ((im_wt.eq.im_sten_secondary).or. &
                      (im_opp_wt.eq.im_sten_secondary)) then
-                  wt_local=one/(one+i1**2+j1**2+k1**2)
+                  wt_local=one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
+                  LCEN=half*(LSCEN_hold_fixed(im_wt)- &
+                             LSCEN_hold_fixed(im_opp_wt))
+                  LCEN=abs(LCEN)
+                  wt_local=wt_local/(one+(four*LCEN/dx(1))**weight_power)
                   wt_local_triple=wt_local_triple_base
                  else if ((im_wt.ne.im_sten_secondary).and. &
                           (im_opp_wt.ne.im_sten_secondary)) then
@@ -4552,7 +4556,11 @@ stop
 
               do im_curv=1,num_materials
 
-               wt_local=one/(one+i1**2+j1**2+k1**2)
+               wt_local=one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
+               LCEN=LSCEN_hold_fixed(im_curv)
+               LCEN=abs(LCEN)
+               wt_local=wt_local/(one+(four*LCEN/dx(1))**weight_power)
+
                do dirloc=1,SDIM
                 n_loc(dirloc)=nrm_local_merge(dirloc+(im_curv-1)*SDIM)
                enddo
