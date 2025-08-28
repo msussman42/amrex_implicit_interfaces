@@ -20450,11 +20450,13 @@ end subroutine RatePhaseChange
              velsrc_micro=source_perim_factor*abs(ksrc_derived*velsrc_micro/LL)
              velsrc=velsrc_micro
             else
-             print *,"microlayer_angle_source invalid"
+             print *,"microlayer_angle_source invalid: ", &
+               microlayer_angle_source
              stop
             endif
            else
-            print *,"macrolayer_size_source invalid"
+            print *,"macrolayer_size_source invalid: ", &
+              macrolayer_size_source
             stop
            endif
           else if (microlayer_substrate_source.eq.0) then
@@ -20466,7 +20468,8 @@ end subroutine RatePhaseChange
          else if (microlayer_size_source.eq.zero) then
           ! do nothing
          else
-          print *,"microlayer_size_source invalid"
+          print *,"macrolayer_size_source invalid(2): ", &
+             macrolayer_size_source
           stop
          endif
   
