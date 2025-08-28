@@ -16,6 +16,8 @@ ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
 ns.density_ratio_relaxation_factor=2.0
 
 # Surface tension: 50 degrees contact angle
+# LG,LS,GS
+# sigma_LG cos(thetaL)=sigma_GS-sigma_LS
 ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
 
 # Specific Heat Capacity
