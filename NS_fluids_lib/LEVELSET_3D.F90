@@ -3468,6 +3468,8 @@ stop
       integer i1,j1,k1
       integer ii,jj,kk
 
+      integer merge_flag
+
       real(amrex_real) LS(num_materials)
       real(amrex_real) LS_fixed(num_materials)
       real(amrex_real) LS_merge(num_materials)
@@ -3496,11 +3498,16 @@ stop
       integer im_sten_primary
       integer im_sten_secondary
       integer im_wt,im_opp_wt
+      integer in_top_two(num_materials)
+      integer in_top_two_sub(num_materials)
       real(amrex_real) :: wt_local
-      real(amrex_real) :: wt_local_triple
-      real(amrex_real) :: wt_local_triple_base
+      real(amrex_real) :: wt_local_combine
+      real(amrex_real) :: wt_local_triple_combine
+      real(amrex_real) :: wt_local_triple(num_materials)
       real(amrex_real) :: mag_loc
       real(amrex_real) :: n_loc(SDIM)
+      real(amrex_real) :: dist_local
+      integer :: normal_local
 
       real(amrex_real) least_squares_normal(num_interfaces,SDIM)
       real(amrex_real) least_squares_normal_wt(num_interfaces)
@@ -3537,6 +3544,7 @@ stop
       integer im3
       integer im3_local
       integer im3_loop
+      integer local_rigid_flag
 
       real(amrex_real) LSCEN_hold(num_materials)
       real(amrex_real) LSCEN_hold_merge(num_materials)
@@ -3570,7 +3578,6 @@ stop
         -ngrow_distance:ngrow_distance, &
         num_materials)
 
-      real(amrex_real), dimension(:,:), allocatable :: xsten0
       real(amrex_real), dimension(:,:), allocatable :: xsten_curv
 
       real(amrex_real) x1dcen,x1dside,x1dcross
@@ -3579,10 +3586,25 @@ stop
 
       integer, parameter :: nhalf=3
       integer nhalf_height ! in: fort_curvstrip
+
+      real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten0
+      real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten_local
+      real(amrex_real) :: xcenter_local(SDIM)
+
+
       integer mask1,mask2
       integer local_mask
       integer ihist
       real(amrex_real) ZEYU_thet_d,ZEYU_u_cl
+
+      real(amrex_real) :: LS_sub(num_materials)
+      real(amrex_real) :: LS_sub_fixed(num_materials)
+      integer im_sub_primary,im_sub_secondary,im_sub
+
+      real(amrex_real), target :: xpart(SDIM)
+      real(amrex_real),target,dimension(num_materials):: data_interp_local_LS
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out_LS
 
       real(amrex_real), parameter :: weight_power=4.0d0
 
@@ -3599,7 +3621,6 @@ stop
        stop
       endif 
  
-      allocate(xsten0(-nhalf:nhalf,SDIM))
       allocate(xsten_curv( &
        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
        SDIM))
@@ -3774,7 +3795,7 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call merge_levelset(xcenter,time,LS,LS_merge)
+         call merge_levelset(xcenter,time,LS,LS_merge,merge_flag)
 
           ! FIX_LS_tessellate is declared in: MOF.F90
           ! input : fluids tessellate, solids are embedded
@@ -3832,7 +3853,7 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
 
-            call merge_levelset(xcenter,time,LSSIDE,LS_merge)
+            call merge_levelset(xcenter,time,LSSIDE,LS_merge,merge_flag)
              !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
             call get_primary_material(LSSIDE_merge_fixed,im_opp)
@@ -4330,6 +4351,11 @@ stop
              do j1=LSstenlo(2),LSstenhi(2)
              do i1=LSstenlo(1),LSstenhi(1)
 
+              call gridsten_level(xsten_local,i+i1,j+j1,k+k1,level,nhalf)
+              do dirloc=1,SDIM
+               xcenter_local(dirloc)=xsten_local(0,dirloc)
+              enddo
+
               do inormal=1,SDIM*num_materials
                call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
                  LSPC_ptr,nrm_local(inormal))
@@ -4348,7 +4374,8 @@ stop
                  nrm_local, & !intent(in)
                  nrm_local_merge) !intent(out)
 
-              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
+              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge, &
+                merge_flag)
               call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
 
               do im_curv=1,num_materials
@@ -4381,85 +4408,57 @@ stop
               call get_secondary_material(LSCEN_hold_fixed, &
                  im_sten_primary,im_sten_secondary)
 
-              im3_local=0
-              do im3_loop=1,num_materials
-               if ((im3_loop.ne.im_sten_primary).and. &
-                   (im3_loop.ne.im_sten_secondary)) then
-                if (im3_local.eq.0) then
-                 im3_local=im3_loop
-                else if ((im3_local.ge.1).and. &
-                         (im3_local.le.num_materials)) then
-                 if (abs(LSCEN_hold_fixed(im3_loop)).le. &
-                     abs(LSCEN_hold_fixed(im3_local))) then
-                  im3_local=im3_loop
-                 endif
-                else
-                 print *,"im3_local invalid: ",im3_local
-                 stop
-                endif
-               endif
-              enddo !im3_loop=1,num_materials
-
-              if (im3_local.eq.0) then
-               if (num_materials.eq.2) then
-                !do nothing
-               else
-                print *,"expecting num_materials=2: ",num_materials
-                stop
-               endif
-               wt_local_triple_base=0.0001d0
-              else if ((im3_local.ge.1).and. &
-                       (im3_local.le.num_materials).and. &
-                       (im3_local.ne.im_sten_primary).and. &
-                       (im3_local.ne.im_sten_secondary)) then
-               if (num_materials.gt.2) then
-                !do nothing
-               else
-                print *,"expecting num_materials>2: ",num_materials
-                stop
-               endif
-               LCEN=LSCEN_hold_fixed(im3_local)
+              do im_wt=1,num_materials
+               LCEN=LSCEN_hold_fixed(im_wt)
                LCEN=abs(LCEN)
-               wt_local_triple_base=one/(one+(four*LCEN/dx(1))**weight_power)
-              else
-               print *,"im3_local invalid: ",im3_local
-               stop
-              endif
+               wt_local_triple(im_wt)=one/(one+(four*LCEN/dx(1))**weight_power)
+              enddo ! do im_wt=1,num_materials
+
+              do im_wt=1,num_materials
+               if ((im_wt.eq.im_sten_primary).or. &
+                   (im_wt.eq.im_sten_secondary)) then
+                in_top_two(im_wt)=1
+               else 
+                in_top_two(im_wt)=0
+               endif
+              enddo !im_wt=1,..,nmat
+     
               
               do im_wt=1,num_materials
                do im_opp_wt=im_wt+1,num_materials
                 call get_iten(im_wt,im_opp_wt,iten_local)
-                if ((im_wt.eq.im_sten_primary).or. &
-                    (im_opp_wt.eq.im_sten_primary)) then
-                 if ((im_wt.eq.im_sten_secondary).or. &
-                     (im_opp_wt.eq.im_sten_secondary)) then
-                  wt_local=one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
-                  LCEN=half*(LSCEN_hold_fixed(im_wt)- &
-                             LSCEN_hold_fixed(im_opp_wt))
-                  LCEN=abs(LCEN)
-                  wt_local=wt_local/(one+(four*LCEN/dx(1))**weight_power)
-                  wt_local_triple=wt_local_triple_base
-                 else if ((im_wt.ne.im_sten_secondary).and. &
-                          (im_opp_wt.ne.im_sten_secondary)) then
-                  wt_local=0.0001d0
-                  wt_local_triple=0.0001d0
-                 else
-                  print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
-                  print *,"im_sten_secondary: ",im_sten_secondary
-                  stop
+
+                wt_local= &
+                  one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
+                LCEN=half*(LSCEN_hold_fixed(im_wt)- &
+                           LSCEN_hold_fixed(im_opp_wt))
+                LCEN=abs(LCEN)
+                wt_local=wt_local/ &
+                    (one+(four*LCEN/dx(1))**weight_power)
+
+                im3_local=0
+                do im3_loop=1,num_materials
+                 if ((im3_loop.ne.im_wt).and. &
+                     (im3_loop.ne.im_opp_wt)) then
+                  if (im3_local.eq.0) then
+                   im3_local=im3_loop
+                  else if ((im3_local.ge.1).and. &
+                           (im3_local.le.num_materials)) then
+                   if (abs(LSCEN_hold_fixed(im3_loop)).le. &
+                       abs(LSCEN_hold_fixed(im3_local))) then
+                    im3_local=im3_loop
+                   endif
+                  else
+                   print *,"im3_local invalid: ",im3_local
+                   stop
+                  endif
                  endif
-                else if ((im_wt.ne.im_sten_primary).and. &
-                         (im_opp_wt.ne.im_sten_primary)) then
-                 wt_local=0.0001d0
-                 wt_local_triple=0.0001d0
-                else
-                 print *,"im_wt, im_opp_wt invalid: ",im_wt,im_opp_wt
-                 print *,"im_sten_primary: ",im_sten_primary
-                 stop
-                endif
+                enddo !im3_loop=1,num_materials
 
                 if ((is_rigid(im_wt).eq.1).or. &
                     (is_rigid(im_opp_wt).eq.1)) then
+
+                 local_rigid_flag=1
 
                  if ((is_rigid(im_wt).eq.1).and. &
                      (is_rigid(im_opp_wt).eq.1)) then
@@ -4469,11 +4468,33 @@ stop
                    do dirloc=1,SDIM
                     n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                    enddo
+                   dist_local=LSCEN_hold_fixed(im_opp_wt)
+
+                   if (in_top_two(im_opp_wt).eq.0) then
+                    normal_local=0
+                   else if (in_top_two(im_opp_wt).eq.1) then
+                    normal_local=1
+                   else
+                    print *,"in_top_two invalid:",in_top_two
+                    stop
+                   endif
+       
                   else if (LSCEN_hold_fixed(im_wt).le. &
                            LSCEN_hold_fixed(im_opp_wt)) then
                    do dirloc=1,SDIM
                     n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
                    enddo
+                   dist_local=LSCEN_hold_fixed(im_wt)
+
+                   if (in_top_two(im_wt).eq.0) then
+                    normal_local=0
+                   else if (in_top_two(im_wt).eq.1) then
+                    normal_local=1
+                   else
+                    print *,"in_top_two invalid:",in_top_two
+                    stop
+                   endif
+
                   else
                    print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
                    print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
@@ -4487,11 +4508,33 @@ stop
                   do dirloc=1,SDIM
                    n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
                   enddo
+                  dist_local=LSCEN_hold_fixed(im_wt)
+
+                  if (in_top_two(im_wt).eq.0) then
+                   normal_local=0
+                  else if (in_top_two(im_wt).eq.1) then
+                   normal_local=1
+                  else
+                   print *,"in_top_two invalid:",in_top_two
+                   stop
+                  endif
+
                  else if ((is_rigid(im_wt).eq.0).and. &
                           (is_rigid(im_opp_wt).eq.1)) then
                   do dirloc=1,SDIM
                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
+                  dist_local=LSCEN_hold_fixed(im_opp_wt)
+  
+                  if (in_top_two(im_opp_wt).eq.0) then
+                   normal_local=0
+                  else if (in_top_two(im_opp_wt).eq.1) then
+                   normal_local=1
+                  else
+                   print *,"in_top_two invalid:",in_top_two
+                   stop
+                  endif
+
                  else
                   print *,"is_rigid(im_wt or im_opp_wt) invalid: ", &
                    im_wt,im_opp_wt, &
@@ -4503,16 +4546,40 @@ stop
                 else if ((is_rigid(im_wt).eq.0).and. &
                          (is_rigid(im_opp_wt).eq.0)) then
 
+                 local_rigid_flag=0
+
                  if (LSCEN_hold_fixed(im_wt).ge. &
                      LSCEN_hold_fixed(im_opp_wt)) then
                   do dirloc=1,SDIM
                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
+                  dist_local=LSCEN_hold_fixed(im_opp_wt)
+
+                  if (in_top_two(im_opp_wt).eq.0) then
+                   normal_local=0
+                  else if (in_top_two(im_opp_wt).eq.1) then
+                   normal_local=1
+                  else
+                   print *,"in_top_two invalid:",in_top_two
+                   stop
+                  endif
+
                  else if (LSCEN_hold_fixed(im_wt).le. &
                           LSCEN_hold_fixed(im_opp_wt)) then
                   do dirloc=1,SDIM
                    n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
                   enddo
+                  dist_local=LSCEN_hold_fixed(im_wt)
+
+                  if (in_top_two(im_wt).eq.0) then
+                   normal_local=0
+                  else if (in_top_two(im_wt).eq.1) then
+                   normal_local=1
+                  else
+                   print *,"in_top_two invalid:",in_top_two
+                   stop
+                  endif
+
                  else
                   print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
                   print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
@@ -4527,30 +4594,114 @@ stop
                  stop
                 endif
 
-                call prepare_normal(n_loc,RR,mag_loc,SDIM)
+                call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
 
                 if (mag_loc.eq.zero) then
-                 wt_local=zero
+                 normal_local=0
                 else if (mag_loc.gt.zero) then
-                 !do nothing
+
+                 do dirloc=1,SDIM
+                  xpart(dirloc)= &
+                    xcenter_local(dirloc)-dist_local*n_loc(dirloc)
+                 enddo
+
+                 call prepare_normal(n_loc,RR,mag_loc,SDIM)
+
+                 if (merge_flag.eq.0) then
+
+                  if (local_rigid_flag.eq.0) then
+
+                   data_out_LS%data_interp=>data_interp_local_LS
+                   data_in%scomp=1 
+                   data_in%ncomp=num_materials
+                   data_in%level=level
+                   data_in%finest_level=finest_level
+                   data_in%bfact=bfact
+                   data_in%dx=dx
+                   data_in%xlo=xlo
+                   data_in%fablo=fablo
+                   data_in%fabhi=fabhi
+                   data_in%xtarget=xpart
+                   call interp_from_grid_util(data_in,LSPC_ptr,data_out_LS)
+                   do im_sub=1,num_materials
+                    LS_sub(im_sub)=data_out_LS%data_interp(im_sub)
+                   enddo
+                   call FIX_LS_tessellate(LS_sub,LS_sub_fixed)
+                   call get_primary_material(LS_sub_fixed,im_sub_primary)
+                   call get_secondary_material(LS_sub_fixed, &
+                     im_sub_primary,im_sub_secondary)
+ 
+                   do im_sub=1,num_materials
+                    if ((im_sub.eq.im_sub_primary).or. &
+                        (im_sub.eq.im_sub_secondary)) then
+                     in_top_two_sub(im_sub)=1
+                    else 
+                     in_top_two_sub(im_sub)=0
+                    endif
+                   enddo !im_sub=1,..,nmat
+
+                   if ((in_top_two_sub(im_wt).eq.1).and. &
+                       (in_top_two_sub(im_opp_wt).eq.1)) then
+                    do im_sub=1,num_materials
+                     if ((im_sub.ne.im_wt).and.(im_sub.ne.im_opp_wt)) then
+                      if (LS_sub_fixed(im_sub).ge.-EPS1*dx(1)) then
+                       normal_local=0
+                      endif
+                     endif
+                    enddo
+                   else
+                    normal_local=0
+                   endif
+
+                  else if (local_rigid_flag.eq.1) then
+                   !do nothing
+                  else
+                   print *,"local_rigid_flag invalid: ",local_rigid_flag
+                   stop
+                  endif
+
+                 else if (merge_flag.eq.1) then
+                  !do nothing
+                 else
+                  print *,"merge_flag invalid: ",merge_flag
+                  stop
+                 endif
+              
                 else
                  print *,"mag_loc invalid: ",mag_loc
                  stop
                 endif
 
+                if (normal_local.eq.0) then
+                 wt_local_combine=0.0001d0
+                 wt_local_triple_combine=0.0001d0
+                else if (normal_local.eq.1) then
+                 wt_local_combine=wt_local
+                 if (local_rigid_flag.eq.1) then
+                  wt_local_triple_combine=1.0d0
+                 else if (im3_local.eq.0) then
+                  wt_local_triple_combine=1.0d0
+                 else
+                  wt_local_triple_combine=wt_local_triple(im3_local)
+                 endif
+                else
+                 print *,"normal_local invalid: ",normal_local
+                 stop
+                endif
+ 
                 do dirloc=1,SDIM
                  least_squares_normal(iten_local,dirloc)= &
                   least_squares_normal(iten_local,dirloc)+ &
-                  wt_local*n_loc(dirloc)
+                  wt_local_combine*n_loc(dirloc)
                  least_squares_normal_triple(iten_local,dirloc)= &
                   least_squares_normal_triple(iten_local,dirloc)+ &
-                  wt_local_triple*wt_local*n_loc(dirloc)
+                  wt_local_triple_combine*wt_local_combine*n_loc(dirloc)
                 enddo
                 least_squares_normal_wt(iten_local)= &
-                  least_squares_normal_wt(iten_local)+wt_local
+                  least_squares_normal_wt(iten_local)+wt_local_combine
                 least_squares_normal_triple_wt(iten_local)= &
                   least_squares_normal_triple_wt(iten_local)+ &
-                  wt_local_triple*wt_local
+                  wt_local_triple_combine*wt_local_combine
                enddo !im_opp_wt=im_wt+1,num_materials
               enddo !im_wt=1,num_materials
 
@@ -4824,7 +4975,6 @@ stop
       enddo
       enddo  ! i,j,k
 
-      deallocate(xsten0)
       deallocate(xsten_curv)
       deallocate(fort_caller_string)
 
