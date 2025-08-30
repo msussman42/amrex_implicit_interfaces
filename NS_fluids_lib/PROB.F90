@@ -4704,7 +4704,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! => merge materials j and k.
        !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
        ! => merge materials i and k.
-      subroutine merge_levelset(xpos,time,LS,LS_merge)
+      subroutine merge_levelset(xpos,time,LS,LS_merge,merge_flag)
       use global_utility_module
       use MOF_routines_module
 
@@ -4713,6 +4713,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: LS(num_materials)
       real(amrex_real), INTENT(out) :: LS_merge(num_materials)
+      integer, INTENT(out) :: merge_flag
+
       integer im,im_opp,im_3
       integer iten
       integer iten_interface
@@ -4721,6 +4723,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer im_tertiary
       real(amrex_real) :: user_tension(num_interfaces)
       real(amrex_real) :: def_thermal(num_materials)
+
+      merge_flag=0
 
       do im=1,num_materials
        def_thermal(im)=room_temperature
@@ -4792,6 +4796,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               if (user_tension(iten_interface).eq.zero) then
                ! do nothing
               else if (user_tension(iten_interface).gt.zero) then
+
+               merge_flag=1
 
                LS_merge(im)=-99999.0d0 ! delete the ice/rigid/rigid_CL material.
 
@@ -5275,14 +5281,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(out) :: gradh
       real(amrex_real) :: LSleft_merge(num_materials)
       real(amrex_real) :: LSright_merge(num_materials)
+      integer :: merge_flag
       integer, INTENT(out) :: imL,imR
 
       im=0
       im_opp=0
       gradh=zero
 
-      call merge_levelset(xpos,time,LSleft,LSleft_merge)
-      call merge_levelset(xpos,time,LSright,LSright_merge)
+      call merge_levelset(xpos,time,LSleft,LSleft_merge,merge_flag)
+      call merge_levelset(xpos,time,LSright,LSright_merge,merge_flag)
 
       call get_primary_material(LSleft_merge,imL)
       call get_primary_material(LSright_merge,imR)
