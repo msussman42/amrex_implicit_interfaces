@@ -4414,10 +4414,10 @@ stop
                   one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
 
                 if (is_rigid(im_wt).eq.1) then
-                 wt_local=wt_local_triple(im_wt)
+                 wt_local=wt_local*wt_local_triple(im_wt)
                  local_rigid_flag=1
                 else if (is_rigid(im_opp_wt).eq.1) then
-                 wt_local=wt_local_triple(im_opp_wt)
+                 wt_local=wt_local*wt_local_triple(im_opp_wt)
                  local_rigid_flag=1
                 else if ((is_rigid(im_wt).eq.0).and. &
                          (is_rigid(im_opp_wt).eq.0)) then
@@ -4613,7 +4613,8 @@ stop
                   else if ((in_top_two(im_wt).eq.1).and. &
                            (in_top_two(im_opp_wt).eq.1)) then
                    do im_sub=1,num_materials
-                    if ((im_sub.ne.im_wt).and.(im_sub.ne.im_opp_wt)) then
+                    if ((im_sub.ne.im_wt).and. &
+                        (im_sub.ne.im_opp_wt)) then
                      if (LS_sub_fixed(im_sub).ge.-EPS2*dx(1)) then
                       normal_local=0
                      else if (LS_sub_fixed(im_sub).le.-EPS2*dx(1)) then
