@@ -4767,6 +4767,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (im_tertiary.eq.0) then
              ! do nothing (there is no surface tension in this case)
             else if (is_rigid(im_tertiary).eq.1) then
+             print *,"get_tertiary_material only returns fluids not solids"
              print *,"expecting is_rigid(im_tertiary)==0"
              stop
             else if (is_ice(im_tertiary).eq.1) then

@@ -338,6 +338,7 @@ extern "C"
       Real* species_molar_mass,
       Real* denconst_interface,
       Real* denconst_interface_min,
+      int* lamb_capillary_wave_speed, //1=>(rho_a+rho_w)/2
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
