@@ -889,7 +889,8 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
-Real NavierStokes::density_ratio_relaxation_factor=10.0;
+Real NavierStokes::density_ratio_relaxation_factor=100.0;
+int NavierStokes::lamb_capillary_wave_speed=1; //def=1 (rho_a+rho_w)/2
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -4243,6 +4244,8 @@ NavierStokes::read_params ()
 
     pp.queryAdd("density_ratio_relaxation_factor",
 		density_ratio_relaxation_factor);
+    pp.queryAdd("lamb_capillary_wave_speed",
+		lamb_capillary_wave_speed);
 
     for (int im=0;im<num_materials;im++) {
      for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
@@ -5971,6 +5974,8 @@ NavierStokes::read_params ()
 
      std::cout << "density_ratio_relaxation_factor= " << 
 	     density_ratio_relaxation_factor << '\n';
+     std::cout << "lamb_capillary_wave_speed= " << 
+	     lamb_capillary_wave_speed << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
@@ -22961,6 +22966,7 @@ void NavierStokes::MaxAdvectSpeed(
     species_molar_mass.dataPtr(),
     denconst_interface.dataPtr(), //fort_estdt
     denconst_interface_min.dataPtr(), //fort_estdt
+    &lamb_capillary_wave_speed, //fort_estdt 1 => (rho_a+rho_w)/2
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
