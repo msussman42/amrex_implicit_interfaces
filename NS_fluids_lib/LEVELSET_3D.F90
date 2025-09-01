@@ -4429,6 +4429,9 @@ stop
                  local_rigid_flag=0
                 else
                  print *,"is_rigid(im_wt) or is_rigid(im_opp_wt) invalid"
+                 print *,"im_wt,is_rigid(im_wt) ",im_wt,is_rigid(im_wt)
+                 print *,"im_opp_wt,is_rigid(im_opp_wt) ", &
+                   im_opp_wt,is_rigid(im_opp_wt)
                  stop
                 endif
 
@@ -4468,7 +4471,7 @@ stop
                    do dirloc=1,SDIM
                     n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                    enddo
-                   dist_local=LSCEN_hold_fixed(im_opp_wt)
+                   dist_local=-LSCEN_hold_fixed(im_opp_wt)
 
                   else if (LSCEN_hold_fixed(im_wt).le. &
                            LSCEN_hold_fixed(im_opp_wt)) then
@@ -4500,7 +4503,7 @@ stop
                   do dirloc=1,SDIM
                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
-                  dist_local=LSCEN_hold_fixed(im_opp_wt)
+                  dist_local=-LSCEN_hold_fixed(im_opp_wt)
   
                  else
                   print *,"is_rigid(im_wt or im_opp_wt) invalid: ", &
@@ -4517,7 +4520,7 @@ stop
                   do dirloc=1,SDIM
                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
-                  dist_local=LSCEN_hold_fixed(im_opp_wt)
+                  dist_local=-LSCEN_hold_fixed(im_opp_wt)
 
                  else if (LSCEN_hold_fixed(im_wt).le. &
                           LSCEN_hold_fixed(im_opp_wt)) then

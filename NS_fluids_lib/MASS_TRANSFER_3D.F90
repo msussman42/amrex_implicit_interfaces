@@ -7949,14 +7949,14 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
       
       if (nstate.eq.STATE_NCOMP) then
        ! do nothing
       else 
-       print *,"nstate invalid"
+       print *,"nstate invalid: ",nstate
        stop
       endif
 
@@ -8346,7 +8346,7 @@ stop
                      (LShere(im_source).ge.zero)) then
 
                   if (LShere(im_dest).ge.zero) then
-                   LS_pos=LShere(im_source)
+                   LS_pos=LShere(im_source) !expecting LS_pos<0
                    do dir=1,SDIM
                       ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
                     nrmCP(dir)= &
@@ -8357,7 +8357,7 @@ stop
                      ! normal_probe_factor=1/2 or 1
                      ! microscale_probe_size=EPS2
                     xdst(dir)=xI(dir)- &
-                     normal_probe_factor*dxmin*nrmCP(dir) 
+                     normal_probe_factor*dxmin*nrmCP(dir)
                     xsrc(dir)=xI(dir)+ &
                      normal_probe_factor*dxmin*nrmCP(dir)
                     xdst_micro(dir)=xI(dir)- &
@@ -8366,7 +8366,7 @@ stop
                      microscale_probe_size*dxmin*nrmCP(dir)
                    enddo ! dir=1..sdim
                   else if (LShere(im_source).ge.zero) then
-                   LS_pos=LShere(im_dest)
+                   LS_pos=LShere(im_dest) !expecting LS_pos<0
                    do dir=1,SDIM
                     nrmCP(dir)= &
                       LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)

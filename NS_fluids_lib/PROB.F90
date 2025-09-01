@@ -24487,6 +24487,7 @@ end subroutine initialize2d
        real(amrex_real) dxlevel(SDIM)
        integer domlo_level(SDIM)
        integer domhi_level(SDIM)
+       integer, PARAMETER :: cache_buf=16
 
        if (max_level.lt.0) then
         print *,"max_level invalid"
@@ -24516,7 +24517,7 @@ end subroutine initialize2d
         endif
         ncell(dir)=domhi(dir)-domlo(dir)+1
         if (ncell(dir).lt.2) then
-         print *,"ncell invalid"
+         print *,"ncell invalid: ",dir,ncell(dir)
          stop
         endif
         if (ncell(dir).gt.max_ncell) then
@@ -24525,7 +24526,7 @@ end subroutine initialize2d
        enddo ! dir
 
        if (max_ncell.lt.2) then
-        print *,"max_ncell invalid"
+        print *,"max_ncell invalid: ",max_ncell
         stop
        endif
 
@@ -24539,8 +24540,8 @@ end subroutine initialize2d
 
        if (grid_cache_allocated.eq.0) then
 
-        cache_index_low=-4*bfactmax
-        cache_index_high=2*max_ncell+4*bfactmax
+        cache_index_low=-cache_buf*bfactmax
+        cache_index_high=2*max_ncell+cache_buf*bfactmax
         cache_max_level=max_level
 
         print *,"allocate grid_cache"
@@ -24584,14 +24585,18 @@ end subroutine initialize2d
 
          do dir=1,SDIM
           if (domlo_level(dir).ne.0) then
-           print *,"domlo_level invalid"
+           print *,"domlo_level invalid: ",dir,domlo_level(dir)
            stop
           endif
-          do i=domlo_level(dir)-2*bfactmax,domhi_level(dir)+2*bfactmax
+          do i=domlo_level(dir)-(cache_buf/2)*bfactmax, &
+               domhi_level(dir)+(cache_buf/2)*bfactmax
            inode=2*i
            if ((inode.lt.cache_index_low).or. &
                (inode+1.gt.cache_index_high)) then
-            print *,"icell outside of cache range"
+            print *,"inode outside of cache range"
+            print *,"inode=",inode
+            print *,"cache_index_low=",cache_index_low
+            print *,"cache_index_high=",cache_index_high
             stop
            endif
            call gridsten1D(xsten,problo,i,domlo, &

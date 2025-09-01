@@ -10527,23 +10527,50 @@ end subroutine print_visual_descriptor
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
-       print *,"(2) break GLOBALUTIL.F90:5613"
+       print *,"(2) break GLOBALUTIL.F90:10530"
        print *,"By pressing <CTRL C> during this read statement, the"
        print *,"gdb debugger will produce a stacktrace."
        print *,"type 0 then <enter> to exit the program"
 
-       read (*,*) dummy_input
+!      read (*,*) dummy_input
        stop
       endif
       if ((2*j-nhalf.lt.cache_index_low).or. &
           (2*j+nhalf.gt.cache_index_high)) then
-       print *,"j out of range"
+       print *,"j out of range gridsten level"
+
+       print *,"j,nhalf,level ",j,nhalf,level
+       print *,"cache_index_low ",cache_index_low
+       print *,"cache_index_high ",cache_index_high
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:10548"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+!      read (*,*) dummy_input
+
        stop
       endif
       if (SDIM.eq.3) then
        if ((2*k-nhalf.lt.cache_index_low).or. &
            (2*k+nhalf.gt.cache_index_high)) then
-        print *,"k out of range"
+        print *,"k out of range gridsten level"
+
+        print *,"k,nhalf,level ",k,nhalf,level
+        print *,"cache_index_low ",cache_index_low
+        print *,"cache_index_high ",cache_index_high
+
+        print *,"(breakpoint) break point and gdb: "
+        print *,"(1) compile with the -g option"
+        print *,"(2) break GLOBALUTIL.F90:10568"
+        print *,"By pressing <CTRL C> during this read statement, the"
+        print *,"gdb debugger will produce a stacktrace."
+        print *,"type 0 then <enter> to exit the program"
+
+!       read (*,*) dummy_input
         stop
        endif
       endif
@@ -10664,17 +10691,25 @@ end subroutine print_visual_descriptor
           (2*i-ii+nhalf.gt.cache_index_high)) then
        print *,"i out of range gridstenMAC_level"
        print *,"i,nhalf,level,grid_type ",i,nhalf,level,grid_type
+       print *,"ii,cache_index_low,cache_index_high ", &
+          ii,cache_index_low,cache_index_high
        stop
       endif
       if ((2*j-jj-nhalf.lt.cache_index_low).or. &
           (2*j-jj+nhalf.gt.cache_index_high)) then
-       print *,"j out of range"
+       print *,"j out of range gridstenMAC_level"
+       print *,"j,nhalf,level,grid_type ",j,nhalf,level,grid_type
+       print *,"jj,cache_index_low,cache_index_high ", &
+          jj,cache_index_low,cache_index_high
        stop
       endif
       if (SDIM.eq.3) then
        if ((2*k-kk-nhalf.lt.cache_index_low).or. &
            (2*k-kk+nhalf.gt.cache_index_high)) then
-        print *,"k out of range"
+        print *,"k out of range gridstenMAC_level"
+        print *,"k,nhalf,level,grid_type ",k,nhalf,level,grid_type
+        print *,"kk,cache_index_low,cache_index_high ", &
+          kk,cache_index_low,cache_index_high
         stop
        endif
       endif
@@ -10717,17 +10752,25 @@ end subroutine print_visual_descriptor
           (2*i-1+nhalf.gt.cache_index_high)) then
        print *,"i out of range gridstenND_level"
        print *,"i,nhalf,level ",i,nhalf,level
+       print *,"cache_index_low ",cache_index_low
+       print *,"cache_index_high ",cache_index_high
        stop
       endif
       if ((2*j-1-nhalf.lt.cache_index_low).or. &
           (2*j-1+nhalf.gt.cache_index_high)) then
-       print *,"j out of range"
+       print *,"j out of range gridstenND_level"
+       print *,"j,nhalf,level ",j,nhalf,level
+       print *,"cache_index_low ",cache_index_low
+       print *,"cache_index_high ",cache_index_high
        stop
       endif
       if (SDIM.eq.3) then
        if ((2*k-1-nhalf.lt.cache_index_low).or. &
            (2*k-1+nhalf.gt.cache_index_high)) then
-        print *,"k out of range"
+        print *,"k out of range gridstenND_level"
+        print *,"k,nhalf,level ",k,nhalf,level
+        print *,"cache_index_low ",cache_index_low
+        print *,"cache_index_high ",cache_index_high
         stop
        endif
       endif
