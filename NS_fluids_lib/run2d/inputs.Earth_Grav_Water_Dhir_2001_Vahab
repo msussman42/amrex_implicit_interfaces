@@ -13,7 +13,7 @@ ns.macrolayer_size=5.0000E-02 0.0 0.0
 
 # Density
 ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
-ns.density_ratio_relaxation_factor=2.0
+ns.density_ratio_relaxation_factor=1000.0
 ns.lamb_capillary_wave_speed=1 #def=1 (rho_a+rho_w)/2
 
 # Surface tension: 50 degrees contact angle
@@ -113,12 +113,12 @@ ns.num_SDC_outer_sweeps=1
 ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 10000    # number of timesteps between checkpoints
+amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.file_name_digits= 7
-#amr.restart         = chk36000
+#amr.restart         = chk0010000
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
