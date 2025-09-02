@@ -2969,7 +2969,9 @@ stop
                drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous_stress_tensor(i1,j1)
 
-                !physical mu * (gradU + gradU^T)
+                !physical mu * (gradU + gradU^T) 
+                !VISCOUS0STRESS does not include turbulence modeling
+                !stresses.
                ibase=DRAGCOMP_VISCOUS0STRESS+6*(im_test-1)+dir
                drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous0_stress_tensor(i1,j1)

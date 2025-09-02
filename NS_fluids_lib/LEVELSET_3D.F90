@@ -3618,12 +3618,12 @@ stop
        stop
       endif 
  
-      allocate(xsten_curv( &
-       -(2*ngrow_distance+1):(2*ngrow_distance+1), &
-       SDIM))
+      nhalf_height=2*ngrow_distance+1 
+
+      allocate(xsten_curv(-nhalf_height:nhalf_height,SDIM))
  
       if (bfact.lt.1) then
-       print *,"bfact invalid90"
+       print *,"bfact invalid90: ",bfact
        stop
       endif
 
@@ -3775,6 +3775,7 @@ stop
         if ((mask2.eq.1).or.(mask1.eq.0)) then
 
          call gridsten_level(xsten0,i,j,k,level,nhalf)
+         call gridsten_level(xsten_curv,i,j,k,level,nhalf_height)
 
          ! center of cell
          do dirloc=1,SDIM
@@ -4122,9 +4123,6 @@ stop
               LSstenhi(dirloc)=ngrow_distance
              enddo
    
-             nhalf_height=2*ngrow_distance+1 
-             call gridsten_level(xsten_curv,i,j,k,level,nhalf_height)
-
              ! get normals at the cell center.
              do inormal=1,SDIM*num_materials
               nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),num_materials+inormal)
@@ -4557,7 +4555,24 @@ stop
                  do dirloc=1,SDIM
                   xpart(dirloc)= &
                     xcenter_local(dirloc)-dist_local*n_loc(dirloc)
-                 enddo
+
+                  if ((xpart(dirloc).lt. &
+                       xsten_curv(-nhalf_height,dirloc)).or. &
+                      (xpart(dirloc).gt. &
+                       xsten_curv(nhalf_height,dirloc))) then
+                   normal_local=0
+                  else if ((xpart(dirloc).ge. &
+                            xsten_curv(-nhalf_height,dirloc)).and. &
+                           (xpart(dirloc).le. &
+                            xsten_curv(nhalf_height,dirloc))) then
+                   !do nothing
+                  else
+                   print *,"xpart or xsten_curv invalid: ", &
+                     xpart,xsten_curv
+                   stop
+                  endif
+
+                 enddo ! do dirloc=1,SDIM
 
                  call prepare_normal(n_loc,RR,mag_loc,SDIM)
 
@@ -4571,84 +4586,93 @@ stop
                   stop
                  endif
 
-                 if ((merge_flag.eq.0).or. &
-                     (local_rigid_flag.eq.1)) then
+                 if (normal_local.eq.1) then
 
-                  data_out_LS%data_interp=>data_interp_local_LS
-                  data_in%scomp=1 
-                  data_in%ncomp=num_materials
-                  data_in%level=level
-                  data_in%finest_level=finest_level
-                  data_in%bfact=bfact
-                  data_in%dx=dx
-                  data_in%xlo=xlo
-                  data_in%fablo=fablo
-                  data_in%fabhi=fabhi
-                  data_in%xtarget=xpart
-                  call interp_from_grid_util(data_in,LSPC_ptr,data_out_LS)
-                  do im_sub=1,num_materials
-                   LS_sub(im_sub)=data_out_LS%data_interp(im_sub)
-                  enddo
-                  call FIX_LS_tessellate(LS_sub,LS_sub_fixed)
-                  call get_primary_material(LS_sub_fixed,im_sub_primary)
-                  call get_secondary_material(LS_sub_fixed, &
-                    im_sub_primary,im_sub_secondary)
- 
-                  do im_sub=1,num_materials
-                   if ((im_sub.eq.im_sub_primary).or. &
-                       (im_sub.eq.im_sub_secondary)) then
-                    in_top_two(im_sub)=1
-                   else if ((im_sub.ne.im_sub_primary).and. &
-                            (im_sub.ne.im_sub_secondary)) then
-                    in_top_two(im_sub)=0
-                   else
-                    print *,"im_sub invalid: ",im_sub
-                    stop
-                   endif
-                  enddo !im_sub=1,..,nmat
+                  if ((merge_flag.eq.0).or. &
+                      (local_rigid_flag.eq.1)) then
 
-                  if ((is_rigid(im_wt).eq.1).and. &
-                      (in_top_two(im_wt).eq.1)) then
-                   !do nothing
-                  else if ((is_rigid(im_opp_wt).eq.1).and. &
-                           (in_top_two(im_opp_wt).eq.1)) then
-                   !do nothing
-                  else if ((in_top_two(im_wt).eq.1).and. &
-                           (in_top_two(im_opp_wt).eq.1)) then
+                   data_out_LS%data_interp=>data_interp_local_LS
+                   data_in%scomp=1 
+                   data_in%ncomp=num_materials
+                   data_in%level=level
+                   data_in%finest_level=finest_level
+                   data_in%bfact=bfact
+                   data_in%dx=dx
+                   data_in%xlo=xlo
+                   data_in%fablo=fablo
+                   data_in%fabhi=fabhi
+                   data_in%xtarget=xpart
+                   call interp_from_grid_util(data_in,LSPC_ptr,data_out_LS)
                    do im_sub=1,num_materials
-                    if ((im_sub.ne.im_wt).and. &
-                        (im_sub.ne.im_opp_wt)) then
-                     if (LS_sub_fixed(im_sub).ge.-EPS2*dx(1)) then
-                      normal_local=0
-                     else if (LS_sub_fixed(im_sub).le.-EPS2*dx(1)) then
-                      !do nothing
-                     else
-                      print *,"LS_sub_fixed(im_sub) invalid ",im_sub, &
-                        LS_sub_fixed
-                      stop
-                     endif
-                    else if ((im_sub.eq.im_wt).or. &
-                             (im_sub.eq.im_opp_wt)) then
-                     !do nothing
+                    LS_sub(im_sub)=data_out_LS%data_interp(im_sub)
+                   enddo
+                   call FIX_LS_tessellate(LS_sub,LS_sub_fixed)
+                   call get_primary_material(LS_sub_fixed,im_sub_primary)
+                   call get_secondary_material(LS_sub_fixed, &
+                     im_sub_primary,im_sub_secondary)
+  
+                   do im_sub=1,num_materials
+                    if ((im_sub.eq.im_sub_primary).or. &
+                        (im_sub.eq.im_sub_secondary)) then
+                     in_top_two(im_sub)=1
+                    else if ((im_sub.ne.im_sub_primary).and. &
+                             (im_sub.ne.im_sub_secondary)) then
+                     in_top_two(im_sub)=0
                     else
                      print *,"im_sub invalid: ",im_sub
                      stop
                     endif
-                   enddo ! do im_sub=1,num_materials
-                  else if ((in_top_two(im_wt).eq.0).or. &
-                           (in_top_two(im_opp_wt).eq.0)) then
-                   normal_local=0
+                   enddo !im_sub=1,..,nmat
+
+                   if ((is_rigid(im_wt).eq.1).and. &
+                       (in_top_two(im_wt).eq.1)) then
+                    !do nothing
+                   else if ((is_rigid(im_opp_wt).eq.1).and. &
+                            (in_top_two(im_opp_wt).eq.1)) then
+                    !do nothing
+                   else if ((in_top_two(im_wt).eq.1).and. &
+                            (in_top_two(im_opp_wt).eq.1)) then
+                    do im_sub=1,num_materials
+                     if ((im_sub.ne.im_wt).and. &
+                         (im_sub.ne.im_opp_wt)) then
+                      if (LS_sub_fixed(im_sub).ge.-EPS2*dx(1)) then
+                       normal_local=0
+                      else if (LS_sub_fixed(im_sub).le.-EPS2*dx(1)) then
+                       !do nothing
+                      else
+                       print *,"LS_sub_fixed(im_sub) invalid ",im_sub, &
+                         LS_sub_fixed
+                       stop
+                      endif
+                     else if ((im_sub.eq.im_wt).or. &
+                              (im_sub.eq.im_opp_wt)) then
+                      !do nothing
+                     else
+                      print *,"im_sub invalid: ",im_sub
+                      stop
+                     endif
+                    enddo ! do im_sub=1,num_materials
+                   else if ((in_top_two(im_wt).eq.0).or. &
+                            (in_top_two(im_opp_wt).eq.0)) then
+                    normal_local=0
+                   else
+                    print *,"in_top_two invalid ",in_top_two
+                    stop
+                   endif
+
+                  else if ((merge_flag.eq.1).and. &
+                           (local_rigid_flag.eq.0)) then
+                   !do nothing
                   else
-                   print *,"in_top_two invalid ",in_top_two
+                   print *,"merge_flag or local_rigid_flag invalid: ", &
+                     merge_flag,local_rigid_flag
                    stop
                   endif
 
-                 else if ((merge_flag.eq.1).and. &
-                          (local_rigid_flag.eq.0)) then
+                 else if (normal_local.eq.0) then
                   !do nothing
                  else
-                  print *,"merge_flag or local_rigid_flag invalid: ", &
-                    merge_flag,local_rigid_flag
+                  print *,"normal_local invalid: ",normal_local
                   stop
                  endif
               
@@ -4947,14 +4971,14 @@ stop
         else if ((mask2.eq.0).and.(mask1.eq.1)) then
          ! do nothing
         else
-         print *,"mask2 or mask1 invalid"
+         print *,"mask2 or mask1 invalid: ",mask1,mask2
          stop
         endif
 
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid: ",local_mask
         stop
        endif
 

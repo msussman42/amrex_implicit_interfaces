@@ -2953,6 +2953,10 @@ NavierStokes::sum_integrated_quantities (
   std::cout << "TIME= "<<upper_slab_time<<" ENERGY MOMENT= " << 
     r_moment << '\n';
 
+// idest=IQ_DRAG_SUM_COMP+local_comp;
+// isource=DRAGCOMP_IQ_FORCE+local_comp;
+// "pressure_load" + "viscous_stress_load" + "visco_stress_load"
+
   local_counter=0;
   for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
@@ -3057,6 +3061,12 @@ NavierStokes::sum_integrated_quantities (
    }
   } //probtype==32
 
+// idest=IQ_PDRAG_SUM_COMP+local_comp;
+// isource=DRAGCOMP_IQ_PFORCE+local_comp;
+// "pressure_load"
+
+  local_counter=0;
+
   for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
@@ -3065,6 +3075,10 @@ NavierStokes::sum_integrated_quantities (
     local_counter++;
    }
   }
+
+// idest=IQ_VISCOUSDRAG_SUM_COMP+local_comp;
+// isource=DRAGCOMP_IQ_VISCOUSFORCE+local_comp;
+// "viscous_stress_load"
 
   local_counter=0;
   for (int im=0;im<num_materials;im++) {
@@ -3075,6 +3089,10 @@ NavierStokes::sum_integrated_quantities (
     local_counter++;
    }
   }
+
+// idest=IQ_VISCOUS0DRAG_SUM_COMP+local_comp;
+// isource=DRAGCOMP_IQ_VISCOUS0FORCE+local_comp;
+// viscous0_sress_tensor
 
   local_counter=0;
   for (int im=0;im<num_materials;im++) {
