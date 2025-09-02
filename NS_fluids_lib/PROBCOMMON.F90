@@ -327,7 +327,7 @@ implicit none
 
       integer, PARAMETER :: OLD_DODECANE=1
 
-      integer, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=1
+      integer, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=0
 
       real(amrex_real), PARAMETER :: GNBC_RADIUS=2.0d0
 
