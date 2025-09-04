@@ -889,7 +889,7 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
-Real NavierStokes::density_ratio_relaxation_factor=1000.0;
+Real NavierStokes::density_ratio_relaxation_factor=2000.0;
 int NavierStokes::lamb_capillary_wave_speed=1; //def=1 (rho_a+rho_w)/2
 
 int NavierStokes::stokes_flow=0;
