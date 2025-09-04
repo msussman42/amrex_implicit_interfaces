@@ -2440,6 +2440,7 @@ stop
        ! do nothing
       else
        print *,"TI_min>TI_max"
+       print *,"reduce ns.saturation_temp_min"
        print *,"TI_min: ",TI_min
        print *,"TI_max: ",TI_max
        print *,"Y_I=",Y_I
