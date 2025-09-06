@@ -79,7 +79,6 @@ ns.gravity        = 0.0   # Fr=U^2/gL L=1
 # 50=no surfactant   5=surfactant
 # 20=Schneider's paper.
 ns.tension        = 20.0 20.0 0.0  # 4.0=157 2.0=164 1.0=169
-ns.capillary_artificial_viscosity=0.0 0.0 0.0  
 #ns.fixed_dt	  = 1.0e-5   # hardwire dt
 ns.sum_interval   = 20      # timesteps between computing mass 
 

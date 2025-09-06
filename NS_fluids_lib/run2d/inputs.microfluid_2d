@@ -65,7 +65,6 @@ ns.visc_coef      = 1.0      # Re=rho L U/mu  L=1  U=1
 ns.gravity        = 0.0   # Fr=U^2/gL L=1
 # contact angle 135   56.6 cgs We=rho L U^2/sigma  
 ns.tension        = 56.6 96.67 56.6 
-ns.capillary_artificial_viscosity=0.0 0.0 0.0  # 0.2
 
 #ns.fixed_dt	  = 1.0e-5   # hardwire dt
 ns.sum_interval   = 20      # timesteps between computing mass 
