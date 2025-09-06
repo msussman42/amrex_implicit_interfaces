@@ -18,9 +18,12 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0  0.0
 geometry.prob_hi   =  6.0  3.0   # 6x6 box for 45 degree or 135
 geometry.is_periodic = 0 0 
-ns.FD_curv_interp=1
 
 ns.EILE_flag=-1
+ns.continuous_mof=1
+ns.MOFITERMAX=30
+ns.MOFITERMAX_AFTER_PREDICT=0
+ns.mof_decision_tree_learning=0
 
 # multigrid class
 mg.verbose = 0
@@ -28,7 +31,7 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
+cg.maxiter = 200
 mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 1
@@ -40,11 +43,6 @@ ns.projection_pressure_scale=10000.0
 # for debugging
 ns.v=1
 
-ns.continuous_mof=1
-ns.mof_ordering=0 0 1
-
-ns.MOFITERMAX=30
-
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
@@ -55,24 +53,31 @@ ns.ns_tiling=false
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=3
 ns.initial_project_cycles=3
+ns.multilevel_maxcycle=200
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-ns.visual_ncell=192 96  # ascii tecplot files "uniform<stuff>.tec"
-                        # uniform data.
 # =0,1, or 3
 ns.visual_tessellate_vfrac=1
+amr.plotfile_on_restart=1
+ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2  # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8       # block factor in grid generation
+amr.blocking_factor = 2 2 2 2 2 2 2 2 2 2 # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.num_SDC_outer_sweeps=1
+ns.enable_spectral=0
+ns.diffusion_enable_spectral=0
 amr.check_int       = 1000     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 24
+cg.min_max_grid_size=1024
 #amr.restart         = chk00009
 #amr.trace   =1
 
@@ -92,6 +97,8 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
+ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
+ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 45 degrees=>sigma_{SV}=sigma_{LV}  and
@@ -114,8 +121,6 @@ ns.law_of_the_wall=0 0 0 #1=law of the wall   2=GNBC  0=neither
 # =7 Blake2006, Popescu2008
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
-
-ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef
 
 # 135 degrees
 # sigma_{SV}-sigma_{SL}=sigma_{LV}(-1/sqrt(2))
@@ -155,6 +160,11 @@ ns.probtype=55
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.material_type=0 0 999 0
+# FSI_flag for present phase/material
+# FSI_FLUID=0 fluid (default)
+# FSI_PRESCRIBED_PROBF90=1 solid (PROB_[23]D.F90)
+# FSI_PRESCRIBED_NODES=2 solid (lagrangian)
+# FSI_ICE_PROBF90=3 ice
 ns.FSI_flag=0 0 1
 ns.viscconst=1.0 0.0156552 1.0
 ns.denconst=1.0 0.001226 1.0 

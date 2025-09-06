@@ -63,7 +63,6 @@ mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0    # body force  (gravity in MKS units)
 ns.gravityangle = 0.0
 ns.tension        = 0.5 
-ns.capillary_artificial_viscosity=0.0
 #ns.fixed_dt	  = 0.002     # hardwire dt 0.0007 for 32x32 grid 
 # for 128x128 grid, expected time step is 0.000175
 #      64x64   "                     "    0.000350

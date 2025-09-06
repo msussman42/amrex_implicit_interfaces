@@ -86,7 +86,6 @@ ns.tension       = 1118.0 559.0 1118.0
 # sigma_{SL}/sigma_{LV}=1-2^{-1/2}
 #ns.tension        = 1118.0 327.0 1118.0   
 
-ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef
 
 # 135 degrees
 # sigma_{SV}-sigma_{SL}=sigma_{LV}(-1/sqrt(2))

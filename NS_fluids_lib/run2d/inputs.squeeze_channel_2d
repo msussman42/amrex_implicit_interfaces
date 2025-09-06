@@ -66,7 +66,6 @@ ns.gravity        = 0.0
 # contact angle 135
 # We=rho L U^2/sigma
 ns.tension        = 50.0 85.4 50.0 # 50.0 cgs 
-ns.capillary_artificial_viscosity=0.0 0.0 0.0
 
 ns.sum_interval   = 100      # timesteps between computing mass 
 

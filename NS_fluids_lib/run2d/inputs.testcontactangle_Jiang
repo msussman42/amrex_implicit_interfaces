@@ -117,7 +117,6 @@ ns.law_of_the_wall=0 0 0  #1=law of the wall   2=GNBC  0=neither
 ns.ZEYU_DCA_SELECT=2  #DCA=dynamic contact angle
 #ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
 
-ns.capillary_artificial_viscosity=0.0 0.0 0.0  # gets multiplied by visc_coef
 
 # 135 degrees
 # sigma_{SV}-sigma_{SL}=sigma_{LV}(-1/sqrt(2))
