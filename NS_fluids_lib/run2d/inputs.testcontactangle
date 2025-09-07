@@ -19,7 +19,7 @@ geometry.prob_lo   =  0.0  0.0
 geometry.prob_hi   =  6.0  3.0   # 6x6 box for 45 degree or 135
 geometry.is_periodic = 0 0 
 
-ns.EILE_flag=-1
+ns.EILE_flag=1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 ns.MOFITERMAX_AFTER_PREDICT=0
@@ -73,7 +73,7 @@ ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
 amr.check_int       = 1000     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10    # CHANGE TO 1000
+amr.plot_int        = 1000    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 24
