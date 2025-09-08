@@ -21744,6 +21744,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    //0=tecplot nodes
   if (visual_nddata_format==0) {
 
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else 
+    amrex::Error("expecting visual_nddata_format==1");
+
    ParallelDescriptor::Barrier();
 
    if (ParallelDescriptor::IOProcessor()) {
@@ -21825,6 +21830,20 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::string plotfilename_MOF="MOF_PLT"; 
    plotfilename_MOF+=steps_string;
 
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (parent->LSA_nsteps_power_method>=1) {
+    plotfilename_MOF+="LSA";
+
+    std::stringstream LSA_steps_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    LSA_steps_string_stream << std::setw(plotfile_digits) << 
+      std::setfill('0') << parent->LSA_current_step;
+    std::string LSA_steps_string=LSA_steps_string_stream.str();
+    plotfilename_MOF+=LSA_steps_string;
+   } else
+    amrex::Error("parent->LSA_nsteps_power_method invalid");
+
    int icomp_MOF=0;
 
     // vfrac,centroid,order,slope,intercept x num_materials
@@ -21902,6 +21921,22 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    std::string plotfilename="nddataPLT"; 
    plotfilename+=steps_string;
+
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (parent->LSA_nsteps_power_method>=1) {
+    plotfilename+="LSA";
+
+    std::stringstream LSA_steps_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    LSA_steps_string_stream << std::setw(plotfile_digits) << 
+      std::setfill('0') << parent->LSA_current_step;
+    std::string LSA_steps_string=LSA_steps_string_stream.str();
+    plotfilename+=LSA_steps_string;
+   } else
+    amrex::Error("parent->LSA_nsteps_power_method invalid");
+
+
 
    int icomp=0;
    varnames[icomp]="X";
@@ -22167,6 +22202,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    //2=tecplot cells (piecewise constant reconstruction).
   } else if (visual_nddata_format==2) {
+
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else 
+    amrex::Error("expecting visual_nddata_format==1");
 
    ParallelDescriptor::Barrier();
 
