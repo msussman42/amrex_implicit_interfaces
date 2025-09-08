@@ -232,10 +232,10 @@ fork_job(int fork_id) {
   //do nothing
  } else if (local_LSA_nsteps_power_method>0) {
 
-  if (initial_cumTime>0.0) {
+  if (initial_cumTime>=0.0) {
    //do nothing
   } else
-   amrex::Error("LSA: expecting initial_cumTime>0.0");
+   amrex::Error("LSA: expecting initial_cumTime=>0.0");
  
 //ABEL OKOJUNO
 //LSA_steps=max_step-initial_levelSteps
@@ -307,6 +307,15 @@ fork_job(int fork_id) {
    std::fflush(NULL);
    BL_PROFILE_INITIALIZE();
    std::fflush(NULL);
+
+   if (local_LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (local_LSA_nsteps_power_method>0) {
+    std::fflush(NULL);
+    std::cout << "LSA_current_step = " << LSA_current_step << '\n';
+    std::cout << "amrptr->levelSteps(0) = " << amrptr->levelSteps(0) << '\n';
+   } else
+    amrex::Error("local_LSA_nsteps_power_method invalid");
 
    // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
    // timeStep is in amrlib/AMReX_AmrCore.cpp
@@ -383,7 +392,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Sep 7, 2025, 16:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Sep 8, 2025, 16:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
