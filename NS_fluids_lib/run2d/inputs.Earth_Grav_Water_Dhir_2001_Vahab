@@ -12,10 +12,25 @@ ns.microlayer_size=4.4661E-09 0.0 0.0
 ns.macrolayer_size=5.0000E-02 0.0 0.0           
 
 # Density
+# density water=958 kg/m^3
 ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
+# RZ
+# if the detachment time is 4.2, then the physical detachment time is
+# time=t_c * t_dimensionless=4.2(0.01512)=0.064 
+# experiment: 52ms=0.052
+# old code coarse grid=(2.9)(.01512)=44ms
+# old code fine grid=(2.5)(.01512)=38ms
+# We=rho L U^2/sigma
+# if dimensionless surface tension=1, sigma=rho L U^2
+# rho=958 kg/m^3
+# T=0.01512 seconds
+# g=9.8 m/s^2
+# since L g/U^2=1     U=L/T     L g/(L^2/T^2)=1 L=g T^2=9.8(.01512)^2=0.0022
+# U=L/T=0146
+# sigma=rho L U^2=958 (.0022)(0.146)^2=0.045
 # Surface tension: 50 degrees contact angle
 # LG,LS,GS
 # sigma_LG cos(thetaL)=sigma_GS-sigma_LS
@@ -25,12 +40,16 @@ ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
 ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
 
 # Latent heat
+# J/kg
+# dynes/g
+# J=kg m^2/s^2
 ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0  
 
 # Thermal conductivity
 ns.heatviscconst=9.7526E+01 3.5568E+00 9.7526E+01
 
 # Dynamic viscosity
+# kg/(m s)
 ns.viscconst=8.7804E-04 3.7828E-05 8.7804E-04
 
 
