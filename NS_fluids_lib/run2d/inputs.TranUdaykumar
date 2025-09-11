@@ -10,6 +10,9 @@ max_step  =  99999    # maximum timestep
 #max_step  =  5    # maximum timestep
 stop_time = 8.0e-5 
 
+ns.visual_nddata_format=0 #0=tecplot 1=native  2=tecplot supercells
+ns.step_through_data=0
+
 # fluid,backing plate (hardest), Tungsten rod (elastic), biofilm (softest)
 ns.num_materials=3 #BIOFILM =4
 ns.num_species_var=0
@@ -219,6 +222,7 @@ ns.elastic_viscosity=0.0 77.3e+10 124.0e+10 # 1GPASCAL=1e+10 CGS
 #ns.elastic_time=0.0 0.0 1.0e+31 #ELASTIC BALL
 ns.elastic_time=0.0 1.0e+31 1.0e+31
 ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
+#A_{t} + u dot grad A = A grad u + grad u A + ....
 #0=FENE-CR
 #1=Oldroyd B
 #3=incremental elastic
@@ -247,6 +251,7 @@ ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE
 ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
 ns.Johnson_Cook_C=0.0 0.003 0.016 0.0
+#gas,steel, tungsten
 ns.hardening_coefficient=0.0 0.569e+10 0.177e+10 0.0
 
 ns.rest_fraction=0.0 #prevent CPU overheating?
