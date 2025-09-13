@@ -18780,7 +18780,10 @@ stop
          else if ((is_rigid(im_left).eq.0).and. &
                   (is_rigid(im_right).eq.0)) then
 
-          if (is_rigid_CL(im_critical).eq.1) then
+           ! elastic materials have is_rigid_CL=1
+           ! viscoelastic materials have is_rigid=0
+          if ((is_rigid_CL(im_critical).eq.1).or. &
+              (is_rigid(im_critical).eq.0)) then
 
            if ((LSleft(im_critical).ge.-extend_offset).and. &
                (LSleft(im_critical).le.zero).and. &
@@ -18949,6 +18952,8 @@ stop
            print *,"fort_extend_elastic_velocity:"
            print *,"is_rigid_CL(im_critical) invalid: ", &
             im_critical,is_rigid_CL(im_critical)
+           print *,"or, is_rigid(im_critical) invalid: ", &
+            im_critical,is_rigid(im_critical)
            stop
           endif
 
@@ -19024,7 +19029,8 @@ stop
         else if (is_rigid(im_left).eq.0) then
 
           !sanity check
-         if (is_rigid_CL(im_critical).eq.1) then
+         if ((is_rigid_CL(im_critical).eq.1).or. &
+             (is_rigid(im_critical).eq.0)) then
 
           if ((localLS(im_critical).ge.-extend_offset).and. &
               (localLS(im_critical).le.zero)) then
@@ -19045,6 +19051,8 @@ stop
           print *,"fort_extend_elastic_velocity:"
           print *,"is_rigid_CL(im_critical) invalid: ", &
            im_critical,is_rigid_CL(im_critical)
+          print *,"or, is_rigid(im_critical) invalid: ", &
+           im_critical,is_rigid(im_critical)
           stop
          endif
 
