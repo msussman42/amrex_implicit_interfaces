@@ -265,7 +265,7 @@ stop
         else if (radblob7.le.zero) then
          ! do nothing
         else
-         print *,"radblob7 is NaN"
+         print *,"radblob7 is NaN: ",radblob7
          stop
         endif
         if (axis_dir.eq.0) then
@@ -293,7 +293,7 @@ stop
         else if (axis_dir.eq.7) then  ! nucleate boiling compressible
          mof_ordering_local(num_materials)=1
         else
-         print *,"axis_dir invalid probtype.eq.55"
+         print *,"axis_dir invalid probtype.eq.55: ",axis_dir
          stop
         endif
        endif

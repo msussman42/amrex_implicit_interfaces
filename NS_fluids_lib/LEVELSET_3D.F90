@@ -5347,6 +5347,7 @@ stop
       real(amrex_real) dx_sten(SDIM)
       real(amrex_real) cencell(SDIM)
       integer i1,j1,k1
+      integer index_local
       integer k1lo,k1hi
       integer im,im_opp
       integer im1,im2
@@ -5704,6 +5705,8 @@ stop
            LS_minus(im)=1
           else
            print *,"LScen or LSside invalid"
+           print *,"im,LScen(im),LSside(im) ", &
+             im,LScen(im),LSside(im)
            stop
           endif
          enddo ! im=1..num_materials
@@ -5723,50 +5726,22 @@ stop
 
           ! we do not consider neighbor cells outside the physical domain
           ! for incrementing volume, surface area, or contact line perimeter.
-         dir=1
-         side=1
-         if (i+i1.lt.fablo(dir)) then
-          if (levelbc(dir,side).ne.INT_DIR) then
-           typeside=0
+          ! But, we do consider cells outside the physical domain for counting
+          ! the solid velocity.
+         do dir=1,SDIM
+          if (dir.eq.1) then
+           index_local=i+i1
+          else if (dir.eq.2) then
+           index_local=j+j1
+          else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
+           index_local=k+k1
+          else
+           print *,"dir invalid fort_getcolorsum: ",dir
+           stop
           endif
-          if (velbc(dir,side,dir).eq.EXT_DIR) then
-           local_solid=1
-          endif
-         endif
-         side=2
-         if (i+i1.gt.fabhi(dir)) then
-          if (levelbc(dir,side).ne.INT_DIR) then
-           typeside=0
-          endif
-          if (velbc(dir,side,dir).eq.EXT_DIR) then
-           local_solid=1
-          endif
-         endif
 
-         dir=2
-         side=1
-         if (j+j1.lt.fablo(dir)) then
-          if (levelbc(dir,side).ne.INT_DIR) then
-           typeside=0
-          endif
-          if (velbc(dir,side,dir).eq.EXT_DIR) then
-           local_solid=1
-          endif
-         endif
-         side=2
-         if (j+j1.gt.fabhi(dir)) then
-          if (levelbc(dir,side).ne.INT_DIR) then
-           typeside=0
-          endif
-          if (velbc(dir,side,dir).eq.EXT_DIR) then
-           local_solid=1
-          endif
-         endif
-
-         if (SDIM.eq.3) then
-          dir=SDIM
           side=1
-          if (k+k1.lt.fablo(dir)) then
+          if (index_local.lt.fablo(dir)) then
            if (levelbc(dir,side).ne.INT_DIR) then
             typeside=0
            endif
@@ -5774,8 +5749,9 @@ stop
             local_solid=1
            endif
           endif
+
           side=2
-          if (k+k1.gt.fabhi(dir)) then
+          if (index_local.gt.fabhi(dir)) then
            if (levelbc(dir,side).ne.INT_DIR) then
             typeside=0
            endif
@@ -5783,12 +5759,7 @@ stop
             local_solid=1
            endif
           endif
-         else if (SDIM.eq.2) then
-          ! do nothing
-         else
-          print *,"dimension bust"
-          stop
-         endif
+         enddo !dir=1,sdim
 
          do dir=1,SDIM
           xstencil_point(dir)=xsten_stencil(0,dir)
@@ -5838,7 +5809,7 @@ stop
          else if (local_solid.eq.0) then
           ! do nothing
          else
-          print *,"local_solid invalid"
+          print *,"local_solid invalid: ",local_solid
           stop
          endif
 
@@ -6048,7 +6019,7 @@ stop
              else if (LScen(im).lt.cutoff) then
               local_interior_wt(1)=1.0E-3
              else
-              print *,"LScen(im) invalid"
+              print *,"LScen(im) invalid: ",im,LScen(im)
               stop
              endif
 

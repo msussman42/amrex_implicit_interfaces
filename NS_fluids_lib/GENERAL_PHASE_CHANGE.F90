@@ -54,7 +54,7 @@ real(amrex_real), INTENT(in) :: x_vec(SDIM)
 if ((time.ge.zero).and.(time.le.1.0e+20)) then
  ! do nothing
 else
- print *,"time invalid"
+ print *,"time invalid acoustic_pulse_bc ",time
  stop
 endif
 
@@ -176,8 +176,22 @@ endif
 
 if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
  ! do nothing
+else if (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED) then
+ if ((im.eq.3).and. &
+     (axis_dir.eq.0).and. &
+     (num_materials.eq.3)) then
+  ! do nothing
+ else
+  print *,"expecting im=3, axis_dir=0, and nmat=3: ", &
+   im,axis_dir,num_materials
+  print *,"error from GENERAL_soliddist(x,dist,im) ", &
+   x,dist,im
+  stop
+ endif
 else
  print *,"expecting FSI_flag(im)=FSI_PRESCRIBED_PROBF90"
+ print *," or .... "
+ print *,"expecting FSI_flag(im)=FSI_RIGID_NOTPRESCRIBED"
  print *,"GENERAL_PHASECHANGE.F90"
  print *,"im=",im
  print *,"FSI_flag(im)=",FSI_flag(im)
@@ -233,7 +247,7 @@ if (probtype.eq.55) then
   endif
 
  else 
-  print *,"axis_dir invalid"
+  print *,"axis_dir invalid in GENERAL_soliddist: ",axis_dir
   stop
  endif
 
@@ -332,7 +346,8 @@ real(amrex_real) :: diameter_blob
   if (probtype.eq.55) then
 
    do im=1,nmat
-    if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
+    if ((FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
+        (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then
      call GENERAL_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
      distsolid=LS(im)
@@ -481,6 +496,7 @@ real(amrex_real) :: diameter_blob
       stop
      endif
     else if (radblob3.eq.zero) then
+
      if (SDIM.eq.2) then
       dist_liquid=radblob- &
           sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
@@ -504,7 +520,8 @@ real(amrex_real) :: diameter_blob
       if (dist_liq2.gt.dist_liquid) then
        dist_liquid=dist_liq2
       endif
-     endif 
+     endif !radblob5>0
+
     else
      print *,"radblob3 invalid: ",radblob3
      stop
@@ -543,8 +560,21 @@ real(amrex_real) :: diameter_blob
     dist_gas=-dist_liquid
     LS(1)=dist_liquid
     LS(2)=dist_gas
+
+    if ((axis_dir.eq.0).and. &
+        (num_materials.eq.3).and. &
+        (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+     if (LS(1).gt.-distsolid) then
+      LS(1)=-distsolid
+     endif
+     if (LS(2).gt.-distsolid) then
+      LS(2)=-distsolid
+     endif
+    endif
+
    else
-    print *,"axis_dir invalid probtype=55 materialdistbatch"
+    print *,"axis_dir invalid probtype=55 materialdistbatch: ",axis_dir
+    print *,"expecting axis_dir=0,1,3,5,6, or 7"
     stop
    endif
 
@@ -614,6 +644,7 @@ real(amrex_real) :: diameter_blob
 
     ! ICE MEHDI: compare with freezing singularity paper
    else if (axis_dir.eq.5) then
+
     if (nmat.ne.4) then
      print *,"nmat invalid"
      stop
@@ -692,11 +723,12 @@ real(amrex_real) :: diameter_blob
     !  (or Sato and Niceno problem)
     !  (or Tryggvason problem)
    else
-    print *,"axis_dir invalid for drop falling on ice"
+    print *,"axis_dir invalid for drop falling on ice: ",axis_dir
     stop
    endif
+
   else
-   print *,"expecting probtype.eq.55"
+   print *,"expecting probtype.eq.55: ",probtype
    stop
   endif
 
