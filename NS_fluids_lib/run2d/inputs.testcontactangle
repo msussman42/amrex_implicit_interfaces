@@ -97,7 +97,9 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
-ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
+ns.density_ratio_relaxation_factor=1.0 #minimum density=maximum density 
+ns.viscosity_ratio_relaxation_factor=1.0 
+ns.explicit_viscosity_dt=1.0
 ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -159,14 +161,14 @@ ns.velfact=0.0
 ns.probtype=55
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.heatviscconst=0.0 0.0 0.0 0.0
-ns.material_type=0 0 999 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
+ns.material_type=0 0 0 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
 # FSI_flag for present phase/material
 # FSI_FLUID=0 fluid (default)
 # FSI_PRESCRIBED_PROBF90=1 solid (PROB_[23]D.F90)
 # FSI_PRESCRIBED_NODES=2 solid (lagrangian)
 # FSI_ICE_PROBF90=3 ice
 # FSI_RIGID_NOTPRESCRIBED=5
-ns.FSI_flag=0 0 1
+ns.FSI_flag=0 0 5
 ns.viscconst=1.0 0.0156552 1.0
 ns.denconst=1.0 0.001226 1.0 
 ns.tempconst=293.0 293.0 293.0 
