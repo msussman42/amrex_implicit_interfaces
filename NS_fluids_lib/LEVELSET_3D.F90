@@ -8249,6 +8249,7 @@ stop
        denconst_interface, &
        denconst_interface_min, &
        viscconst_interface, &
+       viscconst_interface_min, &
        heatviscconst_interface, &
        speciesviscconst_interface, &
        freezing_model, &
@@ -8445,6 +8446,7 @@ stop
       real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
       real(amrex_real), INTENT(in) :: viscconst_interface(num_interfaces)
+      real(amrex_real), INTENT(in) :: viscconst_interface_min(num_interfaces)
       real(amrex_real), INTENT(in) :: heatviscconst_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: &
           speciesviscconst_interface(num_interfaces*num_species_var)
@@ -8776,6 +8778,7 @@ stop
        if ((denconst_interface(im).ge.zero).and. &
            (denconst_interface_min(im).ge.zero).and. &
            (viscconst_interface(im).ge.zero).and. &
+           (viscconst_interface_min(im).ge.zero).and. &
            (heatviscconst_interface(im).ge.zero)) then
         ! do nothing
        else
@@ -9550,8 +9553,13 @@ stop
          if (solid_present_flag.eq.1) then
 
            ! dirichlet cond for velocity at the solid boundaries and 
-           ! clamped boundaries.
-          facevisc_local=zero  
+           ! clamped boundaries; but we still have a large viscosity
+           ! here.
+          call geom_avg( &
+            localvisc_plus(implus_majority), &
+            localvisc_minus(imminus_majority), &
+            wtR,wtL, &
+            facevisc_local)
 
           local_plus=localheatvisc_plus(implus_majority)
           local_minus=localheatvisc_minus(imminus_majority)
@@ -9596,9 +9604,11 @@ stop
          else if ((solid_present_flag.eq.2).or. &
                   (solid_present_flag.eq.3)) then
          
-          call geom_avg(localvisc_plus(implus_majority), &
-                  localvisc_minus(imminus_majority), &
-                  wtR,wtL,facevisc_local)
+          call geom_avg( &
+            localvisc_plus(implus_majority), &
+            localvisc_minus(imminus_majority), &
+            wtR,wtL, &
+            facevisc_local)
 
           local_plus=localheatvisc_plus(implus_majority)
           local_minus=localheatvisc_minus(imminus_majority)
@@ -9838,7 +9848,7 @@ stop
   
              ! 1/s = (wL/sL + wR/sR)/(wL+wR)=(wL sR + wR sL)/(sL sR)*1/(wL+wR)
            if ((visc1.lt.zero).or.(visc2.lt.zero)) then
-            print *,"visc1 or visc2 cannot be negative"
+            print *,"visc1 or visc2 cannot be negative: ",visc1,visc2
             stop
            else if ((visc1.eq.zero).or.(visc2.eq.zero)) then
             facevisc_local=zero
@@ -9872,6 +9882,23 @@ stop
             print *,"viscconst_interface invalid"
             stop
            endif
+
+           if (viscconst_interface_min(iten_main).eq.zero) then
+            ! do nothing
+           else if (viscconst_interface_min(iten_main).gt.zero) then
+
+            if (facevisc_local.lt. &
+                viscconst_interface_min(iten_main)) then
+
+             facevisc_local=viscconst_interface_min(iten_main)
+
+            endif
+
+           else
+            print *,"viscconst_interface_min invalid"
+            stop
+           endif
+
 
             ! STEFANSOLVER will set the thermal face coefficient
             ! to zero where appropriate.
@@ -10001,7 +10028,7 @@ stop
            else if (voldepart.eq.zero) then
             ! do nothing
            else 
-            print *,"voldepart invalid"
+            print *,"voldepart invalid: ",voldepart
             stop
            endif   
           enddo ! im=1..num_materials
@@ -10028,9 +10055,11 @@ stop
           do im=1,num_materials
            do im_opp=im+1,num_materials 
  
-            if ((FFACE(im).gt.EPS2).and. &
-                (FFACE(im_opp).gt.EPS2)) then
-             call get_iten(im,im_opp,iten_FFACE)
+            call get_iten(im,im_opp,iten_FFACE)
+
+            if (((FFACE(im).gt.EPS1).and. &
+                 (FFACE(im_opp).gt.EPS1)).or. &
+                (iten_main.eq.iten_FFACE)) then
 
              if (viscconst_interface(iten_FFACE).eq.zero) then
               ! do nothing
@@ -10041,6 +10070,24 @@ stop
               stop
              endif
 
+             if (viscconst_interface_min(iten_FFACE).eq.zero) then
+              ! do nothing
+             else if (viscconst_interface_min(iten_FFACE).gt.zero) then
+
+              if (facevisc_local.lt. &
+                  viscconst_interface_min(iten_FFACE)) then
+
+               facevisc_local=viscconst_interface_min(iten_FFACE)
+
+              endif
+
+             else
+              print *,"viscconst_interface_min invalid"
+              stop
+             endif
+
+            else if (iten_main.ne.iten_FFACE) then
+             ! do nothing
             else if ((FFACE(im).gt.-EPS1).and. &
                      (FFACE(im_opp).gt.-EPS1)) then
              ! do nothing
@@ -10327,7 +10374,7 @@ stop
                   (voltotal.gt.zero)) then
           ! do nothing
          else
-          print *,"mass_total or voltotal is NaN"
+          print *,"mass_total or voltotal is NaN: ",mass_total,voltotal
           stop
          endif
 
@@ -10412,7 +10459,6 @@ stop
              print *,"denconst_interface_min invalid"
              stop
             endif
-
 
            else if (iten_main.ne.iten_FFACE) then
             ! do nothing

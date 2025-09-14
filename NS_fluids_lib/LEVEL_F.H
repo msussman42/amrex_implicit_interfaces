@@ -428,6 +428,7 @@ namespace amrex{
        Real* denconst_interface,
        Real* denconst_interface_min,
        Real* visc_interface,
+       Real* visc_interface_min,
        Real* heatvisc_interface,
        Real* speciesvisc_interface,
        int* freezing_model,

@@ -889,7 +889,9 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
+Vector<Real> NavierStokes::viscconst_interface_min;
 Real NavierStokes::density_ratio_relaxation_factor=10.0;
+Real NavierStokes::viscosity_ratio_relaxation_factor=0.0;
 int NavierStokes::lamb_capillary_wave_speed=0; //def=0 0=>min(rho_a,rho_w)
                                                //1=>(rho_a+rho_w)/2
 
@@ -4204,6 +4206,7 @@ NavierStokes::read_params ()
 
     denconst.resize(num_materials);
     pp.getarr("denconst",denconst,0,num_materials);
+    pp.getarr("viscconst",viscconst,0,num_materials);
 
     for (int i=0;i<num_materials;i++) {
 
@@ -4234,10 +4237,12 @@ NavierStokes::read_params ()
 
     denconst_interface.resize(num_interfaces);
     denconst_interface_min.resize(num_interfaces);
+    viscconst_interface_min.resize(num_interfaces);
 
     for (int iten=0;iten<num_interfaces;iten++) {
      denconst_interface[iten]=0.0;
      denconst_interface_min[iten]=0.0;
+     viscconst_interface_min[iten]=0.0;
     }
 
     pp.queryAdd("denconst_interface",
@@ -4245,23 +4250,38 @@ NavierStokes::read_params ()
 
     pp.queryAdd("density_ratio_relaxation_factor",
 		density_ratio_relaxation_factor);
+    pp.queryAdd("viscosity_ratio_relaxation_factor",
+		viscosity_ratio_relaxation_factor);
     pp.queryAdd("lamb_capillary_wave_speed",
 		lamb_capillary_wave_speed);
 
     for (int im=0;im<num_materials;im++) {
      for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
       Real max_den=std::max(denconst[im],denconst[im_opp]);
+      Real max_visc=std::max(viscconst[im],viscconst[im_opp]);
       int iten=0;
       get_iten_cpp(im+1,im_opp+1,iten);
       if ((iten<1)||(iten>num_interfaces))
        amrex::Error("iten invalid");
       denconst_interface_min[iten-1]=
-	   max_den/density_ratio_relaxation_factor;
+        max_den/density_ratio_relaxation_factor;
+
+      viscconst_interface_min[iten-1]=0.0;
+      if (viscosity_ratio_relaxation_factor==0.0) {
+       //do nothing
+      } else if (viscosity_ratio_relaxation_factor>0.0) {
+       viscconst_interface_min[iten-1]=
+         max_visc/viscosity_ratio_relaxation_factor;
+      } else
+       amrex::Error("viscosity_ratio_relaxation_factor invalid");
+
      } //im_opp
     } //im
 
     pp.queryAdd("denconst_interface_min",
       denconst_interface_min,num_interfaces);
+    pp.queryAdd("viscconst_interface_min",
+      viscconst_interface_min,num_interfaces);
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
@@ -4371,8 +4391,6 @@ NavierStokes::read_params ()
      initial_temperature_diffuse_duration);
     if (initial_temperature_diffuse_duration<0.0)
      amrex::Error("initial_temperature_diffuse_duration<0.0");
-
-    pp.getarr("viscconst",viscconst,0,num_materials);
 
     viscconst_min=viscconst[0];
     viscconst_max=viscconst[0];
@@ -5977,12 +5995,16 @@ NavierStokes::read_params ()
 	     density_ratio_relaxation_factor << '\n';
      std::cout << "lamb_capillary_wave_speed= " << 
 	     lamb_capillary_wave_speed << '\n';
+     std::cout << "viscosity_ratio_relaxation_factor= " << 
+	     viscosity_ratio_relaxation_factor << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
         denconst_interface[i] << '\n';
       std::cout << "i= " << i << " denconst_interface_min "  << 
         denconst_interface_min[i] << '\n';
+      std::cout << "i= " << i << " viscconst_interface_min "  << 
+        viscconst_interface_min[i] << '\n';
       std::cout << "i= " << i << " viscconst_interface "  << 
         viscconst_interface[i] << '\n';
       std::cout << "i= " << i << " heatviscconst_interface "  << 

@@ -2199,7 +2199,9 @@ protected:
 
     static Vector<Real> denconst_interface;
     static Vector<Real> denconst_interface_min;
+    static Vector<Real> viscconst_interface_min;
     static Real density_ratio_relaxation_factor; //def=10.0
+    static Real viscosity_ratio_relaxation_factor; //def=0.0
     static int lamb_capillary_wave_speed; //def=0 0=>min(rho_a,rho_w) 
                                           //1=>(rho_a+rho_w)/2
 
