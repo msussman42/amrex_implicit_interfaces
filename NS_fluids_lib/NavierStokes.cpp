@@ -11478,9 +11478,27 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
  for (int dir=0;dir<ncomp_total;dir++) {
   scale_parm[dir]=0.0;
  }
- 
+
+ int nstate=state.size();
+ if (nstate!=NUM_STATE_TYPE)
+  amrex::Error("nstate invalid LSA_normalize_eigenvector");
+ if (scomp_section.size()!=NUM_STATE_TYPE)
+  amrex::Error("scomp_section.size() bad LSA_normalize_eigenvector");
+
  for (int isec=0;isec<scomp_section.size();isec++) {
-  if (isec==State_Type) {
+
+  if (isec==Umac_Type) {
+   // do nothing
+  } else if (isec==Vmac_Type) {
+   // do nothing
+  } else if (isec==Wmac_Type) {
+
+   if (AMREX_SPACEDIM==3) {
+    //do nothing
+   } else
+    amrex::Error("expecting Wmac_Type == Vmac_Type");
+
+  } else if (isec==State_Type) {
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
     scale_parm[scomp_section[isec]+dir]=velocity_scale;
    }
@@ -11500,8 +11518,16 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
    //do nothing
   } else if (isec==Refine_Density_Type) {
    //do nothing
-  } else
+  } else {
+   std::cout << "isec= " << isec << '\n';
+   std::cout << "dt_slab= " << dt_slab << '\n';
+   std::cout << "velocity_scale= " << velocity_scale << '\n';
+   std::cout << "ncomp_total= " << ncomp_total << '\n';
+   std::cout << "ncomp= " << ncomp << '\n';
+   std::cout << "scomp_section= " << scomp_section << '\n';
+   std::cout << "num_materials= " << num_materials << '\n';
    amrex::Error("isec invalid");
+  }
 
  } // for (int isec=0;isec<scomp_section.size();isec++)
 
