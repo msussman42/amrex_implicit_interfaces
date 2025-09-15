@@ -11523,8 +11523,16 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
    std::cout << "dt_slab= " << dt_slab << '\n';
    std::cout << "velocity_scale= " << velocity_scale << '\n';
    std::cout << "ncomp_total= " << ncomp_total << '\n';
-   std::cout << "ncomp= " << ncomp << '\n';
-   std::cout << "scomp_section= " << scomp_section << '\n';
+   std::cout << "ncomp.size()= " << ncomp.size() << '\n';
+   for (int i=0;i<ncomp.size();i++) {
+    std::cout << "i= " << i << " ncomp[i]= " << ncomp[i] << '\n';
+   }
+   std::cout << "scomp_section.size()= " << 
+	scomp_section.size() << '\n';
+   for (int i=0;i<scomp_section.size();i++) {
+    std::cout << "i= " << i << " scomp_section[i]= " << 
+      scomp_section[i] << '\n';
+   }
    std::cout << "num_materials= " << num_materials << '\n';
    amrex::Error("isec invalid");
   }
