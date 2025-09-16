@@ -97,9 +97,9 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
-ns.density_ratio_relaxation_factor=1.0 #minimum density=maximum density 
-ns.viscosity_ratio_relaxation_factor=1.0 
-ns.explicit_viscosity_dt=1.0
+ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
+ns.viscosity_ratio_relaxation_factor=0.0 
+ns.explicit_viscosity_dt=0.0
 ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)

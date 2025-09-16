@@ -334,6 +334,7 @@ int  NavierStokes::visual_divergence_plot_int=0;
 //set visual_WALLVEL_plot_int>0 in order to generate WALLVEL*.plt files.
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
+int  NavierStokes::visual_economy=1; 
 
 //ns.blob_history_plot_int
 int  NavierStokes::blob_history_plot_int=0;
@@ -3443,6 +3444,7 @@ NavierStokes::read_params ()
     pp.queryAdd("visual_divergence_plot_int",visual_divergence_plot_int);
     pp.queryAdd("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
     pp.queryAdd("visual_drag_plot_int",visual_drag_plot_int);
+    pp.queryAdd("visual_economy",visual_economy);
 
     pp.queryAdd("blob_history_plot_int",blob_history_plot_int);
 
@@ -6573,6 +6575,8 @@ NavierStokes::read_params ()
 	     visual_WALLVEL_plot_int << '\n';
      std::cout << "visual_drag_plot_int " << 
 	     visual_drag_plot_int << '\n';
+     std::cout << "visual_economy " << 
+	     visual_economy << '\n';
 
      std::cout << "blob_history_plot_int " << 
 	     blob_history_plot_int << '\n';
@@ -21161,15 +21165,22 @@ void NavierStokes::writeInterfaceReconstruction() {
 
 #ifdef AMREX_PARTICLES
 
-  // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
-  // output to: ./PARCON_pos<nsteps>.tec
-  fort_combine_particles(
-   grids_per_level.dataPtr(),
-   &finest_level,
-   &nsteps,
-   &arrdim,
-   &cur_time_slab,
-   &plotint);
+  if (visual_economy==1) {
+   //do nothing
+  } else if (visual_economy==0) {
+
+   // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
+   // output to: ./PARCON_pos<nsteps>.tec
+   fort_combine_particles(
+    grids_per_level.dataPtr(),
+    &finest_level,
+    &nsteps,
+    &arrdim,
+    &cur_time_slab,
+    &plotint);
+
+  } else
+   amrex::Error("visual_economy invalid");
 
 #endif
  }
