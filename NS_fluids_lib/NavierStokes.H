@@ -2006,6 +2006,7 @@ protected:
     static int visual_divergence_plot_int; //def=0
     static int visual_WALLVEL_plot_int; //def=0
     static int visual_drag_plot_int; //def=0
+    static int visual_economy; //def=1
 
     static int blob_history_plot_int; //def=0
 

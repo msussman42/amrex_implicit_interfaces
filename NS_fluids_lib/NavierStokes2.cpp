@@ -7491,27 +7491,35 @@ void NavierStokes::output_triangles() {
 
 #ifdef AMREX_PARTICLES
 
-  NavierStokes& ns_level0=getLevel(0);
-  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+  if (visual_economy==1) {
+   //do nothing
+  } else if (visual_economy==0) {
 
-  auto& particles_grid_tile = localPC.GetParticles(level)
-   [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-  unsigned int Np=particles_AoS.size();
+   NavierStokes& ns_level0=getLevel(0);
+   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
-  // declared in: NAVIERSTOKES_3D.F90
-  // output to:
-  // ./temptecplot/tempPARCON_pos<level><gridno>
-  fort_particle_grid(
-   &tid_current,
-   xlo,dx,
-   particles_AoS.data(),
-   Np,       //pass by value
-   tilelo,tilehi,
-   fablo,fabhi,
-   &bfact,
-   &level,
-   &gridno);
+   auto& particles_grid_tile = localPC.GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
+   unsigned int Np=particles_AoS.size();
+
+   // declared in: NAVIERSTOKES_3D.F90
+   // output to:
+   // ./temptecplot/tempPARCON_pos<level><gridno>
+   fort_particle_grid(
+    &tid_current,
+    xlo,dx,
+    particles_AoS.data(),
+    Np,       //pass by value
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &level,
+    &gridno);
+
+  } else
+   amrex::Error("visual_economy invalid");
+
 
 #endif
 

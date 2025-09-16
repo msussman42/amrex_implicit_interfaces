@@ -1524,7 +1524,7 @@ stop
        else if (TSAT_FLAG.eq.0) then
         ! do nothing
        else
-        print *,"TSAT_FLAG invalid"
+        print *,"TSAT_FLAG invalid: ",TSAT_FLAG
         stop
        endif
 
@@ -1536,7 +1536,15 @@ stop
        if (TSAT_times_weight.gt.zero) then
         TSAT=TSAT_times_weight/TSAT_weight
        else
-        print *,"TSAT_times_weight invalid"
+        print *,"TSAT_times_weight invalid: ",TSAT_times_weight
+        print *,"TSAT_weight ",TSAT_weight
+        print *,"VOFTOL=",VOFTOL
+        print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
+               i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
+        print *,"level,finest_level,dx ",level,finest_level, &
+               dx(1),dx(2),dx(SDIM)
+        print *,"xlo,xtarget,comp ",xlo(1),xlo(2),xlo(SDIM), &
+               xtarget(1),xtarget(2),xtarget(SDIM)
         stop
        endif
       else 
