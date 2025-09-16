@@ -22673,7 +22673,7 @@ NavierStokes::writePlotFile (
   if (nsteps>=0) {
    //do nothing
   } else
-   amrex::Error("nsteps invalid"); 
+   amrex::Error("nsteps invalid writePlotFile"); 
 				   
   ParallelDescriptor::Barrier();
   std::fflush(NULL);
@@ -23361,7 +23361,7 @@ void NavierStokes::computeNewDt (int finest_level,
    local_fixed_dt=fixed_dt;
    local_change_max=change_max;
   } else
-   amrex::Error("nsteps invalid");
+   amrex::Error("nsteps invalid computeNewDt");
    
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
@@ -23431,7 +23431,7 @@ void NavierStokes::computeNewDt (int finest_level,
   }
 
  } else
-  amrex::Error("nsteps invalid");
+  amrex::Error("nsteps invalid computeNewDt 23434");
 
 } //end subroutine computeNewDt
 

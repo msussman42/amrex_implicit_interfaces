@@ -3816,7 +3816,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         local_fixed_dt=fixed_dt;
        } else {
         local_fixed_dt=0.0;
-        amrex::Error("nsteps invalid");
+        amrex::Error("nsteps invalid do_the_advance 3819 ");
        }
 
        Real dt_predict=estTimeStep(local_fixed_dt,local_caller_string);
