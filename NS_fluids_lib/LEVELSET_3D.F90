@@ -2142,6 +2142,13 @@ stop
 
         imhold=im_primary_sten(i,j,k)
 
+        if ((imhold.ge.1).and.(imhold.le.num_materials)) then
+         !do nothing
+        else
+         print *,"imhold invalid: ",imhold
+         stop
+        endif
+
         if (imhold.eq.im3) then
 
          im3_present_node=1
@@ -2150,8 +2157,10 @@ stop
                  (imhold.ge.1).and. &
                  (imhold.le.num_materials)) then 
 
-         if (ice_normal_weight(iten_13).eq. &
-             ice_normal_weight(iten_23)) then
+         if (im3.eq.0) then
+          !do nothing
+         else if (ice_normal_weight(iten_13).eq. &
+                  ice_normal_weight(iten_23)) then
           !do nothing
          else if ((ice_normal_weight(iten_13).eq.one).and. &
                   (ice_normal_weight(iten_23).eq.zero)) then
@@ -2161,7 +2170,7 @@ stop
            !do nothing
           endif
          else if ((ice_normal_weight(iten_13).eq.zero).and. &
-                   (ice_normal_weight(iten_23).eq.one)) then
+                  (ice_normal_weight(iten_23).eq.one)) then
           if (imhold.eq.im) then
            im3_present_node=1
           else
