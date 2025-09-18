@@ -153,6 +153,7 @@ stop
       integer :: dir
       integer :: ncomp_per_tsat
       integer :: tsat_comp
+      integer, PARAMETER :: project_option_local=SOLVETYPE_HEAT
 
       ncomp_per_tsat=EXTRAP_PER_TSAT
       tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
@@ -178,6 +179,7 @@ stop
        if (time.ge.zero) then
         if (use_tsatfab.eq.1) then
          call interpfab_tsat( &
+           project_option_local, &
            i,j,k, &
            ireverse, &
            iten, &
@@ -1385,6 +1387,7 @@ stop
 
 
       subroutine interpfab_tsat( &
+       project_option, & 
        i,j,k, &
        ireverse, &
        iten, &
@@ -1402,6 +1405,7 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: project_option
       integer, INTENT(in) :: i,j,k
       integer, INTENT(in) :: ireverse
       integer, INTENT(in) :: iten
@@ -1470,6 +1474,17 @@ stop
        stop
       endif
 
+      if (project_option.eq.SOLVETYPE_HEAT) then
+       !do nothing
+      else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+               (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+       !do nothing
+      else
+       print *,"project_option invalid; interpfab_tsat: ", &
+         project_option
+       stop
+      endif
+
       cell_index(1)=i
       cell_index(2)=j
       cell_index(3)=k
@@ -1535,16 +1550,23 @@ stop
       if (TSAT_weight.gt.zero) then
        if (TSAT_times_weight.gt.zero) then
         TSAT=TSAT_times_weight/TSAT_weight
+       else if ((TSAT_times_weight.eq.zero).and. &
+                (project_option.ge.SOLVETYPE_SPEC).and. &
+                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+        TSAT=zero
        else
         print *,"TSAT_times_weight invalid: ",TSAT_times_weight
         print *,"TSAT_weight ",TSAT_weight
+        print *,"project_option=",project_option
         print *,"VOFTOL=",VOFTOL
         print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
         print *,"level,finest_level,dx ",level,finest_level, &
                dx(1),dx(2),dx(SDIM)
         print *,"xlo,xtarget,comp ",xlo(1),xlo(2),xlo(SDIM), &
-               xtarget(1),xtarget(2),xtarget(SDIM)
+               xtarget(1),xtarget(2),xtarget(SDIM),comp
+        print *,"put breakpoint here: break MASS_TRANSFER_3D.F90:1548"
+        print *,"put breakpoint here to see the caller"
         stop
        endif
       else 
@@ -1555,7 +1577,7 @@ stop
        print *,"level,finest_level,dx ",level,finest_level, &
                dx(1),dx(2),dx(SDIM)
        print *,"xlo,xtarget,comp ",xlo(1),xlo(2),xlo(SDIM), &
-               xtarget(1),xtarget(2),xtarget(SDIM)
+               xtarget(1),xtarget(2),xtarget(SDIM),comp
        print *,"TSAT_weight ",TSAT_weight
        stop
       endif

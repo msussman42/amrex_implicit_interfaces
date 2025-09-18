@@ -10463,12 +10463,14 @@ stop
                         (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                 tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
                else
-                print *,"project_option invalid; fort_stefansolver"
+                print *,"project_option invalid; fort_stefansolver: ", &
+                    project_option
                 stop
                endif
 
                ngrow_tsat=1
                call interpfab_tsat( &
+                project_option, & 
                 i,j,k, &
                 ireverse, &
                 iten, &
