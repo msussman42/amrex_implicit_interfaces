@@ -23373,6 +23373,27 @@ void NavierStokes::computeNewDt (int finest_level,
    std::cout << "nsteps= " << nsteps << '\n';
    amrex::Error("nsteps invalid computeNewDt");
   }
+
+  if (parent->LSA_nsteps_power_method==0) {
+   if (nsteps>0) {
+    //do nothing
+   } else {
+    std::cout << "nsteps= " << nsteps << '\n';
+    amrex::Error("nsteps invalid (not LSA) computeNewDt");
+   }
+  } else if (parent->LSA_nsteps_power_method>=1) {
+   if ((fixed_dt==fixed_dt_init)&&(fixed_dt>0.0)) {
+    //do nothing
+   } else {
+    std::cout << "fixed_dt= " << fixed_dt << '\n';
+    std::cout << "fixed_dt_init= " << fixed_dt_init << '\n';
+    amrex::Error("expecting fixed_dt > 0.0 (LSA) computeNewDt");
+   }
+  } else {
+   std::cout << "parent->LSA_nsteps_power_method=" <<
+      parent->LSA_nsteps_power_method << '\n';
+   amrex::Error("parent->LSA_nsteps_power_method invalid");
+  }
    
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
