@@ -207,7 +207,7 @@ fork_job(int fork_id) {
 
    // AmrCore::init 
    //  a) if !restart_file.empty() and restart_file!="init" then:
-   //     "restart(restsrt_file)"
+   //     "restart(restart_file)"
    //  b) otherwise: "initialInit(strt_time,stop_time)"
    //
  amrptr->init(strt_time,stop_time);
@@ -392,7 +392,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Sep 18, 2025, 17:30pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Sep 20, 2025, 17:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

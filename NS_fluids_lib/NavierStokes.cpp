@@ -8119,8 +8119,11 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
          nsteps); 
        } else if (ratio<nsteps) {
         //do nothing
-       } else
+       } else {
+        std::cout << "ratio= " << ratio << '\n';
+        std::cout << "nsteps= " << nsteps << '\n';
         amrex::Error("ratio or nsteps invalid");
+       }
 
       } else if (very_last_sweep==0) {
        // do nothing
@@ -22672,8 +22675,10 @@ NavierStokes::writePlotFile (
   int nsteps=parent->levelSteps(0);
   if (nsteps>=0) {
    //do nothing
-  } else
+  } else {
+   std::cout << "nsteps= " << nsteps << '\n';
    amrex::Error("nsteps invalid writePlotFile"); 
+  }
 				   
   ParallelDescriptor::Barrier();
   std::fflush(NULL);
@@ -23350,18 +23355,24 @@ void NavierStokes::computeNewDt (int finest_level,
 
  int nsteps=parent->levelSteps(0);
 
- if (nsteps>0) {
+ if (nsteps>=0) {
 
   Real local_fixed_dt;
   Real local_change_max;
-  if (nsteps==1) {
+
+  if (nsteps==0) {
+   local_fixed_dt=fixed_dt_init;
+   local_change_max=change_max_init;
+  } else if (nsteps==1) {
    local_fixed_dt=fixed_dt;
    local_change_max=change_max_init;
   } else if (nsteps>1) {
    local_fixed_dt=fixed_dt;
    local_change_max=change_max;
-  } else
+  } else {
+   std::cout << "nsteps= " << nsteps << '\n';
    amrex::Error("nsteps invalid computeNewDt");
+  }
    
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
@@ -23389,6 +23400,8 @@ void NavierStokes::computeNewDt (int finest_level,
    } else if ((local_fixed_dt>0.0)||(fixed_dt_velocity>0.0)) {
     // do nothing
    } else {
+    std::cout << "local_fixed_dt = " << local_fixed_dt << '\n';
+    std::cout << "fixed_dt_velocity = " << fixed_dt_velocity << '\n';
     amrex::Error("local_fixed_dt or fixed_dt_velocity invalid");
    }
 
@@ -23430,8 +23443,10 @@ void NavierStokes::computeNewDt (int finest_level,
    }
   }
 
- } else
+ } else {
+  std::cout << "nsteps= " << nsteps << '\n';
   amrex::Error("nsteps invalid computeNewDt 23434");
+ }
 
 } //end subroutine computeNewDt
 
