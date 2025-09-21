@@ -23414,7 +23414,9 @@ void NavierStokes::computeNewDt (int finest_level,
   if (level==0) {
 
    Real newdt=estTimeStep(local_fixed_dt,local_caller_string);
-
+   if (1==0) {
+    std::cout << "newdt1= " << newdt << '\n';
+   }
    if ((local_fixed_dt==0.0)&&(fixed_dt_velocity==0.0)) {
     if  (newdt>local_change_max*dt)
      newdt=local_change_max*dt;
@@ -23424,6 +23426,9 @@ void NavierStokes::computeNewDt (int finest_level,
     std::cout << "local_fixed_dt = " << local_fixed_dt << '\n';
     std::cout << "fixed_dt_velocity = " << fixed_dt_velocity << '\n';
     amrex::Error("local_fixed_dt or fixed_dt_velocity invalid");
+   }
+   if (1==0) {
+    std::cout << "newdt2= " << newdt << '\n';
    }
 
    Real dt_0=newdt;
@@ -23450,6 +23455,9 @@ void NavierStokes::computeNewDt (int finest_level,
       int b = int((upper_slab_time + dt_0) / plot_per);
       if (a != b)
           dt_0 = b * plot_per - upper_slab_time;
+   }
+   if (1==0) {
+    std::cout << "dt_0= " << dt_0 << '\n';
    }
 
    dt=dt_0;

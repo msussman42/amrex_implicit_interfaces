@@ -1554,12 +1554,30 @@ void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   Real initial_cumTime,int initial_levelSteps_in) {
 
+ if ((LSA_nsteps_power_method>=1)&&
+     (LSA_current_step+1==LSA_current_step_in)&&
+     (LSA_current_step_in>=1)) {
+  //do nothing
+ } else
+  amrex::Error("LSA_nsteps_power_method/LSA_current_step(_in) bad");
+
  for (int ilev=0;ilev<=finest_level;ilev++) {
   level_steps[ilev]=initial_levelSteps_in;
  }
  cumtime=initial_cumTime;
- amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
+
+ Real fake_dt=1.0;
  for (int ilev = 0; ilev <= finest_level; ilev++) {
+  //slablow=cumtime-fake_dt
+  //slabhigh=cumtime
+  amr_level[ilev]->setTimeLevel(cumtime,fake_dt);
+ }
+
+ amr_level[0]->computeNewDt(finest_level,dt_AMR,stop_time);
+
+ for (int ilev = 0; ilev <= finest_level; ilev++) {
+  //slablow=cumtime-dt_AMR
+  //slabhigh=cumtime
   amr_level[ilev]->setTimeLevel(cumtime,dt_AMR);
  }
 
