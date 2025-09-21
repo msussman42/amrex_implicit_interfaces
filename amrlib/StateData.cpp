@@ -503,10 +503,14 @@ StateData::setTimeLevel (Real time,Real& dt)
   dt=time;
  } else if ((time>0.0)&&(time-dt>=0.0)) {
   // do nothing
- } else
-  amrex::Error("time or dt bust");
+ } else {
+  std::cout << "time= " << time << '\n';
+  std::cout << "dt= " << dt << '\n';
+  amrex::Error("time or dt bust in StateData.cpp");
+ }
 
  if (dt<1.0e-12) {
+  std::cout << "time= " << time << '\n';
   std::cout << "dt= " << dt << '\n';
   std::cout << "dt cutoff= " << 1.0e-12 << '\n';
   amrex::Error("dt<1.0e-12 in setTimeLevel StateData");
