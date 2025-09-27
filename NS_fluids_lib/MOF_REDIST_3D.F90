@@ -70,6 +70,9 @@ stop
       integer, INTENT(inout) :: touch_hold(num_materials)
       real(amrex_real), INTENT(inout) :: minLS(num_materials)
       real(amrex_real), INTENT(inout) :: maxLS(num_materials)
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
       integer, INTENT(in) :: donateflag(num_materials+1+NCOMP_STENCIL)
       integer :: center_stencil
       integer :: im0_center
@@ -112,10 +115,13 @@ stop
        print *,"bfact140 invalid"
        stop
       endif
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
       if (NCOMP_STENCIL/2.eq.27) then 
        !do nothing
       else
-       print *,"ncomp_stencil invalid"
+       print *,"ncomp_stencil invalid: ",NCOMP_STENCIL
        stop
       endif
 
@@ -148,6 +154,9 @@ stop
        istar_array(dir)=0
       enddo
       call put_istar(istar,istar_array) 
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
       im0_center=donateflag(num_materials+1+istar)
 
       if (SDIM.eq.2) then
@@ -183,6 +192,9 @@ stop
         istar_array(3)=k2
         call put_istar(istar,istar_array) 
 
+        !num_materials+1+nsten:
+        !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+        !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
         donateIND=donateflag(num_materials+1+istar+ &
            icorner_type*NCOMP_STENCIL/2)
 
@@ -239,6 +251,10 @@ stop
 
       enddo !icorner_type=0,1
 
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
+       !
        ! only uses donateflag(1..num_materials+1)
        ! multi_get_distance is declared in: MOF.F90
       call multi_get_distance( &
@@ -1795,10 +1811,14 @@ stop
       integer i4_array(3)
       integer im_corner
       integer im_test_stencil
+      real(amrex_real) r_im_test_stencil
       integer im_test_center
       integer im_test_full
       real(amrex_real) FSUM(num_materials)
       integer on_border
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
        ! 1..num_materials,fluid materials in cell,NCOMP_STENCIL
        ! donateflag(num_materials+2 ... num_materials+1+NCOMP_STENCIL)=
        ! fluid material id that owns
@@ -1857,10 +1877,13 @@ stop
        stop
       endif
 
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
       if (NCOMP_STENCIL/2.eq.27) then
        !do nothing
       else
-       print *,"ncomp_stencil invalid in fort_levelstrip"
+       print *,"ncomp_stencil invalid in fort_levelstrip: ",NCOMP_STENCIL
        stop
       endif
 
@@ -2022,7 +2045,7 @@ stop
           enddo
           init_dist_from_crse=crsedist(D_DECL(i,j,k),im)
            ! touchfab=1 => modify with candidate distance even if 
-           ! new distance will be larger.
+           ! new |distance| will be larger.
           touchfab(D_DECL(i,j,k),im)=one
           if (init_dist_from_crse.lt.minLS(im)) then
            minLS(im)=init_dist_from_crse
@@ -2087,6 +2110,9 @@ stop
 
        call gridsten_level(xsten_donate,i,j,k,level,nhalf)
 
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
        ! im=1..num_materials: donateflag(im)=1 => find closest distance to the 
        !             im interface.
        ! donateflag(num_materials+1)=number fluid materials in the cell.
@@ -2128,37 +2154,39 @@ stop
         stop
        endif
 
+        ! EPS_FULL_WEAK < 1/10
         ! in Sussman and Puckett, 
         ! a reconstructed interface segment was valid if
         ! LS_{ij}(LS_{ij}+LS_{i+i',j+j'}) <= 0 for
         ! some |i'|<=1 |j'|<=1
         ! in the present algorithm, a reconstructed segment is valid if
-        ! (A) F>EPS_FULL_WEAK and
-        ! (B)        
+        ! (A) F>=1/2 in stencil cell (each material), or
+        ! (B) F>=1-EPS_FULL_WEAK (each material), or,
+        ! (C) F(im)>1/2-EPS_FULL_WEAK on cell bdry? (each material)
        do im=1,num_materials
-        cell_test(im)=0 !F>EPS_FULL_WEAK?
+        cell_test(im)=0 !F>=1/2 in stencil cell?
         full_neighbor(im)=0 !neighbor F(im)>1-EPS_FULL_WEAK ?
         stencil_test(im)=0 ! F(im)>1/2-EPS_FULL_WEAK on cell bdry?
        enddo
 
          ! initialize: cell_test
        do im=1,num_materials
+
         if (is_rigid(im).eq.0) then
-         if (vcenter(im).gt.EPS_FULL_WEAK) then
+         if (vcenter(im).ge.half) then
           cell_test(im)=1
+         else if (vcenter(im).le.half) then
+          !do nothing
+         else
+          print *,"vcenter invalid: ",vcenter
+          stop
          endif
         else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid MOF_REDIST_3D.F90"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90: ",im,is_rigid(im)
          stop
         endif
-
-        if ((i.eq.i_DEB_DIST).and. &
-            (j.eq.j_DEB_DIST).and. &
-            (k.eq.k_DEB_DIST)) then
-         print *,"DEB_DIST: im,cell_test=",im,cell_test(im)
-        endif 
 
        enddo  ! im=1..num_materials
 
@@ -2178,9 +2206,13 @@ stop
        if (is_rigid(im_test_center).eq.0) then 
         ! do nothing
        else
-        print *,"is_rigid(im_test_center).ne.0 (0)"
+        print *,"is_rigid(im_test_center).ne.0 (0): ", &
+         im_test_center,is_rigid(im_test_center)
         stop
        endif
+        !num_materials+1+nsten:
+        !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+        !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
         ! 1..num_materials,fluid materials in cell, NCOMP_STENCIL
        donateflag(num_materials+1+istar)=im_test_center
 
@@ -2192,285 +2224,308 @@ stop
 
        rigid_in_stencil=0
 
-       if (on_border.eq.0) then
+       ! stencil_test and rigid_in_stencil
+       ! stencil_test(im)=1 if the interpolated volume fraction
+       ! on one of the 27 cell boundary points exceeds a threshold.
+       ! cell_test(im)=1 if F
+       ! on one of the 27 cell boundary points exceeds 1/2.
+       do k1=klosten+2,khisten+2
+       do j1=1,3
+       do i1=1,3
+        isten=i+i1-2
+        jsten=j+j1-2
+        ksten=k+k1-2
 
-         ! stencil_test and rigid_in_stencil
-         ! stencil_test(im)=1 if the interpolated volume fraction
-         ! on one of the 27 cell boundary points exceeds a threshold.
-        do k1=klosten+2,khisten+2
-        do j1=1,3
-        do i1=1,3
-         isten=i+i1-2
-         jsten=j+j1-2
-         ksten=k+k1-2
+        icur(1)=i1-2 
+        icur(2)=j1-2 
+        icur(3)=k1-2 
+        theta_nbr=zero
+        theta_cen=zero
+        do dir=1,SDIM
+         xnbr(dir)=xsten_donate(2*icur(dir),dir)
+         xmid(dir)=xsten_donate(icur(dir),dir)
+         theta_nbr=theta_nbr+(xnbr(dir)-xmid(dir))**2
+         theta_cen=theta_cen+(xmid(dir)-xsten_donate(0,dir))**2
+        enddo !dir=1..sdim
+        theta_nbr=sqrt(theta_nbr)
+        theta_cen=sqrt(theta_cen)
 
-         icur(1)=i1-2 
-         icur(2)=j1-2 
-         icur(3)=k1-2 
-         theta_nbr=zero
-         theta_cen=zero
-         do dir=1,SDIM
-          xnbr(dir)=xsten_donate(2*icur(dir),dir)
-          xmid(dir)=xsten_donate(icur(dir),dir)
-          theta_nbr=theta_nbr+(xnbr(dir)-xmid(dir))**2
-          theta_cen=theta_cen+(xmid(dir)-xsten_donate(0,dir))**2
-         enddo
-         theta_nbr=sqrt(theta_nbr)
-         theta_cen=sqrt(theta_cen)
+        do im=1,num_materials
+         vofcomp=(im-1)*ngeom_recon+1
+         call safe_data(isten,jsten,ksten,vofcomp, &
+           vofrecon_ptr, &
+           VFRAC_TEMP)
+         if (is_rigid(im).eq.0) then
 
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_recon+1
-          VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
-          if (is_rigid(im).eq.0) then
-           if ((icur(1).eq.0).and.(icur(2).eq.0).and.(icur(3).eq.0)) then
-            VFRAC_INTERP=vcenter(im)
-           else if ((theta_nbr.gt.zero).and.(theta_cen.gt.zero)) then
-            VFRAC_INTERP=(theta_nbr*vcenter(im)+theta_cen*VFRAC_TEMP)/ &
-                         (theta_nbr+theta_cen)
-           else
-            print *,"fort_levelstrip: "
-            print *,"theta_nbr or theta_cen invalid: ",theta_nbr,theta_cen
-            stop
-           endif
-           if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
-            stencil_test(im)=1
-           endif
-          else if (is_rigid(im).eq.1) then
-           if (VFRAC_TEMP.ge.EPS_FULL_WEAK) then
-            rigid_in_stencil=1
-           endif
+          if (VFRAC_TEMP.ge.half) then
+           cell_test(im)=1
+          else if (VFRAC_TEMP.le.half) then
+           !do nothing
           else
-           print *,"is_rigid(im) invalid"
-           stop
-          endif
-         enddo  ! im=1..num_materials
-
-        enddo
-        enddo
-        enddo  ! i1,j1,k1 (test VFRAC_INTERP>=VFRAC_STENCIL_CUTOFF)
-
-        if ((i.eq.i_DEB_DIST).and. &
-            (j.eq.j_DEB_DIST).and. &
-            (k.eq.k_DEB_DIST)) then
-         do im=1,num_materials
-          print *,"DEB_DIST: im,stencil_test=",im,stencil_test(im)
-         enddo
-        endif
-
-         ! investigate all points coinciding at the intersection of the
-         ! line connecting cells (i,j,k) and (i+i3,j+j3,k+k3) with the
-         ! boundary of cell (i,j,k). 
-         ! 
-        do k3=klosten,khisten
-        do j3=-1,1
-        do i3=-1,1
-         istar_array(1)=i3
-         istar_array(2)=j3
-         istar_array(3)=k3
-         do dir=1,3
-          if (istar_array(dir).eq.0) then
-           i4low(dir)=0
-           i4high(dir)=0
-          else if (istar_array(dir).eq.-1) then
-           i4low(dir)=-1
-           i4high(dir)=0
-          else if (istar_array(dir).eq.1) then
-           i4low(dir)=0
-           i4high(dir)=1
-          else
-           print *,"istar_array bust"
-           stop
-          endif
-         enddo ! dir=1..3
-         im_corner=0
-         do im=1,num_materials
-          FSUM(im)=zero
-         enddo
-         ! (i4,j4,k4)=(0,0,0) if (i3,j3,k3)=(0,0,0)
-         do k4=i4low(3),i4high(3)
-         do j4=i4low(2),i4high(2)
-         do i4=i4low(1),i4high(1)
-          isten=i4+i
-          jsten=j4+j
-          ksten=k4+k
-          
-          i4_array(1)=i4
-          i4_array(2)=j4
-          i4_array(3)=k4
-          do dir=1,3
-           if (i4_array(dir).eq.0) then
-            istar_array_offset(dir)=istar_array(dir)
-           else if (i4_array(dir).eq.1) then
-            istar_array_offset(dir)=-1
-           else if (i4_array(dir).eq.-1) then
-            istar_array_offset(dir)=1
-           else
-            print *,"i4_array invalid"
-            stop
-           endif
-          enddo ! dir
-
-           ! fort_steninit called with 
-           ! tessellate==0 prior to fort_levelstrip.
-           ! im_test_stencil is the material that occupies the
-           ! node in question.
-          call put_istar(istar,istar_array_offset)
-          im_test_stencil=NINT(stenfab(D_DECL(isten,jsten,ksten),istar))
-          if ((im_test_stencil.ge.1).and. &
-              (im_test_stencil.le.num_materials)) then
-           ! do nothing
-          else
-           print *,"im_test_stencil out of range 1: ",im_test_stencil
-           stop
-          endif
-          if (is_rigid(im_test_stencil).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid(im_test_stencil).ne.0 (1)"
+           print *,"VFRAC_TEMP invalid: ",VFRAC_TEMP
            stop
           endif
 
-          if ((i.eq.i_DEB_DIST).and. &
-              (j.eq.j_DEB_DIST).and. &
-              (k.eq.k_DEB_DIST)) then
-           print *,"DEB_DIST: i3,j3,k3 ",i3,j3,k3
-           print *,"DEB_DIST: i4,j4,k4 ",i4,j4,k4
-           print *,"DEB_DIST: im_test_stencil ",im_test_stencil
-          endif
-
-          if (im_corner.eq.0) then
-           im_corner=im_test_stencil
-          else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
-           if (im_corner.eq.im_test_stencil) then
-            ! do nothing
-           else
-            im_corner=-1 !conflict in stenfab at the corner.
-           endif
-          else if (im_corner.eq.-1) then
-           ! do nothing
+          if ((icur(1).eq.0).and.(icur(2).eq.0).and.(icur(3).eq.0)) then
+           VFRAC_INTERP=vcenter(im)
+          else if ((theta_nbr.gt.zero).and.(theta_cen.gt.zero)) then
+           VFRAC_INTERP=(theta_nbr*vcenter(im)+theta_cen*VFRAC_TEMP)/ &
+                        (theta_nbr+theta_cen)
           else
-           print *,"im_corner invalid: ",im_corner
+           print *,"fort_levelstrip: "
+           print *,"theta_nbr or theta_cen invalid: ",theta_nbr,theta_cen
            stop
           endif
-          do im=1,num_materials
-           vofcomp=(im-1)*ngeom_recon+1
-           VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
-           FSUM(im)=FSUM(im)+VFRAC_TEMP
-          enddo
-         enddo ! k4
-         enddo ! j4
-         enddo ! i4
-
-            ! if im_corner=-1, then there is a jump in the material
-            ! type at the node, so the material type is assigned
-            ! to be the material with the dominant "nodal volume fraction"
-         if (im_corner.eq.-1) then !stenfab conflict at the corner!
-          FSI_exclude=1
-          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list)
-          im_corner=sorted_list(1)
-          if (is_rigid(im_corner).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid(im_corner).ne.0"
-           stop
+           !VFRAC_STENCIL_CUTOFF=half-EPS_FULL_WEAK
+          if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
+           stencil_test(im)=1
           endif
-         else if (im_corner.eq.0) then
-          print *,"im_corner invalid"
-          stop
-         else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
-          ! do nothing
+         else if (is_rigid(im).eq.1) then
+          if (VFRAC_TEMP.ge.EPS_FULL_WEAK) then
+           rigid_in_stencil=1
+          endif
          else
-          print *,"im_corner invalid"
+          print *,"is_rigid(im) invalid: ",im,is_rigid(im)
           stop
          endif
+        enddo  ! im=1..num_materials
 
-         if ((im_corner.ge.1).and. &
-             (im_corner.le.num_materials)) then
+       enddo
+       enddo
+       enddo  ! i1,j1,k1 (test VFRAC_INTERP>=VFRAC_STENCIL_CUTOFF)
 
-           ! a tougher test for flotsam near contact lines.
-          if ((stencil_test(im_corner).eq.1).or. & !vfrac>1/2 on cell bdry?
-              (rigid_in_stencil.eq.0)) then
-           call put_istar(istar,istar_array) 
-           donateflag(num_materials+1+istar)=im_corner
-          else if ((stencil_test(im_corner).eq.0).and. &
-                   (rigid_in_stencil.eq.1)) then
-           ! do nothing
+       if ((i.eq.i_DEB_DIST).and. &
+           (j.eq.j_DEB_DIST).and. &
+           (k.eq.k_DEB_DIST)) then
+        do im=1,num_materials
+         print *,"DEB_DIST: im,stencil_test=",im,stencil_test(im)
+        enddo
+       endif
+
+        ! investigate all points coinciding at the intersection of the
+        ! line connecting cells (i,j,k) and (i+i3,j+j3,k+k3) with the
+        ! boundary of cell (i,j,k). 
+        ! 
+       do k3=klosten,khisten
+       do j3=-1,1
+       do i3=-1,1
+        istar_array(1)=i3
+        istar_array(2)=j3
+        istar_array(3)=k3
+        do dir=1,3
+         if (istar_array(dir).eq.0) then
+          i4low(dir)=0
+          i4high(dir)=0
+         else if (istar_array(dir).eq.-1) then
+          i4low(dir)=-1
+          i4high(dir)=0
+         else if (istar_array(dir).eq.1) then
+          i4low(dir)=0
+          i4high(dir)=1
+         else
+          print *,"istar_array bust: ",istar_array
+          stop
+         endif
+        enddo ! dir=1..3
+        im_corner=0
+        do im=1,num_materials
+         FSUM(im)=zero
+        enddo
+        ! (i4,j4,k4)=(0,0,0) if (i3,j3,k3)=(0,0,0)
+        do k4=i4low(3),i4high(3)
+        do j4=i4low(2),i4high(2)
+        do i4=i4low(1),i4high(1)
+         isten=i4+i
+         jsten=j4+j
+         ksten=k4+k
+          
+         i4_array(1)=i4
+         i4_array(2)=j4
+         i4_array(3)=k4
+         do dir=1,3
+          if (i4_array(dir).eq.0) then
+           istar_array_offset(dir)=istar_array(dir)
+          else if (i4_array(dir).eq.1) then
+           istar_array_offset(dir)=-1
+          else if (i4_array(dir).eq.-1) then
+           istar_array_offset(dir)=1
           else
-           print *,"stencil_test or rigid_in_stencil invalid"
+           print *,"i4_array invalid"
            stop
           endif
+         enddo ! dir=1,3
 
+          ! fort_steninit called with 
+          ! tessellate==0 prior to fort_levelstrip.
+          ! im_test_stencil is the material that occupies the
+          ! node in question.
+         call put_istar(istar,istar_array_offset)
+
+         call safe_data(isten,jsten,ksten,istar, &
+           stenfab_ptr, &
+           r_im_test_stencil)
+         im_test_stencil=NINT(r_im_test_stencil)
+
+         if ((im_test_stencil.ge.1).and. &
+             (im_test_stencil.le.num_materials)) then
+          ! do nothing
          else
-          print *,"im_corner invalid: ",im_corner
+          print *,"im_test_stencil out of range 1: ",im_test_stencil
+          stop
+         endif
+         if (is_rigid(im_test_stencil).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid(im_test_stencil).ne.0 (1): ",im_test_stencil, &
+            is_rigid(im_test_stencil)
           stop
          endif
 
          if ((i.eq.i_DEB_DIST).and. &
              (j.eq.j_DEB_DIST).and. &
              (k.eq.k_DEB_DIST)) then
-          call put_istar(istar,istar_array) 
-          print *,"DEB_DIST:ijk 3,istar,donateflag(num_materials+1+istar) ", &
-           i3,j3,k3,istar,donateflag(num_materials+1+istar)
+          print *,"DEB_DIST: i3,j3,k3 ",i3,j3,k3
+          print *,"DEB_DIST: i4,j4,k4 ",i4,j4,k4
+          print *,"DEB_DIST: im_test_stencil ",im_test_stencil
          endif
 
-        enddo
-        enddo
-        enddo  ! i3,j3,k3
-
-         ! full_neighbor
-        do k3=klosten,khisten
-        do j3=-1,1
-        do i3=-1,1
-         if ((i3.eq.0).and.(j3.eq.0).and.(k3.eq.0)) then
+         if (im_corner.eq.0) then
+          im_corner=im_test_stencil
+         else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
+          if (im_corner.eq.im_test_stencil) then
+           ! do nothing
+          else
+           im_corner=-1 !conflict in stenfab at the corner.
+          endif
+         else if (im_corner.eq.-1) then
           ! do nothing
-         else if ((abs(i3).eq.1).or.(abs(j3).eq.1).or.(abs(k3).eq.1)) then
-          iside=i+i3
-          jside=j+j3
-          kside=k+k3
-          istar_array(1)=i3
-          istar_array(2)=j3
-          istar_array(3)=k3
-
-          do im=1,num_materials
-           if (is_rigid(im).eq.0) then
-            vofcomp=(im-1)*ngeom_recon+1
-            VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
-            if (VFRAC_TEMP.ge.one-EPS_FULL_WEAK) then
-             full_neighbor(im)=1
-             call put_istar(istar,istar_array) 
-             donateflag(num_materials+1+istar+NCOMP_STENCIL/2)=im
-             im_test_full=NINT(stenfab(D_DECL(i,j,k),istar+NCOMP_STENCIL/2))
-             if (im.eq.im_test_full) then
-              !do nothing
-             else
-              print *,"im<>im_test_full (fort_levelstrip): ",im,im_test_full
-              stop
-             endif
-            endif
-           else if (is_rigid(im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid invalid MOF_REDIST_3D.F90"
-            stop
-           endif
-          enddo ! im=1..num_materials 
-
          else
-          print *,"i3,j3,k3 bust"
+          print *,"im_corner invalid: ",im_corner
           stop
          endif
-        enddo
-        enddo
-        enddo ! i3,j3,k3
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          call safe_data(isten,jsten,ksten,vofcomp, &
+           vofrecon_ptr, &
+           VFRAC_TEMP)
+          FSUM(im)=FSUM(im)+VFRAC_TEMP
+         enddo
+        enddo ! k4
+        enddo ! j4
+        enddo ! i4
 
-       else if (on_border.eq.1) then
+         ! if im_corner=-1, then there is a jump in the material
+         ! type at the node, so the material type is assigned
+         ! to be the material with the dominant "nodal volume fraction"
+        if (im_corner.eq.-1) then !stenfab conflict at the corner!
+         FSI_exclude=1
+         call sort_volume_fraction(FSUM,FSI_exclude,sorted_list)
+         im_corner=sorted_list(1)
+         if (is_rigid(im_corner).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid(im_corner).ne.0"
+          stop
+         endif
+        else if (im_corner.eq.0) then
+         print *,"im_corner invalid"
+         stop
+        else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
+         ! do nothing
+        else
+         print *,"im_corner invalid: ",im_corner
+         stop
+        endif
 
-        ! do nothing 
+        if ((im_corner.ge.1).and. &
+            (im_corner.le.num_materials)) then
 
-       else
-        print *,"on_border invalid: ",on_border
-        stop
-       endif
+         !num_materials+1+nsten:
+         !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+         !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" full
+         ! a tougher test for flotsam near contact lines.
+         if ((stencil_test(im_corner).eq.1).or. & !vfrac>1/2 on cell bdry?
+             (rigid_in_stencil.eq.0)) then
+          call put_istar(istar,istar_array) 
+          donateflag(num_materials+1+istar)=im_corner
+         else if ((stencil_test(im_corner).eq.0).and. &
+                  (rigid_in_stencil.eq.1)) then
+          ! do nothing
+         else
+          print *,"stencil_test or rigid_in_stencil invalid: ", &
+            stencil_test,rigid_in_stencil
+          stop
+         endif
+
+        else
+         print *,"im_corner invalid: ",im_corner
+         stop
+        endif
+
+        if ((i.eq.i_DEB_DIST).and. &
+            (j.eq.j_DEB_DIST).and. &
+            (k.eq.k_DEB_DIST)) then
+         call put_istar(istar,istar_array) 
+         print *,"DEB_DIST:ijk 3,istar,donateflag(num_materials+1+istar) ", &
+          i3,j3,k3,istar,donateflag(num_materials+1+istar)
+        endif
+
+       enddo
+       enddo
+       enddo  ! i3,j3,k3
+
+        ! full_neighbor
+       do k3=klosten,khisten
+       do j3=-1,1
+       do i3=-1,1
+        if ((i3.eq.0).and.(j3.eq.0).and.(k3.eq.0)) then
+         ! do nothing
+        else if ((abs(i3).eq.1).or.(abs(j3).eq.1).or.(abs(k3).eq.1)) then
+         iside=i+i3
+         jside=j+j3
+         kside=k+k3
+         istar_array(1)=i3
+         istar_array(2)=j3
+         istar_array(3)=k3
+
+         do im=1,num_materials
+          if (is_rigid(im).eq.0) then
+           vofcomp=(im-1)*ngeom_recon+1
+
+           call safe_data(iside,jside,kside,vofcomp, &
+             vofrecon_ptr, &
+             VFRAC_TEMP)
+
+           if (VFRAC_TEMP.ge.one-EPS_FULL_WEAK) then
+            full_neighbor(im)=1
+            call put_istar(istar,istar_array) 
+            !num_materials+1+nsten:
+            !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" in cell center
+            !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" full
+            donateflag(num_materials+1+istar+NCOMP_STENCIL/2)=im
+            im_test_full=NINT(stenfab(D_DECL(i,j,k),istar+NCOMP_STENCIL/2))
+            if (im.eq.im_test_full) then
+             !do nothing
+            else
+             print *,"im<>im_test_full (fort_levelstrip): ",im,im_test_full
+             stop
+            endif
+           endif
+          else if (is_rigid(im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid MOF_REDIST_3D.F90"
+           stop
+          endif
+         enddo ! im=1..num_materials 
+
+        else
+         print *,"i3,j3,k3 bust"
+         stop
+        endif
+       enddo
+       enddo
+       enddo ! i3,j3,k3
 
        do im=1,num_materials
 
@@ -2480,12 +2535,12 @@ stop
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
              (full_neighbor(im).eq.1).or. &
-             (cell_test(im).eq.1)) then!Fm>EPS_FULL_WEAK?
+             (cell_test(im).eq.1)) then!Fm>1/2 in stencil?
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
                   (full_neighbor(im).eq.0).and. &
-                  (cell_test(im).eq.0)) then
+                  (cell_test(im).eq.0)) then ! Fm<1/2 all stencil
           legitimate_material=0
          else
           print *,"legitimate check failed"
@@ -2505,11 +2560,15 @@ stop
             im_test_stencil=NINT(stenfab(D_DECL(i,j,k),istar))
             if (is_rigid(im_test_stencil).eq.0) then
              if (im_test_stencil.eq.im) then
-               ! 1<=istar<=NCOMP_STENCIL/2
+              !num_materials+1+nsten:
+              !1<=nsten<=NCOMP_STENCIL/2 donateflag=im "im" at cell center
+              !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im "im" full
+              ! 1<=istar<=NCOMP_STENCIL/2
               donateflag(num_materials+1+istar)=im
              endif
             else
-             print *,"is_rigid(im_test_stencil).ne.0 (1)"
+             print *,"is_rigid(im_test_stencil).ne.0 (1): ", &
+              im_test_stencil,is_rigid(im_test_stencil)
              stop
             endif
            else
@@ -2541,7 +2600,7 @@ stop
         else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid MOF_REDIST_3D.F90"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90: ",im,is_rigid(im)
          stop
         endif
        enddo ! im=1..num_materials
@@ -2744,6 +2803,7 @@ stop
       return
       end subroutine fort_levelstrip
 
+       !STATECOMP_MOF+1 ... STATECOMP_MOF+ncomp_vof
       subroutine fort_correct_uninit( &
          minLS, &
          maxLS, &
@@ -2751,12 +2811,17 @@ stop
          level, &
          finest_level, &
          newfab,DIMS(newfab), &
+         statefab,DIMS(statefab), &
+         voffab,DIMS(voffab), &
          touchfab,DIMS(touchfab), &
          tilelo,tilehi, &
          fablo,fabhi, &
          bfact, &
          xlo,dx, &
-         time) &
+         time, &
+         nstate, &
+         ncompLS, &
+         ncomp_vof) &
       bind(c,name='fort_correct_uninit')
 
       use global_utility_module
@@ -2765,16 +2830,28 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: nstate,ncompLS,ncomp_vof
       integer, INTENT(in) :: level,finest_level
       real(amrex_real), INTENT(in) :: minLS(num_materials)
       real(amrex_real), INTENT(in) :: maxLS(num_materials)
       real(amrex_real), INTENT(in) :: max_problen
       integer, INTENT(in) :: DIMDEC(newfab)
+      integer, INTENT(in) :: DIMDEC(statefab)
+      integer, INTENT(in) :: DIMDEC(voffab)
       integer, INTENT(in) :: DIMDEC(touchfab)
 
       real(amrex_real), INTENT(inout), target :: &
-        newfab(DIMV(newfab),num_materials*(1+SDIM))
+        newfab(DIMV(newfab),ncompLS)
       real(amrex_real), pointer :: newfab_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout), target :: &
+        statefab(DIMV(statefab),nstate)
+      real(amrex_real), pointer :: statefab_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout), target :: &
+        voffab(DIMV(voffab),ncomp_vof)
+      real(amrex_real), pointer :: voffab_ptr(D_DECL(:,:,:),:)
+
 
       real(amrex_real), INTENT(in), target :: &
               touchfab(DIMV(touchfab),num_materials)
@@ -2792,6 +2869,27 @@ stop
       real(amrex_real) init_dist
      
       newfab_ptr=>newfab
+      statefab_ptr=>statefab
+      voffab_ptr=>voffab
+
+      if (ncompLS.eq.num_materials*(1+AMREX_SPACEDIM)) then
+       !do nothing
+      else
+       print *,"expecting ncompLS.eq.num_materials*(1+AMREX_SPACEDIM)"
+       stop
+      endif
+      if (nstate.eq.STATE_NCOMP) then
+       !do nothing
+      else
+       print *,"expecting nstate=STATE_NCOMP"
+       stop
+      endif
+      if (ncomp_vof.eq.num_materials*ngeom_raw) then
+       !do nothing
+      else
+       print *,"expecting ncomp_vof.eq.num_materials*ngeom_raw"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid143"
@@ -2808,6 +2906,8 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,newfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,statefab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,voffab_ptr,2,-1)
       call checkbound_array(fablo,fabhi,touchfab,0,-1)
       
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
@@ -2943,6 +3043,9 @@ stop
        stop
       endif
 
+       !num_materials+1+nsten:
+       !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+       !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
       if (NCOMP_STENCIL/2.eq.27) then
        !do nothing
       else
@@ -2956,7 +3059,7 @@ stop
       endif
 
       if (ngrow_distance.lt.4) then
-       print *,"ngrow_distance<4 error in steninit"
+       print *,"ngrow_distance<4 error in steninit: ",ngrow_distance
        stop
       endif
 
@@ -3037,6 +3140,9 @@ stop
 
         if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
 
+         !num_materials+1+nsten:
+         !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+         !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
          do istar=1,NCOMP_STENCIL/2
           stenfab(D_DECL(i,j,k),istar)=im_crit
          enddo
@@ -3132,6 +3238,9 @@ stop
           istar_array(2)=j3
           istar_array(3)=k3
 
+          !num_materials+1+nsten:
+          !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
+          !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
           call put_istar(istar,istar_array) 
           stenfab(D_DECL(i,j,k),NCOMP_STENCIL/2+istar)=im_crit
 

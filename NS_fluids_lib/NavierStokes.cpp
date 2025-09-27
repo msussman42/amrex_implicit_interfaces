@@ -27263,7 +27263,33 @@ NavierStokes::correct_dist_uninit() {
 
  const Real* dx = geom.CellSize();
 
+ int local_control_flag=NULL_CONTROL;
+ int local_cell_mf=-1;
+ int ncomp_total=0;
+ Vector<int> scomp;
+ Vector<int> ncomp;
+ init_boundary(
+   local_control_flag,
+   local_cell_mf,
+   ncomp_total,
+   scomp,ncomp);
+
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+ MultiFab& S_new = get_new_data(State_Type,slab_step+1);
+
+ int ncomp_vof=num_materials*ngeom_raw;
+
+ MultiFab* vofmf=
+    getState(2,STATECOMP_MOF,ncomp_vof,cur_time_slab);
+
+ int nstate=STATE_NCOMP;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+ int ncompLS=num_materials*(BL_SPACEDIM+1);
+ if (ncompLS!=LS_new.nComp())
+  amrex::Error("ncompLS invalid");
+
  if (localMF[DIST_TOUCH_MF]->nComp()!=num_materials)
   amrex::Error("localMF[DIST_TOUCH_MF]->nComp()!=num_materials");
 
@@ -27288,7 +27314,24 @@ NavierStokes::correct_dist_uninit() {
 
    const Real* xlo = grid_loc[gridno].lo();
 
+   FArrayBox& statefab=S_new[mfi];
+   if (statefab.nComp()==nstate) {
+    //do nothing
+   } else
+    amrex::Error("statefab.nComp()==nstate failed");
+
    FArrayBox& lsfab=LS_new[mfi];
+   if (lsfab.nComp()==ncompLS) {
+    //do nothing
+   } else
+    amrex::Error("lsfab.nComp()==ncompLS failed");
+
+   FArrayBox& voffab=(*vofmf)[mfi];
+   if (voffab.nComp()==ncomp_vof) {
+    //do nothing
+   } else
+    amrex::Error("voffab.nComp()==ncomp_vof failed");
+
    FArrayBox& touchfab=(*localMF[DIST_TOUCH_MF])[mfi];
 
    int tid_current=ns_thread();
@@ -27304,15 +27347,23 @@ NavierStokes::correct_dist_uninit() {
     &finest_level,
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+    statefab.dataPtr(),
+    ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
+    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     touchfab.dataPtr(),
     ARLIM(touchfab.loVect()),ARLIM(touchfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
-    &cur_time_slab);
+    &cur_time_slab,
+    &nstate,
+    &ncompLS,
+    &ncomp_vof);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_CORRECT_UNINIT,"correct_dist_uninit");
+
+ delete vofmf;
 
 } // end subroutine correct_dist_uninit
 
