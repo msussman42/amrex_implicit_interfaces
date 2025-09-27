@@ -78,12 +78,17 @@ namespace amrex{
        int* level,
        int* finest_level,
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
+       Real* statefab,AMREX_ARLIM_P(statefablo),AMREX_ARLIM_P(statefabhi),
+       Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
        Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       Real* time);
+       Real* time, 
+       int* nstate, 
+       int* ncompLS,
+       int* ncomp_vof);
 
      void fort_steninit(
        int* level,int* finest_level,
