@@ -27257,6 +27257,8 @@ NavierStokes::makeStateDist() {
 void
 NavierStokes::correct_dist_uninit() {
 
+ std::string local_caller_string="correct_dist_uninit";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -27273,6 +27275,9 @@ NavierStokes::correct_dist_uninit() {
    local_cell_mf,
    ncomp_total,
    scomp,ncomp);
+
+ resize_metrics(2);  
+ debug_ngrow(VOLUME_MF,2,local_caller_string); 
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
@@ -27314,6 +27319,8 @@ NavierStokes::correct_dist_uninit() {
 
    const Real* xlo = grid_loc[gridno].lo();
 
+   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+
    FArrayBox& statefab=S_new[mfi];
    if (statefab.nComp()==nstate) {
     //do nothing
@@ -27345,6 +27352,7 @@ NavierStokes::correct_dist_uninit() {
     &max_problen,
     &level,
     &finest_level,
+    volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     statefab.dataPtr(),
