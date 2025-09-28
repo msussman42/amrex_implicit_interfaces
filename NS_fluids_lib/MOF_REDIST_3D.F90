@@ -2810,6 +2810,7 @@ stop
          max_problen, &
          level, &
          finest_level, &
+         volfab,DIMS(volfab), &
          newfab,DIMS(newfab), &
          statefab,DIMS(statefab), &
          voffab,DIMS(voffab), &
@@ -2835,10 +2836,15 @@ stop
       real(amrex_real), INTENT(in) :: minLS(num_materials)
       real(amrex_real), INTENT(in) :: maxLS(num_materials)
       real(amrex_real), INTENT(in) :: max_problen
+      integer, INTENT(in) :: DIMDEC(volfab)
       integer, INTENT(in) :: DIMDEC(newfab)
       integer, INTENT(in) :: DIMDEC(statefab)
       integer, INTENT(in) :: DIMDEC(voffab)
       integer, INTENT(in) :: DIMDEC(touchfab)
+
+      real(amrex_real), INTENT(in), target :: &
+        volfab(DIMV(volfab))
+      real(amrex_real), pointer :: volfab_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(inout), target :: &
         newfab(DIMV(newfab),ncompLS)
@@ -2855,6 +2861,7 @@ stop
 
       real(amrex_real), INTENT(in), target :: &
               touchfab(DIMV(touchfab),num_materials)
+      real(amrex_real), pointer :: touchfab_ptr(D_DECL(:,:,:),:)
 
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2864,13 +2871,34 @@ stop
       real(amrex_real), INTENT(in) :: time
 
       integer i,j,k
-      integer im
+      integer i1,j1,k1
+      integer im,im_primary
+      integer dir
+      integer vofcomp,vofcomp_primary
       integer ctouch
       real(amrex_real) init_dist
+      real(amrex_real) voftest,mass_move,mass_avail,volsource,voltarget
+      real(amrex_real) dxmaxLS
+      integer k1lo,k1hi
+      integer ofs_main(3)
+      integer ofs(3)
+      integer in_tile,in_local_tile
+      integer negative_flag
+      integer valid_swap
+      integer, parameter :: nhalf=3
+      real(amrex_real), parameter :: RR_unit=one
+      real(amrex_real) :: mag_loc
+      real(amrex_real) :: xsten_local(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: xcenter_local(SDIM)
+      real(amrex_real) :: xpart(SDIM)
+      real(amrex_real) :: LS_stencil(num_materials)
+      real(amrex_real) :: local_normal(SDIM)
      
+      volfab_ptr=>volfab
       newfab_ptr=>newfab
       statefab_ptr=>statefab
       voffab_ptr=>voffab
+      touchfab_ptr=>touchfab
 
       if (ncompLS.eq.num_materials*(1+AMREX_SPACEDIM)) then
        !do nothing
@@ -2895,21 +2923,38 @@ stop
        print *,"bfact invalid143"
        stop
       endif
-      if (max_problen.le.zero) then
-       print *,"max_problen invalid"
+      if (max_problen.gt.zero) then
+       !do nothing
+      else
+       print *,"max_problen invalid: ",max_problen
        stop
       endif
 
       if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid in levelstrip"
+       print *,"level invalid in fort_correct_uninit"
        stop
       endif
 
+      call checkbound_array1(fablo,fabhi,volfab_ptr,2,-1)
       call checkbound_array(fablo,fabhi,newfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,statefab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,voffab_ptr,2,-1)
-      call checkbound_array(fablo,fabhi,touchfab,0,-1)
+      call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1)
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
       
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
  
@@ -2968,6 +3013,211 @@ stop
       enddo
       enddo
       enddo  ! replace uninit with minLS or maxLS
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,1)
+ 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       ofs_main(1)=i
+       ofs_main(2)=j
+       ofs_main(3)=k
+
+       in_tile=1
+       do dir=1,SDIM
+        if ((tilelo(dir).gt.ofs_main(dir)).or. &
+            (tilehi(dir).lt.ofs_main(dir))) then
+         in_tile=0
+        endif
+       enddo
+
+       call gridsten_level(xsten_local,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xcenter_local(dir)=xsten_local(0,dir)
+       enddo
+
+       do im=1,num_materials
+        LS_stencil(im)=newfab(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(LS_stencil,im_primary)
+       if (is_rigid(im_primary).eq.1) then
+        !do nothing
+       else if (is_rigid(im_primary).eq.0) then
+        do im=1,num_materials
+         if ((im.ne.im_primary).and. &
+             (is_rigid(im).eq.0)) then
+
+          vofcomp=(im-1)*ngeom_raw+1
+          vofcomp_primary=(im_primary-1)*ngeom_raw+1
+
+          voftest=voffab(D_DECL(i,j,k),vofcomp)
+          
+          if ((voftest.ge.-EPS1).and.(voftest.le.zero)) then
+           !do nothing
+          else if ((voftest.gt.zero).and.(voftest.lt.one)) then
+
+           negative_flag=1
+           do k1=k1lo,k1hi
+           do j1=-1,1
+           do i1=-1,1
+            if (voffab(D_DECL(i+i1,j+j1,k+k1),vofcomp).lt.half) then
+             !do nothing
+            else if (voffab(D_DECL(i+i1,j+j1,k+k1),vofcomp).ge.half) then
+             negative_flag=0
+            else
+             print *,"voffab invalid: ",i,j,k,i1,j1,k1,im,vofcomp, &
+              voffab(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+             stop
+            endif
+           enddo !i1
+           enddo !j1
+           enddo !k1
+
+           if ((negative_flag.eq.1).and. &
+               (LS_stencil(im_primary).gt.zero)) then
+            do dir=1,SDIM
+             local_normal(dir)=newfab(D_DECL(i,j,k), &
+               num_materials+(im-1)*SDIM+dir)
+            enddo 
+            call prepare_normal(local_normal,RR_unit,mag_loc,SDIM)
+            if (mag_loc.eq.zero) then
+             !do nothing
+            else if (mag_loc.gt.zero) then
+             do dir=1,SDIM
+              xpart(dir)= &
+                xcenter_local(dir)+dxmaxLS*local_normal(dir)
+             enddo
+             call containing_cell(bfact, &
+               dx, &
+               xlo, &
+               fablo, &
+               xpart, &
+               ofs)
+
+             valid_swap=1
+
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
+              ! do nothing
+             else if (levelrz.eq.COORDSYS_RZ) then
+              if (SDIM.ne.2) then
+               print *,"dimension bust"
+               stop
+              endif
+              if ((ofs(1).lt.zero).or.(i.lt.zero)) then
+               valid_swap=0
+              endif
+             else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+              if ((ofs(1).lt.zero).or.(i.lt.zero)) then
+               valid_swap=0
+              endif
+             else
+              print *,"levelrz invalid in fort_correct_uninit"
+              stop
+             endif
+             if (valid_swap.eq.1) then
+
+              volsource=volfab(D_DECL(i,j,k))
+              voltarget=volfab(D_DECL(ofs(1),ofs(2),ofs(SDIM)))
+
+              if ((volsource.gt.zero).and.(voltarget.gt.zero)) then
+               !do nothing
+              else
+               print *,"volsource or voltarget bad: ",volsource,voltarget
+               stop
+              endif
+
+              mass_move=volsource*voftest
+              mass_avail=voltarget* &
+                voffab(D_DECL(ofs(1),ofs(2),ofs(SDIM)),vofcomp_primary)
+              if (mass_avail.lt.mass_move) then
+               mass_move=mass_avail
+              endif
+
+              if (mass_move.gt.zero) then
+
+               in_local_tile=1
+               do dir=1,SDIM
+                if ((tilelo(dir).gt.ofs(dir)).or. &
+                    (tilehi(dir).lt.ofs(dir))) then
+                 in_local_tile=0
+                endif
+               enddo
+          
+               if (in_tile.eq.1) then
+                statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp)= &
+                  statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp)- &
+                  mass_move/volsource 
+                statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp_primary)= &
+                  statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp_primary)+ &
+                  mass_move/volsource 
+               endif
+               if (in_local_tile.eq.1) then
+                statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
+                         STATECOMP_MOF+vofcomp)= &
+                  statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
+                           STATECOMP_MOF+vofcomp)+ &
+                  mass_move/voltarget
+                statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
+                         STATECOMP_MOF+vofcomp_primary)= &
+                  statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
+                           STATECOMP_MOF+vofcomp_primary)- &
+                  mass_move/voltarget
+               endif
+
+              else if (mass_move.le.zero) then
+               !do nothing
+              else
+               print *,"mass_move invalid: ",mass_move
+               stop
+              endif
+
+             else if (valid_swap.eq.0) then
+              !do nothing
+             else
+              print *,"valid_swap invalid"
+              stop
+             endif
+
+            else
+             print *,"mag_loc invalid"
+             stop
+            endif
+           else if ((negative_flag.eq.0).or. &
+                    (LS_stencil(im_primary).le.zero)) then
+            !do nothing
+           else 
+            print *,"negative_flag invalid? ",negative_flag
+            print *,"LS_stencil(im_primary) invalid? ",im_primary, &
+             LS_stencil(im_primary)
+            stop
+           endif
+
+          else
+           print *,"voftest invalid: ",voftest
+           stop
+          endif
+         
+         else if ((im.eq.im_primary).or. &
+                  (is_rigid(im).eq.1)) then
+          !do nothing
+         else
+          print *,"im,im_primary,or is_rigid invalid: ", &
+           im,im_primary,is_rigid(im)
+          stop
+         endif
+        enddo !im=1,num_materials
+
+       else
+        print *,"is_rigid(im_primary) bad:",im_primary,is_rigid(im_primary)
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  ! move flotsam back to the core.
+
 
       return
       end subroutine fort_correct_uninit

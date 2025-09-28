@@ -77,6 +77,7 @@ namespace amrex{
        Real* max_problen,
        int* level,
        int* finest_level,
+       Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
        Real* statefab,AMREX_ARLIM_P(statefablo),AMREX_ARLIM_P(statefabhi),
        Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
