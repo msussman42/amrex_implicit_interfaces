@@ -2276,11 +2276,13 @@ stop
            print *,"theta_nbr or theta_cen invalid: ",theta_nbr,theta_cen
            stop
           endif
+           !EPS_FULL_WEAK < 1/10
            !VFRAC_STENCIL_CUTOFF=half-EPS_FULL_WEAK
           if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
            stencil_test(im)=1
           endif
          else if (is_rigid(im).eq.1) then
+           ! EPS_FULL_WEAK < 1/10
           if (VFRAC_TEMP.ge.EPS_FULL_WEAK) then
            rigid_in_stencil=1
           endif
@@ -2496,6 +2498,7 @@ stop
              vofrecon_ptr, &
              VFRAC_TEMP)
 
+            !EPS_FULL_WEAK < 1/10
            if (VFRAC_TEMP.ge.one-EPS_FULL_WEAK) then
             full_neighbor(im)=1
             call put_istar(istar,istar_array) 
@@ -2932,6 +2935,8 @@ stop
 
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid in fort_correct_uninit"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
        stop
       endif
 
@@ -3004,7 +3009,8 @@ stop
          endif
 
         else
-         print *,"is_rigid invalid MOF_REDIST_3D.F90"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90: ", &
+            im,is_rigid(im)
          stop
         endif
 
@@ -3056,7 +3062,7 @@ stop
           
           if ((voftest.ge.-EPS1).and.(voftest.le.zero)) then
            !do nothing
-          else if ((voftest.gt.zero).and.(voftest.lt.one)) then
+          else if ((voftest.gt.zero).and.(voftest.lt.half)) then
 
            negative_flag=1
            do k1=k1lo,k1hi
@@ -3105,15 +3111,15 @@ stop
                print *,"dimension bust"
                stop
               endif
-              if ((ofs(1).lt.zero).or.(i.lt.zero)) then
+              if ((ofs(1).lt.0).or.(i.lt.0)) then
                valid_swap=0
               endif
              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-              if ((ofs(1).lt.zero).or.(i.lt.zero)) then
+              if ((ofs(1).lt.0).or.(i.lt.0)) then
                valid_swap=0
               endif
              else
-              print *,"levelrz invalid in fort_correct_uninit"
+              print *,"levelrz invalid in fort_correct_uninit: ",levelrz
               stop
              endif
              if (valid_swap.eq.1) then
@@ -3133,6 +3139,12 @@ stop
                 voffab(D_DECL(ofs(1),ofs(2),ofs(SDIM)),vofcomp_primary)
               if (mass_avail.lt.mass_move) then
                mass_move=mass_avail
+              else if (mass_avail.ge.mass_move) then
+               !do nothing
+              else
+               print *,"mass_move or mass_avail invalid: ", &
+                 mass_move,mass_avail
+               stop
               endif
 
               if (mass_move.gt.zero) then
@@ -3152,6 +3164,11 @@ stop
                 statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp_primary)= &
                   statefab(D_DECL(i,j,k),STATECOMP_MOF+vofcomp_primary)+ &
                   mass_move/volsource 
+               else if (in_tile.eq.0) then
+                !do nothing
+               else
+                print *,"in_tile invalid: ",in_tile
+                stop
                endif
                if (in_local_tile.eq.1) then
                 statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
@@ -3164,6 +3181,11 @@ stop
                   statefab(D_DECL(ofs(1),ofs(2),ofs(SDIM)), &
                            STATECOMP_MOF+vofcomp_primary)- &
                   mass_move/voltarget
+               else if (in_local_tile.eq.0) then
+                !do nothing
+               else
+                print *,"in_local_tile invalid: ",in_local_tile
+                stop
                endif
 
               else if (mass_move.le.zero) then
@@ -3176,12 +3198,12 @@ stop
              else if (valid_swap.eq.0) then
               !do nothing
              else
-              print *,"valid_swap invalid"
+              print *,"valid_swap invalid: ",valid_swap
               stop
              endif
 
             else
-             print *,"mag_loc invalid"
+             print *,"mag_loc invalid: ",mag_loc
              stop
             endif
            else if ((negative_flag.eq.0).or. &
@@ -3194,6 +3216,8 @@ stop
             stop
            endif
 
+          else if ((voftest.ge.half).and.(voftest.lt.one)) then
+           !do nothing
           else
            print *,"voftest invalid: ",voftest
            stop
