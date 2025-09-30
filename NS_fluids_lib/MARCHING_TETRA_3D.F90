@@ -1129,19 +1129,20 @@ stop
         if (plotint.le.0) then
          strandid=1
         else
-         strandid=(nsteps/plotint)+1
+         strandid=1
+!        strandid=(nsteps/plotint)+1
         endif
 
         if (SDIM.eq.3) then
 !        write(11,'(A33,D25.16,A10,I10)')  &
          write(11,'(A33,E25.16,A10,I10)')  &
           'ZONETYPE=FETRIANGLE SOLUTIONTIME=',round_time(time), &
-          " STRANDID=",strandid
+          " STRANDID=",strandid-1
         else if (SDIM.eq.2) then
 !        write(11,'(A32,D25.16,A10,I10)')  &
          write(11,'(A32,E25.16,A10,I10)')  &
           'ZONETYPE=FELINESEG SOLUTIONTIME=',round_time(time), &
-          " STRANDID=",strandid
+          " STRANDID=",strandid-1
         else
          print *,"dimension bust"
          stop
@@ -1169,13 +1170,15 @@ stop
         if (plotint.le.0) then
          strandid=1
         else
-         strandid=(nsteps/plotint)+1
+         strandid=1
+!        strandid=(nsteps/plotint)+1
         endif
 
 !       write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
         write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
           'ZONE F="POINT", I= ', nparticles,  &
-          ', J=1, K=1, SOLUTIONTIME= ',round_time(time),' STRANDID=',strandid
+          ', J=1, K=1, SOLUTIONTIME= ',round_time(time), &
+          ' STRANDID=',strandid-1
 
        endif  !ipass=1
 

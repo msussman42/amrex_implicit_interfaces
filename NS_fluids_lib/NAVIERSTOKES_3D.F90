@@ -682,7 +682,8 @@ stop
        if (plotint.le.0) then
         strandid=1    
        else
-        strandid=(nsteps/plotint)+1
+        strandid=1    
+!       strandid=(nsteps/plotint)+1
        endif
 
        write(11) -1   ! Parent Zone
@@ -4625,7 +4626,8 @@ END SUBROUTINE SIMP
         if (plotint.le.0) then
          strandid=1
         else
-         strandid=(nsteps/plotint)+1
+         strandid=1
+!        strandid=(nsteps/plotint)+1
         endif
  
         write(11) -1   ! Parent Zone
@@ -12468,7 +12470,7 @@ END SUBROUTINE SIMP
 
        ! LINE 3: SOLUTIONTIME, STRANDID
 
-       write(11,*) ' SOLUTIONTIME=',round_time(time),' STRANDID=',strandid
+       write(11,*) ' SOLUTIONTIME=',round_time(time),' STRANDID=',strandid-1
 
        do k=gridlo(3),gridhi(3)
        do j=gridlo(2),gridhi(2)
@@ -12709,7 +12711,8 @@ END SUBROUTINE SIMP
       if (sliceint.le.0) then
        strandid=1
       else
-       strandid=(nsteps/sliceint)+1
+       strandid=1
+!      strandid=(nsteps/sliceint)+1
       endif
 
       write(stepstr,12637) nsteps
@@ -12738,7 +12741,7 @@ END SUBROUTINE SIMP
        stop
       endif
       write(11,*)'zone i=',nslice-1,' SOLUTIONTIME=',round_time(time), &
-       ' STRANDID=',strandid
+       ' STRANDID=',strandid-1
 
       do i=-1,nslice-2
        do n=1,nstate_slice-1
@@ -15417,7 +15420,8 @@ END SUBROUTINE SIMP
         if (plotint.le.0) then
          strandid=1
         else
-         strandid=(nsteps/plotint)+1
+         strandid=1
+!        strandid=(nsteps/plotint)+1
         endif
 
         write(newcenfilename22,15346) newcennamestr10,stepstr,'.tec'
@@ -15458,12 +15462,14 @@ END SUBROUTINE SIMP
         if (plotint.le.0) then
          strandid=1
         else
-         strandid=(nsteps/plotint)+1
+         strandid=1
+!        strandid=(nsteps/plotint)+1
         endif
 
         write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
-          'ZONE F="POINT", I= ', nparticles,  &
-          ', J=1, K=1, SOLUTIONTIME= ',round_time(time),' STRANDID=',strandid
+         'ZONE F="POINT", I= ', nparticles,  &
+         ', J=1, K=1, SOLUTIONTIME= ',round_time(time), &
+         ' STRANDID=',strandid-1
 
        endif  !ipass=1
 
