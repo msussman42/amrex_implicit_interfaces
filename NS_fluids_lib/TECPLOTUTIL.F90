@@ -219,7 +219,7 @@ stop
       Zonename = "ZONE"
       call dumpstring(Zonename)
 
-      strandid=1
+      strandid=12
 
       write(11) -1   ! Parent Zone
       write(11) strandid-1    ! StrandID (this does not work)
@@ -1166,7 +1166,7 @@ stop
         Zonename = "ZONE"
         call dumpstring(Zonename)
 
-        strandid=1
+        strandid=13
  
         write(11) -1   ! Parent Zone
         write(11) strandid-1    ! StrandID (this does not work)
