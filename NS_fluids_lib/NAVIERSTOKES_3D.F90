@@ -680,9 +680,9 @@ stop
        call dumpstring(Zonename)
 
        if (plotint.le.0) then
-        strandid=1    
+        strandid=4
        else
-        strandid=1    
+        strandid=4
 !       strandid=(nsteps/plotint)+1
        endif
 
@@ -4624,9 +4624,9 @@ END SUBROUTINE SIMP
         call dumpstring(Zonename)
 
         if (plotint.le.0) then
-         strandid=1
+         strandid=5
         else
-         strandid=1
+         strandid=5
 !        strandid=(nsteps/plotint)+1
         endif
  
@@ -12404,7 +12404,7 @@ END SUBROUTINE SIMP
        print *,"uniformfilename ",uniformfilename
        open(unit=11,file=uniformfilename)
 
-       strandid=1
+       strandid=6
 
        ! LINE 1: VARIABLES
 
@@ -12709,9 +12709,9 @@ END SUBROUTINE SIMP
       endif
 
       if (sliceint.le.0) then
-       strandid=1
+       strandid=7
       else
-       strandid=1
+       strandid=7
 !      strandid=(nsteps/sliceint)+1
       endif
 
@@ -15418,9 +15418,9 @@ END SUBROUTINE SIMP
         enddo
 
         if (plotint.le.0) then
-         strandid=1
+         strandid=8
         else
-         strandid=1
+         strandid=8
 !        strandid=(nsteps/plotint)+1
         endif
 
@@ -15460,9 +15460,9 @@ END SUBROUTINE SIMP
         write(12,*) ','
 
         if (plotint.le.0) then
-         strandid=1
+         strandid=9
         else
-         strandid=1
+         strandid=9
 !        strandid=(nsteps/plotint)+1
         endif
 

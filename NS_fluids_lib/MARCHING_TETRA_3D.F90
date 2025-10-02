@@ -1127,9 +1127,9 @@ stop
           ', E= ',NumIntElems,', DATAPACKING=POINT, '
 
         if (plotint.le.0) then
-         strandid=1
+         strandid=2
         else
-         strandid=1
+         strandid=2
 !        strandid=(nsteps/plotint)+1
         endif
 
@@ -1168,9 +1168,9 @@ stop
         endif
 
         if (plotint.le.0) then
-         strandid=1
+         strandid=3
         else
-         strandid=1
+         strandid=3
 !        strandid=(nsteps/plotint)+1
         endif
 

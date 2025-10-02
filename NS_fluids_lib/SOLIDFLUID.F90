@@ -1445,7 +1445,7 @@
       Zonename = "ZONE"
       call dumpstring(Zonename)
 
-      strandid=1
+      strandid=10
 
       write(11) -1   ! Parent Zone
       write(11) strandid-1    ! StrandID (this does not work)
@@ -1680,7 +1680,7 @@
       Zonename = "ZONE"
       call dumpstring(Zonename)
 
-      strandid=1
+      strandid=11
 
       write(11) -1   ! Parent Zone
       write(11) strandid-1    ! StrandID (this does not work)
