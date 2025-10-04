@@ -1439,18 +1439,46 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else if ((parent->LSA_current_step>=1)&&
                (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
 
-     if (parent->levelSteps(0)==parent->initial_levelSteps) {
+     int local_step_count=parent->levelSteps(0)-
+                          parent->initial_levelSteps;
+     int local_max_step_count=parent->LSA_max_step-
+                              parent->initial_levelSteps;
+
+     if ((parent->LSA_steps_force>=1)&&
+         (parent->LSA_steps_force<=local_max_step_count)) {
+      //do nothing
+     } else
+      amrex::Error("parent->LSA_steps_force invalid");
+
+     if ((local_step_count>=0)&&
+         (local_step_count<=local_max_step_count)) {
+      //do nothing
+     } else
+      amrex::Error("local_step_count invalid");
+
+     if (local_step_count==0) {
+
       LSA_perturbations_switch=true; 
       //restore t^n data
       LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
       CopyNewToOldALL();
-     } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
+
+     } else if ((local_step_count>=1)&&
+                (local_step_count<=parent->LSA_steps_force)) {
+
+      LSA_perturbations_switch=true; 
+
+     } else if (local_step_count>parent->LSA_steps_force) {
+
       LSA_perturbations_switch=false; 
+
      } else {
       std::cout << "parent->levelSteps(0)=" <<
         parent->levelSteps(0) << '\n';
       std::cout << "parent->initial_levelSteps=" <<
         parent->initial_levelSteps << '\n';
+      std::cout << "local_step_count=" <<
+        local_step_count << '\n';
       amrex::Error("parent->initial_levelSteps invalid");
      }
 
@@ -1542,8 +1570,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     if (parent->LSA_current_step==0) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
-      //save t^{n+1} data
+      //save t^{n+1} unperturbed data
       LSA_save_state_dataALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,SAVE_CONTROL);
+      //save t^{n+1} data (unused here)
       LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.

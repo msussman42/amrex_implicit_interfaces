@@ -67,6 +67,7 @@ public:
     Vector<Real> AMR_min_phase_change_rate;
 
     int LSA_nsteps_power_method;
+    int LSA_steps_force;
 
      //LSA_current_step=0 => define q_np1
      //1<=LSA_current_step<=LSA_nsteps_power_method => power method
