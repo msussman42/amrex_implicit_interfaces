@@ -117,12 +117,18 @@ fork_job(int fork_id) {
   // ABEL OKOJUNU
   // LSA_nsteps_power_method=number of power method iterations.
  int local_LSA_nsteps_power_method=0;
+ int local_LSA_steps_force=0;
  ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
  if (local_LSA_nsteps_power_method>=0) {
   //do nothing
  } else
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
 
+ ppamr.queryAdd("LSA_steps_force",local_LSA_steps_force);
+ if (local_LSA_steps_force>=0) {
+  //do nothing
+ } else
+  amrex::Error("expecting local_LSA_steps_force>=0");
 
  max_step  = -1;    
  strt_time =  0.0;  
@@ -217,6 +223,12 @@ fork_job(int fork_id) {
  Real initial_cumTime=amrptr->cumTime();
  int initial_levelSteps=amrptr->levelSteps(0);
  int LSA_steps=max_step-initial_levelSteps;
+
+ if ((local_LSA_steps_force>=1)&&(local_LSA_steps_force<=LSA_steps)) {
+  //do nothing
+ } else
+  amrex::Error("1<=local_LSA_steps_force<=LSA_steps failed");
+
  Real compare_time_scale=stop_time-initial_cumTime;
 
  if (amrex::ParallelDescriptor::IOProcessor()) {
@@ -226,6 +238,7 @@ fork_job(int fork_id) {
   std::cout << "initial_levelSteps= " << initial_levelSteps <<'\n';
   std::cout << "max_step= " << max_step <<'\n';
   std::cout << "LSA_steps=max_step-initial_levelSteps= " << LSA_steps <<'\n';
+  std::cout << "local_LSA_steps_force= " << local_LSA_steps_force <<'\n';
  }
 
  if (local_LSA_nsteps_power_method==0) {
@@ -392,7 +405,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Oct 02, 2025, 18:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Oct 04, 2025, 18:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

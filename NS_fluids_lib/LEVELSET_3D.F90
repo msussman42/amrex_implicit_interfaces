@@ -16169,7 +16169,7 @@ stop
                     (presbc_boundary.eq.EXT_DIR)) then
             ! do nothing
            else
-            print *,"presbc_boundary invalid"
+            print *,"presbc_boundary invalid: ",presbc_boundary
             stop
            endif
 
@@ -16181,7 +16181,7 @@ stop
             ! do nothing
            endif ! int_dir case
           else
-           print *,"side_boundary invalid"
+           print *,"side_boundary invalid: ",side_boundary
            stop
           endif
 
@@ -16196,14 +16196,14 @@ stop
            if ((xstenMAC_center(1).le.EPS2*dx(1)).and. &
                (dir.eq.0)) then
             if (at_reflect_wall.ne.1) then
-             print *,"at_reflect_wall fails sanity check"
+             print *,"at_reflect_wall fails sanity check: ",at_reflect_wall
              stop
             endif
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            ! do nothing
           else
-           print *,"levelrz invalid grad potential 2"
+           print *,"levelrz invalid grad potential 2: ",levelrz
            stop
           endif
 
@@ -16396,6 +16396,12 @@ stop
                 local_face(FACECOMP_FACEDEN+1)
               else
                print *,"local_face(FACECOMP_FACECUT+1) invalid"
+               print *,"FACECOMP_FACECUT=",FACECOMP_FACECUT
+               print *,"local_face(FACECOMP_FACECUT+1)=", &
+                 local_face(FACECOMP_FACECUT+1)
+               print *,"FACECOMP_FACEDEN=",FACECOMP_FACEDEN
+               print *,"local_face(FACECOMP_FACEDEN+1)=", &
+                 local_face(FACECOMP_FACEDEN+1)
                stop
               endif
 
@@ -16455,12 +16461,14 @@ stop
                  stop
                 endif 
                else
-                print *,"LSleft_grav or LSright_grav invalid"
+                print *,"LSleft_grav or LSright_grav invalid: ", &
+                  LSleft_grav,LSright_grav
                 stop
                endif
 
               else
-               print *,"LSleft_grav,LSright_grav invalid"
+               print *,"LSleft_grav,LSright_grav invalid(2): ", &
+                 LSleft_grav,LSright_grav
                stop
               endif
               
@@ -16486,6 +16494,12 @@ stop
                 local_face(FACECOMP_FACEDEN+1)
               else
                print *,"local_face(FACECOMP_FACECUT+1) invalid"
+               print *,"FACECOMP_FACECUT=",FACECOMP_FACECUT
+               print *,"local_face(FACECOMP_FACECUT+1)=", &
+                 local_face(FACECOMP_FACECUT+1)
+               print *,"FACECOMP_FACEDEN=",FACECOMP_FACEDEN
+               print *,"local_face(FACECOMP_FACEDEN+1)=", &
+                 local_face(FACECOMP_FACEDEN+1)
                stop
               endif
 
@@ -16568,6 +16582,14 @@ stop
                 evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
                            mgoni(D_DECL(i,j,k),evec_comp))
                 pgrad_LSA=-dt*evec*gradh_gravity/hx
+                if (1.eq.1) then
+                 print *,"pgrad_LSA dir,x,dt,hx,evec,grad: ", &
+                  dir, &
+                  xstenMAC_center(1), &
+                  xstenMAC_center(2), &
+                  xstenMAC_center(SDIM), &
+                  dt,hx,evec,gradh_gravity
+                endif
 
                  !pgrad_LSA=0 in "is_rigid" materials, clamped regions,
                  !and no penetration physical boundaries.
@@ -16582,6 +16604,10 @@ stop
                 else
                  print *,"local_face(FACECOMP_FACECUT+1) invalid: ", &
                    local_face(FACECOMP_FACECUT+1)
+                 print *,"FACECOMP_FACECUT=",FACECOMP_FACECUT
+                 print *,"FACECOMP_FACEDEN=",FACECOMP_FACEDEN
+                 print *,"local_face(FACECOMP_FACEDEN+1)=", &
+                   local_face(FACECOMP_FACEDEN+1)
                  stop
                 endif
 
@@ -16653,6 +16679,12 @@ stop
                     local_face(FACECOMP_FACEDEN+1)
                  else
                   print *,"local_face(FACECOMP_FACECUT+1) invalid"
+                  print *,"FACECOMP_FACECUT=",FACECOMP_FACECUT
+                  print *,"local_face(FACECOMP_FACECUT+1)=", &
+                    local_face(FACECOMP_FACECUT+1)
+                  print *,"FACECOMP_FACEDEN=",FACECOMP_FACEDEN
+                  print *,"local_face(FACECOMP_FACEDEN+1)=", &
+                   local_face(FACECOMP_FACEDEN+1)
                   stop
                  endif
                 else
@@ -16661,14 +16693,15 @@ stop
                 endif
 
                else
-                print *,"im_left_gravity invalid"
+                print *,"im_left_gravity invalid: ",im_left_gravity
                 stop
                endif
 
               else if (im_left_gravity.ne.im_right_gravity) then
                ! do nothing
               else
-               print *,"im_left_gravity,im_right_gravity bust"
+               print *,"im_left_gravity,im_right_gravity bust: ", &
+                 im_left_gravity,im_right_gravity
                stop
               endif
              else
@@ -16677,7 +16710,7 @@ stop
              endif 
 
             else
-             print *,"is_clamped_face invalid"
+             print *,"is_clamped_face invalid: ",is_clamped_face
              stop
             endif
 
@@ -16687,7 +16720,8 @@ stop
            endif
 
           else
-           print *,"at_reflect_wall or at_wall invalid"
+           print *,"at_reflect_wall or at_wall invalid: ", &
+            at_reflect_wall,at_wall
            stop
           endif
 
@@ -16712,7 +16746,7 @@ stop
           if (project_option_is_validF(project_option).eq.1) then
            cutedge=xcut(D_DECL(i,j,k),1)  ! e.g. A/rho
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid: ",project_option
            stop
           endif
 
