@@ -14533,7 +14533,7 @@ stop
        stop
       endif
       if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid cell to mac"
+       print *,"level invalid cell to mac: ",level,finest_level
        stop
       endif
  
@@ -16118,6 +16118,13 @@ stop
 
          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
+           if (1.eq.0) then
+            print *,"ncomp_mgoni: ",ncomp_mgoni
+            print *,"num_materials ",num_materials
+            print *,"num_state_material ",num_state_material
+            print *,"LSA_perturbations_switch ",LSA_perturbations_switch
+           endif
+
            ! HYDROSTATIC_PRESDEN_MF is initialized in 
            ! NavierStokes::init_gravity_potentional()
            ! init_gravity_potential() calls fort_init_potential
@@ -16581,14 +16588,18 @@ stop
                 evec_comp=num_materials*num_state_material+im_gravity
                 evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
                            mgoni(D_DECL(i,j,k),evec_comp))
+                evec=100000.0d0*evec
                 pgrad_LSA=-dt*evec*gradh_gravity/hx
                 if (1.eq.1) then
-                 print *,"pgrad_LSA dir,x,dt,hx,evec,grad: ", &
-                  dir, &
-                  xstenMAC_center(1), &
-                  xstenMAC_center(2), &
-                  xstenMAC_center(SDIM), &
-                  dt,hx,evec,gradh_gravity
+                 if (level.eq.finest_level) then
+                  print *,"pgrad_LSA im_gravity,dir,x,dt,hx,evec,grad: ", &
+                   im_gravity, &
+                   dir, &
+                   xstenMAC_center(1), &
+                   xstenMAC_center(2), &
+                   xstenMAC_center(SDIM), &
+                   dt,hx,evec,gradh_gravity
+                 endif
                 endif
 
                  !pgrad_LSA=0 in "is_rigid" materials, clamped regions,
