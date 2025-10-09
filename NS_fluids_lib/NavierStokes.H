@@ -273,7 +273,7 @@ public:
 
     void debug_memory();
 
-    void allocate_mdot();
+    void allocate_mdot(int zap_mdot_flag);
 
     void restore_active_pressure(int save_mf);
 
@@ -639,6 +639,7 @@ protected:
 
     void level_init_elasticmask_and_elasticmaskpart();
     void phase_change_redistributeALL();
+    void sato_model_QDOT_MDOT_SPECIES();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
       int im_source,int im_dest,int indexEXP,
@@ -1781,6 +1782,7 @@ protected:
     static int pos_sites_random_flag; //default=1
     static int n_sites;
     static Vector<Real> pos_sites;
+    static Vector<int> adapt_whole_material;
 
      // if microlayer_size>0 and LS_substrate>0 in 5x5x5 stencil,
      // then the microlayer model is activated.
@@ -1879,6 +1881,13 @@ protected:
      // value: 1..num_materials
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
+     // index: 0..num_materials-1
+     // value: 1..num_species_var
+     // if the Sato model is to be used for a given vapor id "im_vapor,"
+     // then sato_model_spec_id[im_vapor]=species id
+     // The species variable will store the liquid fraction.
+     // "im_vapor" must be wholly contained on the finest AMR level.
+    static Vector<int> sato_model_spec_id; 
      // 0 - distribute to the destination material 
      //     V=u_src dot n + mdot/rho_src
      // 1 - distribute to the source material

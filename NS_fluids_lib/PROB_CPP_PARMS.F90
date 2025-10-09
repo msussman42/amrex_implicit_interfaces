@@ -352,6 +352,7 @@ stop
         ccn_sites, &
         ccnucleation_init_time, &
         ccpos_sites, &
+        ccadapt_whole_material, &
         ccxblob,ccyblob,cczblob,ccradblob, &
         ccxblob2,ccyblob2,cczblob2,ccradblob2, &
         ccxblob3,ccyblob3,cczblob3,ccradblob3, &
@@ -643,6 +644,8 @@ stop
       real(amrex_real), INTENT(in) :: ccnucleation_init_time
       real(amrex_real), INTENT(in) :: ccpos_sites(5000)
      
+      real(amrex_real), INTENT(in) :: ccadapt_whole_material(ccnum_materials)
+
       real(amrex_real), INTENT(in) :: ccCarreau_alpha(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccCarreau_beta(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccCarreau_n(ccnum_materials)
@@ -1539,7 +1542,7 @@ stop
       endif
 
       do im=1,num_materials
-      
+       fort_adapt_whole_material(im)=ccadapt_whole_material(im) 
        fort_material_type(im)=ccmaterial_type(im)
        fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
 
@@ -1878,6 +1881,7 @@ stop
          fort_R_Palmore_Desjardins
 
        do im=1,num_materials
+        print *,"im,adapt_whole_material ",im,fort_adapt_whole_material(im)
         print *,"im,material_type ",im,fort_material_type(im)
         print *,"im,material_conservation_form ", &
           im,fort_material_conservation_form(im)

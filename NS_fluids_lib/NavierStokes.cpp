@@ -724,6 +724,7 @@ Real NavierStokes::nucleation_init_time=0.0;
 int NavierStokes::n_sites=0;
 int NavierStokes::pos_sites_random_flag=1;
 Vector<Real> NavierStokes::pos_sites;
+Vector<int> NavierStokes::adapt_whole_material;
 
 int NavierStokes::perturbation_on_restart=0;
  // sin(2 pi k x /L)
@@ -810,6 +811,7 @@ Vector<int> NavierStokes::mass_fraction_id;
 //both input AND derived.
 Vector<int> NavierStokes::spec_material_id_LIQUID; 
 Vector<int> NavierStokes::spec_material_id_AMBIENT; 
+Vector<int> NavierStokes::sato_model_spec_id; 
 // 0 - distribute to the destination material 
 //     V=mdot/den_src
 //     source term= dF * Vcell/dt^2 * (-1+ den_src/den_dst)
@@ -2220,6 +2222,13 @@ void fortran_parameters() {
  } else
   amrex::Error("NavierStokes::ZEYU_DCA_SELECT invalid");
 
+ Vector<int> temp_adapt_whole_material(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  temp_adapt_whole_material[im]=0;
+ }
+ pp.queryarr("adapt_whole_material",temp_adapt_whole_material,
+   0,NavierStokes::num_materials);
+
  Vector<Real> temp_pos_sites(4);
  for (int dir=0;dir<4;dir++)
   temp_pos_sites[dir]=0.0;
@@ -2294,6 +2303,7 @@ void fortran_parameters() {
   &n_sites,
   &nucleation_init_time,
   temp_pos_sites.dataPtr(),
+  temp_adapt_whole_material.dataPtr(),
   &xblob,&yblob,&zblob,&radblob,
   &xblob2,&yblob2,&zblob2,&radblob2,
   &xblob3,&yblob3,&zblob3,&radblob3,
@@ -3400,6 +3410,13 @@ NavierStokes::read_params ()
         (custom_nucleation_model!=1))
      amrex::Error("custom_nucleation_model invalid");
 
+    adapt_whole_material.resize(num_materials);
+    for (int im=0;im<num_materials;im++) {
+     adapt_whole_material[im]=0;
+    }
+    pp.queryarr("adapt_whole_material",adapt_whole_material,
+       0,num_materials);
+
     n_sites=0;
     pp.queryAdd("n_sites",n_sites);
     pos_sites.resize(4);
@@ -3993,16 +4010,34 @@ NavierStokes::read_params ()
 
     spec_material_id_LIQUID.resize(num_species_var+1);
     spec_material_id_AMBIENT.resize(num_species_var+1);
+    sato_model_spec_id.resize(num_materials);
     for (int i=0;i<num_species_var+1;i++) {
      spec_material_id_LIQUID[i]=0;
      spec_material_id_AMBIENT[i]=0;
     }
-
+    for (int i=0;i<num_materials;i++) {
+     sato_model_spec_id[i]=0;
+    }
     if (num_species_var>0) {
      pp.queryAdd("spec_material_id_LIQUID",spec_material_id_LIQUID,
        num_species_var);
      pp.queryAdd("spec_material_id_AMBIENT",spec_material_id_AMBIENT,
        num_species_var);
+    }
+    pp.queryAdd("sato_model_spec_id",sato_model_spec_id,
+       num_materials);
+
+    for (int i=0;i<num_materials;i++) {
+     if ((sato_model_spec_id[i]>0)&&
+         (sato_model_spec_id[i]<=num_species_var)) {
+      if (adapt_whole_material[i]==1) {
+       //do nothing
+      } else
+       amrex::Error("expecting adapt_whole_material[i]==1");
+     } else if (sato_model_spec_id[i]==0) {
+      //do nothing
+     } else
+      amrex::Error("0<=sato_model_spec_id[i]<=num_species_var");
     }
     
     vorterr.resize(num_materials);
@@ -6227,6 +6262,8 @@ NavierStokes::read_params ()
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
      for (int i=0;i<num_materials;i++) {
+      std::cout << "adapt_whole_material i=" << i << "  " << 
+       adapt_whole_material[i] << '\n';
       std::cout << "microlayer_substrate i=" << i << "  " << 
        microlayer_substrate[i] << '\n';
       std::cout << "microlayer_angle i=" << i << "  " << 
@@ -6247,6 +6284,8 @@ NavierStokes::read_params ()
        buoyancy_microlayer_size[i] << '\n';
       std::cout << "phasechange_microlayer_size i=" << i << "  " << 
        phasechange_microlayer_size[i] << '\n';
+      std::cout << "sato_model_spec_id i= " << i << " " <<
+       sato_model_spec_id[i] << '\n';
      } // i=0..num_materials-1
 
      for (int i=0;i<num_species_var;i++) {
@@ -11889,15 +11928,27 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
 // called from:
 //  NavierStokes::do_the_advance  (near beginning)
 //  NavierStokes::prepare_post_process (near beginning)
-void NavierStokes::allocate_mdot() {
+void NavierStokes::allocate_mdot(int zap_mdot_flag) {
 
  int nsolve=1;
 
- delete_localMF_if_exist(MDOT_MF,1);
+ if ((zap_mdot_flag==1)||
+     (localMF_grow[MDOT_MF]==-1)) {
+
+  delete_localMF_if_exist(MDOT_MF,1);
+  delete_localMF_if_exist(QDOT_MF,1);
 
   // MDOT has nsolve components.
- new_localMF(MDOT_MF,nsolve,0,-1);
- setVal_localMF(MDOT_MF,0.0,0,nsolve,0); //val,scomp,ncomp,ngrow
+  new_localMF(MDOT_MF,nsolve,0,-1);
+  new_localMF(QDOT_MF,nsolve,0,-1);
+  setVal_localMF(MDOT_MF,0.0,0,nsolve,0); //val,scomp,ncomp,ngrow
+  setVal_localMF(QDOT_MF,0.0,0,nsolve,0); //val,scomp,ncomp,ngrow
+
+ } else if ((zap_mdot_flag==0)&&
+            (localMF_grow[MDOT_MF]>=0)) {
+  //do nothing
+ } else
+  amrex::Error("zap_mdot_flag invalid");
 
 } // end subroutine allocate_mdot()
 
@@ -15908,6 +15959,11 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
 
 } // end subroutine level_species_reaction
 
+void
+NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
+
+
+} //end subroutine sato_model_QDOT_MDOT_SPECIES()
 
 void
 NavierStokes::phase_change_redistributeALL() {
@@ -24234,6 +24290,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
 
+ int zap_mdot_flag=1;
+
  if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state
   MOF_training();
@@ -24242,14 +24300,14 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   MOF_training();
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
-  // do nothing
+  zap_mdot_flag=0;
  } else
   amrex::Error("local_caller_string invalid");
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.allocate_mdot(); //MDOT_MF=0.0
+  ns_level.allocate_mdot(zap_mdot_flag); 
 
     // mask=tag if not covered by level+1 or outside the domain.
   Real tag=1.0;
