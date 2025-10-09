@@ -59,6 +59,7 @@ namespace amrex{
        int* n_sites,
        const Real* nucleation_init_time,
        Real* pos_sites,
+       int* adapt_whole_material,
        const Real* xblob,const Real* yblob,
        const Real* zblob,const Real* radblob,
        const Real* xblob2,const Real* yblob2,

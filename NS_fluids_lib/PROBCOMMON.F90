@@ -255,6 +255,7 @@ implicit none
 ! Johnson Cook Softening parameters added April 08, 2025
 ! fort_hardening_coefficient added August 20, 2025
 ! Johnson_Cook_C added August 21, 2025
+! adapt_whole_material added October 9, 2025
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

@@ -5618,6 +5618,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (material_present_flag(im).eq.1) then
 
+        if (fort_adapt_whole_material(im).eq.1) then
+         inear=max(inear,1)
+        else if (fort_adapt_whole_material(im).eq.0) then
+         !do nothing
+        else
+         print *,"fort_adapt_whole_material(im) invalid: ",im, &
+          fort_adapt_whole_material(im)
+         stop
+        endif
+
         material_count=material_count+1
 
        else if (material_present_flag(im).eq.0) then

@@ -2013,9 +2013,12 @@ void NavierStokes::prelim_alloc() {
 
  if (localMF[MDOT_MF]->nComp()!=nsolve)
   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+ if (localMF[QDOT_MF]->nComp()!=nsolve)
+  amrex::Error("localMF[QDOT_MF]->nComp() invalid");
 
    //val,scomp,ncomp,ngrow
  setVal_localMF(MDOT_MF,0.0,0,nsolve,0); 
+ setVal_localMF(QDOT_MF,0.0,0,nsolve,0); 
 
 } // end subroutine prelim_alloc
 
@@ -2270,6 +2273,7 @@ void NavierStokes::phase_change_code_segment(
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
 
   // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
+  // e.g. u dot n = [k grad T dot n]/(rho L)
  for (int ilev=level;ilev<=finest_level;ilev++) {
   int nucleation_flag=0;
   NavierStokes& ns_level=getLevel(ilev);
@@ -2675,10 +2679,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-   // allocate MDOT_MF (delete it first if it already exists)
-   // MDOT_MF has no ghost cells.
-   // MDOT_MF is initialized to zero.
-  ns_level.allocate_mdot(); 
+   // NavierStokes::allocate_mdot() declared in NavierStokes.cpp
+   // allocate MDOT_MF and QDOT_MF (delete it first if it already exists)
+   // MDOT_MF and QDOT_MF have no ghost cells.
+   // MDOT_MF and QDOT_MF are initialized to zero.
+  int zap_mdot_flag=1;
+  ns_level.allocate_mdot(zap_mdot_flag); 
   if (verbose>0) {
    ns_level.DumpProcNum();
   }
@@ -3323,6 +3329,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        //    d) fort_initjumpterm ( modifies localMF[MDOT_MF] )
        //    e) fort_getcolorsum (twice)
        phase_change_redistributeALL();
+
+       NavierStokes& ns_finest=getLevel(finest_level);
+       ns_finest.sato_model_QDOT_MDOT_SPECIES();
 
        delete_array(JUMP_STRENGTH_MF);
    
@@ -6159,6 +6168,19 @@ NavierStokes::SumRegions(
  } else
   amrex::Error("MDOT_MF invalid");
 
+ if (QDOT_MF>=0) {
+  if (localMF[QDOT_MF]->nComp()==1) {
+   // do nothing
+  } else
+   amrex::Error("localMF[QDOT_MF]->nComp() invalid");
+  if (localMF[QDOT_MF]->nGrow()>=0) {
+   // do nothing
+  } else
+   amrex::Error("localMF[QDOT_MF]->nGrow() invalid");
+
+ } else
+  amrex::Error("QDOT_MF invalid");
+
  resize_metrics(1);
 
  debug_ngrow(VOLUME_MF,0,local_caller_string);
@@ -6593,6 +6615,20 @@ NavierStokes::LowMachDIVUALL(
 
  } else
   amrex::Error("MDOT_MF invalid");
+
+ if (QDOT_MF>=0) {
+  if (localMF[QDOT_MF]->nComp()==1) {
+   // do nothing
+  } else
+   amrex::Error("localMF[QDOT_MF]->nComp() invalid");
+  if (localMF[QDOT_MF]->nGrow()>=0) {
+   // do nothing
+  } else
+   amrex::Error("localMF[QDOT_MF]->nGrow() invalid");
+
+ } else
+  amrex::Error("QDOT_MF invalid");
+
 
   //mdot_data[icolor][j=0 or 1]
  Vector< Vector<Real> > mdot_data;
@@ -9728,10 +9764,10 @@ void NavierStokes::multiphase_preconditioner(
 
   NavierStokes& ns_finest=getLevel(finest_level);
   ns_finest.mg_cycleALL(presmooth,
-  project_option,
-  idx_R,
-  idx_Z,
-  nsolve);
+    project_option,
+    idx_R,
+    idx_Z,
+    nsolve);
 
    // MINV=I
  } else if (project_solver_type==2) {
