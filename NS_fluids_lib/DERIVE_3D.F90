@@ -658,6 +658,7 @@ stop
         visc,DIMS(visc), &
         vel,DIMS(vel), &
         eosdata,DIMS(eosdata), &
+        lsdata,DIMS(lsdata), &
         tensor,DIMS(tensor), &
         gammadot,DIMS(gammadot), &
         tilelo,tilehi, &
@@ -698,6 +699,7 @@ stop
       integer, INTENT(in) :: DIMDEC(visc)
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(eosdata)
+      integer, INTENT(in) :: DIMDEC(lsdata)
       integer, INTENT(in) :: DIMDEC(tensor)
       integer, INTENT(in) :: DIMDEC(gammadot)
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
@@ -715,6 +717,9 @@ stop
       real(amrex_real), INTENT(in), target :: eosdata(DIMV(eosdata), &
               num_materials*num_state_material)
       real(amrex_real), pointer :: eosdata_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: lsdata(DIMV(lsdata), &
+              num_materials*(SDIM+1))
+      real(amrex_real), pointer :: lsdata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
          tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE_REFINE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
@@ -880,7 +885,7 @@ stop
       if (dt.gt.zero) then 
        ! do nothing
       else
-       print *,"dt invalid in fort_derviscosity"
+       print *,"dt invalid in fort_derviscosity: ",dt
        stop
       endif
 
@@ -925,6 +930,8 @@ stop
       call checkbound_array1(fablo,fabhi,gammadot_ptr,ngrow,-1)
       eosdata_ptr=>eosdata
       call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1)
+      lsdata_ptr=>lsdata
+      call checkbound_array(fablo,fabhi,lsdata_ptr,ngrow,-1)
       tensor_ptr=>tensor
       call checkbound_array(fablo,fabhi,tensor_ptr,ngrow,-1)
       vel_ptr=>vel
