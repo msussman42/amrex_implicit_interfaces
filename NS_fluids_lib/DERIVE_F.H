@@ -115,6 +115,7 @@ extern "C" {
       int* level,
       int* finest_level,
       Real* visc_coef,
+      Real* visc_coef_boundary_layer_factor,
       int* fortran_im,
       Real* dt,
       Real* viscosity_coefficient,

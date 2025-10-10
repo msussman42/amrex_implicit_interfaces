@@ -10943,6 +10943,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       &level,
       &finest_level,
       &visc_coef,
+      &visc_coef_boundary_layer_factor,
       &fortran_im,
       &dt_slab, //used for viscoelastic coefficient
       &viscconst[im],
