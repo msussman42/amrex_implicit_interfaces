@@ -10830,6 +10830,8 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
  MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
 
+ MultiFab* lsmf=getStateDist(ngrow,cur_time_slab,local_caller_string); 
+
  MultiFab* tensor=vel;
 
  if ((num_materials_viscoelastic>=1)&&
@@ -10923,6 +10925,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
    FArrayBox& velfab=(*vel)[mfi];
    FArrayBox& eosfab=(*EOSdata)[mfi];
+   FArrayBox& lsfab=(*lsmf)[mfi];
    FArrayBox& tensorfab=(*tensor)[mfi];
 
    Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -10961,6 +10964,8 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       eosfab.dataPtr(),
       ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+      lsfab.dataPtr(),
+      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
       tensorfab.dataPtr(scomp_tensor),
       ARLIM(tensorfab.loVect()),ARLIM(tensorfab.hiVect()),
       gammadot.dataPtr(),
@@ -11069,6 +11074,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
  delete vel;
  delete EOSdata;
+ delete lsmf;
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {

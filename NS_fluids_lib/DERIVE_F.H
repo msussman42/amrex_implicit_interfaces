@@ -133,6 +133,7 @@ extern "C" {
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
       Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
+      Real* lsdata,AMREX_ARLIM_P(lsdatalo),AMREX_ARLIM_P(lsdatahi),
       Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
       Real* gammadot,AMREX_ARLIM_P(gammadotlo),AMREX_ARLIM_P(gammadothi),
       const int* tilelo, const int* tilehi,

@@ -341,6 +341,7 @@ public:
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
 
+    static Real visc_coef_boundary_layer_factor; //def=1.0
     static Real visc_coef;  // visc_coef=1/Re
     static Real heatvisc_coef; // heatvisc_coef=(1/(Re Pr))
 
