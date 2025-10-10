@@ -640,6 +640,7 @@ stop
         level, &
         finest_level, &
         visc_coef, &
+        visc_coef_boundary_layer_factor, &
         im_parm, & !1<=im_parm<=num_materials
         dt, & ! used for the viscoelastic coefficient.
         viscosity_coefficient, & ! viscconst(im_parm)
@@ -677,6 +678,7 @@ stop
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       real(amrex_real), INTENT(in) :: visc_coef
+      real(amrex_real), INTENT(in) :: visc_coef_boundary_layer_factor
       integer, INTENT(in) :: im_parm !1<=im_parm<=num_materials
       integer, INTENT(in) :: ncompvisc
       real(amrex_real), INTENT(in) :: dt
@@ -823,6 +825,14 @@ stop
        ! do nothing
       else
        print *,"visc_coef invalid: ",visc_coef,fort_visc_coef
+       stop
+      endif
+
+      if (visc_coef_boundary_layer_factor.ge.one) then
+       !do nothing
+      else
+       print *,"visc_coef_boundary_layer_factor invalid: ", &
+         visc_coef_boundary_layer_factor
        stop
       endif
 
@@ -1000,6 +1010,7 @@ stop
          stop
         endif
 
+        FIX ME FIND primary material and if |LS_primary|<ngrow*dx ...
         visc(D_DECL(i,j,k),im_parm) = mu
 
         if (shear_thinning_fluid.eq.1) then
