@@ -350,6 +350,7 @@ extern "C"
       const int* fablo, const int* fabhi,
       int* bfact,
       Real* explicit_viscosity_dt,
+      Real* visc_coef_boundary_layer_factor,
       Real* min_stefan_velocity_for_dt,
       Real* cap_wave_speed,
       Real* visc_wave_speed,

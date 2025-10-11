@@ -2979,14 +2979,20 @@ stop
           if (init_dist.lt.zero) then
            if (minLS(im).ge.zero) then
             init_dist=-max_problen
-           else
+           else if (minLS(im).lt.zero) then
             init_dist=minLS(im)
+           else
+            print *,"minLS(im) invalid: ",im,minLS(im)
+            stop
            endif
           else if (init_dist.ge.zero) then
            if (maxLS(im).lt.zero) then
             init_dist=max_problen
-           else
+           else if (maxLS(im).ge.zero) then
             init_dist=maxLS(im)
+           else
+            print *,"maxLS(im) invalid: ",im,maxLS(im)
+            stop
            endif
           else
            print *,"init_dist bust: ",init_dist
