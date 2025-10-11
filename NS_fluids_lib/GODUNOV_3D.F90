@@ -2819,6 +2819,17 @@ stop
          if (mu.eq.zero) then
           visc_wave_speed(im)=zero
          else if (mu.gt.zero) then
+
+          if (visc_coef_boundary_layer_factor.eq.one) then
+           !do nothing
+          else if (visc_coef_boundary_layer_factor.gt.one) then
+           mu=mu*visc_coef_boundary_layer_factor
+          else
+           print *,"visc_coef_boundary_layer_factor invalid: ", &
+              visc_coef_boundary_layer_factor
+           stop
+          endif
+
           if (visc_coef.gt.zero) then
            visc_wave_speed(im)=two*SDIM*two*visc_coef*mu/ &
                 (fort_denconst(im)*dxmin)
