@@ -272,27 +272,18 @@ AmrCore::InitAmr () {
  }
 
  LSA_nsteps_power_method=0;
- LSA_steps_force=0;
  pp.queryAdd("LSA_nsteps_power_method",LSA_nsteps_power_method);
- pp.queryAdd("LSA_steps_force",LSA_steps_force);
 
  if (LSA_nsteps_power_method>=0) {
   //do nothing
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
 
- if (LSA_steps_force>=0) {
-  //do nothing
- } else
-  amrex::Error("expecting LSA_steps_force>=0");
-
  LSA_current_step=0;
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "Amr.LSA_nsteps_power_method= " << 
     LSA_nsteps_power_method  << '\n';
-  std::cout << "Amr.LSA_steps_force= " << 
-    LSA_steps_force << '\n';
  }
 
   //AmrCore::Initialize ()
@@ -544,11 +535,6 @@ AmrCore::InitAmr () {
    //do nothing
   } else
    amrex::Error("expecting LSA_max_step>=1");
-
-  if (LSA_steps_force>=1) {
-   //do nothing
-  } else
-   amrex::Error("expecting LSA_steps_force>=1");
 
   if (regrid_int>LSA_max_step) {
    //do nothing
