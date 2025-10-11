@@ -23152,6 +23152,7 @@ void NavierStokes::MaxAdvectSpeed(
     fablo,fabhi,
     &bfact,
     &explicit_viscosity_dt,
+    &visc_coef_boundary_layer_factor,
     &min_stefan_velocity_for_dt,
     local_cap_wave_speed[tid_current].dataPtr(),
     local_visc_wave_speed[tid_current].dataPtr(),

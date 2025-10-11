@@ -735,6 +735,9 @@ stop
       integer dir_local
       real(amrex_real) Q(3,3)
       real(amrex_real) traceA,modtime,viscoelastic_coeff
+      real(amrex_real) DXMAXLS,cutoff
+      real(amrex_real) LS_local(num_materials)
+      integer im_primary,im_local
 
       visc_ptr=>visc
 
@@ -749,6 +752,17 @@ stop
 
       if ((im_parm.lt.1).or.(im_parm.gt.num_materials)) then
        print *,"im_parm invalid3"
+       stop
+      endif
+
+      if (ngrow_distance.lt.4) then
+       print *,"expecting ngrow_distance>=4 in fort_derviscosity: ", &
+         ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"expecting ngrow_make_distance=ngrow_distance-1 in fort_dervisc"
+       print *,"ngrow_make_distance: ",ngrow_make_distance
        stop
       endif
 
@@ -949,6 +963,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      cutoff=DXMAXLS*(ngrow_distance-one)
+
       if (is_rigid(im_parm).eq.1) then
 
        do k=growlo(3),growhi(3)
@@ -1010,7 +1027,28 @@ stop
          stop
         endif
 
-        FIX ME FIND primary material and if |LS_primary|<ngrow*dx ...
+        if (visc_coef_boundary_layer_factor.eq.one) then
+         !do nothing
+        else if (visc_coef_boundary_layer_factor.gt.one) then
+         do im_local=1,num_materials
+          LS_local(im_local)=lsdata(D_DECL(i,j,k),im_local)
+         enddo
+         call get_primary_material(LS_local,im_primary)
+         if (abs(LS_local(im_primary)).le.cutoff) then
+          mu=mu*visc_coef_boundary_layer_factor
+         else if (abs(LS_local(im_primary)).gt.cutoff) then
+          !do nothing
+         else
+          print *,"LS_local(im_primary) invalid: ",im_primary, &
+            LS_local(im_primary)
+          stop
+         endif
+        else
+         print *,"visc_coef_boundary_layer_factor invalid: ", &
+           visc_coef_boundary_layer_factor
+         stop
+        endif
+
         visc(D_DECL(i,j,k),im_parm) = mu
 
         if (shear_thinning_fluid.eq.1) then

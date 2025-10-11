@@ -2466,6 +2466,7 @@ stop
         fablo,fabhi, &
         bfact, &
         explicit_viscosity_dt, &
+        visc_coef_boundary_layer_factor, &
         min_stefan_velocity_for_dt, &
         cap_wave_speed, &
         visc_wave_speed, &
@@ -2576,6 +2577,7 @@ stop
       real(amrex_real), target, INTENT(in) :: dist(DIMV(dist),num_materials)
       real(amrex_real), pointer :: dist_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: explicit_viscosity_dt
+      real(amrex_real), INTENT(in) :: visc_coef_boundary_layer_factor
       real(amrex_real), INTENT(in) :: min_stefan_velocity_for_dt
       real(amrex_real), INTENT(inout) :: &
         cap_wave_speed(num_interfaces) !fort_estdt
@@ -3239,6 +3241,17 @@ stop
              (explicit_viscosity_dt.le.1.0D+20)) then
           mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
           if (mu.gt.zero) then
+
+           if (visc_coef_boundary_layer_factor.eq.one) then
+            !do nothing
+           else if (visc_coef_boundary_layer_factor.gt.one) then
+            mu=mu*visc_coef_boundary_layer_factor
+           else
+            print *,"visc_coef_boundary_layer_factor invalid: ", &
+               visc_coef_boundary_layer_factor
+            stop
+           endif
+
            if (visc_coef.gt.zero) then
             viscosity_wave_speed=two*SDIM*two*visc_coef*mu/ &
                 (fort_denconst(im)*hx)
@@ -3833,10 +3846,14 @@ stop
         stop
        endif
 
+        !weymouth_factor=weymouth_cfl/cfl
        effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)+ &
          max_elastic_wave_speed
 
        if (effective_velocity.gt.zero) then
+         !u_eff=u*cfl/weymouth_cfl
+         !dt=dx/u_eff=dx * weymouth_cfl / (u cfl)
+         !cfl * dt = dx * weymouth_cfl/u
         dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing
