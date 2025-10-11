@@ -47,8 +47,8 @@ ns.v=1
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 96 48
-amr.max_level =  1
+amr.n_cell    = 192 96 
+amr.max_level =  0
 ns.ns_tiling=false
 
 ns.minimum_relative_error=1.0e-18
@@ -77,7 +77,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 1000    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 24
+amr.max_grid_size   = 48
 cg.min_max_grid_size=1024
 #amr.restart         = chk00009
 #amr.trace   =1
@@ -100,7 +100,9 @@ ns.gravity        = 0.0
 ns.tension       = 1118.0 559.0 1118.0 
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.viscosity_ratio_relaxation_factor=0.0 
-ns.explicit_viscosity_dt=0.0
+ns.explicit_viscosity_dt=1.0
+ns.ngrow_distance=6
+ns.visc_coef_boundary_layer_factor=100.0
 ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -170,7 +172,7 @@ ns.material_type=0 0 0 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
 # FSI_ICE_PROBF90=3 ice
 # FSI_RIGID_NOTPRESCRIBED=5
 ns.FSI_flag=0 0 5
-ns.viscconst=1.0 0.0156552 1.0
+ns.viscconst=1.0 0.0156552 10.0
 ns.denconst=1.0 0.001226 1.0 
 ns.tempconst=293.0 293.0 293.0 
 

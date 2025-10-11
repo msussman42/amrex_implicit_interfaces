@@ -1418,57 +1418,28 @@ Real NavierStokes::advance(Real time,Real dt) {
     LSA_perturbations_switch=false; 
    } else if (parent->LSA_nsteps_power_method>=1) {
 
+    int local_step_count=parent->levelSteps(0)-
+                         parent->initial_levelSteps;
+    int local_max_step_count=parent->LSA_max_step-
+                             parent->initial_levelSteps;
+
+    if ((local_step_count>=0)&&
+        (local_step_count<=local_max_step_count)) {
+     //do nothing
+    } else
+     amrex::Error("local_step_count invalid");
+
     if (parent->LSA_current_step==0) { //initialize non perturbed state.
-
-     LSA_perturbations_switch=false; 
-     if (parent->levelSteps(0)==parent->initial_levelSteps) {
-      //save t^n data
-      //LSA_save_state_data is declared in NavierStokes.cpp
-      //LSA_save_state_data calls NavierStokes::init_boundary
-      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
-     } else if (parent->levelSteps(0)>parent->initial_levelSteps) {
-      //do nothing
-     } else {
-      std::cout << "parent->levelSteps(0)=" <<
-        parent->levelSteps(0) << '\n';
-      std::cout << "parent->initial_levelSteps=" <<
-        parent->initial_levelSteps << '\n';
-      amrex::Error("parent->initial_levelSteps invalid");
-     }
-
-    } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
-
-     int local_step_count=parent->levelSteps(0)-
-                          parent->initial_levelSteps;
-     int local_max_step_count=parent->LSA_max_step-
-                              parent->initial_levelSteps;
-
-     if ((parent->LSA_steps_force>=1)&&
-         (parent->LSA_steps_force<=local_max_step_count)) {
-      //do nothing
-     } else
-      amrex::Error("parent->LSA_steps_force invalid");
-
-     if ((local_step_count>=0)&&
-         (local_step_count<=local_max_step_count)) {
-      //do nothing
-     } else
-      amrex::Error("local_step_count invalid");
 
      if (local_step_count==0) {
 
       LSA_perturbations_switch=true; 
-      //restore t^n data
-      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
-      CopyNewToOldALL();
+      //save t^n data
+      //LSA_save_state_data is declared in NavierStokes.cpp
+      //LSA_save_state_data calls NavierStokes::init_boundary
+      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
 
-     } else if ((local_step_count>=1)&&
-                (local_step_count<=parent->LSA_steps_force)) {
-
-      LSA_perturbations_switch=true; 
-
-     } else if (local_step_count>parent->LSA_steps_force) {
+     } else if (local_step_count>0) {
 
       LSA_perturbations_switch=false; 
 
@@ -1479,7 +1450,31 @@ Real NavierStokes::advance(Real time,Real dt) {
         parent->initial_levelSteps << '\n';
       std::cout << "local_step_count=" <<
         local_step_count << '\n';
-      amrex::Error("parent->initial_levelSteps invalid");
+      amrex::Error("local_step_count invalid");
+     }
+
+    } else if ((parent->LSA_current_step>=1)&&
+               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+
+     if (local_step_count==0) {
+
+      LSA_perturbations_switch=true; 
+      //restore t^n data
+      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
+      CopyNewToOldALL();
+
+     } else if (local_step_count>0) {
+
+      LSA_perturbations_switch=false; 
+
+     } else {
+      std::cout << "parent->levelSteps(0)=" <<
+        parent->levelSteps(0) << '\n';
+      std::cout << "parent->initial_levelSteps=" <<
+        parent->initial_levelSteps << '\n';
+      std::cout << "local_step_count=" <<
+        local_step_count << '\n';
+      amrex::Error("local_step_count invalid");
      }
 
     } else {

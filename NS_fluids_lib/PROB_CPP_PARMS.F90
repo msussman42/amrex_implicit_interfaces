@@ -644,7 +644,7 @@ stop
       real(amrex_real), INTENT(in) :: ccnucleation_init_time
       real(amrex_real), INTENT(in) :: ccpos_sites(5000)
      
-      real(amrex_real), INTENT(in) :: ccadapt_whole_material(ccnum_materials)
+      integer, INTENT(in) :: ccadapt_whole_material(ccnum_materials)
 
       real(amrex_real), INTENT(in) :: ccCarreau_alpha(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccCarreau_beta(ccnum_materials)
@@ -1881,7 +1881,7 @@ stop
          fort_R_Palmore_Desjardins
 
        do im=1,num_materials
-        print *,"im,adapt_whole_material ",im,fort_adapt_whole_material(im)
+        print *,"im,fort_adapt_whole_material ",im,fort_adapt_whole_material(im)
         print *,"im,material_type ",im,fort_material_type(im)
         print *,"im,material_conservation_form ", &
           im,fort_material_conservation_form(im)
