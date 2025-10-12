@@ -6683,12 +6683,12 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow.ne.4) then
-       print *,"expecting ngrow==4 in fort_extend_burning_vel"
+      if (ngrow.lt.4) then
+       print *,"expecting ngrow>=4 in fort_extend_burning_vel"
        stop
       endif
-      if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance==3 in fort_extend_burning_vel"
+      if (ngrow_make_distance.ne.ngrow-1) then
+       print *,"expecting ngrow_make_distance==ngrow-1 fort_extend_burning_vel"
        stop
       endif
       if (nburning.eq.num_interfaces*(ncomp_per+1)) then
