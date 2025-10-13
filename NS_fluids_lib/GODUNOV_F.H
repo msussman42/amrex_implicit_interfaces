@@ -480,6 +480,25 @@ extern "C"
     Real* velz,
     AMREX_ARLIM_P(velzlo),AMREX_ARLIM_P(velzhi) );
 
+
+   void fort_LS_evec_max(
+    int* level,
+    int* finest_level,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* time,
+    Real* local_max,
+    Real* maskcov,
+    AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* unperturb,
+    AMREX_ARLIM_P(unperturblo),AMREX_ARLIM_P(unperturbhi),
+    Real* cell_evec,
+    AMREX_ARLIM_P(cell_eveclo),AMREX_ARLIM_P(cell_evechi) );
+
+
    void fort_stefansolver(
     int* project_option,
     int* solidheat_flag,
