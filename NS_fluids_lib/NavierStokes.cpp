@@ -11337,8 +11337,124 @@ void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf,
 
 } //end subroutine LSA_save_state_dataALL
 
+void NavierStokes::LSA_levelset_norminf(
+ int im_critical, //0<=im_critical<num_materials
+ int unperturb_cell_mf,
+ int cell_mf,
+ Real& local_max) {
 
-void NavierStokes::LSA_default_eigenvector(int cell_mf,int face_mf) {
+ std::string local_caller_string="LSA_levelset_norminf";
+
+ int finest_level=parent->finestLevel();
+
+ int local_control_flag=NULL_CONTROL;
+ int ncomp_total=0;
+ Vector<int> scomp_section;
+ Vector<int> ncomp;
+ init_boundary(
+   local_control_flag,
+   cell_mf,
+   ncomp_total,
+   scomp_section,ncomp);
+
+ if ((im_critical>=0)&&(im_critical<num_materials)) {
+  //do nothing
+ } else
+  amrex::Error("im_critical invalid");
+
+ if (localMF[cell_mf]->nComp()==ncomp_total) {
+  //do nothing
+ } else
+  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+
+ if (localMF[unperturb_cell_mf]->nComp()==ncomp_total) {
+  //do nothing
+ } else
+  amrex::Error("localMF[unperturb_cell_mf]->nComp()==ncomp_total failed");
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
+ debug_ixType(MASKCOEF_MF,-1,local_caller_string);
+
+ int scomp=scomp_section[LS_Type]+im_critical;
+
+ bool use_tiling=ns_tiling;
+
+ Vector< Real > local_max_local;
+ local_max_local.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  local_max_local[tid]=0.0;
+ } // tid
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[cell_mf]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[cell_mf],use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+  const Real* dx = geom.CellSize();
+
+  FArrayBox& old_state=(*localMF[unperturb_cell_mf])[mfi]; 
+  FArrayBox& cell_evec=(*localMF[cell_mf])[mfi]; 
+   // mask=tag if not covered by level+1 or outside the domain.
+  FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
+  int tid_current=ns_thread();
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+
+   // in: GODUNOV_3D.F90
+  fort_LS_evec_max( 
+   &level,
+   &finest_level,
+   tilelo,tilehi,
+   fablo,fabhi,&bfact,
+   xlo,dx,
+   &dt_slab,
+   &cur_time_slab,
+   &local_max_local[tid_current],
+   maskcov.dataPtr(),
+   ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+   old_state.dataPtr(scomp),
+   ARLIM(old_state.loVect()),
+   ARLIM(old_state.hiVect()),
+   cell_evec.dataPtr(scomp),
+   ARLIM(cell_evec.loVect()),
+   ARLIM(cell_evec.hiVect()) );
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_LEVELSETNORM,"fort_LS_evec_max"); 
+  //thread_class::sync_tile_d_numPts(),
+  //ParallelDescriptor::ReduceRealSum
+  //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
+ 
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  if (local_max_local[tid]>local_max_local[0])
+   local_max_local[0]=local_max_local[tid];
+ } // tid
+ ParallelDescriptor::ReduceRealMax(local_max_local[0]);
+ local_max=local_max_local[0];
+
+} // end subroutine LSA_levelset_norminf
+
+
+void NavierStokes::LSA_default_eigenvector(
+ int unperturb_cell_mf,int unperturb_face_mf,
+ int cell_mf,int face_mf) {
 
  std::string local_caller_string="LSA_default_eigenvector";
 
@@ -11431,15 +11547,22 @@ void NavierStokes::LSA_default_eigenvector(int cell_mf,int face_mf) {
 
 } // end subroutine LSA_default_eigenvector
 
-void NavierStokes::LSA_default_eigenvectorALL(int cell_mf,int face_mf) {
+
+void NavierStokes::LSA_default_eigenvectorALL(
+ int unperturb_cell_mf,int unperturb_face_mf,
+ int cell_mf,int face_mf) {
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.LSA_default_eigenvector(cell_mf,face_mf);
+  ns_level.LSA_default_eigenvector(
+    unperturb_cell_mf,unperturb_face_mf,
+    cell_mf,face_mf);
  } //ilev
  
- LSA_normalize_eigenvectorALL(cell_mf,face_mf);
+ LSA_normalize_eigenvectorALL(
+   unperturb_cell_mf,unperturb_face_mf,
+   cell_mf,face_mf);
 
 } //end subroutine LSA_default_eigenvectorALL
 
@@ -11485,16 +11608,21 @@ void NavierStokes::LSA_eigenvectorALL(
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.LSA_eigenvector(unperturb_cell_mf,unperturb_face_mf,
+  ns_level.LSA_eigenvector(
+    unperturb_cell_mf,unperturb_face_mf,
     cell_mf,face_mf);
  } //ilev
  
- LSA_normalize_eigenvectorALL(cell_mf,face_mf);
+ LSA_normalize_eigenvectorALL(
+   unperturb_cell_mf,unperturb_face_mf,
+   cell_mf,face_mf);
 
 } //end subroutine LSA_eigenvectorALL
 
 
-void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
+void NavierStokes::LSA_normalize_eigenvector(
+  int unperturb_cell_mf,int unperturb_face_mf,
+  int cell_mf,int face_mf,
   Vector<Real> cell_max,Vector<Real> face_max,
   int isweep) {
 
@@ -11551,7 +11679,7 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
 
   } else if (isec==State_Type) {
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
-    scale_parm[scomp_section[isec]+dir]=velocity_scale;
+    scale_parm[scomp_section[isec]+dir]=velocity_scale; //dx/dt
    }
    for (int im=0;im<num_materials;im++) {
     scale_parm[scomp_section[isec]+STATECOMP_STATES+
@@ -11559,7 +11687,7 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
    } //im=0 .. nmat-1
   } else if (isec==LS_Type) {
    for (int im=0;im<num_materials;im++) {
-    scale_parm[scomp_section[isec]+im]=dx_finest[0]/dt_slab;
+    scale_parm[scomp_section[isec]+im]=2.0*dx_finest[0];
    }
   } else if (isec==DIV_Type) {
    //do nothing
@@ -11594,6 +11722,12 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
     //nghost=0
    Real local_max=localMF[cell_mf]->norminf(scomp,0);
+
+   int im_critical=scomp-scomp_section[LS_Type];
+   if ((im_critical>=0)&&(im_critical<num_materials)) {
+    LSA_levelset_norminf(im_critical,unperturb_cell_mf,cell_mf,local_max);
+   }
+
    cell_max[scomp]=max(cell_max[scomp],local_max);
   }
   for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
@@ -11627,7 +11761,9 @@ void NavierStokes::LSA_normalize_eigenvector(int cell_mf,int face_mf,
 
 } //end subroutine LSA_normalize_eigenvector
 
-void NavierStokes::LSA_normalize_eigenvectorALL(int cell_mf,int face_mf) {
+void NavierStokes::LSA_normalize_eigenvectorALL(
+  int unperturb_cell_mf,int unperturb_face_mf,
+  int cell_mf,int face_mf) {
 
  int finest_level=parent->finestLevel();
 
@@ -11644,7 +11780,9 @@ void NavierStokes::LSA_normalize_eigenvectorALL(int cell_mf,int face_mf) {
  for (int isweep=0;isweep<=1;isweep++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.LSA_normalize_eigenvector(cell_mf,face_mf,
+   ns_level.LSA_normalize_eigenvector(
+     unperturb_cell_mf,unperturb_face_mf,
+     cell_mf,face_mf,
      cell_max,face_max,isweep);
   } //ilev
  } //isweep=0,1

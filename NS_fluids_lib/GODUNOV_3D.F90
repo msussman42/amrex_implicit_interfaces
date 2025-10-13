@@ -21692,6 +21692,139 @@ stop
       end subroutine fort_default_evec
 
 
+      subroutine fort_LS_evec_max( &
+       level, &
+       finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       xlo,dx, &
+       dt, &
+       cur_time, & ! cur_time
+       local_max, &
+       maskcov,DIMS(maskcov), & 
+       unperturb,DIMS(unperturb), & 
+       cell_evec,DIMS(cell_evec) ) &
+      bind(c,name='fort_LS_evec_max')
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
+      integer growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in), target :: xlo(SDIM)
+      real(amrex_real), INTENT(in), target :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      real(amrex_real), INTENT(in) :: cur_time
+      real(amrex_real), INTENT(inout) :: local_max
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(unperturb)
+      integer, INTENT(in) :: DIMDEC(cell_evec)
+
+      real(amrex_real), INTENT(in), target :: &
+       maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+       unperturb(DIMV(unperturb))
+      real(amrex_real), pointer :: unperturb_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+       cell_evec(DIMV(cell_evec))
+      real(amrex_real), pointer :: cell_evec_ptr(D_DECL(:,:,:))
+
+      real(amrex_real) dxmaxLS
+      real(amrex_real) testLS
+      real(amrex_real) test_max
+      integer i,j,k
+      integer local_mask
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_LS_evec_max"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid: ",dt
+       stop
+      endif 
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid: ",cur_time
+       stop
+      endif 
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1)
+
+      unperturb_ptr=>unperturb
+      call checkbound_array1(fablo,fabhi,unperturb_ptr,0,-1)
+
+      cell_evec_ptr=>cell_evec
+      call checkbound_array1(fablo,fabhi,cell_evec_ptr,0,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then
+        testLS=abs(unperturb(D_DECL(i,j,k)))
+        if (testLS.le.dxmaxLS) then
+         test_max=abs(cell_evec(D_DECL(i,j,k)))
+         if (test_max.gt.local_max) then
+          local_max=test_max
+         else if (test_max.le.local_max) then
+          ! do nothing
+         else
+          print *,"test_max,local_max? ",test_max,local_max
+          stop
+         endif
+        else if (testLS.gt.dxmaxLS) then
+         !do nothing
+        else
+         print *,"testLS invalid: ",testLS
+         stop
+        endif
+
+       else if (local_mask.eq.0) then
+        !do nothing
+       else
+        print *,"local_mask invalid: ",local_mask
+        stop
+       endif
+
+      enddo ! i
+      enddo ! j
+      enddo ! k
+
+      return
+      end subroutine fort_LS_evec_max
+
+
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
