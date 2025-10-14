@@ -33,6 +33,17 @@ stop
 ! last comp. of solid <0 in solid
 ! vof is inputs, slopes is output.
 
+!update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID or
+!update_flag=RECON_UPDATE_STATE_CENTROID if called from
+! (a) post_init_state
+! (b) post_restart
+! (c) level_phase_change_convertALL
+! (d) nonlinear_advection (just before split_scalar_advectionALL)
+! (e) phase_change_code_segment
+! (f) no mass_transfer_code_segment
+! (g) nucleation_code_segment
+!and update_centroid_after_recon=1
+
       ! masknbr:
       ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
       ! (2) =1 interior  =0 otherwise

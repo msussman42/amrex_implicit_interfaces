@@ -5907,7 +5907,6 @@ NavierStokes::ColorSum(
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
-
   // mask=tag if not covered by level+1 and at fine/fine ghost cell.
  int ngrowmask=1;
  Real tag=1.0;
@@ -14386,6 +14385,15 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
+    // the velocity is not extended in the following regions:
+    // 1. r=0 if RZ
+    // 2. the velocity is clamped.
+    // 3. is_rigid=1
+    // The extended velocity consists of a weighted average of:
+    // 1. clamped materials
+    // 2. r=0 if RZ
+    // 3. is_rigid=1
+    // 4. the material in question
    fort_extend_elastic_velocity(
       &im_critical, //1<=im_critical<=num_materials
       &dir, //dir=0,1,2
