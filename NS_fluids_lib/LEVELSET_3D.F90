@@ -7126,6 +7126,209 @@ stop
       return
       end subroutine fort_getcolorsum
 
+
+      subroutine fort_sato_qdot_mdot( &
+       tid_current, &
+       tessellate, &
+       cur_time_slab, &
+       dt, &
+       dx, &
+       xlo, &
+       mdot, &
+       DIMS(mdot), &
+       qdot, &
+       DIMS(qdot), &
+       LS,DIMS(LS), &
+       DEN,DIMS(DEN), &
+       VOF,DIMS(VOF), &
+       xface,DIMS(xface), &
+       yface,DIMS(yface), &
+       zface,DIMS(zface), &
+       areax,DIMS(areax), &
+       areay,DIMS(areay), &
+       areaz,DIMS(areaz), &
+       cellfab,DIMS(cellfab), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level, &
+       finest_level, &
+       rzflag, &
+       levelbc, &
+       nface_dst, &
+       ncellfrac) &
+      bind(c,name='fort_sato_qdot_mdot')
+
+      use probcommon_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid_current
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: nface_dst,ncellfrac
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: cur_time_slab
+      real(amrex_real), INTENT(in) :: dt
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      integer, INTENT(in) :: levelbc(SDIM,2)
+
+      integer :: i,j,k
+      integer :: dir
+ 
+      integer, INTENT(in) :: rzflag
+      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      integer :: growlo(3), growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(qdot)
+      integer, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(DEN)
+      integer, INTENT(in) :: DIMDEC(VOF)
+      integer, INTENT(in) :: DIMDEC(xface)
+      integer, INTENT(in) :: DIMDEC(yface)
+      integer, INTENT(in) :: DIMDEC(zface)
+      integer, INTENT(in) :: DIMDEC(areax)
+      integer, INTENT(in) :: DIMDEC(areay)
+      integer, INTENT(in) :: DIMDEC(areaz)
+      integer, INTENT(in) :: DIMDEC(cellfab)
+
+      real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(inout), target :: qdot(DIMV(qdot))
+      real(amrex_real), pointer :: qdot_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+          LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+          DEN(DIMV(DEN),num_materials*num_state_material)
+      real(amrex_real), pointer :: DEN_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+              VOF(DIMV(VOF),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: VOF_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: xface(DIMV(xface),nface_dst)
+      real(amrex_real), INTENT(in), target :: yface(DIMV(yface),nface_dst)
+      real(amrex_real), INTENT(in), target :: zface(DIMV(zface),nface_dst)
+      real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: yface_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: areax(DIMV(areax))
+      real(amrex_real), INTENT(in), target :: areay(DIMV(areay))
+      real(amrex_real), INTENT(in), target :: areaz(DIMV(areaz))
+      real(amrex_real), pointer :: areax_ptr(D_DECL(:,:,:))
+      real(amrex_real), pointer :: areay_ptr(D_DECL(:,:,:))
+      real(amrex_real), pointer :: areaz_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: cellfab(DIMV(cellfab),ncellfrac)
+      real(amrex_real), pointer :: cellfab_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real) local_facearea(num_materials,num_materials)
+      real(amrex_real) local_dist_to_line(num_materials,num_materials)
+      real(amrex_real) local_normal(num_materials,num_materials,SDIM)
+      real(amrex_real) local_dist(num_materials,num_materials)
+      real(amrex_real) frac_pair(num_materials,num_materials)
+      real(amrex_real) dist_pair(num_materials,num_materials)
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      integer nmax
+
+      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid"
+       stop
+      endif
+
+       ! see fort_getcolorsum as a template
+      nmax=POLYGON_LIST_MAX 
+
+      mdot_ptr=>mdot
+      qdot_ptr=>qdot
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid: fort_sato_qdot_mdot: ",dt
+       stop
+      endif
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid: ",cur_time_slab
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid92"
+       stop
+      endif
+
+      if (nface_dst.ne.num_materials*num_materials*2) then
+       print *,"nface_dst invalid"
+       stop
+      endif
+      if (ncellfrac.ne.num_materials*num_materials*(3+SDIM)) then
+       print *,"ncellfrac invalid"
+       stop
+      endif
+
+      if (level.eq.finest_level) then
+       !do nothing
+      else
+       print *,"level or finest_level invalid fort_sato_qdot_mdot"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,qdot_ptr,0,-1)
+
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      DEN_ptr=>DEN
+      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1)
+      VOF_ptr=>VOF
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1)
+      cellfab_ptr=>cellfab
+      call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1)
+  
+      do dir=1,SDIM
+       if (fabhi(dir)-fablo(dir).le.0) then
+        print *,"fablo,fabhi violates blocking factor"
+        stop
+       endif
+      enddo
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_sato_qdot_mdot
+
+
+
       subroutine fort_get_lowmach_divu( &
        tid_current, &
        sweep_num, & !sweep_num=0: sum V_T rho DT/Dt, sweep_num=1:sum mdot=0

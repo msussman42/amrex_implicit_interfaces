@@ -22,8 +22,8 @@ geometry.is_periodic = 0 0
 ns.EILE_flag=1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
-#ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
-ns.MOFITERMAX_AFTER_PREDICT=0 #particles
+ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
+#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
 ns.mof_decision_tree_learning=0
 
 # multigrid class
@@ -100,9 +100,9 @@ ns.gravity        = 0.0
 ns.tension       = 1118.0 559.0 1118.0 
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.viscosity_ratio_relaxation_factor=0.0 
-ns.explicit_viscosity_dt=10.0
+ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=6
-ns.visc_coef_boundary_layer_factor=100.0
+ns.visc_coef_boundary_layer_factor=1.0
 ns.lamb_capillary_wave_speed=0 # 1 => rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -172,7 +172,7 @@ ns.material_type=0 0 0 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
 # FSI_ICE_PROBF90=3 ice
 # FSI_RIGID_NOTPRESCRIBED=5
 ns.FSI_flag=0 0 5
-ns.viscconst=1.0 0.0156552 10.0
+ns.viscconst=1.0 0.0156552 50.0
 ns.denconst=1.0 0.001226 1.0 
 ns.tempconst=293.0 293.0 293.0 
 

@@ -1656,7 +1656,7 @@ protected:
      // continuous_mof = STANDARD_MOF => regular MOF
      // continuous_mof = CMOF_X => CMOF ("continuous MOF ")
     static int  continuous_mof; // default is CMOF_X
-    static int  update_centroid_after_recon; //default is 0
+    static int  update_centroid_after_recon; //default is 1
     static int  mof_decision_tree_learning; // default is 10000
     static int  mof_machine_learning; // default is 0
     static Vector<Real> centroid_noise_factor; //default is 0.0

@@ -594,6 +594,8 @@ ENUM_NUM_TENSOR_TYPE=((ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA))
 
 #define LOOP_LEVELSETNORM 188
 
+#define LOOP_QDOTMDOT 189
+
 #define caller_FSI_make_distance 0
 #define caller_post_restart 1
 #define caller_initData 2

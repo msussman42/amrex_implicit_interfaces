@@ -84,6 +84,39 @@ namespace amrex{
        int* nface_dst,
        int* ncellfrac);
 
+
+     void fort_sato_qdot_mdot(
+       int* tid_current,
+       int* tessellate,
+       Real* cur_time_slab,
+       Real* dt,
+       const Real* dx,
+       const Real* xlo,
+       Real* mdot,
+       AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+       Real* qdot,
+       AMREX_ARLIM_P(qdotlo),AMREX_ARLIM_P(qdothi),
+       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+       Real* DEN,AMREX_ARLIM_P(DENlo),AMREX_ARLIM_P(DENhi),
+       Real* VOF,AMREX_ARLIM_P(VOFlo),AMREX_ARLIM_P(VOFhi),
+       Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
+       Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
+       Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
+       Real* areax,AMREX_ARLIM_P(areaxlo),AMREX_ARLIM_P(areaxhi),
+       Real* areay,AMREX_ARLIM_P(areaylo),AMREX_ARLIM_P(areayhi),
+       Real* areaz,AMREX_ARLIM_P(areazlo),AMREX_ARLIM_P(areazhi),
+       Real* cellfab,AMREX_ARLIM_P(cellfablo),AMREX_ARLIM_P(cellfabhi),
+       const int* tilelo, const int* tilehi,
+       const int* fablo, const int* fabhi, 
+       int* bfact,
+       int* level,
+       int* finest_level,
+       int* rzflag,
+       int* levelbc,
+       int* nface_dst,
+       int* ncellfrac);
+
+
      void fort_get_lowmach_divu(
        int* tid_current,
        int* sweep_num,

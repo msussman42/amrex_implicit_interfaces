@@ -156,7 +156,7 @@ int  NavierStokes::continuous_mof=CMOF_X;
 int  NavierStokes::continuous_mof=STANDARD_MOF;
 #endif
 
-int  NavierStokes::update_centroid_after_recon=0;
+int  NavierStokes::update_centroid_after_recon=1;
 
 //make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
 
@@ -3086,7 +3086,7 @@ NavierStokes::read_params ()
 
 #ifdef AMREX_PARTICLES
     if (continuous_mof==CMOF_X) {
-     //do nothing
+     update_centroid_after_recon=0
     } else
      amrex::Error("expecting continuous_mof==1 if using particles");
 #endif
@@ -16105,6 +16105,147 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
 void
 NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
 
+ int finest_level=parent->finestLevel();
+ if (level==finest_level) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==finest_level sato_model_QDOT_MDOT_SPECIES");
+
+ std::string local_caller_string="sato_model_QDOT_MDOT_SPECIES";
+
+ resize_metrics(1); // one ghost cell for cell areas and volumes
+ debug_ngrow(VOLUME_MF,0,local_caller_string); //sanity check for cell volumes
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(AREA_MF+dir,1,local_caller_string);
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+  if (localMF[AREA_MF+dir]->boxArray()!=Umac_new.boxArray())
+   amrex::Error("area_mf boxarrays do not match");
+ } // dir=0..sdim-1
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF (reconstructed slopes)
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
+ if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+ MultiFab* LSMF=getStateDist(1,cur_time_slab,local_caller_string);
+ MultiFab* den_mf=getStateDen(1,cur_time_slab);
+
+ int tessellate=1;  //all materials tesselate; no rasterized boundaries.
+
+  //this data is deleted in NavierStokes::Geometry_cleanup()
+ makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
+ ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
+ makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
+
+ bool use_tiling=ns_tiling;
+ if (ngrow_distance<4)
+  amrex::Error("ngrow_distance invalid");
+
+   // (num_materials,sdim,2) area on each face of a cell.
+ int nface=num_materials*AMREX_SPACEDIM*2;
+  // (num_materials,num_materials,2)  
+  // left material, right material, frac_pair+dist_pair
+ int nface_dst=num_materials*num_materials*2;
+  // (num_materials,num_materials,3+sdim)
+  // im_inside,im_outside,3+sdim --> area, dist_to_line, dist, line normal.
+ int ncellfrac=num_materials*num_materials*(3+AMREX_SPACEDIM);
+
+ debug_ngrow(FACEFRAC_MM_MF,ngrow_distance,local_caller_string);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,0,local_caller_string);
+ debug_ngrow(CELLFRAC_MM_MF,0,local_caller_string);
+
+ if (localMF[FACEFRAC_MM_MF]->nComp()!=nface)
+  amrex::Error("localMF[FACEFRAC_MM_MF]->nComp()!=nface");
+ if (localMF[FACEFRAC_SOLVE_MM_MF]->nComp()!=nface_dst)
+  amrex::Error("localMF[FACEFRAC_SOLVE_MM_MF]->nComp()!=nface_dst");
+ if (localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac)
+  amrex::Error("localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac");
+
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(LSMF->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*LSMF,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  FArrayBox& lsfab=(*LSMF)[mfi];
+  FArrayBox& denfab=(*den_mf)[mfi];
+  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+  FArrayBox& qdotfab=(*localMF[QDOT_MF])[mfi];
+  FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
+
+  FArrayBox& xfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
+  FArrayBox& yfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
+  FArrayBox& zfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& cellfab=(*localMF[CELLFRAC_MM_MF])[mfi];
+
+  FArrayBox& areax=(*localMF[AREA_MF])[mfi];
+  FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
+  FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
+
+  Vector<int> levelbc=getBCArray(LS_Type,gridno,0,1);
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   //n_sites and pos_sites are fortran (and c++) global variables.
+   //fort_sato_qdot_mdot is declared in: LEVELSET_3D.F90
+  fort_sato_qdot_mdot(
+   &tid_current,
+   &tessellate,
+   &cur_time_slab,
+   &dt_slab, 
+   dx, 
+   xlo, 
+   mdotfab.dataPtr(),
+   ARLIM(mdotfab.loVect()),
+   ARLIM(mdotfab.hiVect()),
+   qdotfab.dataPtr(),
+   ARLIM(qdotfab.loVect()),
+   ARLIM(qdotfab.hiVect()),
+   lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+   denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+   xfacepair.dataPtr(),ARLIM(xfacepair.loVect()),ARLIM(xfacepair.hiVect()),
+   yfacepair.dataPtr(),ARLIM(yfacepair.loVect()),ARLIM(yfacepair.hiVect()),
+   zfacepair.dataPtr(),ARLIM(zfacepair.loVect()),ARLIM(zfacepair.hiVect()),
+   areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
+   areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
+   areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()),
+   cellfab.dataPtr(),ARLIM(cellfab.loVect()),ARLIM(cellfab.hiVect()),
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &finest_level,
+   &NS_geometry_coord,
+   levelbc.dataPtr(),
+   &nface_dst,
+   &ncellfrac);
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_QDOTMDOT,"sato_qdot_mdot");
+
+ delete den_mf;
+ delete LSMF;
 
 } //end subroutine sato_model_QDOT_MDOT_SPECIES()
 
