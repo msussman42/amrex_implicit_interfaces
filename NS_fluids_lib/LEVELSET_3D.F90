@@ -7129,11 +7129,13 @@ stop
 
       subroutine fort_sato_qdot_mdot( &
        tid_current, &
-       tessellate, &
        cur_time_slab, &
        dt, &
        dx, &
        xlo, &
+       nstate, &
+       snew, &
+       DIMS(snew), &
        mdot, &
        DIMS(mdot), &
        qdot, &
@@ -7141,22 +7143,21 @@ stop
        LS,DIMS(LS), &
        DEN,DIMS(DEN), &
        VOF,DIMS(VOF), &
-       xface,DIMS(xface), &
-       yface,DIMS(yface), &
-       zface,DIMS(zface), &
+       vol,DIMS(vol), &
        areax,DIMS(areax), &
        areay,DIMS(areay), &
        areaz,DIMS(areaz), &
-       cellfab,DIMS(cellfab), &
+       conductstate,DIMS(conductstate), &
+       freezing_model, &
+       saturation_temp, &
+       sato_model_spec_id, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
        level, &
        finest_level, &
        rzflag, &
-       levelbc, &
-       nface_dst, &
-       ncellfrac) &
+       levelbc) &
       bind(c,name='fort_sato_qdot_mdot')
 
       use probcommon_module
@@ -7167,37 +7168,42 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid_current
-      integer, INTENT(in) :: tessellate
-      integer, INTENT(in) :: nface_dst,ncellfrac
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(in) :: cur_time_slab
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       integer, INTENT(in) :: levelbc(SDIM,2)
+      integer, INTENT(in) :: freezing_model(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
+      integer, INTENT(in) :: sato_model_spec_id(num_materials)
 
       integer :: i,j,k
-      integer :: dir
+      integer :: ii,jj,kk
+      integer :: iside,jside,kside,side
+      integer :: dir,dir_max,dir_local
  
       integer, INTENT(in) :: rzflag
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       integer :: growlo(3), growhi(3)
       integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(qdot)
       integer, INTENT(in) :: DIMDEC(LS)
       integer, INTENT(in) :: DIMDEC(DEN)
       integer, INTENT(in) :: DIMDEC(VOF)
-      integer, INTENT(in) :: DIMDEC(xface)
-      integer, INTENT(in) :: DIMDEC(yface)
-      integer, INTENT(in) :: DIMDEC(zface)
+      integer, INTENT(in) :: DIMDEC(vol)
       integer, INTENT(in) :: DIMDEC(areax)
       integer, INTENT(in) :: DIMDEC(areay)
       integer, INTENT(in) :: DIMDEC(areaz)
-      integer, INTENT(in) :: DIMDEC(cellfab)
+      integer, INTENT(in) :: DIMDEC(conductstate) !thermal conductivity
 
+      real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(inout), target :: qdot(DIMV(qdot))
@@ -7215,38 +7221,53 @@ stop
               VOF(DIMV(VOF),num_materials*ngeom_recon)
       real(amrex_real), pointer :: VOF_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: xface(DIMV(xface),nface_dst)
-      real(amrex_real), INTENT(in), target :: yface(DIMV(yface),nface_dst)
-      real(amrex_real), INTENT(in), target :: zface(DIMV(zface),nface_dst)
-      real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), pointer :: yface_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
+      real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
+
       real(amrex_real), INTENT(in), target :: areax(DIMV(areax))
       real(amrex_real), INTENT(in), target :: areay(DIMV(areay))
       real(amrex_real), INTENT(in), target :: areaz(DIMV(areaz))
       real(amrex_real), pointer :: areax_ptr(D_DECL(:,:,:))
       real(amrex_real), pointer :: areay_ptr(D_DECL(:,:,:))
       real(amrex_real), pointer :: areaz_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: cellfab(DIMV(cellfab),ncellfrac)
-      real(amrex_real), pointer :: cellfab_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real) local_facearea(num_materials,num_materials)
-      real(amrex_real) local_dist_to_line(num_materials,num_materials)
-      real(amrex_real) local_normal(num_materials,num_materials,SDIM)
-      real(amrex_real) local_dist(num_materials,num_materials)
-      real(amrex_real) frac_pair(num_materials,num_materials)
-      real(amrex_real) dist_pair(num_materials,num_materials)
-      real(amrex_real) mofdata(num_materials*ngeom_recon)
-      integer nmax
+        !thermal conductivity
+      real(amrex_real), INTENT(in), target :: &
+        conductstate(DIMV(conductstate),num_materials)
+      real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real) :: LS_local(num_materials)
+      real(amrex_real) :: VOF_local(num_materials)
+
+      integer spec_id
+      integer vofcomp
+      integer spec_comp
+      integer im,im_primary
+      integer im_solid,im_liquid,im_vapor
+      integer iten_boiling
+      real(amrex_real) :: LL
+      real(amrex_real) :: vof_solid
+      real(amrex_real) :: nsolid(SDIM)
+      real(amrex_real) :: VOF_liquid,VOF_vapor,solid_temperature
+      real(amrex_real) :: microscale_vfrac
+      real(amrex_real) :: local_volume
+      real(amrex_real) :: TSAT
+      real(amrex_real) :: k_liquid,k_vapor,k_solid
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
        stop
       endif
 
-       ! see fort_getcolorsum as a template
-      nmax=POLYGON_LIST_MAX 
+      snew_ptr=>snew
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid"
+       stop
+      endif
 
+       !TODO: add qdot to the temperature field in veldiffuseALL
+       !qdot units temperature
+       !mdot units ???
       mdot_ptr=>mdot
       qdot_ptr=>qdot
 
@@ -7268,21 +7289,14 @@ stop
        stop
       endif
 
-      if (nface_dst.ne.num_materials*num_materials*2) then
-       print *,"nface_dst invalid"
-       stop
-      endif
-      if (ncellfrac.ne.num_materials*num_materials*(3+SDIM)) then
-       print *,"ncellfrac invalid"
-       stop
-      endif
-
       if (level.eq.finest_level) then
        !do nothing
       else
        print *,"level or finest_level invalid fort_sato_qdot_mdot"
        stop
       endif
+
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
       call checkbound_array1(fablo,fabhi,qdot_ptr,0,-1)
@@ -7293,20 +7307,17 @@ stop
       call checkbound_array(fablo,fabhi,DEN_ptr,1,-1)
       VOF_ptr=>VOF
       call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
-      xface_ptr=>xface
-      yface_ptr=>yface
-      zface_ptr=>zface
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,0)
       areax_ptr=>areax
       areay_ptr=>areay
       areaz_ptr=>areaz
       call checkbound_array1(fablo,fabhi,areax_ptr,0,0)
       call checkbound_array1(fablo,fabhi,areay_ptr,0,1)
       call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1)
-      cellfab_ptr=>cellfab
-      call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1)
+
+      conductstate_ptr=>conductstate
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1)
   
       do dir=1,SDIM
        if (fabhi(dir)-fablo(dir).le.0) then
@@ -7315,10 +7326,141 @@ stop
        endif
       enddo
 
+      im_solid=3
+      im_liquid=1
+      im_vapor=2
+      if (num_materials.eq.3) then
+       !do nothing
+      else
+       print *,"expecting num_materials.eq.3"
+       stop
+      endif
+      if (is_rigid(im_solid).eq.1) then
+       !do nothing
+      else
+       print *,"expecting is_rigid(im_solid)=1: ",im_solid,is_rigid(im_solid)
+       stop
+      endif
+      call get_iten(im_liquid,im_vapor,iten_boiling)
+      LL=get_user_latent_heat(iten_boiling,room_temperature,1)
+      if (LL.gt.zero) then
+       !do nothing
+      else
+       print *,"expecting LL>0 fort_sato_qdot_mdot: ",LL
+       stop
+      endif
+      if (freezing_model(iten_boiling).eq.0) then
+       !do nothing
+      else
+       print *,"expecting:freezing_model(iten_boiling).eq.0"
+       stop
+      endif
+      spec_id=sato_model_spec_id(im_vapor)
+      if ((spec_id.ge.1).and.(spec_id.le.num_species_var)) then
+       !do nothing
+      else
+       print *,"spec_id invalid ",spec_id
+       stop
+      endif
+      
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
+
+       do im=1,num_materials
+        LS_local(im)=LS(D_DECL(i,j,k),im)
+        vofcomp=(im-1)*ngeom_recon+1
+        VOF_local(im)=VOF(D_DECL(i,j,k),vofcomp)
+       enddo
+       call get_primary_material(LS_local,im_primary)
+       if ((im_primary.eq.im_liquid).or.(im_primary.eq.im_vapor)) then
+        if (VOF_local(im_vapor).ge.EPS2) then
+         do dir=1,SDIM
+          ii=0
+          jj=0
+          kk=0
+          if (dir.eq.1) then
+           ii=1
+          else if (dir.eq.2) then
+           jj=1
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           kk=1
+          else
+           print *,"dir invalid: ",dir
+           stop
+          endif
+          
+          do side=-1,1,2
+           iside=i+side*ii
+           jside=j+side*jj
+           kside=k+side*kk
+
+           vofcomp=(im_solid-1)*ngeom_recon+1
+           vof_solid=VOF(D_DECL(iside,jside,kside),vofcomp)
+
+           if (vof_solid.ge.half) then
+            dir_max=1
+            do dir_local=1,SDIM
+             nsolid(dir_local)=LS(D_DECL(iside,jside,kside), &
+              num_materials+(im_solid-1)*SDIM+dir_local)
+             if (abs(nsolid(dir_local)).gt.abs(nsolid(dir_max))) then
+              dir_max=dir_local
+             endif
+            enddo
+
+            if ((dir_max.eq.dir).and. &
+                (side*nsolid(dir).gt.zero)) then
+
+             VOF_liquid=VOF_local(im_liquid)
+             VOF_vapor=VOF_local(im_vapor)
+             VOF_liquid=VOF_liquid/(VOF_liquid+VOF_vapor)
+             VOF_vapor=one-VOF_liquid
+             solid_temperature=DEN(D_DECL(iside,jside,kside), &
+              (im_solid-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
+             microscale_vfrac=DEN(D_DECL(i,j,k), &
+              (im_vapor-1)*num_state_material+ENUM_SPECIESVAR+spec_id)
+             local_volume=vol(D_DECL(i,j,k)) !volume of the cell
+             k_liquid=conductstate(D_DECL(i,j,k),im_liquid)
+             k_vapor=conductstate(D_DECL(i,j,k),im_vapor)
+             k_solid=conductstate(D_DECL(iside,jside,kside),im_solid)
+             TSAT=saturation_temp(iten_boiling)
+
+              !store the updated microscale_vfrac here:
+             spec_comp=STATECOMP_STATES+(im_vapor-1)*num_state_material+ &
+               ENUM_SPECIESVAR+spec_id
+             snew(D_DECL(i,j,k),spec_comp)=microscale_vfrac
+
+            else if ((dir_max.ne.dir).or. &
+                     (side*nsolid(dir).le.zero)) then
+             !do nothing
+            else
+             print *,"dir_max,dir,side,nsolid ? ", &
+               dir_max,dir,side,nsolid
+             stop
+            endif
+
+           else if (vof_solid.lt.half) then
+            !do nothing
+           else
+            print *,"vof_solid invalid: ",vof_solid
+            stop
+           endif
+          enddo !side=-1,1,2
+         enddo !dir=1,SDIM
+      
+        else if (VOF_local(im_vapor).lt.EPS2) then
+         !do nothing
+        else
+         print *,"VOF_local invalid: ",VOF_local
+         stop
+        endif
+       else if (im_primary.eq.im_solid) then
+        !do nothing
+       else
+        print *,"im_primary invalid: ",im_primary
+        stop
+       endif 
 
       enddo
       enddo
