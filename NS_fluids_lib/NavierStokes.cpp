@@ -16113,6 +16113,11 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
 
  std::string local_caller_string="sato_model_QDOT_MDOT_SPECIES";
 
+ int nstate=STATE_NCOMP;
+ MultiFab& S_new = get_new_data(State_Type,slab_step+1);
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
  resize_metrics(1); // one ghost cell for cell areas and volumes
  debug_ngrow(VOLUME_MF,0,local_caller_string); //sanity check for cell volumes
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -16128,37 +16133,9 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
  MultiFab* LSMF=getStateDist(1,cur_time_slab,local_caller_string);
  MultiFab* den_mf=getStateDen(1,cur_time_slab);
 
- int tessellate=1;  //all materials tesselate; no rasterized boundaries.
-
-  //this data is deleted in NavierStokes::Geometry_cleanup()
- makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
- ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
- makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
-
  bool use_tiling=ns_tiling;
  if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
-
-   // (num_materials,sdim,2) area on each face of a cell.
- int nface=num_materials*AMREX_SPACEDIM*2;
-  // (num_materials,num_materials,2)  
-  // left material, right material, frac_pair+dist_pair
- int nface_dst=num_materials*num_materials*2;
-  // (num_materials,num_materials,3+sdim)
-  // im_inside,im_outside,3+sdim --> area, dist_to_line, dist, line normal.
- int ncellfrac=num_materials*num_materials*(3+AMREX_SPACEDIM);
-
- debug_ngrow(FACEFRAC_MM_MF,ngrow_distance,local_caller_string);
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,0,local_caller_string);
- debug_ngrow(CELLFRAC_MM_MF,0,local_caller_string);
-
- if (localMF[FACEFRAC_MM_MF]->nComp()!=nface)
-  amrex::Error("localMF[FACEFRAC_MM_MF]->nComp()!=nface");
- if (localMF[FACEFRAC_SOLVE_MM_MF]->nComp()!=nface_dst)
-  amrex::Error("localMF[FACEFRAC_SOLVE_MM_MF]->nComp()!=nface_dst");
- if (localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac)
-  amrex::Error("localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac");
 
  const Real* dx = geom.CellSize();
 
@@ -16183,6 +16160,8 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
+  FArrayBox& snewfab=S_new[mfi];
+
   FArrayBox& lsfab=(*LSMF)[mfi];
   FArrayBox& denfab=(*den_mf)[mfi];
   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
@@ -16190,14 +16169,16 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
   FArrayBox& qdotfab=(*localMF[QDOT_MF])[mfi];
   FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
 
-  FArrayBox& xfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
-  FArrayBox& yfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
-  FArrayBox& zfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& cellfab=(*localMF[CELLFRAC_MM_MF])[mfi];
-
   FArrayBox& areax=(*localMF[AREA_MF])[mfi];
   FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
+
+  FArrayBox& thermal_conductivity_fab=
+    (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+  if (thermal_conductivity_fab.nComp()!=num_materials)
+   amrex::Error("thermal_conductivity_fab.nComp()!=num_materials");
+
+  FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
 
   Vector<int> levelbc=getBCArray(LS_Type,gridno,0,1);
 
@@ -16210,11 +16191,13 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
    //fort_sato_qdot_mdot is declared in: LEVELSET_3D.F90
   fort_sato_qdot_mdot(
    &tid_current,
-   &tessellate,
    &cur_time_slab,
    &dt_slab, 
    dx, 
    xlo, 
+   &nstate,
+   snewfab.dataPtr(),
+   ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
    mdotfab.dataPtr(),
    ARLIM(mdotfab.loVect()),
    ARLIM(mdotfab.hiVect()),
@@ -16224,22 +16207,23 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-   xfacepair.dataPtr(),ARLIM(xfacepair.loVect()),ARLIM(xfacepair.hiVect()),
-   yfacepair.dataPtr(),ARLIM(yfacepair.loVect()),ARLIM(yfacepair.hiVect()),
-   zfacepair.dataPtr(),ARLIM(zfacepair.loVect()),ARLIM(zfacepair.hiVect()),
+   vol.dataPtr(),ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
    areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
    areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
    areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()),
-   cellfab.dataPtr(),ARLIM(cellfab.loVect()),ARLIM(cellfab.hiVect()),
+   thermal_conductivity_fab.dataPtr(), //num_materials components
+   ARLIM(thermal_conductivity_fab.loVect()),
+   ARLIM(thermal_conductivity_fab.hiVect()),
+   freezing_model.dataPtr(),
+   saturation_temp.dataPtr(),
+   sato_model_spec_id.dataPtr(),
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,
    &level,
    &finest_level,
    &NS_geometry_coord,
-   levelbc.dataPtr(),
-   &nface_dst,
-   &ncellfrac);
+   levelbc.dataPtr());
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_QDOTMDOT,"sato_qdot_mdot");
