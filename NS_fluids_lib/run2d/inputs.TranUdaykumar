@@ -54,6 +54,9 @@ ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 #ns.mof_ordering=4 1 2 3 #BIOFILM
 ns.mof_ordering=4 1 2 
 ns.MOFITERMAX=30
+ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
+#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
+ns.mof_decision_tree_learning=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # force AMR tagging within these specified boxes.
 ns.nblocks=0
@@ -107,9 +110,9 @@ amr.n_error_buf     = 2 2 2 2 2 2  # number of buffer cells in error est
 amr.grid_eff        = 0.9   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 2 2 2 2 2 2 2   # block factor in grid generation
-amr.check_int       = 100     # number of timesteps between checkpoints
+amr.check_int       = 50      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100     # 5 for movies. 
+amr.plot_int        = 50     # 5 for movies. 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
