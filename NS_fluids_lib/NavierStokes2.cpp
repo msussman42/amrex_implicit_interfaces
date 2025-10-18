@@ -6280,34 +6280,8 @@ void NavierStokes::process_potential_force_face(
  MultiFab* dendata;
  int ncomp_mgoni=num_materials*num_state_material;
 
- if (LSA_perturbations_switch==false) { 
-  dendata=getStateDen(1,cur_time_slab);
-  ncomp_mgoni=num_materials*num_state_material;
-
-  //append to dendata the level set perturbation
- } else if (LSA_perturbations_switch==true) { 
-  MultiFab* local_dendata=getStateDen(1,cur_time_slab);
-  ncomp_mgoni+=num_materials;
-  dendata=new MultiFab(grids,dmap,ncomp_mgoni,1,
-    MFInfo().SetTag("dendata"),FArrayBoxFactory());
-  MultiFab::Copy(*dendata,*local_dendata,0,0,local_dendata->nComp(),1);
-  int local_control_flag=NULL_CONTROL;
-  int local_cell_mf=-1;
-  int ncomp_total=0;
-  Vector<int> scomp;
-  Vector<int> ncomp;
-  init_boundary(
-    local_control_flag,
-    local_cell_mf,
-    ncomp_total,
-    scomp,ncomp); // init ghost cells on the given level.
-   //LSA_EVEC=dx * normalizedLINF(phi^perturb-phi^no_pert)/dt
-   //dst,src,scomp,dcomp,ncomp,ngrow
-  MultiFab::Copy(*dendata,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
-    num_materials*num_state_material,num_materials,1);
-  delete local_dendata;
- } else
-  amrex::Error("LSA_perturbations_switch invalid");
+ dendata=getStateDen(1,cur_time_slab);
+ ncomp_mgoni=num_materials*num_state_material;
 
   // gpx/rhox,gpy/rhoy,gpz/rhoz
  allocate_flux_register(operation_flag);
@@ -6406,7 +6380,7 @@ void NavierStokes::process_potential_force_face(
    //xface,levelPC,pres,den,mgoni,xgp 
    // process_potential_force_face 
    fort_cell_to_mac( 
-    &ncomp_mgoni,//ncomp_mgoni==nmat*nstate_mat+nmat=>LSA_perturbations_switch=1
+    &ncomp_mgoni,//ncomp_mgoni==nmat*nstate_mat
     &ncomp_xp,
     &ncomp_xgp,
     &simple_AMR_BC_flag,

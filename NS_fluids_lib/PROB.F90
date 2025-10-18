@@ -26291,6 +26291,7 @@ end subroutine initialize2d
 
        subroutine fort_addnoise( &
         dir, &
+        LS_diff_ok, &
         angular_velocity_vector, & !INTENT(in): fort_addnoise
         perturbation_mode, &
         perturbation_eps_temp, &
@@ -26300,6 +26301,7 @@ end subroutine initialize2d
         Snew,DIMS(Snew), &
         LSnew,DIMS(LSnew), &
         MAC,DIMS(MAC), &
+        lsdiff,DIMS(lsdiff), &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -26308,10 +26310,13 @@ end subroutine initialize2d
        bind(c,name='fort_addnoise')
 
        use global_utility_module
+       use geometry_intersect_module
+       use MOF_routines_module
 
        IMPLICIT NONE
 
       integer, INTENT(in) :: dir
+      integer, INTENT(in) :: LS_diff_ok
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3) !fort_addnoise
       integer, INTENT(in) :: perturbation_mode
       real(amrex_real), INTENT(in) :: perturbation_eps_temp
@@ -26323,6 +26328,7 @@ end subroutine initialize2d
       integer, INTENT(in) :: DIMDEC(Snew)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(MAC)
+      integer, INTENT(in) :: DIMDEC(lsdiff)
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer :: growlo(3),growhi(3)
@@ -26333,14 +26339,31 @@ end subroutine initialize2d
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout),target :: MAC(DIMV(MAC))
       real(amrex_real), pointer :: MAC_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in),target :: lsdiff(DIMV(lsdiff),num_materials)
+      real(amrex_real), pointer :: lsdiff_ptr(D_DECL(:,:,:),:)
 
 
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       integer i,j,k,ii,jj,kk,dir2
+      integer i1,j1,k1,k1lo,k1hi
+      integer im
+      integer vofcomp
+      integer vofcomp_recon
       real(amrex_real) problo_arr(SDIM)
       real(amrex_real) probhi_arr(SDIM)
       real(amrex_real) sinprod
+      real(amrex_real) ldata(D_DECL(3,3,3))
+      real(amrex_real) vfrac_local
+      real(amrex_real) volcell
+      real(amrex_real) facearea_local
+      real(amrex_real) centroid_local(SDIM)
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) mofdata(ngeom_recon*num_materials)
+      integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
+      integer, PARAMETER :: tessellate=0
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -26385,27 +26408,40 @@ end subroutine initialize2d
       Snew_ptr=>Snew
       LSnew_ptr=>LSnew
       MAC_ptr=>MAC
+      lsdiff_ptr=>lsdiff
 
       call checkbound_array(fablo,fabhi,Snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,MAC_ptr,0,dir)
+      call checkbound_array(fablo,fabhi,lsdiff_ptr,0,-1)
 
-      if (perturbation_mode.le.0) then
-       print *,"perturbation_mode invalid"
+      if (LS_diff_ok.eq.0) then
+
+       if (perturbation_mode.le.0) then
+        print *,"perturbation_mode invalid"
+        stop
+       endif 
+       if (perturbation_mode.gt.1024) then
+        print *,"perturbation_mode too large"
+        stop
+       endif 
+       if (perturbation_eps_temp.lt.zero) then
+        print *,"perturbation_eps_temp invalid"
+        stop
+       endif 
+       if (perturbation_eps_vel.lt.zero) then
+        print *,"perturbation_eps_vel invalid"
+        stop
+       endif 
+
+      else if (LS_diff_ok.eq.1) then
+
+       !do nothing
+
+      else
+       print *,"LS_diff_ok invalid: ",LS_diff_ok
        stop
-      endif 
-      if (perturbation_mode.gt.1024) then
-       print *,"perturbation_mode too large"
-       stop
-      endif 
-      if (perturbation_eps_temp.lt.zero) then
-       print *,"perturbation_eps_temp invalid"
-       stop
-      endif 
-      if (perturbation_eps_vel.lt.zero) then
-       print *,"perturbation_eps_vel invalid"
-       stop
-      endif 
+      endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -26416,14 +26452,105 @@ end subroutine initialize2d
 
        sinprod=one
        do dir2=1,SDIM
-        if (probhi_arr(dir2).le.problo_arr(dir2)) then
-         print *,"probhi_arr invalid"
+        if (probhi_arr(dir2).gt.problo_arr(dir2)) then
+         !do nothing
+        else
+         print *,"probhi_arr invalid: ",problo_arr,probhi_arr
          stop
         endif
-        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
+        if (LS_diff_ok.eq.0) then
+         sinprod=sinprod*sin(two*Pi*perturbation_mode* &
           (xsten(0,dir2)-problo_arr(dir2))/ &
           (probhi_arr(dir2)-problo_arr(dir2)))
+        endif
        enddo ! dir2
+
+       if (LS_diff_ok.eq.1) then
+
+        do im=1,num_materials*ngeom_recon
+         mofdata(im)=zero
+        enddo
+
+        do im=1,num_materials
+
+         k1lo=0
+         k1hi=0
+         if (SDIM.eq.3) then
+          k1lo=-1
+          k1hi=1
+         else if (SDIM.eq.2) then
+          ! do nothing
+         else
+          print *,"dimension bust"
+          stop
+         endif
+
+         do k1=k1lo,k1hi
+         do j1=-1,1
+         do i1=-1,1
+          ldata(D_DECL(i1+2,j1+2,k1+2))=LSnew(D_DECL(i+i1,j+j1,k+k1),im)
+         enddo
+         enddo
+         enddo
+         call getvolume( &
+           bfact, &
+           dx, &
+           xsten, &
+           nhalf, &
+           ldata, &
+           vfrac_local, &
+           facearea_local, &
+           centroid_local, &
+           VOFTOL, &
+           SDIM)
+         call CISBOX( &
+           xsten, &
+           nhalf, &
+           xlo, &
+           dx, &
+           i,j,k, &
+           bfact, &
+           level, &
+           volcell,cencell,SDIM)
+
+         vofcomp=(im-1)*ngeom_raw+1
+         vofcomp_recon=(im-1)*ngeom_recon+1
+
+         mofdata(vofcomp_recon)=vfrac_local
+         do dir2=1,SDIM
+          mofdata(vofcomp_recon+dir2)= &
+            centroid_local(dir2)-cencell(dir2)
+         enddo
+
+        enddo !im=1,num_materials
+
+        call make_vfrac_sum_ok_base( &
+          cmofsten, &
+          xsten,nhalf, &
+          continuous_mof_parm, &
+          bfact,dx, &
+          tessellate, & !=0
+          mofdata,SDIM)
+
+        do im=1,num_materials
+
+         vofcomp=(im-1)*ngeom_raw+1
+         vofcomp_recon=(im-1)*ngeom_recon+1
+         Snew(D_DECL(i,j,k),STATECOMP_MOF+vofcomp)= &
+           mofdata(vofcomp_recon)
+         do dir2=1,SDIM
+          Snew(D_DECL(i,j,k),STATECOMP_MOF+vofcomp+dir2)= &
+            mofdata(vofcomp_recon+dir2)
+         enddo
+
+        enddo !im=1,num_materials
+
+       else if (LS_diff_ok.eq.0) then
+        !do nothing
+       else
+        print *,"LS_diff_ok invalid"
+        stop
+       endif
 
       enddo
       enddo
@@ -26439,14 +26566,18 @@ end subroutine initialize2d
 
        sinprod=one
        do dir2=1,SDIM
-        if (probhi_arr(dir2).le.problo_arr(dir2)) then
-         print *,"probhi_arr invalid"
+        if (probhi_arr(dir2).gt.problo_arr(dir2)) then
+         !do nothing
+        else
+         print *,"probhi_arr invalid: ",problo_arr,probhi_arr
          stop
         endif
-        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
+        if (LS_diff_ok.eq.0) then
+         sinprod=sinprod*sin(two*Pi*perturbation_mode* &
           (xsten(0,dir2)-problo_arr(dir2))/ &
           (probhi_arr(dir2)-problo_arr(dir2)))
-       enddo
+        endif
+       enddo !dir2
 
       enddo
       enddo

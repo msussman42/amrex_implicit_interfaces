@@ -14578,7 +14578,7 @@ stop
 
       integer, INTENT(in) :: dir  !0,1,2
       integer, INTENT(in) :: ncomp_mgoni
-      integer :: LSA_perturbations_switch
+      integer :: interface_force_switch
       integer, INTENT(in) :: ncomp_xp
       integer, INTENT(in) :: ncomp_xgp
       integer, INTENT(in) :: simple_AMR_BC_flag
@@ -14697,7 +14697,7 @@ stop
       real(amrex_real) pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
       real(amrex_real) incremental_gravity
       real(amrex_real) pgrad_tension
-      real(amrex_real) pgrad_LSA
+      real(amrex_real) pgrad_FORCE
       real(amrex_real) gradh_tension
       real(amrex_real) gradh_gravity
       real(amrex_real) dplus,dminus
@@ -14825,7 +14825,7 @@ stop
 
       homogeneous_rigid_velocity=0
 
-      LSA_perturbations_switch=0
+      interface_force_switch=0
 
       semflux_ptr=>semflux
       xcut_ptr=>xcut
@@ -15022,10 +15022,10 @@ stop
         stop
        endif
        if (ncomp_mgoni.eq.num_materials*num_state_material) then
-        LSA_perturbations_switch=0
+        interface_force_switch=0
        else if (ncomp_mgoni.eq. &
                 num_materials*num_state_material+num_materials) then
-        LSA_perturbations_switch=1
+        interface_force_switch=1
        else
         print *,"ncomp_mgoni invalid OP_POTGRAD_TO_MAC: ",ncomp_mgoni
         stop
@@ -16467,7 +16467,7 @@ stop
             print *,"ncomp_mgoni: ",ncomp_mgoni
             print *,"num_materials ",num_materials
             print *,"num_state_material ",num_state_material
-            print *,"LSA_perturbations_switch ",LSA_perturbations_switch
+            print *,"interface_force_switch ",interface_force_switch
            endif
 
            ! HYDROSTATIC_PRESDEN_MF is initialized in 
@@ -16627,7 +16627,7 @@ stop
            ! u=-delta phi grad phi
            ! phi_t - delta phi =0
            ! phi_t = \delta phi
-          pgrad_LSA=zero ! -(delta phi_{im})grad H(phi_im)/rho_added
+          pgrad_FORCE=zero ! -(delta phi_{im})grad H(phi_im)/rho_added
 
           gradh_gravity=zero
           gradh_tension=zero
@@ -16664,7 +16664,7 @@ stop
             gradh_tension=zero
             gradh_gravity=zero
             incremental_gravity=zero
-            pgrad_LSA=zero
+            pgrad_FORCE=zero
            else if (is_solid_face.eq.0) then
 
             if ((is_clamped_face.eq.1).or. &
@@ -16673,13 +16673,13 @@ stop
              gradh_tension=zero
              gradh_gravity=zero
              incremental_gravity=zero
-             pgrad_LSA=zero
+             pgrad_FORCE=zero
             else if (is_clamped_face.eq.0) then
 
              gradh_tension=zero
              gradh_gravity=zero
              incremental_gravity=zero
-             pgrad_LSA=zero
+             pgrad_FORCE=zero
 
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
@@ -16912,32 +16912,14 @@ stop
  
               if (elastic_interface_fixed.eq.0) then
 
-               if (LSA_perturbations_switch.eq.1) then
-                 ! perturbations only at t=t^{restart}.
-                 ! delta_phi=O(h/dt)
-                 ! u^np1=u^n - dt delta_phi grad H
-                 ! phi_t + u dot grad phi = 0  |grad phi|=1
-                 ! u^np1=-dt delta_phi grad phi
-                 ! phi_t - dt delta_phi =0
-                 ! phi_t = dt delta_phi
-                 ! phi^np1=phi^n + dt^2 delta_phi
-                 ! delta_phi=dx * normalizedLINF(phi^perturb-phi^no_pert)/dt
-                 ! if im_gravity_L < im_gravity_R => 
-                 !  im_gravity_L=im_gravity =>
-                 !  gradh=-1
-                 ! if im_gravity_L > im_gravity_R => 
-                 !  im_gravity_R=im_gravity =>
-                 !  gradh=1
-                 ! im_gravity<im_opp_gravity
-                 ! i.e. gradh=grad h(LS_{im_gravity})
+               if (interface_force_switch.eq.1) then
                 evec_comp=num_materials*num_state_material+im_gravity
                 evec=half*(mgoni(D_DECL(im1,jm1,km1),evec_comp)+ &
                            mgoni(D_DECL(i,j,k),evec_comp))
-                evec=100000.0d0*evec
-                pgrad_LSA=-dt*evec*gradh_gravity/hx
-                if (1.eq.1) then
+                pgrad_FORCE=-dt*evec*gradh_gravity/hx
+                if (1.eq.0) then
                  if (level.eq.finest_level) then
-                  print *,"pgrad_LSA im_gravity,dir,x,dt,hx,evec,grad: ", &
+                  print *,"pgrad_FORCE im_gravity,dir,x,dt,hx,evec,grad: ", &
                    im_gravity, &
                    dir, &
                    xstenMAC_center(1), &
@@ -16947,14 +16929,14 @@ stop
                  endif
                 endif
 
-                 !pgrad_LSA=0 in "is_rigid" materials, clamped regions,
+                 !pgrad_FORCE=0 in "is_rigid" materials, clamped regions,
                  !and no penetration physical boundaries.
                 if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                     (local_face(FACECOMP_FACECUT+1).le.half)) then
-                 pgrad_LSA=zero
+                 pgrad_FORCE=zero
                 else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
                          (local_face(FACECOMP_FACECUT+1).le.one)) then
-                 pgrad_LSA=pgrad_LSA* &
+                 pgrad_FORCE=pgrad_FORCE* &
                   local_face(FACECOMP_FACECUT+1)* &
                   local_face(FACECOMP_FACEDEN+1)
                 else
@@ -16967,11 +16949,11 @@ stop
                  stop
                 endif
 
-               else if (LSA_perturbations_switch.eq.0) then
+               else if (interface_force_switch.eq.0) then
                 !do nothing
                else
-                print *,"LSA_perturbations_switch invalid: ", &
-                 LSA_perturbations_switch
+                print *,"interface_force_switch invalid: ", &
+                 interface_force_switch
                 stop
                endif
 
@@ -16985,7 +16967,7 @@ stop
              else if (gradh_gravity.eq.zero) then
 
               incremental_gravity=zero
-              pgrad_LSA=zero
+              pgrad_FORCE=zero
 
               if (im_left_gravity.eq.im_right_gravity) then
 
@@ -17171,7 +17153,7 @@ stop
            stop
           endif
 
-          xgp(D_DECL(i,j,k),1)=xgp(D_DECL(i,j,k),1)+pgrad_LSA
+          xgp(D_DECL(i,j,k),1)=xgp(D_DECL(i,j,k),1)+pgrad_FORCE
 
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then !p^CELL->MAC
 
@@ -20203,8 +20185,8 @@ stop
       integer ibase
       integer partid
       integer partid_max
-      integer tessellate
-      integer tessellate_transfer
+      integer, parameter :: tessellate=0
+      integer, parameter :: tessellate_transfer=1
       integer LS_extrap_radius
       integer extrap_radius
       integer least_sqr_radius
@@ -20274,8 +20256,6 @@ stop
        print *,"num_LS_extrap invalid"
        stop
       endif
-
-      tessellate=0
 
       nmax=POLYGON_LIST_MAX  ! in: fort_renormalize_prescribe
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -21506,13 +21486,12 @@ stop
 
             ! sum of F_fluid=1
             ! sum of F_rigid<=1
-            tessellate=0
             call make_vfrac_sum_ok_base( &
               cmofsten, &
               xsten,nhalf, &
               continuous_mof_parm, &
               bfact,dx, &
-              tessellate, &
+              tessellate, & !=0
               local_mof, &
               SDIM)
 
@@ -21542,11 +21521,10 @@ stop
              grid_level, &
              SDIM)
      
-            tessellate_transfer=1 
              !EPS2
             call multi_get_volume_tessellate( &
              tid, &
-             tessellate_transfer, &
+             tessellate_transfer, & !=1
              bfact, &
              dx,xsten,nhalf, &
              local_mof, &
@@ -21677,7 +21655,8 @@ stop
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
-           tessellate,mofnew,SDIM)
+           tessellate, & !=0
+           mofnew,SDIM)
 
          do im=1,num_materials*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
@@ -21696,7 +21675,8 @@ stop
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
-           tessellate,mofnew,SDIM)
+           tessellate, & !=0
+           mofnew,SDIM)
         else
          print *,"renormalize only invalid"
          stop
@@ -21780,11 +21760,9 @@ stop
       real(amrex_real) volgrid
       real(amrex_real) cengrid(SDIM)
       integer mask_test
-      integer tessellate
+      integer, parameter :: tessellate=0
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
-      tessellate=0
 
       if (bfact.lt.1) then
        print *,"bfact invalid103"
