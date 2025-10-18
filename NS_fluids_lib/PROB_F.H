@@ -60,6 +60,7 @@ namespace amrex{
 
      void fort_addnoise(
       int* dir,
+      int* LS_diff_ok,
       Real* angular_velocity_vector, //parameter to fort_addnoise
       int* perturbation_mode,
       Real* perturbation_eps_temp,
@@ -69,6 +70,7 @@ namespace amrex{
       Real* Snew,AMREX_ARLIM_P(Snewlo),AMREX_ARLIM_P(Snewhi), 
       Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       Real* MAC,AMREX_ARLIM_P(MAClo),AMREX_ARLIM_P(MAChi), 
+      Real* lsdiff,AMREX_ARLIM_P(lsdifflo),AMREX_ARLIM_P(lsdiffhi), 
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
       int* bfact,

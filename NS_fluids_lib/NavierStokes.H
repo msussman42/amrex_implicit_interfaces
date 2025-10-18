@@ -737,7 +737,8 @@ protected:
     // VAHAB HEAT SOURCE
     void make_heat_source();
 
-    void add_perturbation();
+    void add_perturbation(int null_perturbation);
+
     void make_SEM_delta_force(int project_option);
 
     void getStateMOM_DEN(int idx,int ngrow,Real time);

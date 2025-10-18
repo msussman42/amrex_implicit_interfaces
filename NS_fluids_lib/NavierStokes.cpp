@@ -6766,16 +6766,43 @@ NavierStokes::NavierStokes (AmrCore&        papa,
 
 NavierStokes::~NavierStokes ()
 {
-    Geometry_cleanup();
 
-    for (int i=0;i<MAX_NUM_LOCAL_MF;i++)
-     if (localMF_grow[i]==-1) {
-      // do nothing
-     } else {
-      std::cout << "i= " << i << " localMF_grow= " <<
-       localMF_grow[i] << '\n';
-      amrex::Error("localMF_grow invalid");
-     }
+   if (parent->LSA_nsteps_power_method==0) {
+    //do nothing
+   } else if (parent->LSA_nsteps_power_method>=1) {
+    int local_step_count=parent->levelSteps(0)-
+                         parent->initial_levelSteps;
+    int local_max_step_count=parent->LSA_max_step-
+                             parent->initial_levelSteps;
+
+    std::cout << "deleting NavierStokes() level= " << level << '\n';
+    std::cout << "deleting NavierStokes() local_step_count= " << 
+      local_step_count << '\n';
+    std::cout << "deleting NavierStokes() local_max_step_count= " << 
+      local_max_step_count << '\n';
+    int proc=ParallelDescriptor::MyProc();
+    std::cout << "deleting NavierStokes() proc= " << 
+      proc << '\n';
+
+    if ((local_step_count==0)||
+        (local_step_count==local_max_step_count)) {
+     //do nothing
+    } else
+     amrex::Error("local_step_count invalid when deleting NavierStokes()");
+
+   } else
+    amrex::Error("parent->LSA_nsteps_power_method invalid");
+
+   Geometry_cleanup();
+
+   for (int i=0;i<MAX_NUM_LOCAL_MF;i++)
+    if (localMF_grow[i]==-1) {
+     // do nothing
+    } else {
+     std::cout << "i= " << i << " localMF_grow= " <<
+      localMF_grow[i] << '\n';
+     amrex::Error("localMF_grow invalid");
+    }
 
 }
 
@@ -11679,7 +11706,8 @@ void NavierStokes::LSA_normalize_eigenvector(
 
   } else if (isec==State_Type) {
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
-    scale_parm[scomp_section[isec]+dir]=velocity_scale; //dx/dt
+     //velocity_scale=dx_finest[0]/dt_slab;
+    scale_parm[scomp_section[isec]+dir]=velocity_scale;
    }
    for (int im=0;im<num_materials;im++) {
     scale_parm[scomp_section[isec]+STATECOMP_STATES+
@@ -11719,6 +11747,7 @@ void NavierStokes::LSA_normalize_eigenvector(
  } // for (int isec=0;isec<scomp_section.size();isec++)
 
  if (isweep==0) {
+
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
     //nghost=0
    Real local_max=localMF[cell_mf]->norminf(scomp,0);
@@ -11729,29 +11758,35 @@ void NavierStokes::LSA_normalize_eigenvector(
    }
 
    cell_max[scomp]=max(cell_max[scomp],local_max);
-  }
+  } //for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) 
+
   for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
     //scomp parameter=0
     //nghost=0
    Real local_max=localMF[face_mf+scomp]->norminf(0,0);
    face_max[scomp]=max(face_max[scomp],local_max);
   }
+
  } else if (isweep==1) {
 
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
-   if (cell_max[scomp]>0.0) {
+   Real floating_zero=scale_parm[scomp]*1.0e-10;
+   if (cell_max[scomp]>floating_zero) {
     localMF[cell_mf]->mult(scale_parm[scomp]/cell_max[scomp],scomp,1);
-   } else if (cell_max[scomp]==0.0) {
-    //do nothing
+   } else if ((cell_max[scomp]>=0.0)&&
+              (cell_max[scomp]<=floating_zero)) {
+    localMF[cell_mf]->mult(0.0,scomp,1);
    } else
     amrex::Error("cell_max invalid");
   }
 
   for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
-   if (face_max[scomp]>0.0) {
+   Real floating_zero=velocity_scale*1.0e-10;
+   if (face_max[scomp]>floating_zero) {
     localMF[face_mf]->mult(velocity_scale/face_max[scomp],scomp,1);
-   } else if (face_max[scomp]==0.0) {
-    //do nothing
+   } else if ((face_max[scomp]>=0.0)&&
+              (face_max[scomp]<=floating_zero)) {
+    localMF[face_mf]->mult(0.0,scomp,1);
    } else
     amrex::Error("face_max invalid");
   }
@@ -13146,7 +13181,7 @@ void NavierStokes::make_heat_source() {
 
 
 
-void NavierStokes::add_perturbation() {
+void NavierStokes::add_perturbation(int null_perturbation) {
 
  std::string local_caller_string="add_perturbation";
 
@@ -13162,6 +13197,51 @@ void NavierStokes::add_perturbation() {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()==num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("expecting LS_new.nComp()==num_materials*(1+AMREX_SPACEDIM)");
+
+ MultiFab* LS_diff=new MultiFab(grids,dmap,num_materials,0,
+    MFInfo().SetTag("LS_diff"),FArrayBoxFactory());
+
+ int LS_diff_ok=0;
+ if (LSA_perturbations_switch==false) { 
+  //do nothing
+ } else if (LSA_perturbations_switch==true) { 
+  LS_diff_ok=1;
+
+  int local_control_flag=NULL_CONTROL;
+  int local_cell_mf=-1;
+  int ncomp_total=0;
+  Vector<int> scomp;
+  Vector<int> ncomp;
+  init_boundary(
+    local_control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
+
+   //LSA_EVEC=C * dx * normalizedLINF_LS(phi^perturb-phi^no_pert)
+   //dst,src,scomp,dcomp,ncomp,ngrow
+  if (null_perturbation==0) {
+   MultiFab::Copy(*LS_diff,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
+    0,num_materials,0);
+  } else if (null_perturbation==1) {
+   LS_diff->setVal(0.0,0,num_materials,0);  
+  } else
+   amrex::Error("null_perturbation invalid");
+
+  MultiFab::Add(LS_new,*LS_diff,0,0,num_materials,0);
+
+  init_boundary(
+    local_control_flag,
+    local_cell_mf,
+    ncomp_total,
+    scomp,ncomp); // init ghost cells on the given level.
+
+ } else
+  amrex::Error("LSA_perturbations_switch invalid");
 
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
@@ -13192,6 +13272,7 @@ void NavierStokes::add_perturbation() {
 
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& lsnewfab=LS_new[mfi];
+  FArrayBox& lsdifffab=(*LS_diff)[mfi];
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -13205,6 +13286,7 @@ void NavierStokes::add_perturbation() {
 
    fort_addnoise(
     &dir,
+    &LS_diff_ok,
     angular_velocity_vector.dataPtr(),  //parameter for fort_addnoise
     &perturbation_mode, //inputs parameter
     &perturbation_eps_temp, //inputs parameter
@@ -13217,6 +13299,8 @@ void NavierStokes::add_perturbation() {
     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
     macfab.dataPtr(),
     ARLIM(macfab.loVect()),ARLIM(macfab.hiVect()),
+    lsdifffab.dataPtr(),
+    ARLIM(lsdifffab.loVect()),ARLIM(lsdifffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
     &bfact,
@@ -13227,6 +13311,8 @@ void NavierStokes::add_perturbation() {
 } // omp
 
  ns_reconcile_d_num(LOOP_ADDNOISE,"add_perturbation");
+
+ delete LS_diff;
 
 }   // end subroutine add_perturbation
 
