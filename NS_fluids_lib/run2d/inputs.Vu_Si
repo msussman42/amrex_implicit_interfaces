@@ -114,7 +114,7 @@ ns.visc_coef      = 0.013  #(1/Re) (NONDIM)
 ns.heatvisc_coef  = 1.0  #(1/(Pr Re)) (NONDIM)  Pr * Re=0.013 * 76.74=1.0
 ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=6
-ns.visc_coef_boundary_layer_factor=1.0
+ns.visc_coef_boundary_layer_factor=10.0
 mac.visc_abs_tol  = 1.0e-10
 ns.gravity        = -2.634  #Bo/We Bo=1.317  We=0.5
 ns.incremental_gravity_flag=0

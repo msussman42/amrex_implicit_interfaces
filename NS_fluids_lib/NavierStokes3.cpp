@@ -3400,7 +3400,24 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        phase_change_redistributeALL();
 
        NavierStokes& ns_finest=getLevel(finest_level);
-       ns_finest.sato_model_QDOT_MDOT_SPECIES();
+
+       int use_sato_model=0;
+       for (int im=0;im<num_materials;im++) {
+        if ((sato_model_spec_id[im]>0)&&
+            (sato_model_spec_id[im]<=num_species_var)) {
+         use_sato_model++;
+        } else if (sato_model_spec_id[im]==0) {
+         //do nothing
+        } else
+         amrex::Error("sato_model_spec_id invalid");
+       } //im=0 .. num_materials
+
+       if (use_sato_model==0) {
+        //do nothing
+       } else if (use_sato_model>0) {
+        ns_finest.sato_model_QDOT_MDOT_SPECIES();
+       } else
+        amrex::Error("use_sato_model invalid");
 
        delete_array(JUMP_STRENGTH_MF);
    
