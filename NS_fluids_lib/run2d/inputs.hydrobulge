@@ -54,6 +54,9 @@ ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 # liquid,jwl,aluminum side walls,gas
 ns.mof_ordering=2 3 1 4
 ns.MOFITERMAX=30
+ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
+#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
+ns.mof_decision_tree_learning=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # force AMR tagging within these specified boxes.
@@ -182,14 +185,19 @@ ns.viscoelastic_model=0 0 3 0
 #2.0e+9 (5.87-5.08) (too small)
 #3.0e+9?
 #4.0e+9?
+#"base_yield_stress"
 ns.yield_stress=0.0 0.0 3.0e+9 0.0
+ns.mechanical_to_thermal=0.0 0.0 0.0 0.0
 
 ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10
-ns.yield_alpha=1.2 1.2 1.2 1.2
+#ns.yield_alpha=1.2 1.2 1.2 1.2 #softening
+ns.yield_alpha=1.2 1.2 1.0e+10 1.2 #no softening
 ns.yield_n=1.0e+10 1.0e+10 1.0e+10 1.0e+10
 ns.yield_m=20.0 20.0 20.0 20.0
 ns.ref_plastic_strain=0.001 0.001 0.001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
+ns.Johnson_Cook_C=0.0 0.0 0.0 0.0 #no softening
+ns.hardening_coefficient=0.0 0.0 0.0 0.0 #no "softening"
 
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
