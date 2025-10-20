@@ -28049,7 +28049,7 @@ subroutine JohnsonCookSoftening( &
  hardening_coeff, & ! hardening_coefficient
  eps_p, & !plastic_strain_old
  dot_eps_p, & !dot_plastic_strain
- n, & !yield_n 
+ yield_n, & !yield_n 
  yield_stress)
 use probcommon_module
 IMPLICIT NONE
@@ -28064,7 +28064,7 @@ real(amrex_real), INTENT(in) :: base_yield_stress
 real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p,ref_dot_eps_p
 real(amrex_real), INTENT(in) :: Johnson_Cook_C
 real(amrex_real), INTENT(in) :: hardening_coeff
-real(amrex_real), INTENT(in) :: eps_p,dot_eps_p,n
+real(amrex_real), INTENT(in) :: eps_p,dot_eps_p,yield_n
 real(amrex_real), INTENT(out) :: yield_stress
 
 if (ref_eps_p.ge.zero) then
@@ -28135,7 +28135,7 @@ endif
 if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
     (alpha.gt.zero).and.(ref_eps_p.gt.zero).and. &
     (ref_dot_eps_p.gt.zero).and. &
-    (eps_p.ge.zero).and.(n.gt.zero)) then
+    (eps_p.ge.zero).and.(yield_n.gt.zero)) then
  !do nothing
 else
  print *,"Johnson Cook Softening parameters corrupt"
@@ -28145,12 +28145,12 @@ else
  print *,"T ",T
  print *,"TM ",TM
  print *,"T0 ",T0
- print *,"n ",n
+ print *,"yield_n ",yield_n
  print *,"alpha ",alpha
  stop
 endif
 
-yield_stress=base_yield_stress+hardening_coeff*(eps_p**n)
+yield_stress=base_yield_stress+hardening_coeff*(eps_p**yield_n)
 if (dot_eps_p.lt.ref_dot_eps_p) then
  !do nothing
 else if (dot_eps_p.ge.ref_dot_eps_p) then
@@ -29549,6 +29549,20 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      else
       print *,"f_plastic or NP_dotdot_D invalid"
       print *,"f_plastic=",f_plastic
+      print *,"magA=",magA
+      print *,"Y_plastic_parm_scaled=",Y_plastic_parm_scaled
+      print *,"gamma_not=",gamma_not
+      print *,"elastic_viscosity=",elastic_viscosity
+      print *,"im_critical=",im_critical
+      print *,"plastic_strain_old=",plastic_strain_old
+      print *,"plastic_strain_dot=",plastic_strain_dot
+      print *,"hardening_coefficient=",hardening_coefficient
+      print *,"fort_Johnson_Cook_C=",fort_Johnson_Cook_C
+      print *,"fort_ref_plastic_strain_dot=",fort_ref_plastic_strain_dot
+      print *,"fort_ref_plastic_strain=",fort_ref_plastic_strain
+      print *,"fort_yield_alpha=",fort_yield_alpha
+      print *,"fort_yield_temperature=",fort_yield_temperature
+      print *,"fort_yield_n=",fort_yield_n
       print *,"NP_dotdot_D=",NP_dotdot_D
       stop
      endif
