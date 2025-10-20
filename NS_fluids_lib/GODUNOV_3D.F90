@@ -21728,11 +21728,17 @@ stop
        maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
+       !unperturb is a level set function.
+       !level set function(x,y,z,t) is a positive function in a given 
+       !material, and negative outside.
+       !level set function(x,y,z,t) is zero on the interface.
       real(amrex_real), INTENT(in), target :: &
        unperturb(DIMV(unperturb))
       real(amrex_real), pointer :: unperturb_ptr(D_DECL(:,:,:))
 
-      real(amrex_real), INTENT(in), target :: &
+       ! 0<=im_critical<num_materials
+       ! passing in the compotent: scomp_section[LS_Type]+im_critical
+      real(amrex_real), INTENT(inout), target :: &
        cell_evec(DIMV(cell_evec))
       real(amrex_real), pointer :: cell_evec_ptr(D_DECL(:,:,:))
 
@@ -21792,7 +21798,20 @@ stop
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
-        testLS=abs(unperturb(D_DECL(i,j,k)))
+
+        testLS=abs(unperturb(D_DECL(i,j,k))) !original level set
+
+         ! if a point is far from the interface, then we zero out the
+         ! eigenvector there.
+        if (testLS.ge.three*dxmaxLS) then
+         cell_evec(D_DECL(i,j,k))=zero
+        else if (testLS.le.three*dxmaxLS) then
+         !do nothing
+        else
+         print *,"test_LS ??? ",testLS
+         stop
+        endif
+
         if (testLS.le.dxmaxLS) then
          test_max=abs(cell_evec(D_DECL(i,j,k)))
          if (test_max.gt.local_max) then

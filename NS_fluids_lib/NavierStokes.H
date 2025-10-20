@@ -2258,7 +2258,7 @@ protected:
     static Vector<Real> ref_plastic_strain_dot; 
     static Vector<Real> Johnson_Cook_C; 
     static Vector<Real> yield_m; 
-    static Vector<Real> yield_n;
+    static Vector<Real> yield_n; //def=1.0
     static Vector<Real> yield_alpha;
     static Vector<Real> yield_temperature;
 

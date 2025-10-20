@@ -928,7 +928,7 @@ Vector<Real> NavierStokes::ref_plastic_strain;
 Vector<Real> NavierStokes::ref_plastic_strain_dot;
 Vector<Real> NavierStokes::Johnson_Cook_C; 
 Vector<Real> NavierStokes::yield_m;
-Vector<Real> NavierStokes::yield_n;
+Vector<Real> NavierStokes::yield_n; //default=1.0
 Vector<Real> NavierStokes::yield_alpha;
 Vector<Real> NavierStokes::yield_temperature;
 
