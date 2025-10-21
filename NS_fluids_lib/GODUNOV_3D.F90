@@ -8838,7 +8838,18 @@ stop
        print *,"hardening_coefficient invalid: ",hardening_coefficient
        stop
       endif
-      if (mechanical_to_thermal.ge.zero) then
+      if (abs(mechanical_to_thermal-&
+              fort_mechanical_to_thermal(im_critical+1)).le.EPS6) then
+       !do nothing
+      else
+       print *,"mechanical_to_thermal= ",mechanical_to_thermal
+       print *,"fort_mechanical_to_thermal(im_critical+1)=", &
+          fort_mechanical_to_thermal(im_critical+1)
+       stop
+      endif
+
+      if ((mechanical_to_thermal.ge.zero).and. &
+          (mechanical_to_thermal.le.one)) then
        ! do nothing
       else
        print *,"mechanical_to_thermal invalid: ",mechanical_to_thermal
@@ -9214,12 +9225,12 @@ stop
          ! rho cv DT/Dt = beta W_p^dot
         if (current_dedt_term.ge.zero) then
 
-         if ((current_vfrac.ge.half).and. &
+         if ((current_vfrac.ge.one-EPS2).and. &
              (current_vfrac.le.one+0.1d0)) then
           snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
             plastic_work_average*current_dedt_term
-         else if ((current_vfrac.ge.zero).and. &
-                  (current_vfrac.le.half)) then
+         else if ((current_vfrac.ge.-0.1d0).and. &
+                  (current_vfrac.le.one-EPS2)) then
           !do nothing
          else
           print *,"current_vfrac invalid: ",current_vfrac

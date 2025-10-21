@@ -28381,6 +28381,15 @@ else
  stop
 endif
 
+if ((fort_mechanical_to_thermal(im_critical+1).ge.zero).and. &
+    (fort_mechanical_to_thermal(im_critical+1).le.one)) then
+ !do nothing
+else
+ print *,"fort_mechanical_to_thermal(im_critical+1) invalid: ", &
+  im_critical,fort_mechanical_to_thermal(im_critical+1)
+ stop
+endif
+
 if (fort_material_type(im_critical+1).eq.0) then
  force_unity_determinant=1
 else if (fort_material_type(im_critical+1).eq.999) then
