@@ -13704,6 +13704,10 @@ void NavierStokes::tensor_advection_update(int im) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
+ MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
+  amrex::Error("LS_new invalid ncomp");
+
  MultiFab* EOSdata=getStateDen(1,cur_time_slab);
 
  const Real* dx = geom.CellSize();
@@ -13815,6 +13819,8 @@ void NavierStokes::tensor_advection_update(int im) {
       FArrayBox& snewfab=S_new[mfi];
       FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  // 1/(rho cv)
 
+      FArrayBox& lsnewfab=LS_new[mfi];
+
       Vector<int> velbc=getBCArray(State_Type,gridno,
        STATECOMP_VEL,STATE_NCOMP_VEL);
 
@@ -13852,13 +13858,17 @@ void NavierStokes::tensor_advection_update(int im) {
         tensor_source_mf_fab.dataPtr(),
         ARLIM(tensor_source_mf_fab.loVect()),
         ARLIM(tensor_source_mf_fab.hiVect()),
-        snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+        snewfab.dataPtr(),
+        ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+        lsnewfab.dataPtr(),
+        ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
         DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
         &nstate,
         tilelo,tilehi,
         fablo,fabhi,
         &bfact, 
         &dt_slab,//updatetensor
+        &cur_time_slab,//updatetensor
         &elastic_time[im],
         &viscoelastic_model[im],
         &polymer_factor[im],

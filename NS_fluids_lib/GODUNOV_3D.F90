@@ -8669,12 +8669,14 @@ stop
        tnew,DIMS(tnew), &
        told,DIMS(told), & !ngrow=1
        snew,DIMS(snew), &
+       lsnew,DIMS(lsnew), &
        dedt,DIMS(dedt), &
        nstate, &
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
        dt, &
+       cur_time_slab, &
        elastic_time, &
        viscoelastic_model, &
        polymer_factor, &
@@ -8706,6 +8708,7 @@ stop
       integer, INTENT(in) :: DIMDEC(tnew)
       integer, INTENT(in) :: DIMDEC(told)
       integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(lsnew)
       integer, INTENT(in) :: DIMDEC(dedt)
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
@@ -8756,6 +8759,11 @@ stop
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
+              lsnew(DIMV(lsnew),(1+SDIM)*num_materials)
+      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+
+
+      real(amrex_real), INTENT(in), target :: &
               dedt(DIMV(dedt))
       real(amrex_real), pointer :: dedt_ptr(D_DECL(:,:,:))
 
@@ -8766,7 +8774,7 @@ stop
       integer :: irefine,jrefine,krefine,nrefine
       integer :: irefine2,jrefine2,krefine2,nrefine2
       integer :: iofs,jofs,kofs
-      real(amrex_real), INTENT(in) :: dt,elastic_time
+      real(amrex_real), INTENT(in) :: dt,cur_time_slab,elastic_time
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
@@ -8791,9 +8799,20 @@ stop
       real(amrex_real) told_average,told_weight,local_weight
       real(amrex_real) rval
       integer, parameter :: remove_checkerboard=1
+      real(amrex_real) dxmaxLS
+      real(amrex_real) heating_buffer
+      real(amrex_real) LS_clamped
+      real(amrex_real) temperature_clamped
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) x0(SDIM)
+      real(amrex_real) LSgroup(num_materials)
+      integer im_local
+      integer im_primary
+      integer prescribed_flag
 
       tnew_ptr=>tnew
       snew_ptr=>snew
+      lsnew_ptr=>lsnew
       dedt_ptr=>dedt
 
       if (nstate.ne.STATE_NCOMP) then
@@ -8893,6 +8912,12 @@ stop
        print *,"dt invalid: ",dt
        stop
       endif
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid: ",cur_time_slab
+       stop
+      endif
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,0,-1)
@@ -8921,7 +8946,26 @@ stop
       call checkbound_array(fablo,fabhi,told_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,snew_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,0,-1)
+
       call checkbound_array1(fablo,fabhi,dedt_ptr,0,-1)
+
+      if ((ngrow_distance.ge.4).and. &
+          (ngrow_distance.le.64)) then
+       !do nothing
+      else
+       print *,"ngrow_distance invalid: ",ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      heating_buffer=dxmaxLS*ngrow_make_distance
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -8930,6 +8974,9 @@ stop
       do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir_local=1,SDIM
+        x0(dir_local)=xsten(0,dir_local)
+       enddo
 
        plastic_work_average=zero
        plastic_work_weight=zero
@@ -9227,8 +9274,45 @@ stop
 
          if ((current_vfrac.ge.one-EPS2).and. &
              (current_vfrac.le.one+0.1d0)) then
-          snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
-            plastic_work_average*current_dedt_term
+
+          do im_local=1,num_materials
+           LSgroup(im_local)=lsnew(D_DECL(i,j,k),im_local)
+          enddo 
+          call get_primary_material(LSgroup,im_primary)
+
+          if (im_primary.eq.im_critical+1) then
+
+           if (LSgroup(im_critical+1).ge.heating_buffer) then
+
+             ! LS>0 if clamped
+            call SUB_clamped_LS(x0,cur_time_slab,LS_clamped, &
+              vel_clamped,temperature_clamped,prescribed_flag,dx)
+         
+            if (LS_clamped.lt.zero) then
+       
+             snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
+               plastic_work_average*current_dedt_term
+
+            else if (LS_clamped.ge.zero) then
+             !do nothing
+            else
+             print *,"LS_clamped invalid: ",LS_clamped
+             stop
+            endif
+
+           else if (LSgroup(im_critical+1).lt.heating_buffer) then
+            !do nothing
+           else
+            print *,"LSgroup(im_critical+1).lt.heating_buffer failed"
+            stop
+           endif
+          else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+           !do nothing
+          else
+           print *,"im_primary invalid: ",im_primary
+           stop
+          endif
+
          else if ((current_vfrac.ge.-0.1d0).and. &
                   (current_vfrac.le.one-EPS2)) then
           !do nothing
@@ -15924,7 +16008,7 @@ stop
              else if (LS_clamped.lt.zero) then
               ! do nothing
              else
-              print *,"LS_clamped is NaN"
+              print *,"LS_clamped is NaN: ",LS_clamped
               stop
              endif
 
