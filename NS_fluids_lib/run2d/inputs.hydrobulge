@@ -2,8 +2,14 @@
 # Wardlaw and Luton
 # Shock and Vibration
 # volume 7 (2000) 265-275
-# Sandusky et al
+# For displacement comparison see:
+# Sandusky, Chambers, Zerilli,Fabini, Gottwald 
+# Dynamic measurements of plastic deformation in a water filled aluminum
+# tube in response to detonation of a small explosives charge.
 # Shock and Vibration
+# For displacement comparison see:
+# "Coupled Hydrocode prediction of underwater explosion damage"
+# Wardlaw, McKeown, Luton
 max_step  =  99999    # maximum timestep
 #max_step  =  500    # maximum timestep
 stop_time =  0.4 # maximum problem time (100 microsec=0.1 ms) Tillotsen
@@ -98,7 +104,7 @@ amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
-#amr.restart         = chk06500
+#amr.restart         = chk01200
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
