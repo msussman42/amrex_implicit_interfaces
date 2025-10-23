@@ -241,25 +241,25 @@ ns.viscoelastic_model=0 3 3 #COMPRESSIBLE
 
 #fluid, steel, tungsten, biofilm "base_yield_stress"
 ns.yield_stress=0.0 1.50e+10 1.51e+10
-#ns.mechanical_to_thermal=0.0 0.9 0.9 #softening
-ns.mechanical_to_thermal=0.0 0.0 0.0 #no softening
+ns.mechanical_to_thermal=0.0 0.9 0.9 #softening
+#ns.mechanical_to_thermal=0.0 0.0 0.0 #no softening
 
 #fluid, steel, tungsten, biofilm
 ns.yield_temperature=1.0e+10 1777.0 1723.0 1.0e+10 #COMPRESSIBLE
 #ns.yield_temperature=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #INCOMPRESSIBLE
-#ns.yield_alpha=1.2 1.17 1.0 1.2 #softening
-ns.yield_alpha=1.2 1.0e+10 1.0e+10 1.2 #no softening
+ns.yield_alpha=1.2 1.17 1.0 1.2 #softening
+#ns.yield_alpha=1.2 1.0e+10 1.0e+10 1.2 #no softening
 ns.yield_n=1.0 0.22 0.12 1.0 #COMPRESSIBLE
 #ns.yield_n=1.0 1.0 1.0 1.0 #INCOMPRESSIBLE
 ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE
 #ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE
 ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
-#ns.Johnson_Cook_C=0.0 0.003 0.016 0.0 #softening
-ns.Johnson_Cook_C=0.0 0.0 0.0 0.0 #no softening
+ns.Johnson_Cook_C=0.0 0.003 0.016 0.0 #softening
+#ns.Johnson_Cook_C=0.0 0.0 0.0 0.0 #no softening
 #gas,steel, tungsten
-#ns.hardening_coefficient=0.0 0.569e+10 0.177e+10 0.0 #"softening"
-ns.hardening_coefficient=0.0 0.0 0.0 0.0 #no "softening"
+ns.hardening_coefficient=0.0 0.569e+10 0.177e+10 0.0 #"softening"
+#ns.hardening_coefficient=0.0 0.0 0.0 0.0 #no "softening"
 
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
