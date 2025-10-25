@@ -17932,6 +17932,13 @@ end subroutine print_visual_descriptor
 
       enddo  ! im=1..num_materials mom_den
 
+      if (test_nwrite.eq.PLOTCOMP_CONFIG_TENSOR) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_CONFIG_TENSOR)"
+       stop
+      endif
+
       do partid=1,num_materials_viscoelastic
        im=fort_im_viscoelastic_map(partid)+1
        if ((im.ge.1).and.(im.le.num_materials)) then
@@ -17994,6 +18001,74 @@ end subroutine print_visual_descriptor
          enddo  ! irefine=1..ENUM_NUM_REFINE_DENSITY_TYPE
 
         enddo  ! ispec=1..num_tensor_type
+       else
+        print *,"im invalid60"
+        stop
+       endif
+      enddo ! partid=1..num_materials_viscoelastic 
+
+      if (test_nwrite.eq.PLOTCOMP_CONFIG_MAG) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_CONFIG_MAG)"
+       stop
+      endif
+
+      do partid=1,num_materials_viscoelastic
+       im=fort_im_viscoelastic_map(partid)+1
+       if ((im.ge.1).and.(im.le.num_materials)) then
+        write(matstr,'(I2)') im
+        do i=1,2
+         if (matstr(i:i).eq.' ') then
+          matstr(i:i)='0'
+         endif
+        enddo
+
+        specstr(1:1)='M'
+        specstr(2:2)='G'
+        
+        do irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+         write(refinestr,'(I2)') irefine
+         do i=1,2
+          if (refinestr(i:i).eq.' ') then
+           refinestr(i:i)='0'
+          endif
+         enddo
+
+         ih=1
+         Varname='CT-ijk-'
+         ih=ih+7
+
+         do i=1,2
+          Varname(ih:ih)=refinestr(i:i)
+          ih=ih+1
+         enddo
+         Varname(ih:ih)='-'
+         ih=ih+1
+
+         do i=1,2
+          Varname(ih:ih)=specstr(i:i)
+          ih=ih+1
+         enddo
+         Varname(ih:ih)='-'
+         ih=ih+1
+         Varname(ih:ih)='i'
+         ih=ih+1
+         Varname(ih:ih)='m'
+         ih=ih+1
+         Varname(ih:ih)='-'
+         ih=ih+1
+
+         do i=1,2
+          Varname(ih:ih)=matstr(i:i)
+          ih=ih+1
+         enddo
+         call dumpstring(Varname)
+         test_nwrite=test_nwrite+1
+
+        enddo  ! irefine=1..ENUM_NUM_REFINE_DENSITY_TYPE
+
        else
         print *,"im invalid60"
         stop
