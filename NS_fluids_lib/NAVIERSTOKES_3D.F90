@@ -948,9 +948,11 @@ stop
 
           ! den,den_merge,mom_den,configuration tensor
          do ivar_gb=1,num_materials*num_state_material+ &
-              num_state_material+ & !plotcomp_scalars_merge
-              num_materials+ & !mom_den
-              num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE
+           num_state_material+ & !plotcomp_scalars_merge
+           num_materials+ & !mom_den
+           num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+           num_materials_viscoelastic*ENUM_NUM_REFINE_DENSITY_TYPE+ &
+           num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE 
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -1967,6 +1969,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: nparts_def
       integer, INTENT(in) :: im_solid_map(nparts_def) 
       integer, INTENT(in) :: elastic_ncomp
+      integer :: elastic_mag_ncomp
       integer, INTENT(in) :: refineden_ncomp
       integer, INTENT(in) :: visual_tessellate_vfrac
        ! x,u,pmg,den,temp,spec,mag vort,LS
@@ -2066,6 +2069,10 @@ END SUBROUTINE SIMP
       real(amrex_real) dennd_merge(num_state_material)
       real(amrex_real) mom_dennd(num_materials)
       real(amrex_real) elasticnd(elastic_ncomp)
+      real(amrex_real) elastic_mag_nd(elastic_ncomp)
+      real(amrex_real) Q(num_materials,ENUM_NUM_REFINE_DENSITY_TYPE,3,3)
+      real(amrex_real) magQ
+      integer irefine,partid
       real(amrex_real) refinedennd(refineden_ncomp)
       real(amrex_real) dencell(num_state_material*num_materials)
       real(amrex_real) dencell_merge(num_state_material)
@@ -2223,6 +2230,10 @@ END SUBROUTINE SIMP
        print *,"elastic_ncomp invalid: ",elastic_ncomp
        stop
       endif
+
+      elastic_mag_ncomp=num_materials_viscoelastic* &
+         ENUM_NUM_REFINE_DENSITY_TYPE
+
       if (refineden_ncomp.eq. &
           num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
        ! do nothing
@@ -2280,7 +2291,7 @@ END SUBROUTINE SIMP
       else if (plot_grid_type.eq.1) then ! data "as is"
        call growntilebox(tilelo,tilehi,lo,hi,igridlo,igridhi,1)
       else
-       print *,"plot_grid_type invalid"
+       print *,"plot_grid_type invalid: ",plot_grid_type
        stop
       endif
 
@@ -2316,7 +2327,7 @@ END SUBROUTINE SIMP
       else if (plot_grid_type.eq.1) then ! 1=data "as is"
        ! do nothing
       else
-       print *,"plot_grid_type invalid"
+       print *,"plot_grid_type invalid: ",plot_grid_type
        stop
       endif
 
@@ -2408,7 +2419,7 @@ END SUBROUTINE SIMP
        else if (plot_grid_type.eq.1) then ! data "as is"
         call gridsten_level(xsten,i,j,k,level,nhalf)
        else
-        print *,"plot_grid_type invalid"
+        print *,"plot_grid_type invalid: ",plot_grid_type
         stop
        endif
 
@@ -2516,7 +2527,7 @@ END SUBROUTINE SIMP
 
         call growntilebox(tilelo,tilehi,lo,hi,igridlo,igridhi,1)
        else
-        print *,"plot_grid_type invalid"
+        print *,"plot_grid_type invalid: ",plot_grid_type
         stop
        endif
 
@@ -2561,7 +2572,7 @@ END SUBROUTINE SIMP
         else if (plot_grid_type.eq.1) then ! data "as is"
          call gridsten_level(xstenND,i,j,k,level,nhalf)
         else
-         print *,"plot_grid_type invalid"
+         print *,"plot_grid_type invalid: ",plot_grid_type
          stop
         endif
 
@@ -2688,7 +2699,7 @@ END SUBROUTINE SIMP
          else if (plot_grid_type.eq.1) then ! data "as is"
           call gridsten_level(xsten,i,j,k,level,nhalf)
          else
-          print *,"plot_grid_type invalid"
+          print *,"plot_grid_type invalid: ",plot_grid_type
           stop
          endif
          
@@ -2754,7 +2765,7 @@ END SUBROUTINE SIMP
          else if (plot_grid_type.eq.1) then ! data "as is"
           ! do nothing
          else
-          print *,"plot_grid_type invalid"
+          print *,"plot_grid_type invalid: ",plot_grid_type
           stop
          endif
 
@@ -3173,7 +3184,7 @@ END SUBROUTINE SIMP
         else if (plot_grid_type.eq.1) then ! data "as is"
          ! do nothing
         else
-         print *,"plot_grid_type invalid"
+         print *,"plot_grid_type invalid: ",plot_grid_type
          stop
         endif
 
@@ -3310,6 +3321,97 @@ END SUBROUTINE SIMP
         enddo
         scomp=scomp+elastic_ncomp
 
+        if (scomp.eq.PLOTCOMP_CONFIG_MAG) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_CONFIG_MAG)"
+         stop
+        endif
+
+        do partid=1,num_materials_viscoelastic
+         do irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+          do ii=1,3
+           do jj=1,3
+            Q(partid,irefine,ii,jj)=zero
+           enddo !jj
+          enddo !ii
+         enddo !irefine
+        enddo !partid
+
+        iw=1
+        do partid=1,num_materials_viscoelastic
+         im=fort_im_viscoelastic_map(partid)+1
+         if ((im.ge.1).and.(im.le.num_materials)) then
+          do ispec=1,ENUM_NUM_TENSOR_TYPE
+
+           do irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+            if ((ispec.ge.1).and.(ispec.le.ENUM_NUM_TENSOR_TYPE_BASE)) then
+             call stress_index(ispec,ii,jj)
+             Q(partid,irefine,ii,jj)=elasticnd(iw)
+             if (ii.eq.jj) then
+              !do nothing
+             else if (ii.lt.jj) then
+              Q(partid,irefine,jj,ii)=elasticnd(iw)
+             else
+              print *,"ii or jj invalid: ",ii,jj
+              stop
+             endif
+            endif
+            iw=iw+1
+           enddo !irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+          enddo !ispec=1,ENUM_NUM_TENSOR_TYPE
+
+         else 
+          print *,"im invalid in fort_cellgrid: ",im
+          stop
+         endif
+        enddo !partid=1,num_materials_viscoelastic
+
+        if (iw.eq.elastic_ncomp+1) then
+         !do nothing
+        else
+         print *,"expecting (iw.eq.elastic_ncomp+1)"
+         stop
+        endif
+
+
+        iw=1
+        do partid=1,num_materials_viscoelastic
+         im=fort_im_viscoelastic_map(partid)+1
+         if ((im.ge.1).and.(im.le.num_materials)) then
+
+          do irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+           magQ=zero
+           do ii=1,3
+           do jj=1,3
+            magQ=magQ+Q(partid,irefine,ii,jj)**2
+           enddo
+           enddo
+           magQ=sqrt(magQ)
+           elastic_mag_nd(iw)=magQ
+
+           iw=iw+1
+          enddo !irefine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+         else 
+          print *,"im invalid in fort_cellgrid(1): ",im
+          stop
+         endif
+        enddo !partid=1,num_materials_viscoelastic
+
+        if (iw.eq.elastic_mag_ncomp+1) then
+         !do nothing
+        else
+         print *,"expecting (iw.eq.elastic_ncomp+1)"
+         stop
+        endif
+
+        do iw=1,elastic_mag_ncomp
+         writend(scomp+iw)=elastic_mag_nd(iw) 
+        enddo
+        scomp=scomp+elastic_mag_ncomp
 
         if (scomp.eq.PLOTCOMP_REFINEDEN) then
          ! do nothing
@@ -4164,7 +4266,7 @@ END SUBROUTINE SIMP
       else if (plot_grid_type.eq.1) then ! data "as is"
        ! do nothing
       else
-       print *,"plot_grid_type invalid"
+       print *,"plot_grid_type invalid: ",plot_grid_type
        stop
       endif
 

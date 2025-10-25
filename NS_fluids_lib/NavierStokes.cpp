@@ -22549,6 +22549,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     varnames[icomp]="MOMDEN"+im_string;
    }  // for (int im=0;im<num_materials;im++)
 
+   if (icomp+1==PLOTCOMP_CONFIG_TENSOR) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_CONFIG_TENSOR");
+
    for (int partid=0;partid<num_materials_viscoelastic;partid++) {
     int im=im_viscoelastic_map[partid];
     if ((im>=0)&&(im<num_materials)) {
@@ -22577,6 +22582,38 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     } else
      amrex::Error("im invalid");
    } //partid
+
+   if (icomp+1==PLOTCOMP_CONFIG_MAG) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_CONFIG_MAG");
+
+   for (int partid=0;partid<num_materials_viscoelastic;partid++) {
+    int im=im_viscoelastic_map[partid];
+    if ((im>=0)&&(im<num_materials)) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+
+     for (int irefine=0;irefine<ENUM_NUM_REFINE_DENSITY_TYPE;irefine++) {
+      std::stringstream irefine_string_stream(std::stringstream::in |
+         std::stringstream::out);
+      irefine_string_stream << std::setw(2) << std::setfill('0') << irefine+1;
+      std::string irefine_string=irefine_string_stream.str();
+
+      icomp++;
+      varnames[icomp]="CT-ijk-"+irefine_string+"-"+
+	     "MAG-im-"+im_string;
+     } //irefine
+    } else
+     amrex::Error("im invalid");
+   } //partid
+
+   if (icomp+1==PLOTCOMP_REFINEDEN) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_REFINEDEN");
 
    for (int partid=0;partid<num_materials_compressible;partid++) {
     int im=im_refine_density_map[partid];
