@@ -28195,10 +28195,14 @@ else if (T.ge.TM) then
  print *,"TM=",TM
  print *,"ref_eps_p=",ref_eps_p
  print *,"eps_p=",eps_p
+ print *,"ref_dot_eps_p=",ref_dot_eps_p
+ print *,"dot_eps_p=",dot_eps_p
+ print *,"base_yield_stress=",base_yield_stress
  print *,"i,j,k= ",i,j,k
  print *,"irefine,jrefine,krefine= ",irefine,jrefine,krefine
  print *,"level,finest_level= ",level,finest_level
  print *,"im_critical(0...nmat-1)=",im_critical
+ print *,"num_materials=",num_materials
  print *,"nhalf ",nhalf
  print *,"xsten(0,1) xsten(0,2) xsten(0,sdim) ",xsten(0,1),xsten(0,2), &
          xsten(0,SDIM)

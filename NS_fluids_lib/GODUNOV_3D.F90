@@ -8786,6 +8786,7 @@ stop
       real(amrex_real) :: plastic_work_weight
       real(amrex_real) :: current_vfrac
       real(amrex_real) :: current_temperature
+      real(amrex_real) :: new_temperature
       real(amrex_real) :: current_dedt_term
       real(amrex_real) :: current_TM
       integer :: tcomp
@@ -9290,8 +9291,32 @@ stop
          
             if (LS_clamped.lt.zero) then
        
-             snew(D_DECL(i,j,k),tcomp)=current_temperature+dt* &
+             new_temperature=current_temperature+dt* &
                plastic_work_average*current_dedt_term
+
+             if ((new_temperature.ge.zero).and. &
+                 (new_temperature.le.current_TM)) then
+              snew(D_DECL(i,j,k),tcomp)=new_temperature
+             else
+              print *,"new_temperature invalid: ",new_temperature
+              print *,"current_vfrac: ",current_vfrac
+              print *,"LSgroup: ",LSgroup
+              print *,"heating_buffer: ",heating_buffer
+              print *,"im_critical(0..nmat-1): ",im_critical
+              print *,"current_TM: ",current_TM
+              print *,"plastic_work_average: ",plastic_work_average
+              print *,"plastic_work_weight: ",plastic_work_weight
+              print *,"current_temperature: ",current_temperature
+              print *,"dt: ",dt
+              print *,"dx: ",dx
+              print *,"x0: ",x0
+              print *,"current_dedt_term: ",current_dedt_term
+              print *,"fort_denconst(im_critical+1): ", &
+                      fort_denconst(im_critical+1)
+              print *,"fort_stiffCV(im_critical+1): ", &
+                      fort_stiffCV(im_critical+1)
+              stop
+             endif
 
             else if (LS_clamped.ge.zero) then
              !do nothing
