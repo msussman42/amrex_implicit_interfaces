@@ -13152,6 +13152,15 @@ void NavierStokes::make_heat_source() {
  }  // mfi  
 } // omp
  ns_reconcile_d_num(LOOP_HEATSOURCE,"make_heat_source");
+ 
+ if (level==finest_level) {
+  for (int im=0;im<num_materials;im++) {
+    //dst+=a*src
+    //dst,a,src,srccomp,dstcomp,numcomp,nghost
+   int dstcomp=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
+   MultiFab::Saxpy(S_new,-1.0,*localMF[QDOT_MF],0,dstcomp,1,0);
+  } //im=0 ... nmat-1 
+ }
 
  if (LSA_perturbations_switch==false) { 
   //do nothing
@@ -16198,6 +16207,8 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
 
 } // end subroutine level_species_reaction
 
+//called from NavierStokes::do_the_advance after 
+//"phase_change_redistributeALL"
 void
 NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
 
@@ -16210,9 +16221,12 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
  std::string local_caller_string="sato_model_QDOT_MDOT_SPECIES";
 
  int nstate=STATE_NCOMP;
+ MultiFab& S_old = get_new_data(State_Type,slab_step);
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (nstate!=S_new.nComp())
-  amrex::Error("nstate invalid");
+  amrex::Error("nstate invalid S_new.nComp()");
+ if (nstate!=S_old.nComp())
+  amrex::Error("nstate invalid S_old.nComp()");
 
  resize_metrics(1); // one ghost cell for cell areas and volumes
  debug_ngrow(VOLUME_MF,0,local_caller_string); //sanity check for cell volumes
@@ -16257,6 +16271,7 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
   const Real* xlo = grid_loc[gridno].lo();
 
   FArrayBox& snewfab=S_new[mfi];
+  FArrayBox& soldfab=S_old[mfi];
 
   FArrayBox& lsfab=(*LSMF)[mfi];
   FArrayBox& denfab=(*den_mf)[mfi];
@@ -16294,6 +16309,8 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
    &nstate,
    snewfab.dataPtr(),
    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+   soldfab.dataPtr(),
+   ARLIM(soldfab.loVect()),ARLIM(soldfab.hiVect()),
    mdotfab.dataPtr(),
    ARLIM(mdotfab.loVect()),
    ARLIM(mdotfab.hiVect()),
@@ -17244,7 +17261,8 @@ NavierStokes::level_phase_change_redistribute(
     // declared in: GODUNOV_3D.F90 (distribute_from_target==0)
     //   a)  jump_strength=
     //       JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)
-    //      dF * volgrid * (den_source/den_dest-1)/ dt^2 
+    //      dF * volgrid * (den_source/den_dest-1)/ dt^2 =
+    //      units m^3/s^2
     //   b)  divu_material=jump_strength  cm^3/s^2
     //   c)  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
     //   V = U*  - dt grad p/rho
