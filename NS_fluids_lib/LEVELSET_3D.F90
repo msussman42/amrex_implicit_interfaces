@@ -7126,6 +7126,42 @@ stop
       return
       end subroutine fort_getcolorsum
 
+      subroutine get_delta_ml_init(delta_ml,xpoint)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(out) :: delta_ml
+      real(amrex_real), INTENT(in) :: xpoint(SDIM)
+      real(amrex_real) :: x_site(SDIM)
+      real(amrex_real) :: dist_closest,cur_dist
+      integer :: i_closest,i,dir
+
+      i_closest=0
+      dist_closest=-1.0d0
+      do i=1,n_sites
+       cur_dist=zero
+       do dir=1,SDIM
+        x_site(dir)=pos_sites(4*(i-1)+dir)
+        cur_dist=cur_dist+(xpoint(dir)-x_site(dir))**2
+       enddo
+       cur_dist=sqrt(cur_dist)
+       if (i.eq.1) then 
+        i_closest=i
+        dist_closest=cur_dist
+       else if (cur_dist.lt.dist_closest) then
+        i_closest=i
+        dist_closest=cur_dist
+       else
+        !do nothing
+       endif
+      enddo !i=1,n_sites
+
+      delta_ml=zero !meters (for example)
+         
+      return
+      end subroutine get_delta_ml_init
+
 
       subroutine fort_sato_qdot_mdot( &
        tid_current, &
@@ -7136,6 +7172,8 @@ stop
        nstate, &
        snew, &
        DIMS(snew), &
+       sold, &
+       DIMS(sold), &
        mdot, &
        DIMS(mdot), &
        qdot, &
@@ -7191,6 +7229,7 @@ stop
       integer :: growlo(3), growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(sold)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(qdot)
       integer, INTENT(in) :: DIMDEC(LS)
@@ -7204,6 +7243,8 @@ stop
 
       real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: sold(DIMV(sold),nstate)
+      real(amrex_real), pointer :: sold_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(inout), target :: qdot(DIMV(qdot))
@@ -7238,6 +7279,7 @@ stop
 
       real(amrex_real) :: LS_local(num_materials)
       real(amrex_real) :: VOF_local(num_materials)
+      real(amrex_real) :: VOF_local_old(num_materials)
 
       integer spec_id
       integer vofcomp
@@ -7252,20 +7294,41 @@ stop
       real(amrex_real) :: microscale_vfrac
       real(amrex_real) :: local_volume
       real(amrex_real) :: TSAT
-      real(amrex_real) :: k_liquid,k_vapor,k_solid
+      real(amrex_real) :: k_liquid,k_vapor,k_solid,den_liquid,CP_liquid
+      real(amrex_real) :: local_qdot,local_mdot
+      real(amrex_real) :: delta_ml_temp,area_new,area_old
+      real(amrex_real) :: delta_ml_init
+      integer, parameter :: nhalf=3
+      real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: xpoint(SDIM)
+
+      ! minimum thickness of microlayer below which it is considered
+      ! dryout zone, this can be a input
+      real(amrex_real), parameter :: delta_ml_min=1.0d-10
+
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
        stop
       endif
 
+      if ((abs(dx(1)-dx(2)).le.EPS8*dx(1)).and. &
+          (abs(dx(2)-dx(SDIM)).le.EPS8*dx(1)).and. &
+          (dx(1).gt.zero)) then
+       !do nothing
+      else
+       print *,"expecting dx=dy=dz: ",dx
+       stop
+      endif
+
       snew_ptr=>snew
+      sold_ptr=>sold
       if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
 
-       !TODO: add qdot to the temperature field in veldiffuseALL
+       !TODO: SUBTRACT qdot from the temperature field in veldiffuseALL
        !qdot units temperature
        !mdot units ???
       mdot_ptr=>mdot
@@ -7297,6 +7360,7 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,sold_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
       call checkbound_array1(fablo,fabhi,qdot_ptr,0,-1)
@@ -7368,11 +7432,20 @@ stop
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xpoint(dir)=xsten(0,dir)
+       enddo
+
        do im=1,num_materials
         LS_local(im)=LS(D_DECL(i,j,k),im)
         vofcomp=(im-1)*ngeom_recon+1
         VOF_local(im)=VOF(D_DECL(i,j,k),vofcomp)
+        vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
+        VOF_local_old(im)=sold(D_DECL(i,j,k),vofcomp)
        enddo
+       area_new=VOF_local(im_vapor)*dx(1)*dx(2)
+       area_old=VOF_local_old(im_vapor)*dx(1)*dx(2)
        call get_primary_material(LS_local,im_primary)
        if ((im_primary.eq.im_liquid).or.(im_primary.eq.im_vapor)) then
         if (VOF_local(im_vapor).ge.EPS2) then
@@ -7425,6 +7498,134 @@ stop
              k_vapor=conductstate(D_DECL(i,j,k),im_vapor)
              k_solid=conductstate(D_DECL(iside,jside,kside),im_solid)
              TSAT=saturation_temp(iten_boiling)
+
+             den_liquid=fort_denconst(im_liquid)
+             CP_liquid=fort_stiffCP(im_liquid)
+
+             if (fort_material_type(im_liquid).eq.0) then
+              !do nothing
+             else
+              print *,"expecting incompressible liquid"
+              stop
+             endif
+
+             !check if microscale_vfrac is greater than
+             !delta_ml_min otherwise, its a dry out zone
+             if (microscale_vfrac.gt.delta_ml_min) then
+
+               !k units=Watts/(meter Kelvin)
+               !qdot units=Watts/Meter
+               !height=vfrac * cell_volume/cell_area \approx
+               !vfrac * deltaz
+               !we will further assume that dx=dy=dz
+              local_qdot=k_liquid*(solid_temperature-TSAT)
+
+               !qdot units=Watts/Meter^2
+              local_qdot=local_qdot/(microscale_vfrac*dx(SDIM))
+
+              if (local_qdot.ge.zero) then
+               !do nothing
+              else
+               print *,"local_qdot invalid: ",local_qdot
+               stop
+              endif
+             
+               !LL units=J/kg
+               !mdot units=Watts * kg /(Meter^2 J) = kg/(meter^2 sec)
+              local_mdot=local_qdot/LL
+              
+              !updating the microscale_vfrac
+              !for the cells that does not have triple line
+              if (VOF_liquid.le.EPS2) then
+
+                !dt mdot/(dx rho) is unitless
+               delta_ml_temp=dt*local_mdot/(dx(SDIM)*den_liquid) 
+               microscale_vfrac=microscale_vfrac-delta_ml_temp
+               
+               !for the cell containing triple line, we need 
+              else if (VOF_liquid.gt.EPS2) then  
+                !liquid vapor interface area from the previous time step too
+               if (area_new.gt.area_old) then
+
+                !delta_ml_init is the initial value of microlayer thickness 
+                !units: meters
+                call get_delta_ml_init(delta_ml_init,xpoint)
+
+                delta_ml_temp=(area_new-area_old)*delta_ml_init 
+                delta_ml_temp=delta_ml_temp + &
+                   area_old*microscale_vfrac*dx(SDIM)
+                delta_ml_temp=delta_ml_temp/(area_new*dx(SDIM))
+                if ((delta_ml_temp.ge.zero).and. &
+                    (delta_ml_temp.le.one)) then
+                 !do nothing
+                else if (delta_ml_temp.gt.one) then
+                 delta_ml_temp=one
+                else
+                 print *,"delta_ml_temp invalid: ",delta_ml_temp
+                 stop
+                endif 
+
+                microscale_vfrac=delta_ml_temp
+                delta_ml_temp=dt*local_mdot/ &
+                  (dx(SDIM)*den_liquid)
+
+                microscale_vfrac=microscale_vfrac-delta_ml_temp
+               else if (area_new.le.area_old) then
+                delta_ml_temp=dt*local_mdot/ &
+                  (dx(SDIM)*den_liquid)
+                microscale_vfrac=microscale_vfrac-delta_ml_temp
+               else
+                print *,"area_new or area_old bust ",area_new,area_old
+                stop
+               endif
+               !for the cells that does not have triple line
+              else 
+               print *,"VOF_liquid bust: ",VOF_liquid
+               stop
+              endif
+
+              if ((microscale_vfrac.ge.zero).and. &
+                  (microscale_vfrac.le.one)) then
+               !do nothing
+              else if (microscale_vfrac.lt.zero) then
+               microscale_vfrac=microscale_vfrac+delta_ml_temp
+               local_mdot=microscale_vfrac*dx(SDIM)*den_liquid/dt
+               local_qdot=LL*local_mdot
+               microscale_vfrac=zero
+              else
+               print *,"microscale_vfrac invalid: ",microscale_vfrac
+               stop
+              endif
+
+               !note: mdot=[k grad T]/L
+               !k units: W/(M Kelvin)
+               !T Kelvin
+               !L Joule/kg
+               !(W/m^2)*kg/J=kg/(m^2 s)
+               !local_mdot units=Watts * kg /(Meter^2 J) = kg/(meter^2 sec)
+               !local_qdot units=Watts/Meter^2
+               !after fort_convertmaterial,
+               !JUMPFAB has units of m^3/s^2
+               !after fort_initjumpterm,
+               !MDOT has units of m^3/s^2 (div ustar)volcell/dt
+              
+               !new units of mdot: (kg/(m^2 s)) * m^2 /(s kg/m^3)=
+               !(kg/(m^2 s)) * m^2 * m^3/(kg s)=m^3/s^2
+              mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+ &
+                 local_mdot*area_new/(dt*den_liquid)
+               !new units of qdot: Kelvin
+               !note: rho cv dT/dt = (q1 - q0)/dx
+              qdot(D_DECL(i,j,k))=qdot(D_DECL(i,j,k))+ &
+                dt*local_qdot/(dx(1)*den_liquid*CP_liquid)
+             
+             else if (microscale_vfrac.le.delta_ml_min .and. &
+                      microscale_vfrac.gt.zero) then
+              !mdot and qdot are not calculated for dry out zone 
+              !do nothing
+             else
+              print *,"microscale_vfrac invalid ", microscale_vfrac
+              stop
+             endif 
 
               !store the updated microscale_vfrac here:
              spec_comp=STATECOMP_STATES+(im_vapor-1)*num_state_material+ &

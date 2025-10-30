@@ -12845,6 +12845,8 @@ void NavierStokes::veldiffuseALL() {
    // LSA_perturbations_switch, LSA_EVEC forcing included too.
    // LSA_EVEC=TEMPCHAR * normalizedLINF(TEMP^perturb-TEMP^noperturb)
    // TEMPnp1=TEMPn + dt * LSA_EVEC
+   //
+   // QDOT subtracted from temperature on finest level.
    ns_level.make_heat_source();  // updates S_new
 
    ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);

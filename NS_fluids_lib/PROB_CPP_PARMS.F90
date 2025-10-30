@@ -351,7 +351,7 @@ stop
         ccvelfact, &
         ccn_sites, &
         ccnucleation_init_time, &
-        ccpos_sites, &
+        ccpos_sites, &  !nucleation seeds
         ccadapt_whole_material, &
         ccxblob,ccyblob,cczblob,ccradblob, &
         ccxblob2,ccyblob2,cczblob2,ccradblob2, &
@@ -1404,6 +1404,7 @@ stop
        print *,"pos_sites allocated 1..5000"
        stop
       endif
+       !x,y,z,r?
       do i=1,4*n_sites
        pos_sites(i)=ccpos_sites(i)
       enddo

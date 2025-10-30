@@ -6008,13 +6008,14 @@ stop
              denratio_factor=zero
             endif
 
-            jump_strength=denratio_factor/dt 
+            jump_strength=denratio_factor/dt !units 1/s 
 
              !for distribute_from_targ==0:
              !mdot is distributed to the target material.
              !velocity of the interface (cm/s) is U_source + mdot n/rho_source
-             !mdot=[k grad T]dot n/L
-             !dF=(dt/dx)mdot/rho_source
+             !mdot=[k grad T]dot n/L (W/(m Kelvin))(Kelvin/m)(kg/J)=
+             !  (W/m^2)(kg/J)=kg/(m^2 s)
+             !dF=(dt/dx)mdot/rho_source  (s/m)(kg/(m^2 s))m^3/kg=unitless
              !initially: jump_strength=(den_src/den_dst - 1)/dt
              !ultimately jump_strength has units of cm^{3}/s^{2}
              !source term is jump_strength
@@ -6022,6 +6023,12 @@ stop
              !dF * jump_strength = (mdot/dx)(1/rho_dst-1/rho_src) (units 1/dt)
              !note: vol div u/dt = cm^3 (cm/s) (1/cm) (1/s)=cm^3 / s^2
              !for boiling: jump_strength>0
+     
+             !note: u=ustar-dt grad p/rho
+             !div (grad p /rho)=div(ustar)/dt
+             !vol * div(grad p/rho)=vol div(ustar)/dt
+
+             !units: (1/s)m^3/s=m^3/s^2
             jump_strength=jump_strength*dF*volgrid/dt
 
             JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)=jump_strength
