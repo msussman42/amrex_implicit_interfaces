@@ -8779,6 +8779,9 @@ stop
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
       real(amrex_real), INTENT(in) :: yield_stress
+      real(amrex_real) :: gamma_not !Johnson Cook model
+      real(amrex_real) :: gamma_not_min !Johnson Cook model
+      real(amrex_real) :: gamma_not_max !Johnson Cook model
       real(amrex_real), INTENT(in) :: hardening_coefficient
       real(amrex_real), INTENT(in) :: mechanical_to_thermal
       real(amrex_real) :: plastic_work
@@ -9007,6 +9010,9 @@ stop
         print *,"current_dedt_term invalid: ",current_dedt_term
         stop
        endif
+
+       gamma_not_min=yield_stress
+       gamma_not_max=yield_stress
 
        krefine=0
 #if (AMREX_SPACEDIM==3)
@@ -9240,16 +9246,29 @@ stop
          viscoelastic_model, &
          polymer_factor, &
          elastic_viscosity, &
-         yield_stress, &
+         yield_stress, & !intent(in)
+         gamma_not, & !intent(out)
          hardening_coefficient, &
          plastic_work, &
          irz, &
          bc) 
 
+        if (gamma_not.gt.gamma_not_max) then
+         gamma_not_max=gamma_not
+        endif
+        if (gamma_not.lt.gamma_not_min) then
+         gamma_not_min=gamma_not
+        endif
         if (plastic_work.ge.zero) then
          !do nothing
         else
          print *,"plastic_work invalid: ",plastic_work
+         stop
+        endif
+        if (gamma_not.gt.zero) then
+         !do nothing
+        else
+         print *,"gamma_not invalid: ",gamma_not
          stop
         endif
 
@@ -9299,6 +9318,8 @@ stop
               snew(D_DECL(i,j,k),tcomp)=new_temperature
              else
               print *,"new_temperature invalid: ",new_temperature
+              print *,"gamma_not_min: ",gamma_not_min
+              print *,"gamma_not_max: ",gamma_not_max
               print *,"current_vfrac: ",current_vfrac
               print *,"LSgroup: ",LSgroup
               print *,"heating_buffer: ",heating_buffer
