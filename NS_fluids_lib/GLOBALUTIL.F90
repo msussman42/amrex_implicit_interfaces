@@ -28193,6 +28193,9 @@ else if (T.ge.TM) then
  print *,"T.ge.TM !"
  print *,"T=",T
  print *,"TM=",TM
+ print *,"fort_material_type=",fort_material_type
+ print *,"fort_stiffCV=",fort_stiffCV
+ print *,"fort_denconst=",fort_denconst
  print *,"ref_eps_p=",ref_eps_p
  print *,"eps_p=",eps_p
  print *,"ref_dot_eps_p=",ref_dot_eps_p
@@ -28214,7 +28217,9 @@ endif
 if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
     (alpha.gt.zero).and.(ref_eps_p.gt.zero).and. &
     (ref_dot_eps_p.gt.zero).and. &
-    (eps_p.ge.zero).and.(yield_n.gt.zero)) then
+    (eps_p.ge.zero).and. &
+    (yield_n.gt.zero).and. &
+    (yield_n.le.one)) then
  !do nothing
 else
  print *,"Johnson Cook Softening parameters corrupt"
@@ -28312,6 +28317,7 @@ subroutine point_updatetensor( &
  polymer_factor, &
  elastic_viscosity, &
  yield_stress, &
+ gamma_not, &
  hardening_coefficient, &
  plastic_work, &
  irz, &
@@ -28401,7 +28407,7 @@ integer dir_local
 
 integer DErelaxation_model !Deborah number defines rate of relaxation
 real(amrex_real) magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
-real(amrex_real) gamma_not
+real(amrex_real), intent(out) :: gamma_not
 real(amrex_real) force_coef
 real(amrex_real) one_over_den_local
 real(amrex_real) r_hoop
@@ -28447,6 +28453,18 @@ else
  print *,"yield_stress out of range: ",yield_stress
  stop
 endif
+
+gamma_not=yield_stress
+
+if ((fort_yield_n(im_critical+1).gt.zero).and. &
+    (fort_yield_n(im_critical+1).le.one)) then
+ !do nothing
+else
+ print *,"fort_yield_n invalid: ",im_critical, &
+   fort_yield_n(im_critical+1)
+ stop
+endif
+
 if (hardening_coefficient.ge.zero) then 
  ! do nothing
 else
@@ -29613,7 +29631,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
         !B=569MPa n=0.22 C=0.003 m=1.17 Steel
         !f_plastic=magA-sqrt(2/3) sigma_{v}^{0}
         !sigma_{v}^{1}=sigma_{v}^{0}+dt \sqrt{2/3} h\Gamma
-      plastic_strain_dot=sqrt(f_plastic/(three*(one+weight_prev)))/dt
+      plastic_strain_dot=sqrt(two/three)*f_plastic/ &
+        (two*dt*(one+weight_prev))
 
        ! (16) from Camacho and Ortiz.
        ! just below (11) in Tran and Udaykumar.
