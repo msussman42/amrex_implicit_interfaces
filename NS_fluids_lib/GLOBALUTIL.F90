@@ -28106,6 +28106,59 @@ endif
 return
 end subroutine circleww
 
+subroutine plastic_equation( &
+  plastic_overflow, & !dimensionless (M-sqrt(2/3)sigma0)/G
+  eps_p, & !plastic_strain_old
+  eps_p_new, & ! plastic_strain_new
+  hardening_coeff_scaled, & ! B/(3G)
+  yield_n, & !yield_n 
+  f_bisect)
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: plastic_overflow
+real(amrex_real), INTENT(in) :: eps_p
+real(amrex_real), INTENT(in) :: eps_p_new
+real(amrex_real), INTENT(in) :: hardening_coeff_scaled
+real(amrex_real), INTENT(in) :: yield_n
+real(amrex_real), INTENT(out) :: f_bisect
+
+if (plastic_overflow.gt.zero) then
+ !do nothing
+else
+ print *,"plastic_overflow invalid: ",plastic_overflow
+ stop
+endif
+if (eps_p.ge.zero) then
+ !do nothing
+else
+ print *,"eps_p: ",eps_p
+ stop
+endif
+if (eps_p_new.ge.eps_p) then
+ !do nothing
+else
+ print *,"eps_p_new: ",eps_p_new
+ stop
+endif
+if (hardening_coeff_scaled.ge.zero) then
+ !do nothing
+else
+ print *,"hardening_coeff_scaled: ",hardening_coeff_scaled
+ stop
+endif
+if ((yield_n.gt.zero).and.(yield_n.le.one)) then
+ !do nothing
+else
+ print *,"yield_n: ",yield_n
+ stop
+endif
+f_bisect=plastic_overflow-sqrt(six)*(eps_p_new-eps_p+ &
+  hardening_coeff_scaled*(eps_p_new**yield_n- &
+  eps_p**yield_n))
+
+return
+end subroutine plastic_equation
+ 
 subroutine JohnsonCookSoftening( &
  xsten,nhalf, &
  i,j,k, &
@@ -28412,8 +28465,13 @@ real(amrex_real) force_coef
 real(amrex_real) one_over_den_local
 real(amrex_real) r_hoop
 
-real(amrex_real) plastic_strain_old,plastic_strain_dot
+real(amrex_real) :: plastic_strain_old
+real(amrex_real) :: plastic_strain_dot
+real(amrex_real) :: plastic_strain_dot_max
 real(amrex_real), intent(out) :: plastic_work
+
+real(amrex_real) :: aa,bb,cc,fa,fb,fc
+integer :: ibisect
 
 integer Johnson_iter
 integer force_unity_determinant
@@ -29592,90 +29650,168 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      !=> f_plastic=sqrt(2/3)f   (see equation (2) from Ponthot)
     f_plastic=magA-Y_plastic_parm_scaled
 
-    do ii=1,3
-    do jj=1,3
+    if ((f_plastic.le.zero).or. &
+        ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
 
-     if ((f_plastic.lt.zero).or. &
-         ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
-
-      plastic_strain_dot=zero
-      plastic_work=zero
+     plastic_strain_dot=zero
+     plastic_work=zero
 
       !NP=A/sqrt(A:A)  (NP : NP=1)
-     else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
+    else if ((f_plastic.gt.zero).and.(NP_dotdot_D.gt.zero)) then
 
-       !Anew-Aold=sqrt(2/3) sigma_v A/sqrt(A:A) - A=
-       !NP sqrt(A:A)(sqrt(2/3) sigma_v/sqrt(A:A)-1)=
-       !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
-       !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
-       !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
+      !Anew-Aold=sqrt(2/3) sigma_v A/sqrt(A:A) - A=
+      !NP sqrt(A:A)(sqrt(2/3) sigma_v/sqrt(A:A)-1)=
+      !NP(sqrt(2/3) sigma_v-NP sqrt(A:A))=-2 Gamma NP
+      !Gamma=(1/2)(sqrt(A:A)-sqrt(2/3) sigma_v)
+      !Note: Ponthot (21) has sqrt(sigma_v) by mistake.
 
-       ! hardening_coefficient = h (Tran and Udaykumar)
-      weight_prev=hardening_coefficient/(three*elastic_viscosity)
+      ! hardening_coefficient = h (Tran and Udaykumar)
+     weight_prev=hardening_coefficient/(three*elastic_viscosity)
+
+     if (fort_yield_n(im_critical+1).eq.one) then
 
        ! Tran and Udaykumar:
        ! psi=(magA-sqrt(2/3) sigma_{v}^{0})/(2 G (1+h/(3G)))
-      Aadvect(ii,jj)= &
+      do ii=1,3
+      do jj=1,3
+       Aadvect(ii,jj)= &
         (weight_prev*magA+Y_plastic_parm_scaled)*NP(ii,jj)/ &
         (weight_prev+one)
+      enddo
+      enddo
 
-        !https://www.brown.edu/Departments/Engineering/Courses/En1750/Notes/Plasticity/Plasticity.htm
-        !search for "hardening"
-        !Y(\bar{eps}^{p})=Y_{0} + h \bar{eps}^{p}
-        !see "K" in the table under the wikipedia cite 
-        !"Strain hardening exponent"
-        !stainless steel=1275 MPa
-        !copper=325 MPa
-        !Table 3 Tran and Udaykumar:
-        !B=177MPa n=0.12 C=0.016 m=1.0 Tungsten 
-        !B=569MPa n=0.22 C=0.003 m=1.17 Steel
-        !f_plastic=magA-sqrt(2/3) sigma_{v}^{0}
-        !sigma_{v}^{1}=sigma_{v}^{0}+dt \sqrt{2/3} h\Gamma
+       !https://www.brown.edu/Departments/Engineering/Courses/En1750/Notes/Plasticity/Plasticity.htm
+       !search for "hardening"
+       !Y(\bar{eps}^{p})=Y_{0} + h \bar{eps}^{p}
+       !see "K" in the table under the wikipedia cite 
+       !"Strain hardening exponent"
+       !stainless steel=1275 MPa
+       !copper=325 MPa
+       !Table 3 Tran and Udaykumar:
+       !B=177MPa n=0.12 C=0.016 m=1.0 Tungsten 
+       !B=569MPa n=0.22 C=0.003 m=1.17 Steel
+       !f_plastic=magA-sqrt(2/3) sigma_{v}^{0}
+       !sigma_{v}^{1}=sigma_{v}^{0}+dt \sqrt{2/3} h\Gamma
       plastic_strain_dot=sqrt(two/three)*f_plastic/ &
         (two*dt*(one+weight_prev))
+
+     else if ((fort_yield_n(im_critical+1).lt.one).and. &
+              (fort_yield_n(im_critical+1).gt.zero)) then
+
+      aa=plastic_strain_old
+      call plastic_equation( &
+       f_plastic, &
+       plastic_strain_old, &
+       aa, &
+       weight_prev, &
+       fort_yield_n(im_critical+1), &
+       fa)
+      bb=f_plastic/sqrt(six)+plastic_strain_old
+      call plastic_equation( &
+       f_plastic, &
+       plastic_strain_old, &
+       bb, &
+       weight_prev, &
+       fort_yield_n(im_critical+1), &
+       fb)
+      if ((fa.gt.zero).and.(fb.lt.zero)) then
+       ibisect=0
+       fc=one
+       do while ((ibisect.le.20).and.(fc.ne.zero))
+        cc=half*(aa+bb) 
+        call plastic_equation( &
+         f_plastic, &
+         plastic_strain_old, &
+         cc, &
+         weight_prev, &
+         fort_yield_n(im_critical+1), &
+         fc)
+        if (fc.eq.zero) then
+         !do nothing
+        else if (fc*fa.gt.zero) then
+         aa=cc
+        else if (fc*fb.gt.zero) then
+         bb=cc
+        else
+         print *,"expecting fa,fb,fc <>0"
+         stop
+        endif 
+        ibisect=ibisect+1
+       enddo !do while ((ibisect.le.20).and.(fc.ne.zero))
+
+       plastic_strain_dot_max=sqrt(two/three)*f_plastic/ &
+        (two*dt*(one+weight_prev))
+       plastic_strain_dot=(cc-plastic_strain_old)/dt
+       if ((plastic_strain_dot.ge.zero).and. &
+           (plastic_strain_dot.le.plastic_strain_dot_max)) then
+
+        do ii=1,3
+        do jj=1,3
+         Aadvect(ii,jj)= &
+          (Y_plastic_parm_scaled+ &
+           sqrt(six)*weight_prev* &
+           (cc**fort_yield_n(im_critical+1)- &
+            plastic_strain_old**fort_yield_n(im_critical+1)))*NP(ii,jj)
+        enddo
+        enddo
+
+       else
+        print *,"plastic_strain_dot error"
+        print *,"plastic_strain_dot=",plastic_strain_dot
+        print *,"plastic_strain_dot_max=",plastic_strain_dot_max
+        stop
+       endif
+
+      else
+       print *,"expecting fa>0 and fb<0 ",fa,fb
+       stop
+      endif  
+  
+     else
+      print *,"fort_yield_n invalid: ",im_critical, &
+        fort_yield_n(im_critical+1)
+      stop
+     endif
 
        ! (16) from Camacho and Ortiz.
        ! just below (11) in Tran and Udaykumar.
        ! !magA=sqrt(A:A)
-      plastic_work=fort_mechanical_to_thermal(im_critical+1)* &
-         plastic_strain_dot*magA*sqrt(3.0d0/2.0d0)*elastic_viscosity
+     plastic_work=fort_mechanical_to_thermal(im_critical+1)* &
+        plastic_strain_dot*magA*sqrt(3.0d0/2.0d0)*elastic_viscosity
 
-      if (plastic_strain_dot.ge.zero) then
-       !do nothing
-      else
-       print *,"plastic_strain_dot out of range ",plastic_strain_dot
-       stop
-      endif
-      if (plastic_work.ge.zero) then
-       !do nothing
-      else
-       print *,"plastic_work out of range ",plastic_work
-       stop
-      endif
-
+     if (plastic_strain_dot.ge.zero) then
+      !do nothing
      else
-      print *,"f_plastic or NP_dotdot_D invalid"
-      print *,"f_plastic=",f_plastic
-      print *,"magA=",magA
-      print *,"Y_plastic_parm_scaled=",Y_plastic_parm_scaled
-      print *,"gamma_not=",gamma_not
-      print *,"elastic_viscosity=",elastic_viscosity
-      print *,"im_critical=",im_critical
-      print *,"plastic_strain_old=",plastic_strain_old
-      print *,"plastic_strain_dot=",plastic_strain_dot
-      print *,"hardening_coefficient=",hardening_coefficient
-      print *,"fort_Johnson_Cook_C=",fort_Johnson_Cook_C
-      print *,"fort_ref_plastic_strain_dot=",fort_ref_plastic_strain_dot
-      print *,"fort_ref_plastic_strain=",fort_ref_plastic_strain
-      print *,"fort_yield_alpha=",fort_yield_alpha
-      print *,"fort_yield_temperature=",fort_yield_temperature
-      print *,"fort_yield_n=",fort_yield_n
-      print *,"NP_dotdot_D=",NP_dotdot_D
+      print *,"plastic_strain_dot out of range ",plastic_strain_dot
+      stop
+     endif
+     if (plastic_work.ge.zero) then
+      !do nothing
+     else
+      print *,"plastic_work out of range ",plastic_work
       stop
      endif
 
-    enddo !jj=1,3
-    enddo !ii=1,3
+    else
+     print *,"f_plastic or NP_dotdot_D invalid"
+     print *,"f_plastic=",f_plastic
+     print *,"magA=",magA
+     print *,"Y_plastic_parm_scaled=",Y_plastic_parm_scaled
+     print *,"gamma_not=",gamma_not
+     print *,"elastic_viscosity=",elastic_viscosity
+     print *,"im_critical=",im_critical
+     print *,"plastic_strain_old=",plastic_strain_old
+     print *,"plastic_strain_dot=",plastic_strain_dot
+     print *,"hardening_coefficient=",hardening_coefficient
+     print *,"fort_Johnson_Cook_C=",fort_Johnson_Cook_C
+     print *,"fort_ref_plastic_strain_dot=",fort_ref_plastic_strain_dot
+     print *,"fort_ref_plastic_strain=",fort_ref_plastic_strain
+     print *,"fort_yield_alpha=",fort_yield_alpha
+     print *,"fort_yield_temperature=",fort_yield_temperature
+     print *,"fort_yield_n=",fort_yield_n
+     print *,"NP_dotdot_D=",NP_dotdot_D
+     stop
+    endif
 
    enddo ! Johnson_iter=0,1
 
