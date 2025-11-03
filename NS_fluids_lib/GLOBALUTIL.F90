@@ -28152,6 +28152,7 @@ else
  print *,"yield_n: ",yield_n
  stop
 endif
+ !hardening_coeff_scaled=B/(3G)
 f_bisect=plastic_overflow-sqrt(six)*(eps_p_new-eps_p+ &
   hardening_coeff_scaled*(eps_p_new**yield_n- &
   eps_p**yield_n))
@@ -28455,6 +28456,7 @@ real(amrex_real) signcoeff
 real(amrex_real) weightcoeff
 real(amrex_real) total_weight
 real(amrex_real) weight_prev
+real(amrex_real) modified_weight_prev
 
 integer dir_local
 
@@ -28467,6 +28469,7 @@ real(amrex_real) r_hoop
 
 real(amrex_real) :: plastic_strain_old
 real(amrex_real) :: plastic_strain_dot
+real(amrex_real) :: plastic_strain_dot_form1
 real(amrex_real) :: plastic_strain_dot_max
 real(amrex_real), intent(out) :: plastic_work
 
@@ -29668,7 +29671,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
       ! hardening_coefficient = h (Tran and Udaykumar)
      weight_prev=hardening_coefficient/(three*elastic_viscosity)
 
-     if (fort_yield_n(im_critical+1).eq.one) then
+     if ((fort_yield_n(im_critical+1).eq.one).or. &
+         (weight_prev.eq.zero)) then
 
        ! Tran and Udaykumar:
        ! psi=(magA-sqrt(2/3) sigma_{v}^{0})/(2 G (1+h/(3G)))
@@ -29696,7 +29700,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
         (two*dt*(one+weight_prev))
 
      else if ((fort_yield_n(im_critical+1).lt.one).and. &
-              (fort_yield_n(im_critical+1).gt.zero)) then
+              (fort_yield_n(im_critical+1).gt.zero).and. &
+              (weight_prev.gt.zero)) then
 
       aa=plastic_strain_old
       call plastic_equation( &
@@ -29739,29 +29744,58 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
         ibisect=ibisect+1
        enddo !do while ((ibisect.le.20).and.(fc.ne.zero))
 
-       plastic_strain_dot_max=sqrt(two/three)*f_plastic/ &
-        (two*dt*(one+weight_prev))
-       plastic_strain_dot=(cc-plastic_strain_old)/dt
-       if ((plastic_strain_dot.ge.zero).and. &
-           (plastic_strain_dot.le.plastic_strain_dot_max)) then
+       plastic_strain_dot_form1=(cc-plastic_strain_old)/dt
 
-        do ii=1,3
-        do jj=1,3
-         Aadvect(ii,jj)= &
-          (Y_plastic_parm_scaled+ &
-           sqrt(six)*weight_prev* &
-           (cc**fort_yield_n(im_critical+1)- &
-            plastic_strain_old**fort_yield_n(im_critical+1)))*NP(ii,jj)
-        enddo
-        enddo
+       if (plastic_strain_dot_form1.le.zero) then
+        print *,"plastic_strain_dot_form1=",plastic_strain_dot_form1
+        stop
+       else if (plastic_strain_dot_form1.gt.zero) then
+
+        modified_weight_prev=weight_prev*( &
+          cc**fort_yield_n(im_critical+1)- &
+          plastic_strain_old**fort_yield_n(im_critical+1))/ & 
+          (dt*plastic_strain_dot_form1)
+
+        plastic_strain_dot_max=sqrt(two/three)*f_plastic/ &
+         (two*dt*(one+weight_prev))
+
+        plastic_strain_dot=sqrt(two/three)*f_plastic/ &
+         (two*dt*(one+modified_weight_prev))
+
+        if (plastic_strain_dot.ge.zero) then
+
+         !Tran-Udaykumar
+         !sqrt(3/2)(M-2 G xi)=sigma^0 + \tilde{h}(eps1-eps0)
+         !\tilde{h}=h (eps1^n - eps0^n)/(eps1-eps0)
+         !\sqrt(3/2)M-(3/2)2G(eps1-eps0)=sigma^0+\tilde{h}(eps1-eps0)
+         !\sqrt(3/2)M-3G(eps1-eps0)=sigma^0+\tilde{h}(eps1-eps0)
+         !(M-sqrt(2/3)sigma^0)=sqrt(2/3)(eps1-eps0)(\tilde{h}+3G)=
+         !(2/3)\xi(\tilde{h}+3G)=\xi((2/3)\tilde{h}+2G)=
+         !2G\xi(1+\tilde{h}/(3G))
+         !\xi=(M-\sqrt{2/3}sigma^0)/(2G(1+\tilde{h}/3G))
+         !M-2G\xi=M-(M-\sqrt{2/3}sigma^0)/(1+\tilde{h}/3G)=
+         !((\tilde{h}/3G)M+\sqrt{2}{3}sigma^0)/(1+\tilde{h}/3G)
+         do ii=1,3
+         do jj=1,3
+          Aadvect(ii,jj)= &
+           (Y_plastic_parm_scaled+ &
+            sqrt(six)*weight_prev* &
+            (cc**fort_yield_n(im_critical+1)- &
+             plastic_strain_old**fort_yield_n(im_critical+1)))*NP(ii,jj)
+         enddo
+         enddo
+
+        else
+         print *,"plastic_strain_dot error"
+         print *,"plastic_strain_dot=",plastic_strain_dot
+         print *,"plastic_strain_dot_max=",plastic_strain_dot_max
+         stop
+        endif
 
        else
-        print *,"plastic_strain_dot error"
-        print *,"plastic_strain_dot=",plastic_strain_dot
-        print *,"plastic_strain_dot_max=",plastic_strain_dot_max
+        print *,"plastic_strain_dot_form1 invalid: ",plastic_strain_dot_form1
         stop
        endif
-
       else
        print *,"expecting fa>0 and fb<0 ",fa,fb
        stop
