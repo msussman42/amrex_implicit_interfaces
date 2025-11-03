@@ -440,22 +440,61 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
  if (LSA_perturbations_switch==false) { 
   //do nothing
  } else if (LSA_perturbations_switch==true) { 
-  int local_control_flag=NULL_CONTROL;
-  int local_cell_mf=-1;
-  int ncomp_total=0;
-  Vector<int> scomp;
-  Vector<int> ncomp;
-  init_boundary(
+
+  int null_perturbation=1;
+
+  int local_step_count=parent->levelSteps(0)-
+                       parent->initial_levelSteps;
+  int local_max_step_count=parent->LSA_max_step-
+                           parent->initial_levelSteps;
+
+  if ((local_step_count>=0)&&
+      (local_step_count<=local_max_step_count)) {
+   //do nothing
+  } else
+   amrex::Error("local_step_count invalid");
+
+  if (parent->LSA_current_step==0) { //initialize non perturbed state.
+   //do nothing
+  } else if ((parent->LSA_current_step>=1)&&
+             (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+   null_perturbation=0;
+  } else {
+   std::cout << "parent->LSA_current_step=" <<
+      parent->LSA_current_step << '\n';
+   std::cout << "parent->LSA_nsteps_power_method=" <<
+      parent->LSA_nsteps_power_method << '\n';
+   amrex::Error("parent->LSA_current_step invalid");
+  }
+
+  if (null_perturbation==1) {
+   //do nothing
+  } else if (null_perturbation==0) {
+
+   int local_control_flag=NULL_CONTROL;
+   int local_cell_mf=-1;
+   int ncomp_total=0;
+   Vector<int> scomp;
+   Vector<int> ncomp;
+   init_boundary(
     local_control_flag,
     local_cell_mf,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
+   if (localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total) {
+    //do nothing
+   } else
+    amrex::Error("localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total failed");
+
    //dst+=a*src
    //dst,a,src,srccomp,dstcomp,numcomp,nghost
-  int dstcomp=STATECOMP_VEL;
-  MultiFab::Saxpy(U_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
-    scomp[State_Type]+dstcomp,dstcomp,AMREX_SPACEDIM,0);
+   int dstcomp=STATECOMP_VEL;
+   MultiFab::Saxpy(U_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
+     scomp[State_Type]+dstcomp,dstcomp,AMREX_SPACEDIM,0);
+
+  } else
+   amrex::Error("null_perturbation invalid");
 
  } else
   amrex::Error("LSA_perturbations_switch invalid");

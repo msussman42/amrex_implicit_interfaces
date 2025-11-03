@@ -90,7 +90,6 @@ ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
 ns.fixed_dt	  = 0.0006   # hardwire dt
 amr.LSA_nsteps_power_method=50
-amr.LSA_steps_force=499
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=4  # axis_dir=1 standard pipe problem, =2 inflow for liquid only

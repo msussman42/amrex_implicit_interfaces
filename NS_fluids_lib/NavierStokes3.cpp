@@ -1626,9 +1626,6 @@ Real NavierStokes::advance(Real time,Real dt) {
     amrex::Error("advance_status invalid");
    }
 
-   delete_array(MASKCOEF_MF);
-   delete_array(MASK_NBR_MF);
-
    if (parent->LSA_nsteps_power_method==0) {
     //do nothing (no LSA)
    } else if (parent->LSA_nsteps_power_method>=1) {
@@ -1683,6 +1680,9 @@ Real NavierStokes::advance(Real time,Real dt) {
       parent->LSA_nsteps_power_method << '\n';
     amrex::Error("parent->LSA_nsteps_power_method invalid");
    }
+
+   delete_array(MASKCOEF_MF);
+   delete_array(MASK_NBR_MF);
 
   } while (advance_status==0);
 

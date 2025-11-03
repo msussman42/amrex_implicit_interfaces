@@ -28470,7 +28470,7 @@ real(amrex_real) r_hoop
 real(amrex_real) :: plastic_strain_old
 real(amrex_real) :: plastic_strain_dot
 real(amrex_real) :: plastic_strain_dot_form1
-real(amrex_real) :: plastic_strain_dot_max
+real(amrex_real) :: plastic_strain_dot_base
 real(amrex_real), intent(out) :: plastic_work
 
 real(amrex_real) :: aa,bb,cc,fa,fb,fc
@@ -29747,8 +29747,13 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
        plastic_strain_dot_form1=(cc-plastic_strain_old)/dt
 
        if (plastic_strain_dot_form1.le.zero) then
+
+        print *,"cc=",cc
+        print *,"plastic_strain_old=",plastic_strain_old
+        print *,"dt=",dt
         print *,"plastic_strain_dot_form1=",plastic_strain_dot_form1
         stop
+
        else if (plastic_strain_dot_form1.gt.zero) then
 
         modified_weight_prev=weight_prev*( &
@@ -29756,13 +29761,21 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
           plastic_strain_old**fort_yield_n(im_critical+1))/ & 
           (dt*plastic_strain_dot_form1)
 
-        plastic_strain_dot_max=sqrt(two/three)*f_plastic/ &
+        if (modified_weight_prev.gt.zero) then
+         !do nothing
+        else
+         print *,"modified_weight_prev invalid: ",modified_weight_prev
+         stop
+        endif
+
+        plastic_strain_dot_base=sqrt(two/three)*f_plastic/ &
          (two*dt*(one+weight_prev))
 
         plastic_strain_dot=sqrt(two/three)*f_plastic/ &
          (two*dt*(one+modified_weight_prev))
 
-        if (plastic_strain_dot.ge.zero) then
+        if ((plastic_strain_dot.gt.zero).and. &
+            (plastic_strain_dot_base.gt.zero)) then
 
          !Tran-Udaykumar
          !sqrt(3/2)(M-2 G xi)=sigma^0 + \tilde{h}(eps1-eps0)
@@ -29778,22 +29791,23 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
          do ii=1,3
          do jj=1,3
           Aadvect(ii,jj)= &
-           (Y_plastic_parm_scaled+ &
-            sqrt(six)*weight_prev* &
-            (cc**fort_yield_n(im_critical+1)- &
-             plastic_strain_old**fort_yield_n(im_critical+1)))*NP(ii,jj)
+           (modified_weight_prev*magA+Y_plastic_parm_scaled)*NP(ii,jj)/ &
+           (modified_weight_prev+one)
          enddo
          enddo
 
         else
          print *,"plastic_strain_dot error"
          print *,"plastic_strain_dot=",plastic_strain_dot
-         print *,"plastic_strain_dot_max=",plastic_strain_dot_max
+         print *,"plastic_strain_dot_base=",plastic_strain_dot_base
          stop
         endif
 
        else
         print *,"plastic_strain_dot_form1 invalid: ",plastic_strain_dot_form1
+        print *,"cc=",cc
+        print *,"plastic_strain_old=",plastic_strain_old
+        print *,"dt=",dt
         stop
        endif
       else
@@ -29804,6 +29818,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      else
       print *,"fort_yield_n invalid: ",im_critical, &
         fort_yield_n(im_critical+1)
+      print *,"or weight_prev invalid; weight_prev=",weight_prev
       stop
      endif
 
