@@ -95,7 +95,6 @@ ns.tension        = 1.0
 ns.fixed_dt	  = 0.0006   # hardwire dt non-intrusive LSA 
 
 amr.LSA_nsteps_power_method=50 # non-intrusive LSA
-amr.LSA_steps_force=499
 
 ns.sum_interval   = 1        # timesteps between computing mass 
 
