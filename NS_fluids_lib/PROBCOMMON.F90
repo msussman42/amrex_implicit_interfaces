@@ -1010,6 +1010,19 @@ implicit none
       real(amrex_real), INTENT(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
+       !if isite=0 => user wants just "n_sites_out"
+       !if 1<=isite<=n_sites_out => user wants xsite_out(isite),radsite(isite)
+      subroutine TEMPLATE_NUCLEATION_SITES(n_sites_out,xsite_out,radsite, &
+        temperature,isite)
+      use amrex_fort_module, only : amrex_real
+      integer, INTENT(out) :: n_sites_out
+      integer, INTENT(in) :: isite
+      real(amrex_real), INTENT(out) :: xsite_out(SDIM)
+      real(amrex_real), INTENT(out) :: radsite
+      real(amrex_real), INTENT(out) :: temperature
+      end subroutine TEMPLATE_NUCLEATION_SITES
+
+
       subroutine TEMPLATE_OVERRIDE_TAGFLAG( &
         i,j,k, &
         level,max_level, &
@@ -1436,6 +1449,7 @@ implicit none
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_USER_DEFINED_FORCE), POINTER :: SUB_USER_DEFINED_FORCE
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_NUCLEATION_SITES), POINTER :: SUB_NUCLEATION_SITES
       PROCEDURE(TEMPLATE_OVERRIDE_TAGFLAG), POINTER :: SUB_OVERRIDE_TAGFLAG
       PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
       PROCEDURE(TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP), POINTER :: &

@@ -383,6 +383,8 @@ if ((axis_dir.eq.150).or. &
     (axis_dir.eq.154)) then
  shockdrop_M0=vinletgas
 else if (axis_dir.eq.153) then
+  !inputs2d.nwave
+  !inputs3d.nwave
  shockdrop_M0=radblob2 !far field Mach
 else
  print *,"axis_dir invalid: ",axis_dir
@@ -403,6 +405,8 @@ if ((axis_dir.eq.150).or. &
  shockdrop_T0=278.0d0 !tempconst(2)
  shockdrop_DEN0=0.00125335272d0 !denconst(2)
 else if (axis_dir.eq.153) then
+  !inputs2d.nwave
+  !inputs3d.nwave
  shockdrop_T0=300.0d0 !tempconst(2)
  shockdrop_DEN0=0.00102 !denconst(2)
 else
@@ -649,6 +653,7 @@ use probcommon_module
 integer, intent(out) :: dir_stream,dir_transverse
 
  if (SDIM.eq.3) then
+  !inputs3d.nwave
   dir_stream=1
   dir_transverse=2
  else if (SDIM.eq.2) then
@@ -659,6 +664,7 @@ integer, intent(out) :: dir_stream,dir_transverse
    dir_stream=1
    dir_transverse=2
   else if (axis_dir.eq.153) then !Arienti shock sphere
+    !inputs2d.nwave
    dir_stream=2
    dir_transverse=1
   else
@@ -759,6 +765,9 @@ else
    stop
   endif
 
+  !in: shockdrop_velocity
+  !inputs2d.nwave
+  !inputs3d.nwave
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
@@ -902,6 +911,9 @@ else
    pres=shockdrop_P1
   endif
 
+  !in: shockdrop_pressure
+  !inputs2d.nwave
+  !inputs3d.nwave
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
     !stateIndex=6 p
@@ -1000,6 +1012,9 @@ else if (LS.le.zero) then !gas
    den=shockdrop_DEN1
   endif
 
+  !in: shockdrop_gas_velocity
+  !inputs2d.nwave
+  !inputs3d.nwave
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
@@ -1129,6 +1144,9 @@ else if (LS.le.zero) then !gas
    temp=shockdrop_T1
   endif
 
+  !in: shockdrop_gas_temoperature
+  !inputs2d.nwave
+  !inputs3d.nwave
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
@@ -1214,6 +1232,9 @@ if ((axis_dir.eq.150).or. &
 ! in shock frame of reference:
 ! (subsonic)downstream<-   shock vel=0  (supersonic)upstream <--
  LS=z-zblob2
+
+ !inputs2d.nwave
+ !inputs3d.nwave
 else if (axis_dir.eq.153) then !Arienti shock sphere
  LS=x-xblob2
 else
@@ -1266,6 +1287,10 @@ else if ((axis_dir.eq.152).or. &
   print *,"dimension bust"
   stop
  endif
+
+
+ !inputs2d.nwave
+ !inputs3d.nwave
 else if (axis_dir.eq.153) then ! Arienti shock sphere
  if (SDIM.eq.2) then
   mag=(x-xblob3)**2+(y-yblob3)**2
@@ -1660,6 +1685,8 @@ if ((num_materials.ge.2).and. &
     stop
    endif
 
+   !inputs2d.nwave
+   !inputs3d.nwave
   else if (axis_dir.eq.153) then
 
    if ((LS_LIQUID.ge.zero).or.(F_LIQUID.ge.0.1d0)) then

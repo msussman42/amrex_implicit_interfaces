@@ -7136,13 +7136,19 @@ stop
       real(amrex_real) :: x_site(SDIM)
       real(amrex_real) :: dist_closest,cur_dist
       integer :: i_closest,i,dir
+      integer :: local_n_sites
+      real(amrex_real) :: radsite
+      real(amrex_real) :: temperature
+
+      i=0
+      call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite,temperature,i)
 
       i_closest=0
       dist_closest=-1.0d0
       do i=1,n_sites
        cur_dist=zero
+       call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite,temperature,i)
        do dir=1,SDIM
-        x_site(dir)=pos_sites(4*(i-1)+dir)
         cur_dist=cur_dist+(xpoint(dir)-x_site(dir))**2
        enddo
        cur_dist=sqrt(cur_dist)

@@ -28153,6 +28153,10 @@ else
  stop
 endif
  !hardening_coeff_scaled=B/(3G)
+ !plastic_overflow=(M-sqrt(2/3)sigma0)/G
+ !M-2G sqrt(3/2)(eps1-eps0)=sqrt(2/3) (sigma0+h(eps1^n-eps0^n))
+ !M-sqrt(2/3)sigma0=2G sqrt(3/2)(eps1-eps0)+sqrt(2/3) h(eps1^n-eps0^n)
+ !(M-sqrt(2/3)sigma0)/G=sqrt(6)(eps1-eps0)+sqrt(6) (h/(3G))(eps1^n-eps0^n)
 f_bisect=plastic_overflow-sqrt(six)*(eps_p_new-eps_p+ &
   hardening_coeff_scaled*(eps_p_new**yield_n- &
   eps_p**yield_n))
@@ -28190,7 +28194,8 @@ integer, intent(in) :: irefine,jrefine,krefine
 integer, intent(in) :: level,finest_level
 integer, intent(in) :: im_critical
 real(amrex_real), INTENT(in) :: base_yield_stress
-real(amrex_real), INTENT(in) :: T,TM,T0,alpha,ref_eps_p,ref_dot_eps_p
+real(amrex_real), INTENT(in) :: alpha
+real(amrex_real), INTENT(in) :: T,TM,T0,ref_eps_p,ref_dot_eps_p
 real(amrex_real), INTENT(in) :: Johnson_Cook_C
 real(amrex_real), INTENT(in) :: hardening_coeff
 real(amrex_real), INTENT(in) :: eps_p,dot_eps_p,yield_n
@@ -28269,7 +28274,8 @@ else
  stop
 endif
 if ((T.gt.zero).and.(TM.gt.zero).and.(T0.gt.zero).and. &
-    (alpha.gt.zero).and.(ref_eps_p.gt.zero).and. &
+    (alpha.gt.zero).and. &
+    (ref_eps_p.gt.zero).and. &
     (ref_dot_eps_p.gt.zero).and. &
     (eps_p.ge.zero).and. &
     (yield_n.gt.zero).and. &
@@ -29773,6 +29779,19 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
         plastic_strain_dot=sqrt(two/three)*f_plastic/ &
          (two*dt*(one+modified_weight_prev))
+
+        if (abs(one-plastic_strain_dot/plastic_strain_dot_form1).le.EPS4) then
+         !do nothing
+        else
+         print *,"plastic_strain_dot invalid: ",plastic_strain_dot
+         stop
+        endif
+        if (abs(fc/f_plastic).le.EPS3) then
+         !do nothing
+        else
+         print *,"fc or f_plastic invalid: ",fc,f_plastic
+         stop
+        endif
 
         if ((plastic_strain_dot.gt.zero).and. &
             (plastic_strain_dot_base.gt.zero)) then
