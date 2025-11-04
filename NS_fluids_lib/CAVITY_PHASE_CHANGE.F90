@@ -493,6 +493,47 @@ active_flag3=0
 return
 end subroutine INIT_CAVITY_PHASE_CHANGE_MODULE
 
+
+subroutine CAVITY_PHASE_CHANGE_NUCLEATION_SITES(n_sites_out,xsite_out, &
+       radsite,temperature,isite)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(out) :: n_sites_out
+integer, INTENT(in) :: isite
+real(amrex_real), INTENT(out) :: xsite_out(SDIM)
+real(amrex_real), INTENT(out) :: radsite
+real(amrex_real), INTENT(out) :: temperature
+integer dir
+
+ n_sites_out=sitesnum+sitesnum2+sitesnum3
+
+ if (isite.eq.0) then
+  !do nothing
+ else if ((isite.ge.1).and.(isite.le.n_sites_out)) then
+  if (isite.le.sitesnum) then
+   do dir=1,2
+    xsite_out(dir)=sites(dir,isite)
+   enddo
+   print *,"FIX ME"
+   stop
+   xsite_out(SDIM)=zero
+   temperature=sites(3,isite)
+   radsite=zero
+  else
+   print *,"FIX ME"
+   stop
+  endif
+ else
+  print *,"isite invalid: ",isite
+  stop
+ endif
+
+return
+end subroutine CAVITY_PHASE_CHANGE_NUCLEATION_SITES
+
+
 ! this routine called from PROB.F90
 subroutine Satomodel_nucleation(nucleate_in,xsten,nhalf,make_seed)
 use probcommon_module_types

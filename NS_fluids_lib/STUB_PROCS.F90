@@ -232,6 +232,38 @@ real(amrex_real), INTENT(out) :: LS(nmat)
 return
 end subroutine STUB_LS
 
+subroutine STUB_NUCLEATION_SITES(n_sites_out,xsite_out,radsite, &
+       temperature,isite)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(out) :: n_sites_out
+integer, INTENT(in) :: isite
+real(amrex_real), INTENT(out) :: xsite_out(SDIM)
+real(amrex_real), INTENT(out) :: radsite
+real(amrex_real), INTENT(out) :: temperature
+integer dir
+
+ n_sites_out=n_sites
+ if (isite.eq.0) then
+  !do nothing
+ else if ((isite.ge.1).and.(isite.le.n_sites_out)) then
+  do dir=1,SDIM
+   xsite_out(dir)=pos_sites(4*(isite-1)+dir)
+  enddo
+  radsite=pos_sites(4*(isite-1)+4)
+  temperature=273.0d0
+ else
+  print *,"isite invalid: ",isite
+  stop
+ endif
+
+return
+end subroutine STUB_NUCLEATION_SITES
+
+
+
 subroutine STUB_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
