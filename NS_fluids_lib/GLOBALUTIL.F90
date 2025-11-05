@@ -28175,15 +28175,15 @@ subroutine JohnsonCookSoftening( &
  T, &
  TM, & !yield_temperature
  T0, & !tempconst
- alpha, &  !fort_yield_alpha
+ alpha, &  !fort_yield_alpha ((T-T0)/(TM-T0))^{\alpha}
  ref_eps_p, & !ref_plastic_strain
  ref_dot_eps_p, & !ref_plastic_strain_dot
  Johnson_Cook_C, & !fort_Johnson_Cook_C
  hardening_coeff, & ! hardening_coefficient
  eps_p, & !plastic_strain_old
  dot_eps_p, & !dot_plastic_strain
- yield_n, & !yield_n 
- yield_stress)
+ yield_n, & !fort_yield_n  intent(in) (hardening power)
+ yield_stress) !gamma_not=base_yield_stress+more terms intent(out)
 use probcommon_module
 IMPLICIT NONE
 
@@ -28246,6 +28246,7 @@ else
  print *,"base_yield_stress invalid: ",base_yield_stress
  stop
 endif
+
 if (T.le.TM) then
  !do nothing
 else if (T.ge.TM) then
@@ -29639,19 +29640,19 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      level, &
      finest_level, &
      im_critical, &  ! 0<=im_critical<=num_materials-1
-     yield_stress, &
+     yield_stress, & ! "base_yield_stress"
      cell_temperature, &
      fort_yield_temperature(im_critical+1), &
      fort_tempconst(im_critical+1), &
-     fort_yield_alpha(im_critical+1), &
+     fort_yield_alpha(im_critical+1), & ! ((T-T0)/(T-TM))^alpha
      fort_ref_plastic_strain(im_critical+1), &
      fort_ref_plastic_strain_dot(im_critical+1), &
      fort_Johnson_Cook_C(im_critical+1), &
      hardening_coefficient, &
      plastic_strain_old, &
      plastic_strain_dot, &
-     fort_yield_n(im_critical+1), &
-     gamma_not) !"yield_stress" intent(out)
+     fort_yield_n(im_critical+1), & !hardening power
+     gamma_not) !yield_stress+hardening terms, intent(out)
   
     Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
      !magA=sqrt(A:A)
@@ -29704,6 +29705,23 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
        !sigma_{v}^{1}=sigma_{v}^{0}+dt \sqrt{2/3} h\Gamma
       plastic_strain_dot=sqrt(two/three)*f_plastic/ &
         (two*dt*(one+weight_prev))
+
+      cc=plastic_strain_old+dt*plastic_strain_dot
+
+      call plastic_equation( &
+       f_plastic, &
+       plastic_strain_old, &
+       cc, &
+       weight_prev, &
+       fort_yield_n(im_critical+1), &
+       fc)
+
+      if (abs(fc/f_plastic).le.EPS3) then
+       !do nothing
+      else
+       print *,"fc or f_plastic invalid (n=1 case): ",fc,f_plastic
+       stop
+      endif
 
      else if ((fort_yield_n(im_critical+1).lt.one).and. &
               (fort_yield_n(im_critical+1).gt.zero).and. &
