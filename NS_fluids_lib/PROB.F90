@@ -5576,7 +5576,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call get_primary_material(LS_temp,im_primary)
         material_present_flag(im_primary)=1
         if (is_rigid(im_primary).eq.0) then
-         if (probtype.eq.46) then ! cavitation
+         if (probtype.eq.46) then ! cavitation (calc_error_indicator)
           if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
            im=2 ! jwl
            if (LS_temp(im).gt.-dxmin) then
