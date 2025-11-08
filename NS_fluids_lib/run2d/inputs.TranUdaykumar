@@ -178,7 +178,9 @@ ns.advbot=125000.0 # (1250 m/s impact velocity)
 ns.adv_vel=0.0
 ns.adv_dir=2 # adv_dir=1,2,3
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
-ns.viscconst=0.0001 10.0 10.0 10.0
+# need \Delta x < 2(viscosity)/velocity
+# viscosity>\Delta x * velocity/2 \approx 10^6/100=10^4
+ns.viscconst=10.0 10000.0 10000.0 10000.0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
@@ -253,8 +255,8 @@ ns.yield_alpha=1.2 1.17 1.0 1.2 #softening
 #ns.yield_alpha=1.2 1.0e+10 1.0e+10 1.2 #no softening
 ns.yield_n=1.0 0.22 0.12 1.0 #COMPRESSIBLE
 #ns.yield_n=1.0 1.0 1.0 1.0 #INCOMPRESSIBLE
-ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE (not used)
-#ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE (not used)
+ns.yield_m=20.0 340.0 68.0 20.0 #COMPRESSIBLE not used.
+#ns.yield_m=20.0 20.0 20.0 20.0 #INCOMPRESSIBLE not used.
 ns.ref_plastic_strain=0.001 0.001 0.0001 0.001
 ns.ref_plastic_strain_dot=1.0 1.0 1.0 1.0
 ns.Johnson_Cook_C=0.0 0.003 0.016 0.0 #softening
