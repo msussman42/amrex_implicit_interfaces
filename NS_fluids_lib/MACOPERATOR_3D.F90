@@ -553,7 +553,7 @@ stop
           else if (is_rigid(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im) invalid"
+           print *,"is_rigid(im) invalid: ",im,is_rigid(im)
            stop
           endif
 
@@ -721,7 +721,7 @@ stop
          if (dedt_inverse.gt.zero) then
           ! do nothing
          else
-          print *,"dedt_inverse invalid"
+          print *,"dedt_inverse invalid: ",dedt_inverse
           stop
          endif
 
@@ -750,7 +750,7 @@ stop
           endif
 
          else
-          print *,"is_clamped_cell invalid"
+          print *,"is_clamped_cell invalid: ",is_clamped_cell
           stop
          endif
 
@@ -774,7 +774,7 @@ stop
          if (dt.gt.zero) then
           ! do nothing
          else
-          print *,"dt invalid"
+          print *,"dt invalid: ",dt
           stop
          endif
 
@@ -782,7 +782,7 @@ stop
          if (den_inverse.gt.zero) then
           ! do nothing
          else
-          print *,"den_inverse invalid"
+          print *,"den_inverse invalid: ",den_inverse
           stop
          endif
          do veldir=0,nsolve-1
@@ -807,7 +807,7 @@ stop
              if (xsten(0,1).gt.zero) then
               ! do nothing
              else
-              print *,"r (xsten(0,1)) invalid"
+              print *,"r (xsten(0,1)) invalid xsten= ",xsten
               stop
              endif
             endif
@@ -816,7 +816,7 @@ stop
              if (xsten(0,1).gt.zero) then
               ! do nothing
              else
-              print *,"r (xsten(0,1)) invalid"
+              print *,"r (xsten(0,1)) invalid xsten=",xsten
               stop
              endif
             endif
