@@ -4611,11 +4611,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if (LStest.le.LScrit_solid) then
            ! do nothing
           else
-           print *,"LStest or LScrit_solid bust"
+           print *,"LStest or LScrit_solid bust: ",LStest,LScrit_solid
            stop
           endif
          else
-          print *,"im_solid invalid 7"
+          print *,"im_solid invalid 7: ",im_solid
           stop
          endif
 
@@ -4636,14 +4636,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        
        else
-        print *,"is_lag_part invalid"
+        print *,"is_lag_part invalid: ",im,is_lag_part(im)
         stop
        endif
 
       enddo ! im=1..num_materials
 
       if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
-       print *,"nparts invalid fixed_face"
+       print *,"nparts invalid fixed_face: ",nparts
        stop
       endif
 
@@ -4656,11 +4656,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         im_solid_valid=1 
         if ((partid_solid.lt.0).or. &
             (partid_solid.ge.nparts)) then
-         print *,"partid_solid invalid"
+         print *,"partid_solid invalid: ",partid_solid
          stop
         endif 
        else
-        print *,"im_solid invalid 20"
+        print *,"im_solid invalid 20: ",im_solid
         stop
        endif
       else if ((facecut_solid.ge.VOFTOL_AREAFRAC).and. &

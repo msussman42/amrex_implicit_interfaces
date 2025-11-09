@@ -29798,49 +29798,63 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
         plastic_strain_dot=sqrt(two/three)*f_plastic/ &
          (two*dt*(one+modified_weight_prev))
 
-        if (abs(one-plastic_strain_dot/plastic_strain_dot_form1).le.EPS1) then
+        if ((plastic_strain_dot_form1.gt.zero).and. &
+            (cc.le.EPS10).and. &
+            (cc.gt.zero)) then
          !do nothing
+        else if ((plastic_strain_dot_form1.gt.zero).and. &
+                 (cc.gt.EPS10)) then
+
+          if (abs(one-plastic_strain_dot/plastic_strain_dot_form1).le.EPS1) then
+           !do nothing
+          else
+           print *,"plastic_strain_dot WARNING"
+           print *,"plastic_strain_dot: ",plastic_strain_dot
+           print *,"plastic_strain_dot_form1: ",plastic_strain_dot_form1
+           print *,"plastic_strain_old: ",plastic_strain_old
+           print *,"cc: ",cc
+           print *,"dt: ",dt
+           print *,"weight_prev: ",weight_prev
+           print *,"modified_weight_prev: ",modified_weight_prev
+           print *,"f_plastic: ",f_plastic
+           print *,"fort_yield_n(im_critical+1): ",fort_yield_n(im_critical+1)
+           print *,"hardening_coefficient: ",hardening_coefficient
+           print *,"elastic_viscosity: ",elastic_viscosity
+           print *,"Y_plastic_parm_scaled: ",Y_plastic_parm_scaled
+           print *,"magA: ",magA
+           print *,"cell_temperature: ",cell_temperature
+           print *,"fc: ",fc
+           print *,"fc/f_plastic: ",fc/f_plastic
+!          stop
+          endif
+          if (abs(fc/f_plastic).le.EPS1) then
+           !do nothing
+          else
+           print *,"fc or f_plastic WARNING: ",fc,f_plastic
+           print *,"plastic_strain_dot: ",plastic_strain_dot
+           print *,"plastic_strain_dot_form1: ",plastic_strain_dot_form1
+           print *,"plastic_strain_old: ",plastic_strain_old
+           print *,"cc: ",cc
+           print *,"dt: ",dt
+           print *,"weight_prev: ",weight_prev
+           print *,"modified_weight_prev: ",modified_weight_prev
+           print *,"f_plastic: ",f_plastic
+           print *,"fort_yield_n(im_critical+1): ",fort_yield_n(im_critical+1)
+           print *,"hardening_coefficient: ",hardening_coefficient
+           print *,"elastic_viscosity: ",elastic_viscosity
+           print *,"Y_plastic_parm_scaled: ",Y_plastic_parm_scaled
+           print *,"magA: ",magA
+           print *,"cell_temperature: ",cell_temperature
+           print *,"fc: ",fc
+           print *,"fc/f_plastic: ",fc/f_plastic
+!          stop
+          endif
+
         else
-         print *,"plastic_strain_dot WARNING"
-         print *,"plastic_strain_dot: ",plastic_strain_dot
+         print *,"plastic_strain_dot_form1 or cc invalid"
          print *,"plastic_strain_dot_form1: ",plastic_strain_dot_form1
-         print *,"plastic_strain_old: ",plastic_strain_old
          print *,"cc: ",cc
-         print *,"dt: ",dt
-         print *,"weight_prev: ",weight_prev
-         print *,"modified_weight_prev: ",modified_weight_prev
-         print *,"f_plastic: ",f_plastic
-         print *,"fort_yield_n(im_critical+1): ",fort_yield_n(im_critical+1)
-         print *,"hardening_coefficient: ",hardening_coefficient
-         print *,"elastic_viscosity: ",elastic_viscosity
-         print *,"Y_plastic_parm_scaled: ",Y_plastic_parm_scaled
-         print *,"magA: ",magA
-         print *,"cell_temperature: ",cell_temperature
-         print *,"fc: ",fc
-         print *,"fc/f_plastic: ",fc/f_plastic
-!        stop
-        endif
-        if (abs(fc/f_plastic).le.EPS1) then
-         !do nothing
-        else
-         print *,"fc or f_plastic WARNING: ",fc,f_plastic
-         print *,"plastic_strain_dot: ",plastic_strain_dot
-         print *,"plastic_strain_dot_form1: ",plastic_strain_dot_form1
-         print *,"plastic_strain_old: ",plastic_strain_old
-         print *,"cc: ",cc
-         print *,"dt: ",dt
-         print *,"weight_prev: ",weight_prev
-         print *,"modified_weight_prev: ",modified_weight_prev
-         print *,"f_plastic: ",f_plastic
-         print *,"fort_yield_n(im_critical+1): ",fort_yield_n(im_critical+1)
-         print *,"hardening_coefficient: ",hardening_coefficient
-         print *,"elastic_viscosity: ",elastic_viscosity
-         print *,"Y_plastic_parm_scaled: ",Y_plastic_parm_scaled
-         print *,"magA: ",magA
-         print *,"cell_temperature: ",cell_temperature
-         print *,"fc: ",fc
-         print *,"fc/f_plastic: ",fc/f_plastic
-!        stop
+         stop
         endif
 
         if ((plastic_strain_dot.gt.zero).and. &

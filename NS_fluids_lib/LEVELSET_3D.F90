@@ -9351,7 +9351,8 @@ stop
             zero) then
          !do nothing
         else
-         print *,"speciesviscconst_interface coeff wrong"
+         print *,"speciesviscconst_interface coeff wrong: ", &
+             speciesviscconst_interface
          stop
         endif
        enddo
@@ -9482,7 +9483,7 @@ stop
         else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(im) invalid"
+         print *,"is_rigid(im) invalid: ",im,is_rigid(im)
          stop
         endif
        enddo ! do im=1,num_materials-1
@@ -9510,7 +9511,7 @@ stop
         else if ((veldir.eq.2).and.(SDIM.eq.3)) then
          kk=1
         else
-         print *,"veldir invalid"
+         print *,"veldir invalid: ",veldir
          stop
         endif
 
@@ -9534,7 +9535,8 @@ stop
          else if ((local_maskL.eq.0).and.(local_maskR.eq.1)) then
           covered_face=1
          else
-          print *,"local_maskL or local_maskR invalid"
+          print *,"local_maskL or local_maskR invalid: ", &
+             local_maskL,local_maskR
           stop
          endif
 
@@ -9563,7 +9565,7 @@ stop
              (wtsum.gt.zero)) then
           ! do nothing
          else
-          print *,"wtL, wtR, or wtsum invalid" 
+          print *,"wtL, wtR, or wtsum invalid: ",wtL,wtR,wtsum
           stop
          endif
          wtL=wtL/wtsum
@@ -9669,7 +9671,8 @@ stop
              (implus_majority.gt.num_materials).or. &
              (imminus_majority.lt.1).or. &
              (imminus_majority.gt.num_materials)) then
-          print *,"implus_majority or imminus_majority invalid"
+          print *,"implus_majority or imminus_majority invalid: ", &
+              implus_majority,imminus_majority
           stop
          endif
 
@@ -9763,6 +9766,10 @@ stop
              endif
             else
              print *,"im_solid_map(partid_solid+1)+1.ne.im_solid"
+             print *,"im_solid=",im_solid
+             print *,"partid_solid: ",partid_solid
+             print *,"im_solid_map(partid_solid+1): ", &
+               im_solid_map(partid_solid+1)
              stop
             endif
            else 
@@ -9902,7 +9909,7 @@ stop
                   (inorm.lt.fabhi(veldir+1)+1)) then
           ! do nothing
          else
-          print *,"inorm invalid"
+          print *,"inorm invalid: ",inorm
           stop
          endif
 
@@ -9936,6 +9943,8 @@ stop
           if (gradh.ne.zero) then
            if (im_main.ge.im_main_opp) then
             print *,"fluid_interface bust"
+            print *,"im_main=",im_main
+            print *,"im_main_opp=",im_main_opp
             stop
            endif
            call get_iten(im_main,im_main_opp,iten_main)
@@ -9998,14 +10007,17 @@ stop
          enddo
 
          if (gradh.ne.zero) then
+
           if (im_main.ge.im_main_opp) then
            print *,"fluid_interface bust"
+           print *,"im_main=",im_main
+           print *,"im_main_opp=",im_main_opp
            stop
           endif
           if ((iten_main.ge.1).and.(iten_main.le.num_interfaces)) then
            ! do nothing
           else
-           print *,"iten_main invalid"
+           print *,"iten_main invalid: ",iten_main
            stop
           endif
 
@@ -10094,10 +10106,12 @@ stop
            solid_present_flag=0
           else
            print *,"implus_majority or imminus_majority invalid"
+           print *,"implus_majority ",implus_majority
+           print *,"imminus_majority ",imminus_majority
            stop
           endif
          else 
-          print *,"is_clamped_face invalid"
+          print *,"is_clamped_face invalid: ",is_clamped_face
           stop
          endif
 
@@ -10291,7 +10305,8 @@ stop
              faceheat_local=heatviscconst_interface(iten_majority)
 
             else
-             print *,"heatviscconst_interface invalid"
+             print *,"heatviscconst_interface invalid: ", &
+                 heatviscconst_interface
              stop
             endif
            else if (implus_majority.eq.imminus_majority) then
@@ -10364,17 +10379,19 @@ stop
 
            if ((im_main.gt.num_materials).or. &
                (im_main_opp.gt.num_materials)) then
-            print *,"im_main or im_main_opp bust 3"
+            print *,"im_main or im_main_opp bust 3: ", &
+                im_main,im_main_opp
             stop
            endif
            if (im_main.ge.im_main_opp) then
-            print *,"im_main or im_main_opp invalid"
+            print *,"im_main or im_main_opp invalid: ", &
+                im_main,im_main_opp
             stop
            endif
            if ((iten_main.ge.1).and.(iten_main.le.num_interfaces)) then
             ! do nothing
            else
-            print *,"iten_main invalid"
+            print *,"iten_main invalid: ",iten_main
             stop
            endif
 
@@ -10413,23 +10430,30 @@ stop
             stop
            else if ((visc1.eq.zero).or.(visc2.eq.zero)) then
             facevisc_local=zero
-           else if ((LSIDE(1).eq.zero).and.(LSIDE(2).eq.zero)) then
-            facevisc_local=two*visc1*visc2/(visc1+visc2)
-           else if ((LSIDE(1).ge.zero).and.(LSIDE(2).ge.zero))  then
-            facevisc_local=visc1
-           else if ((LSIDE(1).le.zero).and.(LSIDE(2).le.zero)) then
-            facevisc_local=visc2
-           else if (LSIDE(2).gt.LSIDE(1)) then
-            theta=LSIDE(2)/(LSIDE(2)-LSIDE(1))
-            facevisc_local=theta/visc1+(one-theta)/visc2
-            facevisc_local=one/facevisc_local
-           else if (LSIDE(1).gt.LSIDE(2)) then
-            theta=LSIDE(1)/(LSIDE(1)-LSIDE(2))
-            facevisc_local=theta/visc1+(one-theta)/visc2
-            facevisc_local=one/facevisc_local
+           else if ((visc1.gt.zero).and.(visc2.gt.zero)) then
+
+            if ((LSIDE(1).eq.zero).and.(LSIDE(2).eq.zero)) then
+             facevisc_local=two*visc1*visc2/(visc1+visc2)
+            else if ((LSIDE(1).ge.zero).and.(LSIDE(2).ge.zero))  then
+             facevisc_local=visc1
+            else if ((LSIDE(1).le.zero).and.(LSIDE(2).le.zero)) then
+             facevisc_local=visc2
+            else if (LSIDE(2).gt.LSIDE(1)) then
+             theta=LSIDE(2)/(LSIDE(2)-LSIDE(1))
+             facevisc_local=theta/visc1+(one-theta)/visc2
+             facevisc_local=one/facevisc_local
+            else if (LSIDE(1).gt.LSIDE(2)) then
+             theta=LSIDE(1)/(LSIDE(1)-LSIDE(2))
+             facevisc_local=theta/visc1+(one-theta)/visc2
+             facevisc_local=one/facevisc_local
+            else
+             print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
+             print *,"visc1,visc2 ",visc1,visc2
+             stop
+            endif
+
            else
-            print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
-            print *,"visc1,visc2 ",visc1,visc2
+            print *,"visc1 or visc2 is nan: ",visc1,visc2
             stop
            endif
 
@@ -10440,7 +10464,8 @@ stop
             facevisc_local=viscconst_interface(iten_main)
 
            else
-            print *,"viscconst_interface invalid"
+            print *,"viscconst_interface invalid: ",iten_main, &
+              viscconst_interface
             stop
            endif
 
@@ -10460,6 +10485,12 @@ stop
             stop
            endif
 
+           if ((heat1.ge.zero).and.(heat2.ge.zero)) then
+            !do nothing
+           else
+            print *,"heat1 or heat2 bust: ",heat1,heat2
+            stop
+           endif
 
             ! STEFANSOLVER will set the thermal face coefficient
             ! to zero where appropriate.
@@ -10512,6 +10543,17 @@ stop
            endif
 
            do imspec=1,num_species_var
+
+            if ((spec1(imspec).ge.zero).and.(spec2(imspec).ge.zero)) then
+             !do nothing
+            else if ((spec1(imspec).le.zero).or.(spec2(imspec).le.zero)) then
+             !do nothing
+            else
+             print *,"spec1 or spec2 bust: ", &
+                imspec,spec1(imspec),spec2(imspec)
+             stop
+            endif
+
             if ((spec1(imspec).le.zero).or.(spec2(imspec).le.zero)) then
              facespecies_local(imspec)=zero
             else if ((LSIDE(1).eq.zero).and.(LSIDE(2).eq.zero)) then
@@ -10544,7 +10586,7 @@ stop
             else if (spec_test.gt.zero) then
              facespecies_local(imspec)=spec_test
             else
-             print *,"spec_test invalid"
+             print *,"spec_test invalid: ",spec_test
              stop
             endif
 
@@ -10574,7 +10616,7 @@ stop
            else if (iside.eq.1) then
             visc1=localvisc_plus(im)
            else
-            print *,"iside invalid"
+            print *,"iside invalid: ",iside
             stop
            endif
            if (voldepart.gt.zero) then
@@ -10609,7 +10651,7 @@ stop
           else if (is_zero_visc.eq.1) then
            facevisc_local=zero
           else
-           print *,"is_zero_visc invalid"
+           print *,"is_zero_visc invalid: ",is_zero_visc
            stop
           endif
 
@@ -10627,7 +10669,8 @@ stop
              else if (viscconst_interface(iten_FFACE).gt.zero) then
               facevisc_local=viscconst_interface(iten_FFACE)
              else
-              print *,"viscconst_interface invalid"
+              print *,"viscconst_interface invalid: ",viscconst_interface
+              print *,"iten_FFACE=",iten_FFACE
               stop
              endif
 
@@ -10643,7 +10686,9 @@ stop
               endif
 
              else
-              print *,"viscconst_interface_min invalid"
+              print *,"viscconst_interface_min invalid: ", &
+                   viscconst_interface_min
+              print *,"iten_FFACE=",iten_FFACE
               stop
              endif
 
@@ -10848,7 +10893,7 @@ stop
            endif
 
           else
-           print *,"is_clamped_face invalid"
+           print *,"is_clamped_face invalid: ",is_clamped_face
            stop
           endif
 
@@ -11752,7 +11797,7 @@ stop
        enddo  ! i,j,k (cell centered quantities)
 
       else
-       print *,"isweep invalid"
+       print *,"isweep invalid: ",isweep
        stop
       endif
 
