@@ -11392,12 +11392,14 @@ void NavierStokes::LSA_levelset_norminf(
  if (localMF[cell_mf]->nComp()==ncomp_total) {
   //do nothing
  } else
-  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+  amrex::Error("localMF[cell_mf]->nComp()!=ncomp_total LSA_levelset_norminf");
 
  if (localMF[unperturb_cell_mf]->nComp()==ncomp_total) {
   //do nothing
- } else
-  amrex::Error("localMF[unperturb_cell_mf]->nComp()==ncomp_total failed");
+ } else {
+  std::cout << "in: LSA_levelset_norminf\n";
+  amrex::Error("localMF[unperturb_cell_mf]->nComp()!=ncomp_total");
+ }
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
@@ -11501,6 +11503,13 @@ void NavierStokes::LSA_default_eigenvector(
   //do nothing
  } else
   amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+
+ for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
+  if (localMF[face_mf+dir]->nComp()==1) {
+   //do nothing
+  } else
+   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
+ }
 
  bool use_tiling=ns_tiling;
 
@@ -11615,6 +11624,13 @@ void NavierStokes::LSA_eigenvector(
  } else
   amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
 
+ for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
+  if (localMF[face_mf+dir]->nComp()==1) {
+   //do nothing
+  } else
+   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
+ }
+
  for (int scomp_loop=0;scomp_loop<localMF[cell_mf]->nComp();scomp_loop++) {
    //ngrow=0
   localMF[cell_mf]->minus(*localMF[unperturb_cell_mf],scomp_loop,1,0);
@@ -11679,6 +11695,13 @@ void NavierStokes::LSA_normalize_eigenvector(
   //do nothing
  } else
   amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+
+ for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
+  if (localMF[face_mf+dir]->nComp()==1) {
+   //do nothing
+  } else
+   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
+ }
 
  Vector<Real> scale_parm(ncomp_total);
  for (int dir=0;dir<ncomp_total;dir++) {
@@ -11772,9 +11795,11 @@ void NavierStokes::LSA_normalize_eigenvector(
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
    Real floating_zero=scale_parm[scomp]*1.0e-10;
    if (cell_max[scomp]>floating_zero) {
+     //mult(Real val,int comp,int num_comp,int nghost=0)
     localMF[cell_mf]->mult(scale_parm[scomp]/cell_max[scomp],scomp,1);
    } else if ((cell_max[scomp]>=0.0)&&
               (cell_max[scomp]<=floating_zero)) {
+     //mult(Real val,int comp,int num_comp,int nghost=0)
     localMF[cell_mf]->mult(0.0,scomp,1);
    } else
     amrex::Error("cell_max invalid");
@@ -11783,10 +11808,12 @@ void NavierStokes::LSA_normalize_eigenvector(
   for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
    Real floating_zero=velocity_scale*1.0e-10;
    if (face_max[scomp]>floating_zero) {
-    localMF[face_mf]->mult(velocity_scale/face_max[scomp],scomp,1);
+     //mult(Real val,int comp,int num_comp,int nghost=0)
+    localMF[face_mf+scomp]->mult(velocity_scale/face_max[scomp],0,1);
    } else if ((face_max[scomp]>=0.0)&&
               (face_max[scomp]<=floating_zero)) {
-    localMF[face_mf]->mult(0.0,scomp,1);
+     //mult(Real val,int comp,int num_comp,int nghost=0)
+    localMF[face_mf+scomp]->mult(0.0,0,1);
    } else
     amrex::Error("face_max invalid");
   }
