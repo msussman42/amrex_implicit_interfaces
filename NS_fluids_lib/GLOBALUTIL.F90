@@ -28180,6 +28180,9 @@ subroutine JohnsonCookSoftening( &
  ref_dot_eps_p, & !ref_plastic_strain_dot
  Johnson_Cook_C, & !fort_Johnson_Cook_C
  hardening_coeff, & ! hardening_coefficient
+ Zerilli_beta0, &
+ Zerilli_beta1, &
+ Zerilli_B, &
  eps_p, & !plastic_strain_old
  dot_eps_p, & !dot_plastic_strain
  yield_n, & !fort_yield_n  intent(in) (hardening power)
@@ -28198,6 +28201,9 @@ real(amrex_real), INTENT(in) :: alpha
 real(amrex_real), INTENT(in) :: T,TM,T0,ref_eps_p,ref_dot_eps_p
 real(amrex_real), INTENT(in) :: Johnson_Cook_C
 real(amrex_real), INTENT(in) :: hardening_coeff
+real(amrex_real), INTENT(in) :: Zerilli_beta0
+real(amrex_real), INTENT(in) :: Zerilli_beta1
+real(amrex_real), INTENT(in) :: Zerilli_B
 real(amrex_real), INTENT(in) :: eps_p,dot_eps_p,yield_n
 real(amrex_real), INTENT(out) :: yield_stress
 
@@ -28380,6 +28386,9 @@ subroutine point_updatetensor( &
  yield_stress, &
  gamma_not, &
  hardening_coefficient, &
+ Zerilli_beta0, &
+ Zerilli_beta1, &
+ Zerilli_B, &
  plastic_work, &
  irz, &
  bc) 
@@ -28429,6 +28438,9 @@ real(amrex_real), INTENT(in) :: polymer_factor
 real(amrex_real), INTENT(in) :: elastic_viscosity
 real(amrex_real), INTENT(in) :: yield_stress
 real(amrex_real), INTENT(in) :: hardening_coefficient
+real(amrex_real), INTENT(in) :: Zerilli_beta0
+real(amrex_real), INTENT(in) :: Zerilli_beta1
+real(amrex_real), INTENT(in) :: Zerilli_B
 integer, INTENT(in) :: bc(SDIM,2,SDIM)
 integer, INTENT(in) :: irz
 integer ii,jj,kk
@@ -29649,6 +29661,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
      fort_ref_plastic_strain_dot(im_critical+1), &
      fort_Johnson_Cook_C(im_critical+1), &
      hardening_coefficient, &
+     Zerilli_beta0, & !calling JohnsonCookSoftening
+     Zerilli_beta1, &
+     Zerilli_B, &
      plastic_strain_old, &
      plastic_strain_dot, &
      fort_yield_n(im_critical+1), & !hardening power

@@ -926,6 +926,9 @@ Vector<Real> NavierStokes::stiff_sound_speed; // def=3.0e+10 cm/s
      //         yield_temperature=1723 Kelvin
 Vector<Real> NavierStokes::ref_plastic_strain;
 Vector<Real> NavierStokes::ref_plastic_strain_dot;
+Vector<Real> NavierStokes::Zerilli_beta0; 
+Vector<Real> NavierStokes::Zerilli_beta1; 
+Vector<Real> NavierStokes::Zerilli_B; 
 Vector<Real> NavierStokes::Johnson_Cook_C; 
 Vector<Real> NavierStokes::yield_m;
 Vector<Real> NavierStokes::yield_n; //default=1.0
@@ -3964,6 +3967,9 @@ NavierStokes::read_params ()
 
     ref_plastic_strain.resize(num_materials);
     ref_plastic_strain_dot.resize(num_materials);
+    Zerilli_beta0.resize(num_materials);
+    Zerilli_beta1.resize(num_materials);
+    Zerilli_B.resize(num_materials);
     Johnson_Cook_C.resize(num_materials);
     yield_m.resize(num_materials);
     yield_n.resize(num_materials);
@@ -4344,6 +4350,9 @@ NavierStokes::read_params ()
 
      ref_plastic_strain[i]=0.001;
      ref_plastic_strain_dot[i]=1.0;
+     Zerilli_beta0[i]=0.0;
+     Zerilli_beta1[i]=0.0;
+     Zerilli_B[i]=0.0;
      Johnson_Cook_C[i]=0.0;
      yield_m[i]=68.0;
      yield_n[i]=1.0;
@@ -4371,6 +4380,9 @@ NavierStokes::read_params ()
 
     pp.queryAdd("ref_plastic_strain",ref_plastic_strain,num_materials);
     pp.queryAdd("ref_plastic_strain_dot",ref_plastic_strain_dot,num_materials);
+    pp.queryAdd("Zerilli_beta0",Zerilli_beta0,num_materials);
+    pp.queryAdd("Zerilli_beta1",Zerilli_beta1,num_materials);
+    pp.queryAdd("Zerilli_B",Zerilli_B,num_materials);
     pp.queryAdd("Johnson_Cook_C",Johnson_Cook_C,num_materials);
     pp.queryAdd("yield_m",yield_m,num_materials);
     pp.queryAdd("yield_n",yield_n,num_materials);
@@ -6181,6 +6193,12 @@ NavierStokes::read_params ()
         ref_plastic_strain[i] << '\n';
       std::cout << "ref_plastic_strain_dot i=" << i << " " << 
         ref_plastic_strain_dot[i] << '\n';
+      std::cout << "Zerilli_beta0 i=" << i << " " << 
+        Zerilli_beta0[i] << '\n';
+      std::cout << "Zerilli_beta1 i=" << i << " " << 
+        Zerilli_beta1[i] << '\n';
+      std::cout << "Zerilli_B i=" << i << " " << 
+        Zerilli_B[i] << '\n';
       std::cout << "Johnson_Cook_C i=" << i << " " << 
         Johnson_Cook_C[i] << '\n';
       std::cout << "yield_m i=" << i << " " << 
@@ -13952,6 +13970,9 @@ void NavierStokes::tensor_advection_update(int im) {
         &yield_stress[im],
         &hardening_coefficient[im],
         &mechanical_to_thermal[im],
+        &Zerilli_beta0[im],
+        &Zerilli_beta1[im],
+        &Zerilli_B[im],
         &NS_geometry_coord,
         velbc.dataPtr());
       } else {

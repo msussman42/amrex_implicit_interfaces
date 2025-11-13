@@ -2,7 +2,8 @@
 # fcc metal: sigma=c0+B0 eps^{1/2}e^{-\beta T} aluminum
 # bcc metal: sigma=c0+K eps^{n} + B e^{-beta T}
 # c0=234 MegaPascals for aluminum, B0=1283 MegaPascals 
-# beta=beta0-beta1 log(eps)=0.00371 K^{-1} - 0.000153 K^{-1} * log(eps)
+# beta=beta0-beta1 log(eps_dot/eps_dot_base)=
+#  0.00371 K^{-1} - 0.000153 K^{-1} * log(eps_dot/eps_dot_base)
 # Fluid structure interaction mechanisms for close-in explosions.
 # Wardlaw and Luton
 # Shock and Vibration

@@ -304,6 +304,9 @@ extern "C"
     Real* yield_stress,
     Real* hardening_coefficient,
     Real* mechanical_to_thermal,
+    Real* Zerilli_beta0,
+    Real* Zerilli_beta1,
+    Real* Zerilli_B,
     int* irz,
     const int* bcrec);
 
