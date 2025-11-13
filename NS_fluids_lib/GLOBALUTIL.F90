@@ -28244,6 +28244,24 @@ else
  print *,"Johnson_Cook_C ",Johnson_Cook_C
  stop
 endif
+if (Zerilli_beta0.ge.zero) then
+ !do nothing
+else
+ print *,"Zerilli_beta0 ",Zerilli_beta0
+ stop
+endif
+if (Zerilli_beta1.ge.zero) then
+ !do nothing
+else
+ print *,"Zerilli_beta1 ",Zerilli_beta1
+ stop
+endif
+if (Zerilli_B.ge.zero) then
+ !do nothing
+else
+ print *,"Zerilli_B ",Zerilli_B
+ stop
+endif
 
 
 if (base_yield_stress.gt.zero) then
@@ -28301,47 +28319,69 @@ else
  stop
 endif
 
-yield_stress=base_yield_stress+hardening_coeff*(eps_p**yield_n)
-if (dot_eps_p.lt.ref_dot_eps_p) then
- !do nothing
-else if (dot_eps_p.ge.ref_dot_eps_p) then
- yield_stress=yield_stress*(one+Johnson_Cook_C*log(dot_eps_p/ref_dot_eps_p))
-else
- print *,"dot_eps_p invalid: ",dot_eps_p
- stop
-endif
+if ((Zerilli_B.eq.zero).and. &
+    (Zerilli_beta0.eq.zero).and. &
+    (Zerilli_beta1.eq.zero)) then
 
-if (T.lt.T0) then
- !do nothing
-else if (T.ge.T0) then
- ! note: (13) from Tran and Udaykumar, have 
- ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
- ! see also
- ! Camacho and Ortiz (1997) (31), (33), and just below (33)
- ! Also for heating due to fracture: see (16) for Camacho and Ortiz:
- ! "beta (dot W)^p"
- ! see also:
- ! "Plasticity induced heating in the fracture
- !  and cutting of metals"
- ! From Zehnder, Potdar, and Bhalla:
- ! rho c T_t = div(k grad T) - alpha(3 lambda + 2 mu)T0 eps_dot_kk +
- !   beta sigma_ij eps_dot^p_ij
- ! 3 lambda + 2mu = 3(bulk modulus)
- ! reference [5] from that paper:
- ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
- ! Cambridge University Press, 1992.
- ! if T=TM then yield_stress=0
- ! note: alpha ~ 1.2
- if (T.ge.TM) then
-  yield_stress=zero
- else if ((T.le.TM).and.(T.ge.zero)) then
-  yield_stress=yield_stress*(one-((T-T0)/(TM-T0))**alpha) 
+ yield_stress=base_yield_stress+hardening_coeff*(eps_p**yield_n)
+ if (dot_eps_p.lt.ref_dot_eps_p) then
+  !do nothing
+ else if (dot_eps_p.ge.ref_dot_eps_p) then
+  yield_stress=yield_stress*(one+Johnson_Cook_C*log(dot_eps_p/ref_dot_eps_p))
  else
-  print *,"T or TM invalid: ",T,TM
+  print *,"dot_eps_p invalid: ",dot_eps_p
   stop
  endif
+
+ if (T.lt.T0) then
+  !do nothing
+ else if (T.ge.T0) then
+  ! note: (13) from Tran and Udaykumar, have 
+  ! sigma_y=(A+B(eps^p)^n)(1+C ln(epsdot^p/epsdot^0))(1-theta^m)
+  ! see also
+  ! Camacho and Ortiz (1997) (31), (33), and just below (33)
+  ! Also for heating due to fracture: see (16) for Camacho and Ortiz:
+  ! "beta (dot W)^p"
+  ! see also:
+  ! "Plasticity induced heating in the fracture
+  !  and cutting of metals"
+  ! From Zehnder, Potdar, and Bhalla:
+  ! rho c T_t = div(k grad T) - alpha(3 lambda + 2 mu)T0 eps_dot_kk +
+  !   beta sigma_ij eps_dot^p_ij
+  ! 3 lambda + 2mu = 3(bulk modulus)
+  ! reference [5] from that paper:
+  ! Maugin, G.A., "The Thermomechanics of plasticity and fracture"
+  ! Cambridge University Press, 1992.
+  ! if T=TM then yield_stress=0
+  ! note: alpha ~ 1.2
+  if (T.ge.TM) then
+   yield_stress=zero
+  else if ((T.le.TM).and.(T.ge.zero)) then
+   yield_stress=yield_stress*(one-((T-T0)/(TM-T0))**alpha) 
+  else
+   print *,"T or TM invalid: ",T,TM
+   stop
+  endif
+ else
+  print *,"T invalid: ",T
+  stop
+ endif
+
+ ! bcc metal
+else if ((Zerilli_B.gt.zero).and. &
+         (Zerilli_beta0.gt.zero).and. &
+         (Zerilli_beta1.ge.zero)) then
+
+ ! fcc metal
+else if ((Zerilli_B.eq.zero).and. &
+         (Zerilli_beta0.gt.zero).and. &
+         (Zerilli_beta1.ge.zero)) then
+
 else
- print *,"T invalid: ",T
+ print *,"Zerilli parameters invalid"
+ print *,"Zerilli_B=",Zerilli_B
+ print *,"Zerilli_beta0=",Zerilli_beta0
+ print *,"Zerilli_beta1=",Zerilli_beta1
  stop
 endif
 
