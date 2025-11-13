@@ -2256,6 +2256,9 @@ protected:
      //         yield_temperature=1723 Kelvin
     static Vector<Real> ref_plastic_strain; 
     static Vector<Real> ref_plastic_strain_dot; 
+    static Vector<Real> Zerilli_beta0; 
+    static Vector<Real> Zerilli_beta1; 
+    static Vector<Real> Zerilli_B; 
     static Vector<Real> Johnson_Cook_C; 
     static Vector<Real> yield_m; 
     static Vector<Real> yield_n; //def=1.0

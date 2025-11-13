@@ -8684,6 +8684,9 @@ stop
        yield_stress, &
        hardening_coefficient, &
        mechanical_to_thermal, &
+       Zerilli_beta0, &
+       Zerilli_beta1, &
+       Zerilli_B, &
        irz, &
        bc) &
       bind(c,name='fort_updatetensor')
@@ -8784,6 +8787,9 @@ stop
       real(amrex_real) :: gamma_not_max !Johnson Cook model
       real(amrex_real), INTENT(in) :: hardening_coefficient
       real(amrex_real), INTENT(in) :: mechanical_to_thermal
+      real(amrex_real), INTENT(in) :: Zerilli_beta0
+      real(amrex_real), INTENT(in) :: Zerilli_beta1
+      real(amrex_real), INTENT(in) :: Zerilli_B
       real(amrex_real) :: plastic_work
       real(amrex_real) :: plastic_work_average
       real(amrex_real) :: plastic_work_weight
@@ -8969,7 +8975,8 @@ stop
       endif
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
-      heating_buffer=dxmaxLS*ngrow_make_distance
+!     heating_buffer=dxmaxLS*ngrow_make_distance
+      heating_buffer=dxmaxLS
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -9249,6 +9256,9 @@ stop
          yield_stress, & !intent(in)
          gamma_not, & !intent(out)
          hardening_coefficient, &
+         Zerilli_beta0, &
+         Zerilli_beta1, &
+         Zerilli_B, &
          plastic_work, &
          irz, &
          bc) 
@@ -9350,6 +9360,7 @@ stop
             !do nothing
            else
             print *,"LSgroup(im_critical+1).lt.heating_buffer failed"
+            print *,"heating_buffer=",heating_buffer
             stop
            endif
           else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
