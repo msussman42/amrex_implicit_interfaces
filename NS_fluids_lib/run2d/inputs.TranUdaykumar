@@ -195,7 +195,7 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # material_type=1 EOS_tait
 #ns.material_type=0 0 0 0 #INCOMPRESSIBLE
 ns.material_type=0 36 36 36 #COMPRESSIBLE
-ns.material_conservation_form=0 1 1 0
+ns.material_conservation_form=0 0 0 0
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)

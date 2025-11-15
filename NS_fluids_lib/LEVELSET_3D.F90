@@ -14152,9 +14152,17 @@ stop
 
             if (is_rigid_CL(im_majority).eq.0) then
              rhs(D_DECL(i,j,k),1)=Eforce_conservative
+            else if (is_rigid_CL(im_majority).eq.1) then
+             print *,"im_majority=",im_majority
+             print *,"is_rigid_CL(im_majority) invalid: ", &
+               is_rigid_CL(im_majority)
+             print *,"fort_material_conservation_form(im_majority)=", &
+               fort_material_conservation_form(im_majority)
+             stop
+             rhs(D_DECL(i,j,k),1)=Eforce_conservative
             else
              print *,"im_majority=",im_majority
-             print *,"make fort_material_conservation_form=0 if is_rigid_CL"
+             print *,"is_rigid_CL invalid: ",is_rigid_CL(im_majority)
              stop
             endif
 
@@ -14265,9 +14273,16 @@ stop
                ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
                if (is_rigid_CL(im).eq.0) then
                 internal_e=internal_e+KE_diff+Eforce_conservative
+               else if (is_rigid_CL(im).eq.1) then
+                print *,"im=",im
+                print *,"is_rigid_CL(im) invalid: ",is_rigid_CL(im)
+                print *,"fort_material_conservation_form(im)=", &
+                  fort_material_conservation_form(im)
+                stop
+                internal_e=internal_e+KE_diff+Eforce_conservative
                else
                 print *,"im=",im
-                print *,"make fort_material_conservation_form=0 if is_rigid_CL"
+                print *,"is_rigid_CL(im) invalid: ",is_rigid_CL(im)
                 stop
                endif
 
