@@ -1,4 +1,5 @@
 # Frank J. Zerilli, Dislocation Mechanics-Based Constitutive Equations:
+# Zerilli Armstrong model.
 # fcc metal: sigma=c0+B0 eps^{1/2}e^{-\beta T} aluminum
 # bcc metal: sigma=c0+K eps^{n} + B e^{-beta T}
 # c0=234 MegaPascals for aluminum, B0=1283 MegaPascals 

@@ -28201,6 +28201,7 @@ real(amrex_real), INTENT(in) :: alpha
 real(amrex_real), INTENT(in) :: T,TM,T0,ref_eps_p,ref_dot_eps_p
 real(amrex_real), INTENT(in) :: Johnson_Cook_C
 real(amrex_real), INTENT(in) :: hardening_coeff
+real(amrex_real) :: Zerilli_beta
 real(amrex_real), INTENT(in) :: Zerilli_beta0
 real(amrex_real), INTENT(in) :: Zerilli_beta1
 real(amrex_real), INTENT(in) :: Zerilli_B
@@ -28372,10 +28373,39 @@ else if ((Zerilli_B.gt.zero).and. &
          (Zerilli_beta0.gt.zero).and. &
          (Zerilli_beta1.ge.zero)) then
 
+ Zerilli_beta=Zerilli_beta0
+ if (dot_eps_p.lt.ref_dot_eps_p) then
+  !do nothing
+ else if (dot_eps_p.ge.ref_dot_eps_p) then
+  Zerilli_beta=Zerilli_beta-Zerilli_beta1*log(dot_eps_p/ref_dot_eps_p)
+ else
+  print *,"dot_eps_p invalid: ",dot_eps_p
+  stop
+ endif
+
+ ! bcc metal
+ yield_stress=base_yield_stress+hardening_coeff*(eps_p**yield_n)+ &
+   Zerilli_B*exp(-Zerilli_beta*T)
+
+
  ! fcc metal
 else if ((Zerilli_B.eq.zero).and. &
          (Zerilli_beta0.gt.zero).and. &
          (Zerilli_beta1.ge.zero)) then
+
+ Zerilli_beta=Zerilli_beta0
+ if (dot_eps_p.lt.ref_dot_eps_p) then
+  !do nothing
+ else if (dot_eps_p.ge.ref_dot_eps_p) then
+  Zerilli_beta=Zerilli_beta-Zerilli_beta1*log(dot_eps_p/ref_dot_eps_p)
+ else
+  print *,"dot_eps_p invalid: ",dot_eps_p
+  stop
+ endif
+
+ ! fcc metal
+ yield_stress=base_yield_stress+hardening_coeff*(eps_p**yield_n)* &
+   exp(-Zerilli_beta*T)
 
 else
  print *,"Zerilli parameters invalid"
@@ -29798,6 +29828,23 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
        weight_prev, &
        fort_yield_n(im_critical+1), &
        fb)
+
+      if (fb.lt.zero) then
+       !do nothing
+      else if (fb.ge.zero) then
+       bb=(one+EPS1)*f_plastic/sqrt(six)+plastic_strain_old
+       call plastic_equation( &
+        f_plastic, &
+        plastic_strain_old, &
+        bb, &
+        weight_prev, &
+        fort_yield_n(im_critical+1), &
+        fb)
+      else
+       print *,"fb invalid ",fb
+       stop
+      endif
+
       if ((fa.gt.zero).and.(fb.lt.zero)) then
        ibisect=0
        fc=one
@@ -29817,7 +29864,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
         else if (fc*fb.gt.zero) then
          bb=cc
         else
-         print *,"expecting fa,fb,fc <>0"
+         print *,"expecting fa,fb,fc <>0: ",fa,fb,fc
          stop
         endif 
         ibisect=ibisect+1
@@ -29950,6 +29997,13 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
        endif
       else
        print *,"expecting fa>0 and fb<0 ",fa,fb
+       print *,"aa,bb ",aa,bb
+       print *,"f_plastic=",f_plastic
+       print *,"plastic_strain_old=",plastic_strain_old
+       print *,"weight_prev=",weight_prev
+       print *,"im_critical=",im_critical
+       print *,"fort_yield_n(im_critical+1)=", &
+        fort_yield_n(im_critical+1)
        stop
       endif  
   
