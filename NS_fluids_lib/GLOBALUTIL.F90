@@ -26529,7 +26529,9 @@ do ispec=1,num_species_var
  if (massfrac_parm(ispec).ge.zero) then
   ! do nothing
  else
-  print *,"massfrac_parm invalid"
+  print *,"massfrac_parm invalid EOS_material"
+  print *,"ispec=",ispec
+  print *,"massfrac_parm(ispec)=",massfrac_parm(ispec)
   stop
  endif
 enddo ! ispec
@@ -26705,6 +26707,7 @@ IMPLICIT NONE
 
 integer, INTENT(in) :: imattype,im
 real(amrex_real), INTENT(in) :: rho
+real(amrex_real) :: pressure,rho_plus,e_plus,p_rho_plus,p_e_plus
 real(amrex_real), INTENT(in) :: massfrac_parm(num_species_var+1)
 real(amrex_real) :: internal_energy
 real(amrex_real), INTENT(out) :: soundsqr
@@ -26717,32 +26720,92 @@ internal_energy=internal_energy_in*global_pressure_scale
 if (rho.gt.zero) then
  ! do nothing
 else
- print *,"rho invalid"
+ print *,"rho invalid SOUNDSQR_material: ",rho
  stop
 endif
 if (internal_energy.gt.zero) then
  ! do nothing
 else
- print *,"e invalid"
+ print *,"e invalid SOUNDSQR_material: ",internal_energy
  stop
 endif
 do ispec=1,num_species_var
  if (massfrac_parm(ispec).ge.zero) then
   ! do nothing
  else
-  print *,"massfrac_parm invalid"
+  print *,"massfrac_parm invalid SOUNDSQR_material"
+  print *,"ispec=",ispec
+  print *,"massfrac_parm(ispec)=",massfrac_parm(ispec)
   stop
  endif
 enddo
 
+rho_plus=(one+EPS2)*rho
+e_plus=(one+EPS2)*internal_energy
+
 if (is_in_probtype_list().eq.1) then
- call SUB_SOUNDSQR(rho,massfrac_parm, &
+ call SUB_SOUNDSQR( &
+   rho,massfrac_parm, &
    internal_energy,soundsqr, &
    imattype,im,num_species_var)
+
+ call SUB_EOS( &
+   rho,massfrac_parm, &
+   internal_energy,pressure, &
+   imattype,im,num_species_var)
+ call SUB_EOS( &
+   rho_plus,massfrac_parm, &
+   internal_energy,p_rho_plus, &
+   imattype,im,num_species_var)
+ call SUB_EOS( &
+   rho,massfrac_parm, &
+   e_plus,p_e_plus, &
+   imattype,im,num_species_var)
 else 
- call SOUNDSQR_material_CORE(rho,massfrac_parm, &
+ call SOUNDSQR_material_CORE( &
+   rho,massfrac_parm, &
    internal_energy,soundsqr, &
    imattype,im)
+
+ call EOS_material_CORE( &
+   rho,massfrac_parm, &
+   internal_energy,pressure, &
+   imattype,im)
+ call EOS_material_CORE( &
+   rho_plus,massfrac_parm, &
+   internal_energy,p_rho_plus, &
+   imattype,im)
+ call EOS_material_CORE( &
+   rho,massfrac_parm, &
+   e_plus,p_e_plus, &
+   imattype,im)
+endif
+
+if (soundsqr.ge.zero) then
+ !do nothing
+else
+ print *,"soundsqr invalid SOUNDSQR_material: ",soundsqr
+ stop
+endif
+if (pressure.ge.zero) then
+ !do nothing
+else
+ print *,"pressure invalid SOUNDSQR_material: ",pressure
+ stop
+endif
+if (pressure.le.p_rho_plus) then
+ !do nothing
+else
+ print *,"p_rho_plus invalid SOUNDSQR_material: ",p_rho_plus
+ print *,"pressure=",pressure
+ stop
+endif
+if (pressure.le.p_e_plus) then
+ !do nothing
+else
+ print *,"p_e_plus invalid SOUNDSQR_material: ",p_e_plus
+ print *,"pressure=",pressure
+ stop
 endif
 
 soundsqr=soundsqr/global_pressure_scale
