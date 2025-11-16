@@ -5,7 +5,7 @@
 #See also Satunkin (2003), Figure 15e, r0=5.1mm z0=3.6mm 
 #wetting angle=33 degrees
 #actual We=0.0042
-#Pr=0.013 St=0.116 Bo=1.32 We=0.5 k_sl=0.5
+#Pr=0.013 St=0.116 Bo=1.32 We=10 k_sl=0.5
 #k_gl=1.52e+5/152.3e+5=0.00998
 #k_gl=0.01  Cp=1 mu_sl=5 mu_gl=0.05 rho_sl=0.91 rho_gl=0.05
 #St=Stefan=cp(Tm-Tc)/L_h
@@ -16,7 +16,7 @@
 #U_c=R/tau_c=0.51/0.4014=1.27
 #Pr=C_pl mu_l/k_l=(9.1e+6)(21.8e-3)/152.3e+5=0.013
 #Bo=rho_l g R^2/sigma=2.583(980)(.51^2)/500.0=1.317
-#We=rho_l U_c^2 R/sigma=2.583(1.27^2)(.51)/500.0=0.0042 (numerical We=0.5)
+#We=rho_l U_c^2 R/sigma=2.583(1.27^2)(.51)/500.0=0.0042 (numerical We=10.0)
 #Re=rho_l R U_c/mu_l=2.583(0.51)1.27/21.8e0-3=76.74
 #Pr * Re = 0.013 * 76.74=1.0
 #theta=TSAT+(T-TSAT)/(TSAT-TCOLD)=273.0 + (T-273.0)/(273-263)
@@ -116,7 +116,7 @@ ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=6
 ns.visc_coef_boundary_layer_factor=10.0
 mac.visc_abs_tol  = 1.0e-10
-ns.gravity        = -2.634  #Bo/We Bo=1.317  We=0.5
+ns.gravity        = -0.1317  #Bo/We Bo=1.317  We=10.0
 ns.incremental_gravity_flag=0
 
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
@@ -142,13 +142,13 @@ ns.incremental_gravity_flag=0
 # LG,LI,LS,IG,GS,SI  
 ns.radblob9=0.0 # transition time from the wetting initial 
 #  contact angle to the "non-wetting" case.
-#  We=0.5
+#  We=10.0
 ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
 # 18 degrees growth angle:
 # sigma_LI=sigma_LG(1-cos(18 deg))
 # sigma_GI=sigma_LG
-# actual Weber number: 0.0042;numerical Weber: 0.5
-ns.tension=      2.0 0.098 0.323 2.0 2.0 0.0
+# actual Weber number: 0.0042;numerical Weber: 10.0
+ns.tension=      0.1 0.0049 0.0161 0.1 0.1 0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -203,10 +203,14 @@ ns.heatviscconst=1.0 0.01 0.5 0.5
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 0.5
 # 1 Pa = 10 CGS
+# 12 13 14 23 24 34  
+#liquid, gas, ice, substrate
+# liquid-ice=13, gas-ice=23
+ns.viscconst_interface=0.0 1.0e-10 0.0 1.0e-10 0.0 0.0
 
 ns.uncoupled_viscosity=0 # uncoupled_viscosity=1 => div(mu grad u)
 #liquid, gas, ice, substrate
-ns.viscconst=1.0 0.05 10.0 10.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=1.0 0.05 1.0 1.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #SUSSMAN JAN20 2023
 ns.denconst=1.0 0.05 0.91 10.0
