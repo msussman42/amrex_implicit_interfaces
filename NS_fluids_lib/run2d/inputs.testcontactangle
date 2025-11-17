@@ -1,4 +1,4 @@
-max_step  = 99999  # maximum timestep
+max_step  = 999999  # maximum timestep
 #max_step  = 1  # maximum timestep
 stop_time =  3.0  # maximum problem time
 
