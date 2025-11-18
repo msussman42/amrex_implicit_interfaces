@@ -6782,8 +6782,7 @@ NavierStokes::NavierStokes (AmrCore&        papa,
     Geometry_setup();
 }
 
-NavierStokes::~NavierStokes ()
-{
+NavierStokes::~NavierStokes () {
 
    if (parent->LSA_nsteps_power_method==0) {
     //do nothing
@@ -6822,7 +6821,7 @@ NavierStokes::~NavierStokes ()
      amrex::Error("localMF_grow invalid");
     }
 
-}
+} //end subroutine NavierStokes::~NavierStokes () 
 
 int NavierStokes::ns_is_rigid(int im) {
 
