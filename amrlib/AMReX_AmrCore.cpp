@@ -137,9 +137,8 @@ AmrCore::get_slab_dt_type () const
     return slab_dt_type;
 }   
 
-void
-AmrCore::Initialize ()
-{
+void AmrCore::Initialize () {
+
     if (initialized) return;
     //
     // Set all defaults here!!!
@@ -162,16 +161,16 @@ AmrCore::Initialize ()
     amrex::ExecOnFinalize(AmrCore::Finalize);
 
     initialized = true;
-}
 
-void
-AmrCore::Finalize ()
-{
+} //end subroutine void AmrCore::Initialize () 
+
+void AmrCore::Finalize () {
+
     AmrCore::regrid_ba.clear();
     AmrCore::initial_ba.clear();
 
     initialized = false;
-}
+} // end subroutine void AmrCore::Finalize () 
 
 
 std::ostream&
@@ -619,8 +618,8 @@ AmrCore::InitAmr () {
 
 } // end subroutine InitAmr
 
-AmrCore::~AmrCore ()
-{
+AmrCore::~AmrCore () {
+
     if (level_steps[0] > last_checkpoint)
         checkPoint();
 
@@ -640,7 +639,8 @@ AmrCore::~AmrCore ()
     levelbld->variableCleanUp();
 
     AmrCore::Finalize();
-}
+
+} //end subroutine AmrCore::~AmrCore ()
 
 void
 AmrCore::setRecordGridInfo (const std::string& filename)
