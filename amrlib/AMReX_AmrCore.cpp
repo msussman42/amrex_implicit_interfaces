@@ -170,6 +170,7 @@ void AmrCore::Finalize () {
     AmrCore::initial_ba.clear();
 
     initialized = false;
+
 } // end subroutine void AmrCore::Finalize () 
 
 
@@ -194,8 +195,7 @@ AmrCore::getAmrLevels () noexcept
 // 2. Initialize()
 // 3. InitAmr()
 //  a. levelbld = getLevelBld();
-AmrCore::AmrCore () 
-  : AmrMesh() {
+AmrCore::AmrCore () : AmrMesh() {
 
     // "max_level," needed by 
     // explicit AmrParGDB (AmrCore* amr) noexcept
@@ -535,10 +535,18 @@ AmrCore::InitAmr () {
   } else
    amrex::Error("expecting LSA_max_step>=1");
 
-  if (regrid_int>LSA_max_step) {
-   //do nothing
+  if (max_level>0) {
+   if (regrid_int>LSA_max_step) {
+    //do nothing
+   } else {
+    std::cout << "regrid_int=" << regrid_int << '\n';
+    std::cout << "LSA_max_step (max_step)=" << LSA_max_step << '\n';
+    amrex::Error("expecting regrid_int>LSA_max_step");
+   }
+  } else if (max_level==0) {
+   //check nothing
   } else
-   amrex::Error("expecting regrid_int>LSA_max_step");
+   amrex::Error("max_level invalid");
 
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");

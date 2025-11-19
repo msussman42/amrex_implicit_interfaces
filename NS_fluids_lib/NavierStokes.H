@@ -1514,6 +1514,10 @@ protected:
 
     static int interface_touch_flag;
 
+    static int NS_LSA_nsteps_power_method;
+    static int NS_LSA_max_step_count;
+    static int NS_LSA_step_count;
+
     static bool LSA_perturbations_switch; //default is false
 
     static int ns_time_order;

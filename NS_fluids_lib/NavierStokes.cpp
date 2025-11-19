@@ -1097,6 +1097,10 @@ Real NavierStokes::visc_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::thermal_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::total_advance_time=0.0;
 
+int NavierStokes::NS_LSA_nsteps_power_method=0;
+int NavierStokes::NS_LSA_max_step_count=0;
+int NavierStokes::NS_LSA_step_count=0;
+
 void extra_circle_parameters(
  Real& xblob2,Real& yblob2,Real& zblob2,Real& radblob2,
  Real& xblob3,Real& yblob3,Real& zblob3,Real& radblob3,
@@ -2495,10 +2499,11 @@ void fortran_parameters() {
 
 
 void
-NavierStokes::variableCleanUp ()
-{
+NavierStokes::variableCleanUp () {
+
     desc_lst.clear();
     desc_lstGHOST.clear();
+
 } // end subroutine variableCleanUp ()
 
 void
@@ -6780,35 +6785,32 @@ NavierStokes::NavierStokes (AmrCore&        papa,
     AmrLevel(papa,lev,level_geom,bl,dmap_in,time)
 {
     Geometry_setup();
+    NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
 }
 
 NavierStokes::~NavierStokes () {
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (NS_LSA_nsteps_power_method==0) {
     //do nothing
-   } else if (parent->LSA_nsteps_power_method>=1) {
-    int local_step_count=parent->levelSteps(0)-
-                         parent->initial_levelSteps;
-    int local_max_step_count=parent->LSA_max_step-
-                             parent->initial_levelSteps;
+   } else if (NS_LSA_nsteps_power_method>=1) {
 
     std::cout << "deleting NavierStokes() level= " << level << '\n';
-    std::cout << "deleting NavierStokes() local_step_count= " << 
-      local_step_count << '\n';
-    std::cout << "deleting NavierStokes() local_max_step_count= " << 
-      local_max_step_count << '\n';
+    std::cout << "deleting NavierStokes() NS_LSA_step_count= " << 
+      NS_LSA_step_count << '\n';
+    std::cout << "deleting NavierStokes() NS_LSA_max_step_count= " << 
+      NS_LSA_max_step_count << '\n';
     int proc=ParallelDescriptor::MyProc();
     std::cout << "deleting NavierStokes() proc= " << 
       proc << '\n';
 
-    if ((local_step_count==0)||
-        (local_step_count==local_max_step_count)) {
+    if ((NS_LSA_step_count==0)||
+        (NS_LSA_step_count==NS_LSA_max_step_count)) {
      //do nothing
     } else
-     amrex::Error("local_step_count invalid when deleting NavierStokes()");
+     amrex::Error("NS_LSA_step_count invalid when deleting NavierStokes()");
 
    } else
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    amrex::Error("NS_LSA_nsteps_power_method invalid");
 
    Geometry_cleanup();
 
@@ -10457,6 +10459,8 @@ void NavierStokes::post_restart() {
 void
 NavierStokes::initData () {
 
+ NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+
  interface_touch_flag=1; //initData()
 
  std::string local_caller_string="initData";
@@ -11127,6 +11131,8 @@ NavierStokes::init(
   AmrLevel & old,
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
+
+ NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
 
  interface_touch_flag=1; //init(old,ba_in,dmap_in)
  
@@ -11877,6 +11883,8 @@ void
 NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
+
+ NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
 
  interface_touch_flag=1; //init(ba_in,dmap_in)
 
@@ -13212,16 +13220,15 @@ void NavierStokes::make_heat_source() {
 
   int null_perturbation=1;
 
-  int local_step_count=parent->levelSteps(0)-
-                       parent->initial_levelSteps;
-  int local_max_step_count=parent->LSA_max_step-
-                           parent->initial_levelSteps;
+  NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
+  NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
+  NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
 
-  if ((local_step_count>=0)&&
-      (local_step_count<=local_max_step_count)) {
+  if ((NS_LSA_step_count>=0)&&
+      (NS_LSA_step_count<=NS_LSA_max_step_count)) {
    //do nothing
   } else
-   amrex::Error("local_step_count invalid");
+   amrex::Error("NS_LSA_step_count invalid");
 
   if (parent->LSA_current_step==0) { //initialize non perturbed state.
    //do nothing
