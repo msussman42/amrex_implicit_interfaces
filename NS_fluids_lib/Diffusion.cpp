@@ -443,16 +443,16 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
 
   int null_perturbation=1;
 
-  int local_step_count=parent->levelSteps(0)-
-                       parent->initial_levelSteps;
-  int local_max_step_count=parent->LSA_max_step-
-                           parent->initial_levelSteps;
+  NS_LSA_step_count=parent->levelSteps(0)-
+                    parent->initial_levelSteps;
+  NS_LSA_max_step_count=parent->LSA_max_step-
+                    parent->initial_levelSteps;
 
-  if ((local_step_count>=0)&&
-      (local_step_count<=local_max_step_count)) {
+  if ((NS_LSA_step_count>=0)&&
+      (NS_LSA_step_count<=NS_LSA_max_step_count)) {
    //do nothing
   } else
-   amrex::Error("local_step_count invalid");
+   amrex::Error("NS_LSA_step_count invalid");
 
   if (parent->LSA_current_step==0) { //initialize non perturbed state.
    //do nothing

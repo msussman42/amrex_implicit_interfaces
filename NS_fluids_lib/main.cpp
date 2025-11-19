@@ -323,6 +323,7 @@ fork_job(int fork_id) {
      LSA_current_step,initial_levelSteps);//synchronizes internally
 
    amrex::ParallelDescriptor::Barrier();
+
    std::fflush(NULL);
    BL_PROFILE_FINALIZE();
    std::fflush(NULL);
@@ -331,7 +332,8 @@ fork_job(int fork_id) {
    std::fflush(NULL);
    amrex::Sleep(sleepsec);
    amrex::ParallelDescriptor::Barrier();
-  }
+
+  } // while ( amrptr->okToContinue() etc. 
 
   amrex::ParallelDescriptor::Barrier();
 
@@ -392,7 +394,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Nov 18, 2025, 18:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Nov 19, 2025, 18:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -429,8 +431,12 @@ main (int   argc,
     int fork_id=0;
     fork_job(fork_id);
 
-     //AmrCore::regrid_ba.clear();
-     //AmrCore::initial_ba.clear();
+     //amrex::Finalize calls AmrCore::Finalize() since 
+     //amrex::ExecOnFinalize(AmrCore::Finalize) is called in 
+     //AmrCore::Initialize()
+     // AmrCore::regrid_ba.clear();
+     // AmrCore::initial_ba.clear();
+     //amrex::Finalize() is declared in: AMReX.cpp
     amrex::Finalize();
 
     return 0;
