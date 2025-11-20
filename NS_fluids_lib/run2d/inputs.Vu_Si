@@ -145,10 +145,11 @@ ns.radblob9=0.0 # transition time from the wetting initial
 #  We=10.0
 ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
 # 18 degrees growth angle:
-# sigma_LI=sigma_LG(1-cos(18 deg))
+# sigma_LI=sigma_LG(1-cos(18 deg))=sigma_LG * .049
+# sigma_LI=sigma_LG(1-cos(45 deg))=sigma_LG * .293
 # sigma_GI=sigma_LG
 # actual Weber number: 0.0042;numerical Weber: 10.0
-ns.tension=      0.1 0.0049 0.0161 0.1 0.1 0.0
+ns.tension=      0.1 0.0293 0.0161 0.1 0.1 0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
