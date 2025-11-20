@@ -50,7 +50,8 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
 
 #amr.n_cell    = 32 128
 amr.n_cell    = 32 256
-amr.max_level = 2
+amr.max_level = 0
+#amr.max_level = 2
 ns.projection_pressure_scale=1.0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -70,7 +71,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
 cg.min_max_grid_size   = 256
-amr.restart         = chk00000  #non-intrusive LSA
+#amr.restart         = chk00000  #non-intrusive LSA
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -94,7 +95,7 @@ ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
 ns.fixed_dt	  = 0.0006   # hardwire dt non-intrusive LSA 
 
-amr.LSA_nsteps_power_method=50 # non-intrusive LSA
+amr.LSA_nsteps_power_method=0 # non-intrusive LSA
 
 ns.sum_interval   = 1        # timesteps between computing mass 
 

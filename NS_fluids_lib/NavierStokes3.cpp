@@ -1649,6 +1649,9 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_default_eigenvectorALL(
         LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
         LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+
+      NS_LSA_step_count++;
+
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else {
@@ -1666,6 +1669,9 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_eigenvectorALL(
 	LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
         LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+
+      NS_LSA_step_count++;
+
      } else if (parent->levelSteps(0)<parent->LSA_max_step-1) {
       //do nothing
      } else {
