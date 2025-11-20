@@ -1,0 +1,220 @@
+max_step  = 8000   # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  300  # maximum problem time
+
+# ------------------ Dimention version 08/02/18 ---------------
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+# 3D
+#geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+# 2D
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+# 3D (quarter domain)
+#geometry.prob_lo   =  0.0 0.0 0.0
+#geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
+# 2D
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  2.0 20.0    # D* 4 4 20
+
+# 0=Sussman and Puckett algorithm 
+# 1=EILE (default), -1=Weymouth Yue
+# 2=always EI   3=always LE
+ns.EILE_flag=-1
+ns.continuous_mof=0
+ns.vof_height_function=1
+
+ns.mof_decision_tree_learning=0
+ns.MOFITERMAX_AFTER_PREDICT=0
+ns.MOFITERMAX=30
+ns.num_divu_outer_sweeps=1
+ns.minimum_relative_error=1.0e-22
+#number of Jacobi method cycles elliptic solver initially does.
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0
+ns.num_materials=2 # 1: liquid 2: vapor 
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.output_drop_distribution=1
+
+# 3D (quarter domain)
+#amr.n_cell    = 16 16 160
+# 2D
+amr.n_cell    = 16 160
+
+amr.max_level = 2
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16 16
+
+amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# The proper nesting buffer of level i cells next to level i+1
+# cells is bf_lev[i]*n_proper. (2*bf_lev[i]=blocking_factor[i])
+amr.n_proper=1  # default is 1
+amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
+# viscoelastic terms are always discretized with the low order 
+# directionally split semi-Lagrangian method. This is to insure
+# positive definiteness of the configuration tensor.  
+# note: log conformation approach does not avoid the problem since
+# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 given A close to
+# indefinite.
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.enable_spectral=0
+
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 50
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 64
+#amr.restart         = chk0300
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11 # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0   # scale back initial timestep
+ns.change_max=1.01 
+#KEEP THIS EQUAL TO ONE
+ns.visc_coef      = 1.0  # viscosity 1.0 or
+                         # (eta_solvent/eta_total)*(1/Re(based on eta_total))
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        =-980   # gravity or 1/Fr
+ns.tension        = 50.0     # interfacial tension coefficient or 1/We
+ns.sum_interval   = 10        # timesteps between computing mass 
+ns.vorterr=0.0 0.0 0.0
+ns.axis_dir=0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0 # not used
+ns.advbot=0.0
+ns.adv_vel=0.0
+# 3D
+#ns.adv_dir=3
+# 2D
+ns.adv_dir=2
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.include_viscous_heating=0
+# shock_timestep=2 2 option => never consider sound speed.
+ns.shock_timestep=2 2  
+ns.material_type=0 0 
+ns.viscconst=10.0 1.8e-4
+ns.denconst=1.0 1.2e-3
+ns.tempconst=273.0 273.0
+ns.heatviscconst=0.0 0.0
+ns.xblob=0.0 # D*2
+
+#3D (quarter domain)
+#ns.yblob=0.0 # D*2
+#2D
+ns.yblob=0.75 # D*0.75
+
+ns.zblob=0.75 # D*0.75
+ns.radblob=0.5		# bubble/drop radius
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=36
+
+# given first material and Carreau_beta==0 for first material,
+#  probtype==2, axis_dir>0, then 
+#  "call viscosity(axis_dir,visc(i,j),shear)"
+#  VISCOSITY=visc_coef * visc(i,j)
+# otherwise:
+#  given Carreau_beta==0, then
+#   VISCOSITY=visc_coef * viscconst
+#  otherwise given (Carreau_beta>0) then
+#   given visco-elastic then
+#    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
+#     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
+#    =
+#    VISCOSITY=visc_coef * ( etaS+ 
+#     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
+#
+#   otherwise
+#    VISCOSITY=visc_coef * (
+#      mu_inf + (etaL0-mu_inf)* 
+#      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
+#
+# my "etaL0" is Mitsuhiro's eta_S(1+c_0)= viscconst
+# my "etaP0" is Mitsuhiro's c_0 eta_S   = elastic_viscosity
+# my "etaS" is Mitsuhiro's eta_S too.  = viscconst-elastic_viscosity
+# The coefficient for the viscoelastic force term is:
+#  visc_coef * 
+#  (VISCOSITY-viscconst+elastic_viscosity)/(elastic_time*(1-tr(A)/L^2))
+# =
+#  visc_coef * 
+#  (VISCOSITY-etaL0+etaP0)/(elastic_time*(1-tr(A)/L^2))
+# =
+#  visc_coef * 
+#  (VISCOSITY-etaS)/(elastic_time*(1-tr(A)/L^2))
+# =  (assume visc_coef==1)
+#  etaP0*
+#  (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) 
+#
+
+# 1 Pascal = 1 N/m^2 = 1 kg/(m s^2)=10 g/(cm s^2)
+# liquid viscosity= visc_coef * (eta_S + 
+#   eta_P0(1+(beta gammadot)^alpha)^( (n-1)/alpha ) )
+# eta_S = viscconst - elastic_viscosity = 10 - 9.99000999 = 0.00999001
+# eta_S ~ 10^-2 g/(cm s) = 10^-3 PA s
+# eta_P0 = elastic_viscosity = 9.99000999 = c0 etaS  units=g/(cm s)
+# c0=elastic_viscosity/(viscconst-elastic_viscosity)=
+#    9.99000999/(0.00999001)=999.999999
+# since visc_coef==1,
+# the coefficient for the viscoelastic force is:
+# eta_P0 (1+(beta gammadot)^alpha)^((n-1)/alpha)
+# 0=FENE CR
+# 0,1 => viscoelastic FENE-CR material  2=> elastic material
+ns.viscoelastic_model=0 0
+ns.elastic_time=0.0938 0.0    # relaxation time or Deborah number
+ns.elastic_viscosity=9.99000999 0.0 # c*eta_solvent or 
+                                    # c*eta_solvent/(eta_total*Re)
+ns.polymer_factor=0.1 0.0       # parameter, 1/L
+ns.Carreau_alpha=2.0 0.0
+ns.Carreau_beta=1.0 0.0
+ns.Carreau_n=0.5 0.0
+
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+#3D
+#ns.lo_bc          = 3 3 2
+#ns.hi_bc          = 2 2 2
+#2D
+ns.lo_bc          = 3 2
+ns.hi_bc          = 2 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
