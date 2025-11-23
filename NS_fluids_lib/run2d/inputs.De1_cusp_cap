@@ -20,13 +20,13 @@ geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.continuous_mof=0
+ns.continuous_mof=1
 ns.vof_height_function=1
 
 ns.mof_decision_tree_learning=0
-ns.MOFITERMAX_AFTER_PREDICT=0
+ns.MOFITERMAX_AFTER_PREDICT=30
 ns.MOFITERMAX=30
-ns.num_divu_outer_sweeps=1
+ns.num_divu_outer_sweeps=2
 ns.minimum_relative_error=1.0e-22
 #number of Jacobi method cycles elliptic solver initially does.
 ns.initial_project_cycles=3
