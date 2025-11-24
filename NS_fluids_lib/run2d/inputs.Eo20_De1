@@ -1,4 +1,4 @@
-max_step  = 8000   # maximum timestep
+max_step  = 80000   # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  300  # maximum problem time
 
@@ -78,12 +78,13 @@ amr.time_blocking_factor=1
 ns.enable_spectral=0
 
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_int       = 200      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50
+amr.plot_int        = 100 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 16
+cg.min_max_grid_size=2048
 #amr.restart         = chk0300
 #amr.trace   =1
 
@@ -191,7 +192,7 @@ ns.elastic_viscosity=9.99000999 0.0 # c*eta_solvent or
 ns.polymer_factor=0.1 0.0       # parameter, 1/L
 ns.Carreau_alpha=2.0 0.0
 ns.Carreau_beta=1.0 0.0
-ns.Carreau_n=0.5 0.0
+ns.Carreau_n=1.0 0.0 # 1/2 or 1
 
 
 #ns.mem_debug = 1
