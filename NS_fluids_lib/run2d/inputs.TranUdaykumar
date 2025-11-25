@@ -28,7 +28,8 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 #geometry.prob_lo   =  0.0 0.0 0.0 #3D
 #geometry.prob_hi   =  4.0 4.0 16.0
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  4.0 16.0
+#geometry.prob_hi   =  4.0 16.0
+geometry.prob_hi   = 1.25 10.0
 
 # multigrid class
 mg.verbose = 0
@@ -102,22 +103,22 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 ns.inflow_pressure=1.0e+6  # atmospheric pressure
 ns.outflow_pressure=1.06e+6 # tank pressure at the impact plate
 
-amr.n_cell    = 32 128
-amr.max_level =  3
+amr.n_cell    = 40 320
+amr.max_level =  1
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 2 2 2 2 2 2  # number of buffer cells in error est
-amr.grid_eff        = 0.9   # what constitutes an efficient grid
+amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 2 2 2 2 2 2 2   # block factor in grid generation
-amr.check_int       = 50      # number of timesteps between checkpoints
+amr.blocking_factor = 8 8 8 8 8 8 8   # block factor in grid generation
+amr.check_int       = 200      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50     # 5 for movies. 
+amr.plot_int        = 200     # 5 for movies. 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
-cg.min_max_grid_size=64
-#amr.restart         = chk00500
+cg.min_max_grid_size=2048
+#amr.restart         = chk09350
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -180,7 +181,7 @@ ns.adv_dir=2 # adv_dir=1,2,3
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 # need \Delta x < 2(viscosity)/velocity
 # viscosity>\Delta x * velocity/2 \approx 10^6/100=10^4
-ns.viscconst=10.0 10000.0 10000.0 10000.0
+ns.viscconst=10.0 100.0 100.0 100.0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
@@ -299,13 +300,16 @@ ns.xblob=0.0
 #ns.zblob=9850.0
 #Tungsten rod: yblob-half*radblob3 < y < yblob+half*radblob3
 #Tungsten rod: 5.1 < y < 10.1
-ns.yblob=7.6 # y coordinate of midpoint of rod relative to domain BOTTOM
+#ns.yblob=7.6 # y coordinate of midpoint of rod relative to domain BOTTOM
+#Tungsten rod: 0.1 < y < 5.1
+ns.yblob=2.6 # y coordinate of midpoint of rod relative to domain BOTTOM
 ns.zblob=1021.87  # depth of sphere (unused)
 ns.radblob=0.2  # x radius of Tungsten rod 2mm
 #jetting_plate_dist declared in GLOBALDIST.F90
 ns.radblob2=2.9  # substrate thickness (steel plate thickness)
 ns.radblob3=5.0  # rod height
 #Steel plate: 10.4 < y < 13.3
+#Steel plate: 5.4 < y < 8.3
 ns.yblob2=2.8    # yblob2+yblob < y < yblob2+yblob+thickness
 ns.xblob2=2.0    # substrate radius -xblob2 < r < xblob2
 ns.denfact=1.0
@@ -318,7 +322,7 @@ ns.v = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 2
-ns.hi_bc          = 2 2
+ns.hi_bc          = 3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
