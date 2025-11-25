@@ -322,7 +322,7 @@ ns.v = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 2
-ns.hi_bc          = 3 2
+ns.hi_bc          = 5 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
