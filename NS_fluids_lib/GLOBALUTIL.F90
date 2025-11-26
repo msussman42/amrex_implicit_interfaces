@@ -20750,7 +20750,7 @@ end subroutine print_visual_descriptor
       V=one/rho
       Gamma0=fort_stiffGAMMA(im)
       c0=fort_stiff_sound_speed(im)
-      if ((Gamma0.ge.one).and.(Gamma0.le.1.5d0).and.(c0.gt.zero)) then
+      if ((Gamma0.ge.one).and.(Gamma0.le.2.0d0).and.(c0.gt.zero)) then
        !do nothing
       else
        print *,"Gamma0 or c0 invalid:",Gamma0,c0
@@ -20887,7 +20887,7 @@ end subroutine print_visual_descriptor
       Gamma0=fort_stiffGAMMA(im)
       c0=fort_stiff_sound_speed(im)
 
-      if ((Gamma0.ge.one).and.(Gamma0.le.1.5d0).and.(c0.gt.zero)) then
+      if ((Gamma0.ge.one).and.(Gamma0.le.2.0d0).and.(c0.gt.zero)) then
        !do nothing
       else
        print *,"Gamma0 or c0 invalid:",Gamma0,c0
@@ -24930,6 +24930,11 @@ end subroutine print_visual_descriptor
        gamma_constant*PP
       if (pressure.lt.VOFTOL) then
        pressure=VOFTOL
+      else if (pressure.ge.VOFTOL) then
+       !do nothing
+      else
+       print *,"pressure invalid: ",pressure
+       stop
       endif
 
       return
@@ -25000,6 +25005,11 @@ end subroutine print_visual_descriptor
        gamma_constant*PP
       if (pressure.lt.VOFTOL) then
        pressure=VOFTOL
+      else if (pressure.ge.VOFTOL) then
+       ! do nothing
+      else
+       print *,"pressure invalid: ",pressure
+       stop
       endif
 
       soundsqr=gamma_constant*(pressure+PP)/rho
@@ -25026,8 +25036,10 @@ end subroutine print_visual_descriptor
        stop
       endif
       gamma_constant=fort_stiffGAMMA(im)
-      if (gamma_constant.le.zero) then
-       print *,"gamma_constant invalid"
+      if (gamma_constant.gt.zero) then
+       !do nothing
+      else
+       print *,"gamma_constant invalid: ",gamma_constant
        stop
       endif
       cv=cp/gamma_constant
@@ -25080,38 +25092,55 @@ end subroutine print_visual_descriptor
        stop
       endif
       gamma_constant=fort_stiffGAMMA(im)
-      if (gamma_constant.le.zero) then
-       print *,"gamma_constant invalid"
+      if (gamma_constant.gt.zero) then
+       !do nothing
+      else
+       print *,"gamma_constant invalid: ",gamma_constant
        stop
       endif
       cv=cp/gamma_constant
 
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative:",rho
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
       PP=fort_stiffPINF(im)
-      if (PP.lt.zero) then
-       print *,"fort_stiff PINF invalid"
+      if (PP.ge.zero) then
+       !do nothing
+      else
+       print *,"fort_stiff PINF invalid: ",PP
        stop
       endif
 
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy cannot be <=0: ",internal_energy
        stop
       endif
 
       temperature=(internal_energy-PP/rho)/cv
       if (temperature.lt.VOFTOL) then
        temperature=VOFTOL
+      else if (temperature.ge.VOFTOL) then
+       !do nothing
+      else
+       print *,"temperature invalid: ",temperature
+       stop
       endif
 
       return
@@ -25375,13 +25404,13 @@ end subroutine print_visual_descriptor
       if (fort_stiffGAMMA(im).ge.one) then
        ! do nothing
       else
-       print *,"fort_stiffGAMMA(im) invalid"
+       print *,"fort_stiffGAMMA(im) invalid: ",im,fort_stiffGAMMA(im)
        stop
       endif
       if (fort_stiffCV(im).gt.zero) then
        ! do nothing
       else
-       print *,"fort_stiffCV(im) invalid"
+       print *,"fort_stiffCV(im) invalid: ",im,fort_stiffCV(im)
        stop
       endif
 
@@ -26604,7 +26633,7 @@ endif
 if (fort_stiffGAMMA(im).ge.one) then
  ! do nothing
 else
- print *,"fort_stiffGAMMA(im) invalid"
+ print *,"fort_stiffGAMMA(im) invalid: ",im,fort_stiffGAMMA(im)
  stop
 endif
 if (fort_stiffCV(im).gt.zero) then

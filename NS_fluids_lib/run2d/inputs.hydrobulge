@@ -130,7 +130,7 @@ mac.mac_abs_tol    = 1.0e-10
 # 2=never take sound speed into account
 # 0=take sound speed into account at t=0 only if compressible material
 # liquid,jwl,aluminum side walls
-ns.shock_timestep=1 1 2 2
+ns.shock_timestep=1 1 1 2 #Mie Gruneisen
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
 ns.change_max=1.01    # scale back initial timestep
@@ -160,21 +160,22 @@ ns.adv_dir=2
 # liquid,jwl,aluminum side walls,gas
 # CGS units
 # need \Delta x < 2(viscosity)/velocity
-# viscosity>\Delta x * velocity/2 \approx (8/128)*10^5/2 \approx 3125
+# viscosity>\Delta x * velocity/2 \approx (8/128)*5e+5/2 \approx 15000
 # 
-ns.viscconst=0.01 0.0 3125.0 0.0001
+ns.viscconst=0.01 0.0 15000.0 0.0001
 ns.tempconst=293.0 1367.191399689 293.0 293.0
 ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 
 # liquid,jwl,aluminum side walls,gas
 # 35=EOS_wardlaw_tillotson
 # 3=EOS_NAjwl
+# 36=Mie Gruneison
 # 37=EOS_Sandusky_jwl
 # 14=EOS_air_rho2
 #ns.material_type=35 3 0 14
-ns.material_type=35 3 0 0
+ns.material_type=35 3 36 0  #Mie Gruneison
 #ns.material_type=35 37 0 0
-ns.material_conservation_form=1 1 0 0
+ns.material_conservation_form=1 1 0 0 #Mie Gruneison
 
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
@@ -228,8 +229,11 @@ ns.Zerilli_beta1=0.0 0.0 0.000153 0.0 # 1/Kelvin
 ns.rest_fraction=0.0 #prevent CPU overheating?
 ns.tiling=false
 
+#specific heat aluminum=0.897 J/(g K)=.897e+7 erg/(g K)
 ns.stiffCP= 4.1855e+7  4.1855e+7 0.9e+7 4.1855e+7  # erg/(g K)
 ns.stiffCV= 4.1855e+7  4.1855e+7 0.9e+7 4.1855e+7  # erg/(g K)
+ns.stiffGAMMA=1.4 1.4 1.97 1.4 #Mie Gruneison
+ns.stiff_sound_speed=5.24e+5 5.24e+5 5.24e+5 5.24e+5 #Mie Gruneison
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
@@ -238,10 +242,10 @@ ns.stiffCV= 4.1855e+7  4.1855e+7 0.9e+7 4.1855e+7  # erg/(g K)
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
 #shear_modulus\approx sqrt(elastic_viscosity)=sqrt(2.5E+11)
-#viscosity>\Delta x * velocity/2 \approx (8/128)*10^5/2 \approx 3125
-#viscosity=k/(rho cv)=3125
-#k=rho cv 3125=2.7 * 0.9e+7 * 3125 \approx 7.6e+10
-ns.heatviscconst=0.0 0.0 7.6e+10 0.0
+#viscosity>\Delta x * velocity/2 \approx (8/128)*(5e+5)/2 \approx 15000
+#viscosity=k/(rho cv)=15000
+#k=rho cv 15000=2.7 * 0.9e+7 * 15000 \approx 35.0e+10
+ns.heatviscconst=0.0 0.0 3.5e+11 0.0
 ns.include_viscous_heating=0
 # liquid,jwl,aluminum side walls,air
 ns.denconst=1.0 1.765 2.7 0.00177
