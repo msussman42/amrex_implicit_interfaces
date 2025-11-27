@@ -2,9 +2,12 @@
 #expected most dangerous mode: space frequency=.7
 #wave length=2 pi/.7=9.0
 #see Popinet 2009, see rayleigh_capillary_growth.F90
-#max_step  = 500   # maximum timestep
-max_step  =  2    # maximum timestep
-stop_time = 0.0012 # maximum problem time
+#max_step  = 500   # maximum timestep non-intrusive LSA
+#max_step  = 999999   # maximum timestep perturbation
+max_step  =  2    # maximum timestep non-intrusive LSA
+stop_time = 0.0012 # maximum problem time non-intrusive LSA
+#stop_time = 0.3 # maximum problem time non-intrusive LSA
+#stop_time =  10.25  # maximum problem time perturbation
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -53,7 +56,8 @@ amr.max_level = 0
 ns.projection_pressure_scale=1.0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
-amr.regrid_int      = 100000       # how often to regrid
+amr.regrid_int      = 100000       # how often to regrid non-intrusive LSA
+#amr.regrid_int      = 1           # perturbation
 amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 ns.enable_spectral=0
@@ -62,13 +66,14 @@ amr.blocking_factor = 2 2 2 2 2       # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1  # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1
+#amr.plot_int        = 100  # non-intrusive LSA
+amr.plot_int        = 1  # non-intrusive LSA
+#amr.plot_int       = 100 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
 cg.min_max_grid_size   = 256
-amr.restart         = chk00000
-#amr.trace   =1
+amr.restart         = chk00000 #non-intrusive LSA
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
@@ -90,7 +95,10 @@ mac.visc_abs_tol   = 1.0e-6
 ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
 ns.fixed_dt	  = 0.0006   # hardwire dt
-amr.LSA_nsteps_power_method=2
+
+amr.LSA_nsteps_power_method=2 # non-intrusive LSA
+#amr.LSA_nsteps_power_method=0  # perturbation
+
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=4  # axis_dir=1 standard pipe problem, =2 inflow for liquid only
