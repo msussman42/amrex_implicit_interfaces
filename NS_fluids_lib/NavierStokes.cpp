@@ -13332,6 +13332,19 @@ void NavierStokes::add_perturbation(int null_perturbation) {
   } else
    amrex::Error("null_perturbation invalid");
 
+  if (1==1) {
+   std::cout << "slab_step= " << slab_step << '\n';
+   std::cout << "ns_time_order= " << ns_time_order << '\n';
+   std::cout << "null_perturbation= " << null_perturbation << '\n';
+   std::cout << "num_materials= " << num_materials << '\n';
+   std::cout << "LS_new.nComp() = " << LS_new.nComp() << '\n';
+   for (int i=0;i<num_materials;i++) {
+    std::cout << "i = " << i << '\n';
+    std::cout << "LS_diff norminf = " << LS_diff->norminf(i) << '\n';
+   }
+  }
+    
+ 
   MultiFab::Add(LS_new,*LS_diff,0,0,num_materials,0);
 
   init_boundary(
@@ -13384,6 +13397,7 @@ void NavierStokes::add_perturbation(int null_perturbation) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
    FArrayBox& macfab=Umac_new[mfi];
 
+    //fort_addnoise is declared in PROB.F90
    fort_addnoise(
     &dir,
     &LS_diff_ok,

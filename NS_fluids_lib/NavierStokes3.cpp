@@ -1371,7 +1371,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-    if (parent->LSA_current_step==0) { //initialize non perturbed state.
+     //initialize non perturbed state (the first power method iteration 
+     //establishes the base state).
+    if (parent->LSA_current_step==0) { 
 
      if (NS_LSA_step_count==0) {
       LSA_perturbations_switch=true; 
@@ -1393,6 +1395,12 @@ Real NavierStokes::advance(Real time,Real dt) {
      if (NS_LSA_step_count==0) {
       null_perturbation=0;
       LSA_perturbations_switch=true; 
+
+      //restore t^n data into "get_new_data"
+      //restore data prior to adding level set perturbations.
+      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
+      CopyNewToOldALL();
+
      } else if (NS_LSA_step_count>0) {
       LSA_perturbations_switch=false; 
      } else {
@@ -1432,6 +1440,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
       //void NavierStokes::add_perturbation() declared in NavierStokes.cpp
+      //even if null_perturbation==1, the volume fractions and centroids
+      //can change.
      ns_level.add_perturbation(null_perturbation);
     } 
    
@@ -1506,7 +1516,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-    if (parent->LSA_current_step==0) { //initialize non perturbed state.
+     //initialize non perturbed state (first power series method iteration
+     //used to establish a base state)
+    if (parent->LSA_current_step==0) { 
 
      if (NS_LSA_step_count==0) {
 
@@ -1532,9 +1544,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (NS_LSA_step_count==0) {
 
-      //restore t^n data into "get_new_data"
-      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
-      CopyNewToOldALL();
+      //do nothing
 
      } else if (NS_LSA_step_count>0) {
 
@@ -1637,6 +1647,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
 
+     //initialize non perturbed state (first power series method iteration
+     //used to establish a base state)
     if (parent->LSA_current_step==0) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
@@ -1646,6 +1658,7 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
+FIX ME HERE, IS LEVEL SET PERTURBATION PROPERLY DONE?
       LSA_default_eigenvectorALL(
         LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
         LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);

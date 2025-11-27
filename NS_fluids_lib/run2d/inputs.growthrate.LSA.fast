@@ -14,7 +14,8 @@ stop_time =  10.25  # maximum problem time perturbation
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  5.0 19.634954 #frequence=0.32,wavelength=2Pi/0.32  
-geometry.prob_hi   =  9.0 72.0
+#geometry.prob_hi   =  9.0 72.0
+geometry.prob_hi   =  2.0 2.0
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
 
 ns.EILE_flag=-1
@@ -50,7 +51,8 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
 #amr.n_cell    = 32 128
-amr.n_cell    = 32 256
+#amr.n_cell    = 32 256
+amr.n_cell    = 16 16
 #amr.max_level = 2
 amr.max_level = 0
 ns.projection_pressure_scale=1.0
@@ -68,10 +70,10 @@ amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 #amr.plot_int        = 100 # non-intrusive LSA
 #amr.plot_int        = 1  # non-intrusive LSA
-amr.plot_int       = 100 # perturbation
+amr.plot_int       = 20 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 256
 cg.min_max_grid_size   = 256
 #amr.restart         = chk00000  #non-intrusive LSA
 
@@ -94,7 +96,7 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-6
 ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
-ns.fixed_dt	  = 0.0006   # hardwire dt non-intrusive LSA 
+ns.fixed_dt	  = 0.002   # hardwire dt non-intrusive LSA 
 
 #amr.LSA_nsteps_power_method=2 # non-intrusive LSA
 amr.LSA_nsteps_power_method=0  # perturbation
@@ -129,12 +131,12 @@ ns.xblob5=0.0           # wall vertical gas velocity (x=xhi)
 ns.xblob=1.0                  # base position of gas/liquid interface
 #ns.yblob=10.0                # wave length of perturbation
 #ns.yblob=19.634954            # wave length of perturbation (2*H)
-ns.yblob=72.0 #yblob=72 if non-intrusive LSA
+ns.yblob=2.0 #yblob=2 if non-intrusive LSA
 #ns.yblob=9.0  #yblob=wave length=2 pi/(.7/r0)=2*pi*r0/.7  L=72/NINT(72/lambda)
 #ns.yblob=36.0  #yblob=wave length=2 pi/(.174/r0)=2*pi*r0/.174 
 ns.zblob=0.0
 ns.radblob=0.0 # non-intrusive LSA
-#ns.radblob=0.1 # perturbation 
+#ns.radblob=0.2 # perturbation 
 ns.denfact=1.0
 # velfact=0 => vinletgas (liquid inflow), advbot (gas inflow)
 ns.velfact=0.0 # pressure gradient in z direction (streamwise direction) 

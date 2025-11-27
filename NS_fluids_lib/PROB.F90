@@ -26436,7 +26436,7 @@ end subroutine initialize2d
 
       else if (LS_diff_ok.eq.1) then
 
-       !do nothing
+       !do nothing (LSA algorithm)
 
       else
        print *,"LS_diff_ok invalid: ",LS_diff_ok
