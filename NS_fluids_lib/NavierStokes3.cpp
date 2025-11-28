@@ -1658,7 +1658,6 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
-FIX ME HERE, IS LEVEL SET PERTURBATION PROPERLY DONE?
       LSA_default_eigenvectorALL(
         LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
         LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);

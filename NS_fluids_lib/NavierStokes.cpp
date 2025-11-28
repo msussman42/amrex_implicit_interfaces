@@ -11604,6 +11604,26 @@ void NavierStokes::LSA_default_eigenvector(
   //ParallelDescriptor::ReduceRealSum
   //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
 
+ if (1==1) {
+  std::cout << "LSA_default_eigenvector level= " << level << '\n';
+  std::cout << "num_materials= " << num_materials << '\n';
+  std::cout << "State_Type= " << State_Type << 
+    " scomp[State_Type]]= " << scomp[State_Type] << '\n';
+  std::cout << "LS_Type= " << LS_Type << 
+    " scomp[LS_Type]]= " << scomp[LS_Type] << '\n';
+  for (int i=0;i<scomp.size();i++) {
+   std::cout << "i= " << i << " scomp[i]= " << scomp[i] << '\n';
+   std::cout << "i= " << i << " ncomp[i]= " << ncomp[i] << '\n';
+  }
+  for (int i=0;i<num_materials;i++) {
+   std::cout << "i = " << i << '\n';
+   std::cout << "localMF[cell_mf]->norminf(scomp[LS_Type]+i) = " << 
+      localMF[cell_mf]->norminf(scomp[LS_Type]+i) << '\n';
+   std::cout << "localMF[unperturb_cell_mf]->norminf(scomp[LS_Type]+i) = " << 
+      localMF[unperturb_cell_mf]->norminf(scomp[LS_Type]+i) << '\n';
+  }
+ }
+  
 } // end subroutine LSA_default_eigenvector
 
 
@@ -11689,7 +11709,7 @@ void NavierStokes::LSA_eigenvectorALL(
 void NavierStokes::LSA_normalize_eigenvector(
   int unperturb_cell_mf,int unperturb_face_mf,
   int cell_mf,int face_mf,
-  Vector<Real> cell_max,Vector<Real> face_max,
+  Vector<Real>& cell_max,Vector<Real>& face_max,
   int isweep) {
 
  int finest_level=parent->finestLevel();
@@ -11713,6 +11733,16 @@ void NavierStokes::LSA_normalize_eigenvector(
    ncomp_total,
    scomp_section,
    ncomp);
+
+ if (cell_max.size()==ncomp_total) {
+  //do nothing
+ } else
+  amrex::Error("cell_max.size()==ncomp_total failed");
+
+ if (face_max.size()==AMREX_SPACEDIM) {
+  //do nothing
+ } else
+  amrex::Error("face_max.size()==AMREX_SPACEDIM failed");
 
  if (localMF[cell_mf]->nComp()==ncomp_total) {
   //do nothing
@@ -11792,6 +11822,13 @@ void NavierStokes::LSA_normalize_eigenvector(
 
  } // for (int isec=0;isec<scomp_section.size();isec++)
 
+ if (1==1) {
+  std::cout << "LSA_normalize_eigenvector  level= " << level << '\n';
+  for (int i=0;i<scale_parm.size();i++) {
+   std::cout << "i= " << i << " scale_parm[i]= " << scale_parm[i] << '\n';
+  }
+ }
+
  if (isweep==0) {
 
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
@@ -11801,6 +11838,12 @@ void NavierStokes::LSA_normalize_eigenvector(
    int im_critical=scomp-scomp_section[LS_Type];
    if ((im_critical>=0)&&(im_critical<num_materials)) {
     LSA_levelset_norminf(im_critical,unperturb_cell_mf,cell_mf,local_max);
+
+    if (1==1) {
+     std::cout << "scomp_section[LS_Type]=" << scomp_section[LS_Type]<<'\n';
+     std::cout << "im_critical= " << im_critical << " local_max= " <<
+       local_max << '\n';
+    }
    }
 
    cell_max[scomp]=max(cell_max[scomp],local_max);
@@ -11844,6 +11887,18 @@ void NavierStokes::LSA_normalize_eigenvector(
  } else
   amrex::Error("isweep invalid");
 
+ if (1==1) {
+  std::cout << "LSA_normalize_eigenvector  level= " << level << '\n';
+  std::cout << "isweep= " << isweep << '\n';
+  std::cout << "NS_LSA_step_count= " << NS_LSA_step_count << '\n';
+  std::cout << "NS_LSA_max_step_count= " << NS_LSA_max_step_count << '\n';
+  std::cout << "parent->LSA_current_step=" << parent->LSA_current_step << '\n';
+  for (int i=0;i<ncomp_total;i++) {
+   std::cout << "i= " << i << " localMF[cell_mf]->norminf(i)= " <<
+     localMF[cell_mf]->norminf(i) << '\n';
+  }
+ }
+
 } //end subroutine LSA_normalize_eigenvector
 
 void NavierStokes::LSA_normalize_eigenvectorALL(
@@ -11870,6 +11925,13 @@ void NavierStokes::LSA_normalize_eigenvectorALL(
      cell_mf,face_mf,
      cell_max,face_max,isweep);
   } //ilev
+  if (1==1) { 
+   std::cout << "LSA_normalize_eigenvectorALL\n";
+   for (int i=0;i<cell_max.size();i++) {
+    std::cout << "i= " << i << " cell_max[i]= " <<
+     cell_max[i] <<'\n';
+   }
+  }
  } //isweep=0,1
 
 } //end subroutine LSA_normalize_eigenvectorALL
