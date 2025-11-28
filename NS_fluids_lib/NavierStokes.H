@@ -299,7 +299,7 @@ public:
     void LSA_normalize_eigenvector(
       int unperturb_cell_mf,int unperturb_face_mf,
       int cell_mf,int face_mf,
-      Vector<Real> cell_max,Vector<Real> face_max,
+      Vector<Real>& cell_max,Vector<Real>& face_max,
       int isweep);
     void LSA_normalize_eigenvectorALL(
       int unperturb_cell_mf,int unperturb_face_mf,
