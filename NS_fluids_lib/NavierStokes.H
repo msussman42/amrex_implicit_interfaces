@@ -315,7 +315,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement();
+    void prepare_displacement(int local_smoothing);
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -780,8 +780,8 @@ protected:
     void check_for_NAN(const std::string& caller_string,
      MultiFab* mf);
 
-    void split_scalar_advection(); 
-    void split_scalar_advectionALL();
+    void split_scalar_advection(int local_smoothing); 
+    void split_scalar_advectionALL(int local_smoothing);
  
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
@@ -849,7 +849,9 @@ protected:
 
     void solid_temperature();
 
-    void nonlinear_advection(const std::string& caller_string);
+    void nonlinear_advection(const std::string& caller_string,
+      int smoothing_iter);
+    void smoothing_advection();
 
     void advance_MAC_velocity(int project_option);
 
@@ -1040,6 +1042,7 @@ protected:
       Long& num_particles_sanity_check,
       Long& misplaced_particles);
     void move_particles(
+      int local_smoothing,
       int splitting_dir,
       My_ParticleContainer& localPC,
       const std::string& caller_string);
@@ -1744,6 +1747,8 @@ protected:
     static int Tensor_Type;
     static int Refine_Density_Type;
     static int NUM_STATE_TYPE;
+
+    static int surface_tension_smoothing;
 
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;

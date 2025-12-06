@@ -323,6 +323,7 @@ extern "C"
     int* bfact);
 
    void fort_estdt(
+      int* surface_tension_smoothing,
       int* interface_mass_transfer_model,
       int* tid,
       int* enable_spectral,

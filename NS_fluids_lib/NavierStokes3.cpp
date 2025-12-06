@@ -318,14 +318,101 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 
 }
 
-void NavierStokes::nonlinear_advection(const std::string& caller_string) {
+// 1. advection
+// 2. smoothing
+// 3. phase change
+// 4. viscosity
+// 5. projection (surface tension turned off)
+//
+// smoothing:
+// for k=1,2,3,...
+//  a) compute curvature
+//  b) physical grid variable (clamp ice, elastic, rigid)
+//     (density=1)
+//  c) save MAC velocity
+//  d) smooth project (surface tension turned on)
+//  e) save MAC velocity to UMAC_STATIC_MF
+//  f) restore original MAC velocity
+//  g) directionally split advection using UMAC_STATIC_MF (particles,F,X,LS)
+// 
+
+void NavierStokes::smoothing_advection() {
+
+ std::string local_caller_string="smoothing_advection";
+
+ int finest_level=parent->finestLevel();
+
+ int local_num_steps=surface_tension_smoothing;
+
+ if ((divu_outer_sweeps>=0)&&
+     (divu_outer_sweeps<num_divu_outer_sweeps-1)) {
+  local_num_steps=1;
+ } else if (divu_outer_sweeps==num_divu_outer_sweeps-1) {
+  //do nothing
+ } else
+  amrex::Error("divu_outer_sweeps invalid smoothing_advection");
+ 
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   ns_level.new_localMF(UMAC_STATIC_MF+dir,1,0,dir);
+  }
+ }
+  
+ for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) {
+  no_mass_transfer_code_segment(local_caller_string);
+  int renormalize_only=1;
+  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+   //USTAR=0
+   //density=1
+  make_physics_varsALL(SOLVETYPE_SMOOTH,local_caller_string); 
+  delete_array(CELLTENSOR_MF);
+  delete_array(FACETENSOR_MF);
+  advance_MAC_velocity(SOLVETYPE_SMOOTH);
+  multiphase_project(SOLVETYPE_SMOOTH);
+  nonlinear_advection(local_caller_string,n_smooth);
+ }
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.delete_localMF(UMAC_STATIC_MF,AMREX_SPACEDIM);
+ }
+
+} //end subroutine smoothing_advection
+
+void NavierStokes::nonlinear_advection(const std::string& caller_string,
+  int smoothing_iter) {
 
  std::string local_caller_string="nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
 
+ if (smoothing_iter>=0) {
+  //do nothing
+ } else
+  amrex::Error("smoothing_iter invalid");
+
  init_rest_fraction(local_caller_string);
 
- if (pattern_test(local_caller_string,"do_the_advance")==1) {
+ int local_smoothing=0;
+
+ if (pattern_test(local_caller_string,"smoothing_advection")==1) { 
+
+  local_smoothing=surface_tension_smoothing;
+
+  advect_time_slab=cur_time_slab;
+  vel_time_slab=-1;
+
+  if (surface_tension_smoothing>=1) {
+   //do nothing
+  } else
+   amrex::Error("surface_tension_smoothing invalid");
+
+  if (SDC_outer_sweeps==0) {
+   // do nothing
+  } else
+   amrex::Error("SDC_outer_sweeps invalid nonlinear_advection(smoothing)");
+
+ } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
   advect_time_slab=prev_time_slab;
 
   if (divu_outer_sweeps==0) 
@@ -383,7 +470,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 #endif
 
  NavierStokes& ns_fine=getLevel(finest_level);
- int basestep=ns_fine.nStep();
+ int basestep=ns_fine.nStep()+smoothing_iter;
 
  order_direct_split=basestep-2*(basestep/2);
 
@@ -396,7 +483,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   ns_level.new_localMF(VOF_PREV_TIME_MF,num_materials,2,-1);
  }  // ilev=finest_level ... level
 
-  // order_direct_split=base_step mod 2
+  // order_direct_split=basestep mod 2
  map_forward_direct_split.resize(AMREX_SPACEDIM);
  normdir_direct_split.resize(AMREX_SPACEDIM);
 
@@ -451,13 +538,18 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
 
- // delete_advect_vars() called in NavierStokes::do_the_advance
- // right after increment_face_velocityALL. 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
-  ns_level.prepare_advect_vars(prev_time_slab);
- }
+ if (local_smoothing==0) {
+  // delete_advect_vars() called in NavierStokes::do_the_advance
+  // right after increment_face_velocityALL. 
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+   ns_level.prepare_advect_vars(prev_time_slab);
+  }
+ } else if (local_smoothing>0) {
+  //do nothing
+ } else
+  amrex::Error("local_smoothing invalid");
 
 #ifdef AMREX_PARTICLES
 
@@ -471,11 +563,16 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   bool remove_negative=true;
 
     // level=0
-    // particles at t^{n}
+    // particles at t^{n} 
   My_ParticleContainer& prevPC=newDataPC(slab_step);
 
-  prevPC.Redistribute(lev_min,lev_max,
+  if (local_smoothing==0) {
+   prevPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_redistribute_main,remove_negative);
+  } else if (local_smoothing>0) {
+   prevPC.clearParticles(); //always start fresh if smoothing
+  } else
+   amrex::Error("local_smoothing invalid");
 
     // level=0
   My_ParticleContainer& localPC=newDataPC(slab_step+1);
@@ -524,7 +621,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.prepare_displacement();
+  ns_level.prepare_displacement(local_smoothing);
  } // ilev
 
  for (dir_absolute_direct_split=0;
@@ -558,7 +655,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else
     amrex::Error("dir_absolute_direct_split invalid");
 
-   split_scalar_advectionALL();
+   split_scalar_advectionALL(local_smoothing);
 
    interface_touch_flag=1; //nonlinear_advection
 
@@ -579,6 +676,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      NavierStokes& ns_level=getLevel(ilev);
       //move_particles() declared in NavierStokes2.cpp
      ns_level.move_particles(
+       local_smoothing,
        normdir_here,
        localPC,
        local_caller_string);
@@ -661,7 +759,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 //    b. init U,T in the solid regions.
 //    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if (read_from_CAD()==1) {
+ if (local_smoothing==0) {
+
+  if (read_from_CAD()==1) {
 
     //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
    renormalize_only=1;
@@ -741,16 +841,16 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else
     amrex::Error("ok_copy_FSI_old_to_new invalid");
 
- } else if (read_from_CAD()==0) {
-  // do nothing
- } else
-  amrex::Error("read_from_CAD() invalid");
+  } else if (read_from_CAD()==0) {
+   // do nothing
+  } else
+   amrex::Error("read_from_CAD() invalid");
 
- regenerate_from_eulerian(cur_time_slab);
+  regenerate_from_eulerian(cur_time_slab);
 
- interface_touch_flag=1; //nonlinear_advection
+  interface_touch_flag=1; //nonlinear_advection
 
- if (1==0) {
+  if (1==0) {
    // S_new is level 0 data
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    // data file name "BEFOREPRESCRIBE<stuff>.plt"
@@ -766,7 +866,12 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     State_Type, //state_type_mf==State_Type
     -1, // data_dir==-1
     parent->levelSteps(0)); 
- }
+  }
+
+ } else if (local_smoothing>0) {
+  //do nothing
+ } else
+  amrex::Error("local_smoothing invalid");
 
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
@@ -1928,6 +2033,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
  if (stokes_flow==0) {
 
   int finest_level=parent->finestLevel();
+
   if ((ns_time_order==1)&&(enable_spectral!=0))
    amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
   if ((ns_time_order>=2)&&(enable_spectral!=1))
@@ -2519,7 +2625,12 @@ void NavierStokes::phase_change_code_segment(
    NavierStokes& ns_level=getLevel(ilev);
    int splitting_dir=-1;
     //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(splitting_dir,localPC,local_caller_string);
+   int local_smoothing=0;
+   ns_level.move_particles(
+     local_smoothing,
+     splitting_dir,
+     localPC,
+     local_caller_string);
   }
 
   Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
@@ -2966,7 +3077,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
      if (disable_advection==0) {
 
-      nonlinear_advection(local_caller_string);
+      int smoothing_iter=0;
+      nonlinear_advection(local_caller_string,smoothing_iter);
 
       if (step_through_data==1) {
        int basestep_debug=nStep();
@@ -3130,6 +3242,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //    If no mass transfer
       //    (a) slopes/redistance
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+
+      if (surface_tension_smoothing==0) {
+       //do nothing
+      } else if (surface_tension_smoothing>0) {
+     
+       smoothing_advection();
+
+      } else
+       amrex::Error("surface_tension_smoothing invalid");
 
       if (mass_transfer_active==1) {
 
