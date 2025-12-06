@@ -2434,6 +2434,7 @@ stop
       ! uu_estdt_max(sdim+1) is max c^2
       ! called from: void NavierStokes::MaxAdvectSpeed when static_flag==0
       subroutine fort_estdt( &
+        surface_tension_smoothing, &
         interface_mass_transfer_model, &
         tid, &
         enable_spectral, &
@@ -2496,6 +2497,7 @@ stop
       use hydrateReactor_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: surface_tension_smoothing
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: nparts_def
@@ -2869,8 +2871,10 @@ stop
          else if (user_tension(iten).eq.zero) then
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).gt.zero) then
+
           den1=denconst(im)
           den2=denconst(im_opp)
+ 
           mu=get_user_viscconst(im,den1,fort_tempconst(im))
           visc1=visc_coef*mu+EPS10
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
@@ -2907,10 +2911,21 @@ stop
            endif
 
           else
-           print *,"denconst_interface_min invalid fort_estdt"
+           print *,"denconst_interface_min invalid fort_estdt: ", &
+            iten,denconst_interface_min(iten)
            stop
           endif
 
+          if (surface_tension_smoothing.eq.0) then
+           !do nothing
+          else if (surface_tension_smoothing.ge.1) then
+           den1=one
+           den2=one
+          else
+           print *,"surface_tension_smoothing invalid: ", &
+             surface_tension_smoothing
+           stop
+          endif
 
            ! capillary_wave_speed declared in PROB.F90
            ! theory:
@@ -2932,6 +2947,17 @@ stop
            visc1,visc2, &
            user_tension(iten), &
            cap_wave_speed(iten)) !INTENT(out)
+
+          if (surface_tension_smoothing.eq.0) then
+           !do nothing
+          else if (surface_tension_smoothing.ge.1) then
+           cap_wave_speed(iten)=cap_wave_speed(iten)/ &
+             surface_tension_smoothing
+          else
+           print *,"surface_tension_smoothing invalid: ", &
+             surface_tension_smoothing
+           stop
+          endif
 
          else
           print *,"user_tension invalid fort_estdt"

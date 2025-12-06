@@ -642,6 +642,8 @@ int NavierStokes::idx_scalar_mask_material_mf=-1;
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
+int NavierStokes::surface_tension_smoothing=0;
+
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
@@ -4128,6 +4130,8 @@ NavierStokes::read_params ()
 
     constant_density_all_time.resize(num_materials);
 
+     // in: read_params
+
     tension.resize(num_interfaces);
     ice_normal_weight.resize(num_interfaces);
     tension_init.resize(num_interfaces);
@@ -4244,6 +4248,8 @@ NavierStokes::read_params ()
     }
     molar_mass.resize(num_materials);
 
+     // in: read_params
+
     density_floor.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
      density_floor[i]=0.0;
@@ -4335,6 +4341,10 @@ NavierStokes::read_params ()
       denconst_interface_min,num_interfaces);
     pp.queryAdd("viscconst_interface_min",
       viscconst_interface_min,num_interfaces);
+
+     // in: read_params
+
+    pp.queryAdd("surface_tension_smoothing",surface_tension_smoothing);
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
@@ -6261,6 +6271,9 @@ NavierStokes::read_params ()
       std::cout << "speciesreactionrate i=" << i << "  " << 
           speciesreactionrate[i] << '\n';
      }
+
+     std::cout << "surface_tension_smoothing= " << 
+       surface_tension_smoothing << '\n';
 
      std::cout << "stokes_flow= " << stokes_flow << '\n';
      std::cout << "cancel_advection= " << cancel_advection << '\n';
@@ -14498,7 +14511,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 } // end subroutine prepare_mask_nbr(int ngrow)
 
 void 
-NavierStokes::prepare_displacement() {
+NavierStokes::prepare_displacement(int local_smoothing) {
  
  bool use_tiling=ns_tiling;
 
@@ -14511,8 +14524,15 @@ NavierStokes::prepare_displacement() {
 
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
-   //Umac_Type
-  MultiFab* temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
+  MultiFab* temp_mac_velocity=nullptr;
+  if (local_smoothing==0) {
+    //Umac_Type
+   temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
+  } else if (local_smoothing>0) {
+   //FIX ME (use homogeneous boundary conditions)
+  } else
+   amrex::Error("local_smoothing invalid");
+
 
    // RAW_MAC_VELOCITY_MF and
    // MAC_VELOCITY_MF deleted towards the end of 
@@ -19037,7 +19057,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 } // end subroutine SEM_scalar_advection
 
 void 
-NavierStokes::split_scalar_advectionALL() { 
+NavierStokes::split_scalar_advectionALL(int local_smoothing) { 
 
  interface_touch_flag=1; //split_scalar_advectionALL
 
@@ -19057,7 +19077,7 @@ NavierStokes::split_scalar_advectionALL() {
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.split_scalar_advection();
+  ns_level.split_scalar_advection(local_smoothing);
  } // ilev
 
 #if (NS_profile_solver==1)
@@ -19071,8 +19091,9 @@ NavierStokes::split_scalar_advectionALL() {
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
 void 
-NavierStokes::split_scalar_advection() { 
- 
+NavierStokes::split_scalar_advection(int local_smoothing) { 
+
+  //FIX ME 
  std::string local_caller_string="split_scalar_advection";
 
  bool use_tiling=ns_tiling;
@@ -23704,6 +23725,7 @@ void NavierStokes::MaxAdvectSpeed(
 
    // declared in: GODUNOV_3D.F90
    fort_estdt(
+    &surface_tension_smoothing,
     interface_mass_transfer_model.dataPtr(),
     &tid_current,
     &local_enable_spectral,
