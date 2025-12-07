@@ -355,7 +355,8 @@ void NavierStokes::smoothing_advection() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   ns_level.new_localMF(UMAC_STATIC_MF+dir,1,0,dir);
+   int mac_grow=2;
+   ns_level.new_localMF(UMAC_STATIC_MF+dir,1,mac_grow,dir);
   }
  }
   

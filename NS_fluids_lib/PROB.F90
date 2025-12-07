@@ -16845,7 +16845,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
       else
-       print *,"vel_homflag invalid"
+       print *,"vel_homflag invalid: ",vel_homflag
        stop
       endif
 
@@ -23459,7 +23459,7 @@ end subroutine initialize2d
         else if (homflag.eq.1) then
          vel_homflag=1
         else
-         print *,"homflag invalid in override pbc 2"
+         print *,"homflag invalid in override pbc 2: ",homflag
          stop
         endif
        else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature
@@ -28252,7 +28252,7 @@ end subroutine initialize2d
       if (grid_type.eq.-1) then
        ! do nothing
       else
-       print *,"grid_type invalid"
+       print *,"grid_type invalid: ",grid_type
        stop
       endif
 
@@ -28995,7 +28995,7 @@ end subroutine initialize2d
        velcomp=grid_type+1
        veldir=grid_type
       else
-       print *,"grid_type invalid in umacfill"
+       print *,"grid_type invalid in umacfill: ",grid_type
        stop
       endif
 

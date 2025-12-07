@@ -6829,28 +6829,52 @@ void NavierStokes::move_particles(
  BLProfiler bprof(local_caller_string);
 #endif
 
- if (pattern_test(local_caller_string,"do_the_advance")==1) {
-  //do nothing
- } else {
-  std::cout << local_caller_string << '\n';
-  amrex::Error("caller is invalid in move_particles");
- }
-
  int phase_change_displacement=0;
+ Real local_dt=dt_slab;
+ int homflag=0;
+ int local_project_option=SOLVETYPE_VISC;
 
  if (local_smoothing>0) {
-  //do nothing
+
+  local_dt=local_dt/local_smoothing;
+  homflag=1;
+
  } else if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
+
+  if (pattern_test(local_caller_string,"do_the_advance")==1) {
+   //do nothing
+  } else {
+   std::cout << local_caller_string << '\n';
+   amrex::Error("caller is invalid in move_particles");
+  }
+
   if (local_smoothing==0) {
    //do nothing
   } else
    amrex::Error("local_smoothing invalid");
+
  } else if (pattern_test(local_caller_string,"phase_change_code_segment")==1) {
+
+  if (pattern_test(local_caller_string,"do_the_advance")==1) {
+   //do nothing
+  } else {
+   std::cout << local_caller_string << '\n';
+   amrex::Error("caller is invalid in move_particles");
+  }
+
+  if (local_smoothing==0) {
+   //do nothing
+  } else
+   amrex::Error("local_smoothing invalid");
+
   phase_change_displacement=1;
+
  } else {
   std::cout << local_caller_string << '\n';
   amrex::Error("caller is invalid in move_particles");
  }
+
+ fort_overridepbc(&homflag,&local_project_option);
 
  bool use_tiling=ns_tiling;
 
@@ -6994,7 +7018,7 @@ void NavierStokes::move_particles(
    xlo,dx,
    particles_AoS.data(),
    Np,  // pass by value
-   &dt_slab, //move_particle_container
+   &local_dt, //move_particle_container
    &vel_time_slab,
    xvelfab.dataPtr(),
    ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
@@ -7017,6 +7041,9 @@ void NavierStokes::move_particles(
 } // omp
  ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
 
+ homflag=0;
+ fort_overridepbc(&homflag,&local_project_option);
+
  using MyParIter=My_ParticleContainer::ParIterType;
  for (MyParIter pti(localPC,level);pti.isValid();++pti) {
   auto& particles=pti.GetArrayOfStructs();
@@ -7037,15 +7064,6 @@ void NavierStokes::move_particles(
  }
 
  delete lsmf;
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  if (phase_change_displacement==0) {
-   //do nothing
-  } else if (phase_change_displacement==1) {
-   //do nothing
-  } else
-   amrex::Error("phase_change_displacement invalid");
- }
 
 #if (NS_profile_solver==1)
  bprof.stop();

@@ -4424,7 +4424,7 @@ stop
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"normdir invalid"
+       print *,"normdir invalid fort_velmac_override: ",normdir
        stop
       endif
       if ((dir_absolute_direct_split.ge.0).and. &
@@ -4452,10 +4452,10 @@ stop
       endif
 
       if (level.gt.finest_level) then
-       print *,"finest_level invalid velmac override"
+       print *,"finest_level invalid fort_velmac_override: ",finest_level
        stop
       else if (level.lt.0) then
-       print *,"level invalid velmac override"
+       print *,"level invalid fort_velmac_override: ",level
        stop
       endif
       if ((SDC_outer_sweeps.ge.0).and. &
@@ -4481,7 +4481,7 @@ stop
       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
-       print *,"levelrz invalid velmac override"
+       print *,"levelrz invalid fort_velmac_override ",levelrz
        stop
       endif
 
@@ -4491,7 +4491,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_velmac_override: ",dt
        stop
       endif
 
@@ -4537,7 +4537,7 @@ stop
         if (hx.gt.zero) then
          ! do nothing
         else
-         print *,"xstenMAC bust: ",hx
+         print *,"xstenMAC bust fort_velmac_override: ",hx
          stop
         endif
 
@@ -4554,7 +4554,7 @@ stop
           RR=xstenMAC(0,1)
          endif
         else
-         print *,"levelrz invalid velmac override"
+         print *,"levelrz invalid fort_velmac_override: ",levelrz
          stop
         endif
 
@@ -4570,7 +4570,7 @@ stop
                  (idx.lt.fabhi(normdir+1)+1)) then
          ! do nothing
         else
-         print *,"idx invalid"
+         print *,"idx invalid fort_velmac_override: ",idx
          stop
         endif
 
@@ -4589,13 +4589,13 @@ stop
          else if (localbc.eq.FOEXTRAP) then
           ! do nothing
          else
-          print *,"localbc invalid"
+          print *,"localbc invalid fort_velmac_override: ",localbc
           stop
          endif  ! cases for localbc 
         else if (side.eq.0) then
          ! do nothing
         else
-         print *,"side invalid"
+         print *,"side invalid fort_velmac_override: ",side
          stop
         endif  
 
@@ -4640,7 +4640,7 @@ stop
          else if (delta.ge.zero) then
           delta=(one-EPS6)*hx
          else
-          print *,"delta is corrupt: ",delta
+          print *,"delta is corrupt fort_velmac_override: ",delta
           stop
          endif
          
