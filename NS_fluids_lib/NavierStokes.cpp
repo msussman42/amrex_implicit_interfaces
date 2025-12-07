@@ -14513,6 +14513,8 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 void 
 NavierStokes::prepare_displacement(int local_smoothing) {
  
+ std::string local_caller_string="prepare_displacement";
+
  bool use_tiling=ns_tiling;
 
   // 2 ghost cells needed in order to define the displacement MAC
@@ -14522,6 +14524,20 @@ NavierStokes::prepare_displacement(int local_smoothing) {
 
  int finest_level=parent->finestLevel();
 
+ int homflag=0;
+ Real local_dt=dt_slab;
+ int local_project_option=SOLVETYPE_VISC;
+
+ if (local_smoothing==0) {
+  //do nothing 
+ } else if (local_smoothing>0) {
+  homflag=1;
+  local_dt=local_dt/local_smoothing;
+ } else
+  amrex::Error("local_smoothing invalid");
+
+ fort_overridepbc(&homflag,&local_project_option); 
+
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
   MultiFab* temp_mac_velocity=nullptr;
@@ -14529,7 +14545,18 @@ NavierStokes::prepare_displacement(int local_smoothing) {
     //Umac_Type
    temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
   } else if (local_smoothing>0) {
-   //FIX ME (use homogeneous boundary conditions)
+   Vector<int> scompBC_map;
+   scompBC_map.resize(1);
+   scompBC_map[0]=0;
+   debug_ngrow(UMAC_STATIC_MF+normdir,mac_grow,local_caller_string);
+   GetStateFromLocalALL(UMAC_STATIC_MF+normdir,mac_grow,0,1,
+      Umac_Type+normdir,scompBC_map);
+   BoxArray edge_boxes(grids);
+   edge_boxes.surroundingNodes(normdir);
+   temp_mac_velocity=new MultiFab(edge_boxes,dmap,1,mac_grow,
+     MFInfo().SetTag("temp_mac_velocity"),FArrayBoxFactory());
+   MultiFab::Copy(*temp_mac_velocity,*localMF[UMAC_STATIC_MF+normdir],
+		  0,0,1,mac_grow);
   } else
    amrex::Error("local_smoothing invalid");
 
@@ -14537,7 +14564,7 @@ NavierStokes::prepare_displacement(int local_smoothing) {
    // RAW_MAC_VELOCITY_MF and
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
-   // velocity * dt_slab
+   // velocity * local_dt
   new_localMF(MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
   new_localMF(RAW_MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
 
@@ -14547,11 +14574,10 @@ NavierStokes::prepare_displacement(int local_smoothing) {
   const Real* dx = geom.CellSize();
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
-  // 1. multiply velocity by dt_slab.  
+  // 1. multiply velocity by local_dt.  
   // 2. adjust velocity if RZ.  
   // 3. override velocity if it is a passive advection problem.
   // 4. copy into mac_velocity
-  // 5. repeat for cell_velocity
   if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
@@ -14592,7 +14618,7 @@ NavierStokes::prepare_displacement(int local_smoothing) {
      fablo,fabhi,
      &bfact,
      velbc.dataPtr(),
-     &dt_slab,//fort_velmac_override
+     &local_dt,//fort_velmac_override
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
@@ -14630,6 +14656,9 @@ NavierStokes::prepare_displacement(int local_smoothing) {
 
   localMF[MAC_VELOCITY_MF+normdir]->FillBoundary(geom.periodicity());
  } // normdir=0..sdim-1
+
+ homflag=0;
+ fort_overridepbc(&homflag,&local_project_option); 
 
 }  // end subroutine prepare_displacement
 
@@ -19093,7 +19122,6 @@ NavierStokes::split_scalar_advectionALL(int local_smoothing) {
 void 
 NavierStokes::split_scalar_advection(int local_smoothing) { 
 
-  //FIX ME 
  std::string local_caller_string="split_scalar_advection";
 
  bool use_tiling=ns_tiling;
@@ -19176,32 +19204,12 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombc[m]=b_rec[m];
 
-  // in: split_scalar_advection
- getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
-
- //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
-
- // getStateMOM_DEN declared in: NavierStokes.cpp
- // if override_density(im)=0 or 2, density is not modified:
- // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
- //   In general (non-inertial reference frame):
- //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
- //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
- getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
-
  int TENSOR_RECON_MF_local=-1;
  int Tensor_Type_local=-1;
-
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   TENSOR_RECON_MF_local=TENSOR_RECON_MF;
   Tensor_Type_local=Tensor_Type;
-   //ngrow=2
-  getStateTensor_localMF(
-   TENSOR_RECON_MF_local,
-   ngrow,0,
-   NUM_CELL_ELASTIC_REFINE,
-   advect_time_slab);
  } else if (num_materials_viscoelastic==0) {
   Tensor_Type_local=State_Type;
   TENSOR_RECON_MF_local=DEN_RECON_MF;
@@ -19217,11 +19225,6 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
      (num_materials_compressible<=num_materials)) {
   REFINE_DENSITY_RECON_MF_local=REFINE_DENSITY_RECON_MF;
   Refine_Density_Type_local=Refine_Density_Type;
-  getStateRefineDensity_localMF(
-   REFINE_DENSITY_RECON_MF_local,
-   ngrow,0,
-   NUM_CELL_REFINE_DENSITY,
-   advect_time_slab);
  } else if (num_materials_compressible==0) {
   Refine_Density_Type_local=State_Type;
   REFINE_DENSITY_RECON_MF_local=DEN_RECON_MF;
@@ -19229,44 +19232,14 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   amrex::Error("num_materials_compressble invalid");
 
  MultiFab& Refine_Density_new=
-	 get_new_data(Refine_Density_Type_local,slab_step+1);
+    get_new_data(Refine_Density_Type_local,slab_step+1);
 
  getStateDist_localMF(LS_RECON_MF,ngrow,advect_time_slab,
      local_caller_string);
 
-   // the pressure from before will be copied to the new pressure.
- getState_localMF(VELADVECT_MF,ngrow,
-  STATECOMP_VEL,
-  STATE_NCOMP_VEL+STATE_NCOMP_PRES,
-  advect_time_slab); 
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
- } // dir = 0..sdim-1
-
- if ((dir_absolute_direct_split<0)||
-     (dir_absolute_direct_split>=AMREX_SPACEDIM))
-  amrex::Error("dir_absolute_direct_split invalid");
-
- if (dir_absolute_direct_split==0) {
-
-  // do nothing
-
- } else if ((dir_absolute_direct_split>=1)&&
-            (dir_absolute_direct_split<AMREX_SPACEDIM)) {
-  // do nothing
- } else
-  amrex::Error("dir_absolute_direct_split invalid");
-
  int vofrecon_ncomp=localMF[SLOPE_RECON_MF]->nComp();
  if (vofrecon_ncomp!=num_materials*ngeom_recon)
    amrex::Error("recon ncomp bust");
-
- int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
- if (den_recon_ncomp!=num_state_material*num_materials)
-   amrex::Error("den_recon invalid");
- if (localMF[MOM_DEN_MF]->nComp()!=num_materials)
-  amrex::Error("MOM_DEN_MF invalid nComp()");
 
  int LS_recon_ncomp=localMF[LS_RECON_MF]->nComp();
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
@@ -19277,39 +19250,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
  resize_mask_nbr(ngrow);
  debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string); 
 
- MultiFab* umac_new[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
- }
-
  int ngrid=grids.size();
-
- int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
-
- MultiFab* conserve=new MultiFab(grids,dmap,
-   nc_conserve,
-   ngrow,
-   MFInfo().SetTag("conserve"),FArrayBoxFactory());
-
- int nc_bucket=CISLCOMP_NCOMP;
-
- MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
- MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-
-    //ncomp=2 ngrow=1
-  side_bucket_mom[dir]=new MultiFab(grids,dmap,
-     2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=1
-  side_bucket_mom[dir]->setVal(0.0,0,2,1);
-
-   //ncomp=2 ngrow=1
-  side_bucket_mass[dir]=new MultiFab(grids,dmap,
-     2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
-   //scomp=0 ncomp=2 ngrow=1
-  side_bucket_mass[dir]->setVal(0.0,0,2,1);
- }  // dir = 0..sdim-1
 
  Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
@@ -19317,105 +19258,28 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   nprocessed[tid]=0.0;
  }
 
-
  double profile_time_start=0.0;
  if (profile_debug==1) {
   profile_time_start=ParallelDescriptor::second();
  }
 
- // in: split_scalar_advection
- // initialize selected state variables 
-
- S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
-
- if (divu_outer_sweeps==0) {
-  S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
- } else if ((divu_outer_sweeps>=1)&&
-            (divu_outer_sweeps<num_divu_outer_sweeps)) {
-  //do nothing
- } else
-  amrex::Error("divu_outer_sweeps invalid");
-
  for (int im=0;im<num_materials;im++) {
   if (ns_is_rigid(im)==0) {
-   S_new.setVal(0.0,
-      STATECOMP_STATES+im*num_state_material,
-      num_state_material,1);
    S_new.setVal(0.0,
       STATECOMP_MOF+im*ngeom_raw,
       ngeom_raw,1);
    LS_new.setVal(0.0,im,1,1);
   } else if (ns_is_rigid(im)==1) {
-   if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-    S_new.setVal(0.0,
-     STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
-   } else if (solidheat_flag==2) { // Neumann
-    // do nothing
-   } else if (solidheat_flag==1) { // dirichlet
-    // do nothing
-   } else
-    amrex::Error("solidheat_flag invalid");
+   //do nothing
   } else
    amrex::Error("ns_is_rigid(im) invalid");
  } // im=0..num_materials-1
 
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=num_materials)) {
+ MultiFab* conserve=nullptr;
 
-  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
-   // do nothing
-  } else
-   amrex::Error("NUM_CELL_ELASTIC invalid");
-
-  if (NUM_CELL_ELASTIC_REFINE==
-      num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
-   // do nothing
-  } else
-   amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
-
-  if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
-   // do nothing
-  } else
-   amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
-
-  Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
-
- if ((num_materials_compressible>=1)&&
-     (num_materials_compressible<=num_materials)) {
-
-  if (NUM_CELL_REFINE_DENSITY==
-      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
-   // do nothing
-  } else
-   amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
-
-  if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
-   // do nothing
-  } else
-   amrex::Error("(Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) failed");
-
-  Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
- } else if (num_materials_compressible==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
- if (dir_absolute_direct_split==0) {
-
-   // initialize the error indicator to be 0.0
-  S_new.setVal(0.0,ncomp_state-1,1,1);
-
- } else if ((dir_absolute_direct_split==1)||
-            (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
-  // do nothing
- } else {
-  amrex::Error("dir_absolute_direct_split invalid");
- }
-
+ MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
+ MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
+ 
  Vector< int > grids_per_proc;
  grids_per_proc.resize(amrex::ParallelDescriptor::NProcs());
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
@@ -19426,187 +19290,496 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
+ if (local_smoothing==0) {
+
+  // in: split_scalar_advection
+  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
+
+  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
+
+  // getStateMOM_DEN declared in: NavierStokes.cpp
+  // if override_density(im)=0 or 2, density is not modified:
+  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+  //   In general (non-inertial reference frame):
+  //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+  //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
+  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
+
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
+   //ngrow=2
+   getStateTensor_localMF(
+    TENSOR_RECON_MF_local,
+    ngrow,0,
+    NUM_CELL_ELASTIC_REFINE,
+    advect_time_slab);
+  } else if (num_materials_viscoelastic==0) {
+   //do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   getStateRefineDensity_localMF(
+    REFINE_DENSITY_RECON_MF_local,
+    ngrow,0,
+    NUM_CELL_REFINE_DENSITY,
+    advect_time_slab);
+  } else if (num_materials_compressible==0) {
+   //do nothing
+  } else
+   amrex::Error("num_materials_compressble invalid");
+
+   // the pressure from before will be copied to the new pressure.
+  getState_localMF(VELADVECT_MF,ngrow,
+   STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+   advect_time_slab); 
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
+  } // dir = 0..sdim-1
+
+  if ((dir_absolute_direct_split<0)||
+      (dir_absolute_direct_split>=AMREX_SPACEDIM))
+   amrex::Error("dir_absolute_direct_split invalid");
+
+  if (dir_absolute_direct_split==0) {
+
+   // do nothing
+
+  } else if ((dir_absolute_direct_split>=1)&&
+             (dir_absolute_direct_split<AMREX_SPACEDIM)) {
+   // do nothing
+  } else
+   amrex::Error("dir_absolute_direct_split invalid");
+
+  int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
+  if (den_recon_ncomp!=num_state_material*num_materials)
+   amrex::Error("den_recon invalid");
+  if (localMF[MOM_DEN_MF]->nComp()!=num_materials)
+   amrex::Error("MOM_DEN_MF invalid nComp()");
+
+  MultiFab* umac_new[AMREX_SPACEDIM];
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
+  }
+
+  int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
+
+  conserve=new MultiFab(grids,dmap,
+   nc_conserve,
+   ngrow,
+   MFInfo().SetTag("conserve"),FArrayBoxFactory());
+
+  int nc_bucket=CISLCOMP_NCOMP;
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+    //ncomp=2 ngrow=1
+   side_bucket_mom[dir]=new MultiFab(grids,dmap,
+     2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=1
+   side_bucket_mom[dir]->setVal(0.0,0,2,1);
+
+   //ncomp=2 ngrow=1
+   side_bucket_mass[dir]=new MultiFab(grids,dmap,
+     2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
+   //scomp=0 ncomp=2 ngrow=1
+   side_bucket_mass[dir]->setVal(0.0,0,2,1);
+  }  // dir = 0..sdim-1
+
+  // in: split_scalar_advection
+  // initialize selected state variables 
+
+  S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+
+  if (divu_outer_sweeps==0) {
+   S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+  } else if ((divu_outer_sweeps>=1)&&
+            (divu_outer_sweeps<num_divu_outer_sweeps)) {
+   //do nothing
+  } else
+   amrex::Error("divu_outer_sweeps invalid");
+
+  for (int im=0;im<num_materials;im++) {
+   if (ns_is_rigid(im)==0) {
+    S_new.setVal(0.0,
+      STATECOMP_STATES+im*num_state_material,
+      num_state_material,1);
+   } else if (ns_is_rigid(im)==1) {
+    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
+     S_new.setVal(0.0,
+      STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
+    } else if (solidheat_flag==2) { // Neumann
+     // do nothing
+    } else if (solidheat_flag==1) { // dirichlet
+     // do nothing
+    } else
+     amrex::Error("solidheat_flag invalid");
+   } else
+    amrex::Error("ns_is_rigid(im) invalid");
+  } // im=0..num_materials-1
+
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
+
+   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   if (NUM_CELL_ELASTIC_REFINE==
+       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
+   if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+    // do nothing
+   } else
+    amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
+
+   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
+  } else if (num_materials_viscoelastic==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+
+   if (NUM_CELL_REFINE_DENSITY==
+       num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+ 
+   if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
+    // do nothing
+   } else
+    amrex::Error("(Refine_Density_new.nComp()!=NUM_CELL_REFINE_DENSITY)");
+
+   Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
+  } else if (num_materials_compressible==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+
+  if (dir_absolute_direct_split==0) {
+
+   // initialize the error indicator to be 0.0
+   S_new.setVal(0.0,ncomp_state-1,1,1);
+
+  } else if ((dir_absolute_direct_split==1)||
+             (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
+   // do nothing
+  } else {
+   amrex::Error("dir_absolute_direct_split invalid");
+  }
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
 
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
 
-  const Real* xlo = grid_loc[gridno].lo();
+   const Real* xlo = grid_loc[gridno].lo();
 
-    // mask=tag if not covered by level+1 or outside the domain.
-    // mask=1-tag if covered by level+1 and inside the domain.
-    // NavierStokes::maskfiner  (clear_phys_boundary==0)
-  FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
-   // mask_nbr:
-   // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-   // (2) =1 interior  =0 otherwise
-   // (3) =1 interior+ngrow-1  =0 otherwise
-   // (4) =1 interior+ngrow    =0 otherwise
-  FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
+     // mask=tag if not covered by level+1 or outside the domain.
+     // mask=1-tag if covered by level+1 and inside the domain.
+     // NavierStokes::maskfiner  (clear_phys_boundary==0)
+   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+    // mask_nbr:
+    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+    // (2) =1 interior  =0 otherwise
+    // (3) =1 interior+ngrow-1  =0 otherwise
+    // (4) =1 interior+ngrow    =0 otherwise
+   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
-   // velocity * dt
-  FArrayBox& umac_displace=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-  if (umac_displace.nComp()!=1)
-   amrex::Error("umac_displace has invalid ncomp");
+    // velocity * dt
+   FArrayBox& umac_displace=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
+   if (umac_displace.nComp()!=1)
+    amrex::Error("umac_displace has invalid ncomp");
 
-    // this is the original data
-  FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
-  FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
-  FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
-
-  FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF_local])[mfi];
-  FArrayBox& refinedenfab=(*localMF[REFINE_DENSITY_RECON_MF_local])[mfi];
-
-  FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
-
-    // this is the slope data
-  FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
-
-  FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
-
-  Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
-
-     // this is the result
-  FArrayBox& destfab=S_new[mfi];
-
-  FArrayBox& tennewfab=Tensor_new[mfi];
-  FArrayBox& refinedennewfab=Refine_Density_new[mfi];
-
-  FArrayBox& LSdestfab=LS_new[mfi];
-
-  FArrayBox& consfab=(*conserve)[mfi];
-
-  FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
-  FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
-  FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];
-  FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
-  FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& xmac_new=(*umac_new[0])[mfi];
-  FArrayBox& ymac_new=(*umac_new[1])[mfi];
-  FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& xmac_old=(*localMF[UMACOLD_MF])[mfi];
-  FArrayBox& ymac_old=(*localMF[UMACOLD_MF+1])[mfi];
-  FArrayBox& zmac_old=(*localMF[UMACOLD_MF+AMREX_SPACEDIM-1])[mfi];
-
-  prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-  if (tid_current==0) {
-   grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
-  }
-
-   // solid distance function and solid moments are not modified.
-   // solid temperature is modified only if solidheat_flag==0.
-  fort_vfrac_split(
-   &nprocessed[tid_current],
-   &tid_current,
-   density_floor.dataPtr(),
-   density_ceiling.dataPtr(),
-   &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
-   freezing_model.dataPtr(),
-   distribute_from_target.dataPtr(),
-   constant_density_all_time.dataPtr(),
-   velbc.dataPtr(),
-   &divu_outer_sweeps,
-   &num_divu_outer_sweeps,
-   &EILE_flag,
-   &dir_absolute_direct_split,
-   &normdir_here,
-   tilelo,tilehi,
-   fablo,fabhi,
-   &bfact,
-   &bfact_f,
-   &dt_slab, // fort_vfrac_split
-   &prev_time_slab,
-   &cur_time_slab,
-   &prescribed_vel_time_slab,
      // this is the original data
-   LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
-   ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
-   denfab.dataPtr(),
-   ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-   mom_denfab.dataPtr(),
-   ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-   tenfab.dataPtr(),
-   ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-   refinedenfab.dataPtr(),
-   ARLIM(refinedenfab.loVect()),
-   ARLIM(refinedenfab.hiVect()),
-   velfab.dataPtr(), //VELADVECT_MF
-   ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     // slope data
-   vofslopefab.dataPtr(),
-   ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
-     // this is the result
-   destfab.dataPtr(),
-   ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
-   tennewfab.dataPtr(),
-   ARLIM(tennewfab.loVect()),ARLIM(tennewfab.hiVect()),
-   refinedennewfab.dataPtr(),
-   ARLIM(refinedennewfab.loVect()),
-   ARLIM(refinedennewfab.hiVect()),
-   LSdestfab.dataPtr(),
-   ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
-    // other vars.
-   vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
-   maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-   masknbrfab.dataPtr(),
-   ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
-   umac_displace.dataPtr(),
-   ARLIM(umac_displace.loVect()),
-   ARLIM(umac_displace.hiVect()),
-   xlo,dx,
-    // local variables
-   consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-   xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
-   ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
-   zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
-   xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
-   ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
-   zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-     //umac_new[0..sdim-1]
-   xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
-   ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
-   zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
-    //UMACOLD_MF
-   xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
-   ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
-   zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
-   &stokes_flow,
-   denconst_interface.dataPtr(), //unused in fort_vfrac_split
-   &nc_conserve,
-   &map_forward_direct_split[normdir_here],
-   &vofrecon_ncomp,
-   &den_recon_ncomp,
-   &ncomp_state,
-   &nc_bucket,
-   &verbose,
-   &gridno,&ngrid,
-   &level,
-   &finest_level,
-   dombc.dataPtr(), 
-   domlo,domhi);
+   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
+   FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
+   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
- }  // mfi
+   FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF_local])[mfi];
+   FArrayBox& refinedenfab=(*localMF[REFINE_DENSITY_RECON_MF_local])[mfi];
+
+   FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
+
+     // this is the slope data
+   FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+   FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
+
+   Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
+
+      // this is the result
+   FArrayBox& destfab=S_new[mfi];
+
+   FArrayBox& tennewfab=Tensor_new[mfi];
+   FArrayBox& refinedennewfab=Refine_Density_new[mfi];
+
+   FArrayBox& LSdestfab=LS_new[mfi];
+
+   FArrayBox& consfab=(*conserve)[mfi];
+
+   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
+   FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
+   FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];
+   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
+   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& xmac_new=(*umac_new[0])[mfi];
+   FArrayBox& ymac_new=(*umac_new[1])[mfi];
+   FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+
+   FArrayBox& xmac_old=(*localMF[UMACOLD_MF])[mfi];
+   FArrayBox& ymac_old=(*localMF[UMACOLD_MF+1])[mfi];
+   FArrayBox& zmac_old=(*localMF[UMACOLD_MF+AMREX_SPACEDIM-1])[mfi];
+
+   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   if (tid_current==0) {
+    grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
+   }
+
+    // solid distance function and solid moments are not modified.
+    // solid temperature is modified only if solidheat_flag==0.
+   fort_vfrac_split(
+    &nprocessed[tid_current],
+    &tid_current,
+    density_floor.dataPtr(),
+    density_ceiling.dataPtr(),
+    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
+    freezing_model.dataPtr(),
+    distribute_from_target.dataPtr(),
+    constant_density_all_time.dataPtr(),
+    velbc.dataPtr(),
+    &divu_outer_sweeps,
+    &num_divu_outer_sweeps,
+    &EILE_flag,
+    &dir_absolute_direct_split,
+    &normdir_here,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &bfact_f,
+    &dt_slab, // fort_vfrac_split
+    &prev_time_slab,
+    &cur_time_slab,
+    &prescribed_vel_time_slab,
+      // this is the original data
+    LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
+    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+    denfab.dataPtr(),
+    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+    mom_denfab.dataPtr(),
+    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
+    tenfab.dataPtr(),
+    ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+    refinedenfab.dataPtr(),
+    ARLIM(refinedenfab.loVect()),
+    ARLIM(refinedenfab.hiVect()),
+    velfab.dataPtr(), //VELADVECT_MF
+    ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+      // slope data
+    vofslopefab.dataPtr(),
+    ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
+      // this is the result
+    destfab.dataPtr(),
+    ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
+    tennewfab.dataPtr(),
+    ARLIM(tennewfab.loVect()),ARLIM(tennewfab.hiVect()),
+    refinedennewfab.dataPtr(),
+    ARLIM(refinedennewfab.loVect()),
+    ARLIM(refinedennewfab.hiVect()),
+    LSdestfab.dataPtr(),
+    ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
+     // other vars.
+    vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
+    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    masknbrfab.dataPtr(),
+    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
+    umac_displace.dataPtr(),
+    ARLIM(umac_displace.loVect()),
+    ARLIM(umac_displace.hiVect()),
+    xlo,dx,
+     // local variables
+    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
+    xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
+    ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
+    zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
+    xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
+    ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
+    zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
+      //umac_new[0..sdim-1]
+    xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
+    ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
+    zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
+     //UMACOLD_MF
+    xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
+    ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
+    zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
+    &stokes_flow,
+    denconst_interface.dataPtr(), //unused in fort_vfrac_split
+    &nc_conserve,
+    &map_forward_direct_split[normdir_here],
+    &vofrecon_ncomp,
+    &den_recon_ncomp,
+    &ncomp_state,
+    &nc_bucket,
+    &verbose,
+    &gridno,&ngrid,
+    &level,
+    &finest_level,
+    dombc.dataPtr(), 
+    domlo,domhi);
+
+  }  // mfi
 } // omp
+
+ } else if (local_smoothing>0) {
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+     // mask=tag if not covered by level+1 or outside the domain.
+     // mask=1-tag if covered by level+1 and inside the domain.
+     // NavierStokes::maskfiner  (clear_phys_boundary==0)
+   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+    // mask_nbr:
+    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+    // (2) =1 interior  =0 otherwise
+    // (3) =1 interior+ngrow-1  =0 otherwise
+    // (4) =1 interior+ngrow    =0 otherwise
+   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
+
+    // velocity * dt
+   FArrayBox& umac_displace=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
+   if (umac_displace.nComp()!=1)
+    amrex::Error("umac_displace has invalid ncomp");
+
+     // this is the original data
+   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
+
+     // this is the slope data
+   FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+   FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
+
+   Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
+
+      // this is the result
+   FArrayBox& destfab=S_new[mfi];
+
+   FArrayBox& LSdestfab=LS_new[mfi];
+
+   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   if (tid_current==0) {
+    grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
+   }
+
+    //FIX ME
+    // solid distance function and solid moments are not modified.
+    // solid temperature is modified only if solidheat_flag==0.
+/*
+   fort_vfrac_split_smooth(
+    &local_smoothing,
+    &nprocessed[tid_current],
+    &tid_current,
+    velbc.dataPtr(),
+    &divu_outer_sweeps,
+    &num_divu_outer_sweeps,
+    &EILE_flag,
+    &dir_absolute_direct_split,
+    &normdir_here,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &bfact_f,
+    &dt_slab, // fort_vfrac_split_smooth
+    &prev_time_slab,
+    &cur_time_slab,
+    &prescribed_vel_time_slab,
+      // this is the original data
+    LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
+    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+      // slope data
+    vofslopefab.dataPtr(),
+    ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
+      // this is the result
+    destfab.dataPtr(),
+    ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
+    LSdestfab.dataPtr(),
+    ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
+     // other vars.
+    vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
+    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    masknbrfab.dataPtr(),
+    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
+    umac_displace.dataPtr(),
+    ARLIM(umac_displace.loVect()),
+    ARLIM(umac_displace.hiVect()),
+    xlo,dx,
+    &map_forward_direct_split[normdir_here],
+    &vofrecon_ncomp,
+    &ncomp_state,
+    &nc_bucket,
+    &verbose,
+    &gridno,&ngrid,
+    &level,
+    &finest_level,
+    dombc.dataPtr(), 
+    domlo,domhi);
+*/
+
+  }  // mfi
+} // omp
+ } else
+  amrex::Error("local_smoothing invalid");
+
  ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
@@ -19635,55 +19808,32 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   }
  }
 
- delete conserve;
- 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete side_bucket_mom[dir];
-  delete side_bucket_mass[dir];
- }
-
- delete_localMF(VELADVECT_MF,1);
- delete_localMF(DEN_RECON_MF,1);
- delete_localMF(MOM_DEN_MF,1);
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=num_materials)) {
-  delete_localMF(TENSOR_RECON_MF_local,1);
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
-
- if ((num_materials_compressible>=1)&&
-     (num_materials_compressible<=num_materials)) {
-  delete_localMF(REFINE_DENSITY_RECON_MF_local,1);
- } else if (num_materials_compressible==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
  delete_localMF(LS_RECON_MF,1);
- 
- delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
- 
- if ((level>=0)&&(level<finest_level)) {
 
-  int spectral_override=1; // order derived from "enable_spectral"
-   //Umac_Type
-  avgDownMacState(spectral_override);
- 
+ if ((level>=0)&&(level<finest_level)) {
   avgDown(LS_Type,0,num_materials,0);
   MOFavgDown();
-     // velocity and pressure
-  avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
-  avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+ } else if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("level invalid23");
+
+ if (local_smoothing==0) {
+
+  delete conserve;
+ 
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete side_bucket_mom[dir];
+   delete side_bucket_mass[dir];
+  }
+
+  delete_localMF(VELADVECT_MF,1);
+  delete_localMF(DEN_RECON_MF,1);
+  delete_localMF(MOM_DEN_MF,1);
 
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=num_materials)) {
-   for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
-        scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
-    avgDown_refine_tensor(scomp);
-   }
+   delete_localMF(TENSOR_RECON_MF_local,1);
   } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
@@ -19691,18 +19841,56 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
 
   if ((num_materials_compressible>=1)&&
       (num_materials_compressible<=num_materials)) {
-   for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
-    avgDown_refine_density(im_comp);
-   }
+   delete_localMF(REFINE_DENSITY_RECON_MF_local,1);
   } else if (num_materials_compressible==0) {
    // do nothing
   } else
    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
 
- } else if (level==finest_level) {
-  // do nothing
+  delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
+ 
+  if ((level>=0)&&(level<finest_level)) {
+
+   int spectral_override=1; // order derived from "enable_spectral"
+    //Umac_Type
+   avgDownMacState(spectral_override);
+ 
+     // velocity and pressure
+   avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+   avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=num_materials)) {
+    for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
+         scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
+     avgDown_refine_tensor(scomp);
+    }
+   } else if (num_materials_viscoelastic==0) {
+    // do nothing
+   } else
+    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+   if ((num_materials_compressible>=1)&&
+       (num_materials_compressible<=num_materials)) {
+    for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+     avgDown_refine_density(im_comp);
+    }
+   } else if (num_materials_compressible==0) {
+    // do nothing
+   } else
+    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+
+  } else if (level==finest_level) {
+   // do nothing
+  } else
+   amrex::Error("level invalid23");
+
+ } else if (local_smoothing>0) {
+
+  //do nothing
+
  } else
-  amrex::Error("level invalid23");
+  amrex::Error("local_smoothing invalid");
 
 }  // end subroutine split_scalar_advection
 
