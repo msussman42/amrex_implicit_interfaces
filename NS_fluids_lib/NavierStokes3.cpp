@@ -361,6 +361,8 @@ void NavierStokes::smoothing_advection() {
  }
   
  for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) {
+   //VOF_Recon_ALL
+   //makeStateDistALL
   no_mass_transfer_code_segment(local_caller_string);
   int renormalize_only=1;
   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
@@ -369,7 +371,6 @@ void NavierStokes::smoothing_advection() {
   make_physics_varsALL(SOLVETYPE_SMOOTH,local_caller_string); 
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
-  advance_MAC_velocity(SOLVETYPE_SMOOTH);
   multiphase_project(SOLVETYPE_SMOOTH);
   nonlinear_advection(local_caller_string,n_smooth);
  }
@@ -9833,6 +9834,9 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
+ } else if (project_option==SOLVETYPE_SMOOTH)  { 
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
+  zero_independent_variable(project_option,nsolve);
  } else if (project_option==SOLVETYPE_INITPROJ) { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
@@ -10194,6 +10198,13 @@ void NavierStokes::multiphase_project(int project_option) {
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
 	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
 
+ } else if (project_option==SOLVETYPE_SMOOTH) {
+
+//FIX ME save MAC VELOCITY HERE and ZAP IT OUT
+  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
@@ -10201,7 +10212,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int save_enable_spectral=enable_spectral;
 
- if (project_option_projection(project_option)==1) {
+ if (project_option==SOLVETYPE_SMOOTH) {
+  override_enable_spectral(0); // always low order
+ } else if (project_option_projection(project_option)==1) {
   //do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
@@ -10226,11 +10239,14 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES
+  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
   } else if (project_option==SOLVETYPE_PRES) {
+   //do nothing
+  } else if (project_option==SOLVETYPE_SMOOTH) {
    //do nothing
   } else
    amrex::Error("project_option invalid 45"); 
@@ -10361,34 +10377,57 @@ void NavierStokes::multiphase_project(int project_option) {
  } // tid
 
   // in multiphase_project
- if (project_option==SOLVETYPE_PRES) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_SMOOTH)) {
 
   int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
 
-  if ((FSI_outer_sweeps>=0)&&
-      (FSI_outer_sweeps<
-       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
+  if (project_option==SOLVETYPE_SMOOTH) {
 
-   if (incremental_gravity_flag==1) {
-    potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
-   } else if (incremental_gravity_flag==0) {
-    potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
+   potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+
+  } else if (project_option==SOLVETYPE_PRES) {
+
+   if (surface_tension_smoothing>0) {
+
+    if (incremental_gravity_flag==1) {
+     potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
+    } else if (incremental_gravity_flag==0) {
+     potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
+    } else
+     amrex::Error("incremental_gravity_flag invalid");
+
+   } else if (surface_tension_smoothing==0) {
+
+    if ((FSI_outer_sweeps>=0)&&
+        (FSI_outer_sweeps<
+         min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
+
+     if (incremental_gravity_flag==1) {
+      potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
+     } else if (incremental_gravity_flag==0) {
+      potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
+     } else
+      amrex::Error("incremental_gravity_flag invalid");
+
+    } else if (FSI_outer_sweeps==
+               min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
+
+     if (incremental_gravity_flag==1) {
+      potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+     } else if (incremental_gravity_flag==0) {
+      potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+     } else
+      amrex::Error("incremental_gravity_flag invalid");
+
+    } else
+     amrex::Error("FSI_outer_sweeps invalid");
+
    } else
-    amrex::Error("incremental_gravity_flag invalid");
-
-  } else if (FSI_outer_sweeps==
-             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
-
-   if (incremental_gravity_flag==1) {
-    potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
-   } else if (incremental_gravity_flag==0) {
-    potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
-   } else
-    amrex::Error("incremental_gravity_flag invalid");
+    amrex::Error("surface_tension_smoothing invalid");
 
   } else
-   amrex::Error("FSI_outer_sweeps invalid");
-
+   amrex::Error("project_option invalid");
 
    // 1. init_gravity_potential
    //      output: HYDROSTATIC_PRESDEN_MF
@@ -10406,10 +10445,17 @@ void NavierStokes::multiphase_project(int project_option) {
 // 2. must be called before adding gravity and surface tension.
 // 3. cannot be called after the project because the velocity
 //    will then fail to satisfy the discrete divergence condition.
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.overwrite_outflow();  
-  }
+  if (project_option==SOLVETYPE_SMOOTH) {
+   // do nothing
+  } else if (project_option==SOLVETYPE_PRES) {
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.overwrite_outflow();  
+   }
+
+  } else
+   amrex::Error("project_option invalid");
 
    // increment_potential_forceALL is declared in NavierStokes2.cpp
    // increment_potential_force is declared in NavierStokes2.cpp
@@ -10521,7 +10567,8 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid multiphase prj");
 
- } else if (project_option!=SOLVETYPE_PRES) {
+ } else if (!((project_option==SOLVETYPE_PRES)||
+              (project_option==SOLVETYPE_SMOOTH))) {
   //do nothing
  } else
   amrex::Error("project_option bust");	 
@@ -10730,15 +10777,19 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if (project_option_projection(project_option)==1) {
 
    if (project_option==SOLVETYPE_PRES) {
-    // do nothing
+
+    // updates CELL_SOUND_MF, DIFFUSIONRHS, and S_new. 
+    //  State_Type is updated by solver if project_option==SOLVETYPE_PRES. 
+    // 
+    //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
+    ns_level.init_advective_pressure(project_option); 
+
+   } else if (project_option==SOLVETYPE_SMOOTH) {
+
+    //do nothing
+
    } else
     amrex::Error("project_option invalid 10233");
-
-   // updates CELL_SOUND_MF, DIFFUSIONRHS, and S_new. 
-   //  State_Type is updated by solver if project_option==SOLVETYPE_PRES. 
-   // 
-   //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
-   ns_level.init_advective_pressure(project_option); 
 
   } else if (project_option_projection(project_option)==0) {
    // do nothing 
@@ -12261,6 +12312,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option==SOLVETYPE_INITPROJ) {
   homflag_dual_time=1;
+ } else if (project_option==SOLVETYPE_SMOOTH) { 
+  homflag_dual_time=1;
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   homflag_dual_time=0;
  } else if ((project_option==SOLVETYPE_PRES)|| 
@@ -12293,8 +12346,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES
+  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
-
+//FIX ME
   getState_localMF_listALL(
     PRESPC2_MF,1,
     state_index,
@@ -12471,6 +12525,13 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option==SOLVETYPE_INITPROJ) {
 
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
+	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+  delete_array(PRESSURE_SAVE_MF);
+
+ } else if (project_option==SOLVETYPE_SMOOTH) {
+
+   //FIX ME restore MAC VELOCITY HERE and update the mean curvature velocity.
   Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
 	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   delete_array(PRESSURE_SAVE_MF);

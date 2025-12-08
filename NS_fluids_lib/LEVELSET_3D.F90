@@ -9257,7 +9257,8 @@ stop
       endif
 
       if ((project_option.eq.SOLVETYPE_PRES).or. &
-          (project_option.eq.SOLVETYPE_INITPROJ)) then
+          (project_option.eq.SOLVETYPE_INITPROJ).or. &
+          (project_option.eq.SOLVETYPE_SMOOTH)) then
        ! do nothing
       else
        print *,"project_option invalid fort_init_physics_vars"
@@ -9921,6 +9922,16 @@ stop
           print *,"is_solid_face invalid: ",is_solid_face
           stop
          endif
+
+        if ((project_option.eq.SOLVETYPE_PRES).or. &
+            (project_option.eq.SOLVETYPE_INITPROJ)) then
+         !do nothing
+        else if (project_option.eq.SOLVETYPE_SMOOTH) then
+         local_face(FACECOMP_FACEVEL+1)=zero
+        else
+         print *,"project_option invalid fort_init_physics_vars(FACEVEL)"
+         stop
+        endif
 
           ! gradh>0 => im_main material dominates right and im_main_opp left.
           ! gradh<0 => im_main material dominates left and im_main_opp right.
@@ -11080,6 +11091,17 @@ stop
           enddo ! im_opp=im+1..num_materials
          enddo ! im=1..num_materials
 
+         if ((project_option.eq.SOLVETYPE_PRES).or. &
+             (project_option.eq.SOLVETYPE_INITPROJ)) then
+          !do nothing
+         else if (project_option.eq.SOLVETYPE_SMOOTH) then
+          local_face(FACECOMP_FACEDEN+1)=one
+          local_face(FACECOMP_FACEDEN_BASE+1)=one
+         else
+          print *,"project_option invalid fort_init_physics_vars(FACEVEL)"
+          stop
+         endif
+
          local_face(FACECOMP_FACEVISC+1)=facevisc_local
 
          local_face(FACECOMP_FACEHEAT+1)=faceheat_local
@@ -11201,7 +11223,8 @@ stop
              if ((level.ge.0).and.(level.le.finest_level)) then
 
               if ((project_option.eq.SOLVETYPE_PRES).or. &
-                  (project_option.eq.SOLVETYPE_INITPROJ)) then
+                  (project_option.eq.SOLVETYPE_INITPROJ).or. &
+                  (project_option.eq.SOLVETYPE_SMOOTH)) then
 
                do icurv_ofs=1,CURVCOMP_NCOMP
                 curvL(icurv_ofs)=curv(D_DECL(im1,jm1,km1),icurv+icurv_ofs)
@@ -17416,7 +17439,7 @@ stop
                    POTGRAD_BASE_GRAV) then 
            xgp(D_DECL(i,j,k),1)=pgrad_gravity
           else
-           print *,"energyflag invalid OP_POTGRAD_TO_MAC"
+           print *,"energyflag invalid OP_POTGRAD_TO_MAC: ",energyflag
            stop
           endif
 
@@ -17469,18 +17492,18 @@ stop
         ! do nothing
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
         ! do nothing ( grad(U P) term only low order )
-       else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
+       else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. & 
                 (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
                  POTGRAD_SURFTEN)) then 
-        ! do nothing 
+        ! do nothing (low order: surface tension all interfacial)
        else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
                 (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
                  POTGRAD_INCREMENTAL_GRAV)) then 
-        ! do nothing 
+        ! do nothing (low order: incremental gravity all interfacial)
        else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
                 (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
                  POTGRAD_SURFTEN_INCREMENTAL_GRAV)) then 
-        ! do nothing 
+        !do nothing(low order: incremental gravity/surface ten. all interface)
        else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
                 (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
@@ -17492,10 +17515,10 @@ stop
 
          if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
              POTGRAD_SURFTEN_BASE_GRAV) then
-          ! do nothing 
+          ! do nothing (base grav in bulk)
          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
                   POTGRAD_BASE_GRAV) then
-          ! do nothing 
+          ! do nothing (base grav in bulk)
          else
           print *,"spectral method not for incremental formulation: ", &
            energyflag

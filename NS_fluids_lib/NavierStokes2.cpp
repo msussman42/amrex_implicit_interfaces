@@ -2004,7 +2004,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid init_divup_cell_vel_cell");
-
+//FIX ME
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)) {  
   // do nothing
@@ -5049,7 +5049,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("level invalid make_physics_varsALL");
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)) {
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_SMOOTH)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_varsALL");
@@ -5072,6 +5073,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   // in: NavierStokes::make_physics_varsALL
   // piecewise constant interpolation.
+  // deletes localMF[LEVELPC_MF] if it exists.
  allocate_levelset_ALL(1,LEVELPC_MF);
 
    // create DIST_CURV_MF 
@@ -5331,7 +5333,8 @@ void NavierStokes::make_physics_vars(int project_option,
  int num_curv=num_interfaces*CURVCOMP_NCOMP; 
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)) {
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_SMOOTH)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_vars");
@@ -5971,7 +5974,8 @@ void NavierStokes::increment_potential_force() {
 } // increment_potential_force
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES
+// project_option==SOLVETYPE_PRES or
+// project_option==SOLVETYPE_SMOOTH
 void NavierStokes::deallocate_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5983,7 +5987,8 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES
+// project_option==SOLVETYPE_PRES or
+// project_option==SOLVETYPE_SMOOTH
 void NavierStokes::process_potential_forceALL(
  int potgrad_surface_tension_mask,int project_option) {
 
@@ -5996,7 +6001,8 @@ void NavierStokes::process_potential_forceALL(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- if (project_option==SOLVETYPE_PRES) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_SMOOTH)) {
   //do nothing
  } else
   amrex::Error("project_option invalid5794");
@@ -6212,7 +6218,8 @@ void NavierStokes::process_potential_force_face(
  } else
   amrex::Error("SDC_outer_sweeps invalid process_potential_force_face");
 
- if (project_option==SOLVETYPE_PRES) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_SMOOTH)) {
   //do nothing
  } else
   amrex::Error("project_option invalid 6010 process_pot_force_face ");
