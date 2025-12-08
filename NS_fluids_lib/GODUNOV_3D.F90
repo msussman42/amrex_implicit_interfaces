@@ -13431,7 +13431,7 @@ stop
        recon_ncomp, &
        den_recon_ncomp, &
        ncomp_state, &
-       nc_bucket, &
+       nc_bucket, & !fort_vfrac_split
        verbose, &
        gridno,ngrid, &
        level, &
@@ -16137,6 +16137,1061 @@ stop
 
       return
       end subroutine fort_vfrac_split
+
+      subroutine fort_vfrac_split_smooth( &
+       local_smoothing, &
+       nprocessed, &
+       tid, &
+       velbc, &
+       divu_outer_sweeps, &
+       num_divu_outer_sweeps, &
+       EILE_flag, &
+       dir_counter, &
+       normdir, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       bfact_f, &
+       dt, &
+       time, &
+       cur_time, &
+       passive_veltime, &
+       LS,DIMS(LS), &  ! original data; ngrow=2
+       PLICSLP,DIMS(PLICSLP), &  ! slope data
+       snew,DIMS(snew), &  ! this is the result
+       LSnew,DIMS(LSnew), &
+       vof0,DIMS(vof0), &  
+       mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
+       masknbr,DIMS(masknbr), &
+       umac_displace, & ! vel*dt
+       DIMS(umac_displace), & 
+       xlo,dx, &
+       map_forward, &
+       recon_ncomp, &
+       ncomp_state, &
+       nc_bucket, & !fort_vfrac_split_smooth
+       verbose, &
+       gridno,ngrid, &
+       level, &
+       finest_level, &
+       dombc, &
+       domlo,domhi) &
+      bind(c,name='fort_vfrac_split_smooth')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, PARAMETER :: nhalf=1
+      integer, INTENT(inout) :: nprocessed
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: local_smoothing
+
+      integer, PARAMETER :: ngrow=2
+
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      integer, INTENT(in) :: dombc(SDIM,2)
+      integer, INTENT(in) :: divu_outer_sweeps
+      integer, INTENT(in) :: num_divu_outer_sweeps
+      integer, INTENT(in) :: EILE_flag
+      real(amrex_real), INTENT(in) :: cur_time
+      real(amrex_real), INTENT(in) :: passive_veltime
+      integer, INTENT(in) :: dir_counter
+      integer, INTENT(in) :: normdir
+      integer, INTENT(in) :: verbose
+      integer :: force_check
+      integer, INTENT(in) :: gridno,ngrid
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: recon_ncomp
+      integer, INTENT(in) :: ncomp_state
+      integer, INTENT(in) :: nc_bucket
+      integer :: nc_bucket_test
+      integer, INTENT(in) :: map_forward
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: bfact_f
+      real(amrex_real), INTENT(in) :: dt,time
+       ! original data
+      integer, INTENT(in) :: DIMDEC(LS)
+       ! slope data
+      integer, INTENT(in) :: DIMDEC(PLICSLP)
+       ! new data
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(LSnew)
+       ! other vars
+      integer, INTENT(in) :: DIMDEC(vof0)
+      integer, INTENT(in) :: DIMDEC(mask)
+      integer, INTENT(in) :: DIMDEC(masknbr)
+      integer, INTENT(in) :: DIMDEC(umac_displace)
+
+       ! FABS
+       ! original data
+      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+       ! slope data
+      real(amrex_real), INTENT(in), target :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
+      real(amrex_real), pointer :: PLICSLP_ptr(D_DECL(:,:,:),:)
+       ! new data
+      real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),ncomp_state)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+              LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+       ! other vars
+      real(amrex_real), INTENT(in), target :: vof0(DIMV(vof0),num_materials)
+      real(amrex_real), pointer :: vof0_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+      ! =1 int. =1 fine-fine in domain =0 o.t.
+      real(amrex_real), INTENT(in), target :: masknbr(DIMV(masknbr)) 
+      real(amrex_real), pointer :: masknbr_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: umac_displace(DIMV(umac_displace))
+      real(amrex_real), pointer :: umac_displace_ptr(D_DECL(:,:,:))
+
+      integer, INTENT(in) :: velbc(SDIM,2)
+
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      real(amrex_real) xsten_crse(-nhalf:nhalf,SDIM)
+      integer dir2
+      integer vofcomp
+      integer im
+      real(amrex_real) dxmaxLS
+
+      real(amrex_real) xsten_accept(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_donate(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_target(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_depart(-nhalf:nhalf,SDIM)
+      real(amrex_real) usten_accept(-nhalf:nhalf)
+      real(amrex_real) usten_donate(-nhalf:nhalf)
+
+      real(amrex_real) xdepartsize,xtargetsize,xloint,xhiint
+      real(amrex_real) volint
+      real(amrex_real) coeff(2)
+      integer nmax
+      integer ii,jj,kk
+     
+      integer istate,igeom
+    
+      integer statecomp_data
+
+      real(amrex_real) volcell_recon
+      real(amrex_real) cencell_recon(SDIM)
+      real(amrex_real) volcell_accept
+      real(amrex_real) cencell_accept(SDIM)
+      real(amrex_real) volcell_donate
+      real(amrex_real) cencell_donate(SDIM)
+
+      integer idonate,jdonate,kdonate
+      integer growlo(3),growhi(3)
+      integer datatype
+
+      integer istencil
+      real(amrex_real) donate_data
+
+      integer icrse,jcrse,kcrse
+      integer ifine,jfine,kfine
+      integer nfine
+      integer ifine_stencil,jfine_stencil,kfine_stencil
+      integer ifine_stencil_lo,jfine_stencil_lo,kfine_stencil_lo
+      integer ifine_stencil_hi,jfine_stencil_hi,kfine_stencil_hi
+      integer nfine_stencil
+      integer fine_offset
+
+      integer idonatelow
+      integer idonatehigh
+
+      real(amrex_real) voltotal_target
+      real(amrex_real) voltotal_depart
+      real(amrex_real) voltotal_depart_refine(ENUM_NUM_REFINE_DENSITY_TYPE)
+      real(amrex_real) LS_voltotal_depart
+
+      real(amrex_real) mofdata_grid(recon_ncomp)
+      real(amrex_real) snew_hold(ncomp_state)
+      real(amrex_real) newLS(num_materials)
+      real(amrex_real) newvfrac_weymouth(num_materials)
+      real(amrex_real) newvfrac_cor(num_materials)
+      real(amrex_real) newvfrac(num_materials)
+      real(amrex_real) volmat_depart(num_materials)
+      real(amrex_real) volmat_target(num_materials)
+      real(amrex_real) volmat_depart_cor(num_materials)
+      real(amrex_real) volmat_target_cor(num_materials)
+      real(amrex_real) multi_volume(num_materials)
+      real(amrex_real) multi_volume_grid(num_materials)
+      real(amrex_real) multi_cen(SDIM,num_materials)
+      real(amrex_real) multi_cen_grid(SDIM,num_materials)
+      real(amrex_real) newcen(SDIM,num_materials)
+      real(amrex_real) veldata(nc_bucket)
+
+      integer ihalf
+      integer check_intersection
+      real(amrex_real) xsten_recon(-nhalf:nhalf,SDIM)
+
+      real(amrex_real) warning_cutoff
+
+      integer k1lo,k1hi
+
+      real(amrex_real) :: critical_cutoff_low
+      real(amrex_real) :: critical_cutoff_high
+
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      integer :: fort_caller_string_len
+
+! fort_vfrac_split_smooth code starts here
+
+      fort_caller_string_len=5
+      allocate(CHARACTER(fort_caller_string_len) :: fort_caller_string)
+      fort_caller_string(1:1)='v'
+      fort_caller_string(2:2)='f'
+      fort_caller_string(3:3)='r'
+      fort_caller_string(4:4)='a'
+      fort_caller_string(5:5)='c'
+
+      LS_ptr=>LS
+      PLICSLP_ptr=>PLICSLP
+
+      vof0_ptr=>vof0
+      mask_ptr=>mask
+      masknbr_ptr=>masknbr
+      umac_displace_ptr=>umac_displace
+
+      snew_ptr=>snew
+      LSnew_ptr=>LSnew
+
+      critical_cutoff_low=-1.0D+30
+      critical_cutoff_high=1.0D+30
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      nmax=POLYGON_LIST_MAX ! in: fort_vfrac_split_smooth
+
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.2) then
+       ! do nothing
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid70"
+       stop
+      endif
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid"
+       stop
+      endif
+      if ((bfact.ne.bfact_f).and.(bfact.ne.2*bfact_f)) then
+       print *,"bfact invalid71"
+       stop
+      endif
+
+      if (local_smoothing.gt.0) then
+       !do nothing
+      else
+       print *,"local_smoothing invalid: ",local_smoothing
+       stop
+      endif
+
+      if ((level.lt.0).or. &
+          (level.gt.finest_level)) then
+       print *,"level invalid fort_vfrac_split_smooth"
+       stop
+      endif
+      if ((verbose.lt.0).or.(verbose.gt.2)) then
+       print *,"verbose invalid"
+       stop
+      endif
+      if ((gridno.lt.0).or.(gridno.ge.ngrid)) then
+       print *,"gridno invalid in fort_vfrac_split_smooth"
+       stop
+      endif
+
+      if (ngrow.eq.2) then
+       ! do nothing
+      else
+       print *,"ngrow invalid: ",ngrow
+       stop
+      endif
+
+      if (ncomp_state.ne.STATECOMP_STATES+ &
+          num_materials*(num_state_material+ngeom_raw)+1) then
+       print *,"ncomp_state invalid"
+       stop
+      endif
+
+      if (num_state_material.ne. &
+          num_state_base+num_species_var) then
+       print *,"num_state_material invalid"
+       stop
+      endif
+
+      if ((divu_outer_sweeps.ge.0).and. &
+          (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
+       ! do nothing
+      else
+       print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+       stop
+      endif
+
+      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
+          (EILE_flag.eq.1).or.  & ! EILE
+          (EILE_flag.eq.2).or.  & ! always EI
+          (EILE_flag.eq.3)) then  ! always LE
+       ! do nothing
+      else 
+       print *,"EILE flag invalid"
+       stop
+      endif
+
+      if ((dir_counter.lt.0).or.(dir_counter.ge.SDIM)) then
+       print *,"dir_counter invalid"
+       stop
+      endif
+
+      if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
+       print *,"normdir invalid: ",normdir
+       stop
+      endif
+
+      if (recon_ncomp.ne.num_materials*ngeom_recon) then
+       print *,"recon_ncomp invalid"
+       stop
+      endif
+
+      if ((map_forward.ne.0).and.(map_forward.ne.1)) then
+       print *,"map_forward invalid"
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       if (SDIM.ne.2) then
+        print *,"dimension crash"
+        stop
+       endif
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+       ! do nothing
+      else
+       print *,"levelrz invalid fort_vfrac_split_smooth"
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
+       stop
+      endif
+
+       ! SANITY CHECKS TO MAKE SURE THAT input FABs have the expected number of
+       ! ghost cells.
+
+       ! original data
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
+       ! ngrow=2
+       ! slope data
+      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow,-1)
+       ! new data
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
+       ! other vars
+      call checkbound_array(fablo,fabhi,vof0_ptr,ngrow,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1)
+     
+       ! example: imac=0, left side; then the parcel at imac=-1, left side
+       ! might be advected: imac=-1, left side is in icell=-2.  icell=-2 is
+       ! advected using imac=-2 and imac=-1.
+      call checkbound_array1(fablo,fabhi,umac_displace_ptr, &
+              ngrow,normdir)
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (normdir.eq.0) then
+       ii=1
+      else if (normdir.eq.1) then
+       jj=1
+      else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"normdir invalid"
+       stop
+      endif
+
+      growlo(3)=0
+      growhi(3)=0
+
+      force_check=0
+      datatype=0 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
+ 
+      warning_cutoff=two
+      call aggressive_worker( &
+       fort_caller_string, &
+       datatype, &
+       warning_cutoff, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       growlo,growhi, &
+       bfact, &
+       dx, &
+       0, & !scomp=0
+       num_materials*ngeom_recon, &
+       num_materials*ngeom_recon, &
+       ngrow, &
+       -1, & ! dir
+       verbose, &
+       force_check, &
+       gridno,ngrid, &
+       level,finest_level, &
+       PLICSLP_ptr, &
+       critical_cutoff_low, &
+       critical_cutoff_high)
+
+      nc_bucket_test=CISLCOMP_NCOMP
+      if (nc_bucket_test.ne.nc_bucket) then
+       print *,"nc_bucket invalid: ",nc_bucket_test,nc_bucket
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+       growlo,growhi,1)
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       growlo(1)=max(0,growlo(1))
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+       growlo(1)=max(0,growlo(1))
+      else
+       print *,"levelrz invalid fort_vfrac_split_smooth (growlo(1))"
+       stop
+      endif
+
+      do kcrse=growlo(3),growhi(3)
+      do jcrse=growlo(2),growhi(2)
+      do icrse=growlo(1),growhi(1)
+       nprocessed=nprocessed+1
+
+       call gridsten_level(xsten_crse,icrse,jcrse,kcrse,level,nhalf)
+
+       voltotal_depart=zero
+
+        !nc_bucket=CISL_NCOMP
+       do istate=1,nc_bucket
+        veldata(istate)=zero
+       enddo
+
+       idonate=icrse
+       jdonate=jcrse
+       kdonate=kcrse
+
+       kfine=0
+#if (AMREX_SPACEDIM==3)
+       do kfine=0,1
+#endif
+       do jfine=0,1
+       do ifine=0,1
+
+        nfine=4*kfine+2*jfine+ifine+1
+
+        voltotal_depart_refine(nfine)=zero
+
+        call CISBOXFINE(xsten_accept,nhalf, &
+         xlo,dx, &
+         icrse,jcrse,kcrse, &
+         ifine,jfine,kfine, &
+         bfact,level, &
+         volcell_accept,cencell_accept,SDIM)
+
+        if (volcell_accept.gt.zero) then
+         ! do nothing
+        else
+         print *,"volcell_accept invalid: ",volcell_accept
+         stop
+        endif
+
+        do ihalf=-1,1
+        do dir2=1,SDIM
+         xsten_target(ihalf,dir2)=xsten_accept(ihalf,dir2)
+         xsten_depart(ihalf,dir2)=xsten_accept(ihalf,dir2)
+        enddo
+        enddo
+
+        usten_accept(-1)=umac_displace(D_DECL(icrse,jcrse,kcrse))
+        usten_accept(1)=umac_displace(D_DECL(icrse+ii,jcrse+jj,kcrse+kk))
+
+        if (normdir.eq.0) then
+
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          ! do nothing
+         else if ((levelrz.eq.COORDSYS_RZ).or. &
+                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+          if (icrse.le.0) then
+           usten_accept(-1)=zero
+          endif
+          if (icrse.lt.0) then
+           usten_accept(1)=zero
+           print *,"expecting icrse>=0"
+           stop
+          endif
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+        endif
+
+        usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+
+        if (usten_accept(-1).gt.zero) then
+         idonatelow=-1
+        else if (usten_accept(-1).le.zero) then
+         idonatelow=0
+        else
+         print *,"usten_accept(-1) invalid: ",usten_accept(-1)
+         stop
+        endif
+
+        if (usten_accept(1).lt.zero) then
+         idonatehigh=1
+        else if (usten_accept(1).ge.zero) then
+         idonatehigh=0
+        else
+         print *,"usten_accept(1) invalid: ",usten_accept(1)
+         stop
+        endif
+
+        if (normdir.eq.0) then
+         if (ifine.eq.0) then
+          usten_accept(1)=usten_accept(0)
+         else if (ifine.eq.1) then
+          usten_accept(-1)=usten_accept(0)
+         else
+          print *,"ifine invalid"
+          stop
+         endif
+        else if (normdir.eq.1) then
+         if (jfine.eq.0) then
+          usten_accept(1)=usten_accept(0)
+         else if (jfine.eq.1) then
+          usten_accept(-1)=usten_accept(0)
+         else
+          print *,"jfine invalid"
+          stop
+         endif
+        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+         if (kfine.eq.0) then
+          usten_accept(1)=usten_accept(0)
+         else if (kfine.eq.1) then
+          usten_accept(-1)=usten_accept(0)
+         else
+          print *,"kfine invalid: ",kfine
+          stop
+         endif
+        else
+         print *,"normdir invalid: ",normdir
+         stop
+        endif
+        usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+
+        do istencil=idonatelow,idonatehigh
+ 
+         if (normdir.eq.0) then
+          idonate=icrse+istencil
+         else if (normdir.eq.1) then 
+          jdonate=jcrse+istencil
+         else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+          kdonate=kcrse+istencil
+         else
+          print *,"normdir invalid"
+          stop
+         endif
+         kfine_stencil_lo=kfine
+         jfine_stencil_lo=jfine
+         ifine_stencil_lo=ifine
+         kfine_stencil_hi=kfine
+         jfine_stencil_hi=jfine
+         ifine_stencil_hi=ifine
+         if (normdir.eq.0) then
+          ifine_stencil_lo=0 
+          ifine_stencil_hi=1
+         else if (normdir.eq.1) then 
+          jfine_stencil_lo=0 
+          jfine_stencil_hi=1
+         else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+          kfine_stencil_lo=0 
+          kfine_stencil_hi=1
+         else
+          print *,"normdir invalid: ",normdir
+          stop
+         endif
+         kfine_stencil=0
+#if (AMREX_SPACEDIM==3)
+         do kfine_stencil=kfine_stencil_lo,kfine_stencil_hi
+#endif
+         do jfine_stencil=jfine_stencil_lo,jfine_stencil_hi
+         do ifine_stencil=ifine_stencil_lo,ifine_stencil_hi
+
+          nfine_stencil=4*kfine_stencil+2*jfine_stencil+ifine_stencil+1
+          fine_offset=CISLCOMP_CONS_NCOMP*(nfine_stencil-1)
+
+          call CISBOX(xsten_recon,1, &
+           xlo,dx, &
+           idonate,jdonate,kdonate, &
+           bfact,level, &
+           volcell_recon,cencell_recon,SDIM)
+ 
+          call CISBOXFINE(xsten_donate,1, &
+           xlo,dx, &
+           idonate,jdonate,kdonate, &
+           ifine_stencil,jfine_stencil,kfine_stencil, &
+           bfact,level, &
+           volcell_donate,cencell_donate,SDIM)
+
+          check_intersection=1
+
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           if (SDIM.ne.2) then
+            print *,"dimension bust"
+            stop
+           endif
+           if (xsten_recon(0,1).le.EPS2*dx(1)) then
+            check_intersection=0
+            print *,"idonate invalid (RZ): ",idonate
+            print *,"[ijk]crse ",icrse,jcrse,kcrse
+            print *,"normdir, [ijk]donate ",normdir,idonate,jdonate,kdonate
+            stop
+           endif
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           if (xsten_recon(0,1).le.EPS2*dx(1)) then
+            check_intersection=0
+            print *,"idonate invalid (RTZ): ",idonate
+            stop
+           endif
+          else
+           print *,"levelrz invalid add to bucket 2"
+           stop
+          endif
+
+          if (check_intersection.eq.1) then 
+
+           usten_donate(-1)=umac_displace(D_DECL(idonate,jdonate,kdonate))
+           usten_donate(1)= &
+              umac_displace(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+
+           if (normdir.eq.0) then
+
+            if (levelrz.eq.COORDSYS_CARTESIAN) then
+             ! do nothing
+            else if ((levelrz.eq.COORDSYS_RZ).or. &
+                     (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+             if (idonate.le.0) then
+              usten_donate(-1)=zero
+             endif
+             if (idonate.lt.0) then
+              usten_donate(1)=zero
+              print *,"idonate invalid: ",idonate
+              print *,"[ijk]donate: ",idonate,jdonate,kdonate
+              stop
+             endif
+            else
+             print *,"levelrz invalid"
+             stop
+            endif
+
+           endif
+
+           usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
+
+           if (normdir.eq.0) then
+            if (ifine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (ifine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            else
+             print *,"ifine_stencil invalid"
+             stop
+            endif
+           else if (normdir.eq.1) then
+            if (jfine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (jfine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            else
+             print *,"jfine_stencil invalid"
+             stop
+            endif
+           else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+            if (kfine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (kfine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            else
+             print *,"kfine_stencil invalid: ",kfine_stencil
+             stop
+            endif
+           else
+            print *,"normdir invalid: ",normdir
+            stop
+           endif
+           usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
+
+             ! normdir=0..sdim-1
+           call derive_mappings( &
+            xsten_accept, &
+            xsten_donate, &
+            xsten_target, &
+            xsten_depart, &
+            usten_accept, &
+            usten_donate, &
+            xdepartsize, &
+            xtargetsize, &
+            xloint, &
+            xhiint, &
+            volint, & !volint=xhiint-xloint
+            coeff, &
+            bfact, & !only used for sanity checks
+            dx, &
+            map_forward, &
+            normdir)
+
+           if (volint.gt.zero) then  
+
+             ! we are inside the istencil loop.
+            LS_voltotal_depart=zero
+
+            do dir2=1,num_materials*ngeom_recon
+             mofdata_grid(dir2)= &
+              PLICSLP(D_DECL(idonate,jdonate,kdonate),dir2)
+            enddo
+
+              ! the volumes and centroids are tessellating for the fluid
+              ! materials, but not the solid materials.  Solid materials are
+              ! immersed into the domain.
+
+            call multi_get_volume_grid_and_map( &
+              tid, &
+              normdir, & ! normdir=0..sdim-1
+              coeff, &
+              bfact,dx, &
+              xsten_recon,nhalf, &
+              mofdata_grid, &
+              xsten_depart,nhalf, &
+              multi_volume_grid, & ! intersection of departure with grid.
+              multi_cen_grid, &
+              multi_volume, & ! intersection of target with grid.
+              multi_cen, &
+              geom_xtetlist_uncapt(1,1,1,tid+1), &
+              nmax, &
+              nmax, &
+              SDIM)
+
+             ! normdir=0..sdim-1
+            do im=1,num_materials
+             vofcomp=(im-1)*ngeom_recon+1
+  
+              ! fluid materials tessellate the domain. 
+             if (is_rigid(im).eq.0) then 
+              LS_voltotal_depart=LS_voltotal_depart+ &
+               multi_volume_grid(im)
+             else if (is_rigid(im).eq.1) then
+              ! do nothing
+             else
+              print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
+              stop
+             endif
+
+            enddo  ! im=1,..,num_materials
+
+            if (LS_voltotal_depart.gt.zero) then
+             ! do nothing
+            else if (LS_voltotal_depart.eq.zero) then
+             volint=zero
+            else
+             print *,"EPS_8_4= ",EPS_8_4
+             print *,"EPS_8_3= ",EPS_8_3
+             print *,"LS_voltotal_depart bust (multi_get_volume_grid_and_map)"
+             print *,"LS_voltotal_depart ",LS_voltotal_depart
+             print *,"map_forward,volint ",map_forward,volint
+             print *,"istencil ",istencil
+             print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+             print *,"level,finest_level ",level,finest_level
+             print *,"dx ",dx(1),dx(2),dx(SDIM)
+             do im=1,num_materials 
+              vofcomp=(im-1)*ngeom_recon+1
+              print *,"im,multi_volume_grid ",im,multi_volume_grid(im)
+              print *,"im,multi_volume ",im,multi_volume(im)
+              print *,"im,vfrac ",im,mofdata_grid(vofcomp)
+              print *,"im,flag ",im,mofdata_grid(vofcomp+SDIM+1)
+             enddo
+             stop
+            endif
+
+            if (volint.gt.zero) then
+
+             voltotal_depart=voltotal_depart+LS_voltotal_depart
+             voltotal_depart_refine(nfine)= &
+                voltotal_depart_refine(nfine)+LS_voltotal_depart
+
+             do im=1,num_materials
+
+              ! level set function for im material.
+              ! level set function is stored at the cell centers, not the
+              ! corresponding material centroid.
+              donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
+              veldata(CISLCOMP_LS+im)=veldata(CISLCOMP_LS+im)+ &
+               LS_voltotal_depart*donate_data
+
+              vofcomp=(im-1)*ngeom_raw+1
+              ! material volume from departure (donating) region
+              veldata(CISLCOMP_MOF+vofcomp)= &
+               veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid(im)
+              ! material volume from target (accepting) region
+              veldata(CISLCOMP_FTARGET+im)= &
+               veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
+
+              ! material centroid from target (accepting) region
+              do dir2=1,SDIM
+               veldata(CISLCOMP_MOF+vofcomp+dir2)= &
+                veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
+                multi_volume(im)*multi_cen(dir2,im)
+              enddo 
+
+             enddo ! im=1,..,num_materials (geometry)
+
+            else if (volint.eq.zero) then
+             !do nothing
+            else
+             print *,"volint invalid(2): ",volint
+             stop
+            endif 
+
+           else if (volint.eq.zero) then
+            !do nothing
+           else
+            print *,"volint invalid(1): ",volint
+            stop
+           endif 
+
+          else if (check_intersection.eq.0) then
+           ! do nothing
+          else
+           print *,"check_intersection invalid"
+           stop
+          endif
+
+         enddo  ! ifine_stencil
+         enddo  ! jfine_stencil
+#if (AMREX_SPACEDIM==3)
+         enddo  ! kfine_stencil
+#endif
+
+        enddo !istencil=idonatelow,idonaatehigh
+
+       enddo  ! ifine
+       enddo  ! jfine
+#if (AMREX_SPACEDIM==3)
+       enddo  ! kfine
+#endif
+
+       voltotal_depart=zero
+       voltotal_target=zero
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_raw+1 
+        volmat_target(im)=veldata(CISLCOMP_FTARGET+im)
+        volmat_depart(im)=veldata(CISLCOMP_MOF+vofcomp)
+
+        volmat_target_cor(im)=volmat_target(im)
+        volmat_depart_cor(im)=volmat_depart(im)
+
+         ! fluid materials tessellate the domain.
+        if (is_rigid(im).eq.0) then
+         voltotal_target=voltotal_target+volmat_target(im)
+         voltotal_depart=voltotal_depart+volmat_depart(im)
+        else if (is_rigid(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid invalid GODUNOV_3D.F90"
+         stop
+        endif
+       enddo ! im=1..num_materials
+       
+       if (voltotal_depart.gt.zero) then
+        ! do nothing
+       else
+        print *,"voltotal_depart bust: ",voltotal_depart
+        stop
+       endif
+       if (voltotal_target.gt.zero) then
+        ! do nothing
+       else
+        print *,"voltotal_target bust: ",voltotal_target
+        stop
+       endif
+
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_raw+1 
+
+        newvfrac(im)=volmat_target(im)/voltotal_target
+        newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
+
+        if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
+         newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
+         if (newvfrac_weymouth(im).gt.one) then
+          newvfrac_weymouth(im)=one
+         endif
+        else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
+         newvfrac_weymouth(im)=one- &
+          (voltotal_depart-volmat_depart_cor(im))/voltotal_target
+         if (newvfrac_weymouth(im).lt.zero) then
+          newvfrac_weymouth(im)=zero
+         endif
+        else
+         print *,"vof0 bust"
+         stop
+        endif
+
+        if (newvfrac(im).le.VOFTOL) then
+         newvfrac_weymouth(im)=newvfrac(im)
+         newvfrac_cor(im)=newvfrac(im)
+        endif
+     
+        call CISBOX(xsten_accept,nhalf, &
+         xlo,dx,icrse,jcrse,kcrse, &
+         bfact,level, &
+         volcell_accept,cencell_accept,SDIM)
+  
+        do dir2=1,SDIM
+         if (newvfrac(im).gt.VOFTOL) then
+          newcen(dir2,im)= &
+           veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
+           volmat_target(im)- &
+           cencell_accept(dir2)
+         else
+          newcen(dir2,im)=zero
+         endif
+        enddo ! dir2
+
+       enddo  ! im=1..num_materials (geometry)
+
+       call consistent_materials(newvfrac_cor,newcen)
+
+       if ((EILE_flag.eq.1).or. & ! EILE
+           (EILE_flag.eq.2).or. & ! EI
+           (EILE_flag.eq.3)) then ! LE
+        ! do nothing
+       else if (EILE_flag.eq.-1) then ! weymouth and Yue
+        do im=1,num_materials
+         newvfrac_cor(im)=newvfrac_weymouth(im)
+        enddo
+        call consistent_materials(newvfrac_cor,newcen)
+       else
+        print *,"EILE_flag invalid"
+        stop
+       endif
+   
+       ! levelset function
+       ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
+       do im=1,num_materials
+        if (voltotal_depart.gt.zero) then
+         newLS(im)=veldata(CISLCOMP_LS+im)/voltotal_depart
+        else
+         print *,"voltotal_depart invalid: ",voltotal_depart
+         stop
+        endif 
+       enddo  ! im=1..num_materials (updating levelset vars)
+
+        ! make sure 0<=F<=1 and sum F_i = 1.
+        ! also truncation 1.0e-8 to 0 and 1-1.0e-8 to 1.
+       call consistent_materials(newvfrac_cor,newcen)
+
+       do im=1,num_materials
+
+        vofcomp=(im-1)*ngeom_raw+1
+
+        if (ngeom_raw.eq.SDIM+1) then
+         snew_hold(STATECOMP_MOF+vofcomp)=newvfrac_cor(im)
+         do dir2=1,SDIM
+          snew_hold(STATECOMP_MOF+vofcomp+dir2)=newcen(dir2,im)
+         enddo
+        else
+         print *,"ngeom_raw invalid in vfrac split"
+         print *,"ngeom_raw= ",ngeom_raw
+         stop
+        endif
+
+       enddo  ! im=1..num_materials
+
+        ! volume fractions, centroids
+       do im=1,num_materials
+
+        if (is_rigid(im).eq.0) then
+
+         do igeom=1,ngeom_raw
+          statecomp_data=STATECOMP_STATES+ &
+            num_materials*num_state_material+ &
+            (im-1)*ngeom_raw+igeom
+          snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+            snew_hold(statecomp_data)
+         enddo
+
+        else if (is_rigid(im).eq.1) then
+
+         !do nothing
+
+        else
+         print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
+         stop
+        endif
+
+       enddo ! im=1..num_materials
+
+       do im=1,num_materials
+        if (is_rigid(im).eq.0) then
+         LSnew(D_DECL(icrse,jcrse,kcrse),im)=newLS(im)
+
+         ! level set comes from Lagrangian representation.
+        else if (is_rigid(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid(im) invalid"
+         stop
+        endif
+       enddo ! im=1..num_materials
+
+      enddo
+      enddo
+      enddo ! icrse,jcrse,kcrse -> growntilebox(0 ghost cells)
+
+      return
+      end subroutine fort_vfrac_split_smooth
+
 
 
       ! combine_flag==0 (FVM -> GFM)
