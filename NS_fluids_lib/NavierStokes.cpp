@@ -19286,6 +19286,9 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   grids_per_proc[iproc]=0;
  }
 
+ int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
+ int nc_bucket=CISLCOMP_NCOMP;
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
@@ -19365,14 +19368,10 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
    umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
   }
 
-  int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
-
   conserve=new MultiFab(grids,dmap,
    nc_conserve,
    ngrow,
    MFInfo().SetTag("conserve"),FArrayBoxFactory());
-
-  int nc_bucket=CISLCOMP_NCOMP;
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -19721,10 +19720,6 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
     grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
    }
 
-    //FIX ME
-    // solid distance function and solid moments are not modified.
-    // solid temperature is modified only if solidheat_flag==0.
-/*
    fort_vfrac_split_smooth(
     &local_smoothing,
     &nprocessed[tid_current],
@@ -19766,14 +19761,13 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
     &map_forward_direct_split[normdir_here],
     &vofrecon_ncomp,
     &ncomp_state,
-    &nc_bucket,
+    &nc_bucket, //fort_vfrac_split_smooth
     &verbose,
     &gridno,&ngrid,
     &level,
     &finest_level,
     dombc.dataPtr(), 
     domlo,domhi);
-*/
 
   }  // mfi
 } // omp

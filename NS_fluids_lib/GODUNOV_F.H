@@ -812,6 +812,52 @@ extern "C"
      int* dombc,
      const int* domlo,const int* domhi);
 
+
+   void fort_vfrac_split_smooth(
+     int* local_smoothing,
+     int* nprocessed,
+     int* tid,
+     int* velbc,
+     int* divu_outer_sweeps,
+     int* num_divu_outer_sweeps,
+     int* EILE_flag,
+     int* dir_counter,
+     int* normdir,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     int* bfact_f,
+     Real* dt,
+     Real* time,
+     Real* cur_time,
+     Real* passive_veltime,
+      // original data
+     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+      // slope data
+     Real* vofslope,AMREX_ARLIM_P(vofslopelo),AMREX_ARLIM_P(vofslopehi), 
+      // this is the result
+     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
+     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
+      // other vars.
+     Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+     Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
+     Real* umac_displace,
+     AMREX_ARLIM_P(umac_displacelo), 
+     AMREX_ARLIM_P(umac_displacehi),
+     const Real* xlo,const Real* dx,
+     int* map_forward,
+     int* recon_ncomp,
+     int* ncomp_state,
+     int* nc_bucket,
+     int* verbose,
+     const int* gridno,int* ngrid,
+     int* level,
+     int* finest_level,
+     int* dombc,
+     const int* domlo,const int* domhi);
+
+
    void fort_derive_mom_den(
      int* im_parm,
      int* ngrow,
