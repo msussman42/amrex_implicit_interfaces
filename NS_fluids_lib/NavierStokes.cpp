@@ -6966,6 +6966,7 @@ int NavierStokes::project_option_momeqn(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)||  
+     (project_option==SOLVETYPE_SMOOTH)||  
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
      (project_option==SOLVETYPE_VISC)) {
   return 1;
@@ -6993,6 +6994,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
+     (project_option==SOLVETYPE_SMOOTH)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 0;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
@@ -7012,6 +7014,7 @@ int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_SMOOTH)||
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
@@ -7057,6 +7060,7 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==SOLVETYPE_PRES)||   
+     (project_option==SOLVETYPE_SMOOTH)||
      (project_option==SOLVETYPE_INITPROJ)) { 
   nsolve=1;
   nlist=1;
@@ -7960,6 +7964,9 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_INITPROJ) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_INITPROJ) \n";
+ } else if (project_option==SOLVETYPE_SMOOTH) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_SMOOTH) \n";
  } else if (project_option==SOLVETYPE_HEAT) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_HEAT) \n";
@@ -20571,7 +20578,9 @@ void NavierStokes::project_right_hand_side(
 
  change_flag=0;
 
-  //SOLVETYPE_PRES, SOLVETYPE_INITPROJ,
+  //SOLVETYPE_PRES, 
+  //SOLVETYPE_INITPROJ,
+  //SOLVETYPE_SMOOTH,
   //SOLVETYPE_PRESEXTRAP
  if (project_option_singular_possible(project_option)==1) {
 
@@ -28528,6 +28537,8 @@ NavierStokes::makeStateCurv(int project_option,
   //do nothing
  } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
   //do nothing
+ } else if (pattern_test(local_caller_string,"smoothing_advection")==1) {
+  //do nothing
  } else {
   std::cout << "local_caller_string=" << local_caller_string << '\n';
   amrex::Error("local_caller_string invalid");
@@ -28584,13 +28595,16 @@ NavierStokes::makeStateCurv(int project_option,
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)) {
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_SMOOTH)) {
 
   const Real* dx = geom.CellSize();
 
   Real cl_time=prev_time_slab;
 
   if (project_option==SOLVETYPE_PRES)  
+   cl_time=prev_time_slab;
+  else if (project_option==SOLVETYPE_SMOOTH) 
    cl_time=prev_time_slab;
   else if (project_option==SOLVETYPE_INITPROJ) 
    cl_time=cur_time_slab;

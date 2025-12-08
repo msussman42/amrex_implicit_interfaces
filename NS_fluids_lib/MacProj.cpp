@@ -78,6 +78,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   //SOLVETYPE_PRES,
   //SOLVETYPE_INITPROJ
+  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
 
   // do nothing
@@ -642,6 +643,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // if project_option==SOLVETYPE_PRES,
    //    project_option==SOLVETYPE_INITPROJ,
+   //    project_option==SOLVETYPE_SMOOTH
    //    project_option==SOLVETYPE_PRESEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 

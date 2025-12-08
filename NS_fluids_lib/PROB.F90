@@ -11892,6 +11892,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine grouplsBC
 
+!FIX ME
        ! called from:
        !   fort_buildfacewt (LEVELSET_3D.F90)
        !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
@@ -12029,7 +12030,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd_group=dd
 
         ! SOLVETYPE_PRES, 
-        ! SOLVETYPE_INITPROJ
+        ! SOLVETYPE_INITPROJ,
+        ! SOLVETYPE_SMOOTH,
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
@@ -23443,8 +23445,21 @@ end subroutine initialize2d
 
        integer, INTENT(in) :: homflag,project_option
 
+       if (project_option.eq.SOLVETYPE_SMOOTH) then
+
+        if (homflag.eq.0) then
+         pres_homflag=0
+         vel_homflag=0
+        else if (homflag.eq.1) then
+         pres_homflag=1
+         vel_homflag=1
+        else
+         print *,"homflag invalid in override pbc"
+         stop
+        endif
+
         ! project_option_singular_possibleF is declared in: GLOBALUTIL.F90
-       if (project_option_singular_possibleF(project_option).eq.1) then
+       else if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
          pres_homflag=0
         else if (homflag.eq.1) then
