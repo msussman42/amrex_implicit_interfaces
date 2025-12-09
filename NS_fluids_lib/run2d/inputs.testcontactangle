@@ -98,14 +98,15 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
+ns.surface_tension_smoothing=10
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.viscosity_ratio_relaxation_factor=0.0 
-ns.explicit_viscosity_dt=1.0
+#ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=6
-ns.visc_coef_boundary_layer_factor=10.0
+ns.visc_coef_boundary_layer_factor=1.0
 #liquid,gas,solid
 #12,13,23
-ns.viscconst_interface=0.0 1.0e-10 1.0e-10
+ns.viscconst_interface=0.0 0.0 0.0
 ns.lamb_capillary_wave_speed=0 # 1 => (rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
