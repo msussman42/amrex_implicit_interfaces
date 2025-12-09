@@ -1361,7 +1361,7 @@ END SUBROUTINE SIMP
       if (project_option.eq.SOLVETYPE_PRES) then
        ! do nothing
       else
-       print *,"project_option invalid advective pressure"
+       print *,"project_option invalid advective pressure: ",project_option
        stop
       endif
       if ((level.ge.0).and.(level.le.finest_level)) then

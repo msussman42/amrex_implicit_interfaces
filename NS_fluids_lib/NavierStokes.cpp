@@ -7960,7 +7960,8 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 void NavierStokes::print_project_option(int project_option) {
 
  if (project_option==SOLVETYPE_PRES) {
-  std::cout << "project_option= " << project_option << " (SOLVETYPE_PRES) \n";
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_PRES) \n";
  } else if (project_option==SOLVETYPE_INITPROJ) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_INITPROJ) \n";

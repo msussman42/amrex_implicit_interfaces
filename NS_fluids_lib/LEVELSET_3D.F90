@@ -9929,7 +9929,8 @@ stop
         else if (project_option.eq.SOLVETYPE_SMOOTH) then
          local_face(FACECOMP_FACEVEL+1)=zero
         else
-         print *,"project_option invalid fort_init_physics_vars(FACEVEL)"
+         print *,"project_option invalid fort_init_physics_vars(FACEVEL): ", &
+            project_option
          stop
         endif
 
@@ -11098,7 +11099,8 @@ stop
           local_face(FACECOMP_FACEDEN+1)=one
           local_face(FACECOMP_FACEDEN_BASE+1)=one
          else
-          print *,"project_option invalid fort_init_physics_vars(FACEVEL)"
+          print *,"project_option invalid fort_init_physics_vars(FACEVEL):", &
+             project_option
           stop
          endif
 
@@ -14445,6 +14447,11 @@ stop
           print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
           stop
          endif
+        else if (project_option.eq.SOLVETYPE_SMOOTH) then
+         print *,"not expecting project_option==SOLVETYPE_SMOOTH"
+         print *,"project_option invalid fort_mac_to_cell 5: ",project_option
+         print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
+         stop
         else
          print *,"project_option invalid fort_mac_to_cell 5"
          print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
@@ -16478,6 +16485,11 @@ stop
           if ((project_option.eq.SOLVETYPE_PRES).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
+          else if (project_option.eq.SOLVETYPE_SMOOTH) then
+           print *,"not expecting project_option=SOLVETYPE_SMOOTH:", &
+                project_option
+           print *,"operation_flag==OP_PRES_CELL_TO_MAC"
+           stop
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
@@ -16775,6 +16787,8 @@ stop
 
           if (project_option.eq.SOLVETYPE_PRES) then
            ! do nothing
+          else if (project_option.eq.SOLVETYPE_SMOOTH) then
+           ! do nothing
           else
            print *,"project_option invalid(fort_cell_to_mac): ",project_option
            stop
@@ -17008,7 +17022,8 @@ stop
                 mgoni(D_DECL(im1,jm1,km1),tcomp))
               enddo ! im_heat
 
-              if (project_option.eq.SOLVETYPE_PRES) then
+              if ((project_option.eq.SOLVETYPE_PRES).or. &
+                  (project_option.eq.SOLVETYPE_SMOOTH)) then
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
               else
@@ -20068,6 +20083,7 @@ stop
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing 
            !SOLVETYPE_PRES,
+           !SOLVETYPE_SMOOTH,
            !SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing

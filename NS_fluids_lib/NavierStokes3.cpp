@@ -2230,8 +2230,10 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  if ((project_option==SOLVETYPE_PRES)||  // is_zalesak()==FALSE
      (project_option==SOLVETYPE_INITPROJ)) { //is_zalesak()==TRUE
   // do nothing
- } else
+ } else {
+  std::cout << "project_option= " << project_option << '\n';
   amrex::Error("project_option invalid advance_MAC_velocity");
+ }
 
  int idx_velcell=-1;
  Real beta=0.0;
@@ -10328,6 +10330,7 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_VISC 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_SPEC ...
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESEXTRAP 
+    // diffusionRHS=0.0 if project_option==SOLVETYPE_SMOOTH
    ns_level.Prepare_UMAC_for_solver(project_option,nsolve);
  }  // ilev=level ... finest_level
 
@@ -12520,17 +12523,26 @@ void NavierStokes::multiphase_project(int project_option) {
 
   } else if (project_option==SOLVETYPE_INITPROJ) {
    // do nothing
+  } else if (project_option==SOLVETYPE_SMOOTH) {
+   // do nothing
   } else
    amrex::Error("project_option invalid 55");
 
- } else if (project_option_needs_scaling(project_option)==1) {
+ } else if (project_option_projection(project_option)==0) {
 
-  unscale_variablesALL();
+  if (project_option_needs_scaling(project_option)==1) {
 
- } else if (project_option_needs_scaling(project_option)==0) {
-  // do nothing
- } else 
-  amrex::Error("project_option invalid multiphase project 19");
+   unscale_variablesALL();
+
+  } else if (project_option_needs_scaling(project_option)==0) {
+
+   // do nothing
+   
+  } else 
+   amrex::Error("project_option_needs_scaling invalid multiphase project 19");
+
+ } else
+  amrex::Error("project_option_projection invalid");
 
  override_enable_spectral(save_enable_spectral);
 

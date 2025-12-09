@@ -256,6 +256,7 @@ stop
        ! not used; all elastic/ice materials are fluids
        ! cc_group=cc (SOLVETYPE_PRES)
        ! cc_group=cc*cc_elasticmask (SOLVETYPE_INITPROJ)
+       ! cc_group=cc*cc_elasticmask (SOLVETYPE_SMOOTH)
        im_rigid_CL=num_materials 
       else if ((FSI_outer_sweeps.ge.1).and. &
                (FSI_outer_sweeps.lt. &
@@ -293,7 +294,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid200"
+       print *,"bfact invalid get_elasticmask_and_elasticmaskpart: ",bfact
        stop
       endif
 
@@ -435,6 +436,8 @@ stop
       endif
 
        !if SOLVETYPE_INITPROJ then
+       ! cc_group=cc*cc_elasticmask
+       !if SOLVETYPE_SMOOTH then
        ! cc_group=cc*cc_elasticmask
        !if SOLVETYPE_PRES then
        ! if (num_FSI_outer_sweeps.eq.1) then
@@ -11892,7 +11895,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine grouplsBC
 
-!FIX ME
        ! called from:
        !   fort_buildfacewt (LEVELSET_3D.F90)
        !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
@@ -12059,13 +12061,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
          cc_group=cc*cc_elasticmask
+        else if (project_option.eq.SOLVETYPE_SMOOTH) then!curvature projection
+         cc_group=cc*cc_elasticmask
         else
-         print *,"project_option invalid eval_face_coeff"
+         print *,"project_option invalid eval_face_coeff: ",project_option
          stop
         endif
 
         if (nsolve.ne.1) then
-         print *,"nsolve invalid for projection"
+         print *,"nsolve invalid for projection: ",nsolve
          stop
         endif
 
@@ -12276,7 +12280,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 
        else
-        print *,"project_option invalid eval_face_coeff"
+        print *,"project_option invalid eval_face_coeff: ",project_option
         stop
        endif
 
@@ -14794,7 +14798,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
 
-        ! SOLVETYPE_PRES, INITPROJ
+        ! SOLVETYPE_PRES, SOLVETYPE_INITPROJ, SOLVETYPE_SMOOTH
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid2 SEM_MAC_TO_CELL"
