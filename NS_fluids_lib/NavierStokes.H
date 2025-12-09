@@ -1343,8 +1343,8 @@ void apply_pressure_grad(
      int update_stable,
      int nsolve);
 
-    void increment_potential_forceALL();
-    void increment_potential_force();
+    void increment_potential_forceALL(int project_option);
+    void increment_potential_force(int project_option);
 
     MultiFab* getState_list(int ngrow,Vector<int> strt_comp,
        Vector<int> num_comp,Real time);

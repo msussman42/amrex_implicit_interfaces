@@ -19297,10 +19297,6 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
  int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
  int nc_bucket=CISLCOMP_NCOMP;
 
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
  if (local_smoothing==0) {
 
   // in: split_scalar_advection
@@ -19485,6 +19481,10 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
    amrex::Error("dir_absolute_direct_split invalid");
   }
 
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -19667,7 +19667,13 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   }  // mfi
 } // omp
 
+  ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
+
  } else if (local_smoothing>0) {
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -19779,10 +19785,9 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
 
   }  // mfi
 } // omp
+  ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
  } else
   amrex::Error("local_smoothing invalid");
-
- ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
   ParallelDescriptor::ReduceIntSum(grids_per_proc[iproc]);

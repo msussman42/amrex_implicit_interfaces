@@ -10631,6 +10631,7 @@ END SUBROUTINE SIMP
 ! called from:
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
       subroutine fort_addgravity( &
+       project_option, &
        FSI_outer_sweeps, &
        num_FSI_outer_sweeps, &
        dt, &
@@ -10653,6 +10654,7 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: project_option
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
       real(amrex_real), INTENT(in) :: dt
@@ -10691,6 +10693,7 @@ END SUBROUTINE SIMP
       real(amrex_real) local_macnew
 
       real(amrex_real) gravity_increment
+      real(amrex_real) force_mag,vel_mag
 
       integer, parameter :: nhalf=1
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -10751,6 +10754,9 @@ END SUBROUTINE SIMP
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
 
+      force_mag=zero
+      vel_mag=zero
+
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
@@ -10797,26 +10803,33 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       if (num_FSI_outer_sweeps.eq.1) then
-        if (FSI_outer_sweeps.eq.0) then
-         local_cut=local_cut*cc_elasticmask
+       if (project_option.eq.SOLVETYPE_SMOOTH) then
+        local_cut=local_cut*cc_elasticmask
+       else if (project_option.eq.SOLVETYPE_PRES) then
+        if (num_FSI_outer_sweeps.eq.1) then
+         if (FSI_outer_sweeps.eq.0) then
+          local_cut=local_cut*cc_elasticmask
+         else
+          print *,"expecting FSI_outer_sweeps==0: ",FSI_outer_sweeps
+          stop
+         endif
+        else if ((num_FSI_outer_sweeps.gt.1).and. &
+                 (FSI_outer_sweeps.ge.1).and. &
+                 (FSI_outer_sweeps.lt. &
+                  min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
+         local_cut=local_cut*cc_elasticmaskpart
+        else if ((num_FSI_outer_sweeps.gt.1).and. &
+                 (FSI_outer_sweeps.eq.0)) then
+         !do nothing
         else
-         print *,"expecting FSI_outer_sweeps==0: ",FSI_outer_sweeps
+         print *,"num_FSI_outer_sweeps or FSI_outer_sweeps invalid"
+         print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
+         print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
+         print *,"NFSI_LIMIT: ",NFSI_LIMIT
          stop
         endif
-       else if ((num_FSI_outer_sweeps.gt.1).and. &
-                (FSI_outer_sweeps.ge.1).and. &
-                (FSI_outer_sweeps.lt. &
-                 min(num_FSI_outer_sweeps,NFSI_LIMIT))) then
-        local_cut=local_cut*cc_elasticmaskpart
-       else if ((num_FSI_outer_sweeps.gt.1).and. &
-                (FSI_outer_sweeps.eq.0)) then
-        !do nothing
        else
-        print *,"num_FSI_outer_sweeps or FSI_outer_sweeps invalid"
-        print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
-        print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
-        print *,"NFSI_LIMIT: ",NFSI_LIMIT
+        print *,"project_option invalid(addgravity): ",project_option
         stop
        endif
 
@@ -10846,9 +10859,16 @@ END SUBROUTINE SIMP
 
        macnew(D_DECL(i,j,k))=local_macnew
 
+       force_mag=force_mag+facegrav(D_DECL(i,j,k))**2
+       vel_mag=vel_mag+local_macnew**2
+
       enddo
       enddo
       enddo
+
+      if (1.eq.0) then
+       print *,"add_gravity dir,vel_mag,force_mag ",dir,vel_mag,force_mag
+      endif
 
       return
       end subroutine fort_addgravity

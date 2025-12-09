@@ -447,6 +447,7 @@ extern "C" {
 
 
     void fort_addgravity(
+      int* project_option,
       int* FSI_outer_sweeps,
       int* num_FSI_outer_sweeps,
       Real* dt,

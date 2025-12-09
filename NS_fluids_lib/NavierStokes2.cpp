@@ -499,8 +499,10 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
     //do nothing
    } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
     //do nothing
+   } else if (pattern_test(local_caller_string,"smoothing_advection")==1) {
+    //do nothing
    } else
-    amrex::Error("local_caller_string invalid");
+    amrex::Error("local_caller_string invalid getStateVISC_ALL");
 
   } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
    //do nothing
@@ -5499,6 +5501,7 @@ void NavierStokes::make_physics_vars(int project_option,
    //
    // declared in: LEVELSET_3D.F90
   fort_build_semirefinevof(
+   &project_option,
    &tid_current,
    &tessellate,  // =3
    &ngrow_refine,
@@ -5886,7 +5889,7 @@ void NavierStokes::solid_temperature() {
 
 // adds gravity force and surface tension 
 // to cell and face velocity (all components).
-void NavierStokes::increment_potential_forceALL() {
+void NavierStokes::increment_potential_forceALL(int project_option) {
 
  if (level!=0)
   amrex::Error("level invalid increment_potential_forceALL");
@@ -5894,12 +5897,12 @@ void NavierStokes::increment_potential_forceALL() {
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.increment_potential_force();
+  ns_level.increment_potential_force(project_option);
  }
 
 } // subroutine increment_potential_forceALL()
 
-void NavierStokes::increment_potential_force() {
+void NavierStokes::increment_potential_force(int project_option) {
 
  std::string local_caller_string="increment_potential_force";
 
@@ -5965,6 +5968,7 @@ void NavierStokes::increment_potential_force() {
     // (gravity and surface tension)
     // u+=facegrav 
    fort_addgravity(
+     &project_option,
      &FSI_outer_sweeps,
      &num_FSI_outer_sweeps,
      &dt_slab,

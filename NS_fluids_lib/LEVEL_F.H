@@ -531,6 +531,7 @@ namespace amrex{
 
 
       void fort_build_semirefinevof(
+        int* project_option,
         int* tid,
         int* tessellate,
         int* ngrow_refine,

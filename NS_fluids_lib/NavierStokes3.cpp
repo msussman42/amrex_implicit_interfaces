@@ -373,7 +373,57 @@ void NavierStokes::smoothing_advection() {
   delete_array(FACETENSOR_MF);
   multiphase_project(SOLVETYPE_SMOOTH);
   nonlinear_advection(local_caller_string,n_smooth);
- }
+
+  if (1==1) {
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     //ngrow,dir,time
+     //Umac_Type
+     ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
+        dir,cur_time_slab);
+     MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+     MultiFab::Copy(Umac_new,*ns_level.localMF[UMAC_STATIC_MF],0,0,1,0);
+    }
+   } //for (int ilev=finest_level;ilev>=level;ilev--)
+
+
+   int basestep_debug=n_smooth;
+   parent->writeDEBUG_PlotFile(
+   basestep_debug,
+   SDC_outer_sweeps,
+   slab_step,
+   divu_outer_sweeps);
+   std::cout << "press any number then enter: n_smooth= " << n_smooth << '\n';
+   std::cout << "local_num_steps= " << local_num_steps << '\n';
+   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+   std::cout << "dt_slab= " << dt_slab << '\n';
+   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+   std::cout << "num_divu_outer_sweeps= " << 
+      num_divu_outer_sweeps << '\n';
+   std::cout << "slab_step= " << 
+      slab_step << '\n';
+   std::cout << "SDC_outer_sweeps= " << 
+      SDC_outer_sweeps << '\n';
+   std::cout << "FSI_outer_sweeps= " << 
+      FSI_outer_sweeps << '\n';
+   std::cout << "num_FSI_outer_sweeps= " << 
+      num_FSI_outer_sweeps << '\n';
+   std::cout << "NFSI_LIMIT= " << 
+      NFSI_LIMIT << '\n';
+   int n_input;
+   std::cin >> n_input;
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,
+              HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,0,1,0);
+    delete_array(HOLD_VELOCITY_PROJECT_FACE_MF+dir);
+   }
+
+  } //if (1==1)
+
+ } // for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) 
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -10479,7 +10529,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
    // do nothing
   } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
-   increment_potential_forceALL(); 
+   increment_potential_forceALL(project_option); 
   } else
    amrex::Error("potgrad_surface_tension_mask invalid");
 
@@ -10607,36 +10657,40 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option_needs_scaling invalid46");
 
-  //SOLVETYPE_PRES, 
-  //SOLVETYPE_INITPROJ, 
- if (project_option_FSI_rigid(&project_option)==1) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_SMOOTH)) {
 
-  Vector<blobclass> blobdata;
-  Vector< Vector<Real> > mdot_data;
-  Vector< Vector<Real> > mdot_comp_data;
-  Vector< Vector<Real> > mdot_data_redistribute;
-  Vector< Vector<Real> > mdot_comp_data_redistribute;
-  Vector<int> type_flag;
+   //SOLVETYPE_PRES, 
+   //SOLVETYPE_INITPROJ, 
+  if (project_option_FSI_rigid(&project_option)==1) {
 
-  if (verbose>0) {
-   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "BEGIN: color_variable, multiphase_project\n";
-    print_project_option(project_option);
+   Vector<blobclass> blobdata;
+   Vector< Vector<Real> > mdot_data;
+   Vector< Vector<Real> > mdot_comp_data;
+   Vector< Vector<Real> > mdot_data_redistribute;
+   Vector< Vector<Real> > mdot_comp_data_redistribute;
+   Vector<int> type_flag;
+
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "BEGIN: color_variable, multiphase_project\n";
+     print_project_option(project_option);
+    }
    }
-  }
 
-  int color_count=0;
-  int coarsest_level=0;
+   int color_count=0;
+   int coarsest_level=0;
 
-  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
-  int tessellate=1;
-  int operation_flag=OP_GATHER_MDOT;
+   int tessellate=1;
+   int operation_flag=OP_GATHER_MDOT;
 
-  int use_mac_velocity=1;
+   int use_mac_velocity=1;
 
    //calling from: NavierStokes::multiphase_project
-  ColorSumALL(
+   ColorSumALL(
      use_mac_velocity,
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=1
@@ -10653,136 +10707,141 @@ void NavierStokes::multiphase_project(int project_option) {
      mdot_comp_data_redistribute 
      );
 
-  if (color_count!=blobdata.size())
-   amrex::Error("color_count!=blobdata.size()");
+   if (color_count!=blobdata.size())
+    amrex::Error("color_count!=blobdata.size()");
 
-  if (verbose>0) {
-   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "END: color_variable, multiphase_project\n";
-    print_project_option(project_option);
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "END: color_variable, multiphase_project\n";
+     print_project_option(project_option);
+    }
    }
-  }
 
-  int idx_velcell=-1;
+   int idx_velcell=-1;
 
-  operation_flag=OP_UNEW_CELL_TO_MAC;
-  Real beta=0.0;
+   operation_flag=OP_UNEW_CELL_TO_MAC;
+   Real beta=0.0;
 
-  if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_INITPROJ)) {
+   if ((project_option==SOLVETYPE_PRES)||
+       (project_option==SOLVETYPE_INITPROJ)) {
 
-   if (nsolve!=1)
-    amrex::Error("nsolve invalid");
+    if (nsolve!=1)
+     amrex::Error("nsolve invalid");
 
-   if (project_option==SOLVETYPE_PRES) {
-    operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
-   } else if (project_option==SOLVETYPE_INITPROJ) {
-    operation_flag=OP_UNEW_CELL_TO_MAC;
-   } else 
-    amrex::Error("project_option invalid47");
+    if (project_option==SOLVETYPE_PRES) {
+     operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
+    } else if (project_option==SOLVETYPE_INITPROJ) {
+     operation_flag=OP_UNEW_CELL_TO_MAC;
+    } else 
+     amrex::Error("project_option invalid47");
 
-   if (step_through_data==1) {
-    int basestep_debug=nStep();
-    parent->writeDEBUG_PlotFile(
-    basestep_debug,
-    SDC_outer_sweeps,
-    slab_step,
-    divu_outer_sweeps);
-    std::cout << "press any number then enter: before increment_face_velocityALL\n";
-    std::cout << "WARNING: velocity is scaled\n";
-    std::cout << " cur_time_slab= " << cur_time_slab << '\n';
-    std::cout << " dt_slab= " << dt_slab << '\n';
-    std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
-    std::cout << "num_divu_outer_sweeps= " << 
+    if (step_through_data==1) {
+     int basestep_debug=nStep();
+     parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     slab_step,
+     divu_outer_sweeps);
+     std::cout << "press any number then enter: before increment_face_velocityALL\n";
+     std::cout << "WARNING: velocity is scaled\n";
+     std::cout << " cur_time_slab= " << cur_time_slab << '\n';
+     std::cout << " dt_slab= " << dt_slab << '\n';
+     std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+     std::cout << "num_divu_outer_sweeps= " << 
           num_divu_outer_sweeps << '\n';
-    std::cout << "slab_step= " << 
+     std::cout << "slab_step= " << 
           slab_step << '\n';
-    std::cout << "SDC_outer_sweeps= " << 
+     std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
-    std::cout << "FSI_outer_sweeps= " << 
+     std::cout << "FSI_outer_sweeps= " << 
           FSI_outer_sweeps << '\n';
-    std::cout << "num_FSI_outer_sweeps= " << 
+     std::cout << "num_FSI_outer_sweeps= " << 
           num_FSI_outer_sweeps << '\n';
-    std::cout << "NFSI_LIMIT= " << 
+     std::cout << "NFSI_LIMIT= " << 
           NFSI_LIMIT << '\n';
-    int n_input;
-    std::cin >> n_input;
-   }
+     int n_input;
+     std::cin >> n_input;
+    }
 
-   increment_face_velocityALL(
-    operation_flag,
-    project_option,
-    idx_velcell,beta,blobdata); 
+    increment_face_velocityALL(
+     operation_flag,
+     project_option,
+     idx_velcell,beta,blobdata); 
 
-   if (step_through_data==1) {
-    int basestep_debug=nStep();
-    parent->writeDEBUG_PlotFile(
-    basestep_debug,
-    SDC_outer_sweeps,
-    slab_step,
-    divu_outer_sweeps);
-    std::cout << "press any number then enter: after increment_face_velocityALL\n";
-    std::cout << "WARNING: velocity is scaled\n";
-    std::cout << " cur_time_slab= " << cur_time_slab << '\n';
-    std::cout << " dt_slab= " << dt_slab << '\n';
-    std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
-    std::cout << "num_divu_outer_sweeps= " << 
+    delete_array(TYPE_MF);
+    delete_array(COLOR_MF);
+
+    if (step_through_data==1) {
+     int basestep_debug=nStep();
+     parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     slab_step,
+     divu_outer_sweeps);
+     std::cout << "press any number then enter: after increment_face_velocityALL\n";
+     std::cout << "WARNING: velocity is scaled\n";
+     std::cout << " cur_time_slab= " << cur_time_slab << '\n';
+     std::cout << " dt_slab= " << dt_slab << '\n';
+     std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+     std::cout << "num_divu_outer_sweeps= " << 
           num_divu_outer_sweeps << '\n';
-    std::cout << "slab_step= " << 
+     std::cout << "slab_step= " << 
           slab_step << '\n';
-    std::cout << "SDC_outer_sweeps= " << 
+     std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
-    std::cout << "FSI_outer_sweeps= " << 
+     std::cout << "FSI_outer_sweeps= " << 
           FSI_outer_sweeps << '\n';
-    std::cout << "num_FSI_outer_sweeps= " << 
+     std::cout << "num_FSI_outer_sweeps= " << 
           num_FSI_outer_sweeps << '\n';
-    std::cout << "NFSI_LIMIT= " << 
+     std::cout << "NFSI_LIMIT= " << 
           NFSI_LIMIT << '\n';
-    int n_input;
-    std::cin >> n_input;
-   }
+     int n_input;
+     std::cin >> n_input;
+    }
+   } else if (project_option==SOLVETYPE_SMOOTH) {
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
+    amrex::Error("SOLVETYPE_SMOOTH != FSI_rigid");
 
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     MultiFab* macvel=ns_level.getStateMAC(0,dir,cur_time_slab); 
-     MultiFab::Copy(
-      *ns_level.localMF[MAC_TEMP_MF+dir],
-      *macvel,0,0,nsolve,0);
-     MultiFab::Copy(
-      *ns_level.localMF[UMAC_MF+dir],
-      *macvel,0,0,nsolve,0);
+   } else
+    amrex::Error("project_option invalid 10806");
 
-     if (1==0) {
-      int gridno=0;
-      const Box& fabgrid = grids[gridno];
-      const int* fablo=fabgrid.loVect();
-      const int* fabhi=fabgrid.hiVect();
-      const Real* xlo = grid_loc[gridno].lo();
-      int interior_only=1;
-      FArrayBox& macfab=(*macvel)[0];
-      int scomp_debug=0;
-      int ncomp_debug=nsolve;
-      std::cout << "WARNING: this velocity is scaled\n";
-      tecplot_debug(macfab,xlo,fablo,fabhi,coarse_dx,dir,0,
-	     scomp_debug,ncomp_debug,interior_only);
-     }
-     delete macvel;
-    }  // dir=0..sdim-1
-   } // ilev=finest_level ... level
+  } else if (project_option_FSI_rigid(&project_option)==0) {
+   // do nothing
+  } else {
+   amrex::Error("project_option_FSI_rigid invalid48");
+  } 
 
-  } else
-   amrex::Error("project_option invalid 10208");
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
 
-  delete_array(TYPE_MF);
-  delete_array(COLOR_MF);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    MultiFab* macvel=ns_level.getStateMAC(0,dir,cur_time_slab); 
+    MultiFab::Copy(
+     *ns_level.localMF[MAC_TEMP_MF+dir],
+     *macvel,0,0,nsolve,0);
+    MultiFab::Copy(
+     *ns_level.localMF[UMAC_MF+dir],
+     *macvel,0,0,nsolve,0);
 
- } else if (project_option_FSI_rigid(&project_option)==0) {
-  // do nothing
- } else {
-  amrex::Error("project_option_FSI_rigid invalid48");
- } 
+    if (1==0) {
+     int gridno=0;
+     const Box& fabgrid = grids[gridno];
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     const Real* xlo = grid_loc[gridno].lo();
+     int interior_only=1;
+     FArrayBox& macfab=(*macvel)[0];
+     int scomp_debug=0;
+     int ncomp_debug=nsolve;
+     std::cout << "WARNING: this velocity is scaled\n";
+     tecplot_debug(macfab,xlo,fablo,fabhi,coarse_dx,dir,0,
+            scomp_debug,ncomp_debug,interior_only);
+    }
+    delete macvel;
+   }  // dir=0..sdim-1
+  } // ilev=finest_level ... level
+
+ } //project_option=SOLVETYPE_[PRES|INITPROJ|SMOOTH]
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

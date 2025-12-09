@@ -11833,6 +11833,7 @@ stop
 
        ! called from: NavierStokes::make_physics_vars
       subroutine fort_build_semirefinevof( &
+       project_option, &
        tid, &
        tessellate, &
        ngrow_refine, &
@@ -11864,6 +11865,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: project_option
       integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: ngrow_refine
       integer, INTENT(in) :: tid
@@ -12201,6 +12203,18 @@ stop
            print *,"level,finest_level ",level,finest_level
            stop
           endif  
+
+          if (project_option.eq.SOLVETYPE_PRES) then
+           !do nothing
+          else if (project_option.eq.SOLVETYPE_INITPROJ) then
+           !do nothing
+          else if (project_option.eq.SOLVETYPE_SMOOTH) then
+           den_value=one
+          else
+           print *,"project_option invalid in build_semi_refine_vof ", &
+            project_option
+           stop
+          endif
  
           if (is_rigid(im).eq.0) then
            voltotal_fluid=voltotal_fluid+multi_volume(im)
