@@ -10200,10 +10200,22 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option==SOLVETYPE_SMOOTH) {
 
-//FIX ME save MAC VELOCITY HERE and ZAP IT OUT
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
 	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     //ngrow,dir,time
+     //Umac_Type
+    ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
+        dir,cur_time_slab);
+    MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+     //value,scomp,ncomp,ngrow
+    Umac_new.setVal(0.0,0,1,0);
+   }
+  } //for (int ilev=finest_level;ilev>=level;ilev--)
 
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
@@ -12350,7 +12362,7 @@ void NavierStokes::multiphase_project(int project_option) {
   //SOLVETYPE_PRES
   //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
-//FIX ME
+
   getState_localMF_listALL(
     PRESPC2_MF,1,
     state_index,
@@ -12368,6 +12380,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // then temperature might be updated if compressible material.
    // Copies UMAC to Umac_new: "save_to_macvel_state(UMAC_MF)"
    int update_energy=SUB_OP_THERMAL_DIVUP_NULL;
+
    if (project_option==SOLVETYPE_PRES) {
 
     if (num_FSI_outer_sweeps==1) {
@@ -12389,6 +12402,10 @@ void NavierStokes::multiphase_project(int project_option) {
       amrex::Error("FSI_outer_sweeps invalid");
     } else
      amrex::Error("num_FSI_outer_sweeps invalid");
+
+   } else if (project_option==SOLVETYPE_SMOOTH) {
+
+    update_energy=SUB_OP_THERMAL_DIVUP_NULL;
 
    } else if (project_option==SOLVETYPE_INITPROJ) {
 
@@ -12441,7 +12458,13 @@ void NavierStokes::multiphase_project(int project_option) {
 		    num_state_material*num_materials,1);
 
    } else if (project_option==SOLVETYPE_INITPROJ) {
+
     ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+
+   } else if (project_option==SOLVETYPE_SMOOTH) {
+
+    //do nothing
+
    } else
     amrex::Error("project_option invalid 54");
 
@@ -12454,6 +12477,8 @@ void NavierStokes::multiphase_project(int project_option) {
    unscale_variablesALL();
 
   } else if (project_option==SOLVETYPE_INITPROJ) {
+   // do nothing
+  } else if (project_option==SOLVETYPE_SMOOTH) {
    // do nothing
   } else
    amrex::Error("project_option invalid 11886");
@@ -12533,7 +12558,13 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option==SOLVETYPE_SMOOTH) {
 
-   //FIX ME restore MAC VELOCITY HERE and update the mean curvature velocity.
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   Copy_array(UMAC_STATIC_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
+   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,
+              HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,0,1,0);
+   delete_array(HOLD_VELOCITY_PROJECT_FACE_MF+dir);
+  }
+
   Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
 	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   delete_array(PRESSURE_SAVE_MF);
