@@ -10872,6 +10872,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option==SOLVETYPE_INITPROJ) {
   homflag_residual_correction_form=1; 
+ } else if (project_option==SOLVETYPE_SMOOTH) {
+  homflag_residual_correction_form=1; //both pressure and velocity
  } else if (project_option_is_valid(project_option)==1) {
   homflag_residual_correction_form=0; 
  } else
