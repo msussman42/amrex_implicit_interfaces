@@ -7459,7 +7459,8 @@ stop
        print *,"viscosity force is only cell centered"
        stop
       else
-       print *,"project_option invalid fort_updatesemforce_face"
+       print *,"project_option invalid fort_updatesemforce_face: ", &
+               project_option
        stop
       endif
 
