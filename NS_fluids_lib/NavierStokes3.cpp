@@ -361,6 +361,11 @@ void NavierStokes::smoothing_advection() {
  }
   
  for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) {
+
+  if (verbose>0)
+   if (ParallelDescriptor::IOProcessor())
+    std::cout << "SOLVETYPE_SMOOTH n_smooth= " << n_smooth << '\n';
+
    //VOF_Recon_ALL
    //makeStateDistALL
   no_mass_transfer_code_segment(local_caller_string);
