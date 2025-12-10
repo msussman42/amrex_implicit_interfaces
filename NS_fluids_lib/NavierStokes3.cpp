@@ -374,7 +374,7 @@ void NavierStokes::smoothing_advection() {
   multiphase_project(SOLVETYPE_SMOOTH);
   nonlinear_advection(local_caller_string,n_smooth);
 
-  if (1==1) {
+  if (1==0) {
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
