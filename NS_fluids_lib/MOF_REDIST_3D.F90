@@ -3415,6 +3415,7 @@ stop
          vcenter(im)=mofdata(vofcomp)
         enddo ! im
 
+         !in: fort_steninit
         call check_full_cell_vfrac( &
           vcenter, &
           tessellate, &  ! =0
@@ -3510,6 +3511,7 @@ stop
           vcenter(im)=mofdata(vofcomp)
          enddo ! im
 
+         !in: fort_steninit
          call check_full_cell_vfrac( &
           vcenter, &
           tessellate, &  ! =0
@@ -3757,7 +3759,7 @@ stop
 
          local_tessellate=2
 
-          !EPS_FULL_WEAK
+          !EPS_FULL_WEAK=EPS2
          call multi_get_volume_tessellate( &
           tid, &
           tessellate, &  ! =3
@@ -3783,6 +3785,7 @@ stop
          vcenter(im)=mofdatavalid(vofcomp)
         enddo ! im
 
+         !in: fort_faceinit
         call check_full_cell_vfrac( &
           vcenter, &
           tessellate, & ! 0,1, or 3
@@ -3861,6 +3864,7 @@ stop
            ! multi_cen in absolute coordinate system (not relative to cell
            ! centroid)
            ! in: fort_faceinit
+           ! EPS_FULL_WEAK=EPS2
           call multi_get_volume_grid( &
             tid, &
             EPS_FULL_WEAK, &

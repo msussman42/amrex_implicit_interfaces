@@ -1171,7 +1171,7 @@ stop
 
          call multi_get_volume_grid( &
           tid_in, &
-          EPS_8_4, &
+          EPS_11_4, &
           tessellate, & ! =0
           bfact,dx, &
           xsten,nhalf, & ! phi = n dot (x-x0) + intercept
@@ -1323,7 +1323,7 @@ stop
 
         call multi_get_volume_grid( &
          tid_in, &
-         EPS_8_4, &
+         EPS_11_4, &
          tessellate, & ! =0
          bfact,dx, &
          xsten,nhalf, & ! phi = n dot (x-x0) + intercept
