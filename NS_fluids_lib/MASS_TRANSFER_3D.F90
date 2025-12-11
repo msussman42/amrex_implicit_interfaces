@@ -4206,7 +4206,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
 
@@ -4233,7 +4233,7 @@ stop
               (mass_frac_id.le.num_species_var)) then
            ! do nothing
           else
-           print *,"mass_frac_id invalid"
+           print *,"mass_frac_id invalid: ",mass_frac_id
            stop
           endif
          else
@@ -4804,7 +4804,7 @@ stop
                tessellate=0
                call multi_get_volume_grid( &
                  tid, &
-                 EPS_8_4, &
+                 EPS_11_4, &
                  tessellate, & ! =0
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
@@ -8591,7 +8591,7 @@ stop
                       mag=mag+theta_nrmCP(dir)*nrmCP(dir)
                      enddo
                      if (abs(mag).gt.one+EPS_8_4) then
-                      print *,"dot product bust"
+                      print *,"dot product bust: ",mag
                       stop
                      endif
                      if (abs(mag).gt.zero) then

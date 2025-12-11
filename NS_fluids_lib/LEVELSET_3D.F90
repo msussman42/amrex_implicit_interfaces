@@ -2661,6 +2661,7 @@ stop
          vcenter(im)=mofdata(vofcomp)
         enddo ! im
 
+         !in: fort_cellfaceinit
         call check_full_cell_vfrac(vcenter, &
           tessellate, &  !=0,1, or 3
           im_crit, &
@@ -5595,6 +5596,7 @@ stop
          !   b) else, only consider fluids.
         if ((tessellate.eq.1).or. &
             (tessellate.eq.3)) then
+          !in: fort_getcolorsum
           !EPS2
          call multi_get_volume_tessellate( &
           tid_current, &
@@ -12125,6 +12127,7 @@ stop
           voldonate,cendonate,SDIM)
 
           ! multi_cen is "absolute" (not relative to cell centroid)
+          ! in: fort_build_semirefinevof
           ! EPS2
          call multi_get_volume_grid_simple( &
            tid, &

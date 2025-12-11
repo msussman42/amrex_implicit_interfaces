@@ -18875,7 +18875,7 @@ contains
         !   
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
-        ! for advection, EPS_SINGLE=EPS_8_4=EPS_UNCAPTURED
+        ! for advection, EPS_SINGLE=EPS_11_4=EPS_UNCAPTURED
       subroutine multi_get_volume_grid( &
        tid_in, &
        EPS_SINGLE, &
@@ -18971,7 +18971,7 @@ contains
           (EPS_SINGLE.lt.half)) then
        !do nothing
       else
-       print *,"EPS_SINGLE invalid"
+       print *,"EPS_SINGLE invalid: ",EPS_SINGLE
        stop
       endif
 
@@ -19423,6 +19423,7 @@ contains
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
             print *,"volcell= ",volcell
             print *,"VOFTOL= ",VOFTOL
+            print *,"EPS_11_4= ",EPS_11_4
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
             print *,"EPS_SINGLE= ",EPS_SINGLE
@@ -19788,6 +19789,7 @@ contains
                abs(volcut-uncaptured_volume_fluid)/volcell
             endif
             print *,"VOFTOL= ",VOFTOL
+            print *,"EPS_11_4= ",EPS_11_4
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
             print *,"EPS_SINGLE= ",EPS_SINGLE
@@ -21311,7 +21313,7 @@ contains
           (EPS_SINGLE.lt.half)) then
        !do nothing
       else
-       print *,"EPS_SINGLE invalid"
+       print *,"EPS_SINGLE invalid: ",EPS_SINGLE
        stop
       endif
 
@@ -21738,6 +21740,7 @@ contains
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
             print *,"volcell= ",volcell
             print *,"VOFTOL= ",VOFTOL
+            print *,"EPS_11_4= ",EPS_11_4
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
             print *,"EPS_SINGLE= ",EPS_SINGLE
@@ -22083,6 +22086,7 @@ contains
                abs(volcut-uncaptured_volume_fluid)/volcell
             endif
             print *,"EPS_12_6= ",EPS_12_6
+            print *,"EPS_11_4= ",EPS_11_4
             print *,"EPS_8_4= ",EPS_8_4
             print *,"EPS_SINGLE= ",EPS_SINGLE
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
@@ -22511,7 +22515,7 @@ contains
       if (abs(one-vfrac_fluid_sum).le.EPS_8_4) then
        ! do nothing
       else
-       print *,"vfrac_fluid_sum invalid"
+       print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
        stop
       endif
       if ((vfrac_solid_sum.le.one+EPS_8_4).and. &
@@ -25447,6 +25451,7 @@ contains
        vfrac_data(im)=mofdatavalid(vofcomp)
       enddo ! im=1..num_materials
 
+       !in: multi_get_volume_POINT
       call check_full_cell_vfrac(vfrac_data,tessellate,im_crit,EPS_8_4)
 
       if ((im_crit.ge.1).and. &

@@ -444,6 +444,7 @@ implicit none
       real(amrex_real), PARAMETER :: EPS_10_3=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: EPS_10_4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS_10_5=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER :: EPS_11_4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS_12_2=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: EPS_12_4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS_12_6=BL_REAL_E(1.0,-6)
@@ -493,14 +494,15 @@ implicit none
       real(amrex_real), PARAMETER :: EPS_10_3=BL_REAL_E(1.0,-10)
       real(amrex_real), PARAMETER :: EPS_10_4=BL_REAL_E(1.0,-10)
       real(amrex_real), PARAMETER :: EPS_10_5=BL_REAL_E(1.0,-10)
+      real(amrex_real), PARAMETER :: EPS_11_4=BL_REAL_E(1.0,-11)
       real(amrex_real), PARAMETER :: EPS_12_2=BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: EPS_12_4=BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: EPS_12_6=BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: EPS_14_7=BL_REAL_E(1.0,-14)
       real(amrex_real), PARAMETER :: EPS_13_5=BL_REAL_E(1.0,-13)
 #endif
-      real(amrex_real), PARAMETER :: EPS_UNCAPTURED=EPS_8_4
-      real(amrex_real), PARAMETER :: VOFTOL=EPS_8_4
+      real(amrex_real), PARAMETER :: EPS_UNCAPTURED=EPS_11_4
+      real(amrex_real), PARAMETER :: VOFTOL=EPS_11_4
       real(amrex_real), PARAMETER :: EPS_FULL_WEAK=EPS2
 
       integer, PARAMETER :: tecplot_real=8

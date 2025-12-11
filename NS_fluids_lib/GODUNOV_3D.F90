@@ -3117,6 +3117,13 @@ stop
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (dirnormal.eq.1) then ! theta direction
          RR=xstenMAC(0,1)
+        else if (dirnormal.eq.0) then
+         !do nothing
+        else if ((dirnormal.eq.2).and.(SDIM.eq.3)) then
+         !do nothing
+        else
+         print *,"dirnormal invalid: ",dirnormal
+         stop
         endif
        else
         print *,"levelrz invalid"
@@ -3132,11 +3139,15 @@ stop
        hx=hx*RR
        hxmac=hx
 
+       ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
+       ! if cylindrical coordinates, then dx_{\theta}*=problox
        if (hx.gt.(one-EPS2)*dxmin) then
         ! do nothing
        else
         print *,"expecting hx>(1-EPS2)*dxmin"
         print *,"xstenMAC invalid estdt"
+        print *,"RR= ",RR
+        print *,"problox= ",problox
         print *,"hx= ",hx
         print *,"dxmin= ",dxmin
         print *,"i,j,k ",i,j,k
@@ -7702,8 +7713,10 @@ stop
         enddo ! iquad
         sanity_sum=sanity_sum+GQwsQUAD(jstencil,kinterval)
        enddo  ! jstencil
-       if (abs(sanity_sum-two).gt.EPS12) then
-        print *,"SDC sanity check failed"
+       if (abs(sanity_sum-two).le.EPS12) then
+        !do nothing
+       else
+        print *,"SDC sanity check failed: ",sanity_sum
         stop
        endif
       enddo  ! kinterval
@@ -10652,7 +10665,7 @@ stop
                if ((theta.ge.zero).and.(theta.le.one+EPS2)) then
                 ! do nothing
                else
-                print *,"theta invalid"
+                print *,"theta invalid: ",theta
                 stop
                endif
                if (theta.le.theta_cutoff) then
@@ -14924,6 +14937,7 @@ stop
             else if (LS_voltotal_depart.eq.zero) then
              volint=zero
             else
+             print *,"EPS_11_4= ",EPS_11_4
              print *,"EPS_8_4= ",EPS_8_4
              print *,"EPS_8_3= ",EPS_8_3
              print *,"LS_voltotal_depart bust (multi_get_volume_grid_and_map)"
@@ -16935,6 +16949,7 @@ stop
             else if (LS_voltotal_depart.eq.zero) then
              volint=zero
             else
+             print *,"EPS_11_4= ",EPS_11_4
              print *,"EPS_8_4= ",EPS_8_4
              print *,"EPS_8_3= ",EPS_8_3
              print *,"LS_voltotal_depart bust (multi_get_volume_grid_and_map)"
