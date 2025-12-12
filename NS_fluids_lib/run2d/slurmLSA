@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --job-name="LSA"
+##https://rcc.fsu.edu/manage
+##https://docs.rcc.fsu.edu/hpc/slurm-job-reference/#submitting-jobs
+##SBATCH --ntasks=28
+#SBATCH --cpus-per-task=1
+##SBATCH -C YEAR2022,amd
+#SBATCH -N 1
+#SBATCH -n 4
+##SBATCH --partition=engineering_q
+#SBATCH --partition=backfill
+##SBATCH --partition=mecfd_q
+#SBATCH --mail-type="ALL"
+#SBATCH --mail-user=msussman@fsu.edu
+#SBATCH -t 4:00:00
+##SBATCH -t 48:00:00
+##SBATCH -t 14-00:00:00
+#SBATCH --output=run.out
+#SBATCH --error=run.err
+#SBATCH --open-mode=append
+#SBATCH --exclusive
+
+
+
+# Information about nodes on a partition
+#   $ sinfo -p PARTTION_NAME
+#   $ sinfo -p PARTTION_NAME -N -o "%.12N %.4D %.11T %.13C %.8z %.6m %.8f %10E"
+
+
+# Check your partitions 
+#   $ rcctool my:partitions
+
+pwd;hostname;date
+echo "running on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
+
+ module purge
+ module load gnu/11.2.1
+ module load openmpi
+# # module load intel-openmpi
+srun /gpfs/home/sussman/LSA/amrex_implicit_interfaces/NS_fluids_lib/run2d/growthrate/amrgrowth inputs.growthrate.LSA
+
