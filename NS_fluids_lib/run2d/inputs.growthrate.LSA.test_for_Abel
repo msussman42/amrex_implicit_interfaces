@@ -1,0 +1,165 @@
+#Wang, Simakihina, Sussman Figure 16
+#expected most dangerous mode: space frequency=.7
+#wave length=2 pi/.7=9.0
+#see Popinet 2009, see rayleigh_capillary_growth.F90
+max_step  = 10   # maximum timestep non-intrusive LSA
+#max_step  = 999999   # maximum timestep perturbation
+#max_step  =  2    # maximum timestep non-intrusive LSA
+#stop_time = 0.0012 # maximum problem time non-intrusive LSA
+stop_time = 0.003 # maximum problem time non-intrusive LSA
+#stop_time =  10.25  # maximum problem time perturbation
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+#geometry.prob_hi   =  5.0 19.634954 #frequence=0.32,wavelength=2Pi/0.32  
+geometry.prob_hi   =  2.0 4.0
+geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
+
+ns.EILE_flag=-1
+ns.continuous_mof=1
+ns.MOFITERMAX=30
+ns.vof_height_function=1
+ns.mof_decision_tree_learning=0 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=0
+ns.FD_curv_interp=1
+
+# 0MGPCG 1PCG 2 MINV=I
+ns.project_solver_type=0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 200
+mg.bot_atol = 1.0e-8
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.num_materials=2
+ns.num_species_var=0
+
+ns.post_init_pressure_solve=1 
+
+ns.minimum_relative_error=1.0e-18
+ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
+                         # decent sized residual.
+
+#amr.n_cell    = 32 128
+amr.n_cell    = 64 128
+#amr.max_level = 2
+amr.max_level = 0
+ns.projection_pressure_scale=1.0
+
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 100000       # how often to regrid non-intrusive LSA
+#amr.regrid_int      = 1           # perturbation
+amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+ns.enable_spectral=0
+amr.time_blocking_factor=1
+amr.blocking_factor = 2 2 2 2 2       # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1  # block factor in grid generation
+amr.check_int       = 1000     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+#amr.plot_int        = 100 # non-intrusive LSA
+amr.plot_int        = 1  # non-intrusive LSA
+#amr.plot_int       = 100 # perturbation
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 16
+cg.min_max_grid_size   = 256
+amr.restart         = chk00000  #non-intrusive LSA
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-6
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+ns.visual_nddata_format=1
+
+ns.elastic_time=0.0 0.0 0.0
+ns.elastic_viscosity=0.0 0.0 0.0
+ns.polymer_factor=0.0 0.0 0.0
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-6
+ns.gravity        = 0.0    # body force  -980.0
+ns.tension        = 1.0
+ns.fixed_dt	  = 0.0003   # hardwire dt non-intrusive LSA 
+
+amr.LSA_nsteps_power_method=4 # non-intrusive LSA
+#amr.LSA_nsteps_power_method=0  # perturbation
+
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=4  # axis_dir=1 standard pipe problem, =2 inflow for liquid only
+               # axis_dir=3 inflow for gas only 
+               # axis_dir=4 standard liquid x<x_interface
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0           # liquid velocity (x<x_interface) 
+ns.twall=0.0
+ns.advbot=0.0          # gas velocity (x>x_interface)
+ns.adv_vel=0.0           # should always be 0.0
+ns.adv_dir=2             # should always be 2
+
+ns.heatviscconst=0.0 0.0 0.0 
+#ns.viscconst=0.02 0.00036 # .00036/.02=.036/2=0.018
+ns.viscconst=0.02 0.00026 # .00026/.02=.026/2=0.013
+ns.denconst=1.0 0.001225
+ns.tempconst=293.0 293.0 293.0 
+ns.material_type=0 0 
+ns.FSI_flag=0 0 
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+
+ns.yblob4=0.0            # initial liquid velocity
+ns.yblob5=0.0              # wall vertical liquid velocity (x=xlo)
+ns.twall=0.0
+ns.xblob4=0.0          # initial gas velocity
+ns.xblob5=0.0           # wall vertical gas velocity (x=xhi)
+ns.xblob=1.0                  # base position of gas/liquid interface
+#ns.yblob=10.0                # wave length of perturbation
+#ns.yblob=19.634954            # wave length of perturbation (2*H)
+ns.yblob=4.0 #yblob=72 if non-intrusive LSA
+#ns.yblob=9.0  #yblob=wave length=2 pi/(.7/r0)=2*pi*r0/.7  L=72/NINT(72/lambda)
+#ns.yblob=36.0  #yblob=wave length=2 pi/(.174/r0)=2*pi*r0/.174 
+ns.zblob=0.0
+ns.radblob=0.1 # non-intrusive LSA
+#ns.radblob=0.1 # perturbation 
+ns.denfact=1.0
+# velfact=0 => vinletgas (liquid inflow), advbot (gas inflow)
+ns.velfact=0.0 # pressure gradient in z direction (streamwise direction) 
+#++++++++++++++++++++++++++++++++++++=================
+ns.probtype=41
+ns.output_drop_distribution=1
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 0  # MS 3 1 if inflow, 3 0 if periodic 
+ns.hi_bc          = 5 0  # MS 5 2 if outflow, 5 0 if periodic 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
