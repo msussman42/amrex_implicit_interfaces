@@ -181,7 +181,11 @@ ns.adv_dir=2 # adv_dir=1,2,3
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 # need \Delta x < 2(viscosity)/velocity
 # viscosity>\Delta x * velocity/2 \approx 10^6/100=10^4
-ns.viscconst=10.0 100.0 100.0 100.0
+# 
+# Magma viscosity: 10^2 Pa s .... 10^11 Pa s which is
+# 10^3 .... 10^12 in CGS units.
+#1PA=10 dynes/cm^2
+ns.viscconst=10.0 1000.0 1000.0 1000.0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
@@ -311,7 +315,12 @@ ns.radblob3=5.0  # rod height
 #Steel plate: 10.4 < y < 13.3
 #Steel plate: 5.4 < y < 8.3
 ns.yblob2=2.8    # yblob2+yblob < y < yblob2+yblob+thickness
-ns.xblob2=2.0    # substrate radius -xblob2 < r < xblob2
+#aspect=xblob2
+#clamped regions:
+#-aspect-clamp_width ... -aspect+clamp_width
+#aspect-clamp_width ... aspect+clamp_width
+#ns.xblob2=2.0    # substrate radius -xblob2 < r < xblob2
+ns.xblob2=1.25    # substrate radius -xblob2 < r < xblob2
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=46
