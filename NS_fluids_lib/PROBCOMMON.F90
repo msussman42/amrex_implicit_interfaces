@@ -502,6 +502,7 @@ implicit none
       real(amrex_real), PARAMETER :: EPS_13_5=BL_REAL_E(1.0,-13)
 #endif
       real(amrex_real), PARAMETER :: EPS_UNCAPTURED=EPS_11_4
+      real(amrex_real), PARAMETER :: EPS_UNCAPTURED_SANITY=EPS_8_4
       real(amrex_real), PARAMETER :: VOFTOL=EPS_11_4
       real(amrex_real), PARAMETER :: EPS_FULL_WEAK=EPS2
 

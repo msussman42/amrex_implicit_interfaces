@@ -19249,7 +19249,8 @@ contains
           multi_volume(im)=uncaptured_volume_fluid* &
             vfrac_mult*mofdatasave(vofcomp)
          else if (is_rigid_local(im).eq.1) then
-          multi_volume(im)=uncaptured_volume_fluid*mofdatasave(vofcomp)
+          multi_volume(im)=uncaptured_volume_fluid* &
+            mofdatasave(vofcomp)
          else
           print *,"is_rigid_local invalid"
           stop
@@ -19352,7 +19353,7 @@ contains
             else if (material_used(im).eq.0) then
              ! do nothing
             else
-             print *,"material_used invalid"
+             print *,"material_used invalid: ",material_used
              stop
             endif
            else if (is_rigid_local(im).eq.0) then
@@ -19417,7 +19418,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi volume get volume grid 1"
+            print *,"volcut invalid multi_get_volume_grid 1"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
@@ -19780,7 +19781,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi volume get volume grid 2 "
+            print *,"volcut invalid multi_get_volume_grid 2 "
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
             print *,"volcell= ",volcell
@@ -21734,7 +21735,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi volume get volume grid 3"
+            print *,"volcut invalid multi_get_volume_grid_simple 3"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
@@ -22076,7 +22077,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi volume get volume grid 4"
+            print *,"volcut invalid multi_get_volume_grid_simple 4"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
             print *,"volcell= ",volcell
@@ -22694,8 +22695,8 @@ contains
               volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_solid).gt. &
-              EPS_UNCAPTURED*volcell) then
-           print *,"volcut invalid multi volume get volume grid 5"
+              EPS_UNCAPTURED_SANITY*volcell) then
+           print *,"volcut invalid multi_get_volume_grid_and_map 5"
            print *,"CHECK IF RIGID BODIES INTERSECT"
            print *,"volcut= ",volcut
            print *,"uncaptured_volume_solid=",uncaptured_volume_solid
@@ -22703,6 +22704,8 @@ contains
            print *,"VOFTOL= ",VOFTOL
            print *,"EPS_12_6= ",EPS_12_6
            print *,"EPS_8_4= ",EPS_8_4
+           print *,"EPS_UNCAPTURED= ",EPS_UNCAPTURED
+           print *,"EPS_UNCAPTURED_SANITY= ",EPS_UNCAPTURED_SANITY
            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
              xsten_grid(0,sdim)
@@ -22998,8 +23001,8 @@ contains
              volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_fluid).gt. &
-              EPS_UNCAPTURED*volcell) then
-           print *,"volcut invalid multi volume get volume grid 6"
+              EPS_UNCAPTURED_SANITY*volcell) then
+           print *,"volcut invalid multi_get_volume_grid_and_map 6"
            print *,"volcut= ",volcut
            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
            print *,"volcell= ",volcell
@@ -23010,6 +23013,8 @@ contains
            print *,"VOFTOL= ",VOFTOL
            print *,"EPS_12_6= ",EPS_12_6
            print *,"EPS_8_4= ",EPS_8_4
+           print *,"EPS_UNCAPTURED= ",EPS_UNCAPTURED
+           print *,"EPS_UNCAPTURED_SANITY= ",EPS_UNCAPTURED_SANITY
            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
             xsten_grid(0,sdim)
