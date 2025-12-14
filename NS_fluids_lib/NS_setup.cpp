@@ -698,12 +698,12 @@ NavierStokes::variableSetUp ()
 
     BCRec phys_bc_pres;
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     phys_bc_pres.setLo(dir,phys_bc.lo(dir));
-     phys_bc_pres.setHi(dir,phys_bc.hi(dir));
+     phys_bc_pres.setLo(dir,pressure_phys_bc.lo(dir));
+     phys_bc_pres.setHi(dir,pressure_phys_bc.hi(dir));
      if (phys_bc.lo(dir)==SlipWall)
-      amrex::Error("SlipWall not allowed; use NoSlipWall instead");
+      amrex::Error("phys_bc.lo: SlipWall not allowed; use NoSlipWall instead");
      if (phys_bc.hi(dir)==SlipWall)
-      amrex::Error("SlipWall not allowed; use NoSlipWall instead");
+      amrex::Error("phys_bc.hi: SlipWall not allowed; use NoSlipWall instead");
     }
 
 // Umac_Type  -------------------------------------------

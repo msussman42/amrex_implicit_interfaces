@@ -64,6 +64,7 @@ BCRec NavierStokes::phys_bc;
 BCRec NavierStokes::viscosity_phys_bc;
 BCRec NavierStokes::temperature_phys_bc;
 BCRec NavierStokes::species_phys_bc;
+BCRec NavierStokes::pressure_phys_bc;
 
 int  NavierStokes::NS_geometry_coord=-1;
 
@@ -2537,6 +2538,7 @@ NavierStokes::read_geometry ()
      viscosity_phys_bc.setLo(0,Symmetry);
      temperature_phys_bc.setLo(0,Symmetry);
      species_phys_bc.setLo(0,Symmetry);
+     pressure_phys_bc.setLo(0,Symmetry);
 
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "\n WARNING: Setting phys_bc at xlo to Symmetry\n\n";
@@ -2930,6 +2932,8 @@ NavierStokes::read_params ()
     Vector<int> temperature_hi_bc(AMREX_SPACEDIM);
     Vector<int> species_lo_bc(AMREX_SPACEDIM);
     Vector<int> species_hi_bc(AMREX_SPACEDIM);
+    Vector<int> pressure_lo_bc(AMREX_SPACEDIM);
+    Vector<int> pressure_hi_bc(AMREX_SPACEDIM);
     pp.getarr("lo_bc",lo_bc,0,AMREX_SPACEDIM);
     pp.getarr("hi_bc",hi_bc,0,AMREX_SPACEDIM);
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
@@ -2947,6 +2951,10 @@ NavierStokes::read_params ()
      species_phys_bc.setHi(i,hi_bc[i]);
      species_lo_bc[i]=lo_bc[i];
      species_hi_bc[i]=hi_bc[i];
+     pressure_phys_bc.setLo(i,lo_bc[i]);
+     pressure_phys_bc.setHi(i,hi_bc[i]);
+     pressure_lo_bc[i]=lo_bc[i];
+     pressure_hi_bc[i]=hi_bc[i];
     }
     pp.queryAdd("viscosity_lo_bc",viscosity_lo_bc,AMREX_SPACEDIM);
     pp.queryAdd("viscosity_hi_bc",viscosity_hi_bc,AMREX_SPACEDIM);
@@ -2954,6 +2962,8 @@ NavierStokes::read_params ()
     pp.queryAdd("temperature_hi_bc",temperature_hi_bc,AMREX_SPACEDIM);
     pp.queryAdd("species_lo_bc",species_lo_bc,AMREX_SPACEDIM);
     pp.queryAdd("species_hi_bc",species_hi_bc,AMREX_SPACEDIM);
+    pp.queryAdd("pressure_lo_bc",pressure_lo_bc,AMREX_SPACEDIM);
+    pp.queryAdd("pressure_hi_bc",pressure_hi_bc,AMREX_SPACEDIM);
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
      viscosity_phys_bc.setLo(i,viscosity_lo_bc[i]);
      viscosity_phys_bc.setHi(i,viscosity_hi_bc[i]);
@@ -2961,6 +2971,8 @@ NavierStokes::read_params ()
      temperature_phys_bc.setHi(i,temperature_hi_bc[i]);
      species_phys_bc.setLo(i,species_lo_bc[i]);
      species_phys_bc.setHi(i,species_hi_bc[i]);
+     pressure_phys_bc.setLo(i,pressure_lo_bc[i]);
+     pressure_phys_bc.setHi(i,pressure_hi_bc[i]);
     }
 
      // call after phys_bc initialized since phys_bc might have to be
@@ -2988,6 +3000,7 @@ NavierStokes::read_params ()
        if ((lo_bc[dir] != Interior)||
            (viscosity_lo_bc[dir] != Interior)||
            (species_lo_bc[dir] != Interior)||
+           (pressure_lo_bc[dir] != Interior)||
            (temperature_lo_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but low BC is not Interior\n";
@@ -2996,6 +3009,7 @@ NavierStokes::read_params ()
        if ((hi_bc[dir] != Interior)||
            (viscosity_hi_bc[dir] != Interior)||
            (species_hi_bc[dir] != Interior)||
+           (pressure_hi_bc[dir] != Interior)||
            (temperature_hi_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but high BC is not Interior\n";
@@ -3018,6 +3032,7 @@ NavierStokes::read_params ()
       if ((lo_bc[dir] == Interior)||
           (viscosity_lo_bc[dir] == Interior)||
           (species_lo_bc[dir] == Interior)||
+          (pressure_lo_bc[dir] == Interior)||
           (temperature_lo_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
@@ -3026,6 +3041,7 @@ NavierStokes::read_params ()
       if ((hi_bc[dir] == Interior)||
           (viscosity_hi_bc[dir] == Interior)||
           (species_hi_bc[dir] == Interior)||
+          (pressure_hi_bc[dir] == Interior)||
           (temperature_hi_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
@@ -3039,6 +3055,7 @@ NavierStokes::read_params ()
      std::cout << "viscosity_phys_bc= " << viscosity_phys_bc << '\n';
      std::cout << "temperature_phys_bc= " << temperature_phys_bc << '\n';
      std::cout << "species_phys_bc= " << species_phys_bc << '\n';
+     std::cout << "pressure_phys_bc= " << pressure_phys_bc << '\n';
     }
 
     Real problen_min=geometry_prob_hi[0]-geometry_prob_lo[0];

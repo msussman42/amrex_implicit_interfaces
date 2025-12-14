@@ -1129,6 +1129,9 @@ void NavierStokes::tensor_advection_updateALL() {
         std::cin >> n_input;
        }
 
+        // extend_FSI_data is declared in NavierStokes3.cpp
+	// extend_FSI_data calls fort_extend_elastic_velocity
+        // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.extend_FSI_data(im+1);

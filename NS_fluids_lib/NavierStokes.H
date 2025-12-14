@@ -1597,6 +1597,7 @@ protected:
     static BCRec viscosity_phys_bc;
     static BCRec temperature_phys_bc;
     static BCRec species_phys_bc;
+    static BCRec pressure_phys_bc;
 
     static int NS_geometry_coord;
 
