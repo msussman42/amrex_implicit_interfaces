@@ -55,11 +55,12 @@ ns.num_materials=2 # 1: liquid 2: air
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOF_TURN_OFF_LS=0
-ns.MOF_DEBUG_RECON=0
+ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
+#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
+ns.mof_decision_tree_learning=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
-ns.mof_error_ordering=0
-# water,air,ice,substrate
+ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
+#water air
 ns.mof_ordering=0 0 
 
 # multigrid class

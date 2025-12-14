@@ -12119,7 +12119,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
 
         if (nsolve.ne.1) then
-         print *,"nsolve invalid for pressure extrapolation"
+         print *,"nsolve invalid for pressure extrapolation: ",nsolve
          stop
         endif
         cc_group=cc*cc_elasticmask
