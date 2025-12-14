@@ -7635,9 +7635,17 @@ int NavierStokes::is_singular_coeff(int im) {
   if (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED) {  
    local_is_singular_coeff=1; //extend pressure into this region
   } else if (FSI_flag[im]==FSI_EULERIAN_ELASTIC) {  
-   local_is_singular_coeff=1; //extend pressure into this region
+   local_is_singular_coeff=0; //do not extend pressure into this region
+   if (extend_pressure_into_solid==0) {
+    //do nothing
+   } else
+    amrex::Error("extend_pressure_into_solid==0 condition failed");
   } else if (FSI_flag[im]==FSI_ICE_EULERIAN_ELASTIC) {  
-   local_is_singular_coeff=1; //extend pressure into this region
+   local_is_singular_coeff=0; //do not extend pressure into this region
+   if (extend_pressure_into_solid==0) {
+    //do nothing
+   } else
+    amrex::Error("extend_pressure_into_solid==0 condition failed");
   } else if (FSI_flag[im]==FSI_PRESCRIBED_PROBF90) { 
    local_is_singular_coeff=1; //extend pressure
   } else if (FSI_flag[im]==FSI_PRESCRIBED_NODES) { 
