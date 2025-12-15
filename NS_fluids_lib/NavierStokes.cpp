@@ -4940,7 +4940,8 @@ NavierStokes::read_params ()
        } else
         amrex::Error("latent_heat (LL) invalid");
       } else {
-       std::cout << "freezing_model= " << freezing_model << '\n';
+       std::cout << "iten_local= " << iten_local << '\n';
+       std::cout << "freezing_model= " << freezing_model[iten_local] << '\n';
        amrex::Error("freezing_model invalid");
       }
 
