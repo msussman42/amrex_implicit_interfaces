@@ -4939,8 +4939,10 @@ NavierStokes::read_params ()
         // do nothing
        } else
         amrex::Error("latent_heat (LL) invalid");
-      } else
+      } else {
+       std::cout << "freezing_model= " << freezing_model << '\n';
        amrex::Error("freezing_model invalid");
+      }
 
       Real LL=get_user_latent_heat(iten_local+1,293.0,1);
       if (LL==0.0) {

@@ -125,7 +125,10 @@ stop
       end subroutine departure_node_split
 
       subroutine derive_density( &
-       voldepart,voltarget,voltotal_depart, & !intent(in)
+       incompressible_interface_flag, &
+       voldepart, &
+       voltarget, &
+       voltotal_depart, & !intent(in)
        constant_density_all_time, & !intent(in)
        massdepart, & !intent(in)
        im, & !intent(in)
@@ -134,6 +137,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: incompressible_interface_flag
       integer, INTENT(in) :: im
       integer, INTENT(in) :: constant_density_all_time(num_materials)
       real(amrex_real), INTENT(in) :: voldepart,voltarget,voltotal_depart
@@ -154,7 +158,7 @@ stop
       else if (is_rigid(im).eq.0) then
        ! do nothing
       else
-       print *,"is_rigid(im) invalid"
+       print *,"is_rigid(im) invalid: ",im,is_rigid(im)
        stop
       endif
 
@@ -163,7 +167,8 @@ stop
        if (constant_density_all_time(im).eq.1) then
         density=fort_denconst(im)
        else
-        print *,"constant_density_all_time invalid"
+        print *,"constant_density_all_time invalid: ", &
+          constant_density_all_time
         stop
        endif
       else if ((voldepart.le.VOFTOL*voltotal_depart).or. &
@@ -174,24 +179,36 @@ stop
 
        if (fort_material_type(im).eq.0) then
 
-         if (constant_density_all_time(im).eq.1) then
-          density=fort_denconst(im)
-         else if (constant_density_all_time(im).eq.0) then 
-          density=massdepart/voldepart
-         else
-          print *,"constant_density_all_time invalid"
-          stop
-         endif
-
-       else if (fort_material_type(im).gt.0) then
-        if (constant_density_all_time(im).eq.0) then 
-         density=massdepart/voltarget
+        if (constant_density_all_time(im).eq.1) then
+         density=fort_denconst(im)
+        else if (constant_density_all_time(im).eq.0) then 
+         density=massdepart/voldepart
         else
-         print *,"constant_density_all_time invalid"
+         print *,"constant_density_all_time invalid: ", &
+           constant_density_all_time
          stop
         endif
+
+       else if (fort_material_type(im).gt.0) then
+
+        if (constant_density_all_time(im).eq.0) then 
+         if (incompressible_interface_flag.eq.1) then
+          density=fort_denconst(im)
+         else if (incompressible_interface_flag.eq.0) then
+          density=massdepart/voltarget
+         else
+          print *,"incompressible_interface_flag invalid ", &
+           incompressible_interface_flag
+          stop
+         endif
+        else
+         print *,"constant_density_all_time invalid: ", &
+            constant_density_all_time
+         stop
+        endif
+
        else 
-        print *,"fort_material_type is corrupt"
+        print *,"fort_material_type is corrupt: ",fort_material_type
         stop
        endif
 
@@ -1853,6 +1870,8 @@ stop
         stop
        endif
 
+      ! tileloop==1: high order (grad U + grad U^T)
+      ! tileloop==2:
       ! (1) fluxes+=divu  (2) fluxes*=visccoef
       else if (tileloop.eq.2) then 
 
@@ -2042,7 +2061,9 @@ stop
                 print *,"side invalid (im_opp) : ",im_opp,side
                 stop
                endif
-
+ 
+                ! LS(im_opp)>-alpha dx
+                ! LS(im)>-alpha dx
                if (local_LS.ge.-incomp_thickness*dxmaxLS) then
                 if (fort_material_type_interface(iten).eq.0) then
                  compressible_face=0
@@ -14570,6 +14591,8 @@ stop
          do im_opp=im+1,num_materials
           call get_iten(im,im_opp,iten)
 
+           !LS(im_opp)>=-alpha dx
+           !LS(im)>=-alpha dx
           if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
            if (fort_material_type_interface(iten).eq.0) then
             incompressible_interface_flag=1
@@ -15516,8 +15539,11 @@ stop
         !  else
         !   return error.
         ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
-        call derive_density(volmat_depart_cor(im), &
-         vol_target_local,voltotal_depart, &
+        call derive_density( &
+         incompressible_interface_flag, &
+         volmat_depart_cor(im), &
+         vol_target_local, &
+         voltotal_depart, &
          constant_density_all_time, &
          massdepart, & !intent(in)
          im, &
