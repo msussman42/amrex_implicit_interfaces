@@ -137,12 +137,14 @@ ns.latent_heat = 2.1e+10 0.0  #2.26E+6 J/kg
 # 1=distribute to the source material.
 ns.distribute_from_target = 0 0 # 2 * num_interfaces components
 ns.distribute_mdot_evenly = 0 0 # 2 * num_interfaces components
-ns.constant_density_all_time=1 1 # expansion 1..nmat
-#ns.constant_density_all_time=1 0 # sealed 1..nmat
+ns.constant_density_all_time=0 0 # compressible
+#ns.constant_density_all_time=1 1 # expansion 1..nmat incompressible
+#ns.constant_density_all_time=1 0 # sealed 1..nmat incompressible
 ns.constant_volume_mdot=0 0 # expansion 1..2 nten
 #ns.constant_volume_mdot=-1 0 # sealed
 #evap: freezing_model=6 Palmore and Desjardins 
 ns.freezing_model=6 0
+ns.force_Y_probe_zero=1 0 # 1.. 2*num_interfaces
 # 1..2*nten
 ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3=Kassemi 0=Palmore and Desjardins
 ns.mass_fraction_id=1 0  # 1.. 2 nten
@@ -168,7 +170,13 @@ ns.advbot=0.0
 ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.material_type=0 0 
+ns.material_conservation_form=1 1
+ns.material_type_interface=0 
+ns.shock_timestep=1 1 #incompressible
+#ns.shock_timestep=2 2 #incompressible
+#ns.material_type=0 0  # incompressible
+#7=EOS_tait_rho  5=EOS_air
+ns.material_type=7 5  # compressible
 #vapor: stiffCP-stiffCV=0.2857143e+7
 #gamma=1.4d0  C_pG=1.0d+7   gamma=Cp/Cv  e=Cv T
 #for material_type==5, these values are hardwired:
@@ -177,6 +185,9 @@ ns.material_type=0 0
 ns.material_type_evap=0 5 
 ns.material_type_lowmach=0 5 
 ns.material_type_visual=0 5 
+#Pgamma_Clausius_Clapyron(Pgamma,PSAT,Tgamma,TSAT,L,R,WV)
+#PSAT = reference_pressure
+#Tgamma=TSAT => Pgamma=PSAT
 ns.reference_pressure=27481070.032667376 0.0 
 ns.accommodation_coefficient=1.0 0.0
 
@@ -277,7 +288,8 @@ ns.temperature_lo_bc  = 3 3
 ns.temperature_hi_bc  = 1 1  
 ns.species_lo_bc  = 3 3
 ns.species_hi_bc  = 1 1
-ns.num_divu_outer_sweeps=1
+#ns.num_divu_outer_sweeps=1 #incompressible
+ns.num_divu_outer_sweeps=2 #compressible
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

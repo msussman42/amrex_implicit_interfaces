@@ -24123,12 +24123,16 @@ end subroutine print_visual_descriptor
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative (INTERNAL_air): ",rho
        stop
       endif
-      if (temperature.le.zero) then
-       print *,"temperature cannot be <=0"
+      if (temperature.gt.zero) then
+       !do nothing
+      else
+       print *,"temperature cannot be <=0 (INTERNAL_air) ",temperature
        stop
       endif
       if (cv.le.zero) then

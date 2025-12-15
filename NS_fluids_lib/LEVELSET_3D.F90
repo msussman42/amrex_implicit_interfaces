@@ -9156,6 +9156,7 @@ stop
       integer ispec
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer, parameter :: local_tessellate=3
+      integer, parameter :: incompressible_interface_flag=0
 
       real(amrex_real) local_cenvisc
       real(amrex_real) local_cenden  !1/rho
@@ -9864,7 +9865,7 @@ stop
                    (velbclo.eq.FOEXTRAP)) then
            ! do nothing
           else
-           print *,"velbclo invalid"
+           print *,"velbclo invalid: ",velbclo
            stop
           endif
 
@@ -9872,7 +9873,7 @@ stop
 
           local_masknbr=NINT(masknbr(D_DECL(i,j,k),1))
           if ((local_masknbr.ne.0).and.(local_masknbr.ne.1)) then
-           print *,"local_masknbr invalid"
+           print *,"local_masknbr invalid: ",local_masknbr
            stop
           endif
           if ((presbchi.eq.INT_DIR).and.(local_masknbr.eq.0)) then
@@ -9887,7 +9888,7 @@ stop
                    (presbchi.eq.FOEXTRAP)) then
            mask_boundary=2
           else
-           print *,"presbchi invalid"
+           print *,"presbchi invalid: ",presbchi
            stop
           endif
 
@@ -9904,7 +9905,7 @@ stop
                    (velbchi.eq.FOEXTRAP)) then
            ! do nothing
           else
-           print *,"velbchi invalid"
+           print *,"velbchi invalid: ",velbchi
            stop
           endif
 
@@ -11655,8 +11656,13 @@ stop
           !    then density=mass_depart/vol_depart
           ! if compressible,
           !   density=massdepart/voltarget
+          ! derive_density is declared in GODUNOV_3D.F90
+        
          call derive_density( &
-          voldepart,voldepart,voltotal, & !intent(in)
+          incompressible_interface_flag, & ! =0
+          voldepart, &
+          voldepart, &
+          voltotal, & !intent(in)
           constant_density_all_time, &
           delta_mass, & !intent(in)
           im, &
