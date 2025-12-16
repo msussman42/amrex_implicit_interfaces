@@ -3100,6 +3100,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     // allocate_physics_vars()
     // mdot=0.0
+    // qdot=0.0
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      ns_level.prelim_alloc();
