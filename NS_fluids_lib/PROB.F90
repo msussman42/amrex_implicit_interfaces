@@ -20583,7 +20583,11 @@ end subroutine RatePhaseChange
          stop
         endif
 
+         !velsrc=ksrc_derived*DTsrc/(LL*dxprobe_source)
+         !veldst=kdst_derived*DTdst/(LL*dxprobe_dest)
         if (distribute_from_target.eq.0) then ! default
+         !evaporation: velocity_phase_change=mdot/rho_L
+         !expansion_fact=1-rho_G/rho_L
          velsrc=velsrc/densrc_I
          veldst=veldst/densrc_I
         else if (distribute_from_target.eq.1) then
