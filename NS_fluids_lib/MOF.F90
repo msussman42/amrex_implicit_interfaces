@@ -18877,6 +18877,7 @@ contains
         ! themselves.
         ! for advection, EPS_SINGLE=EPS_11_4=EPS_UNCAPTURED
       subroutine multi_get_volume_grid( &
+       caller_id, &
        tid_in, &
        EPS_SINGLE, &
        tessellate, & ! =0,1,2,3
@@ -18900,6 +18901,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: caller_id
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -19002,7 +19004,7 @@ contains
       endif
 
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon.ne.2*sdim+3"
+       print *,"ngeom_recon.ne.2*sdim+3: ",ngeom_recon
        stop
       endif
 
@@ -19950,10 +19952,21 @@ contains
          !do nothing
         else
          print *,"not all volume accounted for multi_get_volume_grid"
+         print *,"caller_id=",caller_id
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
+         enddo
+         print *,"mofdata=",mofdata
+         print *,"EPS_SINGLE=",EPS_SINGLE
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
          print *,"tolerance: ",four*EPS2
+         print *,"xsten0= ",xsten0
+         print *,"nhalf0= ",nhalf0
+         print *,"xsten_grid= ",xsten_grid
+         print *,"nhalf_grid= ",nhalf_grid
          stop
         endif
 
@@ -20020,6 +20033,7 @@ contains
       real(amrex_real) :: multi_area_sub(num_materials)
       integer i_list
       integer itet_node
+      integer, parameter :: caller_id=1
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (multi_get_volume_tetlist) ",tid_in
@@ -20093,6 +20107,7 @@ contains
         enddo
          ! multi_cen_sub is "absolute" (not relative to cell centroid)
         call multi_get_volume_grid( &
+          caller_id, &
           tid_in, &
           EPS_SINGLE, &
           tessellate, &  ! =0 or 2
@@ -20304,6 +20319,7 @@ contains
 
       real(amrex_real) nrecon(sdim)
       real(amrex_real) intercept
+      integer, parameter :: caller_id=2
       integer, parameter :: continuous_mof=STANDARD_MOF
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
@@ -20493,6 +20509,7 @@ contains
        ! since multi_get_volume_tessellate tessellates each cell with 
        ! fluids and solids (tess=1,3), the flag "is_rigid" should be ignored.
       call multi_get_volume_grid( &
+       caller_id, &
        tid_in, &
        EPS_FULL_WEAK, & !tolerance for "single material" criterion
        local_tessellate_in, &  ! =0 or 2
@@ -23440,6 +23457,7 @@ contains
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer im_raster_solid
       real(amrex_real) vfrac_raster_solid
+      integer, parameter :: caller_id=3
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (multi_get_volume_tessellate) ",tid_in
@@ -23637,6 +23655,7 @@ contains
        endif
 
        call multi_get_volume_grid( &
+        caller_id, &
         tid_in, &
         EPS_FULL_WEAK, & ! tolerance for "single material" criterion
         local_tessellate, & ! =1 or 2
