@@ -1029,7 +1029,14 @@ stop
          print *,"interior_flag invalid: ",interior_flag
          stop
         endif
- 
+
+         !MOF E=||X_{cell}-X(n,b)_{cell}|| subject to the constraint
+         ! ||F_{cell}-F(n,b)_{cell}||=0 
+         !CMOF 
+         ! if num_materials_{cell}=num_materials_{supercell} or
+         !    num_materials_{supercell}<=2,
+         !  E=||X_{supercell}-X(n,b)_{supercell}|| subject to the constraint
+         !  ||F_{cell}-F(n,b)_{cell}||=0 
         if ((continuous_mof_parm.eq.STANDARD_MOF).or. &
             (num_fluid_materials_in_stencil.eq.1).or. &
             (num_fluid_materials_in_stencil.eq.2).or. &
@@ -1083,6 +1090,13 @@ stop
            total_errors(im)+mof_errors(tid_in+1,im)
          enddo  ! im=1..num_materials
 
+         !CMOF 
+         ! if num_materials_{cell}<num_materials_{supercell} and
+         !    num_materials_{supercell}>=3,
+         ! (i) E=||X_{supercell}-X(n,b)_{supercell}|| subject to the constraint
+         !     ||F_{supercell}-F(n,b)_{supercell}||=0 
+         ! (ii) it is possible for F(n,b)_{cell}>0 even if F_{cell}=0
+         ! (iii)
          ! suppose number of fluid materials in super cell greater
          ! than number of fluid materials in the center cell and 
          ! also greater or equal to 3.
@@ -1109,6 +1123,9 @@ stop
                  (num_fluid_materials_in_stencil.gt. &
                   num_fluid_materials_in_cell)) then
 
+          
+         ! E=||X_{supercell}-X(n,b)_{supercell}|| subject to the constraint
+         !   ||F_{supercell}-F(n,b)_{supercell}||=0 
          continuous_mof_parm_super=CMOF_F_AND_X
 
          do dir=1,num_materials*ngeom_recon
@@ -1225,9 +1242,15 @@ stop
            vfrac_local(im)=mofdata_super(vofcomprecon)
            vof_super(im)=vfrac_local(im)
 
+            ! "multi_get_volume_grid" returns valid centroids for materials
+            ! that are present in the center cell.  If a material is not
+            ! present in the center cell (post supercell reconstruction), then
+            ! "multi_get_volume_grid" will return a default.
+            !
             ! if a material, post super cell reconstruction, disappears 
             ! from the center cell, then we use the original centroid
-            ! in doing the final post "mof reconstruction," otherwise
+            ! in doing the final post "mof reconstruction," otherwise if
+            ! a given material is present in the center cell,
             ! we replace the centroid with the super cell derived 
             ! centroid.  The final post "mof reconstruction" uses
             ! regular(local center cell) reference volume fractions.
