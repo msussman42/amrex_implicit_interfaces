@@ -3600,6 +3600,22 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   
       if (mass_transfer_active==1) {
 
+       // example:
+       //  for vaporization, it is optimal to distribute the mdot solely
+       //  into the vapor.  i.e distribute_from_target=0
+       //  suppose num_divu_outer_sweeps>1, then
+       //   1. advection
+       //   2. phase change
+       //   3. mdot redistribute (sources are moved from Fvapor^{n+1}<1/2 to
+       //      Fvapor^{n+1}>1/2).
+       //      Important to move sources to phi_vapor^{n+1}>1.5 dx in order
+       //      to guarantee that phi_vapor^{n}>0 and F_vapor^{n}>1/2
+       //   4. diffusion and projection  div u <> 0 in the vapor near the
+       //      interface.
+       //   5. advection again (using updated velocity); BE CAREFUL,
+       //      vapor at the new time $t^{n+1}$ might be liquid at the old
+       //      time $t^{n}$.
+       //
        // 1. modifies localMF[JUMP_STRENGTH_MF] (size 2 * num_interfaces)
        //    a) fort_tagexpansion
        //    b) fort_distributeexpansion
