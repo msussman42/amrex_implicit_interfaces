@@ -1128,11 +1128,13 @@ stop
          !   ||F_{supercell}-F(n,b)_{supercell}||=0 
          continuous_mof_parm_super=CMOF_F_AND_X
 
+          !is_rigid(im)==1 => mofdata_super=mofdata
          do dir=1,num_materials*ngeom_recon
           mofdata_super_vfrac(dir)=mofdata_super(dir)
          enddo
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
+           !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
           mofdata_super_vfrac(vofcomprecon)=vof_super(im)
          enddo
 
@@ -1152,7 +1154,7 @@ stop
           nmax, &
           nmax, &
           mofdata_super_vfrac, & !intent(inout)
-          vof_super, &
+          vof_super, & !intent(in)
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm_super, &
           cmofsten, & !intent(in)
@@ -1170,8 +1172,17 @@ stop
            total_errors(im)+mof_errors(tid_in+1,im)
          enddo  ! im=1..num_materials
 
+          !currently: mofdata_super(vofcomprecon)=mofdata(vofcomprecon)
+          !multi_get_volume_grid needs 
+          !mofdata_super(vofcomprecon)=vof_super(im)
+          !i.e. the volume fractions must be consistent with the 
+          !slopes and intercept.
+          !is_rigid(im)==0 => vof_super(im)=super cell vfrac
+          !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
+           !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+          mofdata_super(vofcomprecon)=vof_super(im)
           do dir=1,SDIM
            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
           enddo
@@ -1231,7 +1242,7 @@ stop
            endif
           enddo ! im=1,..,num_materials
          else
-          print *,"vfrac_fluid_sum invalid"
+          print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
           stop
          endif
 
@@ -1239,6 +1250,7 @@ stop
           if (is_rigid(im).eq.0) then
 
            vofcomprecon=(im-1)*ngeom_recon+1
+           mofdata_super(vofcomprecon)=mofdata(vofcomprecon)
            vfrac_local(im)=mofdata_super(vofcomprecon)
            vof_super(im)=vfrac_local(im)
 
@@ -1279,7 +1291,7 @@ stop
           else if (is_rigid(im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid: ",im,is_rigid(im)
            stop
           endif
          enddo ! im=1,num_materials
