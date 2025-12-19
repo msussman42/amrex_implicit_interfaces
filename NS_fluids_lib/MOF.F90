@@ -19075,7 +19075,7 @@ contains
          uncaptured_centroid_fluid,sdim)
 
       else
-       print *,"shapeflag invalid"
+       print *,"shapeflag invalid: ",shapeflag
        stop
       endif
 
@@ -19130,7 +19130,7 @@ contains
           vfrac_raster_solid=mofdatasave(vofcomp)
          endif
         else
-         print *,"im_raster_solid invalid"
+         print *,"im_raster_solid invalid: ",im_raster_solid
          stop
         endif
       
@@ -19179,7 +19179,7 @@ contains
           multi_cen(dir,im_raster_solid)=uncaptured_centroid_solid(dir)
          enddo
         else
-         print *,"im_raster_solid invalid"
+         print *,"im_raster_solid invalid: ",im_raster_solid
          stop
         endif
 
@@ -19196,7 +19196,7 @@ contains
            mofdatalocal(vofcomp+dir)=zero
           enddo
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid: ",im,is_rigid_local(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -19209,7 +19209,7 @@ contains
                (tessellate.eq.2)) then
        ! do nothing
       else
-       print *,"tessellate invalid12"
+       print *,"tessellate invalid12 (multi_get_volume_grid): ",tessellate
        stop
       endif
       
@@ -19233,7 +19233,8 @@ contains
        else if (local_tessellate.eq.2) then 
         vfrac_mult=one
        else
-        print *,"local_tessellate invalid13"
+        print *,"local_tessellate invalid13(multi_get_volume_grid)", &
+         local_tessellate
         stop
        endif
  
@@ -19282,7 +19283,8 @@ contains
           stop
          endif
         else
-         print *,"local_tessellate invalid14"
+         print *,"local_tessellate invalid14(multi_get_volume_grid)", &
+           local_tessellate
          stop
         endif
 
@@ -19303,7 +19305,9 @@ contains
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
                (one-EPS_SINGLE)*uncaptured_volume_fraction_solid) then
-            if (single_material.ne.0) then
+            if (single_material.eq.0) then
+             !do nothing
+            else
              print *,"cannot have two rigid materials at once"
              print *,"single_material ",single_material
              print *,"im_test ",im_test
@@ -19321,7 +19325,7 @@ contains
                     (is_rigid_local(im_test).eq.0)) then
            ! do nothing
           else
-           print *,"material used bust"
+           print *,"material used bust: ",im_test,material_used(im_test)
            stop
           endif
          enddo  ! im_test=1..num_materials
@@ -19387,7 +19391,7 @@ contains
               bfact,dx, &
               xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
-              mofdatalocal, &
+              mofdatalocal, & !only slope,intercept,order used.
               xtetlist, &
               nlist_alloc, &
               nlist, &
@@ -19402,7 +19406,8 @@ contains
               new_tessellate_local, &  ! new_tessellate_local=1 or 2
               bfact,dx, &
               xsten0,nhalf0, &
-              xtet,mofdatalocal, &
+              xtet, &
+              mofdatalocal, &
               xtetlist, &
               nlist_alloc, &
               nlist, &
@@ -19410,7 +19415,7 @@ contains
               sdim)
 
            else
-            print *,"shapeflag invalid"
+            print *,"shapeflag invalid: ",shapeflag
             stop
            endif
 
@@ -19446,7 +19451,7 @@ contains
            ! the compliment of materials already processed.
 
           else 
-           print *,"fastflag invalid multi get volume grid"
+           print *,"fastflag invalid multi get volume grid: ",fastflag
            stop
           endif
 
@@ -19468,13 +19473,14 @@ contains
                        (material_used(im).le.num_materials_solid))) then
              ! do nothing
             else
-             print *,"testflag invalid"
+             print *,"testflag invalid: ",testflag,testflag_save
              stop         
             endif 
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid MOF.F90"
+            print *,"is_rigid_local invalid (multi_get_volume_grid) ", &
+             im,is_rigid_local(im)
             stop
            endif
           enddo ! im=1..num_materials
@@ -19584,7 +19590,8 @@ contains
         else if (local_tessellate.eq.2) then
          ! do nothing
         else
-         print *,"local_tessellate invalid15"
+         print *,"local_tessellate invalid15(multi_get_volume_grid) ", &
+           local_tessellate
          stop
         endif
 
@@ -19621,11 +19628,13 @@ contains
                       mofdatasave(vofcomp)) then
               !do nothing
              else
-              print *,"mofdatasave invalid"
+              print *,"mofdatasave invalid (multi_get_volume_grid) ", &
+                mofdatasave
               stop
              endif
             else
-             print *,"single_material invalid"
+             print *,"single_material invalid(multi_get_volume_grid)", &
+              single_material
              stop
             endif
               
@@ -19637,7 +19646,8 @@ contains
                    (is_rigid_local(im_test).eq.1)) then
            ! do nothing
           else
-           print *,"material used bust"
+           print *,"material used bust(multi_get_volume_grid) ",im_test, &
+            material_used
            stop
           endif
          enddo  ! im_test=1..num_materials
@@ -19664,7 +19674,8 @@ contains
           else if (local_tessellate.eq.2) then
            num_processed_total=num_processed_fluid
           else
-           print *,"local_tessellate invalid16"
+           print *,"local_tessellate invalid16(multi_get_volume_grid)", &
+            local_tessellate
            stop
           endif
 
@@ -19683,7 +19694,8 @@ contains
             else if (material_used(im).eq.0) then
              ! do nothing
             else
-             print *,"material_used invalid"
+             print *,"material_used invalid(multi_get_volume_grid1) ",im, &
+               material_used
              stop
             endif
            else if (local_tessellate.eq.0) then
@@ -19696,11 +19708,13 @@ contains
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid"
+              print *,"material_used invalid(multi_get_volume_grid2)",im, &
+                material_used
               stop
              endif
             else
-             print *,"is_rigid invalid MOF.F90"
+             print *,"is_rigid_local invalid (multi_get_volume_grid) ", &
+              im,is_rigid_local(im)
              stop
             endif
            else if (local_tessellate.eq.2) then
@@ -19932,7 +19946,8 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material invalid 18830: ",critical_material
+           print *,"critical_material bad 18830(multi_get_volume_grid): ", &
+             critical_material
            stop
           endif 
 
@@ -19960,6 +19975,8 @@ contains
          print *,"mofdata=",mofdata
          print *,"EPS_SINGLE=",EPS_SINGLE
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
+         print *,"uncaptured_volume_fraction_fluid ", &
+           uncaptured_volume_fraction_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
          print *,"tolerance: ",four*EPS2
