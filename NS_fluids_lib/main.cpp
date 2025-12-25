@@ -123,6 +123,15 @@ fork_job(int fork_id) {
  } else
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
 
+ int local_LSA_activate=0;
+ ppamr.queryAdd("LSA_activate",local_LSA_activate);
+ if ((local_LSA_activate==0)||
+     (local_LSA_activate==1)) {
+  //do nothing
+ } else
+  amrex::Error("expecting local_LSA_activate=0,1");
+
+
  max_step  = -1;    
  strt_time =  0.0;  
  stop_time = -1.0;  
@@ -132,10 +141,24 @@ fork_job(int fork_id) {
  pp.queryAdd("max_step",max_step);
 
  Real local_fixed_dt=0.0;
+ ppns.queryAdd("fixed_dt",local_fixed_dt);
 
- if (local_LSA_nsteps_power_method==0) {
+ if (local_LSA_nsteps_power_method>0) {
+   //time step must be fixed if LSA.
+  if (local_fixed_dt>0.0) {
+   //do nothing
+  } else
+   amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
+ } else if (local_LSA_nsteps_power_method==0) {
   //do nothing
- } else if (local_LSA_nsteps_power_method>0) {
+ } else
+  amrex::Error("local_LSA_nsteps_power_method invalid");
+
+ if ((local_LSA_nsteps_power_method==0)||
+     (local_LSA_activate==0)) {
+  //do nothing
+ } else if ((local_LSA_nsteps_power_method>0)&&
+            (local_LSA_activate==1)) {
 
    //ABEL OKOJUNO
    //for LSA, max_step>=1, and 
@@ -150,13 +173,6 @@ fork_job(int fork_id) {
   } else
    amrex::Error("expecting 1<=max_step");
 
-   //time step must be fixed if LSA.
-  ppns.queryAdd("fixed_dt",local_fixed_dt);
-  if (local_fixed_dt>0.0) {
-   //do nothing
-  } else
-   amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
-
   std::string local_restart_file;
   ppamr.queryAdd("restart",local_restart_file);
   if (!local_restart_file.empty() && local_restart_file != "init") {
@@ -167,7 +183,10 @@ fork_job(int fork_id) {
  } else {
   std::cout << "local_LSA_nsteps_power_method= " << 
     local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_activate= " << 
+    local_LSA_activate <<'\n';
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_activate==0,1");
  }
 
  pp.queryAdd("strt_time",strt_time);
@@ -226,11 +245,28 @@ fork_job(int fork_id) {
   std::cout << "initial_levelSteps= " << initial_levelSteps <<'\n';
   std::cout << "max_step= " << max_step <<'\n';
   std::cout << "LSA_steps=max_step-initial_levelSteps= " << LSA_steps <<'\n';
+  std::cout << "LSA_activate= " << local_LSA_activate <<'\n';
+  std::cout << "amrptr->LSA_current_step= " << 
+    amrptr->LSA_current_step << '\n';
  }
 
- if (local_LSA_nsteps_power_method==0) {
-  //do nothing
- } else if (local_LSA_nsteps_power_method>0) {
+ int initial_LSA_current_step=amrptr->LSA_current_step;
+
+ if ((local_LSA_nsteps_power_method==0)||
+     (local_LSA_activate==0)) {
+
+  if (initial_LSA_current_step==0) {
+   //do nothing
+  } else
+   amrex::Error("initial_LSA_current_step invalid");
+
+ } else if ((local_LSA_nsteps_power_method>0)&&
+            (local_LSA_activate==1)) {
+
+  if (initial_LSA_current_step>=0) {
+   //do nothing
+  } else
+   amrex::Error("initial_LSA_current_step invalid");
 
   if (initial_cumTime>=0.0) {
    //do nothing
@@ -265,7 +301,10 @@ fork_job(int fork_id) {
  } else {
   std::cout << "local_LSA_nsteps_power_method= " << 
     local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_activate= " << 
+    local_LSA_activate <<'\n';
   amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_activate==0,1");
  }
 
 //ABEL OKOJUNO:
@@ -277,14 +316,31 @@ fork_job(int fork_id) {
 //6. let x^{(k+1)}=normalized(data(t1)^{(k)}-data(t1))
 //7. k=k+1
 //8. go back to step 5.
- for (int LSA_current_step=0;
-      LSA_current_step<=local_LSA_nsteps_power_method;
+
+ int end_loop=0;
+ if ((local_LSA_nsteps_power_method==0)||
+     (local_LSA_activate==0)) {
+  end_loop=0;
+ } else if ((local_LSA_nsteps_power_method>0)&&
+            (local_LSA_activate==1)) {
+  end_loop=local_LSA_nsteps_power_method;
+ } else {
+  std::cout << "local_LSA_nsteps_power_method= " << 
+    local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_activate= " << 
+    local_LSA_activate <<'\n';
+  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_activate==0,1");
+ }
+
+ for (int LSA_current_step=initial_LSA_current_step;
+      LSA_current_step<=end_loop;
       LSA_current_step++) {
 
-  if (LSA_current_step==0) {
+  if (LSA_current_step==initial_LSA_current_step) {
    //do nothing
-  } else if ((LSA_current_step>=1)&&
-             (LSA_current_step<=local_LSA_nsteps_power_method)) {
+  } else if ((LSA_current_step>initial_LSA_current_step)&&
+             (LSA_current_step<=end_loop)) {
    amrex::ParallelDescriptor::Barrier();
     //level_steps=initial_levelSteps
     //cumtime=initial_cumTime
@@ -308,14 +364,14 @@ fork_job(int fork_id) {
    BL_PROFILE_INITIALIZE();
    std::fflush(NULL);
 
-   if (local_LSA_nsteps_power_method==0) {
+   if (end_loop==0) {
     //do nothing
-   } else if (local_LSA_nsteps_power_method>0) {
+   } else if (end_loop>0) {
     std::fflush(NULL);
     std::cout << "LSA_current_step = " << LSA_current_step << '\n';
     std::cout << "amrptr->levelSteps(0) = " << amrptr->levelSteps(0) << '\n';
    } else
-    amrex::Error("local_LSA_nsteps_power_method invalid");
+    amrex::Error("end_loop invalid");
 
    // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
    // timeStep is in amrlib/AMReX_AmrCore.cpp
@@ -337,7 +393,7 @@ fork_job(int fork_id) {
 
   amrex::ParallelDescriptor::Barrier();
 
- }  //LSA_current_step=0 .... local_LSA_nsteps_power_method
+ }  //LSA_current_step=0 .... end_loop
 
  amrex::ParallelDescriptor::Barrier();
 
@@ -394,7 +450,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Dec 19, 2025, 18:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Dec 25, 2025, 18:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

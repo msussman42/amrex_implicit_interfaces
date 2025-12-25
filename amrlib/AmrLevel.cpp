@@ -671,7 +671,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 
     int level_MAX_NUM_SLAB=parent->get_MAX_NUM_SLAB();
     int level_slab_dt_type=parent->get_slab_dt_type();
-    if (level_MAX_NUM_SLAB<33)
+    if (level_MAX_NUM_SLAB<33+3) //3 to account for LSA
      amrex::Error("level_MAX_NUM_SLAB too small");
     if ((level_slab_dt_type!=0)&&(level_slab_dt_type!=1))
      amrex::Error("level_slab_dt_type invalid");

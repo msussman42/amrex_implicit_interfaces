@@ -239,7 +239,7 @@ AmrCore::InitAmr () {
  //
  dt_AMR=1.0;
  time_blocking_factor = 1;
- MAX_NUM_SLAB=33;
+ MAX_NUM_SLAB=33+3; //3 to account for LSA
  slab_dt_type=0; // 0=SEM 1=evenly spaced
 
  //
@@ -278,6 +278,23 @@ AmrCore::InitAmr () {
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
 
+ LSA_activate=0;
+ pp.queryAdd("LSA_activate",LSA_activate);
+
+ if ((LSA_activate==0)||
+     (LSA_activate==1)) {
+  //do nothing
+ } else
+  amrex::Error("expecting LSA_activate==0 or 1");
+
+ LSA_extra_data=0;
+ if (LSA_nsteps_power_method==0) {
+  //do nothing
+ } else if (LSA_nsteps_power_method>0) {
+  LSA_extra_data=3;
+ } else
+  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  
  LSA_current_step=0;
 
  if (ParallelDescriptor::IOProcessor()) {
@@ -405,7 +422,7 @@ AmrCore::InitAmr () {
  pp.queryAdd("space_blocking_factor",space_blocking_factor);
  pp.queryAdd("time_blocking_factor",time_blocking_factor);
  pp.queryAdd("MAX_NUM_SLAB",MAX_NUM_SLAB);
- if (time_blocking_factor+1>MAX_NUM_SLAB)
+ if (time_blocking_factor+1>MAX_NUM_SLAB-3) //3 to account for LSA
   amrex::Error("MAX_NUM_SLAB too small");
  if (time_blocking_factor<1)
   amrex::Error("time_blocking_factor too small");
@@ -506,27 +523,46 @@ AmrCore::InitAmr () {
 
  }
 
- if (LSA_nsteps_power_method==0) {
+ if ((LSA_nsteps_power_method==0)||
+     (LSA_activate==0)) {
+
   LSA_max_step=0;
 
   if (max_level==0) {
+
    if (regrid_int==0) {
     //do nothing
    } else {
     amrex::Error("expecting regrid_int==0");
    }
+
   } else if (max_level>0) {
 
-   if (regrid_int>=1) {
-    //do nothing
-   } else {
-    amrex::Error("expecting regrid_int>=1");
-   }
+   if (LSA_nsteps_power_method==0) {
+
+    if (regrid_int>=1) {
+     //do nothing
+    } else {
+     amrex::Error("expecting regrid_int>=1");
+    }
+
+   } else if (LSA_nsteps_power_method>0) {
+
+    ppmain.queryAdd("max_step",LSA_max_step);
+
+    if (regrid_int>LSA_max_step) {
+     //do nothing
+    } else {
+     amrex::Error("expecting regrid_int>max_step");
+    }
+   } else
+    amrex::Error("LSA_nsteps_power_method invalid");
 
   } else
    amrex::Error("max_level invalid");
 
- } else if (LSA_nsteps_power_method>=1) {
+ } else if ((LSA_nsteps_power_method>=1)&&
+            (LSA_activate==1)) {
 
   LSA_max_step=-1;
   ppmain.queryAdd("max_step",LSA_max_step);
@@ -549,7 +585,7 @@ AmrCore::InitAmr () {
    amrex::Error("max_level invalid");
 
  } else
-  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  amrex::Error("LSA_nsteps_power_method or LSA_activate invalid");
 
  Vector<int> n_cell(AMREX_SPACEDIM);
  pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
@@ -1059,6 +1095,8 @@ AmrCore::restart (const std::string& filename)
     int mx_lev;
     is >> mx_lev;
     is >> finest_level;
+    is >> LSA_current_step;
+
     int old_finest_level=finest_level;
 
     fort_override_finest_level(&finest_level);
@@ -1266,7 +1304,23 @@ AmrCore::checkPoint ()
 
  double dCheckPointTime0 = ParallelDescriptor::second();
 
- const std::string ckfile = amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
+  //AMReX_Utility.[cpp|H]
+ std::string ckfile_temp =  
+   amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
+
+ str::string ckfileLSA;
+ if ((LSA_activate==0)||
+     (LSA_nsteps_power_method==0)) {
+  ckfileLSA=ckfile_temp;
+ } else if ((LSA_activate==1)&&
+            (LSA_nsteps_power_method>0)) {
+  std::stringstream result;
+  result << ckfile_temp << "LSA";
+  ckfileLSA=amrex::Concatenate(result.str(),LSA_current_step,file_name_digits);
+ } else
+  amrex::Error("LSA_activate or LSA_nsteps_power_method invalid");
+
+ const std::string ckfile=ckfileLSA;
 
  std::string FullPathName=ckfile;
 
@@ -1311,7 +1365,8 @@ AmrCore::checkPoint ()
              << AMREX_SPACEDIM       << '\n'
              << cumtime           << '\n'
              << max_level         << '\n'
-             << finest_level      << '\n';
+             << finest_level      << '\n'
+             << LSA_current_step  << '\n';
 
 // SUSSMAN KLUGE CHECKPOINT
 
@@ -1566,6 +1621,7 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   Real initial_cumTime,int initial_levelSteps_in) {
 
  if ((LSA_nsteps_power_method>=1)&&
+     (LSA_activate==1)&&
      (LSA_current_step+1==LSA_current_step_in)&&
      (LSA_current_step_in>=1)) {
   //do nothing
