@@ -41,7 +41,7 @@ StateData::StateData ()
 {
    StateData_level=0;
 
-   StateData_MAX_NUM_SLAB=33;
+   StateData_MAX_NUM_SLAB=33+3; // 3 to account for LSA
    StateData_slab_dt_type=0;
 
    desc = 0;
@@ -118,7 +118,7 @@ StateData::define (
     StateData_level=level;
 
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
-    if (StateData_MAX_NUM_SLAB<33)
+    if (StateData_MAX_NUM_SLAB<33+3) //3 to account for LSA
      amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;
@@ -232,7 +232,7 @@ StateData::restart (
      amrex::Error("max_level>=0 violated");
 
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
-    if (StateData_MAX_NUM_SLAB<33)
+    if (StateData_MAX_NUM_SLAB<33+3)  //3 to account for LSA
      amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;

@@ -66,6 +66,9 @@ public:
     Vector<Real> AMR_max_phase_change_rate;
     Vector<Real> AMR_min_phase_change_rate;
 
+    int LSA_activate;  // =0 or 1
+    int LSA_extra_data;  // =0 or 3
+
     int LSA_nsteps_power_method;
 
      //LSA_current_step=0 => define q_np1
