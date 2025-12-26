@@ -249,7 +249,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  } else
   amrex::Error("create_hierarchy invalid");
 
- MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  
@@ -827,7 +827,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=1)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -2325,8 +2325,8 @@ void NavierStokes::ADVECT_DIV() {
 
  const Real* dx = geom.CellSize();
 
- MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& DIV_new=get_new_data(DIV_Type,project_slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -2769,7 +2769,7 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
  correct_velocity(project_option,
    UMAC_MF,UMAC_MF,GRADPEDGE_MF,nsolve);
 
- MultiFab& P_new=get_new_data(state_index,slab_step+1);
+ MultiFab& P_new=get_new_data(state_index,project_slab_step+1);
 
  int scomp_ilist=0;
  for (int ilist=0;ilist<scomp.size();ilist++) {

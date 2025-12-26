@@ -1527,6 +1527,7 @@ protected:
      // before: get_old_data  now: get_new_data(slab_step)
      // before: get_new_data  now: get_new_data(slab_step+1)
     static int slab_step; 
+    static int project_slab_step; 
     static int SDC_outer_sweeps;
     static int divu_outer_sweeps;
     static int very_last_sweep;

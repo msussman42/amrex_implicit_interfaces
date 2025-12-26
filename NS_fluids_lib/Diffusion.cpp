@@ -197,11 +197,11 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
  MultiFab* Un=localMF[idx_vel];
 
- MultiFab& U_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& U_new=get_new_data(State_Type,project_slab_step+1);
  if (U_new.nComp()!=STATE_NCOMP) 
   amrex::Error("U_new.nComp()!=STATE_NCOMP");
 
- MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
@@ -366,11 +366,11 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
 
  MultiFab* Un=localMF[idx_vel];
 
- MultiFab& U_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& U_new=get_new_data(State_Type,project_slab_step+1);
  if (U_new.nComp()!=STATE_NCOMP) 
   amrex::Error("U_new.nComp()!=STATE_NCOMP");
 
- MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
@@ -675,8 +675,8 @@ void NavierStokes::combine_state_variable(
  } else
   amrex::Error("project_option invalid in combine_state_variable");
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  int nstate=STATE_NCOMP;
@@ -903,7 +903,7 @@ void NavierStokes::combine_state_variable(
     if (combine_idx==-1) {
 
      if (project_option==SOLVETYPE_PRES) {
-      face_mf=&get_new_data(Umac_Type+dir,slab_step+1);
+      face_mf=&get_new_data(Umac_Type+dir,project_slab_step+1);
      } else
       amrex::Error("project_option invalid82");
 
@@ -1267,7 +1267,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   0,ncomp_edge,0,AMREX_SPACEDIM,
   SPECTRAL_ORDER_AVGDOWN,local_caller_string);
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())

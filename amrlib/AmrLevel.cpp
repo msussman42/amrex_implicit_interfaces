@@ -695,7 +695,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
       //in the constructor
      new_data_FSI.resize(level_MAX_NUM_SLAB);
 
-     for (int i=0;i<=time_order;i++) {
+     for (int i=0;i<=time_order+parent->LSA_extra_data;i++) {
 
       new_data_FSI[i].clear_FSI();
 
@@ -705,7 +705,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
       AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
 #endif
 
-     }// for (int i=0;i<=time_order;i++) 
+     }// for (int i=0;i<=time_order+parent->LSA_extra_data;i++) 
 
     } else if ((level>0)&&(level<=max_level)) {
      // do nothing
@@ -827,11 +827,11 @@ AmrLevel::restart (AmrCore&      papa,
     std::string fileCharPtrString(fileCharPtr.dataPtr());
     std::istringstream CTML_is(fileCharPtrString, std::istringstream::in);
 
-    for (int i=0;i<=time_order;i++) {
+    for (int i=0;i<=time_order+parent->LSA_extra_data;i++) {
 
      new_data_FSI[i].restart(i,CTML_is);
 
-    }//for (int i=0;i<=time_order;i++) 
+    }//for (int i=0;i<=time_order+parent->LSA_extra_data;i++) 
 
    } else if (ctml_count==0) {
     //do nothing
@@ -1005,7 +1005,7 @@ AmrLevel::checkPoint (const std::string& dir,
 
     if (level==0) {
 
-     for (int i=0;i<=time_order;i++) {
+     for (int i=0;i<=time_order+parent->LSA_extra_data;i++) {
 
 #ifdef AMREX_PARTICLES
       std::string FullPathNamePart=FullPath;
@@ -1018,7 +1018,7 @@ AmrLevel::checkPoint (const std::string& dir,
       AmrLevel0_new_dataPC[i]->Checkpoint(FullPathNamePart,Part_name);
 #endif
 
-     }//for (int i=0;i<=time_order;i++) 
+     }//for (int i=0;i<=time_order+parent->LSA_extra_data;i++) 
 
      //SUSSMAN: output CTML FSI checkpoint data
      ParmParse ppns("ns");
@@ -1047,7 +1047,7 @@ AmrLevel::checkPoint (const std::string& dir,
       if (ctml_count>0) {
 
        new_data_FSI[0].open_checkpoint(FullPath);
-       for (int i=0;i<=time_order;i++) {
+       for (int i=0;i<=time_order+parent->LSA_extra_data;i++) {
         new_data_FSI[i].checkpoint(i);
        }
        new_data_FSI[0].close_checkpoint();
@@ -1086,14 +1086,14 @@ AmrLevel::~AmrLevel ()
      int time_order=parent->Time_blockingFactor();
      int local_nmat=parent->global_AMR_num_materials;
 
-     for (int i=0;i<=time_order;i++) {
+     for (int i=0;i<=time_order+parent->LSA_extra_data;i++) {
 
       new_data_FSI[i].clear_FSI();
 #ifdef AMREX_PARTICLES
       AmrLevel0_new_dataPC[i].reset();
 #endif
 
-     } // for (int i=0;i<=time_order;i++) 
+     } // for (int i=0;i<=time_order+parent->LSA_extra_data;i++) 
 
 #ifdef AMREX_PARTICLES
      AmrLevel0_new_dataPC.resize(0);

@@ -2232,6 +2232,7 @@ NavierStokes::sum_integrated_quantities (
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
  slab_step=ns_time_order-1;
+ project_slab_step=slab_step;
 
  SDC_outer_sweeps=0;
  SDC_setup_step();

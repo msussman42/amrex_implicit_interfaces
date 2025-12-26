@@ -244,8 +244,8 @@ void NavierStokes::avgDownMacState(int spectral_override) {
  NavierStokes& fine_lev = getLevel(level+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  MultiFab& S_crse = get_new_data(Umac_Type+dir,slab_step+1);
-  MultiFab& S_fine = fine_lev.get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& S_crse = get_new_data(Umac_Type+dir,project_slab_step+1);
+  MultiFab& S_fine = fine_lev.get_new_data(Umac_Type+dir,project_slab_step+1);
   int scomp=0;
   int ncomp_edge=S_crse.nComp(); 
  
@@ -388,7 +388,7 @@ void NavierStokes::smoothing_advection() {
      //Umac_Type
      ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
         dir,cur_time_slab);
-     MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+     MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,project_slab_step+1);
      MultiFab::Copy(Umac_new,*ns_level.localMF[UMAC_STATIC_MF],0,0,1,0);
     }
    } //for (int ilev=finest_level;ilev>=level;ilev--)
@@ -396,10 +396,10 @@ void NavierStokes::smoothing_advection() {
 
    int basestep_debug=n_smooth;
    parent->writeDEBUG_PlotFile(
-   basestep_debug,
-   SDC_outer_sweeps,
-   slab_step,
-   divu_outer_sweeps);
+    basestep_debug,
+    SDC_outer_sweeps,
+    project_slab_step,
+    divu_outer_sweeps);
    std::cout << "press any number then enter: n_smooth= " << n_smooth << '\n';
    std::cout << "local_num_steps= " << local_num_steps << '\n';
    std::cout << "cur_time_slab= " << cur_time_slab << '\n';
@@ -409,6 +409,8 @@ void NavierStokes::smoothing_advection() {
       num_divu_outer_sweeps << '\n';
    std::cout << "slab_step= " << 
       slab_step << '\n';
+   std::cout << "project_slab_step= " << 
+      project_slab_step << '\n';
    std::cout << "SDC_outer_sweeps= " << 
       SDC_outer_sweeps << '\n';
    std::cout << "FSI_outer_sweeps= " << 
@@ -621,7 +623,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
     // level=0
     // particles at t^{n} 
-  My_ParticleContainer& prevPC=newDataPC(slab_step);
+  My_ParticleContainer& prevPC=newDataPC(project_slab_step);
 
   if (local_smoothing==0) {
    prevPC.Redistribute(lev_min,lev_max,
@@ -632,7 +634,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    amrex::Error("local_smoothing invalid");
 
     // level=0
-  My_ParticleContainer& localPC=newDataPC(slab_step+1);
+  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
 
   Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
   
@@ -727,7 +729,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
     bool remove_negative=true;
 
       //level==0
-    My_ParticleContainer& localPC=newDataPC(slab_step+1);
+    My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -909,7 +911,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
   if (1==0) {
    // S_new is level 0 data
-   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
    // data file name "BEFOREPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
    // (VFRAC,centroid) x num_materials, error indicator
@@ -946,7 +948,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
  if (1==0) {
     // S_new is level 0 data
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
    // data file name "AFTERPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
    // (VFRAC,centroid) x num_materials, error indicator
@@ -1106,7 +1108,7 @@ void NavierStokes::tensor_advection_updateALL() {
         parent->writeDEBUG_PlotFile(
          basestep_debug,
          SDC_outer_sweeps,
-         slab_step,
+         project_slab_step,
          divu_outer_sweeps);
         std::cout << "press any number then enter: before extend_FSI_data \n";
         std::cout << "im+1 = " << im+1 << '\n';
@@ -1117,6 +1119,8 @@ void NavierStokes::tensor_advection_updateALL() {
           num_divu_outer_sweeps << '\n';
         std::cout << "slab_step= " << 
           slab_step << '\n';
+        std::cout << "project_slab_step= " << 
+          project_slab_step << '\n';
         std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
         std::cout << "FSI_outer_sweeps= " << 
@@ -1142,7 +1146,7 @@ void NavierStokes::tensor_advection_updateALL() {
         parent->writeDEBUG_PlotFile(
          basestep_debug,
          SDC_outer_sweeps,
-         slab_step,
+         project_slab_step,
          divu_outer_sweeps);
         std::cout << "press any number then enter: after extend_FSI_data \n";
         std::cout << "im+1 = " << im+1 << '\n';
@@ -1153,6 +1157,8 @@ void NavierStokes::tensor_advection_updateALL() {
           num_divu_outer_sweeps << '\n';
         std::cout << "slab_step= " << 
           slab_step << '\n';
+        std::cout << "project_slab_step= " << 
+          project_slab_step << '\n';
         std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
         std::cout << "FSI_outer_sweeps= " << 
@@ -1452,7 +1458,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    SDC_outer_sweeps=0;
    slab_step=ns_time_order-1;
-     //cur_time_slab=state[State_Type].slabTime(slab_step+1);
+   project_slab_step=slab_step;
+     //cur_time_slab=state[State_Type].slabTime(slab_step+1) if 
+     //0<=slab_step<ns_time_order
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
@@ -1925,7 +1933,7 @@ void NavierStokes::init_splitting_force_SDC() {
   debug_ngrow(stableF_MF,0,local_caller_string);
   debug_ngrow(delta_MF,0,local_caller_string);
 
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
   int nstate=STATE_NCOMP;
   if (nstate!=S_new.nComp())
@@ -2331,7 +2339,7 @@ void NavierStokes::pressure_gradient_code_segment(
   parent->writeDEBUG_PlotFile(
   basestep_debug,
   SDC_outer_sweeps,
-  slab_step,
+  project_slab_step,
   divu_outer_sweeps);
   std::cout << "press any number then enter: after SOLVETYPE_PRES \n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
@@ -2341,6 +2349,8 @@ void NavierStokes::pressure_gradient_code_segment(
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -2376,7 +2386,7 @@ void NavierStokes::pressure_gradient_code_segment(
      parent->writeDEBUG_PlotFile(
      basestep_debug,
      SDC_outer_sweeps,
-     slab_step,
+     project_slab_step,
      divu_outer_sweeps);
      std::cout << "press any number then enter: after PRESEXTRAP\n";
      std::cout << "cur_time_slab= " << cur_time_slab << '\n';
@@ -2386,6 +2396,8 @@ void NavierStokes::pressure_gradient_code_segment(
            num_divu_outer_sweeps << '\n';
      std::cout << "slab_step= " << 
            slab_step << '\n';
+     std::cout << "project_slab_step= " << 
+           project_slab_step << '\n';
      std::cout << "SDC_outer_sweeps= " << 
            SDC_outer_sweeps << '\n';
      std::cout << "FSI_outer_sweeps= " << 
@@ -2672,7 +2684,7 @@ void NavierStokes::phase_change_code_segment(
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-  My_ParticleContainer& localPC=newDataPC(slab_step+1);
+  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
 
   int lev_min=0;
   int lev_max=-1;
@@ -2806,7 +2818,7 @@ void NavierStokes::nucleation_code_segment(
   parent->writeDEBUG_PlotFile(
     basestep_debug,
     SDC_outer_sweeps,
-    slab_step,
+    project_slab_step,
     divu_outer_sweeps);
   std::cout << "press any number then enter: before nucleate_bubbles\n";
   int n_input;
@@ -2901,7 +2913,7 @@ void NavierStokes::nucleation_code_segment(
   parent->writeDEBUG_PlotFile(
     basestep_debug,
     SDC_outer_sweeps,
-    slab_step,
+    project_slab_step,
     divu_outer_sweeps);
   std::cout << "press any number then enter: after nucleate_bubbles\n";
   int n_input;
@@ -2988,6 +3000,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  SDC_outer_sweeps=0;
  slab_step=0;
+ project_slab_step=0;
  SDC_setup_step();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -3013,6 +3026,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       SDC_outer_sweeps++) {
 
   slab_step=0;
+  project_slab_step=0;
   SDC_setup_step();
   interface_touch_flag=1; //do_the_advance
 
@@ -3056,6 +3070,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   for (slab_step=slab_step_start;
        ((slab_step<=slab_step_end)&&(advance_status==1));
        slab_step++) {
+
+   project_slab_step=slab_step;
+   if (project_slab_step==-1) {
+    project_slab_step=0;
+   }
+   if (project_slab_step==ns_time_order) {
+    project_slab_step=ns_time_order-1;
+   }
+   if ((project_slab_step>=0)&&
+       (project_slab_step<ns_time_order)) {
+    //do nothing
+   } else
+    amrex::Error("project_slab_step invalid");
 
    interface_touch_flag=1; //do_the_advance
 
@@ -3115,7 +3142,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      const int* fabhi=fabgrid.hiVect();
      const Real* xlo = grid_loc[gridno].lo();
      int interior_only=1;
-     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+     MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
      FArrayBox& snewfab=S_new[0];
      const Real* dx = geom.CellSize();
      int scomp_plot=STATECOMP_STATES;
@@ -3148,7 +3175,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        parent->writeDEBUG_PlotFile(
 	 basestep_debug,
 	 SDC_outer_sweeps,
-	 slab_step,
+	 project_slab_step,
 	 divu_outer_sweeps);
        std::cout << "press any number then enter: after nonlinear_advection\n";
        std::cout << "timeSEM= " << timeSEM << '\n';
@@ -3160,6 +3187,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
        std::cout << "slab_step= " << 
 	       slab_step << '\n';
+       std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
        std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
        std::cout << "FSI_outer_sweeps= " << 
@@ -3424,7 +3453,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      parent->writeDEBUG_PlotFile(
 	basestep_debug,
 	SDC_outer_sweeps,
-	slab_step,
+	project_slab_step,
 	divu_outer_sweeps);
      std::cout << "press any number then enter: before make_physics_varsALL\n";
      int n_input;
@@ -3455,7 +3484,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      parent->writeDEBUG_PlotFile(
        basestep_debug,
        SDC_outer_sweeps,
-       slab_step,
+       project_slab_step,
        divu_outer_sweeps);
      std::cout << "press any number then enter: after make_physics_varsALL\n";
      int n_input;
@@ -3508,7 +3537,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        parent->writeDEBUG_PlotFile(
 	 basestep_debug,
 	 SDC_outer_sweeps,
-	 slab_step,
+	 project_slab_step,
 	 divu_outer_sweeps);
        std::cout << "press any number then enter: after tensor_advection_updateALL\n";
        std::cout << "timeSEM= " << timeSEM << '\n';
@@ -3520,6 +3549,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
        std::cout << "slab_step= " << 
 	       slab_step << '\n';
+       std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
        std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
        std::cout << "FSI_outer_sweeps= " << 
@@ -3718,10 +3749,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
-	 basestep_debug,
-	 SDC_outer_sweeps,
-	 slab_step,
-	 divu_outer_sweeps);
+	  basestep_debug,
+	  SDC_outer_sweeps,
+	  project_slab_step,
+	  divu_outer_sweeps);
          std::cout << 
           "press any number then enter: before project_to_rigid_velocityALL\n";
          std::cout << "timeSEM= " << timeSEM << '\n';
@@ -3733,6 +3764,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
          std::cout << "slab_step= " << 
 	       slab_step << '\n';
+         std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
          std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
          std::cout << "FSI_outer_sweeps= " << 
@@ -3754,10 +3787,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
-	 basestep_debug,
-	 SDC_outer_sweeps,
-	 slab_step,
-	 divu_outer_sweeps);
+	  basestep_debug,
+	  SDC_outer_sweeps,
+	  project_slab_step,
+	  divu_outer_sweeps);
          std::cout << "press any number then enter: after project_to_rigid_velocityALL\n";
          std::cout << "timeSEM= " << timeSEM << '\n';
          std::cout << "dtSEM= " << dtSEM << '\n';
@@ -3768,6 +3801,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
          std::cout << "slab_step= " << 
 	       slab_step << '\n';
+         std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
          std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
          std::cout << "FSI_outer_sweeps= " << 
@@ -3807,7 +3842,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           parent->writeDEBUG_PlotFile(
 	   basestep_debug,
 	   SDC_outer_sweeps,
-	   slab_step,
+	   project_slab_step,
 	   divu_outer_sweeps);
           std::cout << "press any number then enter: after manage_FSI_data\n";
           std::cout << "timeSEM= " << timeSEM << '\n';
@@ -3819,6 +3854,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
           std::cout << "slab_step= " << 
 	       slab_step << '\n';
+          std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
           std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
           std::cout << "FSI_outer_sweeps= " << 
@@ -3861,10 +3898,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
-	 basestep_debug,
-	 SDC_outer_sweeps,
-	 slab_step,
-	 divu_outer_sweeps);
+	  basestep_debug,
+	  SDC_outer_sweeps,
+	  project_slab_step,
+	  divu_outer_sweeps);
          std::cout << "press any number then enter: after veldiffuseALL\n";
          std::cout << "timeSEM= " << timeSEM << '\n';
          std::cout << "dtSEM= " << dtSEM << '\n';
@@ -3875,6 +3912,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	       num_divu_outer_sweeps << '\n';
          std::cout << "slab_step= " << 
 	       slab_step << '\n';
+         std::cout << "project_slab_step= " << 
+	       project_slab_step << '\n';
          std::cout << "SDC_outer_sweeps= " << 
 	       SDC_outer_sweeps << '\n';
          std::cout << "FSI_outer_sweeps= " << 
@@ -3930,7 +3969,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         if (1==0) {
            // S_new is level 0 data
-         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+         MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 	 // data file name "VISCSOLVE<stuff>.plt"
 	 // after the viscous solve, but before the pressure projection.
 	 // cell data in the fluid, next to the solid, should "make sense"
@@ -3953,7 +3992,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          parent->writeDEBUG_PlotFile(
 	  basestep_debug,
 	  SDC_outer_sweeps,
-	  slab_step,
+	  project_slab_step,
 	  divu_outer_sweeps);
         }
 
@@ -4423,7 +4462,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      parent->writeDEBUG_PlotFile(
        basestep_debug,
        SDC_outer_sweeps,
-       slab_step,
+       project_slab_step,
        divu_outer_sweeps);
      std::cout << "press any number then enter: just before close of divu_outer_sweeps loop\n";
      std::cout << "timeSEM= " << timeSEM << '\n';
@@ -4435,6 +4474,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
              num_divu_outer_sweeps << '\n';
      std::cout << "slab_step= " << 
              slab_step << '\n';
+     std::cout << "project_slab_step= " << 
+             project_slab_step << '\n';
      std::cout << "SDC_outer_sweeps= " << 
              SDC_outer_sweeps << '\n';
      std::cout << "FSI_outer_sweeps= " << 
@@ -4465,11 +4506,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
  } else if (advance_status==1) { // success
 
   slab_step=ns_time_order-1;
+  project_slab_step=slab_step;
 
   // declared in: MacProj.cpp
   // CELL_SOUND_MF contains: (i) coefficient (1/(rho c^2 dt^2))
   //                         (ii) p_advect
-  // MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
+  // MultiFab& DIV_new=get_new_data(DIV_Type,project_slab_step+1);
   // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
   //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol
   //                          
@@ -4507,7 +4549,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       -1,  // data_dir==-1 (cell centered)
       parent->levelSteps(0)); 
 
-    MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
+    MultiFab& DIV_new=get_new_data(DIV_Type,project_slab_step+1);
     //DIV_Type<stuff>.plt (visit can open binary tecplot files)
     writeSanityCheckData(
       "DIV_Type",
@@ -6145,7 +6187,7 @@ NavierStokes::ColorSum(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(AREA_MF+dir,1,local_caller_string);
-  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
   if (localMF[AREA_MF+dir]->boxArray()!=Umac_new.boxArray())
    amrex::Error("area_mf boxarrays do not match");
  } // dir=0..sdim-1
@@ -6215,7 +6257,7 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("mdot_complement->nGrow() invalid");
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
@@ -6509,10 +6551,11 @@ NavierStokes::SumRegions(
  if (localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*num_materials)
   amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*num_materials");
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- MultiFab& Umac_new=get_new_data(Umac_Type,slab_step+1);
- MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
- MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ MultiFab& Umac_new=get_new_data(Umac_Type,project_slab_step+1);
+ MultiFab& Vmac_new=get_new_data(Umac_Type+1,project_slab_step+1);
+ MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,
+   project_slab_step+1);
 
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
@@ -8803,7 +8846,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  if (ncomp_check!=nsolve)
   amrex::Error("nsolve or ncomp_check invalid 3919");
  
- MultiFab& S_new=get_new_data(state_index,slab_step+1);
+ MultiFab& S_new=get_new_data(state_index,project_slab_step+1);
 
   // in: allocate_project_variables
   // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
@@ -9033,10 +9076,10 @@ void NavierStokes::overwrite_outflow() {
  const Real* dx = geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
  const Real* prob_hi   = geom.ProbHi();
- MultiFab& U_new = get_new_data(State_Type,slab_step+1); 
+ MultiFab& U_new = get_new_data(State_Type,project_slab_step+1); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+   MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
    if (Umac_new.nComp()!=1)
     amrex::Error("Umac_new.nComp() invalid");
 
@@ -9160,7 +9203,7 @@ void NavierStokes::correct_velocity(
 
  const Real* dx = geom.CellSize();
 
- MultiFab& S_new=get_new_data(state_index,slab_step+1);
+ MultiFab& S_new=get_new_data(state_index,project_slab_step+1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -10288,7 +10331,7 @@ void NavierStokes::multiphase_project(int project_option) {
      //Umac_Type
     ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
         dir,cur_time_slab);
-    MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+    MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,project_slab_step+1);
      //value,scomp,ncomp,ngrow
     Umac_new.setVal(0.0,0,1,0);
    }
@@ -10432,6 +10475,7 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << " NFSI_LIMIT= " << NFSI_LIMIT << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
    std::cout << " slab_step= " << slab_step << '\n';
+   std::cout << " project_slab_step= " << project_slab_step << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
    std::cout << " lower_slab_time= " << lower_slab_time << '\n';
    std::cout << " upper_slab_time= " << upper_slab_time << '\n';
@@ -10763,10 +10807,10 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     slab_step,
-     divu_outer_sweeps);
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
      std::cout << "press any number then enter: before increment_face_velocityALL\n";
      std::cout << "WARNING: velocity is scaled\n";
      std::cout << " cur_time_slab= " << cur_time_slab << '\n';
@@ -10776,6 +10820,8 @@ void NavierStokes::multiphase_project(int project_option) {
           num_divu_outer_sweeps << '\n';
      std::cout << "slab_step= " << 
           slab_step << '\n';
+     std::cout << "project_slab_step= " << 
+          project_slab_step << '\n';
      std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
      std::cout << "FSI_outer_sweeps= " << 
@@ -10799,10 +10845,10 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     slab_step,
-     divu_outer_sweeps);
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
      std::cout << "press any number then enter: after increment_face_velocityALL\n";
      std::cout << "WARNING: velocity is scaled\n";
      std::cout << " cur_time_slab= " << cur_time_slab << '\n';
@@ -10812,6 +10858,8 @@ void NavierStokes::multiphase_project(int project_option) {
           num_divu_outer_sweeps << '\n';
      std::cout << "slab_step= " << 
           slab_step << '\n';
+     std::cout << "project_slab_step= " << 
+          project_slab_step << '\n';
      std::cout << "SDC_outer_sweeps= " << 
           SDC_outer_sweeps << '\n';
      std::cout << "FSI_outer_sweeps= " << 
@@ -12348,6 +12396,7 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << "project_option= " << project_option <<
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << 
+          " project_slab_step= " << project_slab_step << 
           " FSI_outer_sweeps= " << FSI_outer_sweeps << 
           " num_FSI_outer_sweeps= " << num_FSI_outer_sweeps << 
           " NFSI_LIMIT= " << NFSI_LIMIT << 
@@ -13340,10 +13389,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: after diffuse_hoopALL\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13352,6 +13401,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13377,10 +13428,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: after INCREMENT_REGISTERS_ALL\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13389,6 +13440,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13490,10 +13543,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: immediately prior SOLVETYPE_VISC\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13502,6 +13555,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13520,10 +13575,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter (right after SOLVETYPE_VISC)\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13532,6 +13587,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13571,10 +13628,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: immediately before vel_elastic_ALL\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13583,6 +13640,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13602,10 +13661,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   projecct_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: immediately after vel_elastic_ALL\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13614,6 +13673,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13642,10 +13703,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: immediately after marangoni\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13654,6 +13715,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13937,10 +14000,10 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  slab_step,
-  divu_outer_sweeps);
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: immediately after assimilate\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -13949,6 +14012,8 @@ void NavierStokes::veldiffuseALL() {
         num_divu_outer_sweeps << '\n';
   std::cout << "slab_step= " << 
         slab_step << '\n';
+  std::cout << "project_slab_step= " << 
+        project_slab_step << '\n';
   std::cout << "SDC_outer_sweeps= " << 
         SDC_outer_sweeps << '\n';
   std::cout << "FSI_outer_sweeps= " << 
@@ -13991,7 +14056,7 @@ void NavierStokes::veldiffuseALL() {
 
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
+   MultiFab& S_new=ns_level.get_new_data(State_Type,project_slab_step+1);
    MultiFab* save_S_new=ns_level.localMF[save_state_MF];
    for (int im=0;im<num_materials;im++) {
 
@@ -14263,8 +14328,8 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
 
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
@@ -14390,7 +14455,7 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
 
  int nsolve=AMREX_SPACEDIM;
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
  int nstate=S_new.nComp();
  if (nstate!=STATE_NCOMP)
   amrex::Error("nstate invalid");
@@ -14494,7 +14559,7 @@ void NavierStokes::manage_FSI_data() {
   const int* domlo = domain.loVect();
   const int* domhi = domain.hiVect();
 
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
    //does velocity need to be restored?
   if ((FSI_outer_sweeps>=1)&&
@@ -14503,7 +14568,7 @@ void NavierStokes::manage_FSI_data() {
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+    MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -14622,7 +14687,7 @@ void NavierStokes::manage_FSI_data() {
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+    MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -14744,7 +14809,7 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //Umac_Type+dir
@@ -14769,7 +14834,7 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -15035,7 +15100,7 @@ void NavierStokes::zalesakVEL() {
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- MultiFab& U_new=get_new_data(State_Type,slab_step+1);
+ MultiFab& U_new=get_new_data(State_Type,project_slab_step+1);
  U_new.setVal(0.0,STATECOMP_PRES,1,1);
 
  if (thread_class::nthreads<1)
