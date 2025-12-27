@@ -1571,7 +1571,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
       //restore t^n data into "get_new_data"
       //restore data prior to adding level set perturbations.
-      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,RESTORE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,RESTORE_CONTROL);
       CopyNewToOldALL();
 
      } else if (NS_LSA_step_count>0) {
@@ -1698,7 +1698,7 @@ Real NavierStokes::advance(Real time,Real dt) {
       //save t^n data from "get_new_data"
       //LSA_save_state_data is declared in NavierStokes.cpp
       //LSA_save_state_data calls NavierStokes::init_boundary
-      LSA_save_state_dataALL(LSA_QCELL_N_MF,LSA_QFACE_N_MF,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,SAVE_CONTROL);
 
      } else if (NS_LSA_step_count>0) {
       //do nothing
@@ -1826,14 +1826,13 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} unperturbed data
-      LSA_save_state_dataALL(LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_NP1_EXTRA,SAVE_CONTROL);
       //save t^{n+1} data 
-      LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
       LSA_default_eigenvectorALL(
-        LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
-        LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+        LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 
@@ -1850,10 +1849,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
-      LSA_save_state_dataALL(LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
       LSA_eigenvectorALL(
-	LSA_QCELL_NP1_MF,LSA_QFACE_NP1_MF,
-        LSA_EVEC_CELL_MF,LSA_EVEC_FACE_MF);
+	LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 

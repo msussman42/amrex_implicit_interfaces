@@ -195,6 +195,7 @@ private:
     int StateData_slab_dt_type;
 
     int bfact_time_order;
+    int LSA_extra_data;
 
     //
     // Pointer to data descriptor.

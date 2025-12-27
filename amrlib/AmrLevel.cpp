@@ -1116,19 +1116,15 @@ AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>&
  AMREX_ALWAYS_ASSERT(level==0);
 
  int time_order=parent->Time_blockingFactor();
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==time_order+1)
-  project_slab_index=time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>time_order)) {
+ if ((slab_index<0)||
+     (slab_index>time_order+parent->LSA_extra_data)) {
+  std::cout << "parent->LSA_extra_data= " << parent->LSA_extra_data << '\n';
   std::cout << "time_order= " << time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid1");
+  std::cout << "slab_index= " << slab_index << '\n';
+  amrex::Error("slab_index invalid1");
  }
 
- return *AmrLevel0_new_dataPC[project_slab_index];
+ return *AmrLevel0_new_dataPC[slab_index];
 
 }
 
@@ -1139,19 +1135,15 @@ AmrLevel::newDataPC (int slab_index) const
  AMREX_ALWAYS_ASSERT(level==0);
  int time_order=parent->Time_blockingFactor();
 
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==time_order+1)
-  project_slab_index=time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>time_order)) {
+ if ((slab_index<0)||
+     (slab_index>time_order+parent->LSA_extra_data)) {
+  std::cout << "parent->LSA_extra_data= " << parent->LSA_extra_data << '\n';
   std::cout << "time_order= " << time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid2");
+  std::cout << "slab_index= " << slab_index << '\n';
+  amrex::Error("slab_index invalid2");
  }
 
- return *AmrLevel0_new_dataPC[project_slab_index];
+ return *AmrLevel0_new_dataPC[slab_index];
 
 }
 
