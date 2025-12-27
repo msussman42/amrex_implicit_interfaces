@@ -277,33 +277,33 @@ public:
 
     void restore_active_pressure(int save_mf);
 
-    void LSA_save_state_data(int cell_mf,int face_mf,int control_flag_in);
-    void LSA_save_state_dataALL(int cell_mf,int face_mf,int control_flag_in);
+    void LSA_save_state_data(int extra_comp,int control_flag_in);
+    void LSA_save_state_dataALL(int extra_comp,int control_flag_in);
     void LSA_levelset_norminf(
         int im_critical, //0<=im_critical<num_materials
-	int unperturb_cell_mf,
-        int cell_mf,
+	int unperturb_extra_comp,
+        int extra_comp,
 	Real& local_max);
     void LSA_default_eigenvector(
-	int unperturb_cell_mf,int unperturb_face_mf,
-        int cell_mf,int face_mf);
+	int unperturb_extra_comp,
+        int extra_comp);
     void LSA_default_eigenvectorALL(
-	int unperturb_cell_mf,int unperturb_face_mf,
-        int cell_mf,int face_mf);
+	int unperturb_extra_comp,
+        int extra_comp);
     void LSA_eigenvector(
-	int unperturb_cell_mf,int unperturb_face_mf,
-	int cell_mf,int face_mf);
+	int unperturb_extra_comp,
+        int extra_comp);
     void LSA_eigenvectorALL(
-	int unperturb_cell_mf,int unperturb_face_mf,
-	int cell_mf,int face_mf);
+	int unperturb_extra_comp,
+        int extra_comp);
     void LSA_normalize_eigenvector(
-      int unperturb_cell_mf,int unperturb_face_mf,
-      int cell_mf,int face_mf,
+      int unperturb_extra_comp,
+      int extra_comp,
       Vector<Real>& cell_max,Vector<Real>& face_max,
       int isweep);
     void LSA_normalize_eigenvectorALL(
-      int unperturb_cell_mf,int unperturb_face_mf,
-      int cell_mf,int face_mf);
+      int unperturb_extra_comp,
+      int extra_comp);
 
     void allocate_maccoefALL(int project_option,int nsolve,
 	int create_hierarchy,Real dt_maccoef); //-1,0,1

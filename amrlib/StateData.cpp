@@ -55,6 +55,7 @@ StateData::StateData ()
     time_array[i] = INVALID_TIME;
    }
    bfact_time_order=0;
+   LSA_extra_data=0;
 }
 
 StateData::StateData (
@@ -127,11 +128,19 @@ StateData::define (
      amrex::Error("StateData_slab_dt_type invalid");
  
     bfact_time_order=time_order;
-    if ((bfact_time_order>StateData_MAX_NUM_SLAB)||
+    LSA_extra_data=parent->LSA_extra_data;
+
+    if ((bfact_time_order>StateData_MAX_NUM_SLAB-3)||
         (bfact_time_order<1)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
      amrex::Error("bfact_time_order invalid in define");
     }
+    if ((LSA_extra_data==0)||
+        (LSA_extra_data==3)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_extra_data invalid");
+
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
 
@@ -188,7 +197,13 @@ StateData::define (
     int ncomp = desc->nComp();
     int state_holds_data = desc->get_state_holds_data();
 
-    for (int i=0;i<=bfact_time_order;i++) {
+    if ((parent->LSA_extra_data==0)||
+        (parent->LSA_extra_data==3)) {
+     //do nothing
+    } else
+     amrex::Error("parent->LSA_extra_data invalid");
+
+    for (int i=0;i<=bfact_time_order+parent->LSA_extra_data;i++) {
 
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
@@ -197,7 +212,7 @@ StateData::define (
       new_data[i]=nullptr;
      } else
       amrex::Error("state_holds_data invalid");
-    }// for (int i=0;i<=bfact_time_order;i++) 
+    }// for (int i=0;i<=bfact_time_order+parent->LSA_extra_data;i++) 
 
     buildBC();
 } // end subroutine StateData::define 
@@ -244,12 +259,18 @@ StateData::restart (
     new_data.resize(StateData_MAX_NUM_SLAB);
 
     bfact_time_order=time_order;
+    LSA_extra_data=parent->LSA_extra_data;
 
     if ((bfact_time_order<1)||
-        (bfact_time_order>StateData_MAX_NUM_SLAB)) {
+        (bfact_time_order>StateData_MAX_NUM_SLAB-3)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
      amrex::Error("bfact_time_order invalid in restart");
     }
+    if ((LSA_extra_data==0)||
+        (LSA_extra_data==3)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_extra_data invalid");
 
     StateData_level=level;
 
@@ -286,10 +307,10 @@ StateData::restart (
      is >> time_array[i];
     }
 
-    int nsets;
-    is >> nsets;
-    if (nsets!=bfact_time_order)
-     amrex::Error("all slab data should be checkpointed");
+    int bfact_time_order_check;
+    is >> bfact_time_order_check;
+    if (bfact_time_order_check!=bfact_time_order)
+     amrex::Error("bfact_time_order_check!=bfact_time_order");
 
     for (int i=0;i<StateData_MAX_NUM_SLAB;i++)
      new_data[i]=nullptr;
@@ -299,7 +320,18 @@ StateData::restart (
 
     int state_holds_data = desc->get_state_holds_data();
 
-    for (int i=0;i<=bfact_time_order;i++) {
+    if ((parent->LSA_extra_data==0)||
+        (parent->LSA_extra_data==3)) {
+     //do nothing
+    } else
+     amrex::Error("parent->LSA_extra_data invalid");
+
+    if (LSA_extra_data==parent->LSA_extra_data) {
+     //do nothing
+    } else
+     amrex::Error("LSA_extra_data==parent->LSA_extra_data failed");
+
+    for (int i=0;i<=bfact_time_order+parent->LSA_extra_data;i++) {
 
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
@@ -334,7 +366,7 @@ StateData::restart (
      } else
       amrex::Error("state_holds_data invalid");
 
-    }  // i=0 ... bfact_time_order
+    }  // i=0 ... bfact_time_order+parent->LSA_extra_data
 
     buildBC();
 }
@@ -373,7 +405,13 @@ StateData::~StateData() {
 
  desc = 0;
  descGHOST = 0;
- for (int i=0;i<=bfact_time_order;i++) {
+ if ((LSA_extra_data==0)||
+     (LSA_extra_data==3)) {
+  //do nothing
+ } else
+  amrex::Error("LSA_extra_data invalid");
+
+ for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
 
   int state_holds_data=1;
   if (new_data[i]==nullptr)
@@ -386,7 +424,7 @@ StateData::~StateData() {
   } else
    amrex::Error("state_holds_data invalid");
 
- } // i=0..bfact_time_order
+ } // i=0..bfact_time_order+LSA_extra_data
 } // end subroutine StateData::~StateData() 
 
 const StateDescriptor*
@@ -427,41 +465,35 @@ StateData::slabTime (int slab_index) const
 MultiFab&
 StateData::newData (int slab_index)
 {
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==bfact_time_order+1)
-  project_slab_index=bfact_time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>bfact_time_order)) {
-  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid1");
- }
- if (new_data[project_slab_index] == nullptr)
-  amrex::Error("new_data[project_slab_index]==nullptr");
 
- return *new_data[project_slab_index];
+ if ((slab_index<0)||
+     (slab_index>=bfact_time_order+LSA_extra_data+1)) {
+  std::cout << "LSA_extra_data= " << LSA_extra_data << '\n';
+  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
+  std::cout << "slab_index= " << slab_index << '\n';
+  amrex::Error("slab_index invalid1");
+ }
+ if (new_data[slab_index] == nullptr)
+  amrex::Error("new_data[slab_index]==nullptr");
+
+ return *new_data[slab_index];
 }
 
 const MultiFab&
 StateData::newData (int slab_index) const
 {
- int project_slab_index=slab_index;
- if (project_slab_index==-1)
-  project_slab_index=0;
- if (project_slab_index==bfact_time_order+1)
-  project_slab_index=bfact_time_order;
- if ((project_slab_index<0)||
-     (project_slab_index>bfact_time_order)) {
-  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
-  std::cout << "project_slab_index= " << project_slab_index << '\n';
-  amrex::Error("project_slab_index invalid2");
- }
- if (new_data[project_slab_index] == nullptr)
-  amrex::Error("new_data[project_slab_index]==nullptr");
 
- return *new_data[project_slab_index];
+ if ((slab_index<0)||
+     (slab_index>=bfact_time_order+LSA_extra_data+1)) {
+  std::cout << "LSA_extra_data= " << LSA_extra_data << '\n';
+  std::cout << "bfact_time_order= " << bfact_time_order << '\n';
+  std::cout << "slab_index= " << slab_index << '\n';
+  amrex::Error("slab_index invalid2");
+ }
+ if (new_data[slab_index] == nullptr)
+  amrex::Error("new_data[slab_index]==nullptr");
+
+ return *new_data[slab_index];
 }
 
 Vector<BCRec>&
@@ -1201,7 +1233,8 @@ StateData::checkPoint (const std::string& name,
     NewSuffix.resize(StateData_MAX_NUM_SLAB);
     Vector<std::string> mf_name;
     mf_name.resize(StateData_MAX_NUM_SLAB);
-    for (int i=0;i<=bfact_time_order;i++) {
+
+    for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
      std::stringstream slab_string_stream(std::stringstream::in |
       std::stringstream::out);
      slab_string_stream << i;
@@ -1224,7 +1257,8 @@ StateData::checkPoint (const std::string& name,
          
       // output to the header file:
      os << bfact_time_order << '\n';
-     for (int i=0;i<=bfact_time_order;i++) {
+
+     for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
        os << mf_name[i] << '\n';
      }  // i
 
@@ -1232,7 +1266,7 @@ StateData::checkPoint (const std::string& name,
 
     int state_holds_data = desc->get_state_holds_data();
 
-    for (int i=0;i<=bfact_time_order;i++) {
+    for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
      if (state_holds_data==1) {
 
       if (new_data[i]==nullptr)

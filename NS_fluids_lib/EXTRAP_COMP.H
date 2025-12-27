@@ -8,6 +8,10 @@
 #define GET_NEW_DATA_OFFSET (-1000)
 #define GET_NEW_DATA_INVALID (-2000)
 
+#define LSA_N_EXTRA (0)
+#define LSA_NP1_EXTRA (1)
+#define LSA_EVEC_EXTRA (2)
+
 #define ENUM_XVEL (0)
 #define ENUM_YVEL (1)
 #define ENUM_ZVEL (2)
