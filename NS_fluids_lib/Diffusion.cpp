@@ -472,13 +472,13 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
   } else if (null_perturbation==0) {
 
    int local_control_flag=NULL_CONTROL;
-   int local_cell_mf=-1;
+   int local_extra_comp=-1;
    int ncomp_total=0;
    Vector<int> scomp;
    Vector<int> ncomp;
    init_boundary(
     local_control_flag,
-    local_cell_mf,
+    local_extra_comp,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 

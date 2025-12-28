@@ -170,7 +170,7 @@ public:
 
     void init_boundary(
       int control_flag,
-      int cell_mf,
+      int extra_comp,
       int& ncomp_total,
       Vector<int>& scomp,
       Vector<int>& ncomp );
@@ -299,7 +299,8 @@ public:
     void LSA_normalize_eigenvector(
       int unperturb_extra_comp,
       int extra_comp,
-      Vector<Real>& cell_max,Vector<Real>& face_max,
+      Vector<Real>& cell_max,
+      Vector<Real>& LS_cell_max,
       int isweep);
     void LSA_normalize_eigenvectorALL(
       int unperturb_extra_comp,

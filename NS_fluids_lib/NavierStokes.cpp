@@ -8560,13 +8560,13 @@ void NavierStokes::assimilate_state_data() {
  for (int isweep=0;isweep<2;isweep++) {
 
   int local_control_flag=NULL_CONTROL;
-  int local_cell_mf=-1;
+  int local_extra_comp=-1;
   int ncomp_total=0;
   Vector<int> scomp;
   Vector<int> ncomp;
   init_boundary(
     local_control_flag,
-    local_cell_mf,
+    local_extra_comp,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
@@ -10965,7 +10965,7 @@ void NavierStokes::init_boundary_list(Vector<int> scomp,
 
 void NavierStokes::init_boundary(
   int control_flag,
-  int cell_mf,
+  int extra_comp,
   int& ncomp_total,
   Vector<int>& scomp,
   Vector<int>& ncomp ) {
@@ -11148,17 +11148,40 @@ void NavierStokes::init_boundary(
              (k==Refine_Density_Type)) {
  
    MultiFab& S_new=get_new_data(k,project_slab_step+1);
+
    if (S_new.nComp()==ncomp[k]) {
     //do nothing
    } else
     amrex::Error("(S_new.nComp()==ncomp[k]) violated");
 
    if (control_flag==NULL_CONTROL) {
-    //do nothing
+    if (extra_comp==-1) {
+     //do nothing
+    } else
+     amrex::Error("expecting extra_comp==-1");
    } else if (control_flag==SAVE_CONTROL) {
-    MultiFab::Copy(*localMF[cell_mf],S_new,0,scomp[k],ncomp[k],1);
+
+    if ((extra_comp==LSA_N_EXTRA)||
+        (extra_comp==LSA_NP1_EXTRA)||
+        (extra_comp==LSA_EVEC_EXTRA)) {
+     //do nothing
+    } else
+     amrex::Error("extra_comp invalid");
+
+    MultiFab& S_new_extra=get_new_data(k,ns_time_order+extra_comp+1);
+    MultiFab::Copy(S_new_extra,S_new,0,0,ncomp[k],1);
+
    } else if (control_flag==RESTORE_CONTROL) {
-    MultiFab::Copy(S_new,*localMF[cell_mf],scomp[k],0,ncomp[k],1);
+
+    if ((extra_comp==LSA_N_EXTRA)||
+        (extra_comp==LSA_NP1_EXTRA)||
+        (extra_comp==LSA_EVEC_EXTRA)) {
+     //do nothing
+    } else
+     amrex::Error("extra_comp invalid");
+
+    MultiFab& S_new_extra=get_new_data(k,ns_time_order+extra_comp+1);
+    MultiFab::Copy(S_new,S_new_extra,0,0,ncomp[k],1);
    } else
     amrex::Error("control_flag invalid");
 
@@ -11383,58 +11406,66 @@ NavierStokes::init(
 
 }  // end subroutine init(old,ba_in,dmap_in)
 
-void NavierStokes::LSA_save_state_data(int cell_mf,int face_mf,
-  int control_flag_in) {
+void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
 
  std::string local_caller_string="LSA_save_state_data";
 
  if (control_flag_in==SAVE_CONTROL) {
-  delete_localMF_if_exist(face_mf,AMREX_SPACEDIM);
-  delete_localMF_if_exist(cell_mf,1);
+  //do nothing
  } else if (control_flag_in==RESTORE_CONTROL) {
   //do nothing
  } else
   amrex::Error("control_flag_in invalid");
 
  int local_control_flag=NULL_CONTROL;
+ int local_extra_comp=-1;
  int ncomp_total=0;
  Vector<int> scomp;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp,ncomp);
  
  if (control_flag_in==SAVE_CONTROL) {
-  new_localMF(cell_mf,ncomp_total,1,-1);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   getStateMAC_localMF(face_mf+dir,0,dir,cur_time_slab);
+   MultiFab* temp_mac_velocity=getStateMAC(0,dir,cur_time_slab);
+   MultiFab& umac_extra=get_new_data(Umac_Type+dir,ns_time_order+extra_comp+1);
+   MultiFab::Copy(umac_extra,*temp_mac_velocity,0,0,1,0);
+   delete temp_mac_velocity;
   }
+
  } else if (control_flag_in==RESTORE_CONTROL) {
+
+  if (project_slab_step==ns_time_order-1) {
+   //do nothing
+  } else
+   amrex::Error("expecting project_slab_step==ns_time_order-1");
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
-   MultiFab::Copy(umac_new,*localMF[face_mf+dir],0,0,1,0);
+   MultiFab& umac_extra=get_new_data(Umac_Type+dir,ns_time_order+extra_comp+1);
+   MultiFab::Copy(umac_new,umac_extra,0,0,1,0);
   }
  } else
   amrex::Error("control_flag_in invalid");
 
  init_boundary(
    control_flag_in,
-   cell_mf,
+   extra_comp,
    ncomp_total,
    scomp,ncomp);
 
 } // end subroutine LSA_save_state_data
 
-void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf,
-  int control_flag_in) {
+void NavierStokes::LSA_save_state_dataALL(int extra_comp,int control_flag_in) {
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.LSA_save_state_data(cell_mf,face_mf,control_flag_in);
+  ns_level.LSA_save_state_data(extra_comp,control_flag_in);
  } //ilev
  
 
@@ -11442,8 +11473,8 @@ void NavierStokes::LSA_save_state_dataALL(int cell_mf,int face_mf,
 
 void NavierStokes::LSA_levelset_norminf(
  int im_critical, //0<=im_critical<num_materials
- int unperturb_cell_mf,
- int cell_mf,
+ int unperturb_extra_comp,
+ int extra_comp,
  Real& local_max) {
 
  std::string local_caller_string="LSA_levelset_norminf";
@@ -11451,12 +11482,13 @@ void NavierStokes::LSA_levelset_norminf(
  int finest_level=parent->finestLevel();
 
  int local_control_flag=NULL_CONTROL;
+ int local_extra_comp=-1;
  int ncomp_total=0;
  Vector<int> scomp_section;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp_section,ncomp);
 
@@ -11465,23 +11497,30 @@ void NavierStokes::LSA_levelset_norminf(
  } else
   amrex::Error("im_critical invalid");
 
- if (localMF[cell_mf]->nComp()==ncomp_total) {
+ if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("localMF[cell_mf]->nComp()!=ncomp_total LSA_levelset_norminf");
+  amrex::Error("extra_comp invalid");
 
- if (localMF[unperturb_cell_mf]->nComp()==ncomp_total) {
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
   //do nothing
- } else {
-  std::cout << "in: LSA_levelset_norminf\n";
-  amrex::Error("localMF[unperturb_cell_mf]->nComp()!=ncomp_total");
- }
+ } else
+  amrex::Error("extra_comp invalid");
+
+ if ((unperturb_extra_comp==LSA_N_EXTRA)||
+     (unperturb_extra_comp==LSA_NP1_EXTRA)||
+     (unperturb_extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("unperturb_extra_comp invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
  debug_ixType(MASKCOEF_MF,-1,local_caller_string);
 
- int scomp=scomp_section[LS_Type]+im_critical;
+ int scomp=im_critical;
 
  bool use_tiling=ns_tiling;
 
@@ -11491,15 +11530,19 @@ void NavierStokes::LSA_levelset_norminf(
   local_max_local[tid]=0.0;
  } // tid
 
+ MultiFab& S_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
+ MultiFab& S_unperturb_extra_comp=
+    get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[cell_mf]->boxArray().d_numPts());
+ thread_class::init_d_numPts(S_extra_comp.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[cell_mf],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_extra_comp,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -11513,8 +11556,8 @@ void NavierStokes::LSA_levelset_norminf(
   const Real* xlo = grid_loc[gridno].lo();
   const Real* dx = geom.CellSize();
 
-  FArrayBox& old_state=(*localMF[unperturb_cell_mf])[mfi]; 
-  FArrayBox& cell_evec=(*localMF[cell_mf])[mfi]; 
+  FArrayBox& old_state=S_unperturb_extra_comp[mfi]; 
+  FArrayBox& cell_evec=S_extra_comp[mfi]; 
    // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -11558,46 +11601,59 @@ void NavierStokes::LSA_levelset_norminf(
 
 
 void NavierStokes::LSA_default_eigenvector(
- int unperturb_cell_mf,int unperturb_face_mf,
- int cell_mf,int face_mf) {
+ int unperturb_extra_comp,int extra_comp) {
 
  std::string local_caller_string="LSA_default_eigenvector";
 
  int finest_level=parent->finestLevel();
 
  int local_control_flag=NULL_CONTROL;
+ int local_extra_comp=-1;
+
  int ncomp_total=0;
  Vector<int> scomp;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp,ncomp);
 
- if (localMF[cell_mf]->nComp()==ncomp_total) {
+ if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+  amrex::Error("extra_comp invalid");
 
- for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
-  if (localMF[face_mf+dir]->nComp()==1) {
-   //do nothing
-  } else
-   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
- }
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp invalid");
+
+ if ((unperturb_extra_comp==LSA_N_EXTRA)||
+     (unperturb_extra_comp==LSA_NP1_EXTRA)||
+     (unperturb_extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("unperturb_extra_comp invalid");
+
+ MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
+ MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
+ MultiFab& LS_unperturb_extra_comp=
+   get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
 
  bool use_tiling=ns_tiling;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[cell_mf]->boxArray().d_numPts());
+ thread_class::init_d_numPts(S_extra_comp.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[cell_mf],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(S_extra_comp,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -11611,45 +11667,29 @@ void NavierStokes::LSA_default_eigenvector(
   const Real* xlo = grid_loc[gridno].lo();
   const Real* dx = geom.CellSize();
 
-  FArrayBox& velx=(*localMF[face_mf])[mfi]; 
-  FArrayBox& vely=(*localMF[face_mf+1])[mfi]; 
-  FArrayBox& velz=(*localMF[face_mf+AMREX_SPACEDIM-1])[mfi]; 
-  FArrayBox& cell_evec=(*localMF[cell_mf])[mfi]; 
+  FArrayBox& S_evec=S_extra_comp[mfi]; 
+  FArrayBox& LS_evec=LS_extra_comp[mfi]; 
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  int scomp_size=scomp.size();
-  int ncomp_size=ncomp.size();
+  int state_ncomp=S_evec.nComp();
 
    // in: GODUNOV_3D.F90
   fort_default_evec( 
    &level,
    &finest_level,
-   &scomp_size,
-   &ncomp_size,
-   &State_Type,
-   &LS_Type,
-   &DIV_Type,
-   &Solid_State_Type,
-   &Tensor_Type,
-   &Refine_Density_Type,
-   &ncomp_total,
-   scomp.dataPtr(),
-   ncomp.dataPtr(),
+   &state_ncomp,
+   S_evec.dataPtr(),
+   ARLIM(S_evec.loVect()),ARLIM(S_evec.hiVect()),
+   LS_evec.dataPtr(),
+   ARLIM(LS_evec.loVect()),ARLIM(LS_evec.hiVect()),
    tilelo,tilehi,
-   fablo,fabhi,&bfact,
+   fablo,fabhi,
+   &bfact,
    xlo,dx,
    &dt_slab,
-   &cur_time_slab,
-   cell_evec.dataPtr(),
-   ARLIM(cell_evec.loVect()),ARLIM(cell_evec.hiVect()),
-   velx.dataPtr(),
-   ARLIM(velx.loVect()),ARLIM(velx.hiVect()),
-   vely.dataPtr(),
-   ARLIM(vely.loVect()),ARLIM(vely.hiVect()),
-   velz.dataPtr(),
-   ARLIM(velz.loVect()),ARLIM(velz.hiVect()));
+   &cur_time_slab);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_INIT_EVEC,"fort_default_evec"); 
@@ -11660,20 +11700,12 @@ void NavierStokes::LSA_default_eigenvector(
  if (1==1) {
   std::cout << "LSA_default_eigenvector level= " << level << '\n';
   std::cout << "num_materials= " << num_materials << '\n';
-  std::cout << "State_Type= " << State_Type << 
-    " scomp[State_Type]]= " << scomp[State_Type] << '\n';
-  std::cout << "LS_Type= " << LS_Type << 
-    " scomp[LS_Type]]= " << scomp[LS_Type] << '\n';
-  for (int i=0;i<scomp.size();i++) {
-   std::cout << "i= " << i << " scomp[i]= " << scomp[i] << '\n';
-   std::cout << "i= " << i << " ncomp[i]= " << ncomp[i] << '\n';
-  }
   for (int i=0;i<num_materials;i++) {
    std::cout << "i = " << i << '\n';
-   std::cout << "localMF[cell_mf]->norminf(scomp[LS_Type]+i) = " << 
-      localMF[cell_mf]->norminf(scomp[LS_Type]+i) << '\n';
-   std::cout << "localMF[unperturb_cell_mf]->norminf(scomp[LS_Type]+i) = " << 
-      localMF[unperturb_cell_mf]->norminf(scomp[LS_Type]+i) << '\n';
+   std::cout << "LS_extra_comp.norminf(i) = " << 
+      LS_extra_comp.norminf(i) << '\n';
+   std::cout << "LS_unperturb_extra_comp.norminf(i) = " << 
+      LS_unperturb_extra_comp.norminf(i) << '\n';
   }
  }
   
@@ -11681,88 +11713,95 @@ void NavierStokes::LSA_default_eigenvector(
 
 
 void NavierStokes::LSA_default_eigenvectorALL(
- int unperturb_cell_mf,int unperturb_face_mf,
- int cell_mf,int face_mf) {
+ int unperturb_extra_comp,int extra_comp) {
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.LSA_default_eigenvector(
-    unperturb_cell_mf,unperturb_face_mf,
-    cell_mf,face_mf);
+    unperturb_extra_comp,extra_comp);
  } //ilev
  
  LSA_normalize_eigenvectorALL(
-   unperturb_cell_mf,unperturb_face_mf,
-   cell_mf,face_mf);
+   unperturb_extra_comp,extra_comp);
 
 } //end subroutine LSA_default_eigenvectorALL
 
 
 void NavierStokes::LSA_eigenvector(
- int unperturb_cell_mf,int unperturb_face_mf,
- int cell_mf,int face_mf) {
+ int unperturb_extra_comp,int extra_comp) {
 
  std::string local_caller_string="LSA_eigenvector";
 
  int local_control_flag=NULL_CONTROL;
+ int local_extra_comp=-1;
  int ncomp_total=0;
  Vector<int> scomp;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp,ncomp);
 
- if (localMF[cell_mf]->nComp()==ncomp_total) {
+ if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+  amrex::Error("extra_comp invalid");
 
- for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
-  if (localMF[face_mf+dir]->nComp()==1) {
-   //do nothing
-  } else
-   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
- }
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp invalid");
 
- for (int scomp_loop=0;scomp_loop<localMF[cell_mf]->nComp();scomp_loop++) {
+ if ((unperturb_extra_comp==LSA_N_EXTRA)||
+     (unperturb_extra_comp==LSA_NP1_EXTRA)||
+     (unperturb_extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("unperturb_extra_comp invalid");
+
+ MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
+ MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
+
+ MultiFab& S_unperturb_extra_comp=
+   get_new_data(State_Type,ns_time_order+unperturb_extra_comp+1);
+ MultiFab& LS_unperturb_extra_comp=
+   get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
+
+ for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
    //ngrow=0
-  localMF[cell_mf]->minus(*localMF[unperturb_cell_mf],scomp_loop,1,0);
+  S_extra_comp.minus(S_unperturb_extra_comp,scomp_loop,1,0);
  }
- for (int scomp_loop=0;scomp_loop<AMREX_SPACEDIM;scomp_loop++) {
-    //scomp parameter=0
-    //nghost=0
-  localMF[face_mf+scomp_loop]->
-     minus(*localMF[unperturb_face_mf+scomp_loop],0,1,0);
- } 
+ for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
+   //ngrow=0
+  LS_extra_comp.minus(LS_unperturb_extra_comp,scomp_loop,1,0);
+ }
 
 } // end subroutine LSA_eigenvector
 
 void NavierStokes::LSA_eigenvectorALL(
- int unperturb_cell_mf,int unperturb_face_mf,
- int cell_mf,int face_mf) {
+ int unperturb_extra_comp,int extra_comp) {
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.LSA_eigenvector(
-    unperturb_cell_mf,unperturb_face_mf,
-    cell_mf,face_mf);
+    unperturb_extra_comp,extra_comp);
  } //ilev
  
  LSA_normalize_eigenvectorALL(
-   unperturb_cell_mf,unperturb_face_mf,
-   cell_mf,face_mf);
+    unperturb_extra_comp,extra_comp);
 
 } //end subroutine LSA_eigenvectorALL
 
 
 void NavierStokes::LSA_normalize_eigenvector(
-  int unperturb_cell_mf,int unperturb_face_mf,
-  int cell_mf,int face_mf,
-  Vector<Real>& cell_max,Vector<Real>& face_max,
+  int unperturb_extra_comp,int extra_comp,
+  Vector<Real>& cell_max,
+  Vector<Real>& LS_cell_max,
   int isweep) {
 
  int finest_level=parent->finestLevel();
@@ -11777,111 +11816,96 @@ void NavierStokes::LSA_normalize_eigenvector(
  Real velocity_scale=dx_finest[0]/dt_slab;
 
  int local_control_flag=NULL_CONTROL;
+ int local_extra_comp=-1;
  int ncomp_total=0;
  Vector<int> scomp_section;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp_section,
    ncomp);
 
- if (cell_max.size()==ncomp_total) {
+ if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("cell_max.size()==ncomp_total failed");
+  amrex::Error("extra_comp invalid");
 
- if (face_max.size()==AMREX_SPACEDIM) {
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
   //do nothing
  } else
-  amrex::Error("face_max.size()==AMREX_SPACEDIM failed");
+  amrex::Error("extra_comp invalid");
 
- if (localMF[cell_mf]->nComp()==ncomp_total) {
+ if ((unperturb_extra_comp==LSA_N_EXTRA)||
+     (unperturb_extra_comp==LSA_NP1_EXTRA)||
+     (unperturb_extra_comp==LSA_EVEC_EXTRA)) {
   //do nothing
  } else
-  amrex::Error("localMF[cell_mf]->nComp()==ncomp_total failed");
+  amrex::Error("unperturb_extra_comp invalid");
 
- for (int dir=0;dir<AMREX_SPACEDIM; dir++) {
-  if (localMF[face_mf+dir]->nComp()==1) {
-   //do nothing
-  } else
-   amrex::Error("localMF[face_mf+dir]->nComp()==1 failed");
- }
+ MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
+ MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
+ MultiFab& S_unperturb_extra_comp=
+   get_new_data(State_Type,ns_time_order+unperturb_extra_comp+1);
+ MultiFab& LS_unperturb_extra_comp=
+   get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
 
- Vector<Real> scale_parm(ncomp_total);
- for (int dir=0;dir<ncomp_total;dir++) {
+ if (cell_max.size()==S_extra_comp.nComp()) {
+  //do nothing
+ } else
+  amrex::Error("cell_max.size()==S_extra_comp.nComp() failed");
+
+ if (LS_cell_max.size()==num_materials) {
+  //do nothing
+ } else
+  amrex::Error("LS_cell_max.size()==num_materials failed");
+
+ int ncomp_local=S_extra_comp.nComp();
+
+ Vector<Real> scale_parm(ncomp_local);
+ for (int dir=0;dir<ncomp_local;dir++) {
   scale_parm[dir]=0.0;
  }
+ Vector<Real> LS_scale_parm(num_materials);
+ for (int dir=0;dir<num_materials;dir++) {
+  LS_scale_parm[dir]=0.0;
+ }
 
- int nstate=state.size();
- if (nstate!=NUM_STATE_TYPE)
-  amrex::Error("nstate invalid LSA_normalize_eigenvector");
- if (scomp_section.size()!=NUM_STATE_TYPE)
-  amrex::Error("scomp_section.size() bad LSA_normalize_eigenvector");
+ for (int isec=0;isec<2;isec++) {
 
- for (int isec=0;isec<scomp_section.size();isec++) {
-
-  if (isec==Umac_Type) {
-   // do nothing
-  } else if (isec==Vmac_Type) {
-   // do nothing
-  } else if (isec==Wmac_Type) {
-
-   if (AMREX_SPACEDIM==3) {
-    //do nothing
-   } else
-    amrex::Error("expecting Wmac_Type == Vmac_Type");
-
-  } else if (isec==State_Type) {
+  if (isec==0) {
    for (int dir=0;dir<BL_SPACEDIM;dir++) {
      //velocity_scale=dx_finest[0]/dt_slab;
-    scale_parm[scomp_section[isec]+dir]=velocity_scale;
+    scale_parm[dir]=velocity_scale;
    }
    for (int im=0;im<num_materials;im++) {
-    scale_parm[scomp_section[isec]+STATECOMP_STATES+
+    scale_parm[STATECOMP_STATES+
       im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im];
    } //im=0 .. nmat-1
-  } else if (isec==LS_Type) {
+  } else if (isec==1) {
    for (int im=0;im<num_materials;im++) {
-    scale_parm[scomp_section[isec]+im]=2.0*dx_finest[0];
+    LS_scale_parm[im]=2.0*dx_finest[0];
    }
-  } else if (isec==DIV_Type) {
-   //do nothing
-  } else if (isec==Solid_State_Type) {
-   //do nothing
-  } else if (isec==Tensor_Type) {
-   //do nothing
-  } else if (isec==Refine_Density_Type) {
-   //do nothing
   } else {
-   std::cout << "isec= " << isec << '\n';
-   std::cout << "dt_slab= " << dt_slab << '\n';
-   std::cout << "velocity_scale= " << velocity_scale << '\n';
-   std::cout << "ncomp_total= " << ncomp_total << '\n';
-   std::cout << "ncomp.size()= " << ncomp.size() << '\n';
-   for (int i=0;i<ncomp.size();i++) {
-    std::cout << "i= " << i << " ncomp[i]= " << ncomp[i] << '\n';
-   }
-   std::cout << "scomp_section.size()= " << 
-	scomp_section.size() << '\n';
-   for (int i=0;i<scomp_section.size();i++) {
-    std::cout << "i= " << i << " scomp_section[i]= " << 
-      scomp_section[i] << '\n';
-   }
-   std::cout << "num_materials= " << num_materials << '\n';
    amrex::Error("isec invalid");
   }
 
- } // for (int isec=0;isec<scomp_section.size();isec++)
+ } // for (int isec=0;isec<2;isec++)
 
  if (1==1) {
   std::cout << "LSA_normalize_eigenvector  level= " << level << '\n';
   for (int i=0;i<scale_parm.size();i++) {
    std::cout << "i= " << i << " scale_parm[i]= " << scale_parm[i] << '\n';
   }
+  for (int i=0;i<LS_scale_parm.size();i++) {
+   std::cout << "i= " << i << " LS_scale_parm[i]= " << LS_scale_parm[i] << '\n';
+  }
  }
 
+FIX ME HERE
  if (isweep==0) {
 
   for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {

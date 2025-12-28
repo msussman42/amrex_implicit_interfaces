@@ -1348,46 +1348,22 @@ implicit none
       end subroutine TEMPLATE_ASSIMILATE
 
       subroutine TEMPLATE_INIT_EVAL( &
-        i,j,k,dir, &
+        i,j,k, &
         xpoint, &
         dx, &
         cur_time, &
-        scomp_size, &
-        ncomp_size, &
-        State_Type, &
-        LS_Type, &
-        DIV_Type, &
-        Solid_State_Type, &
-        Tensor_Type, &
-        Refine_Density_Type, &
-        ncomp_total, &
-        scomp_array, &
-        ncomp_array, &
+        state_ncomp, &
         local_cell_evec, &
-        local_velx, &
-        local_vely, &
-        local_velz)
+        local_cell_evec_LS)
       use amrex_fort_module, only : amrex_real
 
-      integer, INTENT(in) :: i,j,k,dir
+      integer, INTENT(in) :: i,j,k
       real(amrex_real), INTENT(in) :: xpoint(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: cur_time
-      integer, INTENT(in) :: scomp_size
-      integer, INTENT(in) :: ncomp_size
-      integer, INTENT(in) :: State_Type
-      integer, INTENT(in) :: LS_Type
-      integer, INTENT(in) :: DIV_Type
-      integer, INTENT(in) :: Solid_State_Type
-      integer, INTENT(in) :: Tensor_Type
-      integer, INTENT(in) :: Refine_Density_Type
-      integer, INTENT(in) :: ncomp_total
-      integer, INTENT(in) :: scomp_array(scomp_size)
-      integer, INTENT(in) :: ncomp_array(ncomp_size)
-      real(amrex_real), INTENT(inout) :: local_cell_evec(ncomp_total)
-      real(amrex_real), INTENT(inout) :: local_velx
-      real(amrex_real), INTENT(inout) :: local_vely
-      real(amrex_real), INTENT(inout) :: local_velz
+      integer, INTENT(in) :: state_ncomp
+      real(amrex_real), INTENT(inout) :: local_cell_evec(state_ncomp)
+      real(amrex_real), INTENT(inout) :: local_cell_evec_LS(state_ncomp)
       end subroutine TEMPLATE_INIT_EVAL
 
 
