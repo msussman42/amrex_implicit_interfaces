@@ -876,70 +876,29 @@ end subroutine MITSUHIRO_PIPE_STATE_BC
 
 
 subroutine MITSUHIRO_PIPE_INIT_EVAL( &
-  i,j,k,dir, &
+  i,j,k, &
   xpoint, &
   dx, &
   cur_time, &
-  scomp_size, &
-  ncomp_size, &
-  State_Type, &
-  LS_Type, &
-  DIV_Type, &
-  Solid_State_Type, &
-  Tensor_Type, &
-  Refine_Density_Type, &
-  ncomp_total, &
-  scomp_array, &
-  ncomp_array, &
+  state_ncomp, &
   local_cell_evec, &
-  local_velx, &
-  local_vely, &
-  local_velz)
+  local_cell_evec_LS)
 use amrex_fort_module, only : amrex_real
 use probcommon_module
 use global_utility_module
 
-integer, INTENT(in) :: i,j,k,dir
+integer, INTENT(in) :: i,j,k
 real(amrex_real), INTENT(in) :: xpoint(SDIM)
 real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
-integer, INTENT(in) :: scomp_size
-integer, INTENT(in) :: ncomp_size
-integer, INTENT(in) :: State_Type
-integer, INTENT(in) :: LS_Type
-integer, INTENT(in) :: DIV_Type
-integer, INTENT(in) :: Solid_State_Type
-integer, INTENT(in) :: Tensor_Type
-integer, INTENT(in) :: Refine_Density_Type
-integer, INTENT(in) :: ncomp_total
-integer, INTENT(in) :: scomp_array(scomp_size)
-integer, INTENT(in) :: ncomp_array(ncomp_size)
-real(amrex_real), INTENT(inout) :: local_cell_evec(ncomp_total)
-real(amrex_real), INTENT(inout) :: local_velx
-real(amrex_real), INTENT(inout) :: local_vely
-real(amrex_real), INTENT(inout) :: local_velz
+integer, INTENT(in) :: state_ncomp
+real(amrex_real), INTENT(inout) :: local_cell_evec(state_ncomp)
+real(amrex_real), INTENT(inout) :: local_cell_evec_LS(state_ncomp)
 
 integer dir_local
-integer ls_comp
 real(amrex_real) :: perturb_val
 
-if (scomp_array(State_Type+1).eq.0) then
- !do nothing
-else
- print *,"expecting: scomp_array(State_Type+1).eq.0; ", &
-    State_Type,scomp_array(State_Type+1)
- stop
-endif
-
-if (State_Type.eq.0) then
- !do nothing
-else
- print *,"expecting State_Type==0: ",State_Type
- stop
-endif
-
-if (dir.eq.-1) then
- do dir_local=1,ncomp_total
+ do dir_local=1,state_ncomp
   local_cell_evec(dir_local)=zero
  enddo
 
@@ -956,26 +915,17 @@ if (dir.eq.-1) then
    !v     "          "
    !epsilon is a scalar
   perturb_val=dx(1)*sin(two*Pi*xpoint(SDIM)/yblob)
-  ls_comp=scomp_array(LS_Type+1)+1
-  local_cell_evec(ls_comp)=perturb_val
-  local_cell_evec(ls_comp+1)=-perturb_val
+  do dir_local=1,num_materials
+   local_cell_evec_LS(dir_local)=zero
+  enddo
+  local_cell_evec_LS(1)=perturb_val
+  local_cell_evec_LS(2)=-perturb_val
  else
   print *,"expecting probtype=41: ",probtype
   print *,"expecting axis_dir=4: ",axis_dir
   stop
  endif
  
-else if (dir.eq.0) then
- local_velx=zero
-else if (dir.eq.1) then
- local_vely=zero
-else if ((dir.eq.2).and.(SDIM.eq.3)) then
- local_velz=zero
-else
- print *,"dir invalid in MITSUHIRO_PIPE_INIT_EVAL: ",dir
- stop
-endif
-
 return
 end subroutine MITSUHIRO_PIPE_INIT_EVAL
 

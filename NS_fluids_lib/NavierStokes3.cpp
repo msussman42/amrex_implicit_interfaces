@@ -4237,13 +4237,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       for (int ilev=level;ilev<=finest_level;ilev++) {
        NavierStokes& ns_level=getLevel(ilev);
        int local_control_flag=NULL_CONTROL;
-       int local_cell_mf=-1;
+       int local_extra_comp=-1;
        int ncomp_total=0;
        Vector<int> scomp;
        Vector<int> ncomp;
        ns_level.init_boundary(
         local_control_flag,
-        local_cell_mf,
+        local_extra_comp,
         ncomp_total,
         scomp,ncomp); // init ghost cells on the given level.
       }

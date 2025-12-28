@@ -22779,26 +22779,15 @@ stop
       subroutine fort_default_evec( &
        level, &
        finest_level, &
-       scomp_size, &
-       ncomp_size, &
-       State_Type, &
-       LS_Type, &
-       DIV_Type, &
-       Solid_State_Type, &
-       Tensor_Type, &
-       Refine_Density_Type, &
-       ncomp_total, &
-       scomp_array, &
-       ncomp_array, &
+       state_ncomp, &
+       S_evec,DIMS(S_evec), & 
+       LS_evec,DIMS(LS_evec), & 
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        xlo,dx, &
        dt, &
-       cur_time, & ! cur_time
-       cell_evec,DIMS(cell_evec), & 
-       velx,DIMS(velx), & 
-       vely,DIMS(vely), & 
-       velz,DIMS(velz) ) &
+       cur_time) &
       bind(c,name='fort_default_evec')
       use probf90_module
       use global_utility_module
@@ -22806,17 +22795,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: level,finest_level
-      integer, INTENT(in) :: scomp_size
-      integer, INTENT(in) :: ncomp_size
-      integer, INTENT(in) :: State_Type
-      integer, INTENT(in) :: LS_Type
-      integer, INTENT(in) :: DIV_Type
-      integer, INTENT(in) :: Solid_State_Type
-      integer, INTENT(in) :: Tensor_Type
-      integer, INTENT(in) :: Refine_Density_Type
-      integer, INTENT(in) :: ncomp_total
-      integer, INTENT(in) :: scomp_array(scomp_size)
-      integer, INTENT(in) :: ncomp_array(ncomp_size)
+      integer, INTENT(in) :: state_ncomp
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer growlo(3),growhi(3)
@@ -22825,29 +22804,24 @@ stop
       real(amrex_real), INTENT(in), target :: dx(SDIM)
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(in) :: cur_time
-      integer, INTENT(in) :: DIMDEC(cell_evec)
-      integer, INTENT(in) :: DIMDEC(velx)
-      integer, INTENT(in) :: DIMDEC(vely)
-      integer, INTENT(in) :: DIMDEC(velz)
+      integer, INTENT(in) :: DIMDEC(S_evec)
+      integer, INTENT(in) :: DIMDEC(LS_evec)
 
       real(amrex_real), INTENT(inout), target :: &
-       cell_evec(DIMV(cell_evec),ncomp_total)
-      real(amrex_real), pointer :: cell_evec_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: velx(DIMV(velx))
-      real(amrex_real), pointer :: velx_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: vely(DIMV(vely))
-      real(amrex_real), pointer :: vely_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: velz(DIMV(velz))
-      real(amrex_real), pointer :: velz_ptr(D_DECL(:,:,:))
+       S_evec(DIMV(S_evec),state_ncomp)
+      real(amrex_real), pointer :: S_evec_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout), target :: &
+       LS_evec(DIMV(LS_evec),num_materials)
+      real(amrex_real), pointer :: LS_evec_ptr(D_DECL(:,:,:),:)
+
       integer i,j,k
       integer, PARAMETER :: nhalf=3
       real(amrex_real), target :: xsten(-nhalf:nhalf,SDIM)
-      integer dir,dir_local
+      integer dir_local
       real(amrex_real) :: xpoint(SDIM)
-      real(amrex_real) :: local_cell_evec(ncomp_total)
-      real(amrex_real) :: local_velx
-      real(amrex_real) :: local_vely
-      real(amrex_real) :: local_velz
+      real(amrex_real) :: local_cell_evec(state_ncomp)
+      real(amrex_real) :: local_cell_evec_LS(num_materials)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -22861,13 +22835,9 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (State_Type.ne.0) then
-       print *,"expecting State_Type=0"
-       stop
-      endif
-      if (ncomp_array(State_Type+1).ne.STATE_NCOMP) then
-       print *,"ncomp_array(State_Type+1) invalid in GODUNOV_3D.F90 "
-       print *,"ncomp_array=",ncomp_array
+      if (state_ncomp.ne.STATE_NCOMP) then
+       print *,"state_ncomp invalid in GODUNOV_3D.F90 "
+       print *,"state_ncomp=",state_ncomp
        stop
       endif
       if (dt.gt.zero) then
@@ -22883,85 +22853,43 @@ stop
        stop
       endif 
 
-      cell_evec_ptr=>cell_evec
-      call checkbound_array(fablo,fabhi,cell_evec_ptr,0,-1)
-      velx_ptr=>velx
-      call checkbound_array1(fablo,fabhi,velx_ptr,0,0)
-      vely_ptr=>vely
-      call checkbound_array1(fablo,fabhi,vely_ptr,0,1)
-      velz_ptr=>velz
-      call checkbound_array1(fablo,fabhi,velz_ptr,0,SDIM-1)
+      S_evec_ptr=>S_evec
+      call checkbound_array(fablo,fabhi,S_evec_ptr,0,-1)
+      LS_evec_ptr=>LS_evec
+      call checkbound_array(fablo,fabhi,LS_evec_ptr,0,-1)
 
-      do dir=-1,SDIM-1
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       if (dir.eq.-1) then
-        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       else if ((dir.ge.0).and.(dir.lt.SDIM)) then
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-             growlo,growhi,0,dir) 
-       else
-        print *,"dir invalid fort_default_evec:",dir
-        stop
-       endif
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
-       do k=growlo(3),growhi(3)
-       do j=growlo(2),growhi(2)
-       do i=growlo(1),growhi(1)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        if (dir.eq.-1) then
-         call gridsten_level(xsten,i,j,k,level,nhalf)
-        else if ((dir.ge.0).and.(dir.lt.SDIM)) then
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
-        else
-         print *,"dir invalid fort_default_evec:",dir
-         stop
-        endif
+       do dir_local=1,SDIM
+        xpoint(dir_local)=xsten(0,dir_local)
+       enddo
 
-        do dir_local=1,SDIM
-         xpoint(dir_local)=xsten(0,dir_local)
-        enddo
-
-        call SUB_INIT_EVAL( &
-          i,j,k,dir, &
+       call SUB_INIT_EVAL( &
+          i,j,k, &
           xpoint, &
           dx, &
           cur_time, &
-          scomp_size, &
-          ncomp_size, &
-          State_Type, &
-          LS_Type, &
-          DIV_Type, &
-          Solid_State_Type, &
-          Tensor_Type, &
-          Refine_Density_Type, &
-          ncomp_total, &
-          scomp_array, &
-          ncomp_array, &
+          state_ncomp, &
           local_cell_evec, &
-          local_velx, &
-          local_vely, &
-          local_velz)
+          local_cell_evec_LS)
 
-        if (dir.eq.-1) then
-         do dir_local=1,ncomp_total
-          cell_evec(D_DECL(i,j,k),dir_local)=local_cell_evec(dir_local)
-         enddo
-        else if (dir.eq.0) then
-         velx(D_DECL(i,j,k))=local_velx
-        else if (dir.eq.1) then
-         vely(D_DECL(i,j,k))=local_vely
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         velz(D_DECL(i,j,k))=local_velz
-        else
-         print *,"dir invalid fort_default_evec:",dir
-         stop
-        endif
+       do dir_local=1,state_ncomp
+        S_evec(D_DECL(i,j,k,dir_local)=local_cell_evec(dir_local)
+       enddo
+       do dir_local=1,num_materials
+        LS_evec(D_DECL(i,j,k,dir_local)=local_cell_evec_LS(dir_local)
+       enddo
 
-       enddo ! i
-       enddo ! j
-       enddo ! k
+      enddo ! i
+      enddo ! j
+      enddo ! k
 
-      enddo !dir=-1,SDIM-1
 
       return
       end subroutine fort_default_evec
