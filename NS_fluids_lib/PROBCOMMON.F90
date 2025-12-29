@@ -1353,6 +1353,7 @@ implicit none
         dx, &
         cur_time, &
         state_ncomp, &
+        num_materials_in, &
         local_cell_evec, &
         local_cell_evec_LS)
       use amrex_fort_module, only : amrex_real
@@ -1362,8 +1363,9 @@ implicit none
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: cur_time
       integer, INTENT(in) :: state_ncomp
+      integer, INTENT(in) :: num_materials_in
       real(amrex_real), INTENT(inout) :: local_cell_evec(state_ncomp)
-      real(amrex_real), INTENT(inout) :: local_cell_evec_LS(state_ncomp)
+      real(amrex_real), INTENT(inout) :: local_cell_evec_LS(num_materials_in)
       end subroutine TEMPLATE_INIT_EVAL
 
 

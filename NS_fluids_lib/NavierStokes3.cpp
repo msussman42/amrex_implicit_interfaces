@@ -13661,7 +13661,7 @@ void NavierStokes::veldiffuseALL() {
   parent->writeDEBUG_PlotFile(
    basestep_debug,
    SDC_outer_sweeps,
-   projecct_slab_step,
+   project_slab_step,
    divu_outer_sweeps);
   std::cout << "press any number then enter: immediately after vel_elastic_ALL\n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';

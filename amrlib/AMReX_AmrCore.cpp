@@ -1308,7 +1308,7 @@ AmrCore::checkPoint ()
  std::string ckfile_temp =  
    amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
- str::string ckfileLSA;
+ std::string ckfileLSA;
  if ((LSA_activate==0)||
      (LSA_nsteps_power_method==0)) {
   ckfileLSA=ckfile_temp;

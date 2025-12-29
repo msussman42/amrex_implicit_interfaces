@@ -11520,8 +11520,6 @@ void NavierStokes::LSA_levelset_norminf(
  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
  debug_ixType(MASKCOEF_MF,-1,local_caller_string);
 
- int scomp=im_critical;
-
  bool use_tiling=ns_tiling;
 
  Vector< Real > local_max_local;
@@ -11530,19 +11528,19 @@ void NavierStokes::LSA_levelset_norminf(
   local_max_local[tid]=0.0;
  } // tid
 
- MultiFab& S_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
- MultiFab& S_unperturb_extra_comp=
+ MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
+ MultiFab& LS_unperturb_extra_comp=
     get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_extra_comp.boxArray().d_numPts());
+ thread_class::init_d_numPts(LS_extra_comp.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(S_extra_comp,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(LS_extra_comp,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -11556,8 +11554,8 @@ void NavierStokes::LSA_levelset_norminf(
   const Real* xlo = grid_loc[gridno].lo();
   const Real* dx = geom.CellSize();
 
-  FArrayBox& old_state=S_unperturb_extra_comp[mfi]; 
-  FArrayBox& cell_evec=S_extra_comp[mfi]; 
+  FArrayBox& old_state=LS_unperturb_extra_comp[mfi]; 
+  FArrayBox& cell_evec=LS_extra_comp[mfi]; 
    // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -11577,10 +11575,10 @@ void NavierStokes::LSA_levelset_norminf(
    &local_max_local[tid_current],
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-   old_state.dataPtr(scomp),
+   old_state.dataPtr(im_critical),
    ARLIM(old_state.loVect()),
    ARLIM(old_state.hiVect()),
-   cell_evec.dataPtr(scomp),
+   cell_evec.dataPtr(im_critical),
    ARLIM(cell_evec.loVect()),
    ARLIM(cell_evec.hiVect()) );
  } // mfi
@@ -11772,9 +11770,23 @@ void NavierStokes::LSA_eigenvector(
    get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
 
  for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
+
+  int is_temperature=0;
+  for (int im=0;im<num_materials;im++) {
+   if (scomp_loop==STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR)
+    is_temperature=1;
+  }
+
+  if ((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM)) {
    //ngrow=0
-  S_extra_comp.minus(S_unperturb_extra_comp,scomp_loop,1,0);
- }
+   S_extra_comp.minus(S_unperturb_extra_comp,scomp_loop,1,0);
+  } else if (is_temperature==1) {
+   S_extra_comp.minus(S_unperturb_extra_comp,scomp_loop,1,0);
+  } else
+   S_extra_comp.setVal(0.0,scomp_loop,1,0);
+
+ } //scomp_loop=0;scomp_loop<S_extra_comp.nComp()
+
  for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
    //ngrow=0
   LS_extra_comp.minus(LS_unperturb_extra_comp,scomp_loop,1,0);
@@ -11796,7 +11808,6 @@ void NavierStokes::LSA_eigenvectorALL(
     unperturb_extra_comp,extra_comp);
 
 } //end subroutine LSA_eigenvectorALL
-
 
 void NavierStokes::LSA_normalize_eigenvector(
   int unperturb_extra_comp,int extra_comp,
@@ -11848,10 +11859,6 @@ void NavierStokes::LSA_normalize_eigenvector(
 
  MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
  MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
- MultiFab& S_unperturb_extra_comp=
-   get_new_data(State_Type,ns_time_order+unperturb_extra_comp+1);
- MultiFab& LS_unperturb_extra_comp=
-   get_new_data(LS_Type,ns_time_order+unperturb_extra_comp+1);
 
  if (cell_max.size()==S_extra_comp.nComp()) {
   //do nothing
@@ -11874,26 +11881,17 @@ void NavierStokes::LSA_normalize_eigenvector(
   LS_scale_parm[dir]=0.0;
  }
 
- for (int isec=0;isec<2;isec++) {
-
-  if (isec==0) {
-   for (int dir=0;dir<BL_SPACEDIM;dir++) {
-     //velocity_scale=dx_finest[0]/dt_slab;
-    scale_parm[dir]=velocity_scale;
-   }
-   for (int im=0;im<num_materials;im++) {
-    scale_parm[STATECOMP_STATES+
-      im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im];
-   } //im=0 .. nmat-1
-  } else if (isec==1) {
-   for (int im=0;im<num_materials;im++) {
-    LS_scale_parm[im]=2.0*dx_finest[0];
-   }
-  } else {
-   amrex::Error("isec invalid");
-  }
-
- } // for (int isec=0;isec<2;isec++)
+ for (int dir=0;dir<BL_SPACEDIM;dir++) {
+   //velocity_scale=dx_finest[0]/dt_slab;
+  scale_parm[dir]=velocity_scale;
+ }
+ for (int im=0;im<num_materials;im++) {
+  scale_parm[STATECOMP_STATES+
+    im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im];
+ } //im=0 .. nmat-1
+ for (int im=0;im<num_materials;im++) {
+  LS_scale_parm[im]=2.0*dx_finest[0];
+ }
 
  if (1==1) {
   std::cout << "LSA_normalize_eigenvector  level= " << level << '\n';
@@ -11905,61 +11903,82 @@ void NavierStokes::LSA_normalize_eigenvector(
   }
  }
 
-FIX ME HERE
  if (isweep==0) {
 
-  for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
-    //nghost=0
-   Real local_max=localMF[cell_mf]->norminf(scomp,0);
+  for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
 
-   int im_critical=scomp-scomp_section[LS_Type];
-   if ((im_critical>=0)&&(im_critical<num_materials)) {
-    LSA_levelset_norminf(im_critical,unperturb_cell_mf,cell_mf,local_max);
-
-    if (1==1) {
-     std::cout << "scomp_section[LS_Type]=" << scomp_section[LS_Type]<<'\n';
-     std::cout << "im_critical= " << im_critical << " local_max= " <<
-       local_max << '\n';
-    }
+   int is_temperature=0;
+   for (int im=0;im<num_materials;im++) {
+    if (scomp_loop==STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR)
+     is_temperature=1;
    }
 
-   cell_max[scomp]=max(cell_max[scomp],local_max);
-  } //for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) 
+   if ((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM)) {
+    Real local_max=S_extra_comp.norminf(scomp_loop,0);
+    cell_max[scomp_loop]=max(cell_max[scomp_loop],local_max);
+   } else if (is_temperature==1) {
+    Real local_max=S_extra_comp.norminf(scomp_loop,0);
+    cell_max[scomp_loop]=max(cell_max[scomp_loop],local_max);
+   } else
+    cell_max[scomp_loop]=0.0;
 
-  for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
-    //scomp parameter=0
-    //nghost=0
-   Real local_max=localMF[face_mf+scomp]->norminf(0,0);
-   face_max[scomp]=max(face_max[scomp],local_max);
-  }
+  } //scomp_loop=0;scomp_loop<S_extra_comp.nComp()
+
+  for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
+
+   Real local_max=0.0;
+   LSA_levelset_norminf(scomp_loop,unperturb_extra_comp,extra_comp,local_max);
+
+   if (1==1) {
+    std::cout << "scomp_loop= " << scomp_loop << " local_max= " <<
+       local_max << '\n';
+   }
+   LS_cell_max[scomp_loop]=max(LS_cell_max[scomp_loop],local_max);
+
+  } //scomp_loop=0;scomp_loop<num_materials
 
  } else if (isweep==1) {
 
-  for (int scomp=0;scomp<localMF[cell_mf]->nComp();scomp++) {
-   Real floating_zero=scale_parm[scomp]*1.0e-10;
-   if (cell_max[scomp]>floating_zero) {
-     //mult(Real val,int comp,int num_comp,int nghost=0)
-    localMF[cell_mf]->mult(scale_parm[scomp]/cell_max[scomp],scomp,1);
-   } else if ((cell_max[scomp]>=0.0)&&
-              (cell_max[scomp]<=floating_zero)) {
-     //mult(Real val,int comp,int num_comp,int nghost=0)
-    localMF[cell_mf]->mult(0.0,scomp,1);
-   } else
-    amrex::Error("cell_max invalid");
-  }
+  for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
 
-  for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
-   Real floating_zero=velocity_scale*1.0e-10;
-   if (face_max[scomp]>floating_zero) {
+   int is_temperature=0;
+   for (int im=0;im<num_materials;im++) {
+    if (scomp_loop==STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR)
+     is_temperature=1;
+   }
+
+   if (((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM))||
+       (is_temperature==1)) {
+    Real floating_zero=scale_parm[scomp_loop]*1.0e-10;
+    if (cell_max[scomp_loop]>floating_zero) {
      //mult(Real val,int comp,int num_comp,int nghost=0)
-    localMF[face_mf+scomp]->mult(velocity_scale/face_max[scomp],0,1);
-   } else if ((face_max[scomp]>=0.0)&&
-              (face_max[scomp]<=floating_zero)) {
+     S_extra_comp.mult(scale_parm[scomp_loop]/cell_max[scomp_loop],
+        scomp_loop,1);
+    } else if ((cell_max[scomp_loop]>=0.0)&&
+               (cell_max[scomp_loop]<=floating_zero)) {
      //mult(Real val,int comp,int num_comp,int nghost=0)
-    localMF[face_mf+scomp]->mult(0.0,0,1);
+     S_extra_comp.mult(0.0,scomp_loop,1);
+    } else
+     amrex::Error("cell_max invalid");
+   }
+
+  } //for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++)
+
+  for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
+
+   Real floating_zero=LS_scale_parm[scomp_loop]*1.0e-10;
+   if (LS_cell_max[scomp_loop]>floating_zero) {
+    //mult(Real val,int comp,int num_comp,int nghost=0)
+    LS_extra_comp.mult(LS_scale_parm[scomp_loop]/LS_cell_max[scomp_loop],
+        scomp_loop,1);
+   } else if ((LS_cell_max[scomp_loop]>=0.0)&&
+              (LS_cell_max[scomp_loop]<=floating_zero)) {
+     //mult(Real val,int comp,int num_comp,int nghost=0)
+    LS_extra_comp.mult(0.0,scomp_loop,1);
    } else
-    amrex::Error("face_max invalid");
-  }
+    amrex::Error("LS_cell_max invalid");
+
+  } //for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++)
 
  } else
   amrex::Error("isweep invalid");
@@ -11970,43 +11989,72 @@ FIX ME HERE
   std::cout << "NS_LSA_step_count= " << NS_LSA_step_count << '\n';
   std::cout << "NS_LSA_max_step_count= " << NS_LSA_max_step_count << '\n';
   std::cout << "parent->LSA_current_step=" << parent->LSA_current_step << '\n';
-  for (int i=0;i<ncomp_total;i++) {
-   std::cout << "i= " << i << " localMF[cell_mf]->norminf(i)= " <<
-     localMF[cell_mf]->norminf(i) << '\n';
+  for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
+   std::cout << "scomp_loop= " << scomp_loop << 
+     " S_extra_comp.norminf(scomp_loop)= " <<
+     S_extra_comp.norminf(scomp_loop) << '\n';
+  }
+  for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
+   std::cout << "scomp_loop= " << scomp_loop << 
+     " LS_extra_comp.norminf(scomp_loop)= " <<
+     LS_extra_comp.norminf(scomp_loop) << '\n';
   }
  }
 
 } //end subroutine LSA_normalize_eigenvector
 
 void NavierStokes::LSA_normalize_eigenvectorALL(
-  int unperturb_cell_mf,int unperturb_face_mf,
-  int cell_mf,int face_mf) {
+  int unperturb_extra_comp,int extra_comp) {
 
  int finest_level=parent->finestLevel();
 
- Vector<Real> cell_max(localMF[cell_mf]->nComp());
- Vector<Real> face_max(AMREX_SPACEDIM);
+ if (extra_comp!=unperturb_extra_comp) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp invalid");
+
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp invalid");
+
+ if ((unperturb_extra_comp==LSA_N_EXTRA)||
+     (unperturb_extra_comp==LSA_NP1_EXTRA)||
+     (unperturb_extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("unperturb_extra_comp invalid");
+
+ MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
+
+ Vector<Real> cell_max(S_extra_comp.nComp());
+ Vector<Real> LS_cell_max(num_materials);
 
  for (int scomp=0;scomp<cell_max.size();scomp++) {
   cell_max[scomp]=0.0;
  }
- for (int scomp=0;scomp<AMREX_SPACEDIM;scomp++) {
-  face_max[scomp]=0.0;
+ for (int scomp=0;scomp<num_materials;scomp++) {
+  LS_cell_max[scomp]=0.0;
  }
 
  for (int isweep=0;isweep<=1;isweep++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.LSA_normalize_eigenvector(
-     unperturb_cell_mf,unperturb_face_mf,
-     cell_mf,face_mf,
-     cell_max,face_max,isweep);
+     unperturb_extra_comp,extra_comp,
+     cell_max,LS_cell_max,isweep);
   } //ilev
   if (1==1) { 
    std::cout << "LSA_normalize_eigenvectorALL\n";
    for (int i=0;i<cell_max.size();i++) {
     std::cout << "i= " << i << " cell_max[i]= " <<
      cell_max[i] <<'\n';
+   }
+   for (int i=0;i<LS_cell_max.size();i++) {
+    std::cout << "i= " << i << " LS_cell_max[i]= " <<
+     LS_cell_max[i] <<'\n';
    }
   }
  } //isweep=0,1
@@ -13389,27 +13437,24 @@ void NavierStokes::make_heat_source() {
   } else if (null_perturbation==0) {
 
    int local_control_flag=NULL_CONTROL;
-   int local_cell_mf=-1;
+   int local_extra_comp=-1;
    int ncomp_total=0;
    Vector<int> scomp;
    Vector<int> ncomp;
    init_boundary(
     local_control_flag,
-    local_cell_mf,
+    local_extra_comp,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
-   if (localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total) {
-    //do nothing
-   } else
-    amrex::Error("localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total failed");
-
+   MultiFab& S_extra_comp=
+     get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+   
    for (int im=0;im<num_materials;im++) {
     //dst+=a*src
     //dst,a,src,srccomp,dstcomp,numcomp,nghost
     int dstcomp=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
-    MultiFab::Saxpy(S_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
-     scomp[State_Type]+dstcomp,dstcomp,1,0);
+    MultiFab::Saxpy(S_new,dt_slab,S_extra_comp,dstcomp,dstcomp,1,0);
    } //im=0 ... nmat-1 
 
   } else
@@ -13453,21 +13498,22 @@ void NavierStokes::add_perturbation(int null_perturbation) {
   LS_diff_ok=1;
 
   int local_control_flag=NULL_CONTROL;
-  int local_cell_mf=-1;
+  int local_extra_comp=-1;
   int ncomp_total=0;
   Vector<int> scomp;
   Vector<int> ncomp;
   init_boundary(
     local_control_flag,
-    local_cell_mf,
+    local_extra_comp,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
    //LSA_EVEC=C * dx * normalizedLINF_LS(phi^perturb-phi^no_pert)
    //dst,src,scomp,dcomp,ncomp,ngrow
   if (null_perturbation==0) {
-   MultiFab::Copy(*LS_diff,*localMF[LSA_EVEC_CELL_MF],scomp[LS_Type],
-    0,num_materials,0);
+   MultiFab& LS_extra_comp=
+     get_new_data(LS_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+   MultiFab::Copy(*LS_diff,LS_extra_comp,0,0,num_materials,0);
   } else if (null_perturbation==1) {
    LS_diff->setVal(0.0,0,num_materials,0);  
   } else
@@ -13491,7 +13537,7 @@ void NavierStokes::add_perturbation(int null_perturbation) {
 
   init_boundary(
     local_control_flag,
-    local_cell_mf,
+    local_extra_comp,
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
@@ -28207,13 +28253,13 @@ NavierStokes::correct_dist_uninit() {
  const Real* dx = geom.CellSize();
 
  int local_control_flag=NULL_CONTROL;
- int local_cell_mf=-1;
+ int local_extra_comp=-1;
  int ncomp_total=0;
  Vector<int> scomp;
  Vector<int> ncomp;
  init_boundary(
    local_control_flag,
-   local_cell_mf,
+   local_extra_comp,
    ncomp_total,
    scomp,ncomp);
 
