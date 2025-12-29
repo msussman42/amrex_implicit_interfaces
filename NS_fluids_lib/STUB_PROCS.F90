@@ -1323,6 +1323,7 @@ subroutine STUB_INIT_EVAL( &
   dx, &
   cur_time, &
   state_ncomp, &
+  num_materials_in, &
   local_cell_evec, &
   local_cell_evec_LS)
 use amrex_fort_module, only : amrex_real
@@ -1333,10 +1334,18 @@ real(amrex_real), INTENT(in) :: xpoint(SDIM)
 real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 integer, INTENT(in) :: state_ncomp
+integer, INTENT(in) :: num_materials_in
 real(amrex_real), INTENT(inout) :: local_cell_evec(state_ncomp)
-real(amrex_real), INTENT(inout) :: local_cell_evec_LS(state_ncomp)
+real(amrex_real), INTENT(inout) :: local_cell_evec_LS(num_materials_in)
 
 integer dir_local
+
+ if (num_materials.eq.num_materials_in) then
+  !do nothing
+ else
+  print *,"num_materials.eq.num_materials_in violated"
+  stop
+ endif
 
  do dir_local=1,state_ncomp
   local_cell_evec(dir_local)=zero

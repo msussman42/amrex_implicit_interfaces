@@ -22876,14 +22876,15 @@ stop
           dx, &
           cur_time, &
           state_ncomp, &
+          num_materials, &
           local_cell_evec, &
           local_cell_evec_LS)
 
        do dir_local=1,state_ncomp
-        S_evec(D_DECL(i,j,k,dir_local)=local_cell_evec(dir_local)
+        S_evec(D_DECL(i,j,k),dir_local)=local_cell_evec(dir_local)
        enddo
        do dir_local=1,num_materials
-        LS_evec(D_DECL(i,j,k,dir_local)=local_cell_evec_LS(dir_local)
+        LS_evec(D_DECL(i,j,k),dir_local)=local_cell_evec_LS(dir_local)
        enddo
 
       enddo ! i

@@ -482,16 +482,14 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
     ncomp_total,
     scomp,ncomp); // init ghost cells on the given level.
 
-   if (localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total) {
-    //do nothing
-   } else
-    amrex::Error("localMF[LSA_EVEC_CELL_MF]->nComp()==ncomp_total failed");
+   MultiFab& S_extra_comp=
+     get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
 
    //dst+=a*src
    //dst,a,src,srccomp,dstcomp,numcomp,nghost
    int dstcomp=STATECOMP_VEL;
-   MultiFab::Saxpy(U_new,dt_slab,*localMF[LSA_EVEC_CELL_MF],
-     scomp[State_Type]+dstcomp,dstcomp,AMREX_SPACEDIM,0);
+   MultiFab::Saxpy(U_new,dt_slab,S_extra_comp,dstcomp,dstcomp,
+     AMREX_SPACEDIM,0);
 
   } else
    amrex::Error("null_perturbation invalid");
