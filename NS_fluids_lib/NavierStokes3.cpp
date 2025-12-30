@@ -442,6 +442,23 @@ void NavierStokes::smoothing_advection() {
 void NavierStokes::nonlinear_advection(const std::string& caller_string,
   int smoothing_iter) {
 
+ int im_extension=-1;
+ sub_nonlinear_advection(caller_string,smoothing_iter,im_extension);
+
+ for (im_extension=0;im_extension<num_materials;im_extension++) {
+  if (material_extend_velocity[im_extension]>0) {
+   sub_nonlinear_advection(caller_string,smoothing_iter,im_extension);
+  } else if (material_extend_velocity[im_extension]==0) {
+   //do nothing
+  } else
+   amrex::Error("material_extend_velocity invalid");
+ }
+
+}  // end subroutine nonlinear_advection
+
+void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
+  int smoothing_iter,int im_extension) {
+
  std::string local_caller_string="nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
 
@@ -602,7 +619,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
   // right after increment_face_velocityALL. 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+   // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF with
+   // the velocity at prev_time_slab.
    ns_level.prepare_advect_vars(prev_time_slab);
   }
  } else if (local_smoothing>0) {
@@ -611,6 +629,16 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
   amrex::Error("local_smoothing invalid");
 
 #ifdef AMREX_PARTICLES
+
+ if (parent->LSA_nsteps_power_method==0) {
+  //do nothing
+ } else
+  amrex::Error("cannot do both particles and LSA");
+
+ if (im_extension==-1) {
+  //do nothing
+ } else
+  amrex::Error("cannot do free slip algorithm with particles");
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
@@ -969,7 +997,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
  finalize_rest_fraction(local_caller_string);
 
-}  // end subroutine nonlinear_advection
+}  // end subroutine sub_nonlinear_advection
 
 
 void NavierStokes::allocate_SDC() {

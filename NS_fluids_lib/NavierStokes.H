@@ -420,6 +420,8 @@ public:
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_type_interface; 
     static Vector<int> material_conservation_form; 
+    static Vector<int> material_extend_velocity; 
+    static int material_extend_velocity_flag;
 
     static int num_species_var; 
     static int num_materials;
@@ -852,6 +854,10 @@ protected:
 
     void nonlinear_advection(const std::string& caller_string,
       int smoothing_iter);
+
+    void sub_nonlinear_advection(const std::string& caller_string,
+      int smoothing_iter,int im_extension);
+
     void smoothing_advection();
 
     void advance_MAC_velocity(int project_option);
