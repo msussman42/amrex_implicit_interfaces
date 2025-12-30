@@ -985,6 +985,8 @@ int NavierStokes::solidheat_flag=0;
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_type_interface;
 Vector<int> NavierStokes::material_conservation_form;
+Vector<int> NavierStokes::material_extend_velocity;
+int NavierStokes::material_extend_velocity_flag;
 
 //0 incomp; material_type_evap needed for the Kassemi model.
 Vector<int> NavierStokes::material_type_evap;
@@ -3575,6 +3577,18 @@ NavierStokes::read_params ()
     material_type.resize(num_materials);
     material_type_interface.resize(num_interfaces);
     material_conservation_form.resize(num_materials);
+
+    material_extend_velocity.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     material_extend_velocity[i]=0;
+    }
+    pp.queryarr("material_extend_velocity",material_extend_velocity,0,
+      num_materials);
+    material_extend_velocity_flag=0;
+    for (int i=0;i<num_materials;i++) {
+     if (material_extend_velocity[i]>0)
+      material_extend_velocity_flag=i+1;
+    }
 
     pp.getarr("material_type",material_type,0,num_materials);
 
@@ -6212,6 +6226,8 @@ NavierStokes::read_params ()
 	      material_type_visual[i] << '\n';
       std::cout << "material_conservation_form i=" << i << " " << 
         material_conservation_form[i] << '\n';
+      std::cout << "material_extend_velocity i=" << i << " " << 
+        material_extend_velocity[i] << '\n';
       std::cout << "pressure_error_cutoff i=" << i << " " << 
         pressure_error_cutoff[i] << '\n';
       std::cout << "vorterr i=" << i << " " << 
@@ -6292,6 +6308,8 @@ NavierStokes::read_params ()
       std::cout << "speciesreactionrate i=" << i << "  " << 
           speciesreactionrate[i] << '\n';
      }
+     std::cout << "material_extend_velocity_flag= " << 
+       material_extend_velocity_flag << '\n';
 
      std::cout << "surface_tension_smoothing= " << 
        surface_tension_smoothing << '\n';
