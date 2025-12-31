@@ -799,7 +799,7 @@ extern "C"
 
 
    void fort_vfrac_split_smooth(
-     int* local_smoothing,
+     int* local_smoothing_flag,
      int* nprocessed,
      int* tid,
      int* velbc,
