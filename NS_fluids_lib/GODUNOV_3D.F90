@@ -16180,7 +16180,7 @@ stop
       end subroutine fort_vfrac_split
 
       subroutine fort_vfrac_split_smooth( &
-       local_smoothing, &
+       local_smoothing_flag, &
        nprocessed, &
        tid, &
        velbc, &
@@ -16229,7 +16229,7 @@ stop
       integer, PARAMETER :: nhalf=1
       integer, INTENT(inout) :: nprocessed
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: local_smoothing
+      integer, INTENT(in) :: local_smoothing_flag
 
       integer, PARAMETER :: ngrow=2
 
@@ -16439,10 +16439,10 @@ stop
        stop
       endif
 
-      if (local_smoothing.gt.0) then
+      if (local_smoothing_flag.ge.0) then
        !do nothing
       else
-       print *,"local_smoothing invalid: ",local_smoothing
+       print *,"local_smoothing_flag invalid: ",local_smoothing_flag
        stop
       endif
 

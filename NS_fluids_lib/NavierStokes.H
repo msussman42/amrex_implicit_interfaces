@@ -316,7 +316,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement(int local_smoothing);
+    void prepare_displacement(int local_smoothing_flag);
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -783,8 +783,8 @@ protected:
     void check_for_NAN(const std::string& caller_string,
      MultiFab* mf);
 
-    void split_scalar_advection(int local_smoothing); 
-    void split_scalar_advectionALL(int local_smoothing);
+    void split_scalar_advection(int local_smoothing_flag,int im_extension); 
+    void split_scalar_advectionALL(int local_smoothing_flag,int im_extension);
  
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
@@ -852,11 +852,16 @@ protected:
 
     void solid_temperature();
 
+    void save_interface_data(int control_flag,int local_smoothing_flag,
+      int im_extension);
+    void save_interface_dataALL(int control_flag,int local_smoothing_flag,
+      int im_extension);
+
     void nonlinear_advection(const std::string& caller_string,
       int smoothing_iter);
 
     void sub_nonlinear_advection(const std::string& caller_string,
-      int smoothing_iter,int im_extension);
+      int smoothing_iter,int local_smoothing_flag,int im_extension);
 
     void smoothing_advection();
 
@@ -1049,7 +1054,6 @@ protected:
       Long& num_particles_sanity_check,
       Long& misplaced_particles);
     void move_particles(
-      int local_smoothing,
       int splitting_dir,
       My_ParticleContainer& localPC,
       const std::string& caller_string);

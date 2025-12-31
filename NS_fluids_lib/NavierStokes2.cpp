@@ -6839,7 +6839,6 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 #ifdef AMREX_PARTICLES
 
 void NavierStokes::move_particles(
-  int local_smoothing,
   int splitting_dir,
   My_ParticleContainer& localPC,
   const std::string& caller_string) {
@@ -6861,12 +6860,7 @@ void NavierStokes::move_particles(
  int homflag=0;
  int local_project_option=SOLVETYPE_VISC;
 
- if (local_smoothing>0) {
-
-  local_dt=local_dt/local_smoothing;
-  homflag=1;
-
- } else if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
+ if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
 
   if (pattern_test(local_caller_string,"do_the_advance")==1) {
    //do nothing
@@ -6874,11 +6868,6 @@ void NavierStokes::move_particles(
    std::cout << local_caller_string << '\n';
    amrex::Error("caller is invalid in move_particles");
   }
-
-  if (local_smoothing==0) {
-   //do nothing
-  } else
-   amrex::Error("local_smoothing invalid");
 
  } else if (pattern_test(local_caller_string,"phase_change_code_segment")==1) {
 
@@ -6888,11 +6877,6 @@ void NavierStokes::move_particles(
    std::cout << local_caller_string << '\n';
    amrex::Error("caller is invalid in move_particles");
   }
-
-  if (local_smoothing==0) {
-   //do nothing
-  } else
-   amrex::Error("local_smoothing invalid");
 
   phase_change_displacement=1;
 

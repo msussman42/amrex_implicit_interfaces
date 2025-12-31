@@ -14642,7 +14642,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 } // end subroutine prepare_mask_nbr(int ngrow)
 
 void 
-NavierStokes::prepare_displacement(int local_smoothing) {
+NavierStokes::prepare_displacement(int local_smoothing_flag) {
  
  std::string local_caller_string="prepare_displacement";
 
@@ -14659,23 +14659,23 @@ NavierStokes::prepare_displacement(int local_smoothing) {
  Real local_dt=dt_slab;
  int local_project_option=SOLVETYPE_VISC;
 
- if (local_smoothing==0) {
+ if (local_smoothing_flag==0) {
   //do nothing 
- } else if (local_smoothing>0) {
+ } else if (local_smoothing_flag>0) {
   homflag=1;
-  local_dt=local_dt/local_smoothing;
+  local_dt=local_dt/local_smoothing_flag;
  } else
-  amrex::Error("local_smoothing invalid");
+  amrex::Error("local_smoothing_flag invalid");
 
  fort_overridepbc(&homflag,&local_project_option); 
 
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
   MultiFab* temp_mac_velocity=nullptr;
-  if (local_smoothing==0) {
+  if (local_smoothing_flag==0) {
     //Umac_Type
    temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
-  } else if (local_smoothing>0) {
+  } else if (local_smoothing_flag>0) {
    Vector<int> scompBC_map;
    scompBC_map.resize(1);
    scompBC_map[0]=0;
@@ -14689,7 +14689,7 @@ NavierStokes::prepare_displacement(int local_smoothing) {
    MultiFab::Copy(*temp_mac_velocity,*localMF[UMAC_STATIC_MF+normdir],
 		  0,0,1,mac_grow);
   } else
-   amrex::Error("local_smoothing invalid");
+   amrex::Error("local_smoothing_flag invalid");
 
 
    // RAW_MAC_VELOCITY_MF and
@@ -19217,7 +19217,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 } // end subroutine SEM_scalar_advection
 
 void 
-NavierStokes::split_scalar_advectionALL(int local_smoothing) { 
+NavierStokes::split_scalar_advectionALL(int local_smoothing_flag,
+  int im_extension) { 
 
  interface_touch_flag=1; //split_scalar_advectionALL
 
@@ -19237,7 +19238,7 @@ NavierStokes::split_scalar_advectionALL(int local_smoothing) {
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.split_scalar_advection(local_smoothing);
+  ns_level.split_scalar_advection(local_smoothing_flag,im_extension);
  } // ilev
 
 #if (NS_profile_solver==1)
@@ -19251,7 +19252,8 @@ NavierStokes::split_scalar_advectionALL(int local_smoothing) {
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
 void 
-NavierStokes::split_scalar_advection(int local_smoothing) { 
+NavierStokes::split_scalar_advection(int local_smoothing_flag,
+   int im_extension) { 
 
  std::string local_caller_string="split_scalar_advection";
 
@@ -19420,7 +19422,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
  int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
  int nc_bucket=CISLCOMP_NCOMP;
 
- if (local_smoothing==0) {
+ if ((local_smoothing_flag==0)&&(im_extension==-1)) {
 
   // in: split_scalar_advection
   getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
@@ -19792,7 +19794,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
 
   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
- } else if (local_smoothing>0) {
+ } else if ((local_smoothing_flag>0)||(im_extension>=0)) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -19858,7 +19860,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
    }
 
    fort_vfrac_split_smooth(
-    &local_smoothing,
+    &local_smoothing_flag,
     &nprocessed[tid_current],
     &tid_current,
     velbc.dataPtr(),
@@ -19910,7 +19912,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
 } // omp
   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
  } else
-  amrex::Error("local_smoothing invalid");
+  amrex::Error("local_smoothing_flag or im_extension invalid");
 
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
   ParallelDescriptor::ReduceIntSum(grids_per_proc[iproc]);
@@ -19948,7 +19950,7 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
  } else
   amrex::Error("level invalid23");
 
- if (local_smoothing==0) {
+ if ((local_smoothing_flag==0)&&(im_extension==-1)) {
 
   delete conserve;
  
@@ -20015,12 +20017,12 @@ NavierStokes::split_scalar_advection(int local_smoothing) {
   } else
    amrex::Error("level invalid23");
 
- } else if (local_smoothing>0) {
+ } else if ((local_smoothing_flag>0)||(im_extension>=0)) {
 
   //do nothing
 
  } else
-  amrex::Error("local_smoothing invalid");
+  amrex::Error("local_smoothing_flag or im_extension invalid");
 
 }  // end subroutine split_scalar_advection
 
