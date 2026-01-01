@@ -281,7 +281,12 @@
 
 #define HOLD_VELOCITY_PROJECT_FACE_MF (TRANSPORT_REGISTER_FACE_MF+3)
 
-#define NEXT_MF (HOLD_VELOCITY_PROJECT_FACE_MF+3)
+#define interface_hold_MF (HOLD_VELOCITY_PROJECT_FACE_MF+3)
+#define improved_interface_hold_MF (interface_hold_MF+1)
+#define standard_interface_hold_MF (improved_interface_hold_MF+1)
+#define interface_velocity_hold_MF (standard_interface_hold_MF+1)
+
+#define NEXT_MF (interface_velocity_hold_MF+3)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
