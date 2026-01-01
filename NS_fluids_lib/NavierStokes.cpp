@@ -76,6 +76,7 @@ int NavierStokes::POLYGON_LIST_MAX=1000;
 int  NavierStokes::ns_time_order=1; // time_blocking_factor
 int  NavierStokes::slab_step=0;
 int  NavierStokes::project_slab_step=0;
+int  NavierStokes::velocity_slab_step=0;
 int  NavierStokes::SDC_outer_sweeps=0;
 int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;

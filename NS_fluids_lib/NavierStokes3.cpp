@@ -442,6 +442,155 @@ void NavierStokes::smoothing_advection() {
 void NavierStokes::save_interface_data(
   int control_flag,int local_smoothing_flag,int im_extension) {
 
+ std::string local_caller_string="save_interface_data";
+
+ if (material_extend_velocity_flag>0) {
+  //do nothing
+ } else
+  amrex::Error("expecting material_extend_velocity_flag>0");
+
+ int ncomp_interface=num_materials*ngeom_raw+num_materials;
+
+ if (control_flag==SAVE_CONTROL) {
+
+  new_localMF(interface_hold_MF,ncomp_interface,1,-1);
+  new_localMF(improved_interface_hold_MF,ncomp_interface,1,-1);
+  new_localMF(standard_interface_hold_MF,ncomp_interface,1,-1);
+  MultiFab* vofmf=
+   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
+  MultiFab::Copy(*localMF[interface_hold_MF],*vofmf,0,0,
+    num_materials*ngeom_raw,1);
+  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
+  MultiFab::Copy(*localMF[interface_hold_MF],*lsmf,0,
+    num_materials*ngeom_raw,num_materials,1);
+  MultiFab::Copy(*localMF[improved_interface_hold_MF],
+    *localMF[interface_hold_MF],0,0,ncomp_interface,1);
+  MultiFab::Copy(*localMF[standard_interface_hold_MF],
+    *localMF[interface_hold_MF],0,0,ncomp_interface,1);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ncomp=1 ngrow=0
+   new_localMF(interface_velocity_hold_MF+dir,1,0,dir);
+   if (local_smoothing_flag==0) {
+    MultiFab* velmf=getStateMAC(0,dir,vel_time_slab);
+    MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],*velmf,0,0,1,0);
+    delete velmf;
+   } else if (local_smoothing_flag>0) {
+    int homflag=1;
+    int local_project_option=SOLVETYPE_VISC;
+    fort_overridepbc(&homflag,&local_project_option);
+    Vector<int> scompBC_map;
+    scompBC_map.resize(1);
+    scompBC_map[0]=0;
+    debug_ngrow(UMAC_STATIC_MF+dir,0,local_caller_string);
+      //grow=0,scomp=0,ncomp=1
+    GetStateFromLocalALL(UMAC_STATIC_MF+dir,0,0,1,
+      Umac_Type+dir,scompBC_map);
+    MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],
+      *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
+    homflag=0;
+    fort_overridepbc(&homflag,&local_project_option);
+   } else
+    amrex::Error("local_smoothing_flag invalid");
+  } //dir=0;dir<AMREX_SPACEDIM
+
+  delete vofmf;
+  delete lsmf;
+
+ } else if (control_flag==POST_PROCESS_CONTROL) {
+
+  if (im_extension==-1) {
+   MultiFab* vofmf=
+    getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
+   MultiFab::Copy(*localMF[standard_interface_hold_MF],*vofmf,0,0,
+    num_materials*ngeom_raw,1);
+   MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
+   MultiFab::Copy(*localMF[standard_interface_hold_MF],*lsmf,0,
+    num_materials*ngeom_raw,num_materials,1);
+   delete vofmf;
+   delete lsmf;
+  } else if ((im_extension>=0)&&
+             (im_extension+1<=material_extend_velocity_flag)) {
+   if (material_extend_velocity[im_extension]>0) {
+    //do nothing
+   } else
+    amrex::Error("expecting material_extend_velocity[im_extension]>0");
+
+   MultiFab* vofmf=
+    getState(1,STATECOMP_MOF+im_extension*ngeom_raw,ngeom_raw,cur_time_slab); 
+   MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,0,
+    im_extension*ngeom_raw,ngeom_raw,1);
+   MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
+    //scomp,dcomp,ncomp,ngrow
+   MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsmf,im_extension,
+    num_materials*ngeom_raw+im_extension,1,1);
+   delete vofmf;
+   delete lsmf;
+
+   if (im_extension+1==material_extend_velocity_flag) {
+    //correct the volume fractions, centroids, and level set function(s)
+
+
+    //restore the velocity field
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (local_smoothing_flag==0) {
+      MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
+      MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
+        0,0,1,0);
+     } else if (local_smoothing_flag>0) {
+      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+       *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
+     } else
+      amrex::Error("local_smoothing_flag invalid");
+    } //dir=0;dir<AMREX_SPACEDIM
+
+    //delete the hold data
+    delete_localMF(interface_hold_MF,1);
+    delete_localMF(improved_interface_hold_MF,1);
+    delete_localMF(standard_interface_hold_MF,1);
+
+    delete_localMF(interface_velocity_hold_MF,AMREX_SPACEDIM);
+
+   } else if ((im_extension>=0)&&
+              (im_extension+1<material_extend_velocity_flag)) {
+    //do nothing
+   } else
+    amrex::Error("im_extension invalid");
+
+  } else
+   amrex::Error("im_extension invalid");
+
+ 
+ } else if (control_flag==RESTORE_CONTROL) {
+
+  //restore F,X,LS
+  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+   //dest,source,scomp,dcomp,ncomp,ngrow
+  MultiFab::Copy(S_new,*localMF[interface_hold_MF],0,
+    STATECOMP_MOF,num_materials*ngeom_raw,1);
+  MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+  MultiFab::Copy(LS_new,*localMF[interface_hold_MF],num_materials*ngeom_raw,
+    0,num_materials,1);
+
+  //restore the velocity field
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (local_smoothing_flag==0) {
+    MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
+    MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
+      0,0,1,0);
+   } else if (local_smoothing_flag>0) {
+    MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+     *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
+   } else
+    amrex::Error("local_smoothing_flag invalid");
+  } //dir=0;dir<AMREX_SPACEDIM
+
+
+  //extrapolate the velocity field here:
+
+ } else
+  amrex::Error("control_flag invalid");
+
 }  //end subroutine save_interface_data
 
 void NavierStokes::save_interface_dataALL(
@@ -472,7 +621,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
   local_smoothing_flag=surface_tension_smoothing;
 
   advect_time_slab=cur_time_slab;
-  vel_time_slab=-1;
+  vel_time_slab=-1.0;
+  velocity_slab_step=-1;
 
   if (surface_tension_smoothing>=1) {
    //do nothing
@@ -488,11 +638,13 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
   advect_time_slab=prev_time_slab;
 
-  if (divu_outer_sweeps==0) 
+  if (divu_outer_sweeps==0) {
    vel_time_slab=prev_time_slab;
-  else if (divu_outer_sweeps>0)
+   velocity_slab_step=project_slab_step;
+  } else if (divu_outer_sweeps>0) {
    vel_time_slab=cur_time_slab;
-  else
+   velocity_slab_step=project_slab_step+1;
+  } else
    amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
 
  } else
@@ -548,7 +700,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
       im_extension);
 
    if (material_extend_velocity_flag>0) {
-    save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,im_extension);
+    save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
+       im_extension);
    } else
     amrex::Error("material_extend_velocity_flag invalid");
 
@@ -2208,7 +2361,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
     } else
      amrex::Error("slab_step invalid");
 
-    vel_time_slab=prev_time_slab;
+    vel_time_slab=prev_time_slab; //in: SEM_advectALL
+
    } else if (source_term==SUB_OP_SDC_ISCHEME) {
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -2216,6 +2370,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
     } else
      amrex::Error("slab_step invalid");
 
+     //in: SEM_advectALL
     if (divu_outer_sweeps==0) 
      vel_time_slab=prev_time_slab;
     else if (divu_outer_sweeps>0)
