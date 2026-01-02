@@ -563,6 +563,12 @@ void NavierStokes::save_interface_data(
  
  } else if (control_flag==RESTORE_CONTROL) {
 
+  if ((im_extension>=0)&&
+      (im_extension+1<=material_extend_velocity_flag)) {
+   //do nothing
+  } else
+   amrex::Error("im_extension invalid (RESTORE_CONTROL)");
+
   //restore F,X,LS
   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
    //dest,source,scomp,dcomp,ncomp,ngrow
@@ -585,8 +591,8 @@ void NavierStokes::save_interface_data(
     amrex::Error("local_smoothing_flag invalid");
   } //dir=0;dir<AMREX_SPACEDIM
 
-
   //extrapolate the velocity field here:
+  extend_FSI_data(im_extension+1,local_smoothing_flag);
 
  } else
   amrex::Error("control_flag invalid");
@@ -597,7 +603,9 @@ void NavierStokes::save_interface_dataALL(
   int control_flag,int local_smoothing_flag,int im_extension) {
 
  int finest_level=parent->finestLevel();
- for (int ilev=finest_level;ilev>=level;ilev--) {
+   //Must go from coarsest to finest since FSI_MAC_VELOCITY_MF 
+   //not initially declared on all the levels
+ for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.save_interface_data(control_flag,local_smoothing_flag,
      im_extension);
@@ -693,6 +701,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
    if (material_extend_velocity_flag>0) {
     save_interface_dataALL(RESTORE_CONTROL,local_smoothing_flag,im_extension);
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     delete_array(FSI_MAC_VELOCITY_MF+dir);
+    }
    } else
     amrex::Error("material_extend_velocity_flag invalid");
 
@@ -1378,7 +1389,11 @@ void NavierStokes::tensor_advection_updateALL() {
         // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.extend_FSI_data(im+1);
+        int local_smoothing_flag=-1;
+        ns_level.extend_FSI_data(im+1,local_smoothing_flag);
+       }
+       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+        delete_array(FSI_MAC_VELOCITY_MF+dir);
        }
 
        if (step_through_data==1) {
@@ -15019,7 +15034,8 @@ void NavierStokes::manage_FSI_data() {
 
 } // end subroutine manage_FSI_data()
 
-void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
+//1<=im_critical<=nmat
+void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) { 
 
  int finest_level=parent->finestLevel();
 
@@ -15035,8 +15051,20 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
  if (ngrow_distance<4)
   amrex::Error("ngrow_distance<4");
 
- resize_levelset(ngrow_distance,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
+ MultiFab* levelset_extend=nullptr;
+
+ if (local_smoothing_flag==-1) {
+  resize_levelset(ngrow_distance,LEVELPC_MF);
+  debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
+  levelset_extend=localMF[LEVELPC_MF];
+ } else if (local_smoothing_flag==0) {
+  levelset_extend=getStateDist(ngrow_distance,vel_time_slab,
+    local_caller_string);
+ } else if (local_smoothing_flag>0) {
+  levelset_extend=getStateDist(ngrow_distance,cur_time_slab,
+    local_caller_string);
+ } else
+  amrex::Error("local_smoothing_flag invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
@@ -15049,16 +15077,8 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
 
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //Umac_Type+dir
-    //getStateMAC_localMF is declared in NavierStokes2.cpp
-    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
-  getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
-     dir,cur_time_slab);
- } // dir=0 ... sdim-1
  getState_localMF(FSI_CELL_VELOCITY_MF,
     1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
-
 
  if (localMF[FSI_CELL_VELOCITY_MF]->nGrow()>=1) {
   //do nothing
@@ -15072,7 +15092,54 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-  MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
+    //Umac_Type+dir
+    //getStateMAC_localMF is declared in NavierStokes2.cpp
+    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
+  Real local_time=cur_time_slab;
+  int local_slab_step=project_slab_step+1;
+
+  if (local_smoothing_flag==-1) {
+   local_time=cur_time_slab;
+   local_slab_step=project_slab_step+1;
+  } else if (local_smoothing_flag==0) {
+   local_time=vel_time_slab;
+   local_slab_step=velocity_slab_step;
+  } else if (local_smoothing_flag>0) {
+   local_time=cur_time_slab;
+   local_slab_step=project_slab_step+1;
+  } else
+   amrex::Error("local_smoothing_flag invalid");
+   
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,local_slab_step);
+
+   //FSI_MAC_VELOCITY_MF deleted by the caller.
+  getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
+     dir,local_time);
+  if (local_smoothing_flag==-1) {
+   //do nothing
+  } else if (local_smoothing_flag==0) {
+   //do nothing
+  } else if (local_smoothing_flag>0) {
+   int homflag=1;
+   int local_project_option=SOLVETYPE_VISC;
+   fort_overridepbc(&homflag,&local_project_option);
+   Vector<int> scompBC_map;
+   scompBC_map.resize(1);
+   scompBC_map[0]=0;
+
+   MultiFab::Copy(*localMF[FSI_MAC_VELOCITY_MF+dir],
+    *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
+
+   debug_ngrow(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,local_caller_string);
+     //scomp=1 ncomp=1
+   GetStateFromLocal(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,0,1,
+      Umac_Type+dir,scompBC_map);
+   
+   homflag=0;
+   fort_overridepbc(&homflag,&local_project_option);
+
+  } else
+   amrex::Error("local_smoothing_flag invalid");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -15094,7 +15161,7 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
    int bfact=parent->Space_blockingFactor(level);
    const Real* xlo = grid_loc[gridno].lo();
    
-   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+   FArrayBox& lsfab=(*levelset_extend)[mfi];
 
    FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
    if (FSIvelMAC.nComp()!=1)
@@ -15125,6 +15192,7 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
     // 3. is_rigid=1
     // 4. the material in question
    fort_extend_elastic_velocity(
+      &local_smoothing_flag,
       &im_critical, //1<=im_critical<=num_materials
       &dir, //dir=0,1,2
       velbc.dataPtr(),  
@@ -15149,13 +15217,31 @@ void NavierStokes::extend_FSI_data(int im_critical) { //1<=im_critical<=nmat
 } // omp
   ns_reconcile_d_num(LOOP_EXTEND_VEL,"fort_extend_elastic_velcity");
 
-  MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
-  MultiFab::Copy(S_new,*localMF[FSI_CELL_VELOCITY_MF],
+  if (local_smoothing_flag==-1) {
+   MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+   MultiFab::Copy(S_new,*localMF[FSI_CELL_VELOCITY_MF],
      dir,STATECOMP_VEL+dir,1,1);
+  } else if (local_smoothing_flag==0) {
+   MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+  } else if (local_smoothing_flag>0) {
+   MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+     *localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+  } else
+   amrex::Error("local_smoothing_flag invalid");
 
  } // dir=0..sdim-1
- delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
+ //FSI_MAC_VELOCITY_MF is deleted by the caller.
+ //delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
  delete_localMF(FSI_CELL_VELOCITY_MF,1);
+
+ if (local_smoothing_flag==-1) {
+  //do nothing
+ } else if (local_smoothing_flag>=0) {
+  delete levelset_extend;
+ } else
+  amrex::Error("local_smoothing_flag invalid");
 
 } // end subroutine extend_FSI_data()
 

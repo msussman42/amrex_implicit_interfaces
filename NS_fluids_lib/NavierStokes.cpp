@@ -986,7 +986,9 @@ int NavierStokes::solidheat_flag=0;
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_type_interface;
 Vector<int> NavierStokes::material_conservation_form;
-Vector<int> NavierStokes::material_extend_velocity;
+//nmat components.
+//values range from 0 to nmat-1
+Vector<int> NavierStokes::material_extend_velocity; 
 int NavierStokes::material_extend_velocity_flag;
 
 //0 incomp; material_type_evap needed for the Kassemi model.
@@ -14681,7 +14683,7 @@ NavierStokes::prepare_displacement(int local_smoothing_flag) {
    scompBC_map.resize(1);
    scompBC_map[0]=0;
    debug_ngrow(UMAC_STATIC_MF+normdir,mac_grow,local_caller_string);
-   GetStateFromLocalALL(UMAC_STATIC_MF+normdir,mac_grow,0,1,
+   GetStateFromLocal(UMAC_STATIC_MF+normdir,mac_grow,0,1,
       Umac_Type+normdir,scompBC_map);
    BoxArray edge_boxes(grids);
    edge_boxes.surroundingNodes(normdir);
