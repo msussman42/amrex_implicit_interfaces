@@ -371,6 +371,7 @@ namespace amrex{
 
 
       void fort_extend_elastic_velocity(
+        int* local_smoothing_flag,
         int* im_critical, // 1<=im_critical<=num_materials
         int* dir, //dir=0,1,2
         int* velbc,

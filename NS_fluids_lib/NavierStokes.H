@@ -331,7 +331,8 @@ public:
 
     void manage_FSI_data();
 
-    void extend_FSI_data(int im_critical); //1<=im_critical<=num_materials
+     //1<=im_critical<=num_materials
+    void extend_FSI_data(int im_critical,int local_smoothing_flag); 
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
@@ -1403,6 +1404,7 @@ void apply_pressure_grad(
 
     void make_marangoni_and_disjoining_pressure_force();
 
+     //declared in: NavierStokes2.cpp
     void delete_array(int idx_localMF);
 
     void allocate_array(int ngrow,int ncomp,int grid_type,

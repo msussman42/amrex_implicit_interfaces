@@ -19247,6 +19247,7 @@ stop
 
        !called from: NavierStokes::extend_FSI_data()
       subroutine fort_extend_elastic_velocity( &
+       local_smoothing_flag, &
        im_critical, & ! 1<=im_critical<=num_materials
        dir, & !0,1,2
        velbc_in, &
@@ -19270,6 +19271,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: local_smoothing_flag
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -19340,8 +19342,23 @@ stop
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
+      integer local_homflag
+
        !fort_extend_elastic_velocity
       real(amrex_real), parameter :: elastic_extend_cells=3.0d0
+
+      local_homflag=0
+
+      if (local_smoothing_flag.eq.-1) then
+       local_homflag=0
+      else if (local_smoothing_flag.eq.0) then
+       local_homflag=0
+      else if (local_smoothing_flag.gt.0) then
+       local_homflag=1
+      else
+       print *,"local_smoothing_flag invalid: ",local_smoothing_flag
+       stop
+      endif
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -19586,14 +19603,23 @@ stop
              if ((LS_clamped_plus.ge.zero).and. &
                  (LS_clamped_minus.ge.zero)) then
               local_wt=one
-              local_vel=half*(vel_clamped_plus(dir+1)+ &
-                              vel_clamped_minus(dir+1))
+              local_vel=zero
+              if (local_homflag.eq.0) then
+               local_vel=half*(vel_clamped_plus(dir+1)+ &
+                               vel_clamped_minus(dir+1))
+              endif
              else if (LS_clamped_plus.ge.zero) then
               local_wt=one
-              local_vel=vel_clamped_plus(dir+1)
+              local_vel=zero
+              if (local_homflag.eq.0) then
+               local_vel=vel_clamped_plus(dir+1)
+              endif
              else if (LS_clamped_minus.ge.zero) then
               local_wt=one
-              local_vel=vel_clamped_minus(dir+1)
+              local_vel=zero
+              if (local_homflag.eq.0) then
+               local_vel=vel_clamped_minus(dir+1)
+              endif
              else if ((LS_clamped_plus.lt.zero).and. &
                       (LS_clamped_minus.lt.zero)) then
 
