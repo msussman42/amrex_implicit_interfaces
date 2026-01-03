@@ -784,6 +784,8 @@ protected:
     void check_for_NAN(const std::string& caller_string,
      MultiFab* mf);
 
+    void correct_flotsam();
+
     void split_scalar_advection(int local_smoothing_flag,int im_extension); 
     void split_scalar_advectionALL(int local_smoothing_flag,int im_extension);
  

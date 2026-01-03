@@ -20029,6 +20029,99 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
 
 }  // end subroutine split_scalar_advection
 
+
+void 
+NavierStokes::correct_flotsam() { 
+
+ std::string local_caller_string="correct_flotsam";
+
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+
+ int bfact=parent->Space_blockingFactor(level);
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ if ((SDC_outer_sweeps>=0)&&
+     (SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else {
+  std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
+  amrex::Error("SDC_outer_sweeps invalid");
+ }
+
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ int ncomp_state=S_new.nComp();
+ if (ncomp_state!=STATECOMP_STATES+
+     num_materials*(num_state_material+ngeom_raw)+1)
+  amrex::Error("ncomp_state invalid");
+
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& improved_fab=(*localMF[improved_interface_hold_MF])[mfi];
+   FArrayBox& standard_fab=(*localMF[standard_interface_hold_MF])[mfi];
+
+   FArrayBox& snewfab=S_new[mfi];
+   FArrayBox& lsnewfab=LS_new[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   fort_correct_flotsam(
+    material_extend_velocity.dataPtr(),
+    &tid_current,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    improved_fab.dataPtr(), 
+    ARLIM(improved_fab.loVect()),ARLIM(improved_fab.hiVect()),
+    standard_fab.dataPtr(), 
+    ARLIM(standard_fab.loVect()),ARLIM(standard_fab.hiVect()),
+    snewfab.dataPtr(STATECOMP_MOF),
+    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+    lsnewfab.dataPtr(),
+    ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+    xlo,dx,
+    &level,
+    &finest_level);
+
+ }  // mfi
+} // omp
+
+ ns_reconcile_d_num(LOOP_CORRECTFLOTSAM,"fort_correct_flotsam");
+
+}  // end subroutine correct_flotsam
+
+
 void
 NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  Real time,int n_error_buf,int ngrow)

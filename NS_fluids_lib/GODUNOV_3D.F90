@@ -17235,6 +17235,252 @@ stop
       end subroutine fort_vfrac_split_smooth
 
 
+      subroutine fort_correct_flotsam( &
+       material_extend_velocity, &
+       tid, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       improved,DIMS(improved), &  
+       standard,DIMS(standard), &  
+       snew,DIMS(snew), &  
+       lsnew,DIMS(lsnew), &
+       xlo,dx, &
+       level, &
+       finest_level) &
+      bind(c,name='fort_correct_flotsam')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, PARAMETER :: nhalf=3
+      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: material_extend_velocity(num_materials)
+      integer :: material_list_by_rank(num_materials)
+
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(improved)
+      integer, INTENT(in) :: DIMDEC(standard)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(lsnew)
+
+      real(amrex_real), INTENT(in), target :: &
+         improved(DIMV(improved),num_materials*(ngeom_raw+1))
+      real(amrex_real), INTENT(in), target :: &
+         standard(DIMV(standard),num_materials*(ngeom_raw+1))
+      real(amrex_real), pointer :: improved_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: standard_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target ::  &
+         snew(DIMV(snew),num_materials*ngeom_raw)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+         lsnew(DIMV(lsnew),num_materials)
+      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+
+      integer i,j,k
+      integer dir,im,im_opp,im_primary,irank,last
+      real(amrex_real) uncapt
+      real(amrex_real) test_vof
+      integer vofcompraw
+      integer vofcomprecon
+      integer growlo(3),growhi(3)
+
+      real(amrex_real) mofnew(num_materials*ngeom_recon)
+      real(amrex_real) LS(num_materials)
+      real(amrex_real) local_LS(num_materials)
+      real(amrex_real) LS_improved(num_materials)
+
+      improved_ptr=>improved
+      standard_ptr=>standard
+
+      snew_ptr=>snew
+      lsnew_ptr=>lsnew
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid correct_flotsam ",bfact
+       stop
+      endif
+
+      if ((level.lt.0).or. &
+          (level.gt.finest_level)) then
+       print *,"level invalid fort_correct_flotsam"
+       stop
+      endif
+
+      if (num_state_material.ne. &
+          num_state_base+num_species_var) then
+       print *,"num_state_material invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,improved_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,standard_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+
+      growlo(3)=0
+      growhi(3)=0
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+ 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do im=1,num_materials 
+        LS(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+       enddo
+       do im=1,num_materials 
+        LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+       enddo
+       call get_primary_material(LS,im_primary)
+
+       do im=1,num_materials
+        vofcompraw=(im-1)*ngeom_raw+1
+        vofcomprecon=(im-1)*ngeom_recon+1
+        do dir=1,SDIM+1
+         mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+        enddo
+        local_LS(im)=LS(im)
+       enddo
+
+       if (is_rigid(im_primary).eq.1) then
+        !do nothing
+       else if (is_rigid(im_primary).eq.0) then
+        do irank=1,num_materials
+         material_list_by_rank(irank)=0
+        enddo
+        do im=1,num_materials
+         if (material_extend_velocity(im).gt.0) then
+          irank=1
+          do im_opp=1,num_materials
+           if (im_opp.ne.im) then
+            if (is_rigid(im_opp).eq.0) then
+             if (material_extend_velocity(im_opp).gt.0) then
+              if (material_extend_velocity(im_opp).lt. &
+                  material_extend_velocity(im)) then
+               irank=irank+1
+              endif
+             endif
+            endif
+           endif
+          enddo
+          material_list_by_rank(irank)=im
+         endif
+        enddo !im=1..num_materials
+       
+        last=0
+        uncapt=one 
+        do irank=1,num_materials
+
+         if (uncapt.gt.zero) then
+          im=material_list_by_rank(irank)
+          if ((im.ge.1).and.(im.le.num_materials)) then
+           vofcompraw=(im-1)*ngeom_raw+1
+           vofcomprecon=(im-1)*ngeom_recon+1
+           do dir=1,SDIM+1
+            mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
+           enddo
+           local_LS(im)=LS_improved(im)
+           test_vof=mofnew(vofcomprecon)
+           if (test_vof.gt.zero) then
+            last=im
+           endif
+           uncapt=uncapt-test_vof
+          endif
+         endif
+ 
+        enddo
+        do im=1,num_materials
+         if (uncapt.gt.zero) then
+          if (is_rigid(im).eq.0) then
+           if (material_extend_velocity(im).eq.0) then
+            vofcompraw=(im-1)*ngeom_raw+1
+            vofcomprecon=(im-1)*ngeom_recon+1
+            do dir=1,SDIM+1
+             mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+            enddo
+            local_LS(im)=LS(im)
+            test_vof=mofnew(vofcomprecon)
+            if (test_vof.gt.zero) then
+             last=im
+            endif
+            uncapt=uncapt-test_vof
+           endif
+          endif
+         endif
+        enddo
+        if (last.eq.0) then
+         do im=1,num_materials
+          vofcompraw=(im-1)*ngeom_raw+1
+          vofcomprecon=(im-1)*ngeom_recon+1
+          do dir=1,SDIM+1
+           mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+          enddo
+          local_LS(im)=LS(im)
+         enddo
+        else
+         im=last
+         vofcomprecon=(im-1)*ngeom_recon+1
+         mofnew(vofcomprecon)=mofnew(vofcomprecon)+uncapt
+        endif
+
+       else
+        print *,"is_rigid(im_primary) invalid"
+        stop
+       endif
+
+       call make_vfrac_sum_ok_base( &
+         cmofsten, &
+         xsten,nhalf, &
+         continuous_mof_parm, &
+         bfact,dx, &
+         tessellate, & !=0
+         mofnew,SDIM)
+
+       do im=1,num_materials
+        vofcompraw=(im-1)*ngeom_raw+1
+        vofcomprecon=(im-1)*ngeom_recon+1
+        do dir=1,SDIM+1
+         snew(D_DECL(i,j,k),vofcompraw+dir-1)=mofnew(vofcomprecon+dir-1)
+        enddo
+        lsnew(D_DECL(i,j,k),im)=local_LS(im)
+       enddo !im=1,..,num_materials
+
+      enddo
+      enddo
+      enddo ! i,j,k -> growntilebox(0 ghost cells)
+
+      return
+      end subroutine fort_correct_flotsam
+
+
+
+
+
 
       ! combine_flag==0 (FVM -> GFM)
       ! combine_flag==1 (GFM -> FVM)
