@@ -529,7 +529,7 @@ void NavierStokes::save_interface_data(
 
    if (im_extension+1==material_extend_velocity_flag) {
     //correct the volume fractions, centroids, and level set function(s)
-
+    correct_flotsam();
 
     //restore the velocity field
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -601,6 +601,11 @@ void NavierStokes::save_interface_data(
 
 void NavierStokes::save_interface_dataALL(
   int control_flag,int local_smoothing_flag,int im_extension) {
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==0");
 
  int finest_level=parent->finestLevel();
    //Must go from coarsest to finest since FSI_MAC_VELOCITY_MF 
@@ -721,6 +726,19 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
   } else
    amrex::Error("material_extend_velocity invalid");
  }
+
+ if (material_extend_velocity_flag>0) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.avgDown(LS_Type,0,num_materials,0);
+   ns_level.MOFavgDown();
+  }  // ilev=finest_level ... level  
+
+ } else if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
 
 }  // end subroutine nonlinear_advection
 
@@ -14851,6 +14869,12 @@ void NavierStokes::manage_FSI_data() {
      FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
      if (FSIvelMAC.nComp()!=1)
       amrex::Error("FSIvelMAC.nComp() invalid");
+
+     if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
+      //do nothing
+     } else
+      amrex::Error("expecting localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0");
+
      FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
      if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
       amrex::Error("FSIvelCELL.nComp() invalid");
@@ -14869,6 +14893,8 @@ void NavierStokes::manage_FSI_data() {
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // fort_manage_elastic_velocity is declared in: LEVELSET_3D.F90
+      // FSI_extend_cells=-1.0d0 => no elastic velocity extrapolation 
+      // into the surrounding fluid.
      fort_manage_elastic_velocity(
       &extend_solid_velocity,
       im_elastic_map.dataPtr(),
@@ -14970,6 +14996,12 @@ void NavierStokes::manage_FSI_data() {
      FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
      if (FSIvelMAC.nComp()!=1)
       amrex::Error("FSIvelMAC.nComp() invalid");
+
+     if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
+      //do nothing
+     } else
+      amrex::Error("expecting localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0");
+
      FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
      if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
       amrex::Error("FSIvelCELL.nComp() invalid");
@@ -15166,6 +15198,12 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
    FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
    if (FSIvelMAC.nComp()!=1)
     amrex::Error("FSIvelMAC.nComp() invalid");
+
+   if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
+    //do nothing
+   } else
+    amrex::Error("expecting localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0");
+
    FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
    if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
     amrex::Error("FSIvelCELL.nComp() invalid");
