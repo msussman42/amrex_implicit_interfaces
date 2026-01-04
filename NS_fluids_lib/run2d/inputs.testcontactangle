@@ -106,7 +106,7 @@ ns.ngrow_distance=6
 ns.visc_coef_boundary_layer_factor=1.0
 #liquid,gas,solid
 #12,13,23
-ns.viscconst_interface=0.0 0.0 0.0
+#ns.viscconst_interface=0.0 0.0 0.0
 ns.lamb_capillary_wave_speed=0 # 1 => (rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)

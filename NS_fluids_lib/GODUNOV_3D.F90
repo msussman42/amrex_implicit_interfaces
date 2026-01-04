@@ -17294,6 +17294,7 @@ stop
 
       integer i,j,k
       integer dir,im,im_opp,im_primary,irank,last
+      integer lowest_rank
       real(amrex_real) uncapt
       real(amrex_real) test_vof
       integer vofcompraw
@@ -17313,7 +17314,7 @@ stop
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
+       print *,"tid invalid (correct_flotsam): ",tid
        stop
       endif
 
@@ -17324,15 +17325,88 @@ stop
 
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
-       print *,"level invalid fort_correct_flotsam"
+       print *,"level invalid fort_correct_flotsam: ",level,finest_level
        stop
       endif
 
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
-       print *,"num_state_material invalid"
+       print *,"num_state_material invalid (fort_correct_flotsam): ", &
+         num_state_material
        stop
       endif
+
+      do irank=1,num_materials
+       material_list_by_rank(irank)=0
+      enddo
+
+      lowest_rank=0
+
+      do im=1,num_materials
+       if (material_extend_velocity(im).gt.0) then
+
+        if (is_rigid(im).eq.0) then
+         !do nothing
+        else
+         print *,"expecting is_rigid(im).eq.0"
+         print *,"im=",im
+         print *,"material_extend_velocity(im)=", &
+          material_extend_velocity(im)
+         stop
+        endif
+
+        irank=1
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if (is_rigid(im_opp).eq.0) then
+           if (material_extend_velocity(im_opp).gt.0) then
+            if (material_extend_velocity(im_opp).lt. &
+                material_extend_velocity(im)) then
+             irank=irank+1
+            else if (material_extend_velocity(im_opp).eq. &
+                     material_extend_velocity(im)) then
+             print *,"material_extend_velocity duplicate: ",im,im_opp
+             stop
+            endif
+           endif
+          endif
+         endif
+        enddo !im_opp=1,num_materials
+        if (material_extend_velocity(im).ne.irank) then
+         print *,"material_extend_velocity(im).ne.irank"
+         print *,"im=",im
+         print *,"irank=",irank
+         print *,"material_extend_velocity(im)=", &
+          material_extend_velocity(im)
+         stop
+        endif
+        material_list_by_rank(irank)=im
+        if (irank.gt.lowest_rank) then
+         lowest_rank=irank
+        endif
+       endif
+      enddo !im=1..num_materials
+
+      if (lowest_rank.ge.1) then
+       !do nothing
+      else
+       print *,"expecting lowest_rank.ge.1: ",lowest_rank
+       stop
+      endif
+
+      do im=1,num_materials
+       if (material_extend_velocity(im).eq.0) then
+        if (is_rigid(im).eq.0) then
+         lowest_rank=lowest_rank+1
+         if (lowest_rank.gt.num_materials) then
+          print *,"lowest_rank invalid: ",lowest_rank
+          stop
+         endif
+         material_list_by_rank(lowest_rank)=im
+        endif
+       endif
+      enddo !im=1,num_materials
+  
 
       call checkbound_array(fablo,fabhi,improved_ptr,0,-1)
       call checkbound_array(fablo,fabhi,standard_ptr,0,-1)
@@ -17370,69 +17444,58 @@ stop
        if (is_rigid(im_primary).eq.1) then
         !do nothing
        else if (is_rigid(im_primary).eq.0) then
-        do irank=1,num_materials
-         material_list_by_rank(irank)=0
-        enddo
-        do im=1,num_materials
-         if (material_extend_velocity(im).gt.0) then
-          irank=1
-          do im_opp=1,num_materials
-           if (im_opp.ne.im) then
-            if (is_rigid(im_opp).eq.0) then
-             if (material_extend_velocity(im_opp).gt.0) then
-              if (material_extend_velocity(im_opp).lt. &
-                  material_extend_velocity(im)) then
-               irank=irank+1
-              endif
-             endif
-            endif
-           endif
-          enddo
-          material_list_by_rank(irank)=im
-         endif
-        enddo !im=1..num_materials
        
         last=0
         uncapt=one 
-        do irank=1,num_materials
+        do irank=1,lowest_rank
 
          if (uncapt.gt.zero) then
           im=material_list_by_rank(irank)
           if ((im.ge.1).and.(im.le.num_materials)) then
+           if (is_rigid(im).eq.0) then
+            !do nothing
+           else
+            print *,"expecting is_rigid(im).eq.0"
+            print *,"im=",im
+            print *,"irank=",irank
+            stop
+           endif
            vofcompraw=(im-1)*ngeom_raw+1
            vofcomprecon=(im-1)*ngeom_recon+1
-           do dir=1,SDIM+1
-            mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
-           enddo
-           local_LS(im)=LS_improved(im)
+
+           if (material_extend_velocity(im).ge.1) then
+            do dir=1,SDIM+1
+             mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
+            enddo
+            local_LS(im)=LS_improved(im)
+           else if (material_extend_velocity(im).eq.0) then
+            do dir=1,SDIM+1
+             mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+            enddo
+            local_LS(im)=LS(im)
+           else
+            print *,"material_extend_velocity(im) invalid:",im, &
+             material_extend_velocity(im)
+            stop
+           endif
            test_vof=mofnew(vofcomprecon)
            if (test_vof.gt.zero) then
             last=im
            endif
            uncapt=uncapt-test_vof
+          else
+           print *,"im invalid ",im
+           stop
           endif
+         else if (uncapt.le.zero) then
+          !do nothing
+         else
+          print *,"uncapt=NaN: ",uncapt
+          stop
          endif
  
-        enddo
-        do im=1,num_materials
-         if (uncapt.gt.zero) then
-          if (is_rigid(im).eq.0) then
-           if (material_extend_velocity(im).eq.0) then
-            vofcompraw=(im-1)*ngeom_raw+1
-            vofcomprecon=(im-1)*ngeom_recon+1
-            do dir=1,SDIM+1
-             mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
-            enddo
-            local_LS(im)=LS(im)
-            test_vof=mofnew(vofcomprecon)
-            if (test_vof.gt.zero) then
-             last=im
-            endif
-            uncapt=uncapt-test_vof
-           endif
-          endif
-         endif
-        enddo
+        enddo !irank=1,lowest_rank
+
         if (last.eq.0) then
          do im=1,num_materials
           vofcompraw=(im-1)*ngeom_raw+1
@@ -17449,7 +17512,8 @@ stop
         endif
 
        else
-        print *,"is_rigid(im_primary) invalid"
+        print *,"is_rigid(im_primary) invalid: ",im_primary, &
+         is_rigid(im_primary)
         stop
        endif
 
@@ -17476,9 +17540,6 @@ stop
 
       return
       end subroutine fort_correct_flotsam
-
-
-
 
 
 
