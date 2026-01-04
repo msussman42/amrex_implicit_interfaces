@@ -207,7 +207,7 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 0.5
 # 12 13 14 23 24 34  
 #liquid, gas, ice, substrate
 # liquid-ice=13, gas-ice=23
-ns.viscconst_interface=0.0 1.0e-10 0.0 1.0e-10 0.0 0.0
+#ns.viscconst_interface=0.0 1.0e-10 0.0 1.0e-10 0.0 0.0
 
 ns.uncoupled_viscosity=0 # uncoupled_viscosity=1 => div(mu grad u)
 #liquid, gas, ice, substrate
