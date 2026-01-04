@@ -1808,6 +1808,8 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    } else if (parent->LSA_nsteps_power_method>=1) {
 
+     //parent->initial_levelSteps=amrptr->levelSteps(0) at the
+     //very beginning (main.cpp)
     NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
 
@@ -1822,7 +1824,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     if (parent->LSA_current_step==0) { 
 
      if (NS_LSA_step_count==0) {
-      LSA_perturbations_switch=true; 
+      LSA_perturbations_switch=true; //null_perturbation=1
      } else if (NS_LSA_step_count>0) {
       LSA_perturbations_switch=false; 
      } else {
