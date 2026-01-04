@@ -13487,7 +13487,7 @@ void NavierStokes::make_heat_source() {
 }   // end subroutine make_heat_source
 
 
-
+//null_perturbation=1 if parent->LSA_current_step==0
 void NavierStokes::add_perturbation(int null_perturbation) {
 
  std::string local_caller_string="add_perturbation";
