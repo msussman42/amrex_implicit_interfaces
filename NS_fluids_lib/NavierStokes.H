@@ -175,6 +175,8 @@ public:
       Vector<int>& scomp,
       Vector<int>& ncomp );
 
+    void swap_time_slab(int slab1,int slab2);
+
     void init_boundary_list(Vector<int> scomp,Vector<int> ncomp);
 
     void MaxPressureVelocity(Real& minpres,Real& maxpres,

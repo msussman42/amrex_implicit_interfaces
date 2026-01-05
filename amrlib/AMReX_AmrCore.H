@@ -68,6 +68,7 @@ public:
 
     int LSA_activate;  // =0 or 1
     int LSA_extra_data;  // =0 or 3
+    int LSA_plot_index; // 0,1,2, or 3
 
     int LSA_nsteps_power_method;
 

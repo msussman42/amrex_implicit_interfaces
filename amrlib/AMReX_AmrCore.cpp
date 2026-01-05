@@ -287,6 +287,9 @@ AmrCore::InitAmr () {
  } else
   amrex::Error("expecting LSA_activate==0 or 1");
 
+ LSA_plot_index=0;
+ pp.queryAdd("LSA_plot_index",LSA_plot_index);
+
  LSA_extra_data=0;
  if (LSA_nsteps_power_method==0) {
   //do nothing
@@ -294,7 +297,12 @@ AmrCore::InitAmr () {
   LSA_extra_data=3;
  } else
   amrex::Error("expecting LSA_nsteps_power_method>=0");
-  
+ 
+ if ((LSA_plot_index>=0)&&(LSA_plot_index<=LSA_extra_data)) {
+  //do nothing
+ } else
+  amrex::Error("LSA_plot_index invalid");
+ 
  LSA_current_step=0;
 
  if (ParallelDescriptor::IOProcessor()) {
@@ -528,12 +536,19 @@ AmrCore::InitAmr () {
 
   LSA_max_step=0;
 
+  if (LSA_nsteps_power_method==0) {
+   //do nothing
+  } else if (LSA_nsteps_power_method>0) {
+   ppmain.queryAdd("max_step",LSA_max_step);
+  } else
+   amrex::Error("LSA_nsteps_power_method invalid");
+
   if (max_level==0) {
 
    if (regrid_int==0) {
     //do nothing
    } else {
-    amrex::Error("expecting regrid_int==0");
+    amrex::Error("expecting regrid_int==0 if max_level==0");
    }
 
   } else if (max_level>0) {
@@ -543,17 +558,15 @@ AmrCore::InitAmr () {
     if (regrid_int>=1) {
      //do nothing
     } else {
-     amrex::Error("expecting regrid_int>=1");
+     amrex::Error("expecting regrid_int>=1 if max_level>0");
     }
 
    } else if (LSA_nsteps_power_method>0) {
 
-    ppmain.queryAdd("max_step",LSA_max_step);
-
     if (regrid_int>LSA_max_step) {
      //do nothing
     } else {
-     amrex::Error("expecting regrid_int>max_step");
+     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_power_method>0");
     }
    } else
     amrex::Error("LSA_nsteps_power_method invalid");
@@ -671,7 +684,7 @@ AmrCore::~AmrCore () {
      int do_plot=1;
      int do_slice=((slice_int>0) ? 1 : 0);
      int SDC_outer_sweeps=0;
-     int slab_step=Time_blockingFactor()-1;
+     int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
       do_plot,do_slice,
@@ -773,7 +786,7 @@ AmrCore::writeDEBUG_PlotFile(
    slab_step,
    divu_outer_sweeps);
 
-}
+} //end subroutine writeDEBUG_PlotFile
 
 void
 AmrCore::writePlotFile (
@@ -964,7 +977,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
    int do_plot=1;
    int do_slice=((slice_int>0) ? 1 : 0);
    int SDC_outer_sweeps=0;
-   int slab_step=Time_blockingFactor()-1;
+   int slab_step=Time_blockingFactor()-1+LSA_plot_index;
    int divu_outer_sweeps=0;
    writePlotFile(
     do_plot,do_slice,
@@ -1309,10 +1322,10 @@ AmrCore::checkPoint ()
    amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
  std::string ckfileLSA;
- if ((LSA_activate==0)||
+ if ((LSA_activate==0)&&
      (LSA_nsteps_power_method==0)) {
   ckfileLSA=ckfile_temp;
- } else if ((LSA_activate==1)&&
+ } else if ((LSA_activate==1)||
             (LSA_nsteps_power_method>0)) {
   std::stringstream result;
   result << ckfile_temp << "LSA";
@@ -1568,7 +1581,7 @@ AmrCore::timeStep (Real time,
   int do_plot=1;
   int do_slice=((slice_int>0) ? 1 : 0);
   int SDC_outer_sweeps=0;
-  int slab_step=Time_blockingFactor()-1;
+  int slab_step=Time_blockingFactor()-1+LSA_plot_index;
   int divu_outer_sweeps=0;
   writePlotFile(
    do_plot,do_slice,
@@ -1844,7 +1857,7 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
       last_plotfile = level_steps[0];
      }
      int SDC_outer_sweeps=0;
-     int slab_step=Time_blockingFactor()-1;
+     int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
       do_plot,do_slice,
