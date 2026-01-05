@@ -10984,6 +10984,49 @@ void NavierStokes::init_boundary_list(Vector<int> scomp,
 
 } // end subroutine init_boundary_list
 
+void NavierStokes::swap_time_slab(int slab1,int slab2) {
+
+ ns_time_order=parent->Time_blockingFactor();
+
+ if ((slab1>=0)&&
+     (slab1<ns_time_order+parent->LSA_plot_index)) {
+  //do nothing
+ } else
+  amrex::Error("slab1 invalid");
+
+ if ((slab2>=0)&&
+     (slab2<ns_time_order+parent->LSA_plot_index)) {
+  //do nothing
+ } else
+  amrex::Error("slab2 invalid");
+
+ int nstate=state.size();
+ if (nstate!=NUM_STATE_TYPE)
+  amrex::Error("nstate invalid");
+
+ if (slab1==slab2) 
+  amrex::Error("expecting slab1<>slab2");
+
+ for (int k=0;k<nstate;k++) {
+  MultiFab& S_new1=get_new_data(k,slab1+1);
+  MultiFab& S_new2=get_new_data(k,slab2+1);
+  const BoxArray mfBA=S_new1.boxArray();
+   //AMReX_FabArrayBase.H
+  const DistributionMapping dm=S_new1.DistributionMap();
+  int ngrow=S_new1.nGrow();
+  int ncomp=S_new1.nComp();
+  MultiFab* hold_mf=new MultiFab(mfBA,dm,ncomp,ngrow,
+    MFInfo().SetTag("hold_mf"),FArrayBoxFactory());
+
+  MultiFab::Copy(*hold_mf,S_new1,0,0,ncomp,ngrow); 
+  MultiFab::Copy(S_new1,S_new2,0,0,ncomp,ngrow); 
+  MultiFab::Copy(S_new2,*hold_mf,0,0,ncomp,ngrow); 
+  
+  delete hold_mf;
+ } // for (int k=0;k<nstate;k++)
+
+} //end subroutine swap_time_slab
+
 void NavierStokes::init_boundary(
   int control_flag,
   int extra_comp,
@@ -23713,6 +23756,12 @@ NavierStokes::writePlotFile (
   int slab_step_in,
   int divu_outer_sweeps_in) {
 
+ int finest_level=parent->finestLevel();
+
+  //UtilCreateDirectoryDestructive is declared in
+  //amrex-master/Src/Base/AMReX_Utility.cpp
+  //callbarrier=true
+  //Create a new directory, removing old one if it exists.
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
 
@@ -23720,7 +23769,9 @@ NavierStokes::writePlotFile (
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
- if ((slab_step_in>=0)&&(slab_step_in<ns_time_order)) {
+
+ if ((slab_step_in>=0)&&
+     (slab_step_in<ns_time_order+parent->LSA_plot_index)) {
   //do nothing
  } else
   amrex::Error("slab_step_in invalid");
@@ -23734,10 +23785,27 @@ NavierStokes::writePlotFile (
 
  int save_slab_step=slab_step;
  int save_project_slab_step=project_slab_step;
- slab_step=slab_step_in; 
- project_slab_step=slab_step;
+ int save_divu_outer_sweeps=divu_outer_sweeps;
 
- SDC_setup_step();
+ if (level==0) {
+  if (slab_step_in>ns_time_order-1) {
+   for (int ilev=finest_level;ilev>=0;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+   }
+   slab_step=ns_time_order-1;
+  } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
+   slab_step=slab_step_in; 
+  } else
+   amrex::Error("slab_step_in invalid");
+
+  project_slab_step=slab_step;
+
+  SDC_setup_step();
+ } else if ((level>0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid"); 
 
  divu_outer_sweeps=divu_outer_sweeps_in;
  if ((divu_outer_sweeps>=0)&&
@@ -23846,16 +23914,39 @@ NavierStokes::writePlotFile (
   } else {
    amrex::Error("blob_history_trigger invalid");
   }
- } else if (level>0) {
+ } else if ((level>0)&&(level<=finest_level)) {
   //do nothing
  } else
   amrex::Error("level invalid");
 
+  //UtilCreateDirectoryDestructive is declared in
+  //amrex-master/Src/Base/AMReX_Utility.cpp
+  //callbarrier=true
+  //Create a new directory, removing old one if it exists.
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
 
+ if (level==0) {
+  if (slab_step_in>ns_time_order-1) {
+   for (int ilev=finest_level;ilev>=0;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+   }
+  } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
+   //do nothing
+  } else
+   amrex::Error("slab_step_in incorrect");
+ } else if ((level>0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
+
  slab_step=save_slab_step;
  project_slab_step=save_project_slab_step;
+
+ SDC_setup_step();
+
+ divu_outer_sweeps=save_divu_outer_sweeps;
 
 } // end subroutine writePlotFile
 

@@ -156,7 +156,17 @@ fork_job(int fork_id) {
 
  if ((local_LSA_nsteps_power_method==0)||
      (local_LSA_activate==0)) {
-  //do nothing
+
+  if (local_LSA_nsteps_power_method>0) {
+   if (max_step>=1) {
+    //do nothing
+   } else
+    amrex::Error("expecting 1<=max_step");
+  } else if (local_LSA_nsteps_power_method==0) {
+   //do nothing
+  } else
+   amrex::Error("local_LSA_nsteps_power_method invalid");
+
  } else if ((local_LSA_nsteps_power_method>0)&&
             (local_LSA_activate==1)) {
 
@@ -450,7 +460,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial ASYMPT PRESERVE, Jan 04, 2025, 18:00pm on proc " << 
+	"Multimaterial ASYMPT PRESERVE, Jan 05, 2025, 18:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

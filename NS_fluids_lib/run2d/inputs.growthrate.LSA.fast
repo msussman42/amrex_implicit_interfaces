@@ -69,12 +69,16 @@ amr.check_int       = 1  # number of timesteps between checkpoints LSA
 amr.check_file      = chk     # root name of checkpoint file
 #amr.plot_int        = 100 # non-intrusive LSA
 amr.plot_int        = 1  # non-intrusive LSA
+# 1=LSA_N_EXTRA
+# 2=LSA_NP1_EXTRA
+# 3=LSA_EVEC_EXTRA
+amr.LSA_plot_index=0
 #amr.plot_int       = 20 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 256
 cg.min_max_grid_size   = 256
-#amr.restart         = chk00000  #non-intrusive LSA
+amr.restart         = chk00000LSA00000  #non-intrusive LSA
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
@@ -97,7 +101,7 @@ ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
 ns.fixed_dt	  = 0.002   # hardwire dt non-intrusive LSA 
 
-amr.LSA_activate=0
+amr.LSA_activate=1
 amr.LSA_nsteps_power_method=2 # non-intrusive LSA
 
 ns.sum_interval   = 1        # timesteps between computing mass 
@@ -130,12 +134,12 @@ ns.xblob5=0.0           # wall vertical gas velocity (x=xhi)
 ns.xblob=1.0                  # base position of gas/liquid interface
 #ns.yblob=10.0                # wave length of perturbation
 #ns.yblob=19.634954            # wave length of perturbation (2*H)
-#ns.yblob=2.0 #yblob=2 if non-intrusive LSA
+ns.yblob=2.0 #yblob=2 if non-intrusive LSA
 #ns.yblob=9.0  #yblob=wave length=2 pi/(.7/r0)=2*pi*r0/.7  L=72/NINT(72/lambda)
 #ns.yblob=36.0  #yblob=wave length=2 pi/(.174/r0)=2*pi*r0/.174 
 ns.zblob=0.0
-ns.radblob=0.0 # non-intrusive LSA
-#ns.radblob=0.2 # perturbation 
+#ns.radblob=0.0 # non-intrusive LSA
+ns.radblob=0.2 # perturbation  non-intrusive LSA
 ns.denfact=1.0
 # velfact=0 => vinletgas (liquid inflow), advbot (gas inflow)
 ns.velfact=0.0 # pressure gradient in z direction (streamwise direction) 
