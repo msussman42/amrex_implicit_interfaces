@@ -23787,12 +23787,53 @@ NavierStokes::writePlotFile (
  int save_project_slab_step=project_slab_step;
  int save_divu_outer_sweeps=divu_outer_sweeps;
 
+ int LSA_code=slab_step_in-ns_time_order;
+ int swap_flag=0;
+
+ if (LSA_code<0) {
+  //do nothing
+ } else if (LSA_code==LSA_N_EXTRA) {
+  if (parent->LSA_current_step>0) {
+   swap_flag=1;
+  } else if (parent->LSA_current_step==0) {
+   if (parent->levelSteps(0)>parent->initial_levelSteps) {
+    swap_flag=1;
+   } else if (parent->levelSteps(0)==parent->initial_levelSteps) {
+    //do nothing
+   } else
+    amrex::Error("parent->levelSteps(0) invalid");
+  } else
+   amrex::Error("parent->LSA_current_step invalid");
+ } else if (LSA_code==LSA_NP1_EXTRA) {
+  if (parent->LSA_current_step>0) {
+   swap_flag=1;
+  } else if (parent->LSA_current_step==0) {
+   //do nothing
+  } else
+   amrex::Error("parent->LSA_current_step invalid");
+ } else if (LSA_code==LSA_EVEC_EXTRA) {
+  if (parent->LSA_current_step>0) {
+   swap_flag=1;
+  } else if (parent->LSA_current_step==0) {
+   //do nothing
+  } else
+   amrex::Error("parent->LSA_current_step invalid");
+ } else
+  amrex::Error("LSA_code invalid in writePlotFile");
+
  if (level==0) {
-  if (slab_step_in>ns_time_order-1) {
-   for (int ilev=finest_level;ilev>=0;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
-   }
+  if (LSA_code>=0) {
+
+   if (swap_flag==1) {
+    for (int ilev=finest_level;ilev>=0;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+    }
+   } else if (swap_flag==0) {
+    //do nothing
+   } else
+    amrex::Error("swap_flag invalid");
+
    slab_step=ns_time_order-1;
   } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
    slab_step=slab_step_in; 
@@ -23814,6 +23855,57 @@ NavierStokes::writePlotFile (
  } else
   amrex::Error("divu_outer_sweeps invalid in writePlotFile");
 
+ if (LSA_code==LSA_EVEC_EXTRA) {
+
+  if (level==0) {
+
+   int LSA_digits=6;
+
+   std::string evec_root="LSA_EVEC_SNEW";
+   std::stringstream result;
+   result << evec_root;
+   std::string evec_string=amrex::Concatenate(result.str(),
+     parent->LSA_current_step,LSA_digits);
+
+   MultiFab& S_new_temp=get_new_data(State_Type,project_slab_step+1);
+
+   writeSanityCheckData(
+    evec_string,
+    "U,V,W,P,DEN1,T1,...",
+    local_caller_string,
+    State_Type+GET_NEW_DATA_OFFSET,
+    S_new_temp.nComp(),
+    -1,  //data_mf=-1
+    State_Type, //state_type_mf==State_Type
+    -1, //data_dir=-1
+    parent->levelSteps(0)); 
+   
+   evec_root="LSA_EVEC_LSNEW";
+   std::stringstream result2;
+   result2 << evec_root;
+   evec_string=amrex::Concatenate(result2.str(),
+     parent->LSA_current_step,LSA_digits);
+
+   MultiFab& LS_new_temp=get_new_data(LS_Type,project_slab_step+1);
+
+   writeSanityCheckData(
+    evec_string,
+    "LS1,LS2,...",
+    local_caller_string,
+    LS_Type+GET_NEW_DATA_OFFSET,
+    LS_new_temp.nComp(),
+    -1,  //data_mf=-1
+    LS_Type, //state_type_mf==LS_Type
+    -1, //data_dir=-1
+    parent->levelSteps(0)); 
+ 
+  } else if ((level>0)&&(level<=finest_level)) {
+   //do nothing
+  } else
+   amrex::Error("level invalid"); 
+
+ } else if (LSA_code!=LSA_EVEC_EXTRA) {
+
   // metrics_dataALL
   // MASKCOEF_MF
   // MASK_NBR_MF
@@ -23822,102 +23914,105 @@ NavierStokes::writePlotFile (
   // MASKSEM_MF
   // VOF_Recon_ALL
   // make_physics_varsALL
- if (level==0) {
-  prepare_post_process(local_caller_string);
- } // level==0
+  if (level==0) {
+   prepare_post_process(local_caller_string);
+  } // level==0
 
-  // output tecplot zonal files  x,y,z,u,v,w,phi,psi
+   // output tecplot zonal files  x,y,z,u,v,w,phi,psi
 
- if (level==0) {
+  if (level==0) {
 
-  writeTECPLOT_File(do_plot,do_slice);
+   writeTECPLOT_File(do_plot,do_slice);
 
-  int nsteps=parent->levelSteps(0);
-  if (nsteps>=0) {
-   //do nothing
-  } else {
-   std::cout << "nsteps= " << nsteps << '\n';
-   amrex::Error("nsteps invalid writePlotFile"); 
-  }
-				   
-  ParallelDescriptor::Barrier();
-  std::fflush(NULL);
-   // call FLUSH(6)
-  fort_flush_fortran();
-  ParallelDescriptor::Barrier();
-  std::cout.precision(20);
-
-  int blob_history_trigger=0;
-  if (blob_history_plot_int>0) {
-   if (nsteps%blob_history_plot_int == 0) {
-    blob_history_trigger=1;
+   int nsteps=parent->levelSteps(0);
+   if (nsteps>=0) {
+    //do nothing
+   } else {
+    std::cout << "nsteps= " << nsteps << '\n';
+    amrex::Error("nsteps invalid writePlotFile"); 
    }
-  } else if ((blob_history_plot_int==0)||
-             (blob_history_plot_int==-1)) {
-   // do nothing
-  } else
-   amrex::Error("blob_history_plot_int invalid");
+				   
+   ParallelDescriptor::Barrier();
+   std::fflush(NULL);
+    // call FLUSH(6)
+   fort_flush_fortran();
+   ParallelDescriptor::Barrier();
+   std::cout.precision(20);
 
-  if (blob_history_trigger==1) {
+   int blob_history_trigger=0;
+   if (blob_history_plot_int>0) {
+    if (nsteps%blob_history_plot_int == 0) {
+     blob_history_trigger=1;
+    }
+   } else if ((blob_history_plot_int==0)||
+              (blob_history_plot_int==-1)) {
+    // do nothing
+   } else
+    amrex::Error("blob_history_plot_int invalid");
 
-   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
-    std::cout << "BLOB HISTORY START_TIME= " << 
-      blob_history_class.start_time << '\n';
-    std::cout << "BLOB HISTORY END_TIME= " << 
-      blob_history_class.end_time << '\n';
-    std::cout << "BLOB HISTORY START_STEP= " << 
-      blob_history_class.start_step << '\n';
-    std::cout << "BLOB HISTORY END_STEP= " << 
-      blob_history_class.end_step << '\n';
+   if (blob_history_trigger==1) {
 
-    int history_size=blob_history_class.blob_history.size();
-    for (int i=0;i<history_size;i++) {
-     int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
-     for (int j=0;j<snapshot_size;j++) {
-      Real rad_min= 
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
+     std::cout << "BLOB HISTORY START_TIME= " << 
+       blob_history_class.start_time << '\n';
+     std::cout << "BLOB HISTORY END_TIME= " << 
+       blob_history_class.end_time << '\n';
+     std::cout << "BLOB HISTORY START_STEP= " << 
+       blob_history_class.start_step << '\n';
+     std::cout << "BLOB HISTORY END_STEP= " << 
+       blob_history_class.end_step << '\n';
+
+     int history_size=blob_history_class.blob_history.size();
+     for (int i=0;i<history_size;i++) {
+      int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
+      for (int j=0;j<snapshot_size;j++) {
+       Real rad_min= 
 	 blob_history_class.blob_history[i].snapshots[j].blob_axis_len[0];
-      Real rad_max=rad_min;
-      for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
-       rad_min=min(rad_min,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
-       rad_max=max(rad_max,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
-      }
-      Real defparm=-1.0;
-      if (rad_min+rad_max>0.0) {
-       defparm=(rad_max-rad_min)/(rad_max+rad_min);
-      }
+       Real rad_max=rad_min;
+       for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
+        rad_min=min(rad_min,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+        rad_max=max(rad_max,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+       }
+       Real defparm=-1.0;
+       if (rad_min+rad_max>0.0) {
+        defparm=(rad_max-rad_min)/(rad_max+rad_min);
+       }
 
-      std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,defparm,vol " <<
-       blob_history_class.blob_history[i].im << ' ' <<
-       i << ' ' <<
-       j << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].blob_center[0] << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].blob_center[1] << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].
-          blob_center[AMREX_SPACEDIM-1] << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].
-          blob_axis_len[0] << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].
-          blob_axis_len[1] << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].
-          blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
-       defparm << ' ' <<
-       blob_history_class.blob_history[i].snapshots[j].
-          blob_volume << '\n';
-     } //j
-    } //i
-    std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';
-   } //ParallelDescriptor::IOProcessor
-  } else if (blob_history_trigger==0) {
+       std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,defparm,vol " <<
+        blob_history_class.blob_history[i].im << ' ' <<
+        i << ' ' <<
+        j << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].blob_center[0] << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].blob_center[1] << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].
+           blob_center[AMREX_SPACEDIM-1] << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].
+           blob_axis_len[0] << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].
+           blob_axis_len[1] << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].
+           blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
+        defparm << ' ' <<
+        blob_history_class.blob_history[i].snapshots[j].
+           blob_volume << '\n';
+      } //j
+     } //i
+     std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';
+    } //ParallelDescriptor::IOProcessor
+   } else if (blob_history_trigger==0) {
+    //do nothing
+   } else {
+    amrex::Error("blob_history_trigger invalid");
+   }
+  } else if ((level>0)&&(level<=finest_level)) {
    //do nothing
-  } else {
-   amrex::Error("blob_history_trigger invalid");
-  }
- } else if ((level>0)&&(level<=finest_level)) {
-  //do nothing
+  } else
+   amrex::Error("level invalid");
+
  } else
-  amrex::Error("level invalid");
+  amrex::Error("LSA_code corrupted");
 
   //UtilCreateDirectoryDestructive is declared in
   //amrex-master/Src/Base/AMReX_Utility.cpp
@@ -23927,11 +24022,18 @@ NavierStokes::writePlotFile (
  UtilCreateDirectoryDestructive(path2);
 
  if (level==0) {
-  if (slab_step_in>ns_time_order-1) {
-   for (int ilev=finest_level;ilev>=0;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
-   }
+  if (LSA_code>=0) {
+
+   if (swap_flag==1) {
+    for (int ilev=finest_level;ilev>=0;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+     ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+    }
+   } else if (swap_flag==0) {
+    //do nothing
+   } else
+    amrex::Error("swap_flag invalid");
+
   } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
    //do nothing
   } else
