@@ -605,6 +605,9 @@ int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
 Real NavierStokes::projection_velocity_scale=1.0;
 
+Real NavierStokes::LSA_velocity_scale=0.1;
+Real NavierStokes::LSA_temperature_scale=0.1;
+
 int NavierStokes::num_elements_blobclass=-32767;
 int NavierStokes::BLB_MATRIX=-32767;
 int NavierStokes::BLB_RHS=-32767;
@@ -5304,6 +5307,9 @@ NavierStokes::read_params ()
 
     }
 
+    pp.queryAdd("LSA_velocity_scale",LSA_velocity_scale);
+    pp.queryAdd("LSA_temperature_scale",LSA_temperature_scale);
+
     projection_pressure_scale=1.0;
 
     if (some_materials_compressible()==1) {
@@ -6612,6 +6618,12 @@ NavierStokes::read_params ()
        projection_pressure_scale << '\n';
      std::cout << "projection_velocity_scale " << 
        projection_velocity_scale << '\n';
+
+     std::cout << "LSA_temperature_scale " << 
+       LSA_temperature_scale << '\n';
+
+     std::cout << "LSA_velocity_scale " << 
+       LSA_velocity_scale << '\n';
 
       //in AMReX_MemPool.cpp and AMReX_FArrayBox.cpp: 
       // ParmParse pp("fab");
@@ -11888,7 +11900,7 @@ void NavierStokes::LSA_normalize_eigenvector(
  } else
   amrex::Error("expecting dt_slab>0.0");
 
- Real velocity_scale=dx_finest[0]/dt_slab;
+ Real velocity_scale=1.0;
 
  int local_control_flag=NULL_CONTROL;
  int local_extra_comp=-1;
@@ -11946,12 +11958,12 @@ void NavierStokes::LSA_normalize_eigenvector(
  }
 
  for (int dir=0;dir<BL_SPACEDIM;dir++) {
-   //velocity_scale=dx_finest[0]/dt_slab;
+   //velocity_scale=1.0
   scale_parm[dir]=velocity_scale;
  }
  for (int im=0;im<num_materials;im++) {
   scale_parm[STATECOMP_STATES+
-    im*num_state_material+ENUM_TEMPERATUREVAR]=tempconst[im];
+    im*num_state_material+ENUM_TEMPERATUREVAR]=1.0;
  } //im=0 .. nmat-1
  for (int im=0;im<num_materials;im++) {
   LS_scale_parm[im]=2.0*dx_finest[0];
@@ -13473,8 +13485,8 @@ void NavierStokes::make_heat_source() {
 
   int null_perturbation=1;
 
-  NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
-  NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
+  NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
+  NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
 
   if ((NS_LSA_step_count>=0)&&
@@ -13518,7 +13530,8 @@ void NavierStokes::make_heat_source() {
     //dst+=a*src
     //dst,a,src,srccomp,dstcomp,numcomp,nghost
     int dstcomp=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
-    MultiFab::Saxpy(S_new,dt_slab,S_extra_comp,dstcomp,dstcomp,1,0);
+    MultiFab::Saxpy(S_new,LSA_temperature_scale,
+       S_extra_comp,dstcomp,dstcomp,1,0);
    } //im=0 ... nmat-1 
 
   } else
@@ -23796,9 +23809,9 @@ NavierStokes::writePlotFile (
   if (parent->LSA_current_step>0) {
    swap_flag=1;
   } else if (parent->LSA_current_step==0) {
-   if (parent->levelSteps(0)>parent->initial_levelSteps) {
+   if (parent->levelSteps(0)>parent->LSA_initial_levelSteps) {
     swap_flag=1;
-   } else if (parent->levelSteps(0)==parent->initial_levelSteps) {
+   } else if (parent->levelSteps(0)==parent->LSA_initial_levelSteps) {
     //do nothing
    } else
     amrex::Error("parent->levelSteps(0) invalid");

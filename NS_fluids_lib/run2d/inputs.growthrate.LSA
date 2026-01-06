@@ -55,6 +55,9 @@ amr.n_cell    = 32 256
 amr.max_level = 0
 ns.projection_pressure_scale=1.0
 
+ns.LSA_velocity_scale=0.1
+ns.LSA_temperature_scale=0.0
+
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 100000       # how often to regrid non-intrusive LSA
 amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
@@ -95,6 +98,7 @@ ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
 ns.fixed_dt	  = 0.0006   # hardwire dt
 
+amr.LSA_initial_levelSteps=0
 amr.LSA_activate=0
 amr.LSA_nsteps_power_method=2 # non-intrusive LSA
 

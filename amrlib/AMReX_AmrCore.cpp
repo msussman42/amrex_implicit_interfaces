@@ -1191,11 +1191,17 @@ AmrCore::restart (const std::string& filename)
        //
        for (int lev(0); lev <= finest_level; ++lev)
        {
+           if (1==0) {
+            std::cout << "prior to reset lev=" << lev << '\n';
+           }
            amr_level[lev].reset((*levelbld)());
             // internal to amr_level -> restart are the commands:
             // parent->SetBoxArray(level, grids);
             // parent->SetDistributionMap(level, dmap);
            amr_level[lev]->restart(*this, is,old_finest_level,finest_level);
+           if (1==0) {
+            std::cout << "after restart  lev=" << lev << '\n';
+           }
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
        }
@@ -1300,7 +1306,7 @@ AmrCore::restart (const std::string& filename)
          std::cout << "Restart time = " << dRestartTime << " seconds." << '\n';
         }
     }
-}
+} // end subroutine AmrCore:: restart
 
 void
 AmrCore::checkPoint ()
@@ -1535,10 +1541,21 @@ AmrCore::timeStep (Real time,
 
   if (level_0_already_regridded==0) {
 
-   regrid_level_0_on_restart();
+   if ((LSA_activate==1)&&
+       ((LSA_initial_levelSteps<level_steps[0])||
+        (LSA_current_step>0))) {
+    level_0_already_regridded=1;
+   } else if ((LSA_activate==0)||
+              ((LSA_initial_levelSteps==level_steps[0])&&
+               (LSA_current_step==0))) {
 
-   if (record_grid_info && ParallelDescriptor::IOProcessor())
-    printGridInfo(gridlog,0,finest_level);
+    regrid_level_0_on_restart();
+
+    if (record_grid_info && ParallelDescriptor::IOProcessor())
+     printGridInfo(gridlog,0,finest_level);
+
+   } else
+    amrex::Error("corrupt LSA parameters");
 
   } else if (level_0_already_regridded==1) {
 
@@ -1631,7 +1648,7 @@ AmrCore::timeStep (Real time,
 
 void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
-  Real initial_cumTime,int initial_levelSteps_in) {
+  Real initial_cumTime,int LSA_initial_levelSteps_in) {
 
  if ((LSA_nsteps_power_method>=1)&&
      (LSA_activate==1)&&
@@ -1642,7 +1659,7 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   amrex::Error("LSA_nsteps_power_method/LSA_current_step(_in) bad");
 
  for (int ilev=0;ilev<=finest_level;ilev++) {
-  level_steps[ilev]=initial_levelSteps_in;
+  level_steps[ilev]=LSA_initial_levelSteps_in;
  }
  cumtime=initial_cumTime;
 
@@ -1665,11 +1682,11 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
 
 void
 AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
-  int initial_levelSteps_in)
+  int LSA_initial_levelSteps_in)
 {
 
     LSA_current_step=LSA_current_step_in;
-    initial_levelSteps=initial_levelSteps_in;
+    LSA_initial_levelSteps=LSA_initial_levelSteps_in;
 
     if ((LSA_current_step>=0)&&
         (LSA_current_step<=LSA_nsteps_power_method)) {

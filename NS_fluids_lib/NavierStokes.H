@@ -2231,6 +2231,9 @@ protected:
     static Real projection_pressure_scale;
     static Real projection_velocity_scale;
 
+    static Real LSA_velocity_scale;
+    static Real LSA_temperature_scale;
+
     static Vector<Real> vorterr; // 0 to disable
     static int pressure_error_flag;  // 0 (check mag, default) 1=check diff
     static Vector<Real> pressure_error_cutoff; // 0 to disable

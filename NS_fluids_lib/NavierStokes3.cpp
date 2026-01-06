@@ -1808,10 +1808,10 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    } else if (parent->LSA_nsteps_power_method>=1) {
 
-     //parent->initial_levelSteps=amrptr->levelSteps(0) at the
+     //parent->LSA_initial_levelSteps=amrptr->levelSteps(0) at the
      //very beginning (main.cpp)
-    NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
-    NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
+    NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
+    NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
 
     if ((NS_LSA_step_count>=0)&&
         (NS_LSA_step_count<=NS_LSA_max_step_count)) {
@@ -1830,8 +1830,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      } else {
       std::cout << "parent->levelSteps(0)=" <<
         parent->levelSteps(0) << '\n';
-      std::cout << "parent->initial_levelSteps=" <<
-        parent->initial_levelSteps << '\n';
+      std::cout << "parent->LSA_initial_levelSteps=" <<
+        parent->LSA_initial_levelSteps << '\n';
       std::cout << "NS_LSA_step_count=" <<
         NS_LSA_step_count << '\n';
       amrex::Error("NS_LSA_step_count invalid");
@@ -1854,8 +1854,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      } else {
       std::cout << "parent->levelSteps(0)=" <<
         parent->levelSteps(0) << '\n';
-      std::cout << "parent->initial_levelSteps=" <<
-        parent->initial_levelSteps << '\n';
+      std::cout << "parent->LSA_initial_levelSteps=" <<
+        parent->LSA_initial_levelSteps << '\n';
       std::cout << "NS_LSA_step_count=" <<
         NS_LSA_step_count << '\n';
       amrex::Error("NS_LSA_step_count invalid");
@@ -1954,9 +1954,9 @@ Real NavierStokes::advance(Real time,Real dt) {
    } else if (parent->LSA_nsteps_power_method>=1) {
 
     NS_LSA_step_count=parent->levelSteps(0)-
-                      parent->initial_levelSteps;
+                      parent->LSA_initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-
-                          parent->initial_levelSteps;
+                          parent->LSA_initial_levelSteps;
 
     if ((NS_LSA_step_count>=0)&&
         (NS_LSA_step_count<=NS_LSA_max_step_count)) {
@@ -1980,8 +1980,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      } else {
       std::cout << "parent->levelSteps(0)=" <<
         parent->levelSteps(0) << '\n';
-      std::cout << "parent->initial_levelSteps=" <<
-        parent->initial_levelSteps << '\n';
+      std::cout << "parent->LSA_initial_levelSteps=" <<
+        parent->LSA_initial_levelSteps << '\n';
       std::cout << "NS_LSA_step_count=" <<
         NS_LSA_step_count << '\n';
       amrex::Error("NS_LSA_step_count invalid");
@@ -2001,8 +2001,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      } else {
       std::cout << "parent->levelSteps(0)=" <<
         parent->levelSteps(0) << '\n';
-      std::cout << "parent->initial_levelSteps=" <<
-        parent->initial_levelSteps << '\n';
+      std::cout << "parent->LSA_initial_levelSteps=" <<
+        parent->LSA_initial_levelSteps << '\n';
       std::cout << "NS_LSA_step_count=" <<
         NS_LSA_step_count << '\n';
       amrex::Error("NS_LSA_step_count invalid");
@@ -2092,8 +2092,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     //do nothing (no LSA)
    } else if (parent->LSA_nsteps_power_method>=1) {
 
-    NS_LSA_step_count=parent->levelSteps(0)-parent->initial_levelSteps;
-    NS_LSA_max_step_count=parent->LSA_max_step-parent->initial_levelSteps;
+    NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
+    NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
 
      //initialize non perturbed state (first power series method iteration
      //used to establish a base state)
