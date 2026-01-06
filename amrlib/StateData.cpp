@@ -203,6 +203,13 @@ StateData::define (
     } else
      amrex::Error("parent->LSA_extra_data invalid");
 
+    if (1==0) {
+     std::cout << "bfact_time_order in StateData::define= " <<
+      bfact_time_order << '\n';
+     std::cout << "LSA_extra_data in StateData::define= " <<
+      parent->LSA_extra_data << '\n';
+    }
+
     for (int i=0;i<=bfact_time_order+parent->LSA_extra_data;i++) {
 
      if (state_holds_data==1) {
@@ -331,6 +338,13 @@ StateData::restart (
     } else
      amrex::Error("LSA_extra_data==parent->LSA_extra_data failed");
 
+    if (1==0) {
+     std::cout << "bfact_time_order in StateData::restart= " <<
+      bfact_time_order << '\n';
+     std::cout << "LSA_extra_data in StateData::restart= " <<
+      parent->LSA_extra_data << '\n';
+    }
+
     for (int i=0;i<=bfact_time_order+parent->LSA_extra_data;i++) {
 
      if (state_holds_data==1) {
@@ -369,7 +383,7 @@ StateData::restart (
     }  // i=0 ... bfact_time_order+parent->LSA_extra_data
 
     buildBC();
-}
+} //end subroutine StateData::restart
 
 void
 StateData::buildBC ()
@@ -410,6 +424,13 @@ StateData::~StateData() {
   //do nothing
  } else
   amrex::Error("LSA_extra_data invalid");
+
+ if (1==0) {
+  std::cout << "bfact_time_order in StateData::~StateData= " <<
+    bfact_time_order << '\n';
+  std::cout << "LSA_extra_data in StateData::~StateData= " <<
+    LSA_extra_data << '\n';
+ }
 
  for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
 
@@ -1233,6 +1254,13 @@ StateData::checkPoint (const std::string& name,
     NewSuffix.resize(StateData_MAX_NUM_SLAB);
     Vector<std::string> mf_name;
     mf_name.resize(StateData_MAX_NUM_SLAB);
+
+    if (1==0) {
+     std::cout << "bfact_time_order in StateData::checkPoint= " <<
+      bfact_time_order << '\n';
+     std::cout << "LSA_extra_data in StateData::checkPoint " <<
+      LSA_extra_data << '\n';
+    }
 
     for (int i=0;i<=bfact_time_order+LSA_extra_data;i++) {
      std::stringstream slab_string_stream(std::stringstream::in |

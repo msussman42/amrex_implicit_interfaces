@@ -444,9 +444,9 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
   int null_perturbation=1;
 
   NS_LSA_step_count=parent->levelSteps(0)-
-                    parent->initial_levelSteps;
+                    parent->LSA_initial_levelSteps;
   NS_LSA_max_step_count=parent->LSA_max_step-
-                    parent->initial_levelSteps;
+                    parent->LSA_initial_levelSteps;
 
   if ((NS_LSA_step_count>=0)&&
       (NS_LSA_step_count<=NS_LSA_max_step_count)) {
@@ -488,7 +488,7 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
    //dst+=a*src
    //dst,a,src,srccomp,dstcomp,numcomp,nghost
    int dstcomp=STATECOMP_VEL;
-   MultiFab::Saxpy(U_new,dt_slab,S_extra_comp,dstcomp,dstcomp,
+   MultiFab::Saxpy(U_new,LSA_velocity_scale,S_extra_comp,dstcomp,dstcomp,
      AMREX_SPACEDIM,0);
 
   } else
