@@ -137,7 +137,8 @@ ns.density_floor=0.1 0.0001
 ns.speciesviscconst=0.0 0.0758
 ns.tempconst=300. 300. 
 
-ns.inflow_pressure= 878380.0 
+ns.inflow_pressure= 841000.0 
+#ns.inflow_pressure= 878380.0 
 #ns.outflow_pressure = 1514260.42973874
 ns.outflow_pressure=3468112.
 
@@ -189,6 +190,8 @@ prescribe_temperature_outflow=1
 #ns.hi_bc          = 1 0 0
 ns.lo_bc          = 3 1 
 ns.hi_bc          = 3 1 
+ns.pressure_lo_bc=3 2
+ns.pressure_hi_bc=3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
