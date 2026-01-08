@@ -33,6 +33,25 @@ implicit none
 
 integer, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
+! axis_dir=0 => tank geometry prescribed internally (not from file)  
+!   ZBOT (Vahab created level set function)
+! axis_dir=1 => num_aux_expect=0 (no auxiliary file!)
+!   TPCE (tank geometry prescribed internally)
+! CRYOGENIC_TANK_MK_OPEN_AUXFILE requires axis_dir=2 or 4
+! CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX requires axis_dir=2 or 4
+! TPCE THICK: heatera_coarse.vtk, heaterb_coarse.vtk,
+!   nozzlesource_coarse.vtk,sink_coarse.vtk,
+!   tank_coarse.vtk,nozzle_coarse.vtk
+! TPCE THIN: tpce_heatera.vtk, tpce_heaterb.vtk,
+!   nozzlesource_15deg.vtk,tpce_sink.vtk,
+!   tpce_shell.vtk,
+!   (nozzle_15deg.vtk not used),
+!   nozzle_15deg_01thick.vtk,
+!   tpce_ladhousing.vtk,
+! ZBOT THIN: zbot_flight_heatera.vtk,zbot_flight_heaterb.vtk,
+!    zbot_flight_inflow_thick.vtk,zbot_flight_outflow_thick.vtk,
+!    zbot_flight_tank_thicknozzles.vtk,zbot_flight_inletnozzle_thick.vtk,
+!    zbot_flight_outletnozzle_thick.vtk
 integer, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
 integer, PARAMETER :: ZBOT_FLIGHT_ID=1
 integer, PARAMETER :: TPCE_ID=0
