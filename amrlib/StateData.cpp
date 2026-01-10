@@ -215,6 +215,9 @@ StateData::define (
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,ncomp,desc->nExtra(),
        MFInfo().SetTag("new_data"),FArrayBoxFactory());
+      if (i>bfact_time_order) {
+       new_data[i]->setVal(0.0,0,ncomp,desc->nExtra());
+      }
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
      } else
@@ -350,6 +353,9 @@ StateData::restart (
      if (state_holds_data==1) {
       new_data[i]=new MultiFab(grids,dmap,desc->nComp(),desc->nExtra(),
         MFInfo().SetTag("new_data"),FArrayBoxFactory());
+      if (i>bfact_time_order) {
+       new_data[i]->setVal(0.0,0,desc->nComp(),desc->nExtra());
+      }
      } else if (state_holds_data==0) {
       new_data[i]=nullptr;
      } else

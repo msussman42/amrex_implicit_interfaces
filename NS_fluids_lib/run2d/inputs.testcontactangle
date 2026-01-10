@@ -47,7 +47,8 @@ ns.v=1
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 192 96 
+amr.n_cell    = 48 24 
+#amr.n_cell    = 192 96 
 amr.max_level =  0
 ns.ns_tiling=false
 
@@ -74,7 +75,7 @@ ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
 amr.check_int       = 100     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100    # CHANGE TO 1000
+amr.plot_int        = 1    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 48
@@ -98,7 +99,7 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
-ns.surface_tension_smoothing=10
+#ns.surface_tension_smoothing=10
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.viscosity_ratio_relaxation_factor=0.0 
 #ns.explicit_viscosity_dt=1.0
@@ -168,6 +169,7 @@ ns.velfact=0.0
 ns.probtype=55
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.heatviscconst=0.0 0.0 0.0 0.0
+ns.material_extend_velocity=2 0 1
 ns.material_type=0 0 0 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
 # FSI_flag for present phase/material
 # FSI_FLUID=0 fluid (default)
