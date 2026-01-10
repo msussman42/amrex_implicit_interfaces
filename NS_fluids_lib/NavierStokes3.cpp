@@ -280,7 +280,7 @@ void NavierStokes::init_rest_fraction(const std::string& caller_string) {
  } else
   amrex::Error("rest_fraction invalid");
 
-}
+} //end subroutine init_rest_fraction
 
 void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 
@@ -316,7 +316,7 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
  } else
   amrex::Error("rest_fraction invalid");
 
-}
+} //end subroutine finalize_rest_fraction
 
 // 1. advection
 // 2. smoothing
@@ -517,8 +517,10 @@ void NavierStokes::save_interface_data(
     amrex::Error("expecting material_extend_velocity[im_extension]>0");
 
    MultiFab* vofmf=
-    getState(1,STATECOMP_MOF+im_extension*ngeom_raw,ngeom_raw,cur_time_slab); 
-   MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,0,
+    getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
+
+   MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
+    im_extension*ngeom_raw,
     im_extension*ngeom_raw,ngeom_raw,1);
    MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
     //scomp,dcomp,ncomp,ngrow
@@ -714,6 +716,35 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
    sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
       im_extension);
+
+   if ((step_through_data==1)||(1==1)) {
+    int basestep_debug=nStep();
+    parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     project_slab_step,
+     divu_outer_sweeps);
+    std::cout << "press any number then enter:after sub_nonlinear_advection\n";
+    std::cout << "im_extension= " << im_extension << '\n';
+    std::cout << "smoothing_iter= " << smoothing_iter << '\n';
+    std::cout << "local_smoothing_flag= " << local_smoothing_flag << '\n';
+    std::cout << "advect_time_slab= " << advect_time_slab << '\n';
+    std::cout << "vel_time_slab= " << vel_time_slab << '\n';
+    std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+    std::cout << "num_divu_outer_sweeps= " << 
+     num_divu_outer_sweeps << '\n';
+    std::cout << "slab_step= " << slab_step << '\n';
+    std::cout << "project_slab_step= " << project_slab_step << '\n';
+    std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
+    std::cout << "FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
+    std::cout << "num_FSI_outer_sweeps= " << 
+      num_FSI_outer_sweeps << '\n';
+    std::cout << "NFSI_LIMIT= " << 
+      NFSI_LIMIT << '\n';
+    int n_input;
+    std::cin >> n_input;
+   }
+
 
    if (material_extend_velocity_flag>0) {
     save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
