@@ -509,6 +509,34 @@ void NavierStokes::save_interface_data(
     num_materials*ngeom_raw,num_materials,1);
    delete vofmf;
    delete lsmf;
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ncomp=1 ngrow=0
+    new_localMF(standard_interface_velocity_hold_MF+dir,1,0,dir);
+    if (local_smoothing_flag==0) {
+     MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
+     MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],*velmf,
+        0,0,1,0);
+     delete velmf;
+    } else if (local_smoothing_flag>0) {
+     int homflag=1;
+     int local_project_option=SOLVETYPE_VISC;
+     fort_overridepbc(&homflag,&local_project_option);
+     Vector<int> scompBC_map;
+     scompBC_map.resize(1);
+     scompBC_map[0]=0;
+     debug_ngrow(UMAC_STATIC_MF+dir,0,local_caller_string);
+      //grow=0,scomp=0,ncomp=1
+     GetStateFromLocalALL(UMAC_STATIC_MF+dir,0,0,1,
+      Umac_Type+dir,scompBC_map);
+     MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],
+      *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
+     homflag=0;
+     fort_overridepbc(&homflag,&local_project_option);
+    } else
+     amrex::Error("local_smoothing_flag invalid");
+   } //dir=0;dir<AMREX_SPACEDIM
+
   } else if ((im_extension>=0)&&
              (im_extension+1<=material_extend_velocity_flag)) {
    if (material_extend_velocity[im_extension]>0) {
@@ -539,9 +567,15 @@ void NavierStokes::save_interface_data(
       MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
       MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
         0,0,1,0);
+      MultiFab& Umac_new_new=get_new_data(Umac_Type+dir,project_slab_step+1);
+      MultiFab::Copy(Umac_new_new,
+        *localMF[standard_interface_velocity_hold_MF+dir],
+        0,0,1,0);
      } else if (local_smoothing_flag>0) {
       MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
        *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
+      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+       *localMF[standard_interface_velocity_hold_MF+dir],0,0,1,0);
      } else
       amrex::Error("local_smoothing_flag invalid");
     } //dir=0;dir<AMREX_SPACEDIM
@@ -552,6 +586,7 @@ void NavierStokes::save_interface_data(
     delete_localMF(standard_interface_hold_MF,1);
 
     delete_localMF(interface_velocity_hold_MF,AMREX_SPACEDIM);
+    delete_localMF(standard_interface_velocity_hold_MF,AMREX_SPACEDIM);
 
    } else if ((im_extension>=0)&&
               (im_extension+1<material_extend_velocity_flag)) {
@@ -687,7 +722,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
  if (material_extend_velocity_flag==0) {
   //do nothing
  } else if (material_extend_velocity_flag>0) {
-   //VFRAC,CEN,LS,UMAC
+   //VFRAC,CEN,LS,UMAC (project_slab_step+1) copied to interface_hold_MF, 
+   //interface_velocity_hold_MF
   save_interface_dataALL(SAVE_CONTROL,local_smoothing_flag,im_extension);
  } else
   amrex::Error("material_extend_velocity_flag invalid");
@@ -698,6 +734,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
  if (material_extend_velocity_flag==0) {
   //do nothing
  } else if (material_extend_velocity_flag>0) {
+   //copy VFRAC,CEN,LS to standard_interface_hold_MF
   save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
      im_extension);
  } else
@@ -707,6 +744,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
   if (material_extend_velocity[im_extension]>0) {
 
    if (material_extend_velocity_flag>0) {
+     //copy interface_hold_MF, interface_velocity_hold_MF back to
+     //state data. (project_slab_step+1)
+     //extrapolate the velocity field.
     save_interface_dataALL(RESTORE_CONTROL,local_smoothing_flag,im_extension);
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      delete_array(FSI_MAC_VELOCITY_MF+dir);
@@ -717,7 +757,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
       im_extension);
 
-   if ((step_through_data==1)||(1==1)) {
+   if ((step_through_data==1)||(1==0)) {
     int basestep_debug=nStep();
     parent->writeDEBUG_PlotFile(
      basestep_debug,
@@ -747,6 +787,18 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 
 
    if (material_extend_velocity_flag>0) {
+     //copy VFRAC,CEN,LS to improved_interface_hold_MF
+     //copy interface_velocity_hold_MF to Umac_new|UMAC_STATIC at
+     //velocity_slab_step.
+     //if (im_extension+1==material_extend_velocity_flag) then
+     // a) correct the volume fractions, centroids and levelset functions.
+     // b) copy interface_velocity_hold back to 
+     //    velocity_slab_step|UMAC_STATIC
+     // c) copy standard_interface_velocity_hold back to 
+     //    project_slab_step+1|UMAC_STATIC
+     // d) delete interface_hold,improved_interface_hold,
+     //    standard_interface_hold,interface_velocity_hold,
+     //    standard_interface_velocity_hold
     save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
        im_extension);
    } else

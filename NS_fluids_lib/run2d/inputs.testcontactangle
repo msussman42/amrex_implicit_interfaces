@@ -19,6 +19,10 @@ geometry.prob_lo   =  0.0  0.0
 geometry.prob_hi   =  6.0  3.0   # 6x6 box for 45 degree or 135
 geometry.is_periodic = 0 0 
 
+# 0 - centroid furthest from uncaptured centroid
+# 1 - smallest MOF error
+ns.mof_error_ordering=0
+ns.mof_ordering=2 3 1
 ns.EILE_flag=1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
@@ -75,7 +79,7 @@ ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
 amr.check_int       = 100     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1    # CHANGE TO 1000
+amr.plot_int        = 100    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 48

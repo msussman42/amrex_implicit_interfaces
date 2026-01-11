@@ -17294,7 +17294,7 @@ stop
 
       integer i,j,k
       integer dir,im,im_opp,im_primary,irank,last
-      integer lowest_rank
+      integer worst_rank
       real(amrex_real) uncapt
       real(amrex_real) test_vof
       integer vofcompraw
@@ -17340,7 +17340,7 @@ stop
        material_list_by_rank(irank)=0
       enddo
 
-      lowest_rank=0
+      worst_rank=0
 
       do im=1,num_materials
        if (material_extend_velocity(im).gt.0) then
@@ -17381,28 +17381,28 @@ stop
          stop
         endif
         material_list_by_rank(irank)=im
-        if (irank.gt.lowest_rank) then
-         lowest_rank=irank
+        if (irank.gt.worst_rank) then
+         worst_rank=irank
         endif
        endif
       enddo !im=1..num_materials
 
-      if (lowest_rank.ge.1) then
+      if (worst_rank.ge.1) then
        !do nothing
       else
-       print *,"expecting lowest_rank.ge.1: ",lowest_rank
+       print *,"expecting worst_rank.ge.1: ",worst_rank
        stop
       endif
 
       do im=1,num_materials
        if (material_extend_velocity(im).eq.0) then
         if (is_rigid(im).eq.0) then
-         lowest_rank=lowest_rank+1
-         if (lowest_rank.gt.num_materials) then
-          print *,"lowest_rank invalid: ",lowest_rank
+         worst_rank=worst_rank+1
+         if (worst_rank.gt.num_materials) then
+          print *,"worst_rank invalid: ",worst_rank
           stop
          endif
-         material_list_by_rank(lowest_rank)=im
+         material_list_by_rank(worst_rank)=im
         endif
        endif
       enddo !im=1,num_materials
@@ -17447,7 +17447,7 @@ stop
        
         last=0
         uncapt=one 
-        do irank=1,lowest_rank
+        do irank=1,worst_rank
 
          if (uncapt.gt.zero) then
           im=material_list_by_rank(irank)
@@ -17494,7 +17494,7 @@ stop
           stop
          endif
  
-        enddo !irank=1,lowest_rank
+        enddo !irank=1,worst_rank
 
         if (last.eq.0) then
          do im=1,num_materials

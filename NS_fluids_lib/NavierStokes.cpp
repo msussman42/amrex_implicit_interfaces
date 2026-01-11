@@ -22236,8 +22236,8 @@ void NavierStokes::writeInterfaceReconstruction() {
 
  std::string local_caller_string="writeInterfaceReconstruction";
 
- std::string path1="./temptecplot";
- UtilCreateDirectoryDestructive(path1);
+ std::string util_path="./temptecplot";
+ UtilCreateDirectoryDestructive(util_path);
 
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (level!=0)
@@ -22293,8 +22293,7 @@ void NavierStokes::writeInterfaceReconstruction() {
  }
  ParallelDescriptor::Barrier();
 
- std::string path2="./temptecplot";
- UtilCreateDirectoryDestructive(path2);
+ UtilCreateDirectoryDestructive(util_path);
 
 }  // end subroutine writeInterfaceReconstruction
 
@@ -22394,8 +22393,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  std::string local_caller_string="writeTECPLOT_File";
 
- std::string path1="./temptecplot";
- UtilCreateDirectoryDestructive(path1);
+ std::string util_path="./temptecplot";
+ UtilCreateDirectoryDestructive(util_path);
 
  if (level!=0)
   amrex::Error("level invalid writeTECPLOT_File");
@@ -22706,8 +22705,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
- std::string path2="./temptecplot";
- UtilCreateDirectoryDestructive(path2);
+ UtilCreateDirectoryDestructive(util_path);
 
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -23511,8 +23509,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
- std::string path3="./temptecplot";
- UtilCreateDirectoryDestructive(path3);
+ UtilCreateDirectoryDestructive(util_path);
 
 } // end subroutine writeTECPLOT_File
 
@@ -23536,8 +23533,8 @@ void NavierStokes::writeSanityCheckData(
  } else
   amrex::Error("tower_mf_id out of range");
 
- std::string path1="./temptecplot";
- UtilCreateDirectoryDestructive(path1);
+ std::string util_path="./temptecplot";
+ UtilCreateDirectoryDestructive(util_path);
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "in: writeSanityCheckData, root_string= " <<
@@ -23748,8 +23745,7 @@ void NavierStokes::writeSanityCheckData(
 
  ParallelDescriptor::Barrier();
 
- std::string path2="./temptecplot";
- UtilCreateDirectoryDestructive(path2);
+ UtilCreateDirectoryDestructive(util_path);
 
 } // end subroutine writeSanityCheckData
 
@@ -23775,8 +23771,8 @@ NavierStokes::writePlotFile (
   //amrex-master/Src/Base/AMReX_Utility.cpp
   //callbarrier=true
   //Create a new directory, removing old one if it exists.
- std::string path1="./temptecplot";
- UtilCreateDirectoryDestructive(path1);
+ std::string util_path="./temptecplot";
+ UtilCreateDirectoryDestructive(util_path);
 
  std::string local_caller_string="writePlotFile";
 
@@ -24051,8 +24047,7 @@ NavierStokes::writePlotFile (
   //amrex-master/Src/Base/AMReX_Utility.cpp
   //callbarrier=true
   //Create a new directory, removing old one if it exists.
- std::string path2="./temptecplot";
- UtilCreateDirectoryDestructive(path2);
+ UtilCreateDirectoryDestructive(util_path);
 
  if (level==0) {
   if (LSA_code>=0) {
