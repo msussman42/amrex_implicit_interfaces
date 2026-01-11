@@ -12530,7 +12530,7 @@ NavierStokes::SDC_setup_step() {
  } else
   amrex::Error("slab_step invalid"); 
 
-} // SDC_setup_step()
+} // end subroutine SDC_setup_step()
 
 
 void
@@ -23780,7 +23780,6 @@ NavierStokes::writePlotFile (
 
  std::string local_caller_string="writePlotFile";
 
- SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
 
  if ((slab_step_in>=0)&&
@@ -23789,16 +23788,35 @@ NavierStokes::writePlotFile (
  } else
   amrex::Error("slab_step_in invalid");
 
- SDC_outer_sweeps=SDC_outer_sweeps_in;
- if ((SDC_outer_sweeps>=0)&&
-     (SDC_outer_sweeps<ns_time_order)) {
+ int save_SDC_outer_sweeps=SDC_outer_sweeps;
+
+ if ((SDC_outer_sweeps_in>=0)&&
+     (SDC_outer_sweeps_in<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid in writePlotFile");
+  amrex::Error("SDC_outer_sweeps_in invalid in writePlotFile");
+
+ if ((save_SDC_outer_sweeps>=0)&&
+     (save_SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("save_SDC_outer_sweeps invalid in writePlotFile");
 
  int save_slab_step=slab_step;
  int save_project_slab_step=project_slab_step;
  int save_divu_outer_sweeps=divu_outer_sweeps;
+ Real save_prev_time_slab=prev_time_slab;
+ Real save_cur_time_slab=cur_time_slab;
+ Real save_vel_time_slab=vel_time_slab;
+ Real save_prescribed_vel_time_slab=prescribed_vel_time_slab;
+ Real save_dt_slab=dt_slab;
+ Real save_upper_slab_time=upper_slab_time;
+ Real save_lower_slab_time=lower_slab_time;
+ Real save_delta_slab_time=delta_slab_time;
+
+ SDC_setup();
+
+ SDC_outer_sweeps=SDC_outer_sweeps_in;
 
  int LSA_code=slab_step_in-ns_time_order;
  int swap_flag=0;
@@ -23984,8 +24002,10 @@ NavierStokes::writePlotFile (
 	 blob_history_class.blob_history[i].snapshots[j].blob_axis_len[0];
        Real rad_max=rad_min;
        for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
-        rad_min=min(rad_min,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
-        rad_max=max(rad_max,blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+        rad_min=min(rad_min,
+	 blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
+        rad_max=max(rad_max,
+	 blob_history_class.blob_history[i].snapshots[j].blob_axis_len[dir]);
        }
        Real defparm=-1.0;
        if (rad_min+rad_max>0.0) {
@@ -24062,6 +24082,17 @@ NavierStokes::writePlotFile (
  SDC_setup_step();
 
  divu_outer_sweeps=save_divu_outer_sweeps;
+
+ prev_time_slab=save_prev_time_slab;
+ cur_time_slab=save_cur_time_slab;
+ vel_time_slab=save_vel_time_slab;
+ prescribed_vel_time_slab=save_prescribed_vel_time_slab;
+ dt_slab=save_dt_slab;
+ upper_slab_time=save_upper_slab_time;
+ lower_slab_time=save_lower_slab_time;
+ delta_slab_time=save_delta_slab_time;
+
+ SDC_outer_sweeps=save_SDC_outer_sweeps;
 
 } // end subroutine writePlotFile
 
