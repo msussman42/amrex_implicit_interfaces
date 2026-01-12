@@ -19919,6 +19919,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
    }
 
    fort_vfrac_split_smooth(
+    &im_extension, //-1<=im_extension<num_materials
     &local_smoothing_flag,
     &nprocessed[tid_current],
     &tid_current,

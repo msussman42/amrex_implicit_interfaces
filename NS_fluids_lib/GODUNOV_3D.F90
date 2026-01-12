@@ -16180,6 +16180,7 @@ stop
       end subroutine fort_vfrac_split
 
       subroutine fort_vfrac_split_smooth( &
+       im_extension, & !-1<=im_extension<num_materials
        local_smoothing_flag, &
        nprocessed, &
        tid, &
@@ -16229,6 +16230,7 @@ stop
       integer, PARAMETER :: nhalf=1
       integer, INTENT(inout) :: nprocessed
       integer, INTENT(in) :: tid
+      integer, INTENT(in) :: im_extension
       integer, INTENT(in) :: local_smoothing_flag
 
       integer, PARAMETER :: ngrow=2
@@ -16443,6 +16445,13 @@ stop
        !do nothing
       else
        print *,"local_smoothing_flag invalid: ",local_smoothing_flag
+       stop
+      endif
+
+      if ((im_extension.ge.-1).and.(im_extension.lt.num_materials)) then
+       !do nothing
+      else
+       print *,"im_extension invalid: ",im_extension
        stop
       endif
 
@@ -16902,6 +16911,31 @@ stop
             stop
            endif
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
+
+           !DEBUGGING
+           if (1.eq.1) then
+            if (im_extension.eq.2) then
+             if (LS(D_DECL(icrse,jcrse,kcrse),im_extension+1).ge. &
+                 -two*dx(1)) then
+              if ((usten_donate(0).ne.zero).or. &
+                  (usten_donate(-1).ne.zero).or. &
+                  (usten_donate(1).ne.zero).or. &
+                  (usten_accept(0).ne.zero).or. &
+                  (usten_accept(-1).ne.zero).or. &
+                  (usten_accept(1).ne.zero)) then
+               print *,"expect zero velocity"
+               print *,"divu_outer_sweeps=",divu_outer_sweeps
+               print *,"dir_counter=",dir_counter
+               print *,"dx(1)= ",dx(1)
+               print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+               print *,"LS=",LS(D_DECL(icrse,jcrse,kcrse),im_extension+1)
+               print *,"usten_donate ",usten_donate
+               print *,"usten_accept ",usten_accept
+               stop
+              endif
+             endif
+            endif
+           endif
 
              ! normdir=0..sdim-1
            call derive_mappings( &

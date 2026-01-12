@@ -799,6 +799,7 @@ extern "C"
 
 
    void fort_vfrac_split_smooth(
+     int* im_extension, //-1<=im_extension<num_materials
      int* local_smoothing_flag,
      int* nprocessed,
      int* tid,
