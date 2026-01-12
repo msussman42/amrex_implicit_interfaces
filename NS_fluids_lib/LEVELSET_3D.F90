@@ -19345,7 +19345,7 @@ stop
       integer local_homflag
 
        !fort_extend_elastic_velocity
-      real(amrex_real), parameter :: elastic_extend_cells=3.0d0
+      real(amrex_real) :: elastic_extend_cells
 
       local_homflag=0
 
@@ -19371,6 +19371,7 @@ stop
        ! FSI_band_cells in subroutine fort_extrapolate_tensor
        ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
        ! in: fort_extend_elastic_velocity
+      elastic_extend_cells=ngrow_make_distance
       extend_offset=elastic_extend_cells*dxmaxLS
 
       if (bfact.lt.1) then

@@ -23,7 +23,7 @@ geometry.is_periodic = 0 0
 # 1 - smallest MOF error
 ns.mof_error_ordering=0
 ns.mof_ordering=2 3 1
-ns.EILE_flag=1
+ns.EILE_flag=-1 #Weymouth and Yue
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
@@ -107,7 +107,7 @@ ns.tension       = 1118.0 559.0 1118.0
 ns.density_ratio_relaxation_factor=2.0 #minimum density=maximum density / 2
 ns.viscosity_ratio_relaxation_factor=0.0 
 #ns.explicit_viscosity_dt=1.0
-ns.ngrow_distance=6
+ns.ngrow_distance=8
 ns.visc_coef_boundary_layer_factor=1.0
 #liquid,gas,solid
 #12,13,23
@@ -187,8 +187,8 @@ ns.denconst=1.0 0.001226 1.0
 ns.tempconst=293.0 293.0 293.0 
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 2 5  # 1 5 WIND  2 5 NO WIND
-ns.hi_bc          = 2 2
+ns.lo_bc          = 5 5  # 1 5 WIND  2 5 NO WIND
+ns.hi_bc          = 5 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
