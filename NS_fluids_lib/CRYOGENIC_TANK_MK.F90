@@ -37,8 +37,13 @@ integer, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 !   ZBOT (Vahab created level set function)
 ! axis_dir=1 => num_aux_expect=0 (no auxiliary file!)
 !   TPCE (tank geometry prescribed internally)
+!
 ! CRYOGENIC_TANK_MK_OPEN_AUXFILE requires axis_dir=2 or 4
 ! CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX requires axis_dir=2 or 4
+!
+! axis_dir==4: parabolic flight using AUXFILE(s) - Cryogenic temperatures
+!
+! TANK_MK_GEOM_DESCRIPTOR=TPCE_ID
 ! TPCE THICK: heatera_coarse.vtk, heaterb_coarse.vtk,
 !   nozzlesource_coarse.vtk,sink_coarse.vtk,
 !   tank_coarse.vtk,nozzle_coarse.vtk
@@ -48,6 +53,8 @@ integer, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 !   (nozzle_15deg.vtk not used),
 !   nozzle_15deg_01thick.vtk,
 !   tpce_ladhousing.vtk,
+!   
+! TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
 ! ZBOT THIN: zbot_flight_heatera.vtk,zbot_flight_heaterb.vtk,
 !    zbot_flight_inflow_thick.vtk,zbot_flight_outflow_thick.vtk,
 !    zbot_flight_tank_thicknozzles.vtk,zbot_flight_inletnozzle_thick.vtk,
@@ -622,9 +629,9 @@ idata=1
 
 z_shift=z
 
-if (axis_dir.eq.3) then
+if (axis_dir.eq.3) then !prescribed parabolic, cylinder
  !do nothing
-else if (axis_dir.eq.4) then
+else if (axis_dir.eq.4) then ! aux files parabolic
  ! -0.1 = a (-.05)+b
  ! 0.1= a(.25)+b
  ! 0.2=a(.3)  a=2/3
@@ -633,7 +640,7 @@ else if (axis_dir.eq.4) then
  !z=1/4=>z_shift=1/6-1/15=1/10
  z_shift=(2.0d0/3.0d0)*z-1.0d0/15.0d0  
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
@@ -667,9 +674,9 @@ else
      (parabolic_tinit(idata,index_1)-parabolic_tinit(idata-1,index_1))
 endif
 
-if (axis_dir.eq.3) then
+if (axis_dir.eq.3) then !prescribed parabolic, cylinder
  !do nothing
-else if (axis_dir.eq.4) then
+else if (axis_dir.eq.4) then !aux files parabolic
  temperature=temperature-300.0d0
  if (temperature.lt.20.28d0) then
   temperature=20.28d0
@@ -847,16 +854,16 @@ end subroutine interp_parabolic_xyz
    TANK_MK_INSULATE_R_HIGH = yblob/2.0d0 !yblob is height of cylindrical part
 
    ! TPCE
-  else if ((axis_dir.eq.1).or. &
-           (axis_dir.eq.2).or. &
-           (axis_dir.eq.4)) then ! heater on top
+  else if ((axis_dir.eq.1).or. & !TPCE (tank geometry prescribed internally)
+           (axis_dir.eq.2).or. & ! heater on top (use aux, no parabolic flt)
+           (axis_dir.eq.4)) then ! heater on top (parabolic flight)
 
    number_of_source_regions=3 ! heater A, inflow, outflow
 
-   if (axis_dir.eq.1) then
+   if (axis_dir.eq.1) then !TPCE (tank geometry prescribed internally)
     num_aux_expect=0
-   else if ((axis_dir.eq.2).or. &
-            (axis_dir.eq.4)) then
+   else if ((axis_dir.eq.2).or. & !heater on top (use aux, no parabolic flt)
+            (axis_dir.eq.4)) then !heater on top (use aux, parabolic flight)
 
     if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      num_aux_expect=7
@@ -906,9 +913,9 @@ end subroutine interp_parabolic_xyz
 
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
-   if (axis_dir.eq.2) then
+   if (axis_dir.eq.2) then !heater on top (use aux, no parabolic flt)
     !do nothing
-   else if (axis_dir.eq.4) then
+   else if (axis_dir.eq.4) then !heater on top (use aux, parabolic flight)
     call read_parabolic_data()
    else
     print *,"axis_dir invalid: ",axis_dir
@@ -917,7 +924,7 @@ end subroutine interp_parabolic_xyz
 
    !Experimental characterization of non-isothermal sloshing in microgravity
    !Monteiro et al 2024
-  else if (axis_dir.eq.3) then
+  else if (axis_dir.eq.3) then!tank geometry internally,parabolic flt, cylinder
    number_of_source_regions=0
    num_aux_expect=0
 
@@ -974,10 +981,10 @@ end subroutine interp_parabolic_xyz
   real(amrex_real), INTENT(out) :: LS
   real(amrex_real) :: xlo,xhi,ylo,yhi,xcen
 
-  if ((axis_dir.eq.0).or. &
-      (axis_dir.eq.1).or. &
-      (axis_dir.eq.2).or. &
-      (axis_dir.eq.4)) then
+  if ((axis_dir.eq.0).or. & !prescribed,ZBOT
+      (axis_dir.eq.1).or. & !prescribed,TPCE
+      (axis_dir.eq.2).or. & !aux files
+      (axis_dir.eq.4)) then !aux files,parabolic
 
    if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
        (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
@@ -1331,8 +1338,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
    ! Solid
 
-   if ((axis_dir.eq.0).or. & !ZBOT
-       (axis_dir.eq.1)) then !TPCE
+   if ((axis_dir.eq.0).or. & !prescribed,ZBOT
+       (axis_dir.eq.1)) then !prescribed,TPCE
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1347,9 +1354,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   !Z=abs(P(2))
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
-    if (axis_dir.eq.0) then !ZBOT
+    if (axis_dir.eq.0) then !prescribed, ZBOT
      ! do nothing
-    else if (axis_dir.eq.1) then ! TPCE
+    else if (axis_dir.eq.1) then ! prescribed, TPCE
      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
@@ -1400,7 +1407,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
     !Experimental characterization of non-isothermal sloshing in microgravity
     !Monteiro et al 2024
-   else if (axis_dir.eq.3) then
+   else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder 3 probes
     xcen=zero
     ycen=zero
      !LS(3)>0 outside the cylinder
@@ -1591,9 +1598,10 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-   if ((axis_dir.eq.0).or. &  !ZBOT problem
-       (axis_dir.eq.1).or. &  !TPCE problem
-       (axis_dir.eq.2)) then  !read e.g. tpce_geometry.vtk (TPCE problem)
+   if ((axis_dir.eq.0).or. &  !prescribed, ZBOT 
+       (axis_dir.eq.1).or. &  !prescribed, TPCE
+       (axis_dir.eq.2)) then  !aux files read e.g. tpce_geometry.vtk
+                              !(TPCE problem)
 
     do dir=1,SDIM
      VEL(dir)=0.0d0
@@ -1638,8 +1646,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
 
-   else if ((axis_dir.eq.3).or. &
-            (axis_dir.eq.4)) then
+   else if ((axis_dir.eq.3).or. & !prescribed parabolic, cylinder 3 probes
+            (axis_dir.eq.4)) then !aux files, parabolic
 
     do dir=1,SDIM
      VEL(dir)=0.0d0
@@ -2207,9 +2215,9 @@ if ((num_materials.eq.3).and. &
 
   ! temperature
 
-  if ((axis_dir.eq.0).or. &
-      (axis_dir.eq.1).or. &
-      (axis_dir.eq.2)) then
+  if ((axis_dir.eq.0).or. & !prescribed,ZBOT
+      (axis_dir.eq.1).or. & !prescribed,TPCE
+      (axis_dir.eq.2)) then !aux files
 
    if (t.eq.0.0d0) then
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
@@ -2220,8 +2228,8 @@ if ((num_materials.eq.3).and. &
     stop
    endif
 
-  else if ((axis_dir.eq.3).or. &
-           (axis_dir.eq.4))  then
+  else if ((axis_dir.eq.3).or. &  !prescribed, parabolic flight (cylinder)
+           (axis_dir.eq.4))  then !aux files, parabolic flight
    call interp_parabolic_tinit(x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
@@ -2238,11 +2246,13 @@ if ((num_materials.eq.3).and. &
   if (t.eq.0.0d0) then
    if (im.eq.2) then
     den=STATE(ibase+ENUM_DENVAR+1)
-    if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+    if ((axis_dir.eq.0).or. & !prescribed,ZBOT
+        (axis_dir.eq.1).or. & !prescribed,TPCE
+        (axis_dir.eq.2)) then !aux files
      temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
-    else if (axis_dir.eq.3) then
+    else if (axis_dir.eq.3) then !prescribed, parabolic flight (cylinder)
      temperature=295.41d0
-    else if (axis_dir.eq.4) then !LH2
+    else if (axis_dir.eq.4) then !LH2, aux files, parabolic
 !     temperature=20.0d0
      temperature=30.0d0
     else
@@ -2289,11 +2299,11 @@ if ((num_materials.eq.3).and. &
         fort_molar_mass(2)) !intent(in)
      if (abs(Pgamma-pressure).le.EPS2*pressure) then
       ! do nothing
-     else if ((axis_dir.eq.0).or. &
-              (axis_dir.eq.1).or. &
-              (axis_dir.eq.2).or. &
-              (axis_dir.eq.3).or. & ! parabolic test
-              (axis_dir.eq.4)) then 
+     else if ((axis_dir.eq.0).or. & !prescribed, ZBOT
+              (axis_dir.eq.1).or. & !prescribed, TPCE
+              (axis_dir.eq.2).or. & !aux files
+              (axis_dir.eq.3).or. & !prescribed,  parabolic test (cylinder)
+              (axis_dir.eq.4)) then !aux files, parabolic
       print *,"mismatch between Pgamma and Pgas"
       print *,"axis_dir=",axis_dir
       print *,"Pgamma=",Pgamma
@@ -2622,10 +2632,10 @@ endif
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-if ((axis_dir.eq.0).or. &
-    (axis_dir.eq.1).or. &
-    (axis_dir.eq.2).or. &
-    (axis_dir.eq.4)) then
+if ((axis_dir.eq.0).or. & !prescribed ZBOT
+    (axis_dir.eq.1).or. & !prescribed TPCE
+    (axis_dir.eq.2).or. & !aux files
+    (axis_dir.eq.4)) then !aux files, parabolic
 
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
   ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
@@ -2676,12 +2686,12 @@ if ((axis_dir.eq.0).or. &
      internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
   support_r=0.0d0
   do dir=1,SDIM
-   if (axis_dir.eq.0) then
+   if (axis_dir.eq.0) then !prescribed,ZBOT
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
-   else if (axis_dir.eq.1) then
+   else if (axis_dir.eq.1) then !prescribed TPCE
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
-   else if ((axis_dir.eq.2).or. &
-            (axis_dir.eq.4)) then
+   else if ((axis_dir.eq.2).or. & !aux files
+            (axis_dir.eq.4)) then !aux files, parabolic
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else
     print *,"axis_dir invalid: ",axis_dir
@@ -2734,7 +2744,7 @@ if ((axis_dir.eq.0).or. &
   stop
  endif
 
-else if (axis_dir.eq.3) then
+else if (axis_dir.eq.3) then !prescribed parabolic, cylinder
 
  if ((nsum1.eq.0).and.(nsum2.eq.0)) then
   !do nothing
@@ -2826,13 +2836,13 @@ integer :: im,iregion,dir
    regions_list(iregion,0)%region_energy_after=0.0d0 
   enddo ! iregion=1,number_of_source_regions
 
-  if (axis_dir.eq.0) then 
+  if (axis_dir.eq.0) then  !prescribed ZBOT
    regions_list(1,0)%region_material_id=3 !heater
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
-  else if ((axis_dir.eq.1).or. &
-           (axis_dir.eq.2).or. &
-           (axis_dir.eq.4)) then 
-   regions_list(1,0)%region_material_id=3 ! heater
+  else if ((axis_dir.eq.1).or. & !prescribed TPCE
+           (axis_dir.eq.2).or. & !aux files
+           (axis_dir.eq.4)) then !aux files, parabolic
+   regions_list(1,0)%region_material_id=3 ! heater A, top
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
     ! inflow
    regions_list(2,0)%region_material_id=1
@@ -2844,7 +2854,7 @@ integer :: im,iregion,dir
     regions_list(2,0)%region_velocity_prescribe(SDIM)= &
        xblob5/(Pi*(TANK_MK_NOZZLE_RAD**2.0d0))
    else
-    print *,"TANK_MK_NOZZLE_RAD invalid"
+    print *,"TANK_MK_NOZZLE_RAD invalid: ",TANK_MK_NOZZLE_RAD
     stop
    endif
     ! outflow
@@ -2853,7 +2863,7 @@ integer :: im,iregion,dir
    regions_list(3,0)%region_material_id=1
    regions_list(3,0)%region_volume_flux=-xblob5
    regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
-  else if (axis_dir.eq.3) then
+  else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
    !do nothing
   else
    print *,"axis_dir invalid: ",axis_dir
@@ -2903,7 +2913,7 @@ real(amrex_real) :: LS_tank(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
- if (axis_dir.eq.0) then ! ZBOT
+ if (axis_dir.eq.0) then ! prescribed, ZBOT
   TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
   if (TANK_MK_R_WIDTH.gt.0.0d0) then
    if (region_id.eq.1) then
@@ -2922,7 +2932,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      stop
     endif
    else
-    print *,"region_id invalid"
+    print *,"region_id invalid: ",region_id
     stop
    endif
   else
@@ -2930,7 +2940,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
- else if (axis_dir.eq.1) then !TPCE
+ else if (axis_dir.eq.1) then !prescribed, TPCE
 
   if (region_id.eq.1) then
    called_from_heater_source=1
@@ -2941,7 +2951,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    else if (LS_A.le.0.0d0) then
     charfn_out=0.0d0
    else
-    print *,"LS_A invalid"
+    print *,"LS_A invalid: ",LS_A
     stop
    endif
   else if (region_id.eq.2) then ! inflow
@@ -3005,8 +3015,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
- else if ((axis_dir.eq.2).or. &
-          (axis_dir.eq.4)) then
+ else if ((axis_dir.eq.2).or. & !aux files
+          (axis_dir.eq.4)) then !aux files, parabolic
 
   if (region_id.eq.1) then ! heater A (top)
    auxcomp=1
@@ -3050,7 +3060,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
- else if (axis_dir.eq.3) then
+ else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
   !do nothing
  else
   print *,"axis_dir invalid: ",axis_dir
@@ -3150,7 +3160,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   stop
  endif  
 
- if (axis_dir.eq.0) then ! ZBOT
+ if (axis_dir.eq.0) then ! prescribed, ZBOT
 
   if (im.eq.2) then ! vapor
    ! do nothing
@@ -3268,17 +3278,17 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
- else if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2).or. &
-          (axis_dir.eq.4)) then !TPCE
+ else if ((axis_dir.eq.1).or. & !prescribed TPCE
+          (axis_dir.eq.2).or. & !aux files
+          (axis_dir.eq.4)) then !aux files, parabolic, TPCE
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    called_from_heater_source=1
-   if (axis_dir.eq.1) then
+   if (axis_dir.eq.1) then !prescribed, TPCE
     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source)
-   else if ((axis_dir.eq.2).or. &
-            (axis_dir.eq.4)) then
+   else if ((axis_dir.eq.2).or. & !aux files
+            (axis_dir.eq.4)) then !aux files parabolic
     auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    else
@@ -3307,10 +3317,10 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
-  if ((axis_dir.eq.1).or. &
-      (axis_dir.eq.2)) then
+  if ((axis_dir.eq.1).or. & !prescribed TPCE
+      (axis_dir.eq.2)) then !aux files
    !do nothing
-  else if (axis_dir.eq.4) then
+  else if (axis_dir.eq.4) then !aux files parabolic
    if (cur_time.le.parabolic_lead_time) then
     thermal_k=zero
    else if (cur_time.ge.parabolic_lead_time) then
@@ -3324,7 +3334,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
- else if (axis_dir.eq.3) then !parabolic
+ else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
   if (cur_time.le.parabolic_lead_time) then
    thermal_k=zero
   else if (cur_time.ge.parabolic_lead_time) then
@@ -3931,12 +3941,12 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   gravity_vector_out(dir)=gravity_vector_in(dir)
  enddo
 
- if ((axis_dir.eq.0).or. &
-     (axis_dir.eq.1).or. &
-     (axis_dir.eq.2)) then
+ if ((axis_dir.eq.0).or. & !prescribed ZBOT
+     (axis_dir.eq.1).or. & !prescribed TPCE
+     (axis_dir.eq.2)) then !aux files
   !do nothing
- else if ((axis_dir.eq.3).or. &
-          (axis_dir.eq.4)) then
+ else if ((axis_dir.eq.3).or. & !prescribed parabolic, cylinder
+          (axis_dir.eq.4)) then !aux files, parabolic
   if ((gravity_vector_in(1).eq.zero).and. &
       (gravity_vector_in(SDIM-1).eq.zero).and. &
       (abs(abs(gravity_vector_in(SDIM))-9.8d0).le.0.1d0)) then
@@ -4017,10 +4027,12 @@ if ((num_materials.ge.3).and. &
   stop
  endif
 
- if ((axis_dir.eq.0).or.(axis_dir.eq.1).or.(axis_dir.eq.2)) then
+ if ((axis_dir.eq.0).or. & !prescribed ZBOT
+     (axis_dir.eq.1).or. & !prescribed TPCE
+     (axis_dir.eq.2)) then !aux files
   !do nothing
- else if ((axis_dir.eq.3).or. &
-          (axis_dir.eq.4)) then
+ else if ((axis_dir.eq.3).or. & !prescribed parabolic, cylinder
+          (axis_dir.eq.4)) then !aux files, parabolic
   if (assimilate_in%cur_time.le.parabolic_lead_time) then
    if (cell_flag.eq.-1) then
     call interp_parabolic_tinit(xcrit(SDIM),parabolic_temp)
