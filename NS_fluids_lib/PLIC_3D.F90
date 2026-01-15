@@ -1101,61 +1101,311 @@ stop
                  (num_fluid_materials_in_stencil.gt. &
                   num_fluid_materials_in_cell)) then
 
+         if (1.eq.0) then
+
+          !CMOF 
+          ! if num_materials_{cell}<num_materials_{supercell} and
+          !    num_materials_{supercell}>=3,
+          ! (i) E=||X_{supercell}-X(n,b)_{supercell}|| subject to the constraint
+          !     ||F_{supercell}-F(n,b)_{supercell}||=0 
+          ! (ii) it is possible for F(n,b)_{cell}>0 even if F_{cell}=0
+          ! (iii)
+          ! suppose number of fluid materials in super cell greater
+          ! than number of fluid materials in the center cell and 
+          ! also greater or equal to 3.
+          ! Then:
+          !   i) pick the material whose super cell material centroid 
+          !      is furthest from the super cell centroid.
+          !   ii) if the material from (i) does not appear in the center
+          !       cell, then how to find the intercept? valid volume
+          !       preserving intercepts are multi-valued (non-unique)
+          !   iii) The scenario from (ii) is unacceptable since whatever
+          !        non-unique intercept is chosen, effects the slope for
+          !        the next "cut."
+          ! instead for general CMOF reconstruction (>=3 materials):
+          ! 1. find CMOF reconstruction using both CMOF centroids and
+          !    CMOF volumes.
+          ! 2. Find the centroids of the resulting reconstruction in the
+          !    center cell.
+          ! 3. If both the original center cell volume fractions and
+          !    center cell reconstructed volume fraction satisfy 0<F<1,
+          !    then replace center cell centroids with those from step 3.
+          ! 4. Do a standard MOF reconstruction.
           
-         continuous_mof_parm_super=STANDARD_MOF
+          ! E=||X_{supercell}-X(n,b)_{supercell}|| subject to the constraint
+          !   ||F_{supercell}-F(n,b)_{supercell}||=0 
+          continuous_mof_parm_super=CMOF_F_AND_X
 
-         do im=1,num_materials*ngeom_recon
-          mofdata_super(im)=mofdata(im)
-          mofdata_super_vfrac(im)=mofdata_super(im)
-         enddo
-         do k1=klosten,khisten
-         do j1=-1,1
-         do i1=-1,1
-          cmofsten(D_DECL(i1,j1,k1))=1
-         enddo
-         enddo
-         enddo
-         do im=1,num_materials
-          vof_super(im)=voflist_center(im)
-         enddo
+           !is_rigid(im)==1 => mofdata_super=mofdata
+          do dir=1,num_materials*ngeom_recon
+           mofdata_super_vfrac(dir)=mofdata_super(dir)
+          enddo
 
-          !mofdata_super: centroid super cell, vfrac regular cell
-          !mofdata_super_vfrac: centroid super cell, vfrac super cell
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+            !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+           mofdata_super_vfrac(vofcomprecon)=vof_super(im)
+          enddo
 
-         call multimaterial_MOF( &
-          tid_in, &
-          bfact,dx, &
-          xsten, &
-          nhalf, &
-          mof_verbose, &
-          use_ls_data, & ! use_ls_data=1
-          LS_stencil, &
-          geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist_old(1,1,1,tid_in+1), &
-          nmax, &
-          nmax, &
-          mofdata_super_vfrac, & !intent(inout)
-          vof_super, & !intent(in)
-          multi_centroidA, & ! (num_materials,sdim) intent(out)
-          continuous_mof_parm_super, &
-          cmofsten, & !intent(in)
-          grid_index, &
-          grid_level, &
-          SDIM)
+           !mofdata_super: centroid super cell, vfrac regular cell
+           !mofdata_super_vfrac: centroid super cell, vfrac super cell
 
-         ! mof_calls, mof_iterations, mof_errors are init. in 
-         ! multimaterial_MOF
-         do im=1,num_materials
-          total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
-          total_iterations(im)= &
-           total_iterations(im)+mof_iterations(tid_in+1,im)
-          total_errors(im)= &
-           total_errors(im)+mof_errors(tid_in+1,im)
-         enddo  ! im=1..num_materials
+          call multimaterial_MOF( &
+           tid_in, &
+           bfact,dx, &
+           xsten, &
+           nhalf, &
+           mof_verbose, &
+           use_ls_data, & ! use_ls_data=1
+           LS_stencil, &
+           geom_xtetlist(1,1,1,tid_in+1), &
+           geom_xtetlist_old(1,1,1,tid_in+1), &
+           nmax, &
+           nmax, &
+           mofdata_super_vfrac, & !intent(inout)
+           vof_super, & !intent(in)
+           multi_centroidA, & ! (num_materials,sdim) relative to supercell
+           continuous_mof_parm_super, &
+           cmofsten, & !intent(in)
+           grid_index, &
+           grid_level, &
+           SDIM)
 
-         do im=1,num_materials*ngeom_recon
-          mofdata_super(im)=mofdata_super_vfrac(im)
-         enddo
+          ! mof_calls, mof_iterations, mof_errors are init. in 
+          ! multimaterial_MOF
+          do im=1,num_materials
+           total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
+           total_iterations(im)= &
+            total_iterations(im)+mof_iterations(tid_in+1,im)
+           total_errors(im)= &
+            total_errors(im)+mof_errors(tid_in+1,im)
+          enddo  ! im=1..num_materials
+
+           !currently: mofdata_super(vofcomprecon)=mofdata(vofcomprecon)
+           !multi_get_volume_grid needs 
+           !mofdata_super(vofcomprecon)=vof_super(im)
+           !i.e. the volume fractions must be consistent with the 
+           !slopes and intercept.
+           !is_rigid(im)==0 => vof_super(im)=super cell vfrac
+           !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+            !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+           mofdata_super(vofcomprecon)=vof_super(im)
+           do dir=1,SDIM
+            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
+           enddo
+            ! order,slope,intercept (SDIM+2)
+           do dir=SDIM+1,ngeom_recon-1
+            mofdata_super(vofcomprecon+dir)= &
+                mofdata_super_vfrac(vofcomprecon+dir)
+           enddo
+          enddo ! im=1..num_materials
+
+           !mofdata_super: centroid regular cell, vfrac regular cell,
+           !               reconstruction super cell.
+
+          call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+           volume_super,cen_super,SDIM)
+
+          call multi_get_volume_grid( &
+           caller_id, &
+           tid_in, &
+           EPS_11_4, &
+           tessellate, & ! =0
+           bfact,dx, &
+           xsten,nhalf, & ! phi = n dot (x-x0) + intercept
+           mofdata_super, &
+           xsten,nhalf, & ! find volumes within xsten (cell i,j,k)
+           xtet, &        ! not within xtet
+           multi_volume, &
+           multi_cen, & !(sdim,num_materials) absolute frame of ref.
+           multi_area, & !(num_materials)
+           geom_xtetlist_uncapt(1,1,1,tid_in+1), &
+           nmax, &
+           nmax, &
+           SDIM, &
+           shapeflag) !shapeflag=0
+
+          vfrac_fluid_sum=zero
+          do im=1,num_materials
+           if (is_rigid(im).eq.0) then
+            vfrac_fluid_sum=vfrac_fluid_sum+multi_volume(im)
+           else if (is_rigid(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1,..,num_materials
+
+          if (vfrac_fluid_sum.gt.zero) then
+           do im=1,num_materials
+            if (is_rigid(im).eq.0) then
+             multi_volume(im)=multi_volume(im)/vfrac_fluid_sum
+            else if (is_rigid(im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid invalid"
+             stop
+            endif
+           enddo ! im=1,..,num_materials
+          else
+           print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
+           stop
+          endif
+
+          do im=1,num_materials
+           if (is_rigid(im).eq.0) then
+
+            vofcomprecon=(im-1)*ngeom_recon+1
+            mofdata_super(vofcomprecon)=mofdata(vofcomprecon)
+            vfrac_local(im)=mofdata_super(vofcomprecon)
+            vof_super(im)=vfrac_local(im)
+
+             ! "multi_get_volume_grid" returns valid centroids for materials
+             ! that are present in the center cell.  If a material is not
+             ! present in the center cell (post supercell reconstruction), then
+             ! "multi_get_volume_grid" will return a default.
+             !
+             ! if a material, post super cell reconstruction, disappears 
+             ! from the center cell, then we use the original centroid
+             ! in doing the final post "mof reconstruction," otherwise if
+             ! a given material is present in the center cell,
+             ! we replace the centroid with the super cell derived 
+             ! centroid.  The final post "mof reconstruction" uses
+             ! regular(local center cell) reference volume fractions.
+            if ((vfrac_local(im).ge.0.01D0).and. &
+                (vfrac_local(im).le.0.99D0).and. &
+                (multi_volume(im).ge.0.01D0).and. &
+                (multi_volume(im).le.0.99D0)) then
+
+             do dir=1,SDIM
+              cmof_centroid=multi_cen(dir,im)-cen_super(dir)
+              mofdata_super(vofcomprecon+dir)=cmof_centroid
+             enddo
+            else if (abs(vfrac_local(im)).le.0.01D0) then
+             ! do nothing
+            else if (abs(one-vfrac_local(im)).le.0.01D0) then
+             ! do nothing
+            else if (abs(multi_volume(im)).le.0.01D0) then
+             ! do nothing
+            else if (abs(one-multi_volume(im)).le.0.01D0) then
+             ! do nothing
+            else
+             print *,"vfrac_local or multi_volumeinvalid"
+             stop
+            endif
+
+           else if (is_rigid(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid: ",im,is_rigid(im)
+            stop
+           endif
+          enddo ! im=1,num_materials
+
+           ! replace the slopes with the particle container derived slopes.
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+           !vof,cenref,order,slope,intercept
+           do dir=1,SDIM
+            mofdata_super(vofcomprecon+SDIM+1+dir)= &
+              slopes(D_DECL(i,j,k),vofcomprecon+SDIM+1+dir)
+           enddo
+          enddo ! im=1,num_materials
+
+          continuous_mof_parm=STANDARD_MOF
+
+          call multimaterial_MOF( &
+           tid_in, &
+           bfact,dx, &
+           xsten, &
+           nhalf, &
+           mof_verbose, &
+           use_ls_data, & ! use_ls_data=1
+           LS_stencil, &
+           geom_xtetlist(1,1,1,tid_in+1), &
+           geom_xtetlist_old(1,1,1,tid_in+1), &
+           nmax, &
+           nmax, &
+           mofdata_super, & !intent(inout)
+           vof_super, &
+           multi_centroidA, & ! (num_materials,sdim) relative to supercell
+           continuous_mof_parm, &
+           cmofsten, & !intent(in)
+           grid_index, &
+           grid_level, &
+           SDIM)
+
+          ! mof_calls, mof_iterations, mof_errors are init. in 
+          ! multimaterial_MOF
+          do im=1,num_materials
+           total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
+           total_iterations(im)= &
+            total_iterations(im)+mof_iterations(tid_in+1,im)
+           total_errors(im)= &
+            total_errors(im)+mof_errors(tid_in+1,im)
+          enddo  ! im=1..num_materials
+ 
+         else
+
+          continuous_mof_parm_super=STANDARD_MOF
+
+          do im=1,num_materials*ngeom_recon
+           mofdata_super(im)=mofdata(im)
+           mofdata_super_vfrac(im)=mofdata_super(im)
+          enddo
+          do k1=klosten,khisten
+          do j1=-1,1
+          do i1=-1,1
+           cmofsten(D_DECL(i1,j1,k1))=1
+          enddo
+          enddo
+          enddo
+          do im=1,num_materials
+           vof_super(im)=voflist_center(im)
+          enddo
+
+           !mofdata_super: centroid super cell, vfrac regular cell
+           !mofdata_super_vfrac: centroid super cell, vfrac super cell
+
+          call multimaterial_MOF( &
+           tid_in, &
+           bfact,dx, &
+           xsten, &
+           nhalf, &
+           mof_verbose, &
+           use_ls_data, & ! use_ls_data=1
+           LS_stencil, &
+           geom_xtetlist(1,1,1,tid_in+1), &
+           geom_xtetlist_old(1,1,1,tid_in+1), &
+           nmax, &
+           nmax, &
+           mofdata_super_vfrac, & !intent(inout)
+           vof_super, & !intent(in)
+           multi_centroidA, & ! (num_materials,sdim) intent(out)
+           continuous_mof_parm_super, &
+           cmofsten, & !intent(in)
+           grid_index, &
+           grid_level, &
+           SDIM)
+
+          ! mof_calls, mof_iterations, mof_errors are init. in 
+          ! multimaterial_MOF
+          do im=1,num_materials
+           total_calls(im)=total_calls(im)+mof_calls(tid_in+1,im)
+           total_iterations(im)= &
+            total_iterations(im)+mof_iterations(tid_in+1,im)
+           total_errors(im)= &
+            total_errors(im)+mof_errors(tid_in+1,im)
+          enddo  ! im=1..num_materials
+
+          do im=1,num_materials*ngeom_recon
+           mofdata_super(im)=mofdata_super_vfrac(im)
+          enddo
+
+         endif
 
         else
          print *,"continuous_mof_parm or num_fluid_materials bad"

@@ -91,8 +91,10 @@ real(amrex_real) :: TANK_MK_INTERFACE_LOCATION
 real(amrex_real) :: TANK_MK_END_RADIUS
 ! Tank spherical end curvature center (0,C_z)
 real(amrex_real) :: TANK_MK_END_CENTER
-! Heater flux
+! Heater flux A
 real(amrex_real) :: TANK_MK_HEATER_WATTS
+! Heater flux B
+real(amrex_real) :: TANK_MK_HEATER_WATTS_B
 ! Heater location in dim=2 direction
 real(amrex_real) :: TANK_MK_HEATER_WALL_MODEL
 real(amrex_real) :: TANK_MK_HEATER_LOW
@@ -158,7 +160,7 @@ integer :: stat
  endif
 
  file_format=1 ! vtk format
- if (axis_dir.eq.2) then
+ if (axis_dir.eq.2) then !deprecated code
   open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
   if (stat.ne.0) then
    print *,"tpce_geometry.vtk can not be opened"
@@ -314,9 +316,9 @@ integer :: dir
 
    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
-    if (part_id.eq.1) then ! side heater_a 
+    if (part_id.eq.1) then ! side heater_a (front)
      call check_outside_box(xcell,exterior_BB,LS,MASK)
-    else if (part_id.eq.2) then ! side heater b
+    else if (part_id.eq.2) then ! side heater b (back)
      call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.3) then ! source
      call check_outside_box(xcell,exterior_BB,LS,MASK)
@@ -366,8 +368,8 @@ integer, INTENT(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
      (auxcomp.le.num_aux_expect)) then
-  if ((axis_dir.eq.2).or. &
-      (axis_dir.eq.4)) then
+  if ((axis_dir.eq.2).or. & !aux files either ZBOT or TPCE, no parabolic flight
+      (axis_dir.eq.4)) then !aux files either ZBOT or TPCE, parabolic flight
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
 
@@ -425,9 +427,9 @@ integer, INTENT(out) :: aux_ncells_max_side
 
      else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
-      if (auxcomp.eq.1) then ! side heater a 
+      if (auxcomp.eq.1) then ! side heater a (front)
        aux_ncells_max_side=64
-      else if (auxcomp.eq.2) then ! side heater b
+      else if (auxcomp.eq.2) then ! side heater b (back)
        aux_ncells_max_side=64
       else if (auxcomp.eq.3) then ! source
        aux_ncells_max_side=256
@@ -484,7 +486,8 @@ integer :: stat
 
  file_format=1 ! vtk format
 
- if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
+ if ((axis_dir.eq.2).or. & !aux files, ZBOT or TPCE, no parabolic flight
+     (axis_dir.eq.4)) then !aux files, ZBOT or TPCE, parabolic flight
 
   if (fort_num_local_aux_grids.eq.num_aux_expect) then
 
@@ -555,10 +558,10 @@ integer :: stat
 
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
-     if (part_id.eq.1) then ! side heatera
+     if (part_id.eq.1) then ! side heatera (front)
       open(unit=unit_id,file= 'zbot_flight_heatera.vtk',status='old', &
               iostat=stat)
-     else if (part_id.eq.2) then ! side heaterb
+     else if (part_id.eq.2) then ! side heaterb (back)
       open(unit=unit_id,file= 'zbot_flight_heaterb.vtk',status='old', &
               iostat=stat)
      else if (part_id.eq.3) then
@@ -833,10 +836,11 @@ end subroutine interp_parabolic_xyz
   TANK_MK_BUBBLE_Z         = zblob2
 
   TANK_MK_HEATER_WATTS      = xblob3
+  TANK_MK_HEATER_WATTS_B    = xblob9
 
    ! see Barsi and Kassemi 2013, Journal of Thermal Science and Engineering
    ! Applications.
-   ! ZBOT
+   ! ZBOT (geometry hardwired)
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
 
    print *,"axis_dir=0, tank geometry prescribed internally (not from file)"
@@ -858,7 +862,7 @@ end subroutine interp_parabolic_xyz
            (axis_dir.eq.2).or. & ! heater on top (use aux, no parabolic flt)
            (axis_dir.eq.4)) then ! heater on top (parabolic flight)
 
-   number_of_source_regions=3 ! heater A, inflow, outflow
+   number_of_source_regions=4 ! heater A, inflow, outflow
 
    if (axis_dir.eq.1) then !TPCE (tank geometry prescribed internally)
     num_aux_expect=0
@@ -1455,6 +1459,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   return
  end subroutine CRYOGENIC_TANK_MK_LS
 
+   !axis_dir.eq.1 prescribed, TPCE
+   !region_id=1
    !LS>0 in heater A region.
    !x(2) is the vertical direction
  subroutine CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS,called_from_heater_source)
@@ -2804,7 +2810,7 @@ integer :: im,iregion,dir
  if (number_of_source_regions.ge.0) then
   ! do nothing
  else
-  print *,"number_of_source_regions invalid"
+  print *,"number_of_source_regions invalid: ",number_of_source_regions
   stop
  endif 
 
@@ -2863,6 +2869,10 @@ integer :: im,iregion,dir
    regions_list(3,0)%region_material_id=1
    regions_list(3,0)%region_volume_flux=-xblob5
    regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
+
+   regions_list(4,0)%region_material_id=3 ! heater B, side
+   regions_list(4,0)%region_energy_flux=TANK_MK_HEATER_WATTS_B ! Watts=J/s
+
   else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
    !do nothing
   else
@@ -2890,7 +2900,9 @@ real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(out) :: charfn_out
 real(amrex_real) :: TANK_MK_R_WIDTH
-real(amrex_real) :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
+real(amrex_real) :: LS_A
+real(amrex_real) :: LS_B
+real(amrex_real) :: shell_R,shell_center,LS_SHELL,LS_nozzle,zdiff
 integer :: called_from_heater_source
 real(amrex_real) :: r_cyl
 real(amrex_real) :: x3D(3)
@@ -3029,6 +3041,20 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     print *,"LS_A invalid"
     stop
    endif
+
+  else if (region_id.eq.4) then ! heater B (side)
+
+   auxcomp=2
+   call interp_from_aux_grid(auxcomp,xfoot3D,LS_B)
+   if (LS_B.ge.0.0d0) then
+    charfn_out=one
+   else if (LS_B.le.0.0d0) then
+    charfn_out=0.0d0
+   else
+    print *,"LS_B invalid: ",LS_B
+    stop
+   endif
+
   else if (region_id.eq.2) then ! inflow
    auxcomp=3
    call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
@@ -3042,7 +3068,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     print *,"LS_A invalid"
     stop
    endif
+
   else if (region_id.eq.3) then ! outflow
+
    auxcomp=4
    call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    call CRYOGENIC_TANK_MK_LS(x,cur_time,LS_tank,num_materials)
@@ -3055,8 +3083,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     print *,"LS_A invalid"
     stop
    endif
+
   else
-   print *,"region_id invalid"
+   print *,"region_id invalid: ",region_id
    stop
   endif
 
@@ -3115,6 +3144,7 @@ real(amrex_real) :: expansion_coefficient
 integer :: turb_flag
 
 real(amrex_real) :: LS_A
+real(amrex_real) :: LS_B
 integer :: called_from_heater_source
 real(amrex_real) :: r_cyl
 real(amrex_real) :: x3D(3)
@@ -3291,6 +3321,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
             (axis_dir.eq.4)) then !aux files parabolic
     auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
+    auxcomp=2 ! heater B (side)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_B)
    else
     print *,"axis_dir invalid: ",axis_dir
     stop
@@ -3312,6 +3344,24 @@ if ((im.ge.1).and.(im.le.num_materials)) then
     print *,"LS_A is NaN"
     stop
    endif
+
+   if (LS_B.gt.-dx(1)) then
+    thermal_k=fort_heatviscconst(im)* &
+      max(one,dx(1)/fort_thermal_microlayer_size(im))
+   else if (LS_B.le.-dx(1)) then
+    if (im.eq.3) then
+     thermal_k=0.0d0
+    else if (im.eq.1) then
+     ! do nothing
+    else
+     print *,"im invalid"
+     stop
+    endif
+   else
+    print *,"LS_B is NaN"
+    stop
+   endif
+
   else
    print *,"im invalid"
    stop
