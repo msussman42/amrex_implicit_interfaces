@@ -8754,10 +8754,58 @@ contains
       do im=1,num_materials
        order_algorithm(im)=order_algorithm_in(im)
        if (order_algorithm(im).lt.0) then
-        print *,"order_alg bust"
+        print *,"order_alg bust im,order_algorithm ",im,order_algorithm(im)
         stop
        endif
       enddo
+
+      min_rank=0
+      nonzero_ranks=num_materials
+      do im=1,num_materials
+       if (order_algorithm(im).eq.0) then
+        nonzero_ranks=nonzero_ranks-1
+       else if (min_rank.eq.0) then
+        min_rank=order_algorithm(im)
+       else if (order_algorithm(im).lt.min_rank) then
+        min_rank=order_algorithm(im)
+       else if (order_algorithm(im).ge.min_rank) then
+        ! do nothing
+       else
+        print *,"order_algorithm(im) problem: ",im,order_algorithm(im)
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      do irank=1,num_materials
+       rank_algorithm(irank)=0
+      enddo
+      do im=1,num_materials
+       if (order_algorithm(im).eq.0) then
+        !do nothing
+       else if (order_algorithm(im).gt.0) then
+        irank=1
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if (order_algorithm(im_opp).ne.0) then
+           if (order_algorithm(im_opp).lt.order_algorithm(im)) then
+            irank=irank+1
+           endif
+          endif 
+         endif 
+        enddo
+        do while (rank_algorithm(irank).ne.0)
+         irank=irank+1
+        enddo
+        rank_algorithm(irank)=im
+        if (irank.gt.nonzero_ranks) then
+         print *,"irank>nonzero_ranks: ",irank,nonzero_ranks
+         stop
+        endif
+       else
+        print *,"order_algorithm(im) invalid: ",im, &
+          order_algorithm(im)
+        stop
+       endif
 
       return
       end subroutine set_order_algorithm
@@ -26259,6 +26307,8 @@ module MOF_cpp_module
 
 contains
 
+        !fort_initmof is called from:
+        !void fortran_parameters() (in NavierStokes.cpp)
       subroutine fort_initmof( &
        order_algorithm_in, &
        MOFITERMAX_in, &

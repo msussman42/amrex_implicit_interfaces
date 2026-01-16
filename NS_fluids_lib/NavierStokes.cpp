@@ -2456,9 +2456,9 @@ void fortran_parameters() {
 
   //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
  fort_mof_ordering_override(
-  mof_ordering_local.dataPtr(),
-  &mof_error_ordering_local,
-  NavierStokes::FSI_flag.dataPtr());
+  mof_ordering_local.dataPtr(), //intent(out)
+  &mof_error_ordering_local,  //intent(in)
+  NavierStokes::FSI_flag.dataPtr()); //intent(in)
 
  pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
 
@@ -6023,9 +6023,9 @@ NavierStokes::read_params ()
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
     fort_mof_ordering_override(
-      mof_ordering.dataPtr(),
-      &mof_error_ordering,
-      FSI_flag.dataPtr());
+      mof_ordering.dataPtr(), //intent(out)
+      &mof_error_ordering,    //intent(in)
+      FSI_flag.dataPtr());    //intent(in)
 
     pp.queryAdd("mof_ordering",mof_ordering,num_materials);
 

@@ -161,9 +161,9 @@ stop
        ! called from: fortran_parameters()  (before "pp.queryAdd")
        ! called from: NavierStokes::read_params()  (before "pp.queryAdd")
       subroutine fort_mof_ordering_override( &
-        mof_ordering_local, &
-        mof_error_ordering_local, &
-        FSI_flag_temp) &
+        mof_ordering_local, & !intent(out)
+        mof_error_ordering_local, & !intent(in)
+        FSI_flag_temp) & !intent(in)
       bind(c,name='fort_mof_ordering_override')
 
       use probcommon_module
@@ -176,7 +176,8 @@ stop
       integer :: local_FSI_flag
 
       if ((num_materials.lt.1).or.(num_materials.gt.9999)) then
-       print *,"num_materials invalid"
+       print *,"num_materials invalid(fort_mof_ordering_override): ", &
+          num_materials
        stop
       endif
 
