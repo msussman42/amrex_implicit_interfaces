@@ -17328,17 +17328,23 @@ stop
 
       integer i,j,k
       integer dir,im,im_opp,im_primary,irank,last
+      integer sub_rank
+      integer sub_im
+      integer use_standard
       integer worst_rank
       real(amrex_real) uncapt
       real(amrex_real) test_vof
+      real(amrex_real) F_avail
       integer vofcompraw
       integer vofcomprecon
       integer growlo(3),growhi(3)
 
       real(amrex_real) mofnew(num_materials*ngeom_recon)
-      real(amrex_real) LS(num_materials)
       real(amrex_real) local_LS(num_materials)
+      real(amrex_real) LS_standard(num_materials)
       real(amrex_real) LS_improved(num_materials)
+      real(amrex_real) F_standard(num_materials)
+      real(amrex_real) F_improved(num_materials)
 
       improved_ptr=>improved
       standard_ptr=>standard
@@ -17459,10 +17465,11 @@ stop
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do im=1,num_materials 
-        LS(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
-       enddo
-       do im=1,num_materials 
+        vofcompraw=(im-1)*ngeom_raw+1
+        LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
         LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+        F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
+        F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
        enddo
        call get_primary_material(LS,im_primary)
 
@@ -17472,7 +17479,7 @@ stop
         do dir=1,SDIM+1
          mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
         enddo
-        local_LS(im)=LS(im)
+        local_LS(im)=LS_standard(im)
        enddo
 
        if (is_rigid(im_primary).eq.1) then
@@ -17480,11 +17487,44 @@ stop
        else if (is_rigid(im_primary).eq.0) then
        
         last=0
+        use_standard=0
         uncapt=one 
         do irank=1,worst_rank
 
          if (uncapt.gt.zero) then
+
+          F_avail=zero
+          do sub_rank=irank,worst_rank
+           sub_im=material_list_by_rank(sub_rank)
+           if (material_extend_velocity(sub_im).ge.1) then
+            F_avail=F_avail+F_improved(sub_im)
+           else if (material_extend_velocity(sub_im).eq.0) then
+            F_avail=F_avail+F_standard(sub_im)
+           else
+            print *,"material_extend_velocity(sub_im) invalid:",sub_im, &
+             material_extend_velocity(sub_im)
+            stop
+           endif
+          enddo !sub_rank=irank,worst_rank
+
           im=material_list_by_rank(irank)
+
+          if ((F_avail.eq.zero).or. &
+              (material_extend_velocity(im).eq.0)) then
+           use_standard=1
+          else if ((F_avail.gt.zero).and. &
+                   (material_extend_velocity(im).ge.1)) then
+           !do nothing
+          else
+           print *,"F_avail: ",F_avail
+           print *,"im=",im
+           print *,"irank=",irank
+           print *,"material_extend_velocity(im) ", &
+              material_extend_velocity(im)
+           print *,"corruption"
+           stop
+          endif
+
           if ((im.ge.1).and.(im.le.num_materials)) then
            if (is_rigid(im).eq.0) then
             !do nothing
@@ -17497,19 +17537,18 @@ stop
            vofcompraw=(im-1)*ngeom_raw+1
            vofcomprecon=(im-1)*ngeom_recon+1
 
-           if (material_extend_velocity(im).ge.1) then
+           if (use_standard.eq.0) then
             do dir=1,SDIM+1
              mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
             enddo
             local_LS(im)=LS_improved(im)
-           else if (material_extend_velocity(im).eq.0) then
+           else if (use_standard.eq.1) then
             do dir=1,SDIM+1
              mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
             enddo
-            local_LS(im)=LS(im)
+            local_LS(im)=LS_standard(im)
            else
-            print *,"material_extend_velocity(im) invalid:",im, &
-             material_extend_velocity(im)
+            print *,"use_standard invalid:",use_standard
             stop
            endif
            test_vof=mofnew(vofcomprecon)
@@ -17531,14 +17570,12 @@ stop
         enddo !irank=1,worst_rank
 
         if (last.eq.0) then
-         do im=1,num_materials
-          vofcompraw=(im-1)*ngeom_raw+1
-          vofcomprecon=(im-1)*ngeom_recon+1
-          do dir=1,SDIM+1
-           mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
-          enddo
-          local_LS(im)=LS(im)
-         enddo
+         print *,"all volume from both improved and standard vanished"
+         print *,"F_improved=",F_improved
+         print *,"F_standard=",F_standard
+         print *,"LS_improved=",LS_improved
+         print *,"LS_standard=",LS_standard
+         stop
         else
          im=last
          vofcomprecon=(im-1)*ngeom_recon+1
