@@ -17335,6 +17335,7 @@ stop
       real(amrex_real) uncapt
       real(amrex_real) test_vof
       real(amrex_real) F_avail
+      real(amrex_real) dxmin
       integer vofcompraw
       integer vofcomprecon
       integer growlo(3),growhi(3)
@@ -17373,6 +17374,14 @@ stop
           num_state_base+num_species_var) then
        print *,"num_state_material invalid (fort_correct_flotsam): ", &
          num_state_material
+       stop
+      endif
+
+      call get_dxmin(dx,bfact,dxmin)
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin must be positive: ",dxmin
        stop
       endif
 
@@ -17496,6 +17505,24 @@ stop
         uncapt=one 
         do irank=1,worst_rank
 
+         im=material_list_by_rank(irank)
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
+
+         if ((im.ge.1).and.(im.le.num_materials)) then
+          if (is_rigid(im).eq.0) then
+           !do nothing
+          else
+           print *,"expecting is_rigid(im).eq.0"
+           print *,"im=",im
+           print *,"irank=",irank
+           stop
+          endif
+         else
+          print *,"im invalid ",im
+          stop
+         endif
+
          if (uncapt.gt.zero) then
 
           F_avail=zero
@@ -17511,8 +17538,6 @@ stop
             stop
            endif
           enddo !sub_rank=irank,worst_rank
-
-          im=material_list_by_rank(irank)
 
           if ((F_avail.eq.zero).or. &
               (material_extend_velocity(im).eq.0)) then
@@ -17539,8 +17564,6 @@ stop
             print *,"irank=",irank
             stop
            endif
-           vofcompraw=(im-1)*ngeom_raw+1
-           vofcomprecon=(im-1)*ngeom_recon+1
 
            if (use_standard.eq.0) then
             do dir=1,SDIM+1
@@ -17566,7 +17589,17 @@ stop
            stop
           endif
          else if (uncapt.le.zero) then
-          !do nothing
+          do dir=1,SDIM+1
+           mofnew(vofcomprecon+dir-1)=zero
+          enddo
+          if (LS_standard(im).lt.-half*dxmin) then
+           local_LS(im)=LS_standard(im)
+          else if (LS_standard(im).ge.-half*dxmin) then
+           local_LS(im)=-half*dxmin
+          else
+           print *,"LS_standard ",im,LS_standard(im)
+           stop
+          endif
          else
           print *,"uncapt=NaN: ",uncapt
           stop

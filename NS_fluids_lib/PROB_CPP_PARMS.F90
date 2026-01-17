@@ -163,6 +163,8 @@ stop
       subroutine fort_mof_ordering_override( &
         mof_ordering_local, & !intent(out)
         mof_renormalize_ordering_local, & !intent(out)
+        denconst_local, & !intent(in)
+        is_rigid_local, & !intent(in)
         mof_error_ordering_local, & !intent(in)
         FSI_flag_temp) & !intent(in)
       bind(c,name='fort_mof_ordering_override')
@@ -174,7 +176,12 @@ stop
       integer, INTENT(in) :: FSI_flag_temp(num_materials)
       integer, INTENT(out) :: mof_ordering_local(num_materials)
       integer, INTENT(out) :: mof_renormalize_ordering_local(num_materials)
+      real(amrex_real), INTENT(in) :: denconst_local(num_materials)
+      integer, INTENT(in) :: is_rigid_local(num_materials)
+      integer :: rank_algorithm(num_materials)
       integer :: im
+      integer :: sub_im
+      integer :: irank
       integer :: local_FSI_flag
 
       if ((num_materials.lt.1).or.(num_materials.gt.9999)) then
@@ -184,6 +191,13 @@ stop
       endif
 
       do im=1,num_materials
+       if (denconst_local(im).gt.zero) then
+        !do nothing
+       else
+        print *,"denconst_local(im) invalid: ",im,denconst_local(im)
+        stop
+       endif
+       rank_algorithm(im)=0
        mof_ordering_local(im)=0
        mof_renormalize_ordering_local(im)=0
 
@@ -331,6 +345,42 @@ stop
        print *,"mof_error_ordering_local invalid"
        stop
       endif
+
+      do im=1,num_materials
+       if (is_rigid_local(im).eq.1) then
+        !do nothing
+       else if (is_rigid_local(im).eq.0) then
+        irank=1
+        do sub_im=1,num_materials
+         if (im.ne.sub_im) then
+          if (is_rigid_local(sub_im).eq.1) then
+           !do nothing
+          else if (is_rigid_local(sub_im).eq.0) then
+           if (denconst_local(sub_im).lt.denconst_local(im)) then
+            irank=irank+1
+           endif
+          else
+           print *,"is_rigid_local(sub_im) invalid: ",sub_im, &
+             is_rigid_local(sub_im)
+           stop
+          endif
+         endif !im<>sub_im
+        enddo !sub_im=1,num_materials
+
+        do while (rank_algorithm(irank).ne.0)
+         irank=irank+1
+        enddo
+        if (irank.gt.num_materials) then
+         print *,"irank invalid ",irank
+         stop
+        endif
+        rank_algorithm(irank)=im
+        mof_renormalize_ordering_local(im)=irank
+       else
+        print *,"is_rigid_local(im) invalid ",im,is_rigid_local(im)
+        stop
+       endif
+      enddo ! im=1,num_materials
 
       end subroutine fort_mof_ordering_override
 
