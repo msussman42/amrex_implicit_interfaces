@@ -38,6 +38,7 @@ namespace amrex{
       // NavierStokes.cpp: NavierStokes::read_params()
      void fort_mof_ordering_override(
        int* mof_ordering_local,
+       int* mof_renormalize_ordering_local,
        int* mof_error_ordering_local,
        int* FSI_flag_temp);
 

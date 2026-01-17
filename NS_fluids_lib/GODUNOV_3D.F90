@@ -17408,6 +17408,11 @@ stop
              print *,"material_extend_velocity duplicate: ",im,im_opp
              stop
             endif
+           else if (material_extend_velocity(im_opp).eq.0) then
+            !do nothing
+           else
+            print *,"material_extend_velocity(im_opp) invalid"
+            stop
            endif
           endif
          endif
@@ -17471,7 +17476,7 @@ stop
         F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
         F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
        enddo
-       call get_primary_material(LS,im_primary)
+       call get_primary_material(LS_standard,im_primary)
 
        do im=1,num_materials
         vofcompraw=(im-1)*ngeom_raw+1

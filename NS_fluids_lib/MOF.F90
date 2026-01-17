@@ -26311,6 +26311,9 @@ contains
         !void fortran_parameters() (in NavierStokes.cpp)
       subroutine fort_initmof( &
        order_algorithm_in, &
+       renormalize_order_algorithm_in, &
+       denconst_local, &
+       is_rigid_local, &
        MOFITERMAX_in, &
        MOFITERMAX_AFTER_PREDICT_in, &
        MOF_DEBUG_RECON_in, &
@@ -26327,6 +26330,9 @@ contains
 
       integer, INTENT(in) :: nmax_in,nthreads
       integer, INTENT(in) :: order_algorithm_in(num_materials)
+      integer, INTENT(in) :: renormalize_order_algorithm_in(num_materials)
+      real(amrex_real), INTENT(in) :: denconst_local(num_materials)
+      integer, INTENT(in) :: is_rigid_local(num_materials)
       integer, INTENT(in) :: MOFITERMAX_in
       integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
       integer, INTENT(in) :: MOF_DEBUG_RECON_in
@@ -26374,6 +26380,89 @@ contains
       allocate(mof_calls(geom_nthreads,num_materials))
       allocate(mof_errors(geom_nthreads,num_materials))
       allocate(mof_iterations(geom_nthreads,num_materials))
+
+      default_flag=1
+      do im=1,num_materials
+       if (renormalize_order_algorithm_in(im).eq.0) then
+        !do nothing
+       else if (renormalize_order_algorithm_in(im).gt.0) then
+        default_flag=0
+       else
+        print *,"renormalize_order_algorithm_in(im) invalid"
+        stop
+       endif
+      enddo
+
+      min_rank=0
+      nonzero_ranks=0
+
+      do im=1,num_materials
+       if (is_rigid_local(im).eq.1) then
+        !do nothing
+       else if (is_rigid_local(im).eq.0) then
+        irank=1
+        do sub_im=1,num_materials
+         if (im.ne.sub_im) then
+          if (is_rigid_local(sub_im).eq.1) then
+           !do nothing
+          else if (is_rigid_local(sub_im).eq.0) then
+           if (default_flag.eq.1) then
+            if (denconst_local(sub_im).lt.denconst_local(im)) then
+             irank=irank+1
+            endif
+           else if (default_flag.eq.0) then
+            if (renormalize_order_algorithm_in(sub_im).lt. &
+                renormalize_order_algorithm_in(im)) then
+             irank=irank+1
+            else if (renormalize_order_algorithm_in(sub_im).eq. &
+                     renormalize_order_algorithm_in(im)) then
+             print *,"renormalize_order_algorithm_in invalid"
+             stop
+            else if (renormalize_order_algorithm_in(sub_im).gt. &
+                     renormalize_order_algorithm_in(im)) then
+             !do nothing
+            endif
+           else
+            print *,"default_flag invalid"
+            stop
+           endif
+          else
+           print *,"is_rigid_local(sub_im) invalid"
+           stop
+          endif
+         endif
+        enddo !sub_im=1,num_materials
+        if (min_rank.eq.0) then
+         min_rank=irank
+        else if (irank.eq.min_rank) then
+         irank=irank+1
+        else if (irank.lt.min_rank) then
+         min_rank=irank
+        else if (irank.gt.min_rank) then
+         !do nothing
+        else
+         print *,"irank,min_rank problem ",irank,min_rank
+         stop
+        endif
+        rank_algorithm(irank)=im
+        nonzero_ranks=nonzero_ranks+1
+        if (default_flag.eq.1) then
+         renormalize_order_algorithm_in(im)=irank
+        endif
+        if (renormalize_order_algorithm_in(im).eq.irank) then
+         !do nothing
+        else
+         print *,"renormalize_order_algorithm_in(im)<>irank"
+         print *,"im=",im
+         print *,"renormalize_order_algorithm_in(im) ", &
+           renormalize_order_algorithm_in(im)
+         stop
+        endif
+       else
+        print *,"is_rigid_local(im) invalid ",im,is_rigid_local(im)
+        stop
+       endif
+      enddo ! im=1,num_materials
 
       call set_order_algorithm(order_algorithm_in)
 
