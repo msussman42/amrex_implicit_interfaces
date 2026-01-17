@@ -2218,6 +2218,7 @@ protected:
     static int axis_dir;
 
     static Vector<int> mof_ordering;
+    static Vector<int> mof_renormalize_ordering;
 
     static Real rgasinlet;
     static Real slipcoeff;

@@ -2457,10 +2457,18 @@ void fortran_parameters() {
  Vector<int> mof_renormalize_ordering_local;
  mof_renormalize_ordering_local.resize(NavierStokes::num_materials);
 
+ Vector<int> is_rigid_local(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  int imp1=im+1;
+  is_rigid_local(im)=fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1);
+ }
+
   //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
  fort_mof_ordering_override(
   mof_ordering_local.dataPtr(), //intent(out)
   mof_renormalize_ordering_local.dataPtr(), //intent(out)
+  denconst_temp.dataPtr(),
+  is_rigid_local.dataPtr(),
   &mof_error_ordering_local,  //intent(in)
   NavierStokes::FSI_flag.dataPtr()); //intent(in)
 
@@ -2494,12 +2502,6 @@ void fortran_parameters() {
 
  int temp_POLYGON_LIST_MAX=1000;
 
- Vector<int> is_rigid_local(NavierStokes::num_materials);
- for (int im=0;im<NavierStokes::num_materials;im++) {
-  int imp1=im+1;
-  is_rigid_local(im)=fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1);
- }
-  
   //fort_initmof is declared in: MOF.F90
  fort_initmof(
    mof_ordering_local.dataPtr(),
@@ -2518,6 +2520,8 @@ void fortran_parameters() {
   for (int im=0;im<NavierStokes::num_materials;im++) {
    std::cout << "im= " << im << " mof_ordering_local= " <<
     mof_ordering_local[im] << '\n';
+   std::cout << "im= " << im << " mof_renormalize_ordering_local= " <<
+    mof_renormalize_ordering_local[im] << '\n';
   }
  }
 }  // end subroutine fortran_parameters()
@@ -6035,14 +6039,26 @@ NavierStokes::read_params ()
      amrex::Error("mof_error_ordering invalid");
 
     mof_ordering.resize(num_materials);
+    mof_renormalize_ordering.resize(num_materials);
+
+    Vector<int> is_rigid_local(num_materials);
+    for (int im=0;im<num_materials;im++) {
+     int imp1=im+1;
+     is_rigid_local(im)=fort_is_rigid_base(&FSI_flag[im],&imp1);
+    }
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
     fort_mof_ordering_override(
       mof_ordering.dataPtr(), //intent(out)
+      mof_renormalize_ordering.dataPtr(), //intent(out)
+      denconst.dataPtr(),
+      is_rigid_local.dataPtr(),
       &mof_error_ordering,    //intent(in)
       FSI_flag.dataPtr());    //intent(in)
 
     pp.queryAdd("mof_ordering",mof_ordering,num_materials);
+    pp.queryAdd("mof_renormalize_ordering",
+      mof_renormalize_ordering,num_materials);
 
     int n_ndef=0;
 
@@ -6231,7 +6247,8 @@ NavierStokes::read_params ()
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
-
+      std::cout << "mof_renormalize_ordering i= " << i << ' ' <<
+        mof_renormalize_ordering[i] << '\n';
 
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';

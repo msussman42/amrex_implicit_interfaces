@@ -39,6 +39,8 @@ namespace amrex{
      void fort_mof_ordering_override(
        int* mof_ordering_local,
        int* mof_renormalize_ordering_local,
+       Real* denconst_local,
+       int* is_rigid_local,
        int* mof_error_ordering_local,
        int* FSI_flag_temp);
 
