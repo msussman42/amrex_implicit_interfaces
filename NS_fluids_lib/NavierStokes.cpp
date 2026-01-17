@@ -587,6 +587,7 @@ Vector<Real> NavierStokes::polymer_factor; // def=0
 int  NavierStokes::mof_error_ordering=0;
 
 Vector<int> NavierStokes::mof_ordering; // def=0
+Vector<int> NavierStokes::mof_renormalize_ordering; // def=0
 
 // adv_dir=1,..,sdim+1
 int  NavierStokes::adv_dir=0;
@@ -2453,14 +2454,19 @@ void fortran_parameters() {
 
  Vector<int> mof_ordering_local;
  mof_ordering_local.resize(NavierStokes::num_materials);
+ Vector<int> mof_renormalize_ordering_local;
+ mof_renormalize_ordering_local.resize(NavierStokes::num_materials);
 
   //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
  fort_mof_ordering_override(
   mof_ordering_local.dataPtr(), //intent(out)
+  mof_renormalize_ordering_local.dataPtr(), //intent(out)
   &mof_error_ordering_local,  //intent(in)
   NavierStokes::FSI_flag.dataPtr()); //intent(in)
 
  pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
+ pp.queryAdd("mof_renormalize_ordering",
+   mof_renormalize_ordering_local,NavierStokes::num_materials);
 
  int n_ndef=0;
  
@@ -2487,10 +2493,19 @@ void fortran_parameters() {
  }
 
  int temp_POLYGON_LIST_MAX=1000;
- 
+
+ Vector<int> is_rigid_local(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  int imp1=im+1;
+  is_rigid_local(im)=fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1);
+ }
+  
   //fort_initmof is declared in: MOF.F90
  fort_initmof(
    mof_ordering_local.dataPtr(),
+   mof_renormalize_ordering_local.dataPtr(),
+   denconst_temp.dataPtr(),
+   is_rigid_local.dataPtr(),
    &MOFITERMAX,
    &MOFITERMAX_AFTER_PREDICT,
    &MOF_DEBUG_RECON,

@@ -162,6 +162,7 @@ stop
        ! called from: NavierStokes::read_params()  (before "pp.queryAdd")
       subroutine fort_mof_ordering_override( &
         mof_ordering_local, & !intent(out)
+        mof_renormalize_ordering_local, & !intent(out)
         mof_error_ordering_local, & !intent(in)
         FSI_flag_temp) & !intent(in)
       bind(c,name='fort_mof_ordering_override')
@@ -172,6 +173,7 @@ stop
       integer, INTENT(in) :: mof_error_ordering_local
       integer, INTENT(in) :: FSI_flag_temp(num_materials)
       integer, INTENT(out) :: mof_ordering_local(num_materials)
+      integer, INTENT(out) :: mof_renormalize_ordering_local(num_materials)
       integer :: im
       integer :: local_FSI_flag
 
@@ -183,6 +185,7 @@ stop
 
       do im=1,num_materials
        mof_ordering_local(im)=0
+       mof_renormalize_ordering_local(im)=0
 
        local_FSI_flag=FSI_flag_temp(im)
 
