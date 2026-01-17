@@ -2460,7 +2460,7 @@ void fortran_parameters() {
  Vector<int> is_rigid_local(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++) {
   int imp1=im+1;
-  is_rigid_local(im)=fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1);
+  is_rigid_local[im]=fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1);
  }
 
   //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
@@ -6044,7 +6044,7 @@ NavierStokes::read_params ()
     Vector<int> is_rigid_local(num_materials);
     for (int im=0;im<num_materials;im++) {
      int imp1=im+1;
-     is_rigid_local(im)=fort_is_rigid_base(&FSI_flag[im],&imp1);
+     is_rigid_local[im]=fort_is_rigid_base(&FSI_flag[im],&imp1);
     }
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
@@ -20186,6 +20186,7 @@ NavierStokes::correct_flotsam() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    fort_correct_flotsam(
+    mof_renormalize_ordering.dataPtr(),
     material_extend_velocity.dataPtr(),
     &tid_current,
     tilelo,tilehi,

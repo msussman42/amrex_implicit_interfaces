@@ -26432,6 +26432,10 @@ contains
         stop
        endif
       enddo
+      if (default_flag.ne.0) then
+       print *,"expecting default_flag==0"
+       stop
+      endif
 
       nonzero_ranks=0
 
@@ -26451,25 +26455,16 @@ contains
           if (is_rigid_local(sub_im).eq.1) then
            !do nothing
           else if (is_rigid_local(sub_im).eq.0) then
-           if (default_flag.eq.1) then
-            if (denconst_local(sub_im).lt.denconst_local(im)) then
-             irank=irank+1
-            endif
-           else if (default_flag.eq.0) then
-            if (renormalize_order_algorithm_in(sub_im).lt. &
-                renormalize_order_algorithm_in(im)) then
-             irank=irank+1
-            else if (renormalize_order_algorithm_in(sub_im).eq. &
-                     renormalize_order_algorithm_in(im)) then
-             print *,"renormalize_order_algorithm_in invalid"
-             stop
-            else if (renormalize_order_algorithm_in(sub_im).gt. &
-                     renormalize_order_algorithm_in(im)) then
-             !do nothing
-            endif
-           else
-            print *,"default_flag invalid"
+           if (renormalize_order_algorithm_in(sub_im).lt. &
+               renormalize_order_algorithm_in(im)) then
+            irank=irank+1
+           else if (renormalize_order_algorithm_in(sub_im).eq. &
+                    renormalize_order_algorithm_in(im)) then
+            print *,"renormalize_order_algorithm_in invalid"
             stop
+           else if (renormalize_order_algorithm_in(sub_im).gt. &
+                    renormalize_order_algorithm_in(im)) then
+            !do nothing
            endif
           else
            print *,"is_rigid_local(sub_im) invalid"
@@ -26489,9 +26484,6 @@ contains
 
         rank_algorithm(irank)=im
         nonzero_ranks=nonzero_ranks+1
-        if (default_flag.eq.1) then
-         renormalize_order_algorithm_in(im)=irank
-        endif
         if (renormalize_order_algorithm_in(im).eq.irank) then
          !do nothing
         else
