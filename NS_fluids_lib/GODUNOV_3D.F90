@@ -17592,6 +17592,15 @@ stop
          enddo !j1
          enddo !k1
 
+         if (gradLS_min.lt.zero) then
+          !do nothing
+         else
+          print *,"cannot find a direction of steepest descent"
+          print *,"gradLS_min=",gradLS_min
+          print *,"LS_standard=",LS_standard
+          stop
+         endif
+
          F_fluid=zero
          im_crit=0
          do im=1,num_materials
