@@ -16913,7 +16913,7 @@ stop
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
 
            !DEBUGGING
-           if (1.eq.1) then
+           if (1.eq.0) then
             if (im_extension.eq.2) then
              if (LS(D_DECL(icrse,jcrse,kcrse),im_extension+1).ge. &
                  -two*dx(1)) then
@@ -17334,6 +17334,7 @@ stop
       integer sub_im
       integer use_standard
       integer worst_rank
+      integer num_materials_fluids
       real(amrex_real) uncapt
       real(amrex_real) test_vof
       real(amrex_real) F_avail
@@ -17387,9 +17388,19 @@ stop
        stop
       endif
 
+      num_materials_fluids=0
+
       do irank=1,num_materials
+       if (is_rigid(irank).eq.0) then
+        num_materials_fluids=num_materials_fluids+1
+       else if (is_rigid(irank).eq.1) then
+        !do nothing
+       else
+        print *,"is_rigid(irank) invalid"
+        stop
+       endif
        material_list_by_rank(irank)=0
-      enddo
+      enddo ! irank=1,num_materials
 
       worst_rank=0
 
@@ -17475,6 +17486,15 @@ stop
        endif
       enddo !im=1,num_materials
   
+      if ((worst_rank.eq.num_materials_fluids).and. &
+          (num_materials_fluids.ge.1)) then
+       !do nothing
+      else
+       print *,"worst_rank<>num_materials_fluids"
+       print *,"worst_rank ",worst_rank
+       print *,"num_materials_fluids ",num_materials_fluids
+       stop
+      endif
 
       call checkbound_array(fablo,fabhi,improved_ptr,0,-1)
       call checkbound_array(fablo,fabhi,standard_ptr,0,-1)

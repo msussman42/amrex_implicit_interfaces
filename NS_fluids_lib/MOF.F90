@@ -18222,6 +18222,7 @@ contains
       integer dir
       integer vofcomp
       real(amrex_real) voffluid,vofsolid,vofsolid_max
+      integer num_materials_fluids
       integer im_solid_max
       integer is_rigid_local(num_materials)
       real(amrex_real) volcell
@@ -18308,6 +18309,8 @@ contains
        stop
       endif
 
+      num_materials_fluids=0
+
       voffluid=zero
       vofsolid=zero
       vofsolid_max=zero
@@ -18380,6 +18383,7 @@ contains
 
        if (is_rigid_local(im).eq.0) then
         voffluid=voffluid+mofdata(vofcomp)
+        num_materials_fluids=num_materials_fluids+1
        else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+mofdata(vofcomp)
         if (im_solid_max.eq.0) then
@@ -18463,12 +18467,35 @@ contains
       else if ((tessellate.eq.0).or. &
                (tessellate.eq.1)) then
 
+       if ((nonzero_ranks.eq.num_materials_fluids).and. &
+           (num_materials_fluids.ge.1)) then
+        !do nothing
+       else
+        print *,"nonzero_ranks<>num_materials_fluids"
+        print *,"nonzero_ranks ",nonzero_ranks
+        print *,"num_materials_fluids ",num_materials_fluids
+        stop
+       endif
+
        last=0
        uncapt=one
        do irank=1,nonzero_ranks
 
         im=rank_algorithm(irank)
+
+        if (renormalize_order_algorithm(im).eq.irank) then
+         !do nothing
+        else
+         print *,"irank inconsistent"
+         print *,"irank=",irank
+         print *,"im=",im
+         print *,"renormalize_order_algorithm(im)=", &
+              renormalize_order_algorithm(im)
+         stop
+        endif
+
         vofcomp=(im-1)*ngeom_recon+1
+
         if ((im.ge.1).and.(im.le.num_materials)) then
          if (is_rigid_local(im).eq.0) then
           !do nothing
