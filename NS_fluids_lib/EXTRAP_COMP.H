@@ -606,6 +606,7 @@ ENUM_NUM_TENSOR_TYPE=((ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA))
 #define LOOP_QDOTMDOT 189
 
 #define LOOP_CORRECTFLOTSAM 190
+#define LOOP_CORRECTFORSHEAR 191
 
 #define caller_FSI_make_distance 0
 #define caller_post_restart 1

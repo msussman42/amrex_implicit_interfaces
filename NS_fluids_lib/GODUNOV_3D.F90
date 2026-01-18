@@ -17269,6 +17269,423 @@ stop
       end subroutine fort_vfrac_split_smooth
 
 
+      subroutine fort_correct_for_shear( &
+       mof_renormalize_ordering, &
+       material_extend_velocity, &
+       tid, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       ls_fab,DIMS(ls_fab), &  
+       mof_fab,DIMS(mof_fab), &  
+       snew,DIMS(snew), &  
+       lsnew,DIMS(lsnew), &
+       xlo,dx, &
+       level, &
+       finest_level) &
+      bind(c,name='fort_correct_for_shear')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, PARAMETER :: nhalf=3
+      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: mof_renormalize_ordering(num_materials)
+      integer, INTENT(in) :: material_extend_velocity(num_materials)
+      integer :: material_list_by_rank(num_materials)
+
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(ls_fab)
+      integer, INTENT(in) :: DIMDEC(mof_fab)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(lsnew)
+
+      real(amrex_real), INTENT(in), target :: &
+         ls_fab(DIMV(ls_fab),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+         mof_fab(DIMV(mof_fab),num_materials*ngeom_raw)
+      real(amrex_real), pointer :: ls_fab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: mof_fab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target ::  &
+         snew(DIMV(snew),num_materials*ngeom_raw)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+         lsnew(DIMV(lsnew),num_materials)
+      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+
+      integer i,j,k
+      integer dir,im,im_opp,im_primary,irank,last
+      integer sub_rank
+      integer sub_im
+      integer use_standard
+      integer worst_rank
+      integer num_materials_fluids
+      real(amrex_real) uncapt
+      real(amrex_real) test_vof
+      real(amrex_real) F_avail
+      real(amrex_real) dxmin
+      integer vofcompraw
+      integer vofcomprecon
+      integer growlo(3),growhi(3)
+
+      real(amrex_real) mofnew(num_materials*ngeom_recon)
+      real(amrex_real) local_LS(num_materials)
+      real(amrex_real) LS_standard(num_materials)
+      real(amrex_real) LS_improved(num_materials)
+      real(amrex_real) F_standard(num_materials)
+      real(amrex_real) F_improved(num_materials)
+
+      ls_fab_ptr=>ls_fab
+      mof_fab_ptr=>mof_fab
+
+      snew_ptr=>snew
+      lsnew_ptr=>lsnew
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid (correct_for_shear): ",tid
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid correct_for_shear ",bfact
+       stop
+      endif
+
+      if ((level.lt.0).or. &
+          (level.gt.finest_level)) then
+       print *,"level invalid fort_correct_for_shear: ",level,finest_level
+       stop
+      endif
+
+      if (num_state_material.ne. &
+          num_state_base+num_species_var) then
+       print *,"num_state_material invalid (fort_correct_for_shear): ", &
+         num_state_material
+       stop
+      endif
+
+      call get_dxmin(dx,bfact,dxmin)
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin must be positive: ",dxmin
+       stop
+      endif
+
+      num_materials_fluids=0
+
+      do irank=1,num_materials
+       if (is_rigid(irank).eq.0) then
+        num_materials_fluids=num_materials_fluids+1
+       else if (is_rigid(irank).eq.1) then
+        !do nothing
+       else
+        print *,"is_rigid(irank) invalid"
+        stop
+       endif
+       material_list_by_rank(irank)=0
+      enddo ! irank=1,num_materials
+
+      worst_rank=0
+
+      do im=1,num_materials
+       if (material_extend_velocity(im).gt.0) then
+
+        if (material_extend_velocity(im).eq. &
+            mof_renormalize_ordering(im)) then
+         !do nothing
+        else
+         print *,"material_extend_velocity: ", &
+           material_extend_velocity
+         print *,"mof_renormalize_ordering: ", &
+           mof_renormalize_ordering
+         print *,"should be the same at the non 0"
+         stop
+        endif
+
+        if (is_rigid(im).eq.0) then
+         !do nothing
+        else
+         print *,"expecting is_rigid(im).eq.0"
+         print *,"im=",im
+         print *,"material_extend_velocity(im)=", &
+          material_extend_velocity(im)
+         stop
+        endif
+
+        irank=1
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if (is_rigid(im_opp).eq.0) then
+           if (material_extend_velocity(im_opp).gt.0) then
+            if (material_extend_velocity(im_opp).lt. &
+                material_extend_velocity(im)) then
+             irank=irank+1
+            else if (material_extend_velocity(im_opp).eq. &
+                     material_extend_velocity(im)) then
+             print *,"material_extend_velocity duplicate: ",im,im_opp
+             stop
+            endif
+           else if (material_extend_velocity(im_opp).eq.0) then
+            !do nothing
+           else
+            print *,"material_extend_velocity(im_opp) invalid"
+            stop
+           endif
+          endif
+         endif
+        enddo !im_opp=1,num_materials
+        if (material_extend_velocity(im).ne.irank) then
+         print *,"material_extend_velocity(im).ne.irank"
+         print *,"im=",im
+         print *,"irank=",irank
+         print *,"material_extend_velocity(im)=", &
+          material_extend_velocity(im)
+         stop
+        endif
+        material_list_by_rank(irank)=im
+        if (irank.gt.worst_rank) then
+         worst_rank=irank
+        endif
+       endif
+      enddo !im=1..num_materials
+
+      if (worst_rank.ge.1) then
+       !do nothing
+      else
+       print *,"expecting worst_rank.ge.1: ",worst_rank
+       stop
+      endif
+
+      do im=1,num_materials
+       if (material_extend_velocity(im).eq.0) then
+        if (is_rigid(im).eq.0) then
+         worst_rank=worst_rank+1
+         if (worst_rank.gt.num_materials) then
+          print *,"worst_rank invalid: ",worst_rank
+          stop
+         endif
+         material_list_by_rank(worst_rank)=im
+        endif
+       endif
+      enddo !im=1,num_materials
+  
+      if ((worst_rank.eq.num_materials_fluids).and. &
+          (num_materials_fluids.ge.1)) then
+       !do nothing
+      else
+       print *,"worst_rank<>num_materials_fluids"
+       print *,"worst_rank ",worst_rank
+       print *,"num_materials_fluids ",num_materials_fluids
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,ls_fab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,mof_fab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+
+      growlo(3)=0
+      growhi(3)=0
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+ 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do im=1,num_materials 
+        vofcompraw=(im-1)*ngeom_raw+1
+        LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+        LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+        F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
+        F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
+       enddo
+       call get_primary_material(LS_standard,im_primary)
+
+       do im=1,num_materials
+        vofcompraw=(im-1)*ngeom_raw+1
+        vofcomprecon=(im-1)*ngeom_recon+1
+        do dir=1,SDIM+1
+         mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+        enddo
+        local_LS(im)=LS_standard(im)
+       enddo
+
+       if (is_rigid(im_primary).eq.1) then
+        !do nothing
+       else if (is_rigid(im_primary).eq.0) then
+       
+        last=0
+        use_standard=0
+        uncapt=one 
+        do irank=1,worst_rank
+
+         im=material_list_by_rank(irank)
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
+
+         if ((im.ge.1).and.(im.le.num_materials)) then
+          if (is_rigid(im).eq.0) then
+           !do nothing
+          else
+           print *,"expecting is_rigid(im).eq.0"
+           print *,"im=",im
+           print *,"irank=",irank
+           stop
+          endif
+         else
+          print *,"im invalid ",im
+          stop
+         endif
+
+         if (uncapt.gt.zero) then
+
+          F_avail=zero
+          do sub_rank=irank,worst_rank
+           sub_im=material_list_by_rank(sub_rank)
+           if (material_extend_velocity(sub_im).ge.1) then
+            F_avail=F_avail+F_improved(sub_im)
+           else if (material_extend_velocity(sub_im).eq.0) then
+            F_avail=F_avail+F_standard(sub_im)
+           else
+            print *,"material_extend_velocity(sub_im) invalid:",sub_im, &
+             material_extend_velocity(sub_im)
+            stop
+           endif
+          enddo !sub_rank=irank,worst_rank
+
+          if ((F_avail.eq.zero).or. &
+              (material_extend_velocity(im).eq.0)) then
+           use_standard=1
+          else if ((F_avail.gt.zero).and. &
+                   (material_extend_velocity(im).ge.1)) then
+           !do nothing
+          else
+           print *,"F_avail: ",F_avail
+           print *,"im=",im
+           print *,"irank=",irank
+           print *,"material_extend_velocity(im) ", &
+              material_extend_velocity(im)
+           print *,"corruption"
+           stop
+          endif
+
+          if ((im.ge.1).and.(im.le.num_materials)) then
+           if (is_rigid(im).eq.0) then
+            !do nothing
+           else
+            print *,"expecting is_rigid(im).eq.0"
+            print *,"im=",im
+            print *,"irank=",irank
+            stop
+           endif
+
+           if (use_standard.eq.0) then
+            do dir=1,SDIM+1
+             mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
+            enddo
+            local_LS(im)=LS_improved(im)
+           else if (use_standard.eq.1) then
+            do dir=1,SDIM+1
+             mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+            enddo
+            local_LS(im)=LS_standard(im)
+           else
+            print *,"use_standard invalid:",use_standard
+            stop
+           endif
+           test_vof=mofnew(vofcomprecon)
+           if (test_vof.gt.zero) then
+            last=im
+           endif
+           uncapt=uncapt-test_vof
+          else
+           print *,"im invalid ",im
+           stop
+          endif
+         else if (uncapt.le.zero) then
+          do dir=1,SDIM+1
+           mofnew(vofcomprecon+dir-1)=zero
+          enddo
+          if (LS_standard(im).lt.-half*dxmin) then
+           local_LS(im)=LS_standard(im)
+          else if (LS_standard(im).ge.-half*dxmin) then
+           local_LS(im)=-half*dxmin
+          else
+           print *,"LS_standard ",im,LS_standard(im)
+           stop
+          endif
+         else
+          print *,"uncapt=NaN: ",uncapt
+          stop
+         endif
+ 
+        enddo !irank=1,worst_rank
+
+        if (last.eq.0) then
+         print *,"all volume from both improved and standard vanished"
+         print *,"F_improved=",F_improved
+         print *,"F_standard=",F_standard
+         print *,"LS_improved=",LS_improved
+         print *,"LS_standard=",LS_standard
+         stop
+        else
+         im=last
+         vofcomprecon=(im-1)*ngeom_recon+1
+         mofnew(vofcomprecon)=mofnew(vofcomprecon)+uncapt
+        endif
+
+       else
+        print *,"is_rigid(im_primary) invalid: ",im_primary, &
+         is_rigid(im_primary)
+        stop
+       endif
+
+       call make_vfrac_sum_ok_base( &
+         cmofsten, &
+         xsten,nhalf, &
+         continuous_mof_parm, &
+         bfact,dx, &
+         tessellate, & !=0
+         mofnew,SDIM)
+
+       do im=1,num_materials
+        vofcompraw=(im-1)*ngeom_raw+1
+        vofcomprecon=(im-1)*ngeom_recon+1
+        do dir=1,SDIM+1
+         snew(D_DECL(i,j,k),vofcompraw+dir-1)=mofnew(vofcomprecon+dir-1)
+        enddo
+        lsnew(D_DECL(i,j,k),im)=local_LS(im)
+       enddo !im=1,..,num_materials
+
+      enddo
+      enddo
+      enddo ! i,j,k -> growntilebox(0 ghost cells)
+
+      return
+      end subroutine fort_correct_for_shear
+
+
+
       subroutine fort_correct_flotsam( &
        mof_renormalize_ordering, &
        material_extend_velocity, &

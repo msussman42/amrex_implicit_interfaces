@@ -862,6 +862,20 @@ extern "C"
      int* finest_level);
 
 
+   void fort_correct_for_shear(
+     int* mof_renormalize_ordering,
+     int* material_extend_velocity,
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     Real* ls_fab,AMREX_ARLIM_P(ls_fablo),AMREX_ARLIM_P(ls_fabhi), 
+     Real* mof_fab,AMREX_ARLIM_P(mof_fablo),AMREX_ARLIM_P(mof_fabhi), 
+     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
+     Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi), 
+     const Real* xlo,const Real* dx,
+     int* level,
+     int* finest_level);
 
    void fort_derive_mom_den(
      int* im_parm,

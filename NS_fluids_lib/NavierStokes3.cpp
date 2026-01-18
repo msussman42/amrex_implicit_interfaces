@@ -497,6 +497,8 @@ void NavierStokes::save_interface_data(
   delete vofmf;
   delete lsmf;
 
+  //save_interface_data is called from save_interface_dataALL
+  //for (int ilev=level;ilev<=finest_level;ilev++) 
  } else if (control_flag==POST_PROCESS_CONTROL) {
 
   if (im_extension==-1) {
@@ -560,6 +562,7 @@ void NavierStokes::save_interface_data(
    if (im_extension+1==material_extend_velocity_flag) {
     //correct the volume fractions, centroids, and level set function(s)
     correct_flotsam();
+    correct_for_shear();
 
     //restore the velocity field
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
