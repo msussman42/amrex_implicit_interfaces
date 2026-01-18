@@ -20545,9 +20545,9 @@ stop
       integer partid_max
       integer, parameter :: tessellate=0
       integer, parameter :: tessellate_transfer=1
-      integer LS_extrap_radius
-      integer extrap_radius
-      integer least_sqr_radius
+      integer, parameter :: LS_extrap_radius=1
+      integer, parameter :: extrap_radius=1
+      integer, parameter :: least_sqr_radius=1
       integer least_sqrZ
       integer center_stencil_im_only
       integer center_stencil_wetting_im
@@ -20688,10 +20688,6 @@ stop
        stop
       endif
 
-      extrap_radius=1
-      LS_extrap_radius=1
-
-      least_sqr_radius=1
       least_sqrZ=0
       if (SDIM.eq.2) then
        ! do nothing
@@ -21458,6 +21454,7 @@ stop
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
             cell_CP_parm%k=k+k1
+             ! inside of "cell_xCP":
              ! xSOLID_BULK(dir)=xsten(i+i1,j+j1,k+k1,dir)
              ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
             call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
