@@ -369,7 +369,8 @@ integer, INTENT(out) :: aux_ncells_max_side
  if ((auxcomp.ge.1).and. &
      (auxcomp.le.num_aux_expect)) then
   if ((axis_dir.eq.2).or. & !aux files either ZBOT or TPCE, no parabolic flight
-      (axis_dir.eq.4)) then !aux files either ZBOT or TPCE, parabolic flight
+      (axis_dir.eq.4).or. & !aux files either ZBOT or TPCE, parabolic flight
+      (axis_dir.eq.5)) then !implicit rigid_motion
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
 
@@ -487,7 +488,8 @@ integer :: stat
  file_format=1 ! vtk format
 
  if ((axis_dir.eq.2).or. & !aux files, ZBOT or TPCE, no parabolic flight
-     (axis_dir.eq.4)) then !aux files, ZBOT or TPCE, parabolic flight
+     (axis_dir.eq.4).or. & !aux files, ZBOT or TPCE, parabolic flight
+     (axis_dir.eq.5)) then !implicit rigid motion
 
   if (fort_num_local_aux_grids.eq.num_aux_expect) then
 
@@ -600,7 +602,7 @@ integer :: stat
   endif 
 
  else
-  print *,"expecting axis_dir.eq.2 or 4: ",axis_dir
+  print *,"expecting axis_dir.eq.2 or 4 or 5: ",axis_dir
   stop
  endif
 
@@ -643,7 +645,7 @@ else if (axis_dir.eq.4) then ! aux files parabolic
  !z=1/4=>z_shift=1/6-1/15=1/10
  z_shift=(2.0d0/3.0d0)*z-1.0d0/15.0d0  
 else
- print *,"axis_dir invalid: ",axis_dir
+ print *,"axis_dir invalid(interp_parabolic_tinit): ",axis_dir
  stop
 endif
 
@@ -685,7 +687,7 @@ else if (axis_dir.eq.4) then !aux files parabolic
   temperature=20.28d0
  endif
 else
- print *,"axis_dir invalid: ",axis_dir
+ print *,"axis_dir invalid(interp_parabolic_tinit): ",axis_dir
  stop
 endif
 
@@ -860,14 +862,16 @@ end subroutine interp_parabolic_xyz
    ! TPCE
   else if ((axis_dir.eq.1).or. & !TPCE (tank geometry prescribed internally)
            (axis_dir.eq.2).or. & ! heater on top (use aux, no parabolic flt)
-           (axis_dir.eq.4)) then ! heater on top (parabolic flight)
+           (axis_dir.eq.4).or. & ! heater on top (parabolic flight)
+           (axis_dir.eq.5)) then ! implicit rigid motion
 
    number_of_source_regions=4 ! heater A, inflow, outflow
 
    if (axis_dir.eq.1) then !TPCE (tank geometry prescribed internally)
     num_aux_expect=0
    else if ((axis_dir.eq.2).or. & !heater on top (use aux, no parabolic flt)
-            (axis_dir.eq.4)) then !heater on top (use aux, parabolic flight)
+            (axis_dir.eq.4).or. & !heater on top (use aux, parabolic flight)
+            (axis_dir.eq.5)) then !implicit rigid motion
 
     if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      num_aux_expect=7
@@ -921,6 +925,8 @@ end subroutine interp_parabolic_xyz
     !do nothing
    else if (axis_dir.eq.4) then !heater on top (use aux, parabolic flight)
     call read_parabolic_data()
+   else if (axis_dir.eq.5) then !implicit rigid motion
+    !do nothing
    else
     print *,"axis_dir invalid: ",axis_dir
     stop
@@ -988,7 +994,8 @@ end subroutine interp_parabolic_xyz
   if ((axis_dir.eq.0).or. & !prescribed,ZBOT
       (axis_dir.eq.1).or. & !prescribed,TPCE
       (axis_dir.eq.2).or. & !aux files
-      (axis_dir.eq.4)) then !aux files,parabolic
+      (axis_dir.eq.4).or. & !aux files,parabolic
+      (axis_dir.eq.5)) then !implicit rigid motion
 
    if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
        (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
@@ -1376,7 +1383,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
    else if ((axis_dir.eq.2).or. &
-            (axis_dir.eq.4)) then !TPCE e.g. tpce_geometry.vtk
+            (axis_dir.eq.4).or. & !TPCE e.g. tpce_geometry.vtk
+            (axis_dir.eq.5)) then !implicit rigid motion
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1606,8 +1614,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
    if ((axis_dir.eq.0).or. &  !prescribed, ZBOT 
        (axis_dir.eq.1).or. &  !prescribed, TPCE
-       (axis_dir.eq.2)) then  !aux files read e.g. tpce_geometry.vtk
-                              !(TPCE problem)
+       (axis_dir.eq.2).or. &  !aux files read e.g. tpce_geometry.vtk (TPCE)
+       (axis_dir.eq.5)) then  !implicit rigid motion 
 
     do dir=1,SDIM
      VEL(dir)=0.0d0
@@ -2223,7 +2231,8 @@ if ((num_materials.eq.3).and. &
 
   if ((axis_dir.eq.0).or. & !prescribed,ZBOT
       (axis_dir.eq.1).or. & !prescribed,TPCE
-      (axis_dir.eq.2)) then !aux files
+      (axis_dir.eq.2).or. & !aux files
+      (axis_dir.eq.5)) then !implicit rigid motion
 
    if (t.eq.0.0d0) then
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
@@ -2255,6 +2264,8 @@ if ((num_materials.eq.3).and. &
     if ((axis_dir.eq.0).or. & !prescribed,ZBOT
         (axis_dir.eq.1).or. & !prescribed,TPCE
         (axis_dir.eq.2)) then !aux files
+     temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
+    else if (axis_dir.eq.5) then !implicit rigid motion
      temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
     else if (axis_dir.eq.3) then !prescribed, parabolic flight (cylinder)
      temperature=295.41d0
@@ -2309,7 +2320,8 @@ if ((num_materials.eq.3).and. &
               (axis_dir.eq.1).or. & !prescribed, TPCE
               (axis_dir.eq.2).or. & !aux files
               (axis_dir.eq.3).or. & !prescribed,  parabolic test (cylinder)
-              (axis_dir.eq.4)) then !aux files, parabolic
+              (axis_dir.eq.4).or. & !aux files, parabolic
+              (axis_dir.eq.5)) then !implicit rigid motion
       print *,"mismatch between Pgamma and Pgas"
       print *,"axis_dir=",axis_dir
       print *,"Pgamma=",Pgamma
@@ -2641,7 +2653,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
 if ((axis_dir.eq.0).or. & !prescribed ZBOT
     (axis_dir.eq.1).or. & !prescribed TPCE
     (axis_dir.eq.2).or. & !aux files
-    (axis_dir.eq.4)) then !aux files, parabolic
+    (axis_dir.eq.4).or. & !aux files, parabolic
+    (axis_dir.eq.5)) then !implicit rigid motion
 
  if ((nsum1.eq.1).and.(nsum2.eq.2)) then
   ! integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
@@ -2655,7 +2668,8 @@ if ((axis_dir.eq.0).or. & !prescribed ZBOT
   T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
  
   if ((axis_dir.eq.2).or. &
-      (axis_dir.eq.4)) then ! TPCE aux files
+      (axis_dir.eq.4).or. & ! TPCE aux files
+      (axis_dir.eq.5)) then !implicit rigid motion
    if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
     T1_probe(1)=xblob2
     T1_probe(2)=zblob2
@@ -2697,7 +2711,8 @@ if ((axis_dir.eq.0).or. & !prescribed ZBOT
    else if (axis_dir.eq.1) then !prescribed TPCE
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else if ((axis_dir.eq.2).or. & !aux files
-            (axis_dir.eq.4)) then !aux files, parabolic
+            (axis_dir.eq.4).or. & !aux files, parabolic
+            (axis_dir.eq.5)) then !implicit rigid motion
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else
     print *,"axis_dir invalid: ",axis_dir
@@ -2847,7 +2862,8 @@ integer :: im,iregion,dir
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
   else if ((axis_dir.eq.1).or. & !prescribed TPCE
            (axis_dir.eq.2).or. & !aux files
-           (axis_dir.eq.4)) then !aux files, parabolic
+           (axis_dir.eq.4).or. & !aux files, parabolic
+           (axis_dir.eq.5)) then !implicit rigid motion
    regions_list(1,0)%region_material_id=3 ! heater A, top
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
     ! inflow
@@ -3028,7 +3044,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   endif
 
  else if ((axis_dir.eq.2).or. & !aux files
-          (axis_dir.eq.4)) then !aux files, parabolic
+          (axis_dir.eq.4).or. & !aux files, parabolic
+          (axis_dir.eq.5)) then !implicit rigid motion
 
   if (region_id.eq.1) then ! heater A (top)
    auxcomp=1
@@ -3310,7 +3327,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
 
  else if ((axis_dir.eq.1).or. & !prescribed TPCE
           (axis_dir.eq.2).or. & !aux files
-          (axis_dir.eq.4)) then !aux files, parabolic, TPCE
+          (axis_dir.eq.4).or. & !aux files, parabolic, TPCE
+          (axis_dir.eq.5)) then !implicit rigid motion
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
@@ -3318,7 +3336,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    if (axis_dir.eq.1) then !prescribed, TPCE
     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source)
    else if ((axis_dir.eq.2).or. & !aux files
-            (axis_dir.eq.4)) then !aux files parabolic
+            (axis_dir.eq.4).or. & !aux files parabolic
+            (axis_dir.eq.5)) then !implicit rigid motion
     auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
     auxcomp=2 ! heater B (side)
@@ -3369,6 +3388,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
 
   if ((axis_dir.eq.1).or. & !prescribed TPCE
       (axis_dir.eq.2)) then !aux files
+   !do nothing
+  else if (axis_dir.eq.5) then !implicit rigid motion
    !do nothing
   else if (axis_dir.eq.4) then !aux files parabolic
    if (cur_time.le.parabolic_lead_time) then
@@ -3909,6 +3930,13 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
 
+!Alexis Dalmon, Mathieu Lepilliez, Sébastien Tanguy, Annaig Pedrono,
+!Barbara Busset, Henri Bavestrello, Jean Mignot
+!Dalmon, A., Lepilliez, M., Tanguy, S., Pedrono, A., Busset, B., 
+!Bavestrello, H., & Mignot, J. (2018). 
+!Direct numerical simulation of a bubble motion in a spherical 
+!tank under external forces and microgravity conditions. 
+!Journal of Fluid Mechanics, 849, 467–497. doi:10.1017/jfm.2018.389
 subroutine CRYOGENIC_TANK_MK_angular_velocity_vector(x,cur_time, &
    angular_velocity_vector, &
    angular_velocity_vector_custom, &
@@ -3952,18 +3980,31 @@ real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
  lever_arm_custom=lever_arm_in
  angular_velocity_vector_dot=zero
  lever_arm_custom(2)=radblob8
- if (cur_time.ge.xblob8) then
-  !do nothing
- else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
-  angular_velocity_vector_custom(3)=angular_velocity_vector(3)*cur_time/xblob8
-  angular_velocity_vector_dot(3)=angular_velocity_vector(3)/xblob8
+
+ if (axis_dir.eq.5) then
+  !define lever_arm_custom, angular_velocity_vector_custom, and
+  !angular_velocity_vector_dot as needed
  else
-  print *,"cur_time invalid"
-  stop
+
+  if (cur_time.ge.xblob8) then
+   !do nothing
+  else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
+   angular_velocity_vector_custom(3)=angular_velocity_vector(3)*cur_time/xblob8
+   angular_velocity_vector_dot(3)=angular_velocity_vector(3)/xblob8
+  else
+   print *,"cur_time invalid"
+   stop
+  endif
+
  endif
 
 end subroutine CRYOGENIC_TANK_MK_angular_velocity_vector
 
+!Dalmon, A., Lepilliez, M., Tanguy, S., Pedrono, A., Busset, B., 
+!Bavestrello, H., & Mignot, J. (2018). 
+!Direct numerical simulation of a bubble motion in a spherical 
+!tank under external forces and microgravity conditions. 
+!Journal of Fluid Mechanics, 849, 467–497. doi:10.1017/jfm.2018.389
 subroutine CRYOGENIC_TANK_MK_gravity_vector(x,cur_time, &
    gravity_vector_in, &
    gravity_vector_out)
@@ -3995,6 +4036,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      (axis_dir.eq.1).or. & !prescribed TPCE
      (axis_dir.eq.2)) then !aux files
   !do nothing
+ else if (axis_dir.eq.5) then !implicit rigid motion
+  !another option for implicitly defined force via gravity vector
+  !define "gravity_vector_out" as needed.
  else if ((axis_dir.eq.3).or. & !prescribed parabolic, cylinder
           (axis_dir.eq.4)) then !aux files, parabolic
   if ((gravity_vector_in(1).eq.zero).and. &
@@ -4079,7 +4123,8 @@ if ((num_materials.ge.3).and. &
 
  if ((axis_dir.eq.0).or. & !prescribed ZBOT
      (axis_dir.eq.1).or. & !prescribed TPCE
-     (axis_dir.eq.2)) then !aux files
+     (axis_dir.eq.2).or. & !aux files
+     (axis_dir.eq.5)) then !implicit rigid motion
   !do nothing
  else if ((axis_dir.eq.3).or. & !prescribed parabolic, cylinder
           (axis_dir.eq.4)) then !aux files, parabolic
