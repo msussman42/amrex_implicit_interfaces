@@ -1097,6 +1097,7 @@ stop
        SUB_STATE_BC=>shockdrop_STATE_BC
        SUB_CFL_HELPER=>shockdrop_maxvelocity
        SUB_OVERRIDE_TAGFLAG=>shockdrop_OVERRIDE_TAGFLAG
+       SUB_ASSIMILATE=>shockdrop_ASSIMILATE
 
       else if (probtype.eq.411) then ! cav3D.F90
        SUB_INIT_MODULE=>INIT_CAV3D_MODULE

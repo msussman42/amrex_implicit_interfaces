@@ -1713,4 +1713,223 @@ endif
 
 end subroutine shockdrop_OVERRIDE_TAGFLAG
 
+
+!! Ashwani Pal 1/16/25
+! This subroutine forces the flow variable to the desired values
+! It uses an user defined length of the sponge layer and forces the
+! flow vriables to N_wave solution as a function of time over the speicied
+! length of the sponge layer
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! The inputs to the subroutine are the position, time &
+! flow variables (u,T,P,density), LS, nmat
+! The output are the forcing terms (vel_damp,P_damp,T_damp,den_damp)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine damp_nwave_activate(x,activate_flag)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(out) :: activate_flag
+
+ activate_flag=1 ! modify MAC velocity
+
+end subroutine damp_nwave_activate
+
+subroutine damp_nwave(x,dx,t,dt,num_cell_sponge,vel,den,T,nmat,LS,&
+          vel_damp, den_damp, T_damp)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: num_cell_sponge !user defined number of cells
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM),dx(SDIM) 
+real(amrex_real), INTENT(in) :: t, dt  
+real(amrex_real), INTENT(in) :: LS(nmat)  
+real(amrex_real), INTENT(in) :: T(nmat)  
+real(amrex_real), INTENT(in) :: den(nmat)  
+real(amrex_real), INTENT(in) :: vel(SDIM), P
+real(amrex_real), intent(out) :: vel_damp(SDIM)
+real(amrex_real), intent(out) :: den_damp(nmat)
+real(amrex_real), intent(out) :: T_damp(nmat)
+
+real(amrex_real) :: P_target, den_target, vel_target(SDIM), T_target
+real(amrex_real) :: damp_coeff, damp_max, dist
+real(amrex_real) :: L_sponge
+
+real(amrex_real) :: velsolid_flag
+integer :: dir_stream, dir_transverse, dir
+
+ damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
+ L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
+                                  ! be the width of first cell of the domain 
+ damp_coeff = 0.0d0 
+
+ 
+ do dir=1,SDIM
+  vel_damp(dir) = vel(dir)
+ enddo
+
+ im_gas=2 
+ P_damp = P
+ T_damp = T(im_gas)
+ den_damp = den(im_gas)
+
+ ! Call to setup_stream: already in shockdrop.F90
+ call setup_stream(dir_stream,dir_transverse)
+
+ ! Sponge Strength (Quadratic ramp)
+ ! For inflow boundary
+ if (x(dir_stream) .lt. (x_lo(dir_stream) + L_sponge)) then
+  dist = ((x_lo(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
+  damp_coeff = damp_max * (dist**2)
+  
+ ! For Outflow boundary 
+ else if (x(dir_stream) .gt. (x_hi(dir_stream) - L_sponge)) then
+  dist = (x(dir_stream) - (x_hi(dir_stream) - L_sponge)) / L_sponge
+  damp_coeff = damp_max * (dist**2)
+
+ else
+  damp_coeff = 0.0d0
+ endif
+
+
+ ! If inside sponge, calculate 
+ if (damp_coeff .gt. 0.0d0 .and. damp_coeff.le. 1.0d0) then
+  ! To set the target values of flow variables, the N_wave solutions are called 
+  ! at the inflow boundary 
+  !call to shockdrop flow varibales: These subroutines are defined in shockdrop.F90
+  call shockdrop_pressure(x,t,ls,P_target,nmat)
+  
+  velsolid_flag = 0
+  
+  call shockdrop_velocity(x,t,ls,vel_target,velsolid_flag,dx,nmat)
+
+  call shockdrop_gas_density(t,x(dir_stream),x(dir_transverse),&
+          x(SDIM),den_target)
+
+  call shockdrop_gas_temperature(t,x(dir_stream),&
+          x(dir_transverse),x(SDIM),T_target) 
+ 
+  ! Apply the Damping 
+  do dir=1,SDIM
+   vel_damp(dir) = vel(dir) - damp_coeff * ( vel(dir) - vel_target(dir) )
+  enddo
+ 
+  P_damp = P - damp_coeff * (P - P_target)
+  T_damp = T - damp_coeff * (T - T_target)
+  den_damp = den - damp_coeff * (den - den_target)
+  
+ else if (damp_coeff.lt.0d0 .or. damp_coeff .gt. 1.0d0 ) then 
+   print*,'invalid damp_coeff in damp_nwave'
+   stop   
+ endif
+
+end subroutine damp_nwave
+
+
+
+
+
+
+subroutine shockdrop_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag) !cell_flag=-1,0,1,..,sdim
+use probcommon_module
+use geometry_intersect_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), INTENT(in) :: assimilate_in
+type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
+integer, INTENT(in) :: i,j,k,cell_flag
+
+integer :: nstate,nstate_test
+real(amrex_real) :: xcrit(SDIM)
+real(amrex_real) :: temperature_local(num_materials)
+real(amrex_real) :: den_local(num_materials)
+real(amrex_real) :: LS_local(num_materials)
+integer :: im
+integer, PARAMETER :: im_gas=2
+integer :: dir
+integer :: ibase
+integer, PARAMETER :: num_cell_sponge=10
+
+nstate=assimilate_in%nstate
+
+nstate_test=STATE_NCOMP
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
+ stop
+endif
+
+if ((num_materials.ge.2).and. &
+    (num_state_material.ge.2).and. & 
+    (probtype.eq.3001)) then
+
+ do dir=1,SDIM
+  xcrit(dir)=assimilate_in%xsten(0,dir)
+  dx_local(dir)=assimilate_in%dx(dir)
+  vel_local(dir)=assimilate_in%Snew(D_DECL(i,j,k),dir)
+ enddo
+
+ do im=1,num_materials 
+  ibase=(im-1)*num_state_material
+  temperature_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+      STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)
+  den_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+      STATECOMP_STATES+ibase+ENUM_DENVAR+1)
+  LS_local(im)=assimilate_in%LSnew(D_DECL(i,j,k),im)
+ enddo
+ 
+ if (assimilate_in%nhalf.ge.2) then
+  ! do nothing
+ else
+  print *,"(assimilate_in%nhalf.ge.2) violated"
+  stop
+ endif
+
+ if (cell_flag.eq.-1) then
+  call damp_nwave(xcrit,dx_local, &
+          assimilate_in%cur_time, &
+          assimilate_in%dt, &
+          num_cell_sponge, &
+          vel_local, &
+          den_local, &
+          temperature_local, &
+          num_materials,
+          LS_local, &
+          vel_damp, &
+          den_damp, &
+          T_damp, &
+          activate_flag)
+
+  if (activate_flag.eq.1) then
+   ibase=(im_gas-1)*num_state_material
+   assimilate_out%state(D_DECL(i,j,k), &
+     STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)=T_damp(im_gas)
+   assimilate_out%state(D_DECL(i,j,k), &
+     STATECOMP_STATES+ibase+ENUM_DENVAR+1)=den_damp(im_gas)
+   do dir=1,SDIM
+    assimilate_out%state(D_DECL(i,j,k),dir)=vel_damp(dir)
+   enddo
+  else ....
+ else if ((cell_flag.ge.0).and.(cell_flag.lt.SDIM)) then
+  call damp_nwave_activate(xcrit,activate_flag)
+  if (activate_flag.eq.1) then
+          MAC=average of cell
+  else ...
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+
+return
+end subroutine shockdrop_ASSIMILATE
+
+
 END MODULE shockdrop
