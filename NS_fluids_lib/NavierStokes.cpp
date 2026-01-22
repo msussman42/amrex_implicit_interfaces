@@ -8622,6 +8622,8 @@ void NavierStokes::assimilate_state_data() {
  MultiFab& Smac_new_y = get_new_data(Umac_Type+1,project_slab_step+1);
  MultiFab& Smac_new_z = get_new_data(Umac_Type+AMREX_SPACEDIM-1,project_slab_step+1);
 
+    // isweep==0 => update cell data
+    // isweep==1 => update MAC data 
  for (int isweep=0;isweep<2;isweep++) {
 
   int local_control_flag=NULL_CONTROL;
