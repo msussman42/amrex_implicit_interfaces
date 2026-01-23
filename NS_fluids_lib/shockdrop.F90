@@ -1725,19 +1725,58 @@ end subroutine shockdrop_OVERRIDE_TAGFLAG
 ! The output are the forcing terms (vel_damp,P_damp,T_damp,den_damp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine damp_nwave_activate(x,activate_flag)
+subroutine damp_nwave_activate(x,dx, &
+  num_cell_sponge, &
+  activate_flag)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: x(SDIM),dx(SDIM)
+integer, INTENT(in) :: num_cell_sponge !user defined number of cells
 real(amrex_real), INTENT(out) :: activate_flag
+integer :: dir_stream, dir_transverse
+real(amrex_real) :: damp_coeff, damp_max, dist
 
- activate_flag=1 ! modify MAC velocity
+ damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
+ L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
+                                  ! be the width of first cell of the domain 
+ damp_coeff = 0.0d0 
+ activate_flag=0 
+ ! Call to setup_stream: already in shockdrop.F90
+ call setup_stream(dir_stream,dir_transverse)
+
+ ! Sponge Strength (Quadratic ramp)
+ ! For inflow boundary
+ if (x(dir_stream) .lt. (problo_array(dir_stream) + L_sponge)) then
+  dist = ((problo_array(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
+  damp_coeff = damp_max * (dist**2)
+ ! For Outflow boundary 
+ else if (x(dir_stream) .gt. (probhi_array(dir_stream) - L_sponge)) then
+  dist = (x(dir_stream) - (probhi_array(dir_stream) - L_sponge)) / L_sponge
+  damp_coeff = damp_max * (dist**2)
+ else
+  damp_coeff = 0.0d0
+ endif
+ ! If inside sponge, calculate 
+ if (damp_coeff .gt. 0.0d0 .and. damp_coeff.le. 1.0d0) then
+
+  activate_flag=1
+ endif
 
 end subroutine damp_nwave_activate
 
-subroutine damp_nwave(x,dx,t,dt,num_cell_sponge,vel,den,T,nmat,LS,&
-          vel_damp, den_damp, T_damp)
+subroutine damp_nwave(x,dx, &
+  t,dt, &
+  num_cell_sponge, &
+  vel, &
+  den, &
+  T, &
+  nmat, &
+  LS, &
+  vel_damp, &
+  den_damp, &
+  T_damp, &
+  activate_flag)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -1749,10 +1788,11 @@ real(amrex_real), INTENT(in) :: t, dt
 real(amrex_real), INTENT(in) :: LS(nmat)  
 real(amrex_real), INTENT(in) :: T(nmat)  
 real(amrex_real), INTENT(in) :: den(nmat)  
-real(amrex_real), INTENT(in) :: vel(SDIM), P
+real(amrex_real), INTENT(in) :: vel(SDIM)
 real(amrex_real), intent(out) :: vel_damp(SDIM)
 real(amrex_real), intent(out) :: den_damp(nmat)
 real(amrex_real), intent(out) :: T_damp(nmat)
+integer, INTENT(out) :: activate_flag
 
 real(amrex_real) :: P_target, den_target, vel_target(SDIM), T_target
 real(amrex_real) :: damp_coeff, damp_max, dist
@@ -1765,7 +1805,7 @@ integer :: dir_stream, dir_transverse, dir
  L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
                                   ! be the width of first cell of the domain 
  damp_coeff = 0.0d0 
-
+ activate_flag=0
  
  do dir=1,SDIM
   vel_damp(dir) = vel(dir)
@@ -1781,13 +1821,13 @@ integer :: dir_stream, dir_transverse, dir
 
  ! Sponge Strength (Quadratic ramp)
  ! For inflow boundary
- if (x(dir_stream) .lt. (x_lo(dir_stream) + L_sponge)) then
-  dist = ((x_lo(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
+ if (x(dir_stream) .lt. (problo_array(dir_stream) + L_sponge)) then
+  dist = ((problo_array(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
   damp_coeff = damp_max * (dist**2)
   
  ! For Outflow boundary 
- else if (x(dir_stream) .gt. (x_hi(dir_stream) - L_sponge)) then
-  dist = (x(dir_stream) - (x_hi(dir_stream) - L_sponge)) / L_sponge
+ else if (x(dir_stream) .gt. (probhi_array(dir_stream) - L_sponge)) then
+  dist = (x(dir_stream) - (probhi_array(dir_stream) - L_sponge)) / L_sponge
   damp_coeff = damp_max * (dist**2)
 
  else
@@ -1797,6 +1837,9 @@ integer :: dir_stream, dir_transverse, dir
 
  ! If inside sponge, calculate 
  if (damp_coeff .gt. 0.0d0 .and. damp_coeff.le. 1.0d0) then
+
+  activate_flag=1
+
   ! To set the target values of flow variables, the N_wave solutions are called 
   ! at the inflow boundary 
   !call to shockdrop flow varibales: These subroutines are defined in shockdrop.F90
@@ -1818,8 +1861,8 @@ integer :: dir_stream, dir_transverse, dir
   enddo
  
   P_damp = P - damp_coeff * (P - P_target)
-  T_damp = T - damp_coeff * (T - T_target)
-  den_damp = den - damp_coeff * (den - den_target)
+  T_damp(im_gas) = T - damp_coeff * (T - T_target)
+  den_damp(im_gas) = den - damp_coeff * (den - den_target)
   
  else if (damp_coeff.lt.0d0 .or. damp_coeff .gt. 1.0d0 ) then 
    print*,'invalid damp_coeff in damp_nwave'
@@ -1827,9 +1870,6 @@ integer :: dir_stream, dir_transverse, dir
  endif
 
 end subroutine damp_nwave
-
-
-
 
 
 
@@ -1846,13 +1886,19 @@ integer, INTENT(in) :: i,j,k,cell_flag
 
 integer :: nstate,nstate_test
 real(amrex_real) :: xcrit(SDIM)
+real(amrex_real) :: dx_local(SDIM)
+real(amrex_real) :: vel_local(SDIM)
 real(amrex_real) :: temperature_local(num_materials)
 real(amrex_real) :: den_local(num_materials)
 real(amrex_real) :: LS_local(num_materials)
+real(amrex_real) :: vel_damp(SDIM)
+real(amrex_real) :: den_damp(nmat)
+real(amrex_real) :: T_damp(nmat)
 integer :: im
 integer, PARAMETER :: im_gas=2
 integer :: dir
 integer :: ibase
+integer :: activate_flag
 integer, PARAMETER :: num_cell_sponge=10
 
 nstate=assimilate_in%nstate
@@ -1874,18 +1920,8 @@ if ((num_materials.ge.2).and. &
  do dir=1,SDIM
   xcrit(dir)=assimilate_in%xsten(0,dir)
   dx_local(dir)=assimilate_in%dx(dir)
-  vel_local(dir)=assimilate_in%Snew(D_DECL(i,j,k),dir)
  enddo
 
- do im=1,num_materials 
-  ibase=(im-1)*num_state_material
-  temperature_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
-      STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)
-  den_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
-      STATECOMP_STATES+ibase+ENUM_DENVAR+1)
-  LS_local(im)=assimilate_in%LSnew(D_DECL(i,j,k),im)
- enddo
- 
  if (assimilate_in%nhalf.ge.2) then
   ! do nothing
  else
@@ -1894,6 +1930,20 @@ if ((num_materials.ge.2).and. &
  endif
 
  if (cell_flag.eq.-1) then
+
+  do dir=1,SDIM
+   vel_local(dir)=assimilate_in%Snew(D_DECL(i,j,k),dir)
+  enddo
+
+  do im=1,num_materials 
+   ibase=(im-1)*num_state_material
+   temperature_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+      STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)
+   den_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+      STATECOMP_STATES+ibase+ENUM_DENVAR+1)
+   LS_local(im)=assimilate_in%LSnew(D_DECL(i,j,k),im)
+  enddo
+
   call damp_nwave(xcrit,dx_local, &
           assimilate_in%cur_time, &
           assimilate_in%dt, &
@@ -1917,12 +1967,41 @@ if ((num_materials.ge.2).and. &
    do dir=1,SDIM
     assimilate_out%state(D_DECL(i,j,k),dir)=vel_damp(dir)
    enddo
-  else ....
+  else if (activate_flag.eq.0) then
+   !do nothing
+  else
+   print *,"activate_flag invalid"
+   stop
+  endif
  else if ((cell_flag.ge.0).and.(cell_flag.lt.SDIM)) then
-  call damp_nwave_activate(xcrit,activate_flag)
+  call damp_nwave_activate(xcrit,dx_local,num_cell_sponge,activate_flag)
   if (activate_flag.eq.1) then
-          MAC=average of cell
-  else ...
+   if (cell_flag.eq.0) then
+    assimilate_out%macx(D_DECL(i,j,k))=half*( &
+     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_in%Snew(D_DECL(i-1,j,k),cell_flag+1))
+   else if (cell_flag.eq.1) then
+    assimilate_out%macy(D_DECL(i,j,k))=half*( &
+     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_in%Snew(D_DECL(i,j-1,k),cell_flag+1))
+   else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then
+    assimilate_out%macz(D_DECL(i,j,k))=half*( &
+     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_in%Snew(D_DECL(i,j,k-1),cell_flag+1))
+   else 
+    print *,"cell_flag invalid ",cell_flag
+    stop
+   endif
+  else if (activate_flag.eq.0) then
+   !do nothing
+  else
+   print *,"activate_flag invalid"
+   stop
+  endif
+ else
+  print *,"cell_flag invalid ",cell_flag
+  stop
+ endif
 else
  print *,"num_materials,num_state_material, or probtype invalid"
  stop

@@ -19247,8 +19247,9 @@ stop
 
        !called from: NavierStokes::extend_FSI_data()
       subroutine fort_extend_elastic_velocity( &
+       material_extend_velocity, &
        local_smoothing_flag, &
-       im_critical, & ! 1<=im_critical<=num_materials
+       im_critical, & ! 1<=im_critical<=num_materials+1
        dir, & !0,1,2
        velbc_in, &
        time, &
@@ -19271,6 +19272,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: material_extend_velocity(num_materials)
       integer, INTENT(in) :: local_smoothing_flag
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: level
@@ -19336,7 +19338,7 @@ stop
       real(amrex_real) xclamped_plus_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) loc_xclamped_minus_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) loc_xclamped_plus_sten(-nhalf:nhalf,SDIM)
-      integer im_critical
+      integer, intent(in) :: im_critical !1<=im_critical<=num_materials+1
       real(amrex_real) extend_offset
       real(amrex_real) dxmaxLS
       real(amrex_real) vel_sum,wtsum
@@ -19390,12 +19392,14 @@ stop
        stop
       endif
 
-      if (fort_denconst(im_critical).gt.zero) then
-       ! do nothing
-      else
-       print *,"denconst invalid: ",im_critical,fort_denconst(im_critical)
-       stop
-      endif
+      do im=1,num_materials
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
+        print *,"denconst invalid: ",im,fort_denconst(im)
+        stop
+       endif
+      enddo
 
       if (ngrow_make_distance.ne.ngrow_distance-1) then
        print *,"ngrow_make_distance!=ngrow_distance-1 fort_extend_elastic_vel"
@@ -19416,18 +19420,44 @@ stop
       call checkbound_array(fablo,fabhi,levelPC_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
 
-      if (fort_material_type(im_critical).eq.0) then
-       ! do nothing
-      else if (fort_material_type(im_critical).eq.999) then
-       ! do nothing
-      else if ((fort_material_type(im_critical).ge.1).and. &
-               (fort_material_type(im_critical).le.MAX_NUM_EOS)) then
-       ! do nothing
+      do im=1,num_materials
+       if (fort_material_type(im).eq.0) then
+        ! do nothing
+       else if (fort_material_type(im).eq.999) then
+        ! do nothing
+       else if ((fort_material_type(im).ge.1).and. &
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
+        ! do nothing
+       else
+        print *,"fort_material_type invalid: ", &
+         im,fort_material_type(im)
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      if ((im_critical.ge.1).and.(im_critical.le.num_materials+1)) then
+       !do nothing
       else
-       print *,"fort_material_type invalid: ", &
-        im_critical,fort_material_type(im_critical)
+       print *,"im_critical invalid: ",im_critical
        stop
       endif
+      do im=1,num_materials
+       if (is_rigid(im).eq.1) then
+        if (im.eq.im_critical) then
+         print *,"im_critical invalid: ",im_critical
+         stop
+        endif
+        if (material_extend_velocity(im).ge.1) then
+         print *,"expecting material_extend_velocity==0"
+         stop
+        endif
+       else if (is_rigid(im).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid(im) invalid: ",im,is_rigid(im)
+        stop
+       endif
+      enddo !im=1,num_materials
 
       k1low=0
       k1high=0
@@ -19555,11 +19585,7 @@ stop
          else if ((is_rigid(im_left).eq.0).and. &
                   (is_rigid(im_right).eq.0)) then
 
-           ! elastic materials have is_rigid_CL=1
-           ! viscoelastic materials have is_rigid=0
-          if ((is_rigid_CL(im_critical).eq.1).or. &
-              (is_rigid(im_critical).eq.0)) then
-
+                  FIX ME HERE
            if ((LSleft(im_critical).ge.-extend_offset).and. &
                (LSleft(im_critical).le.zero).and. &
                (LSright(im_critical).ge.-extend_offset).and. &
@@ -19732,14 +19758,6 @@ stop
              im_critical,LSright(im_critical)
             stop
            endif
-          else
-           print *,"fort_extend_elastic_velocity:"
-           print *,"is_rigid_CL(im_critical) invalid: ", &
-            im_critical,is_rigid_CL(im_critical)
-           print *,"or, is_rigid(im_critical) invalid: ", &
-            im_critical,is_rigid(im_critical)
-           stop
-          endif
 
          else
           print *,"fort_extend_elastic_velocity:"
@@ -19812,10 +19830,6 @@ stop
          !do nothing
         else if (is_rigid(im_left).eq.0) then
 
-          !sanity check
-         if ((is_rigid_CL(im_critical).eq.1).or. &
-             (is_rigid(im_critical).eq.0)) then
-
           if ((localLS(im_critical).ge.-extend_offset).and. &
               (localLS(im_critical).le.zero)) then
            velCELL(D_DECL(i,j,k))=half*( &
@@ -19830,15 +19844,6 @@ stop
             im_critical,localLS(im_critical)
            stop
           endif
-
-         else
-          print *,"fort_extend_elastic_velocity:"
-          print *,"is_rigid_CL(im_critical) invalid: ", &
-           im_critical,is_rigid_CL(im_critical)
-          print *,"or, is_rigid(im_critical) invalid: ", &
-           im_critical,is_rigid(im_critical)
-          stop
-         endif
 
         else
          print *,"is_rigid invalid"

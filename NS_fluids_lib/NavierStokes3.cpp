@@ -539,63 +539,59 @@ void NavierStokes::save_interface_data(
      amrex::Error("local_smoothing_flag invalid");
    } //dir=0;dir<AMREX_SPACEDIM
 
-  } else if ((im_extension>=0)&&
-             (im_extension+1<=material_extend_velocity_flag)) {
-   if (material_extend_velocity[im_extension]>0) {
-    //do nothing
-   } else
-    amrex::Error("expecting material_extend_velocity[im_extension]>0");
+  } else if (im_extension==0) {
 
    MultiFab* vofmf=
     getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
-
-   MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
-    im_extension*ngeom_raw,
-    im_extension*ngeom_raw,ngeom_raw,1);
    MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
-    //scomp,dcomp,ncomp,ngrow
-   MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsmf,im_extension,
-    num_materials*ngeom_raw+im_extension,1,1);
+
+   for (int im=0;im<num_materials;im++) {
+    if (material_extend_velocity[im]==0) {
+     //do nothing
+    } else if (material_extend_velocity[im]>0) {
+
+     MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
+      im*ngeom_raw,
+      im*ngeom_raw,ngeom_raw,1);
+     //scomp,dcomp,ncomp,ngrow
+    MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsmf,im,
+       num_materials*ngeom_raw+im,1,1);
+   } else
+    amrex::Error("material_extend_velocity invalid");
+
    delete vofmf;
    delete lsmf;
 
-   if (im_extension+1==material_extend_velocity_flag) {
     //correct the volume fractions, centroids, and level set function(s)
-    correct_flotsam();
-    correct_for_shear();
+   correct_flotsam();
+   correct_for_shear();
 
-    //restore the velocity field
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     if (local_smoothing_flag==0) {
-      MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
-      MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
-        0,0,1,0);
-      MultiFab& Umac_new_new=get_new_data(Umac_Type+dir,project_slab_step+1);
-      MultiFab::Copy(Umac_new_new,
-        *localMF[standard_interface_velocity_hold_MF+dir],
-        0,0,1,0);
-     } else if (local_smoothing_flag>0) {
-      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-       *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
-      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-       *localMF[standard_interface_velocity_hold_MF+dir],0,0,1,0);
-     } else
-      amrex::Error("local_smoothing_flag invalid");
-    } //dir=0;dir<AMREX_SPACEDIM
+   //restore the velocity field
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    if (local_smoothing_flag==0) {
+     MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
+     MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
+       0,0,1,0);
+     MultiFab& Umac_new_new=get_new_data(Umac_Type+dir,project_slab_step+1);
+     MultiFab::Copy(Umac_new_new,
+       *localMF[standard_interface_velocity_hold_MF+dir],
+       0,0,1,0);
+    } else if (local_smoothing_flag>0) {
+     MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+      *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
+     MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
+      *localMF[standard_interface_velocity_hold_MF+dir],0,0,1,0);
+    } else
+     amrex::Error("local_smoothing_flag invalid");
+   } //dir=0;dir<AMREX_SPACEDIM
 
-    //delete the hold data
-    delete_localMF(interface_hold_MF,1);
-    delete_localMF(improved_interface_hold_MF,1);
-    delete_localMF(standard_interface_hold_MF,1);
+   //delete the hold data
+   delete_localMF(interface_hold_MF,1);
+   delete_localMF(improved_interface_hold_MF,1);
+   delete_localMF(standard_interface_hold_MF,1);
 
-    delete_localMF(interface_velocity_hold_MF,AMREX_SPACEDIM);
-    delete_localMF(standard_interface_velocity_hold_MF,AMREX_SPACEDIM);
-
-   } else if ((im_extension>=0)&&
-              (im_extension+1<material_extend_velocity_flag)) {
-    //do nothing
-   } else
-    amrex::Error("im_extension invalid");
+   delete_localMF(interface_velocity_hold_MF,AMREX_SPACEDIM);
+   delete_localMF(standard_interface_velocity_hold_MF,AMREX_SPACEDIM);
 
   } else
    amrex::Error("im_extension invalid");
@@ -603,8 +599,7 @@ void NavierStokes::save_interface_data(
  
  } else if (control_flag==RESTORE_CONTROL) {
 
-  if ((im_extension>=0)&&
-      (im_extension+1<=material_extend_velocity_flag)) {
+  if (im_extension==0) {
    //do nothing
   } else
    amrex::Error("im_extension invalid (RESTORE_CONTROL)");
@@ -632,7 +627,8 @@ void NavierStokes::save_interface_data(
   } //dir=0;dir<AMREX_SPACEDIM
 
   //extrapolate the velocity field here:
-  extend_FSI_data(im_extension+1,local_smoothing_flag);
+  int im_extend=num_materials+1;
+  extend_FSI_data(im_extend,local_smoothing_flag);
 
  } else
   amrex::Error("control_flag invalid");
@@ -740,80 +736,64 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    //copy VFRAC,CEN,LS to standard_interface_hold_MF
   save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
      im_extension);
- } else
-  amrex::Error("material_extend_velocity_flag invalid");
 
- for (im_extension=0;im_extension<num_materials;im_extension++) {
-  if (material_extend_velocity[im_extension]>0) {
+  im_extension=0;
 
-   if (material_extend_velocity_flag>0) {
-     //copy interface_hold_MF, interface_velocity_hold_MF back to
-     //state data. (project_slab_step+1)
-     //extrapolate the velocity field.
-    save_interface_dataALL(RESTORE_CONTROL,local_smoothing_flag,im_extension);
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     delete_array(FSI_MAC_VELOCITY_MF+dir);
-    }
-   } else
-    amrex::Error("material_extend_velocity_flag invalid");
+   //copy interface_hold_MF, interface_velocity_hold_MF back to
+   //state data. (project_slab_step+1)
+   //extrapolate the velocity field.
+   //FSI_MAC_VELOCITY_MF is allocated in extend_FSI_data.
+  save_interface_dataALL(RESTORE_CONTROL,local_smoothing_flag,im_extension);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   delete_array(FSI_MAC_VELOCITY_MF+dir);
+  }
 
-   sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
+  sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
       im_extension);
 
-   if ((step_through_data==1)||(1==0)) {
-    int basestep_debug=nStep();
-    parent->writeDEBUG_PlotFile(
+  if ((step_through_data==1)||(1==0)) {
+   int basestep_debug=nStep();
+   parent->writeDEBUG_PlotFile(
      basestep_debug,
      SDC_outer_sweeps,
      project_slab_step,
      divu_outer_sweeps);
-    std::cout << "press any number then enter:after sub_nonlinear_advection\n";
-    std::cout << "im_extension= " << im_extension << '\n';
-    std::cout << "smoothing_iter= " << smoothing_iter << '\n';
-    std::cout << "local_smoothing_flag= " << local_smoothing_flag << '\n';
-    std::cout << "advect_time_slab= " << advect_time_slab << '\n';
-    std::cout << "vel_time_slab= " << vel_time_slab << '\n';
-    std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
-    std::cout << "num_divu_outer_sweeps= " << 
+   std::cout << "press any number then enter:after sub_nonlinear_advection\n";
+   std::cout << "im_extension= " << im_extension << '\n';
+   std::cout << "smoothing_iter= " << smoothing_iter << '\n';
+   std::cout << "local_smoothing_flag= " << local_smoothing_flag << '\n';
+   std::cout << "advect_time_slab= " << advect_time_slab << '\n';
+   std::cout << "vel_time_slab= " << vel_time_slab << '\n';
+   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+   std::cout << "num_divu_outer_sweeps= " << 
      num_divu_outer_sweeps << '\n';
-    std::cout << "slab_step= " << slab_step << '\n';
-    std::cout << "project_slab_step= " << project_slab_step << '\n';
-    std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
-    std::cout << "FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
-    std::cout << "num_FSI_outer_sweeps= " << 
+   std::cout << "slab_step= " << slab_step << '\n';
+   std::cout << "project_slab_step= " << project_slab_step << '\n';
+   std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
+   std::cout << "FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
+   std::cout << "num_FSI_outer_sweeps= " << 
       num_FSI_outer_sweeps << '\n';
-    std::cout << "NFSI_LIMIT= " << 
+   std::cout << "NFSI_LIMIT= " << 
       NFSI_LIMIT << '\n';
-    int n_input;
-    std::cin >> n_input;
-   }
+   int n_input;
+   std::cin >> n_input;
+  }
 
 
-   if (material_extend_velocity_flag>0) {
-     //copy VFRAC,CEN,LS to improved_interface_hold_MF
-     //copy interface_velocity_hold_MF to Umac_new|UMAC_STATIC at
-     //velocity_slab_step.
-     //if (im_extension+1==material_extend_velocity_flag) then
-     // a) correct the volume fractions, centroids and levelset functions.
-     // b) copy interface_velocity_hold back to 
-     //    velocity_slab_step|UMAC_STATIC
-     // c) copy standard_interface_velocity_hold back to 
-     //    project_slab_step+1|UMAC_STATIC
-     // d) delete interface_hold,improved_interface_hold,
-     //    standard_interface_hold,interface_velocity_hold,
-     //    standard_interface_velocity_hold
-    save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
-       im_extension);
-   } else
-    amrex::Error("material_extend_velocity_flag invalid");
-
-  } else if (material_extend_velocity[im_extension]==0) {
-   //do nothing
-  } else
-   amrex::Error("material_extend_velocity invalid");
- }
-
- if (material_extend_velocity_flag>0) {
+   //copy VFRAC,CEN,LS to improved_interface_hold_MF
+   //copy interface_velocity_hold_MF to Umac_new|UMAC_STATIC at
+   //velocity_slab_step.
+   //if (im_extension+1==material_extend_velocity_flag) then
+   // a) correct the volume fractions, centroids and levelset functions.
+   // b) copy interface_velocity_hold back to 
+   //    velocity_slab_step|UMAC_STATIC
+   // c) copy standard_interface_velocity_hold back to 
+   //    project_slab_step+1|UMAC_STATIC
+   // d) delete interface_hold,improved_interface_hold,
+   //    standard_interface_hold,interface_velocity_hold,
+   //    standard_interface_velocity_hold
+  save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
+     im_extension);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -821,8 +801,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    ns_level.MOFavgDown();
   }  // ilev=finest_level ... level  
 
- } else if (material_extend_velocity_flag==0) {
-  //do nothing
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
@@ -1282,7 +1260,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     parent->levelSteps(0)); 
   }
 
- } else if ((local_smoothing_flag>0)||(im_extension>=0)) {
+ } else if ((local_smoothing_flag>0)||(im_extension==0)) {
   //do nothing
  } else
   amrex::Error("local_smoothing_flag or im_extension invalid");
@@ -15154,7 +15132,7 @@ void NavierStokes::manage_FSI_data() {
 
 } // end subroutine manage_FSI_data()
 
-//1<=im_critical<=nmat
+//1<=im_critical<=nmat+1
 void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) { 
 
  int finest_level=parent->finestLevel();
@@ -15318,8 +15296,9 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
     // 3. is_rigid=1
     // 4. the material in question
    fort_extend_elastic_velocity(
+      material_extend_velocity.dataPtr(),
       &local_smoothing_flag,
-      &im_critical, //1<=im_critical<=num_materials
+      &im_critical, //1<=im_critical<=num_materials+1
       &dir, //dir=0,1,2
       velbc.dataPtr(),  
       &cur_time_slab, 

@@ -16180,7 +16180,7 @@ stop
       end subroutine fort_vfrac_split
 
       subroutine fort_vfrac_split_smooth( &
-       im_extension, & !-1<=im_extension<num_materials
+       im_extension, & !im_extension==-1, or 0.
        local_smoothing_flag, &
        nprocessed, &
        tid, &
@@ -16448,7 +16448,7 @@ stop
        stop
       endif
 
-      if ((im_extension.ge.-1).and.(im_extension.lt.num_materials)) then
+      if ((im_extension.ge.-1).and.(im_extension.le.0)) then
        !do nothing
       else
        print *,"im_extension invalid: ",im_extension
@@ -16914,8 +16914,8 @@ stop
 
            !DEBUGGING
            if (1.eq.0) then
-            if (im_extension.eq.2) then
-             if (LS(D_DECL(icrse,jcrse,kcrse),im_extension+1).ge. &
+            if (im_extension.eq.0) then
+             if (LS(D_DECL(icrse,jcrse,kcrse),3).ge. &
                  -two*dx(1)) then
               if ((usten_donate(0).ne.zero).or. &
                   (usten_donate(-1).ne.zero).or. &
@@ -16928,7 +16928,7 @@ stop
                print *,"dir_counter=",dir_counter
                print *,"dx(1)= ",dx(1)
                print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
-               print *,"LS=",LS(D_DECL(icrse,jcrse,kcrse),im_extension+1)
+               print *,"LS=",LS(D_DECL(icrse,jcrse,kcrse),3)
                print *,"usten_donate ",usten_donate
                print *,"usten_accept ",usten_accept
                stop

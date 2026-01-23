@@ -992,6 +992,8 @@ Vector<int> NavierStokes::material_type_interface;
 Vector<int> NavierStokes::material_conservation_form;
 //nmat components.
 //values range from 0 to nmat-1
+//0=>do not extend this materials' velocity.
+//1...nmat-1 =>a ranking for extension
 Vector<int> NavierStokes::material_extend_velocity; 
 int NavierStokes::material_extend_velocity_flag;
 
@@ -19887,7 +19889,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
 
   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
- } else if ((local_smoothing_flag>0)||(im_extension>=0)) {
+ } else if ((local_smoothing_flag>0)||(im_extension==0)) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -19953,7 +19955,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
    }
 
    fort_vfrac_split_smooth(
-    &im_extension, //-1<=im_extension<num_materials
+    &im_extension, //im_extension==-1 or 0
     &local_smoothing_flag,
     &nprocessed[tid_current],
     &tid_current,
@@ -20111,7 +20113,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
   } else
    amrex::Error("level invalid23");
 
- } else if ((local_smoothing_flag>0)||(im_extension>=0)) {
+ } else if ((local_smoothing_flag>0)||(im_extension==0)) {
 
   //do nothing
 
