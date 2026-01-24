@@ -17330,7 +17330,7 @@ stop
       integer i1,j1,k1
       integer i1crit,j1crit,k1crit
       integer k1lo,k1hi
-      integer dir,im,im_opp,im_primary,im_crit,irank,last
+      integer dir,im,im_opp,im_primary,im_crit,irank
       integer worst_rank
       integer num_materials_fluids
       real(amrex_real) dxmin
@@ -17344,7 +17344,6 @@ stop
       integer vofcompraw
       integer growlo(3),growhi(3)
 
-      real(amrex_real) mofnew(num_materials*ngeom_recon)
       real(amrex_real) LS_standard(num_materials)
       real(amrex_real) F_standard(num_materials)
 

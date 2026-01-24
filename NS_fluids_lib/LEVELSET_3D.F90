@@ -19344,6 +19344,7 @@ stop
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
+      integer need_to_extend
       integer local_homflag
 
        !fort_extend_elastic_velocity
@@ -19585,11 +19586,76 @@ stop
          else if ((is_rigid(im_left).eq.0).and. &
                   (is_rigid(im_right).eq.0)) then
 
-                  FIX ME HERE
-           if ((LSleft(im_critical).ge.-extend_offset).and. &
-               (LSleft(im_critical).le.zero).and. &
-               (LSright(im_critical).ge.-extend_offset).and. &
-               (LSright(im_critical).le.zero)) then
+           if ((im_critical.ge.1).and. &
+               (im_critical.le.num_materials)) then
+            if ((LSleft(im_critical).ge.-extend_offset).and. &
+                (LSleft(im_critical).le.zero).and. &
+                (LSright(im_critical).ge.-extend_offset).and. &
+                (LSright(im_critical).le.zero)) then
+             need_to_extend=1
+            else if ((LSleft(im_critical).lt.-extend_offset).or. &
+                     (LSleft(im_critical).gt.zero).or. &
+                     (LSright(im_critical).lt.-extend_offset).or. &
+                     (LSright(im_critical).gt.zero)) then
+             need_to_extend=0
+            else
+             print *,"LSright,LSleft invalid ",LSleft,LSright
+             stop
+            endif
+           else if (im_critical.eq.num_materials+1) then
+            need_to_extend=1
+            do im=1,num_materials
+             if (material_extend_velocity(im).ge.1) then
+              if ((LSleft(im).gt.zero).or. & 
+                  (LSright(im).gt.zero)) then
+               need_to_extend=0
+              else if ((LSleft(im).le.zero).and. & 
+                       (LSright(im).le.zero)) then
+               !do nothing
+              else
+               print *,"LSright,LSleft invalid ",LSleft,LSright
+               stop
+              endif
+             else if (material_extend_velocity(im).eq.0) then
+              !do nothing
+             else
+              print *,"material_extend_velocity invalid"
+              stop
+             endif
+            enddo !im=1..num_materials
+            if (need_to_extend.eq.1) then
+             need_to_extend=0
+             do im=1,num_materials
+              if (material_extend_velocity(im).ge.1) then
+               if ((LSleft(im).ge.-extend_offset).and. &
+                   (LSright(im).ge.-extend_offset)) then
+                need_to_extend=1
+               else if ((LSleft(im).lt.-extend_offset).or. &
+                        (LSright(im).lt.-extend_offset)) then
+                !do nothing
+               else
+                print *,"LSright,LSleft invalid ",LSleft,LSright
+                stop
+               endif
+              else if (material_extend_velocity(im).eq.0) then
+               !do nothing
+              else
+               print *,"material_extend_velocity invalid"
+               stop
+              endif
+             enddo !im=1..num_materials
+            else if (need_to_extend.eq.0) then
+             !do nothing
+            else
+             print *,"need_to_extend invalid"
+             stop
+            endif
+           else
+            print *,"im_critical invalid: ",im_critical
+            stop
+           endif
+
+           if (need_to_extend.eq.1) then 
 
             vel_sum=zero
             wtsum=zero
@@ -19680,14 +19746,22 @@ stop
 
                if ((is_rigid(loc_im_left).eq.1).or. &
                    (loc_im_left.eq.im_critical).or. &
+                   ((im_critical.eq.num_materials+1).and. &
+                    (material_extend_velocity(loc_im_left).ge.1)).or. &
                    (is_rigid(loc_im_right).eq.1).or. &
-                   (loc_im_right.eq.im_critical)) then
+                   (loc_im_right.eq.im_critical).or. &
+                   ((im_critical.eq.num_materials+1).and. &
+                    (material_extend_velocity(loc_im_right).ge.1))) then
                 local_wt=one
                 local_vel=velMAC(D_DECL(i+i1,j+j1,k+k1))
                else if ((is_rigid(loc_im_left).eq.0).and. &
                         (loc_im_left.ne.im_critical).and. &
+                        ((im_critical.ne.num_materials+1).or. &
+                         (material_extend_velocity(loc_im_left).eq.0)).and. &
                         (is_rigid(loc_im_right).eq.0).and. &
-                        (loc_im_right.ne.im_critical)) then
+                        (loc_im_right.ne.im_critical).and. &
+                        ((im_critical.ne.num_materials+1).or. &
+                         (material_extend_velocity(loc_im_right).eq.0))) then
                 !do nothing
                else
                 print *,"is_rigid(s) invalid"
@@ -19745,17 +19819,11 @@ stop
              stop
             endif
 
-           else if ((LSleft(im_critical).le.-extend_offset).or. &
-                    (LSleft(im_critical).ge.zero).or. &
-                    (LSright(im_critical).le.-extend_offset).or. &
-                    (LSright(im_critical).ge.zero)) then
+           else if (need_to_extend.eq.0) then
             !do nothing
            else
             print *,"fort_extend_elastic_velocity:"
-            print *,"LSleft(im_critical) invalid? ", &
-             im_critical,LSleft(im_critical)
-            print *,"LSright(im_critical) invalid? ", &
-             im_critical,LSright(im_critical)
+            print *,"need_to_extend invalid: ",need_to_extend
             stop
            endif
 
@@ -19830,20 +19898,79 @@ stop
          !do nothing
         else if (is_rigid(im_left).eq.0) then
 
+         if ((im_critical.ge.1).and. &
+             (im_critical.le.num_materials)) then
           if ((localLS(im_critical).ge.-extend_offset).and. &
               (localLS(im_critical).le.zero)) then
-           velCELL(D_DECL(i,j,k))=half*( &
-              velMAC(D_DECL(i,j,k))+ &
-              velMAC(D_DECL(i+ii,j+jj,k+kk)))
-          else if ((localLS(im_critical).le.-extend_offset).or. &
-                   (localLS(im_critical).ge.zero)) then
-           !do nothing
+           need_to_extend=1
+          else if ((localLS(im_critical).lt.-extend_offset).or. &
+                   (localLS(im_critical).gt.zero)) then
+           need_to_extend=0
           else
-           print *,"fort_extend_elastic_velocity:"
-           print *,"localLS(im_critical) invalid: ", &
-            im_critical,localLS(im_critical)
+           print *,"localLS invalid ",localLS
            stop
           endif
+         else if (im_critical.eq.num_materials+1) then
+          need_to_extend=1
+          do im=1,num_materials
+           if (material_extend_velocity(im).ge.1) then
+            if (localLS(im).gt.zero) then
+             need_to_extend=0
+            else if (localLS(im).le.zero) then
+             !do nothing
+            else
+             print *,"localLS invalid ",localLS
+             stop
+            endif
+           else if (material_extend_velocity(im).eq.0) then
+            !do nothing
+           else
+            print *,"material_extend_velocity invalid"
+            stop
+           endif
+          enddo !im=1..num_materials
+          if (need_to_extend.eq.1) then
+           need_to_extend=0
+           do im=1,num_materials
+            if (material_extend_velocity(im).ge.1) then
+             if (localLS(im).ge.-extend_offset) then
+              need_to_extend=1
+             else if (localLS(im).lt.-extend_offset) then
+              !do nothing
+             else
+              print *,"localLS invalid ",localLS
+              stop
+             endif
+            else if (material_extend_velocity(im).eq.0) then
+             !do nothing
+            else
+             print *,"material_extend_velocity invalid"
+             stop
+            endif
+           enddo !im=1..num_materials
+          else if (need_to_extend.eq.0) then
+           !do nothing
+          else
+           print *,"need_to_extend invalid"
+           stop
+          endif
+         else
+          print *,"im_critical invalid: ",im_critical
+          stop
+         endif
+
+         if (need_to_extend.eq.1) then 
+
+          velCELL(D_DECL(i,j,k))=half*( &
+             velMAC(D_DECL(i,j,k))+ &
+             velMAC(D_DECL(i+ii,j+jj,k+kk)))
+
+         else if (need_to_extend.eq.0) then
+          !do nothing
+         else
+          print *,"need_to_extend invalid"
+          stop
+         endif
 
         else
          print *,"is_rigid invalid"

@@ -553,11 +553,12 @@ void NavierStokes::save_interface_data(
      MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
       im*ngeom_raw,
       im*ngeom_raw,ngeom_raw,1);
-     //scomp,dcomp,ncomp,ngrow
-    MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsmf,im,
+      //scomp,dcomp,ncomp,ngrow
+     MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsmf,im,
        num_materials*ngeom_raw+im,1,1);
-   } else
-    amrex::Error("material_extend_velocity invalid");
+    } else
+     amrex::Error("material_extend_velocity invalid");
+   } //im=1..num_materials
 
    delete vofmf;
    delete lsmf;
@@ -595,7 +596,6 @@ void NavierStokes::save_interface_data(
 
   } else
    amrex::Error("im_extension invalid");
-
  
  } else if (control_flag==RESTORE_CONTROL) {
 
