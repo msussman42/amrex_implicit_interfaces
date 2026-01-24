@@ -1733,9 +1733,9 @@ use global_utility_module
 IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM),dx(SDIM)
 integer, INTENT(in) :: num_cell_sponge !user defined number of cells
-real(amrex_real), INTENT(out) :: activate_flag
+integer, INTENT(out) :: activate_flag
 integer :: dir_stream, dir_transverse
-real(amrex_real) :: damp_coeff, damp_max, dist
+real(amrex_real) :: damp_coeff, damp_max, dist,L_sponge
 
  damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
  L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
@@ -1770,7 +1770,7 @@ subroutine damp_nwave(x,dx, &
   num_cell_sponge, &
   vel, &
   den, &
-  T, &
+  Temperature, &
   nmat, &
   LS, &
   vel_damp, &
@@ -1786,7 +1786,7 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM),dx(SDIM) 
 real(amrex_real), INTENT(in) :: t, dt  
 real(amrex_real), INTENT(in) :: LS(nmat)  
-real(amrex_real), INTENT(in) :: T(nmat)  
+real(amrex_real), INTENT(in) :: Temperature(nmat)  
 real(amrex_real), INTENT(in) :: den(nmat)  
 real(amrex_real), INTENT(in) :: vel(SDIM)
 real(amrex_real), intent(out) :: vel_damp(SDIM)
@@ -1798,8 +1798,9 @@ real(amrex_real) :: P_target, den_target, vel_target(SDIM), T_target
 real(amrex_real) :: damp_coeff, damp_max, dist
 real(amrex_real) :: L_sponge
 
-real(amrex_real) :: velsolid_flag
+integer :: velsolid_flag
 integer :: dir_stream, dir_transverse, dir
+integer, PARAMETER :: im_gas=2
 
  damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
  L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
@@ -1811,9 +1812,9 @@ integer :: dir_stream, dir_transverse, dir
   vel_damp(dir) = vel(dir)
  enddo
 
- im_gas=2 
- P_damp = P
- T_damp = T(im_gas)
+!FIX ME USE EOS
+! P_damp = zero
+ T_damp = Temperature(im_gas)
  den_damp = den(im_gas)
 
  ! Call to setup_stream: already in shockdrop.F90
@@ -1859,10 +1860,12 @@ integer :: dir_stream, dir_transverse, dir
   do dir=1,SDIM
    vel_damp(dir) = vel(dir) - damp_coeff * ( vel(dir) - vel_target(dir) )
   enddo
- 
-  P_damp = P - damp_coeff * (P - P_target)
-  T_damp(im_gas) = T - damp_coeff * (T - T_target)
-  den_damp(im_gas) = den - damp_coeff * (den - den_target)
+
+  !FIX ME this is obsolete 
+  !P_damp = P - damp_coeff * (P - P_target)
+  T_damp(im_gas) = Temperature(im_gas) -  &
+     damp_coeff * (Temperature(im_gas) - T_target)
+  den_damp(im_gas) = den(im_gas) - damp_coeff * (den(im_gas) - den_target)
   
  else if (damp_coeff.lt.0d0 .or. damp_coeff .gt. 1.0d0 ) then 
    print*,'invalid damp_coeff in damp_nwave'
@@ -1892,8 +1895,8 @@ real(amrex_real) :: temperature_local(num_materials)
 real(amrex_real) :: den_local(num_materials)
 real(amrex_real) :: LS_local(num_materials)
 real(amrex_real) :: vel_damp(SDIM)
-real(amrex_real) :: den_damp(nmat)
-real(amrex_real) :: T_damp(nmat)
+real(amrex_real) :: den_damp(num_materials)
+real(amrex_real) :: T_damp(num_materials)
 integer :: im
 integer, PARAMETER :: im_gas=2
 integer :: dir
@@ -1932,16 +1935,16 @@ if ((num_materials.ge.2).and. &
  if (cell_flag.eq.-1) then
 
   do dir=1,SDIM
-   vel_local(dir)=assimilate_in%Snew(D_DECL(i,j,k),dir)
+   vel_local(dir)=assimilate_out%state(D_DECL(i,j,k),dir)
   enddo
 
   do im=1,num_materials 
    ibase=(im-1)*num_state_material
-   temperature_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+   temperature_local(im)=assimilate_out%state(D_DECL(i,j,k), &
       STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR+1)
-   den_local(im)=assimilate_in%Snew(D_DECL(i,j,k), &
+   den_local(im)=assimilate_out%state(D_DECL(i,j,k), &
       STATECOMP_STATES+ibase+ENUM_DENVAR+1)
-   LS_local(im)=assimilate_in%LSnew(D_DECL(i,j,k),im)
+   LS_local(im)=assimilate_out%LS_state(D_DECL(i,j,k),im)
   enddo
 
   call damp_nwave(xcrit,dx_local, &
@@ -1951,7 +1954,7 @@ if ((num_materials.ge.2).and. &
           vel_local, &
           den_local, &
           temperature_local, &
-          num_materials,
+          num_materials, &
           LS_local, &
           vel_damp, &
           den_damp, &
@@ -1978,16 +1981,16 @@ if ((num_materials.ge.2).and. &
   if (activate_flag.eq.1) then
    if (cell_flag.eq.0) then
     assimilate_out%macx(D_DECL(i,j,k))=half*( &
-     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
-     assimilate_in%Snew(D_DECL(i-1,j,k),cell_flag+1))
+     assimilate_out%state(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_out%state(D_DECL(i-1,j,k),cell_flag+1))
    else if (cell_flag.eq.1) then
     assimilate_out%macy(D_DECL(i,j,k))=half*( &
-     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
-     assimilate_in%Snew(D_DECL(i,j-1,k),cell_flag+1))
+     assimilate_out%state(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_out%state(D_DECL(i,j-1,k),cell_flag+1))
    else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then
     assimilate_out%macz(D_DECL(i,j,k))=half*( &
-     assimilate_in%Snew(D_DECL(i,j,k),cell_flag+1)+ &
-     assimilate_in%Snew(D_DECL(i,j,k-1),cell_flag+1))
+     assimilate_out%state(D_DECL(i,j,k),cell_flag+1)+ &
+     assimilate_out%state(D_DECL(i,j,k-1),cell_flag+1))
    else 
     print *,"cell_flag invalid ",cell_flag
     stop
