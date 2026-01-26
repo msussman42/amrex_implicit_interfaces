@@ -2,12 +2,12 @@
 #expected most dangerous mode: space frequency=.7
 #wave length=2 pi/.7=9.0
 #see Popinet 2009, see rayleigh_capillary_growth.F90
-max_step  = 10   # maximum timestep non-intrusive LSA
+max_step  = 10000   # maximum timestep non-intrusive LSA
 #max_step  = 999999   # maximum timestep perturbation
 #max_step  =  2    # maximum timestep non-intrusive LSA
 #stop_time = 0.0012 # maximum problem time non-intrusive LSA
-stop_time = 0.003 # maximum problem time non-intrusive LSA
-#stop_time =  10.25  # maximum problem time perturbation
+#stop_time = 0.003 # maximum problem time non-intrusive LSA
+stop_time =  10.25  # maximum problem time perturbation
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -59,7 +59,7 @@ ns.LSA_velocity_scale=0.1
 ns.LSA_temperature_scale=0.0
 
 # 0- 1 level 1- 2 levels  2- 3 levels
-amr.regrid_int      = 100000       # how often to regrid non-intrusive LSA
+amr.regrid_int      = 1000000       # how often to regrid non-intrusive LSA
 amr.n_error_buf     = 2 2 2 2 2    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 ns.enable_spectral=0
@@ -68,12 +68,12 @@ amr.blocking_factor = 2 2 2 2 2       # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1  # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-#amr.plot_int        = 100 # non-intrusive LSA
-amr.plot_int        = 1  # non-intrusive LSA
+amr.plot_int        = 100 # non-intrusive LSA
+#amr.plot_int        = 1  # non-intrusive LSA
 # 1=LSA_N_EXTRA
 # 2=LSA_NP1_EXTRA
 # 3=LSA_EVEC_EXTRA
-amr.LSA_plot_index=3
+amr.LSA_plot_index=0
 #amr.plot_int       = 100 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
