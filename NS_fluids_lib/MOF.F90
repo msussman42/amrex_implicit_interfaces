@@ -16097,6 +16097,15 @@ contains
 ! if just one fluid material occupies a cell, then the order for that
 ! fluid is 1, and all other orders are 0.
 
+!FUTURE: 
+!1. add material_extend_velocity to probdataf95.H
+!2. multimaterial_MOF calls "sub_multimaterial_MOF"
+!    a) just the prescribed rigid materials (artificially made tessellating)
+!       MOF
+!    b) just the material_extend_velocity materials (artificially made 
+!       tessellating). MOF
+!    c) just the fluids
+!    "is_rigid" should not be needed inside of "sub_multimaterial_MOF"
       subroutine multimaterial_MOF( &
         tid_in, &
         bfact,dx, &
