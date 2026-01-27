@@ -1419,6 +1419,18 @@ implicit none
       real(amrex_real), INTENT(inout) :: latent_heat ! always positive
       end subroutine TEMPLATE_VARIABLE_LATENT_HEAT
 
+      subroutine TEMPLATE_VARIABLE_VISCCONST( &
+        im, &
+        density, &
+        temperature, &
+        visc_in_out)
+      use amrex_fort_module, only : amrex_real
+      integer, INTENT(in) :: im
+      real(amrex_real), INTENT(in) :: density
+      real(amrex_real), INTENT(in) :: temperature
+      real(amrex_real), INTENT(inout) :: visc_in_out
+      end subroutine TEMPLATE_VARIABLE_VISCCONST
+
 
       END INTERFACE
 
@@ -1503,6 +1515,8 @@ implicit none
               SUB_VARIABLE_SURFACE_TENSION
       PROCEDURE(TEMPLATE_VARIABLE_LATENT_HEAT), POINTER :: &
               SUB_VARIABLE_LATENT_HEAT
+      PROCEDURE(TEMPLATE_VARIABLE_VISCCONST), POINTER :: &
+              SUB_VARIABLE_VISCCONST
 
 contains
 

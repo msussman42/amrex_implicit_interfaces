@@ -1645,6 +1645,8 @@ void fortran_parameters() {
 
  NavierStokes::material_type.resize(NavierStokes::num_materials);
 
+ NavierStokes::material_extend_velocity.resize(NavierStokes::num_materials);
+
  NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
 
  NavierStokes::material_conservation_form.resize(NavierStokes::num_materials);
@@ -1705,6 +1707,14 @@ void fortran_parameters() {
   amrex::Error("angular_velocity_vector_in_table invalid");
 
  pp.getarr("material_type",NavierStokes::material_type,0,
+    NavierStokes::num_materials);
+
+ for (int i=0;i<NavierStokes::num_materials;i++) {
+  NavierStokes::material_extend_velocity[i]=0;
+ }
+
+ pp.queryarr("material_extend_velocity",
+    NavierStokes::material_extend_velocity,0,
     NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
@@ -2355,6 +2365,7 @@ void fortran_parameters() {
   &NavierStokes::ngeom_raw,
   &NavierStokes::ngeom_recon,
   &NavierStokes::num_materials,
+  NavierStokes::material_extend_velocity.dataPtr(),
   NavierStokes::material_type.dataPtr(),
   NavierStokes::material_type_interface.dataPtr(),
   NavierStokes::material_conservation_form.dataPtr(),
@@ -3609,8 +3620,10 @@ NavierStokes::read_params ()
     for (int i=0;i<num_materials;i++) {
      material_extend_velocity[i]=0;
     }
+
     pp.queryarr("material_extend_velocity",material_extend_velocity,0,
       num_materials);
+
     material_extend_velocity_flag=0;
     for (int i=0;i<num_materials;i++) {
      if (material_extend_velocity[i]>0)

@@ -442,6 +442,7 @@ stop
         ccngeom_raw, &
         ccngeom_recon, &
         ccnum_materials, &
+        ccmaterial_extend_velocity, &
         ccmaterial_type, &
         ccmaterial_type_interface, &
         ccmaterial_conservation_form, &
@@ -620,6 +621,7 @@ stop
       integer, INTENT(in) :: ccngeom_raw
       integer, INTENT(in) :: ccngeom_recon
       
+      integer, INTENT(in) :: ccmaterial_extend_velocity(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
       integer, INTENT(in) :: ccmaterial_conservation_form(ccnum_materials)
@@ -824,6 +826,7 @@ stop
 
       SUB_VARIABLE_SURFACE_TENSION=>STUB_VARIABLE_SURFACE_TENSION
       SUB_VARIABLE_LATENT_HEAT=>STUB_VARIABLE_LATENT_HEAT
+      SUB_VARIABLE_VISCCONST=>STUB_VARIABLE_VISCCONST
 
       SUB_UNITLESS_EXPANSION_FACTOR=>STUB_UNITLESS_EXPANSION_FACTOR
       SUB_INTERNAL_GRAVITY_WAVE_FLAG=>STUB_INTERNAL_GRAVITY_WAVE_FLAG
@@ -1601,6 +1604,8 @@ stop
 
       do im=1,num_materials
        fort_adapt_whole_material(im)=ccadapt_whole_material(im) 
+       fort_material_extend_velocity(im)= &
+              ccmaterial_extend_velocity(im)
        fort_material_type(im)=ccmaterial_type(im)
        fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
 
@@ -1621,7 +1626,7 @@ stop
                 (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else
-        print *,"fort_material_type invalid"
+        print *,"fort_material_type invalid: ",im,fort_material_type(im)
         stop
        endif
       
@@ -1940,7 +1945,10 @@ stop
 
        do im=1,num_materials
         print *,"im,fort_adapt_whole_material ",im,fort_adapt_whole_material(im)
-        print *,"im,material_type ",im,fort_material_type(im)
+        print *,"im,material_extend_velocity ",im, &
+                fort_material_extend_velocity(im)
+        print *,"im,material_type ",im, &
+                fort_material_type(im)
         print *,"im,material_conservation_form ", &
           im,fort_material_conservation_form(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
