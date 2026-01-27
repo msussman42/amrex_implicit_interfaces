@@ -110,6 +110,7 @@ namespace amrex{
        int* ngeom_raw,
        int* ngeom_recon,
        int* cpp_num_materials,
+       int* material_extend_velocity,
        int* material_type,
        int* material_type_interface,
        int* material_conservation_form,

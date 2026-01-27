@@ -19443,6 +19443,19 @@ stop
        stop
       endif
       do im=1,num_materials
+
+       if (material_extend_velocity(im).eq. &
+           fort_material_extend_velocity(im)) then
+        !do nothing
+       else
+        print *,"material_extend_velocity: ", &
+            material_extend_velocity
+        print *,"fort_material_extend_velocity: ", &
+            fort_material_extend_velocity
+        print *,"mismatch"
+        stop
+       endif
+
        if (is_rigid(im).eq.1) then
         if (im.eq.im_critical) then
          print *,"im_critical invalid: ",im_critical

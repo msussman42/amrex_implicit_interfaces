@@ -19215,8 +19215,8 @@ end subroutine print_visual_descriptor
       end subroutine geom_avg
 
 
-        ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
-        ! MARCO ARIENTI
+       ! CONTAINER ROUTINE FOR MEHDI VAHAB, MITSUHIRO OHTA, and
+       ! MARCO ARIENTI
       real(amrex_real) function get_user_viscconst(im,density,temperature)
       use probcommon_module
       IMPLICIT NONE
@@ -19224,22 +19224,23 @@ end subroutine print_visual_descriptor
       integer, INTENT(in) :: im
       real(amrex_real), INTENT(in) :: density,temperature
       real(amrex_real) mu
+      real(amrex_real) get_user_viscconst_local
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im out of range"
+       print *,"im out of range: ",im
        stop
       endif
 
       if (temperature.gt.zero) then
        ! do nothing
       else
-       print *,"temperature invalid"
+       print *,"temperature invalid(get_user_viscconst): ",temperature
        stop
       endif
       if (density.gt.zero) then
        ! do nothing
       else
-       print *,"density invalid in get_user_viscconst"
+       print *,"density invalid in get_user_viscconst: ",density
        stop
       endif
 
@@ -19247,17 +19248,20 @@ end subroutine print_visual_descriptor
           (fort_prerecalesce_viscconst(im).ge.zero)) then
        ! do nothing
       else
-       print *,"fortran viscconst invalid"
+       print *,"fortran viscconst invalid: ",fort_viscconst
+       print *,"fortran fort_prerecalesce_viscconst: ", &
+          fort_prerecalesce_viscconst
+       print *,"im=",im
        stop
       endif
 
-      get_user_viscconst=fort_viscconst(im)
+      get_user_viscconst_local=fort_viscconst(im)
 
       if (fort_viscosity_state_model(im).eq.0) then
        ! do nothing
       else if (fort_viscosity_state_model(im).eq.1) then
        call VISC_dodecane(density,temperature,fort_viscconst(im),mu)
-       get_user_viscconst=mu
+       get_user_viscconst_local=mu
       else if (fort_viscosity_state_model(im).eq.2) then
        print *,"viscosity_state_model(im)=2 is for Mitsuhiro."
        stop
@@ -19265,6 +19269,13 @@ end subroutine print_visual_descriptor
        print *,"fort_viscosity_state_model invalid"
        stop
       endif
+
+      if (is_in_probtype_list().eq.1) then
+       call SUB_VARIABLE_VISCCONST(im,density,temperature, &
+          get_user_viscconst_local)
+      endif
+
+      get_user_viscconst=get_user_viscconst_local
 
       return
       end function get_user_viscconst

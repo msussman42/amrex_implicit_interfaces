@@ -2058,6 +2058,43 @@ real(amrex_real), INTENT(inout) :: latent_heat ! always positive
 
 end subroutine STUB_VARIABLE_LATENT_HEAT
 
+
+subroutine STUB_VARIABLE_VISCCONST( &
+  im, &
+  density, &
+  temperature, &
+  visc_in_out)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: density
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(inout) :: visc_in_out
+
+ if ((im.ge.1).and.(im.le.num_materials)) then
+  ! do nothing
+ else
+  print *,"im invalid (STUB_VARIABLE_VISCCONST): ",im
+  stop
+ endif
+ if (temperature.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"temperature invalid(STUB_VARIABLE_VISCCONST): ",temperature
+  stop
+ endif
+ if (visc_in_out.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"visc_in_out invalid(STUB_VARIABLE_VISCCONST): ",visc_in_out
+  stop
+ endif
+
+end subroutine STUB_VARIABLE_VISCCONST
+
+
 subroutine STUB_T0_Boussinesq(x,dx,cur_time,im,T0)
 use probcommon_module
 use global_utility_module

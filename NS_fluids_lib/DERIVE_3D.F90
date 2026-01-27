@@ -998,6 +998,7 @@ stop
          stop
         endif
 
+         !get_user_viscconst is declared in GLOBALUTIL.F90
          !viscconst(im_parm) in default case.
         mu=get_user_viscconst(im_parm,density,temperature)
 
