@@ -3181,7 +3181,7 @@ void NavierStokes::nucleation_code_segment(
 
  ParallelDescriptor::Barrier();
 
- int tessellate=1;
+ int tessellate=TESSELLATE_ALL;
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
  int operation_flag=OP_GATHER_MDOT;
  int coarsest_level=0;
@@ -3192,7 +3192,7 @@ void NavierStokes::nucleation_code_segment(
  ColorSumALL( 
    use_mac_velocity,
    operation_flag, //=OP_GATHER_MDOT
-   tessellate, //=1
+   tessellate, //=TESSELLATE_ALL
    coarsest_level,
    color_count,
    TYPE_MF,
@@ -4384,7 +4384,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           int local_color_count=0;
           int coarsest_level=0;
           int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-          int local_tessellate=3;
+          int local_tessellate=TESSELLATE_ALL_RASTER;
           int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
           int use_mac_velocity=0;
@@ -4395,7 +4395,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ColorSumALL(
            use_mac_velocity,
            operation_flag, // =OP_GATHER_MDOT
-           local_tessellate, //=3
+           local_tessellate, //=TESSELLATE_ALL_RASTER
            coarsest_level,
            local_color_count,
            TYPE_MF,COLOR_MF,
@@ -6293,7 +6293,7 @@ int ilev;
 void
 NavierStokes::ColorSum(
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
- int tessellate,  // =1 or 3
+ int tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
  int sweep_num,
  int ncomp_mdot_alloc,
  int ncomp_mdot,
@@ -7759,7 +7759,7 @@ void
 NavierStokes::ColorSumALL(
  int use_mac_velocity,
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
- int tessellate,  // 1 or 3
+ int tessellate,  // TESSELLATE_ALL or TESSELLATE_ALL_RASTER
  int coarsest_level,
  int& color_count,
  int idx_type,
@@ -8005,7 +8005,7 @@ NavierStokes::ColorSumALL(
 
    ns_level.ColorSum(
     operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
-    tessellate,  // =1 or 3
+    tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
     sweep_num,
     ncomp_mdot_alloc,
     ncomp_mdot,
@@ -11090,7 +11090,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
    int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
-   int tessellate=1;
+   int tessellate=TESSELLATE_ALL;
    int operation_flag=OP_GATHER_MDOT;
 
    int use_mac_velocity=1;
@@ -11099,7 +11099,7 @@ void NavierStokes::multiphase_project(int project_option) {
    ColorSumALL(
      use_mac_velocity,
      operation_flag, // =OP_GATHER_MDOT
-     tessellate, //=1
+     tessellate, //=TESSELLATE_ALL
      coarsest_level,
      color_count,
      TYPE_MF,COLOR_MF,

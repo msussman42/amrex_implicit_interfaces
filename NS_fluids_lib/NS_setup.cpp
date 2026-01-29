@@ -2432,7 +2432,7 @@ NavierStokes::sum_integrated_quantities (
 
   int color_count=0;
   int coarsest_level=0;
-  int tessellate=1;
+  int tessellate=TESSELLATE_ALL;
   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
   int operation_flag=OP_GATHER_MDOT;
   int use_mac_velocity=0;
@@ -2443,7 +2443,7 @@ NavierStokes::sum_integrated_quantities (
   ColorSumALL(
     use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
-    tessellate, // =1
+    tessellate, // =TESSELLATE_ALL
     coarsest_level,
     color_count,
     TYPE_MF,

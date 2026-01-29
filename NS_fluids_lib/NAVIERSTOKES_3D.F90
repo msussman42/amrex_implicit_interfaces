@@ -2166,7 +2166,7 @@ END SUBROUTINE SIMP
       real(amrex_real) mofdata_raster(num_materials*ngeom_recon)
       integer, PARAMETER :: nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       integer, PARAMETER :: bfact_finest=2
-      integer, PARAMETER :: tessellate_raster=3
+      integer, PARAMETER :: tessellate_raster=TESSELLATE_ALL_RASTER
 
       integer visual_ncell(SDIM)
       real(amrex_real) visual_dx(SDIM)
@@ -2433,7 +2433,7 @@ END SUBROUTINE SIMP
        ! EPS2
        call multi_get_volume_tessellate( &
         tid, &
-        tessellate_raster, & !=3
+        tessellate_raster, & !=TESSELLATE_ALL_RASTER
         bfact, &
         dx,xsten,nhalf, &
         mofdata_raster, &
@@ -2442,8 +2442,9 @@ END SUBROUTINE SIMP
         nmax, &
         SDIM)
 
-       if ((visual_tessellate_vfrac.eq.1).or. & 
-           (visual_tessellate_vfrac.eq.3)) then ! rasterized solid.
+       if ((visual_tessellate_vfrac.eq.TESSELLATE_ALL).or. & 
+           (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER)) then 
+         ! rasterized solid.
          ! before (mofdata): only fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
          ! EPS2
@@ -2457,10 +2458,10 @@ END SUBROUTINE SIMP
          nmax, &
          nmax, &
          SDIM)
-       else if (visual_tessellate_vfrac.eq.0) then
+       else if (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS) then
         ! do nothing
        else
-        print *,"visual_tessellate_vfrac invalid"
+        print *,"visual_tessellate_vfrac invalid: ",visual_tessellate_vfrac
         stop
        endif
 
@@ -7440,7 +7441,7 @@ END SUBROUTINE SIMP
 
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
-      integer local_tessellate
+      integer, parameter ::  local_tessellate=TESSELLATE_ALL
 
       type(user_defined_sum_int_type) :: GRID_DATA_PARM
       real(amrex_real) local_user_out1(ncomp_sum_int_user1+1)
@@ -7644,7 +7645,6 @@ END SUBROUTINE SIMP
         ! before (mofdata): fluids tessellate
         ! after  (mofdata): fluids and solids tessellate
         ! EPS2
-        local_tessellate=1
         call multi_get_volume_tessellate( &
          tid, &
          local_tessellate, &
@@ -7656,7 +7656,7 @@ END SUBROUTINE SIMP
          nmax, &
          SDIM)
 
-         ! tessellate==1 (internal to stackerror)
+         ! tessellate==TESSELLATE_ALL (internal to stackerror)
          ! in: fort_summass
         call stackerror( &
          geom_xtetlist(1,1,1,tid+1), &
@@ -8658,7 +8658,7 @@ END SUBROUTINE SIMP
       integer :: dir
       integer :: local_dir
       integer :: local_mask,local_mask_L
-      integer :: tessellate
+      integer, parameter :: tessellate=TESSELLATE_ALL
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_L(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_R(-nhalf:nhalf,SDIM)
@@ -8787,11 +8787,10 @@ END SUBROUTINE SIMP
           mofdata(im)=VOF(D_DECL(i,j,k),im)
          enddo
 
-         tessellate=1 ! tessellate output (tessellate=3 => raster output)
           ! EPS2
          call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=1 
+           tessellate, & ! tessellate=TESSELLATE_ALL
            bfact, &
            dx, &
            xsten,nhalf, &
@@ -8853,7 +8852,7 @@ END SUBROUTINE SIMP
              if (DeDT.gt.zero) then
                ! do nothing
              else
-               print *,"DeDT must be positive"
+               print *,"DeDT must be positive(regionsum): ",DeDT
                stop
              endif
 
@@ -9250,11 +9249,10 @@ END SUBROUTINE SIMP
            mofdata_L(im)=VOF(D_DECL(i-ii,j-jj,k-kk),im)
           enddo
 
-          tessellate=1 ! tessellate output (tessellate=3 => raster output)
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=1 
+           tessellate, & ! tessellate=TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_R,nhalf, &
@@ -9267,7 +9265,7 @@ END SUBROUTINE SIMP
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=1 
+           tessellate, & ! tessellate=TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_L,nhalf, &
@@ -13933,7 +13931,7 @@ END SUBROUTINE SIMP
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
-      integer tessellate
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: mof_verbose=0
       integer, parameter :: use_ls_data=0
@@ -14100,7 +14098,6 @@ END SUBROUTINE SIMP
                enddo ! im
 
               else if (fine_covered.eq.0) then
-               tessellate=0
 
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
@@ -14140,7 +14137,7 @@ END SUBROUTINE SIMP
                call multi_get_volume_grid_simple( &
                 tid_in, &
                 EPS2, &
-                tessellate, &  !=0
+                tessellate, &  !=TESSELLATE_FLUIDS
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &
                 xstengrid,nhalfgrid, &

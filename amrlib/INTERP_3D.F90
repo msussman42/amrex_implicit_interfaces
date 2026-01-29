@@ -192,14 +192,12 @@ stop
       real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
       real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       integer n_overlap
-      integer tessellate
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid: ",tid_in
        stop
       endif 
-
-      tessellate=0
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
@@ -305,7 +303,7 @@ stop
           xsten,nhalf, &
           continuous_mof, &
           bfact_coarse,dxc, &
-          tessellate, & !=0
+          tessellate, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -456,7 +454,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid_in, &
                EPS3, &
-               tessellate, &  !=0
+               tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
                xstengrid,nhalfgrid, &
@@ -865,7 +863,7 @@ stop
       real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
       real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       integer n_overlap
-      integer tessellate
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
@@ -878,8 +876,6 @@ stop
        print *,"tid_in invalid: ",tid_in
        stop
       endif 
-
-      tessellate=0
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
@@ -999,7 +995,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid_in, &
                EPS3, &
-               tessellate, &  !=0
+               tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
                xstengrid,nhalfgrid, &
@@ -1130,7 +1126,7 @@ stop
          xstenfine,nhalf, &
          continuous_mof, &
          bfact_fine,dxf, &
-         tessellate, & !=0
+         tessellate, & !=TESSELLATE_FLUIDS
          mofdata,SDIM)
 
        do im=1,num_materials

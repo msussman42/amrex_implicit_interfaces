@@ -187,7 +187,7 @@ stop
       integer, parameter :: nhalfbox_sten=1
       real(amrex_real) dxmaxLS
       integer debugslope
-      integer, parameter :: tessellate=0
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer, parameter :: shapeflag=0
       integer, parameter :: continuous_mof_standard=STANDARD_MOF
 
@@ -542,7 +542,7 @@ stop
          nhalf, &
          continuous_mof_standard, &
          bfact,dx, &
-         tessellate, & ! =0
+         tessellate, & ! =TESSELLATE_FLUIDS
          mofdata, &  ! INTENT(inout)
          SDIM)
 
@@ -801,7 +801,7 @@ stop
             nhalfbox_sten, & ! =1
             continuous_mof_standard, & ! =STANDARD_MOF
             bfact,dx, &
-            tessellate, & ! =0
+            tessellate, & ! =TESSELLATE_FLUIDS
             mofsten, &
             SDIM)
 
@@ -1212,7 +1212,7 @@ stop
            caller_id, &
            tid_in, &
            EPS_11_4, &
-           tessellate, & ! =0
+           tessellate, & ! =TESSELLATE_FLUIDS
            bfact,dx, &
            xsten,nhalf, & ! phi = n dot (x-x0) + intercept
            mofdata_super, &
@@ -1431,7 +1431,7 @@ stop
          caller_id2, &
          tid_in, &
          EPS_11_4, &
-         tessellate, & ! =0
+         tessellate, & ! =TESSELLATE_FLUIDS
          bfact,dx, &
          xsten,nhalf, & ! phi = n dot (x-x0) + intercept
          mofdata_super, &

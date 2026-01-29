@@ -11741,7 +11741,7 @@ stop
          if (DeDT.gt.zero) then
           ! do nothing
          else
-          print *,"DeDT must be positive: ",DeDT
+          print *,"DeDT must be positive(fort_init_physics_vars): ",DeDT
           stop
          endif
 
