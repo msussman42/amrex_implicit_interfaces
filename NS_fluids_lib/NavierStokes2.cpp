@@ -3251,7 +3251,7 @@ void NavierStokes::project_to_rigid_velocityALL() {
 
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
- int tessellate=1;
+ int tessellate=TESSELLATE_ALL;
  int operation_flag=OP_GATHER_MDOT;
  int use_mac_velocity=0;
 
@@ -3259,7 +3259,7 @@ void NavierStokes::project_to_rigid_velocityALL() {
  ColorSumALL(
     use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
-    tessellate, //=1
+    tessellate, //=TESSELLATE_ALL
     coarsest_level,
     color_count,
     TYPE_MF,COLOR_MF,
@@ -5487,14 +5487,14 @@ void NavierStokes::make_physics_vars(int project_option,
   FArrayBox& vofFfab=(*vofF)[mfi];
   FArrayBox& massFfab=(*massF)[mfi];
 
-  int tessellate=3;
+  int tessellate=TESSELLATE_ALL_RASTER;
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // tessellate=3
+   // tessellate=TESSELLATE_ALL_RASTER
    //  If rigid materials dominate the cell, then that cell is considered
    //  to only have the one dominant rigid material (raster cell).  
    //  In the non-raster cells, the solids have no volume.
@@ -5503,7 +5503,7 @@ void NavierStokes::make_physics_vars(int project_option,
   fort_build_semirefinevof(
    &project_option,
    &tid_current,
-   &tessellate,  // =3
+   &tessellate,  // =TESSELLATE_ALL_RASTER
    &ngrow_refine,
    &nrefine_vof,
    spec_material_id_AMBIENT.dataPtr(),
@@ -7489,7 +7489,8 @@ void NavierStokes::output_triangles() {
    // in: MARCHING_TETRA_3D.F90
   fort_isogrid(
    &tid_current,
-   &visual_tessellate_vfrac,  // =0,1, or 3
+   &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
+                            //TESSELLATE_ALL_RASTER 
    reconfab.dataPtr(),
    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
    xlo,dx,
@@ -8377,7 +8378,8 @@ void NavierStokes::output_zones(
       &level,
       &finest_level,
       &gridno,
-      &visual_tessellate_vfrac,  // = 0,1,3
+      &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
+                               //TESSELLATE_ALL_RASTER 
       &NS_geometry_coord,
       &nparts,
       &nparts_def,
@@ -8642,7 +8644,8 @@ void NavierStokes::output_zones(
       &level,
       &finest_level,
       &gridno,
-      &visual_tessellate_vfrac,  // = 0,1,3
+      &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
+                               //TESSELLATE_ALL_RASTER 
       &NS_geometry_coord,
       &nparts,
       &nparts_def,

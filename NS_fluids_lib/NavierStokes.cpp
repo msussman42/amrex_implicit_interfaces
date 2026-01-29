@@ -323,11 +323,12 @@ int  NavierStokes::adapt_quad_depth=1;
 
 int  NavierStokes::step_through_data=0;   
 
-// =0 (solids embed, fluids tessellate), 
-// =1 (solids and fluids tessellate)
-// =3 (solids and fluids tessellate, if F_solid>1/2, replace with F_solid=1,
+// =TESSELLATE_FLUIDS (solids embed, fluids tessellate), 
+// =TESSELLATE_ALL (solids and fluids tessellate)
+// =TESSELLATE_ALL_RASTER (solids and fluids tessellate, 
+//    if F_solid>1/2, replace with F_solid=1,
 //    if F_solid<1/2, replace with F_solid=0.
-int  NavierStokes::visual_tessellate_vfrac=0;   
+int  NavierStokes::visual_tessellate_vfrac=TESSELLATE_FLUIDS;   
 int  NavierStokes::visual_revolve=0;   
 int  NavierStokes::visual_output_raw_State_Type=0; 
 int  NavierStokes::visual_output_raw_mac_Type=0; 
@@ -3540,9 +3541,9 @@ NavierStokes::read_params ()
 
     pp.queryAdd("visual_nddata_format",visual_nddata_format);
 
-    if ((visual_tessellate_vfrac!=0)&&
-        (visual_tessellate_vfrac!=1)&&
-	(visual_tessellate_vfrac!=3))
+    if ((visual_tessellate_vfrac!=TESSELLATE_FLUIDS)&&
+        (visual_tessellate_vfrac!=TESSELLATE_ALL)&&
+	(visual_tessellate_vfrac!=TESSELLATE_ALL_RASTER))
      amrex::Error("visual_tessellate_vfrac invalid");
 
     if (visual_revolve<0) {
@@ -17010,7 +17011,7 @@ NavierStokes::phase_change_redistributeALL() {
   //auxiliary sums.
  int idx_mdot=JUMP_STRENGTH_MF;
  int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
- int tessellate=3;
+ int tessellate=TESSELLATE_ALL_RASTER;
  int operation_flag=OP_GATHER_MDOT; 
  int use_mac_velocity=0;
 
@@ -17018,7 +17019,7 @@ NavierStokes::phase_change_redistributeALL() {
  ColorSumALL(
   use_mac_velocity,
   operation_flag, // =OP_GATHER_MDOT
-  tessellate,  //=3
+  tessellate,  //=TESSELLATE_ALL_RASTER
   coarsest_level,
   color_count,
   TYPE_MF,
@@ -17039,7 +17040,7 @@ NavierStokes::phase_change_redistributeALL() {
  ColorSumALL(
   use_mac_velocity,
   operation_flag, //=OP_SCATTER_MDOT
-  tessellate,  //=3
+  tessellate,  //=TESSELLATE_ALL_RASTER
   coarsest_level,
   color_count,
   TYPE_MF,
@@ -26537,7 +26538,7 @@ NavierStokes::post_init_state () {
  int color_count=0;
  int coarsest_level=0;
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
- int tessellate=1;
+ int tessellate=TESSELLATE_ALL;
  int operation_flag=OP_GATHER_MDOT;
 
  int use_mac_velocity=0;
@@ -26546,7 +26547,7 @@ NavierStokes::post_init_state () {
  ColorSumALL(
   use_mac_velocity,
   operation_flag, //=OP_GATHER_MDOT
-  tessellate,  //=1
+  tessellate,  //=TESSELLATE_ALL
   coarsest_level,
   color_count,
   TYPE_MF,
@@ -28588,7 +28589,7 @@ NavierStokes::makeStateDist() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // fort_steninit is declared in: MOF_REDIST_3D.F90
-    // internally sets tessellate=0
+    // internally sets tessellate=TESSELLATE_FLUIDS
     // fluid material id for each cell edge point is initialized.
    fort_steninit( 
     &level,
@@ -28887,7 +28888,9 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
  int finest_level=parent->finestLevel();
 
- if ((tessellate!=0)&&(tessellate!=1)&&(tessellate!=3))
+ if ((tessellate!=TESSELLATE_FLUIDS)&&
+     (tessellate!=TESSELLATE_ALL)&&
+     (tessellate!=TESSELLATE_ALL_RASTER))
   amrex::Error("tessellate invalid60");
 
  if ((level<0)||(level>finest_level))
@@ -28957,7 +28960,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     &ngrow_dest,
     &tid_current,
     &dir,
-    &tessellate, // =0,1, or 3
+    &tessellate, //TESSELLATE_FLUIDS, TESSELLATE_ALL, or TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     dstfab.dataPtr(),
@@ -28984,8 +28987,8 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
 
 // WARNING: makeFaceFrac allocates, but does not delete.
-// if caller from: makeStateDist (tessellate==0)
-// if caller from: ColorSum (tessellate==1)
+// if caller from: makeStateDist (tessellate==TESSELLATE_FLUIDS)
+// if caller from: ColorSum (tessellate==TESSELLATE_ALL)
 void
 NavierStokes::makeFaceFrac(
  int tessellate,int ngrow,int idx) {
@@ -29042,7 +29045,7 @@ NavierStokes::makeFaceFrac(
     // in: MOF_REDIST_3D.F90
    fort_faceinit( 
     &tid_current,
-    &tessellate,  // 0,1, or 3
+    &tessellate, //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     facefab.dataPtr(),
@@ -29070,7 +29073,7 @@ NavierStokes::makeFaceFrac(
 // WARNING: makeCellFrac allocates, but does not delete.
 void
 NavierStokes::makeCellFrac(
-  int tessellate, // = 0,1, or 3
+  int tessellate, //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
   int ngrow,int idx) {
  
  std::string local_caller_string="makeCellFrac";
@@ -29130,7 +29133,7 @@ NavierStokes::makeCellFrac(
     // in: LEVELSET_3D.F90
    fort_cellfaceinit( 
     &tid_current,
-    &tessellate,  // = 0,1, or 3
+    &tessellate,  //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     facefab.dataPtr(),

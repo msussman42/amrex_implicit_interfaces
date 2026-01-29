@@ -26726,7 +26726,7 @@ else if ((imattype.eq.999).or. &
  if (DeDT.gt.zero) then
   ! do nothing
  else
-  print *,"e must be increasing function of T"
+  print *,"e must be increasing function of T(DeDT_material)",DeDT
   stop
  endif
 else
@@ -26907,13 +26907,13 @@ real(amrex_real) local_internal_energy  ! this is an output
 if (rho.gt.zero) then
  ! do nothing
 else
- print *,"rho invalid"
+ print *,"rho invalid(INTERNAL_material) ",rho
  stop
 endif
 if (temperature.gt.zero) then
  ! do nothing
 else
- print *,"T invalid"
+ print *,"T invalid(INTERNAL_material)",temperature
  stop
 endif
 

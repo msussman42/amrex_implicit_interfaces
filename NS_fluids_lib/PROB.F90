@@ -121,10 +121,10 @@ stop
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
 
-      if (tessellate.eq.0) then
+      if (tessellate.eq.TESSELLATE_FLUIDS) then
        call get_primary_material_VFRAC(vof,im_primary)
-      else if ((tessellate.eq.1).or. &
-               (tessellate.eq.3)) then
+      else if ((tessellate.eq.TESSELLATE_ALL).or. &
+               (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        im_primary=0
        do im=1,num_materials
         if (im_primary.eq.0) then
@@ -134,7 +134,7 @@ stop
         endif
        enddo ! im 
       else
-       print *,"tessellate invalid63"
+       print *,"tessellate invalid63(get_mach_number) ",tessellate
        stop
       endif
      
@@ -3239,7 +3239,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid(TEMPERATURE_material)",rho
        stop
       endif
       if (internal_energy.gt.zero) then
@@ -5876,7 +5876,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       ! get_symmetric_error
       real(amrex_real), INTENT(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       integer nmax
-      integer tessellate
+      integer, parameter :: tessellate=TESSELLATE_ALL
       integer vofcomp
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
@@ -6114,7 +6114,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        enddo ! imaterial
 
-       tessellate=1
        if (nmax.lt.10) then
         print *,"nmax bust 1"
         stop
@@ -6124,7 +6123,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call multi_get_volume_grid_simple( &
         tid_local, &
         EPS2, &
-        tessellate, &  ! =1
+        tessellate, &  ! =TESSELLATE_ALL
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
         xsten,nhalf, &
@@ -19985,7 +19984,7 @@ end subroutine RatePhaseChange
         ! create unidirectional seed
         ! initialize volume fraction, level set function, centroid,
         ! density, temperature, and vapor mass fraction.
-        tessellate=0
+        tessellate=TESSELLATE_FLUIDS
 
         do im_local=1,num_materials
          ibase_raw=(im_local-1)*ngeom_raw+1
@@ -20007,7 +20006,7 @@ end subroutine RatePhaseChange
           continuous_mof, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
-          tessellate, &  ! =0
+          tessellate, &  ! =TESSELLATE_FLUIDS
           mofdata, &
           SDIM)
 
@@ -20037,16 +20036,17 @@ end subroutine RatePhaseChange
          grid_level, &
          SDIM)
 
-         ! if local_tessellate==3: (rasterized reconstruction for solids)
+         ! if local_tessellate==TESSELLATE_ALL_RASTER: 
+         !  (rasterized reconstruction for solids)
          !  if solid material(s) dominate the cell, then F_solid_raster=1
          !  and F_fluid=0.
          !  if fluid material(s) dominate the cell, then F_solid=0,
          !  sum F_fluid=1
-        local_tessellate=3
+        local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2
         call multi_get_volume_tessellate( &
          nucleate_in%tid, &
-         local_tessellate, & ! =3
+         local_tessellate, & ! =TESSELLATE_ALL_RASTER
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
@@ -24833,7 +24833,7 @@ end subroutine initialize2d
        real(amrex_real) local_state(num_materials*num_state_material)
        real(amrex_real) massfrac_parm(num_species_var+1)
        integer local_ibase
-       integer tessellate
+       integer, parameter :: tessellate=TESSELLATE_FLUIDS
        integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
        integer, parameter :: continuous_mof=STANDARD_MOF
@@ -24865,8 +24865,6 @@ end subroutine initialize2d
        scal_ptr=>scal
        refineden_ptr=>refineden
        LS_ptr=>LS
-
-       tessellate=0
 
        if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
         print *,"tid invalid"
@@ -26138,7 +26136,7 @@ end subroutine initialize2d
           xsten,nhalf, &
           continuous_mof, &
           bfact,dx, &
-          tessellate, & ! =0
+          tessellate, & ! =TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -26384,7 +26382,7 @@ end subroutine initialize2d
       real(amrex_real) cencell(SDIM)
       real(amrex_real) mofdata(ngeom_recon*num_materials)
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
-      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
 
@@ -26552,7 +26550,7 @@ end subroutine initialize2d
           xsten,nhalf, &
           continuous_mof_parm, &
           bfact,dx, &
-          tessellate, & !=0
+          tessellate, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -29751,7 +29749,7 @@ end subroutine initialize2d
       real(amrex_real) voffluid_bound,vofsolid_bound
       real(amrex_real) voftest_wall,voftest_bound
 
-      integer tessellate
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       integer, parameter :: nhalf=3
 
@@ -29775,8 +29773,6 @@ end subroutine initialize2d
        print *,"grid_type invalid"
        stop
       endif
-
-      tessellate=0
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -29960,7 +29956,7 @@ end subroutine initialize2d
            xsten,nhalf, &
            continuous_mof, &
            bfact,dx, &
-           tessellate, &  ! =0
+           tessellate, &  ! =TESSELLATE_FLUIDS
            mofdata, &
            SDIM)
 
