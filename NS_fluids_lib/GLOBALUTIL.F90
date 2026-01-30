@@ -30587,22 +30587,22 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: LS(num_materials)
 integer, INTENT(out) :: im_primary
 integer im,imtest
-integer, parameter :: tessellate=0
+integer, parameter :: tessellate=TESSELLATE_FLUIDS
 integer is_rigid_local(num_materials)
 
 do im=1,num_materials
  is_rigid_local(im)=is_rigid(im)
- if (tessellate.eq.2) then
+ if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
   is_rigid_local(im)=0
-  print *,"expecting tessellate==0"
+  print *,"expecting tessellate==TESSELLATE_FLUIDS"
   stop
- else if (tessellate.eq.0) then
+ else if (tessellate.eq.TESSELLATE_FLUIDS) then
   ! do nothing
- else if (tessellate.eq.1) then
-  print *,"expecting tessellate==0"
+ else if (tessellate.eq.TESSELLATE_ALL) then
+  print *,"expecting tessellate==TESSELLATE_FLUIDS"
   stop
- else if (tessellate.eq.3) then
-  print *,"expecting tessellate==0"
+ else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
+  print *,"expecting tessellate==TESSELLATE_FLUIDS"
   stop
  else
   print *,"tessellate invalid38: ",tessellate

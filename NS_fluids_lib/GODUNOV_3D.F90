@@ -17714,7 +17714,7 @@ stop
       IMPLICIT NONE
 
       integer, PARAMETER :: nhalf=3
-      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
@@ -18086,7 +18086,7 @@ stop
          xsten,nhalf, &
          continuous_mof_parm, &
          bfact,dx, &
-         tessellate, & !=0
+         tessellate, & !TESSELLATE_FLUIDS
          mofnew,SDIM)
 
        do im=1,num_materials
@@ -18582,11 +18582,11 @@ stop
         !  and F_fluid=0.
         !  if fluid material(s) dominate the cell, then F_solid=0,
         !  sum F_fluid=1
-        local_tessellate=3
+        local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2 tolerance
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, &  ! =3
+         local_tessellate, &  !TESSELLATE_ALL_RASTER
          bfact, &
          dx,xsten, &
          nhalf, & !nhalf=3
@@ -20130,11 +20130,11 @@ stop
          do im=1,num_materials*ngeom_recon
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
-         local_tessellate=3
+         local_tessellate=TESSELLATE_ALL_RASTER
           !EPS2 tolerance
          call multi_get_volume_tessellate( &
           tid, &
-          local_tessellate, & !  =3
+          local_tessellate, & !TESSELLATE_ALL_RASTER 
           bfact, &
           dx,xsten, &
           nhalf, & !=3

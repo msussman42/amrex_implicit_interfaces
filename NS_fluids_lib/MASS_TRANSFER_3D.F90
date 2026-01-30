@@ -1061,11 +1061,11 @@ stop
        mofdata(im)=local_data_out
       enddo
 
-      local_tessellate=3
+      local_tessellate=TESSELLATE_ALL_RASTER
        !EPS2
       call multi_get_volume_tessellate( &
         tid, &
-        local_tessellate, & ! =3
+        local_tessellate, & ! =TESSELLATE_ALL_RASTER
         bfact, &
         dx, &
         xsten,nhalf, &
@@ -4802,12 +4802,12 @@ stop
 
                  ! find volumes within u_xsten_updatecell (target)
                shapeflag=1  
-               tessellate=0
+               tessellate=TESSELLATE_FLUIDS
                call multi_get_volume_grid( &
                  caller_id, &
                  tid, &
                  EPS_11_4, &
-                 tessellate, & ! =0
+                 tessellate, & ! =TESSELLATE_FLUIDS
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
                  mofdata, &
@@ -5553,7 +5553,7 @@ stop
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EPS1)) then
 
-             tessellate=3
+             tessellate=TESSELLATE_ALL_RASTER
              call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
@@ -6082,7 +6082,7 @@ stop
 
               LS_dest_old=LSold(D_DECL(i,j,k),im_dest)
 
-              tessellate=3
+              tessellate=TESSELLATE_ALL_RASTER
               call multi_get_volumePOINT( &
                tessellate, &
                bfact,dx, &
@@ -6091,7 +6091,7 @@ stop
                xPOINT_GFM, & ! absolute coordinate system
                im_old_crit,SDIM)
 
-              tessellate=3
+              tessellate=TESSELLATE_ALL_RASTER
               call multi_get_volumePOINT( &
                 tessellate, &
                 bfact,dx, &
@@ -6376,7 +6376,7 @@ stop
 
              ! sum of F_fluid=1
              ! sum of F_rigid<=1
-             tessellate=0
+             tessellate=TESSELLATE_FLUIDS
              call make_vfrac_sum_ok_base( &
                cmofsten, &
                u_xsten_updatecell,nhalf, &
