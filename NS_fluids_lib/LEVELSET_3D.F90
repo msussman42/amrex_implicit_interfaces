@@ -20689,7 +20689,7 @@ stop
       integer partid
       integer partid_max
       integer, parameter :: tessellate=TESSELLATE_FLUIDS
-      integer, parameter :: tessellate_transfer=1
+      integer, parameter :: tessellate_transfer=TESSELLATE_ALL
       integer, parameter :: LS_extrap_radius=1
       integer, parameter :: extrap_radius=1
       integer, parameter :: least_sqr_radius=1
