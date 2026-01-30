@@ -20581,14 +20581,14 @@ contains
 
        local_tessellate_in=TESSELLATE_IGNORE_ISRIGID
 
-       ! if tessellate_in==1:
+       ! if tessellate_in==TESSELLATE_ALL:
        ! before (mofdata): fluids tessellate, solids embedded
        ! after  (mofdata): fluids and solids tessellate
        ! The slope of fluid material whose volume fraction changes from
        ! one to less than one is initialized from a solid slope.
        ! The "order" for this fluid is set to num_materials.
        !
-       ! if tessellate_in==3:
+       ! if tessellate_in==TESSELLATE_ALL_RASTER:
        !   a) if solid_vfrac>=1/2 then
        !        consider cell as F_{im_solid_max}=1
        !   b) else, only consider fluids.
@@ -23534,11 +23534,11 @@ contains
 
        ! before (mofdata): fluids tessellate, solids are embedded.
        ! after  (mofdata): fluids and solids tessellate
-       ! note if tessellate_in==1:
+       ! note if tessellate_in==TESSELLATE_ALL:
        !  The slope of fluid material whose volume fraction changes from
        !  one to less than one is initialized from a solid slope.
        !  The "order" for this fluid is set to num_materials.
-       ! note if tessellate_in==3:
+       ! note if tessellate_in==TESSELLATE_ALL_RASTER:
        !  if solid material(s) dominate the cell, then F_solid_raster=1
        !  and F_fluid=0.
        !  if fluid material(s) dominate the cell, then F_solid=0,
