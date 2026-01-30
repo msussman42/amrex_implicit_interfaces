@@ -627,8 +627,8 @@ stop
         mofdata(dir)=recon(D_DECL(i,j,k),dir)
        enddo
 
-       if ((visual_tessellate_vfrac.eq.1).or. &
-           (visual_tessellate_vfrac.eq.3)) then
+       if ((visual_tessellate_vfrac.eq.TESSELLATE_ALL).or. &
+           (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
 
@@ -669,10 +669,10 @@ stop
          stop
         endif
         
-       else if (visual_tessellate_vfrac.eq.0) then
+       else if (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS) then
         ! do nothing
        else
-        print *,"visual_tessellate_vfrac invalid"
+        print *,"visual_tessellate_vfrac invalid: ",visual_tessellate_vfrac
         stop
        endif
 

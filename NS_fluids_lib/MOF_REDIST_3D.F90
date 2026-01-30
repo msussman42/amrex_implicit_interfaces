@@ -2357,7 +2357,7 @@ stop
          enddo ! dir=1,3
 
           ! fort_steninit called with 
-          ! tessellate==0 prior to fort_levelstrip.
+          ! tessellate==TESSELLATE_FLUIDS prior to fort_levelstrip.
           ! im_test_stencil is the material that occupies the
           ! node in question.
          call put_istar(istar,istar_array_offset)
@@ -3756,9 +3756,9 @@ stop
          mofdata,mofdatavalid, &
          SDIM)
 
-        if (tessellate.eq.3) then
+        if (tessellate.eq.TESSELLATE_ALL_RASTER) then
 
-         local_tessellate=2
+         local_tessellate=TESSELLATE_IGNORE_ISRIGID
 
           !EPS_FULL_WEAK=EPS2
          call multi_get_volume_tessellate( &
@@ -3772,8 +3772,8 @@ stop
           nmax, &
           SDIM) 
 
-        else if ((tessellate.eq.0).or. &
-                 (tessellate.eq.1)) then
+        else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                 (tessellate.eq.TESSELLATE_ALL)) then
          local_tessellate=tessellate
         else
          print *,"tessellate invalid"
@@ -3870,7 +3870,7 @@ stop
             caller_id, &
             tid, &
             EPS_FULL_WEAK, &
-            local_tessellate, &  ! 0,1, or 2
+            local_tessellate, &  ! TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID
             bfact,dx,xsten,nhalf, &
             mofdataproject, &
             xsten_thin,nhalf_thin, &
@@ -3886,10 +3886,10 @@ stop
 
           total_vol=zero
           do im=1,num_materials
-           if ((tessellate.eq.1).or. &
-               (tessellate.eq.3)) then
+           if ((tessellate.eq.TESSELLATE_ALL).or. &
+               (tessellate.eq.TESSELLATE_ALL_RASTER)) then
             total_vol=total_vol+multi_volume(im)
-           else if (tessellate.eq.0) then
+           else if (tessellate.eq.TESSELLATE_FLUIDS) then
             if (is_rigid(im).eq.0) then
              total_vol=total_vol+multi_volume(im)
             else if (is_rigid(im).eq.1) then
@@ -4282,12 +4282,12 @@ stop
          frac_left(im)=leftface(im)
          frac_right(im)=rightface(im)
 
-         if ((tessellate.eq.1).or. &
-             (tessellate.eq.3).or. &
+         if ((tessellate.eq.TESSELLATE_ALL).or. &
+             (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
              (is_rigid(im).eq.0)) then
           left_total=left_total+frac_left(im)
           right_total=right_total+frac_right(im)
-         else if ((tessellate.eq.0).and.(is_rigid(im).eq.1)) then
+         else if ((tessellate.eq.TESSELLATE_FLUIDS).and.(is_rigid(im).eq.1)) then
           ! do nothing
          else 
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4327,8 +4327,8 @@ stop
 
         do im = 1,num_materials
 
-         if ((tessellate.eq.1).or. &
-             (tessellate.eq.3).or. &
+         if ((tessellate.eq.TESSELLATE_ALL).or. &
+             (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
              (is_rigid(im).eq.0)) then
 
           if ((frac_left(im).gt.one+EPS_FULL_WEAK).or. &
@@ -4351,7 +4351,7 @@ stop
            frac_right(im) = one
           endif
 
-         else if ((tessellate.eq.0).and.(is_rigid(im).eq.1)) then
+         else if ((tessellate.eq.TESSELLATE_FLUIDS).and.(is_rigid(im).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4370,11 +4370,11 @@ stop
 
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
-          if ((tessellate.eq.1).or. &
-              (tessellate.eq.3).or. &
+          if ((tessellate.eq.TESSELLATE_ALL).or. &
+              (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
               (is_rigid(im).eq.0)) then
            ! do nothing
-          else if ((tessellate.eq.0).and. &
+          else if ((tessellate.eq.TESSELLATE_FLUIDS).and. &
                    (is_rigid(im).eq.1)) then
            do dir2=1,ngeom_recon
             mofdata_left(vofcomp+dir2-1)=zero 
@@ -4392,26 +4392,26 @@ stop
 
          enddo ! im=1..num_materials
 
-         if (tessellate.eq.0) then
-          local_tessellate=1 ! is_rigid data has been zeroed out.
-         else if ((tessellate.eq.1).or. &
-                  (tessellate.eq.3)) then
+         if (tessellate.eq.TESSELLATE_FLUIDS) then
+          local_tessellate=TESSELLATE_ALL ! is_rigid data has been zeroed out.
+         else if ((tessellate.eq.TESSELLATE_ALL).or. &
+                  (tessellate.eq.TESSELLATE_ALL_RASTER)) then
           local_tessellate=tessellate
          else
           print *,"tessellate invalid"
           stop
          endif
 
-          ! if local_tessellate==1 or 3:
+          ! if local_tessellate==TESSELLATE_ALL or TESSELLATE_ALL_RASTER:
           !  a) call multi_get_volume_tessellate
-          !  b) local_tessellate_in=2
+          !  b) local_tessellate_in=TESSELLATE_IGNORE_ISRIGID
           !  c) is_rigid_local=0 for all materials
-          ! else if local_tessellate==0
-          !  a) local_tessellate_in=0
+          ! else if local_tessellate==TESSELLATE_FLUIDS
+          !  a) local_tessellate_in=TESSELLATE_FLUIDS
           ! 
          call multi_get_area_pairs( &
            tid, &
-           local_tessellate, & ! =1 or 3
+           local_tessellate, & ! =TESSELLATE_ALL,TESSELLATE_ALL_RASTER
            bfact, &
            dx, &
            xsten_right, &
@@ -4483,14 +4483,14 @@ stop
 
         do ml = 1, num_materials
 
-         if ((tessellate.eq.1).or. &
-             (tessellate.eq.3).or. &
+         if ((tessellate.eq.TESSELLATE_ALL).or. &
+             (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
              (is_rigid(ml).eq.0)) then
 
           do mr = 1, num_materials
 
-           if ((tessellate.eq.1).or. &
-               (tessellate.eq.3).or. &
+           if ((tessellate.eq.TESSELLATE_ALL).or. &
+               (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
                (is_rigid(mr).eq.0)) then
 
             if ((frac_pair(ml,mr).lt.-EPS1).or. &
@@ -4534,7 +4534,7 @@ stop
              stop
             endif ! dir==1 ?
 
-           else if ((tessellate.eq.0).and.(is_rigid(mr).eq.1)) then
+           else if ((tessellate.eq.TESSELLATE_FLUIDS).and.(is_rigid(mr).eq.1)) then
             ! do nothing
            else
             print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4543,7 +4543,7 @@ stop
 
           enddo ! mr=1..num_materials
 
-         else if ((tessellate.eq.0).and.(is_rigid(ml).eq.1)) then
+         else if ((tessellate.eq.TESSELLATE_FLUIDS).and.(is_rigid(ml).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"

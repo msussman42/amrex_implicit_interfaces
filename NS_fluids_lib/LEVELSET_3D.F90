@@ -2451,7 +2451,7 @@ stop
        ! 
       subroutine fort_cellfaceinit( &
          tid, &
-         tessellate, &  ! = 0,1, or 3
+         tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
          level, &
          finest_level, &
          cface,DIMS(cface), &
@@ -2474,7 +2474,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: tessellate  ! =0,1, or 3
+      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: ncellfrac
@@ -2552,16 +2552,16 @@ stop
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, parameter :: caller_id=4
-      integer, parameter :: local_tessellate=0
+      integer, parameter :: local_tessellate=TESSELLATE_FLUIDS
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
        stop
       endif
 
-      if ((tessellate.ne.0).and. &
-          (tessellate.ne.1).and. &
-          (tessellate.ne.3)) then
+      if ((tessellate.ne.TESSELLATE_FLUIDS).and. &
+          (tessellate.ne.TESSELLATE_ALL).and. &
+          (tessellate.ne.TESSELLATE_ALL_RASTER)) then
        print *,"tessellate invalid1: ",tessellate
        stop
       endif
@@ -2664,7 +2664,7 @@ stop
 
          !in: fort_cellfaceinit
         call check_full_cell_vfrac(vcenter, &
-          tessellate, &  !=0,1, or 3
+          tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           im_crit, &
           EPS_8_4)
 
@@ -2697,7 +2697,7 @@ stop
            xsten,nhalf, &
            continuous_mof, &
            bfact,dx, &
-           local_tessellate, & ! =0 
+           local_tessellate, & !TESSELLATE_FLUIDS 
            mofdata,mofdatavalid, &
            SDIM)
 
@@ -2709,7 +2709,7 @@ stop
           caller_id, &
           tid, &
           EPS2, &
-          tessellate, &  ! =0,1, or 3
+          tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact,dx, &
           xsten,nhalf, &
           mofdatavalid, &
@@ -2773,7 +2773,7 @@ stop
          num_processed_solid=0
          num_processed_fluid=0
 
-         if ((tessellate.eq.1).and.(vfrac_solid_sum.gt.zero)) then
+         if ((tessellate.eq.TESSELLATE_ALL).and.(vfrac_solid_sum.gt.zero)) then
 
           loop_counter=0
           do while ((loop_counter.lt.num_materials_rigid).and. &
@@ -2812,7 +2812,7 @@ stop
                call multi_get_volume_grid_simple( &
                 tid, &
                 EPS2, &
-                tessellate, &  ! =1
+                tessellate, &  !TESSELLATE_ALL
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, &
                 xsten,nhalf, &
@@ -3009,8 +3009,8 @@ stop
                  ! num_processed_fluid<num_materials_fluid and
                  ! uncaptured_volume_fraction>0
 
-         else if ((tessellate.eq.0).or. &
-                  (tessellate.eq.3).or. &
+         else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                  (tessellate.eq.TESSELLATE_ALL_RASTER).or. &
                   (vfrac_solid_sum.eq.zero)) then
           ! do nothing
          else
@@ -3052,7 +3052,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid, &
                EPS2, &
-               tessellate, &  !=0,1, or 3
+               tessellate, &  !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
                bfact,dx,xsten,nhalf, &
                mofdatavalid, &
                xsten,nhalf, &
@@ -3079,7 +3079,7 @@ stop
                  do im_opp=1,num_materials
 
                   if ((is_rigid(im_opp).eq.0).or. &
-                      (tessellate.eq.1)) then
+                      (tessellate.eq.TESSELLATE_ALL)) then
 
                    if (im_opp.ne.im) then
                     call get_iten(im,im_opp,iten)
@@ -3100,8 +3100,8 @@ stop
                     stop
                    endif
                   else if ((is_rigid(im_opp).eq.1).and. &
-                           ((tessellate.eq.0).or. &
-                            (tessellate.eq.3))) then
+                           ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                            (tessellate.eq.TESSELLATE_ALL_RASTER))) then
                    ! do nothing
                   else
                    print *,"is_rigid or tessellate invalid"
@@ -3113,7 +3113,7 @@ stop
                  if (total_facearea.gt.zero) then
                   do im_opp=1,num_materials
                    if ((is_rigid(im_opp).eq.0).or. &
-                       (tessellate.eq.1)) then
+                       (tessellate.eq.TESSELLATE_ALL)) then
 
                     if (im_opp.ne.im) then
                      call get_iten(im,im_opp,iten)
@@ -3175,8 +3175,8 @@ stop
                      stop
                     endif
                    else if ((is_rigid(im_opp).eq.1).and. &
-                            ((tessellate.eq.0).or. &
-                             (tessellate.eq.3))) then
+                            ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                             (tessellate.eq.TESSELLATE_ALL_RASTER))) then
                     ! do nothing
                    else
                     print *,"is_rigid or tessellate invalid"
@@ -5589,20 +5589,20 @@ stop
          mofdata(im)=VOF(D_DECL(i,j,k),im)
         enddo
 
-         ! tessellate==1:
+         ! tessellate==TESSELLATE_ALL:
          !  input: fluids tessellate, solids embedded 
          !  output: all materials tessellating 
-         ! tessellate==3:
+         ! tessellate==TESSELLATE_ALL_RASTER:
          !   a) if solid_vfrac>=1/2 then
          !        consider cell as F_{im_solid_max}=1
          !   b) else, only consider fluids.
-        if ((tessellate.eq.1).or. &
-            (tessellate.eq.3)) then
+        if ((tessellate.eq.TESSELLATE_ALL).or. &
+            (tessellate.eq.TESSELLATE_ALL_RASTER)) then
           !in: fort_getcolorsum
           !EPS2
          call multi_get_volume_tessellate( &
           tid_current, &
-          tessellate, & ! =1 or 3
+          tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact, &
           dx, &
           xsten,nhalf, &
@@ -8860,7 +8860,7 @@ stop
        vol,DIMS(vol), &
        levelPC,DIMS(levelPC), &
        vofC,DIMS(vofC), &
-       vofF,DIMS(vofF), & !vofF: see fort_build_semirefinevof, tessellate==3
+       vofF,DIMS(vofF), & !vofF: see fort_build_semirefinevof, tessellate==TESSELLATE_ALL_RASTER
        massF,DIMS(massF), & !massF: "            "
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -9157,7 +9157,7 @@ stop
       integer local_im_solid_primary
       integer ispec
       real(amrex_real) massfrac_parm(num_species_var+1)
-      integer, parameter :: local_tessellate=3
+      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
       integer, parameter :: incompressible_interface_flag=0
 
       real(amrex_real) local_cenvisc
@@ -11553,7 +11553,7 @@ stop
          !EPS2
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, & ! =3
+         local_tessellate, & !TESSELLATE_ALL_RASTER
          bfact, &
          dx, &
          xsten,nhalf, &
@@ -11967,9 +11967,9 @@ stop
        print *,"tid invalid"
        stop
       endif
-      if ((tessellate.ne.0).and. &
-          (tessellate.ne.1).and. &
-          (tessellate.ne.3)) then
+      if ((tessellate.ne.TESSELLATE_FLUIDS).and. &
+          (tessellate.ne.TESSELLATE_ALL).and. &
+          (tessellate.ne.TESSELLATE_ALL_RASTER)) then
        print *,"tessellate invalid2"
        stop
       endif
@@ -12140,7 +12140,7 @@ stop
          call multi_get_volume_grid_simple( &
            tid, &
            EPS2, &
-           tessellate, &  !=0,1, or 3
+           tessellate, &  !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
            bfact,dx, &
            xsten_recon,1, &
            mofdata, &
@@ -12288,11 +12288,11 @@ stop
           enddo !veldir=0..sdim-1
          enddo ! im=1,num_materials
 
-         if (tessellate.eq.0) then
+         if (tessellate.eq.TESSELLATE_FLUIDS) then
           voltotal=voltotal_fluid
           mass_total=mass_total_fluid
-         else if ((tessellate.eq.1).or. &
-                  (tessellate.eq.3)) then
+         else if ((tessellate.eq.TESSELLATE_ALL).or. &
+                  (tessellate.eq.TESSELLATE_ALL_RASTER)) then
           voltotal=voltotal_fluid+voltotal_solid
           mass_total=mass_total_fluid+mass_total_solid
          else
@@ -20688,7 +20688,7 @@ stop
       integer ibase
       integer partid
       integer partid_max
-      integer, parameter :: tessellate=0
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer, parameter :: tessellate_transfer=1
       integer, parameter :: LS_extrap_radius=1
       integer, parameter :: extrap_radius=1
@@ -21991,7 +21991,7 @@ stop
               xsten,nhalf, &
               continuous_mof_parm, &
               bfact,dx, &
-              tessellate, & !=0
+              tessellate, & !TESSELLATE_FLUIDS
               local_mof, &
               SDIM)
 
@@ -22024,7 +22024,7 @@ stop
              !EPS2
             call multi_get_volume_tessellate( &
              tid, &
-             tessellate_transfer, & !=1
+             tessellate_transfer, & !TESSELLATE_ALL
              bfact, &
              dx,xsten,nhalf, &
              local_mof, &
@@ -22155,7 +22155,7 @@ stop
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
-           tessellate, & !=0
+           tessellate, & !TESSELLATE_FLUIDS
            mofnew,SDIM)
 
          do im=1,num_materials*(1+SDIM)
@@ -22175,7 +22175,7 @@ stop
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
-           tessellate, & !=0
+           tessellate, & !TESSELLATE_FLUIDS
            mofnew,SDIM)
         else
          print *,"renormalize only invalid"
@@ -22260,7 +22260,7 @@ stop
       real(amrex_real) volgrid
       real(amrex_real) cengrid(SDIM)
       integer mask_test
-      integer, parameter :: tessellate=0
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
