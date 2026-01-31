@@ -7642,8 +7642,8 @@ END SUBROUTINE SIMP
 
         stack_error_level=0
 
-        ! before (mofdata): fluids tessellate
-        ! after  (mofdata): fluids and solids tessellate
+        ! before (mofdata_tess): fluids tessellate
+        ! after  (mofdata_tess): fluids and solids tessellate
         ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
@@ -14105,7 +14105,7 @@ END SUBROUTINE SIMP
                  xstenfine,nhalf, &
                  continuous_mof, &
                  bfact_f,dxf, &
-                 tessellate, &
+                 tessellate, & !TESSELLATE_FLUIDS
                  mofdatafine, &
                  SDIM)
 

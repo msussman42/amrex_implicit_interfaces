@@ -3642,7 +3642,7 @@ stop
       real(amrex_real) multi_area(num_materials)
       real(amrex_real) total_vol
       integer mask1,mask2
-      integer normalize_tessellate
+      integer, parameter :: normalize_tessellate=TESSELLATE_FLUIDS
       integer local_tessellate
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -3746,13 +3746,12 @@ stop
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
         enddo
 
-        normalize_tessellate=0
         call make_vfrac_sum_ok_copy( &
          cmofsten, &
          xsten,nhalf, &
          continuous_mof, &
          bfact,dx, &
-         normalize_tessellate, &  ! =0
+         normalize_tessellate, &  !TESSELLATE_FLUIDS
          mofdata,mofdatavalid, &
          SDIM)
 

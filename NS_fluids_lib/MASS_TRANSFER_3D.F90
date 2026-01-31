@@ -6382,7 +6382,8 @@ stop
                u_xsten_updatecell,nhalf, &
                continuous_mof_parm, &
                bfact,dx, &
-               tessellate,mofdata,SDIM)
+               tessellate, & !TESSELLATE_FLUIDS
+               mofdata,SDIM)
 
              do u_im=1,num_materials
               vofcomp_recon=(u_im-1)*ngeom_recon+1

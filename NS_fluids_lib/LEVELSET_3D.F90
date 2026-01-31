@@ -2698,7 +2698,8 @@ stop
            continuous_mof, &
            bfact,dx, &
            local_tessellate, & !TESSELLATE_FLUIDS 
-           mofdata,mofdatavalid, &
+           mofdata, &
+           mofdatavalid, &
            SDIM)
 
          shapeflag=0
@@ -2712,7 +2713,7 @@ stop
           tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact,dx, &
           xsten,nhalf, &
-          mofdatavalid, &
+          mofdatavalid, & !fluids tessellate, solids embedded.
           xsten,nhalf, &
           dummy_tri, &
           multi_volume, &
@@ -2814,7 +2815,7 @@ stop
                 EPS2, &
                 tessellate, &  !TESSELLATE_ALL
                 bfact,dx,xsten,nhalf, &
-                mofdatavalid, &
+                mofdatavalid, & !fluids tessellate, solids embedded
                 xsten,nhalf, &
                 multi_volume_offset, &
                 multi_cen_offset, &
@@ -3054,7 +3055,7 @@ stop
                EPS2, &
                tessellate, &  !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
                bfact,dx,xsten,nhalf, &
-               mofdatavalid, &
+               mofdatavalid, & !fluids tessellate, solids embedded
                xsten,nhalf, &
                multi_volume_offset, &
                multi_cen_offset, &
@@ -5606,7 +5607,7 @@ stop
           bfact, &
           dx, &
           xsten,nhalf, &
-          mofdata, &
+          mofdata, & !input: fluids tessellate, solids embedded.
           geom_xtetlist(1,1,1,tid_current+1), &
           nmax, &
           nmax, &
@@ -11557,7 +11558,7 @@ stop
          bfact, &
          dx, &
          xsten,nhalf, &
-         mofdata, &
+         mofdata, & !input:fluids tessellate, solids embedded
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
@@ -12138,18 +12139,18 @@ stop
           ! in: fort_build_semirefinevof
           ! EPS2
          call multi_get_volume_grid_simple( &
-           tid, &
-           EPS2, &
-           tessellate, &  !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
-           bfact,dx, &
-           xsten_recon,1, &
-           mofdata, &
-           xsten_donate,1, &
-           multi_volume,multi_cen, &
-           geom_xtetlist(1,1,1,tid+1), &
-           nmax, &
-           nmax, &
-           SDIM)
+          tid, &
+          EPS2, &
+          tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+          bfact,dx, &
+          xsten_recon,1, &
+          mofdata, & !before:fluids tessellate, solids embedded
+          xsten_donate,1, &
+          multi_volume,multi_cen, &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          SDIM)
        
          mass_total_fluid=zero
          voltotal_fluid=zero 
@@ -22332,7 +22333,8 @@ stop
           xsten,nhalf, &
           continuous_mof, &
           bfact,dx, &
-          tessellate,mofdata,SDIM)
+          tessellate, & !TESSELLATE_FLUIDS
+          mofdata,SDIM)
 
         do im=1,num_materials
          vofcompraw=(im-1)*ngeom_raw+1
