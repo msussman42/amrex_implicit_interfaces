@@ -193,10 +193,10 @@ stop
 
       real(amrex_real) vfrac_fluid_sum
       real(amrex_real) vfrac_solid_sum
+      real(amrex_real) vfrac_elastic_sum
       real(amrex_real) vfrac_solid_sum_center
-      real(amrex_real) vfrac_raster_solid
+      real(amrex_real) vfrac_elastic_sum_center
       real(amrex_real) vfrac_local(num_materials)
-      integer im_raster_solid
       integer mod_cmofsten
       integer :: interior_flag,outside_fab
 
@@ -548,11 +548,7 @@ stop
 
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
-       im_raster_solid=0
-
-        ! i,j,k
-        ! vfrac_raster_solid=max_{is_rigid(im)==1} vfrac(im)
-       vfrac_raster_solid=zero
+       vfrac_elastic_sum=zero
 
        do im=1,num_materials
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -562,39 +558,23 @@ stop
          ! voflist_stencil(im)=max_{3x3x3 stencil} F(im,stencil)
         voflist_stencil(im)=zero
 
-        if (is_rigid(im).eq.0) then
-         vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
-        else if (is_rigid(im).eq.1) then
-         if (im_raster_solid.eq.0) then
-          im_raster_solid=im
-          vfrac_raster_solid=voflist_center(im)
-         else if ((im_raster_solid.ge.1).and. &
-                  (im_raster_solid.le.num_materials).and. &
-                  (is_rigid(im_raster_solid).eq.1)) then
-          if (vfrac_raster_solid.lt.voflist_center(im)) then
-           im_raster_solid=im
-           vfrac_raster_solid=voflist_center(im)
-          else if (vfrac_raster_solid.ge.voflist_center(im)) then
-           ! do nothing
-          else
-           print *,"vfrac_raster_solid or voflist_center is NaN:", &
-             im,vfrac_raster_solid,voflist_center(im)
-           stop
-          endif
-         else
-          print *,"im_raster_solid invalid:",im_raster_solid
-          stop
-         endif
-      
+        if (is_rigid(im).eq.1) then
          vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
+        else if (is_elastic(im).eq.1) then
+         vfrac_elastic_sum=vfrac_elastic_sum+voflist_center(im)
+        else if ((is_rigid(im).eq.0).and. &
+                 (is_elastic(im).eq.0)) then
+         vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
         else
          print *,"is_rigid(im) invalid: ",im,is_rigid(im)
+         print *,"or is_elastic(im) invalid: ",im,is_elastic(im)
          stop
         endif
 
        enddo ! im=1..num_materials
 
        vfrac_solid_sum_center=vfrac_solid_sum
+       vfrac_elastic_sum_center=vfrac_elastic_sum
 
        if (abs(vfrac_fluid_sum-one).le.EPS1) then
         ! do nothing
@@ -642,7 +622,7 @@ stop
         num_fluid_materials_in_cell=0
         num_fluid_materials_in_stencil=0
         do im=1,num_materials
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
            ! voflist_stencil(im)=max_{3x3x3 stencil} F(im,stencil)
           if (voflist_stencil(im).gt.VOFTOL) then
            num_fluid_materials_in_stencil=num_fluid_materials_in_stencil+1
@@ -650,10 +630,12 @@ stop
           if (voflist_center(im).gt.VOFTOL) then
            num_fluid_materials_in_cell=num_fluid_materials_in_cell+1
           endif
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or. &
+                  (is_elastic(im).eq.1)) then
           ! do nothing
          else
           print *,"is_rigid invalid PLIC_3D.F90: ",im,is_rigid(im)
+          print *,"or is_elastic invalid PLIC_3D.F90: ",im,is_elastic(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -672,12 +654,15 @@ stop
         call SUB_verification_flag(verification_flag)
 
         fluid_obscured=0
-        if (vfrac_solid_sum.ge.half) then
+        if ((vfrac_solid_sum.ge.half).or. &
+            (vfrac_elastic_sum.ge.half)) then
          fluid_obscured=1
-        else if (vfrac_solid_sum.le.half) then
+        else if ((vfrac_solid_sum.le.half).and. &
+                 (vfrac_elastic_sum.le.half)) then
          !do nothing
         else
          print *,"vfrac_solid_sum invalid:",vfrac_solid_sum
+         print *,"or vfrac_elastic_sum invalid:",vfrac_elastic_sum
          stop
         endif
 
@@ -705,7 +690,7 @@ stop
 
          ! always use MOF on the coarser levels or if decision tree data
          ! is not available or if the fluids in a cell are ``mostly''
-         ! obscured by "is_rigid" materials.
+         ! obscured by "is_rigid" or "is_elastic" materials.
          continuous_mof_parm=STANDARD_MOF
 
         else if ((level.ge.finest_level).and. &
@@ -746,16 +731,18 @@ stop
 
          do im=1,num_materials
 
-          if (is_rigid(im).eq.1) then
+          if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
            ! do nothing
-          else if (is_rigid(im).eq.0) then
+          else if ((is_rigid(im).eq.0).and. &
+                   (is_elastic(im).eq.0)) then
            vofcomprecon=(im-1)*ngeom_recon+1
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=zero
            enddo
            vof_super(im)=zero
           else
-           print *,"is_rigid(im) invalid"
+           print *,"is_rigid(im) invalid: ",is_rigid(im)
+           print *,"or is_elastic(im) invalid",is_elastic(im)
            stop
           endif
 
@@ -807,36 +794,22 @@ stop
 
           vfrac_fluid_sum=zero
           vfrac_solid_sum=zero
-          im_raster_solid=0
-           ! i+i',j+j',k+k'
-           ! vfrac_raster_solid=max_{is_rigid(im)==1} vfrac(im)
-          vfrac_raster_solid=zero
+          vfrac_elastic_sum=zero
 
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
            vfrac_local(im)=mofsten(vofcomprecon)
 
-           if (is_rigid(im).eq.0) then
+           if ((is_rigid(im).eq.0).and. &
+               (is_elastic(im).eq.0)) then
             vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
            else if (is_rigid(im).eq.1) then
-            if (im_raster_solid.eq.0) then
-             im_raster_solid=im
-             vfrac_raster_solid=vfrac_local(im)
-            else if ((im_raster_solid.ge.1).and. &
-                     (im_raster_solid.le.num_materials).and. &
-                     (is_rigid(im_raster_solid).eq.1)) then
-             if (vfrac_raster_solid.lt.vfrac_local(im)) then
-              im_raster_solid=im
-              vfrac_raster_solid=vfrac_local(im)
-             endif
-            else
-             print *,"im_raster_solid invalid:",im_raster_solid
-             stop
-            endif
-     
             vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
+           else if (is_elastic(im).eq.1) then
+            vfrac_elastic_sum=vfrac_elastic_sum+vfrac_local(im)
            else
-            print *,"is_rigid(im) invalid"
+            print *,"is_rigid(im) invalid: ",is_rigid(im)
+            print *,"or is_elastic(im) invalid: ",is_elastic(im)
             stop
            endif
           enddo ! im=1..num_materials
@@ -850,15 +823,18 @@ stop
 
           mod_cmofsten=0
 
-          if (vfrac_solid_sum_center.ge.half) then
+          if ((vfrac_solid_sum_center.ge.half).or. &
+              (vfrac_elastic_sum_center.ge.half)) then
 
            ! do nothing, we can do the full cmof stencil in masked
            ! off is_rigid=1 cells (for reconstructing the fluid
            ! interfaces)
 
-          else if (vfrac_solid_sum_center.lt.half) then
+          else if ((vfrac_solid_sum_center.lt.half).and. &
+                   (vfrac_elastic_sum_center.lt.half)) then
 
-           if (vfrac_solid_sum.ge.half) then
+           if ((vfrac_solid_sum.ge.half).or. &
+               (vfrac_elastic_sum.ge.half)) then
 
             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
              print *,"expecting i1 or j1 or k1 not 0"
@@ -874,15 +850,17 @@ stop
              print *,"partial_cmof_stencil_at_walls invalid"
              stop
             endif
-           else if (vfrac_solid_sum.lt.half) then
+           else if ((vfrac_solid_sum.lt.half).and. &
+                    (vfrac_elastic_sum.lt.half)) then
             ! do nothing
            else
-            print *,"vfrac_solid_sum invalid"
+            print *,"vfrac_solid_sum or vfrac_elastic_sum invalid"
             stop
            endif
 
           else
            print *,"vfrac_solid_sum_center invalid"
+           print *,"or vfrac_elastic_sum_center invalid"
            stop
           endif
 
@@ -895,7 +873,7 @@ stop
 
            do im=1,num_materials
 
-            if (is_rigid(im).eq.0) then
+            if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
 
              vofcomprecon=(im-1)*ngeom_recon+1
              volmat=volsten*vfrac_local(im)
@@ -907,10 +885,11 @@ stop
              enddo ! dir
              volume_super_mofdata=volume_super_mofdata+volmat
 
-            else if (is_rigid(im).eq.1) then
+            else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
              ! do nothing
             else
-             print *,"is_rigid(im) invalid"
+             print *,"is_rigid(im) invalid ",is_rigid(im)
+             print *,"or is_elastic(im) invalid ",is_elastic(im)
              stop
             endif
 
@@ -949,13 +928,14 @@ stop
           vofcomprecon=(im-1)*ngeom_recon+1
 
            ! always standard MOF centroid for the rigid materials.
-          if (is_rigid(im).eq.1) then
+          if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
 
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
            enddo
 
-          else if (is_rigid(im).eq.0) then
+          else if ((is_rigid(im).eq.0).and. &
+                   (is_elastic(im).eq.0)) then
 
            if (vof_super(im).gt.zero) then
             do dir=1,SDIM
@@ -975,7 +955,8 @@ stop
            endif
 
           else
-           print *,"is_rigid invalid PLIC_3D.F90"
+           print *,"is_rigid invalid PLIC_3D.F90 ",is_rigid(im)
+           print *,"or is_elastic invalid PLIC_3D.F90 ",is_elastic(im)
            stop
           endif
 
@@ -1137,6 +1118,7 @@ stop
           continuous_mof_parm_super=CMOF_F_AND_X
 
            !is_rigid(im)==1 => mofdata_super=mofdata
+           !is_elastic(im)==1 => mofdata_super=mofdata
           do dir=1,num_materials*ngeom_recon
            mofdata_super_vfrac(dir)=mofdata_super(dir)
           enddo
@@ -1144,6 +1126,7 @@ stop
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
             !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+            !is_elastic(im)==1 => vof_super(im)=mofdata(vofcomprecon)
            mofdata_super_vfrac(vofcomprecon)=vof_super(im)
           enddo
 
@@ -1186,11 +1169,11 @@ stop
            !mofdata_super(vofcomprecon)=vof_super(im)
            !i.e. the volume fractions must be consistent with the 
            !slopes and intercept.
-           !is_rigid(im)==0 => vof_super(im)=super cell vfrac
-           !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+           !is_rigid && is_elastic(im)==0 => vof_super(im)=super cell vfrac
+           !is_rigid|elastic(im)==1 => vof_super(im)=mofdata(vofcomprecon)
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
-            !is_rigid(im)==1 => vof_super(im)=mofdata(vofcomprecon)
+            !is_rigid|elastic(im)==1 => vof_super(im)=mofdata(vofcomprecon)
            mofdata_super(vofcomprecon)=vof_super(im)
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
@@ -1229,24 +1212,28 @@ stop
 
           vfrac_fluid_sum=zero
           do im=1,num_materials
-           if (is_rigid(im).eq.0) then
+           if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
             vfrac_fluid_sum=vfrac_fluid_sum+multi_volume(im)
-           else if (is_rigid(im).eq.1) then
+           else if ((is_rigid(im).eq.1).or. &
+                    (is_elastic(im).eq.1)) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid ",is_rigid(im)
+            print *,"or is_elastic invalid ",is_elastic(im)
             stop
            endif
           enddo ! im=1,..,num_materials
 
           if (vfrac_fluid_sum.gt.zero) then
            do im=1,num_materials
-            if (is_rigid(im).eq.0) then
+            if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
              multi_volume(im)=multi_volume(im)/vfrac_fluid_sum
-            else if (is_rigid(im).eq.1) then
+            else if ((is_rigid(im).eq.1).or. &
+                     (is_elastic(im).eq.1)) then
              ! do nothing
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid ",is_rigid(im)
+             print *,"or is_elastic invalid ",is_elastic(im)
              stop
             endif
            enddo ! im=1,..,num_materials
@@ -1256,7 +1243,7 @@ stop
           endif
 
           do im=1,num_materials
-           if (is_rigid(im).eq.0) then
+           if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
 
             vofcomprecon=(im-1)*ngeom_recon+1
             mofdata_super(vofcomprecon)=mofdata(vofcomprecon)
@@ -1297,10 +1284,12 @@ stop
              stop
             endif
 
-           else if (is_rigid(im).eq.1) then
+           else if ((is_rigid(im).eq.1).or. &
+                    (is_elastic(im).eq.1)) then
             ! do nothing
            else
-            print *,"is_rigid invalid: ",im,is_rigid(im)
+            print *,"is_rigid invalid ",im,is_rigid(im)
+            print *,"or is_elastic invalid ",im,is_elastic(im)
             stop
            endif
           enddo ! im=1,num_materials
@@ -1447,7 +1436,7 @@ stop
          shapeflag)
 
         do im=1,num_materials
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
 
           if (local_maskcov.eq.0) then
            ! do nothing
@@ -1486,10 +1475,12 @@ stop
            stop
           endif
 
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or. &
+                  (is_elastic(im).eq.1)) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid ",is_rigid(im)
+          print *,"or is_elastic invalid ",is_elastic(im)
           stop
          endif
         enddo ! im=1,num_materials

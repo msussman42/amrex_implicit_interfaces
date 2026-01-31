@@ -5837,7 +5837,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xsten0,nhalf0, & ! top level cell
         dx,bfact, &
         xsten,nhalf, &   ! refined cell
-        mofdata, &
+        mofdata, & !fluids tessellate,solids embedded
         mofdata_tess, &
         errorparm,cutflag,time)
 
@@ -6125,7 +6125,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         EPS2, &
         tessellate, &  ! =TESSELLATE_ALL
         bfact,dx,xsten0,nhalf0, &
-        mofdata, &
+        mofdata, & !input: fluids tessellate, solids embedded
         xsten,nhalf, &
         multi_volume,multi_cen, &
         xtrilist, &
@@ -6158,8 +6158,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        xsten0,nhalf0, &
        dxin,bfact, &
        xsten,nhalf, &
-       mofdata, &
-       mofdata_tess, &
+       mofdata, & !fluids tessellate,solids embedded
+       mofdata_tess, & !fluids and solids tessellate
        errorparm,level, &
        max_level,time)
       IMPLICIT NONE
