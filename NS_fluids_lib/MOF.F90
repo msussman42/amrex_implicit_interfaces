@@ -18213,7 +18213,7 @@ contains
       integer i
       integer dir
       integer vofcomp
-      real(amrex_real) voffluid,vofsolid
+      real(amrex_real) voffluid,vofsolid,vofelastic
       integer num_materials_fluids
       integer num_materials_elastic
       integer is_rigid_local(num_materials)
@@ -18308,6 +18308,7 @@ contains
 
       voffluid=zero
       vofsolid=zero
+      vofelastic=zero
 
       if (continuous_mof.eq.STANDARD_MOF) then !MOF
        call Box_volumeFAST( &
@@ -18381,6 +18382,7 @@ contains
        else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+mofdata(vofcomp)
        else if (is_elastic_local(im).eq.1) then
+        vofelastic=vofelastic+mofdata(vofcomp)
         num_materials_elastic=num_materials_elastic+1
        else
         print *,"is_rigid invalid MOF.F90 ",is_rigid_local
@@ -18403,6 +18405,7 @@ contains
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       print *,"vofelastic= ",vofelastic
        print *,"xsten= ",xsten
        print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
        print *,"nhalf= ",nhalf
@@ -18720,7 +18723,7 @@ contains
       integer im
       integer dir
       integer vofcomp
-      real(amrex_real) voffluid,vofsolid,vof_test
+      real(amrex_real) voffluid,vofsolid,vofelastic,vof_test
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
 
@@ -18780,7 +18783,6 @@ contains
         ! do nothing
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
         print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        print *,"if non-raster cell, pass tessellate=TESSELLATE_FLUIDS"
         stop
        else
         print *,"tessellate invalid9: ",tessellate
@@ -18805,6 +18807,7 @@ contains
 
       voffluid=zero
       vofsolid=zero
+      vofelastic=zero
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -18828,7 +18831,7 @@ contains
        else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+vof_test
        else if (is_elastic_local(im).eq.1) then
-        !do nothing
+        vofelastic=vofelastic+vof_test
        else
         print *,"is_rigid invalid MOF.F90 ",is_rigid_local
         print *,"or is_elastic invalid MOF.F90 ",is_elastic_local
@@ -18847,6 +18850,7 @@ contains
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       print *,"vofelastic= ",vofelastic
        print *,"tessellate=",tessellate
        print *,"continuous_mof=",continuous_mof
        print *,"dx=",dx
