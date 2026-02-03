@@ -16924,7 +16924,7 @@ contains
           single_material_elastic=imaterial
          else if ((single_material_elastic.ge.1).and. &
                   (single_material_elastic.le.num_materials)) then
-          vofcomp_single=(single_material_elasic-1)*ngeom_recon+1
+          vofcomp_single=(single_material_elastic-1)*ngeom_recon+1
           if (mofdata(vofcomp_single).lt. &
               mofdata(vofcomp)) then
            single_material_elastic=imaterial
