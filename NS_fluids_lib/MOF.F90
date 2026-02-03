@@ -13711,6 +13711,7 @@ contains
 ! xcell is cell center (not cell centroid)
 
       subroutine individual_MOF( &
+        elastic_flag, &
         grid_index, &
         grid_level, &
         tid_in, &
@@ -13741,6 +13742,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(IN) :: elastic_flag
       integer, INTENT(IN) :: nlist_alloc 
       integer, INTENT(IN) :: tid_in
       integer, INTENT(in) :: sdim 
@@ -13816,6 +13818,13 @@ contains
 
 #include "mofdata.H"
 
+      if ((elastic_flag.eq.0).or.(elastic_flag.eq.1)) then
+       !do nothing
+      else
+       print *,"elastic_flag invalid: ",elastic_flag
+       stop
+      endif
+
       nDOF_standard=sdim-1
       nEQN_standard=sdim
 
@@ -13825,24 +13834,6 @@ contains
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        print *,"tessellate should be 0"
-        stop
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"tessellate should be 0"
-        stop
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        print *,"if non-raster cell, pass tessellate=TESSELLATE_FLUIDS"
-        print *,"subroutine individual_MOF: tessellate should be 0"
-        stop
-       else
-        print *,"tessellate invalid6"
-        stop
-       endif
       enddo ! im=1..num_materials
 
       if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
@@ -16167,6 +16158,13 @@ contains
       real(amrex_real) uncaptured_volume_vof_rigid
       real(amrex_real) uncaptured_centroid_vof_rigid(sdim)
 
+      integer elastic_flag
+
+      real(amrex_real) uncaptured_volume_vof_elastic
+      real(amrex_real) uncaptured_centroid_vof_elastic(sdim)
+      real(amrex_real) uncaptured_volume_cen_elastic
+      real(amrex_real) uncaptured_centroid_cen_elastic(sdim)
+
       real(amrex_real) uncaptured_volume_vof
       real(amrex_real) uncaptured_centroid_vof(sdim)
 
@@ -16178,10 +16176,13 @@ contains
       real(amrex_real) xref_matT(sdim)
       real(amrex_real) xact_matT(sdim)
       integer single_material
+      integer single_material_elastic
       real(amrex_real) remaining_vfrac
+      real(amrex_real) remaining_vfrac_elastic
       real(amrex_real) nrecon(sdim)
       integer order_algorithm_in(num_materials)
       integer num_materials_cell
+      integer num_materials_cell_elastic
       integer, dimension(:,:), allocatable :: order_array
       integer, dimension(:,:), allocatable :: order_stack
       real(amrex_real), dimension(:,:), allocatable :: mofdata_array
@@ -16236,7 +16237,7 @@ contains
       real(amrex_real) local_npredict(sdim)
       real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       real(amrex_real) mag(3)
-      integer continuous_mof_rigid
+      integer, parameter :: continuous_mof_rigid=STANDARD_MOF
       integer nlist_vof,nlist_cen
 
       integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
@@ -16245,6 +16246,7 @@ contains
       integer :: nDOF_standard
       integer :: nEQN_standard
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
       integer, parameter :: num_particles=0;
       real(amrex_real) :: particle_list(1,sdim+1)
@@ -16279,6 +16281,7 @@ contains
 
       do imaterial=1,num_materials
        is_rigid_local(imaterial)=is_rigid(imaterial)
+       is_elastic_local(imaterial)=is_elastic(imaterial)
       enddo ! imaterial=1..num_materials
 
       if (bfact.lt.1) then
@@ -16341,8 +16344,9 @@ contains
        print *,"nmax too small in multimaterial_MOF"
        stop
       endif
-      if ((use_ls_data.ne.0).and.(use_ls_data.ne.1)) then
-       print *,"use_ls_data invalid"
+      if ((use_ls_data.ne.0).and. &
+          (use_ls_data.ne.1)) then
+       print *,"use_ls_data invalid: ",use_ls_data
        stop
       endif
 
@@ -16376,6 +16380,7 @@ contains
       do imaterial=1,num_materials
 
        vofcomp=(imaterial-1)*ngeom_recon+1
+
        voftest(imaterial)=mofdata(vofcomp)
 
        if ((vof_super(imaterial).ge.-0.1d0).and. &
@@ -16467,6 +16472,24 @@ contains
         tessellate, &  ! =TESSELLATE_FLUIDS
         mofdata, &
         sdim)
+
+      call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_vof_rigid, &
+        uncaptured_centroid_vof_rigid, &
+        sdim)
+
+      call Box_volumeFAST( &
+       bfact,dx,xsten0,nhalf0, &
+       uncaptured_volume_vof_elastic, &
+       uncaptured_centroid_vof_elastic, &
+       sdim)
+
+      call Box_volumeFAST( &
+       bfact,dx,xsten0,nhalf0, &
+       uncaptured_volume_cen_elastic, &
+       uncaptured_centroid_cen_elastic, &
+       sdim)
 
       if (continuous_mof.eq.STANDARD_MOF) then 
 
@@ -16643,20 +16666,17 @@ contains
        stop
       endif
 
-      remaining_vfrac=zero
-      single_material=0
-      num_materials_cell=0
-
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
        ! reconstruct the rigid materials.
 
       do imaterial=1,num_materials
 
+       vofcomp=(imaterial-1)*ngeom_recon+1
+
        mof_iterations(tid_in+1,imaterial)=0
        mof_errors(tid_in+1,imaterial)=0.0d0
        mof_calls(tid_in+1,imaterial)=0
-       vofcomp=(imaterial-1)*ngeom_recon+1
 
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
            (continuous_mof.eq.MOF_TRI_TET).or. & 
@@ -16671,7 +16691,8 @@ contains
         if (vofcomp+2*sdim+2.eq.imaterial*ngeom_recon) then
          ! do nothing
         else
-         print *,"ngeom_recon,vofcomp, or imaterial invalid"
+         print *,"ngeom_recon,vofcomp, or imaterial invalid: ", &
+            ngeom_recon,vofcomp,imaterial
          stop
         endif
 
@@ -16684,17 +16705,24 @@ contains
         multi_centroidA(imaterial,dir)=zero
        enddo
 
+      enddo !imaterial=1,num_materials
+
+       !This loop reconstructs the rigid materials.
+      do imaterial=1,num_materials
+
+       vofcomp=(imaterial-1)*ngeom_recon+1
+
        if (is_rigid_local(imaterial).eq.1) then
 
         if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
             (continuous_mof.eq.CMOF_X).or. & !CMOF X
             (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF F and X
-         continuous_mof_rigid=STANDARD_MOF
+         !do nothing
         else if (continuous_mof.eq.MOF_TRI_TET) then !TRI-TET
-         continuous_mof_rigid=MOF_TRI_TET
+         print *,"cannot have is_rigid and MOF_TRI_TET: ",is_rigid_local
+         stop
         else
-         print *,"continuous_mof (continuous_mof_rigid) invalid: ", &
-          continuous_mof
+         print *,"continuous_mof invalid: ",continuous_mof
          stop
         endif
 
@@ -16709,24 +16737,8 @@ contains
          fastflag=1
          nlist_vof=0
          nlist_cen=0
-        else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
-         call Box_volumeTRI_TET( &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          uncaptured_volume_vof_rigid, &
-          uncaptured_centroid_vof_rigid, &
-          sdim)
-         fastflag=0
-         nlist_vof=1
-         nlist_cen=1
-         do i1=1,sdim+1
-         do dir=1,sdim
-          xtetlist_vof(i1,dir,nlist_vof)=xsten0(-nhalf0+i1-1,dir) 
-          xtetlist_cen(i1,dir,nlist_vof)=xsten0(-nhalf0+i1-1,dir) 
-         enddo
-         enddo
         else
-         print *,"continuous_mof_rigid invalid"
+         print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
          stop
         endif
 
@@ -16795,7 +16807,7 @@ contains
            refcentroid, &
            refvfrac, &
            npredict, &
-           continuous_mof_rigid, & !STANDARD_MOF or MOF_TRI_TET
+           continuous_mof_rigid, & !STANDARD_MOF 
            cmofsten, &
            nslope, &
            intercept, &
@@ -16857,28 +16869,6 @@ contains
             centroidA, & ! centroid in absolute coordinate system
             sdim)
 
-          else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
-
-           call multi_find_intercept( &
-            tid_in, &
-            nMAT_OPT_standard, & !nMAT_OPT_standard=1
-            nDOF_standard, & !nDOF_standard=sdim-1
-            nEQN_standard, &  !nEQN_standard=sdim
-            bfact,dx, &
-            xsten0,nhalf0, &
-            local_npredict, &
-            intercept(1), &
-            continuous_mof_rigid, &
-            cmofsten, &
-            xtetlist_vof, & !intent(in)
-            nlist_alloc, &
-            nlist_vof, & !intent(in)
-            nmax, & !intent(in)
-            refvfrac(1), &
-            use_initial_guess, & !=1
-            centroidA, & ! centroid in absolute coordinate system
-            fastflag, &
-            sdim)
           else
            print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
            stop
@@ -16904,6 +16894,104 @@ contains
         endif
   
        else if (is_rigid_local(imaterial).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid_local invalid: ",is_rigid_local
+        stop
+       endif
+
+      enddo !imaterial=1,num_materials
+
+      remaining_vfrac=zero
+      single_material=0
+      num_materials_cell=0
+
+      remaining_vfrac_elastic=zero
+      single_material_elastic=0
+      num_materials_cell_elastic=0
+
+      do imaterial=1,num_materials
+
+       vofcomp=(imaterial-1)*ngeom_recon+1
+
+       if (is_rigid_local(imaterial).eq.1) then
+        !do nothing
+       else if (is_elastic_local(imaterial).eq.1) then
+
+        if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
+
+         if (single_material_elastic.eq.0) then
+          single_material_elastic=imaterial
+         else if ((single_material_elastic.ge.1).and. &
+                  (single_material_elastic.le.num_materials)) then
+          vofcomp_single=(single_material_elasic-1)*ngeom_recon+1
+          if (mofdata(vofcomp_single).lt. &
+              mofdata(vofcomp)) then
+           single_material_elastic=imaterial
+          else if (mofdata(vofcomp_single).ge. &
+                   mofdata(vofcomp)) then
+           !do nothing
+          else
+           print *,"mofdata invalid: ",single_material_elastic, &
+            mofdata(vofcomp),mofdata(vofcomp_single)
+           stop
+          endif
+         else
+          print *,"single_material_elastic invalid: ",single_material_elastic
+          stop
+         endif
+
+        else if (mofdata(vofcomp).le.one-EPS_UNCAPTURED) then
+         remaining_vfrac_elastic=remaining_vfrac_elastic+mofdata(vofcomp)
+        else
+         print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
+         stop
+        endif
+
+        if ((continuous_mof.eq.STANDARD_MOF).or. & 
+            (continuous_mof.eq.CMOF_F_AND_X).or. &
+            (continuous_mof.eq.CMOF_X)) then 
+
+          ! order_algorithm is declared in mofdata.H
+         order_algorithm_in(imaterial)=order_algorithm(imaterial)
+
+         if ((order_algorithm(imaterial).ge.1).and. &
+             (order_algorithm(imaterial).le.num_materials)) then
+          ! do nothing
+         else
+          print *,"order_algorithm(imaterial) invalid (elastic): ",imaterial, &
+           order_algorithm(imaterial)
+          stop
+         endif
+
+         if (mofdata(vofcomp).ge.one-VOFTOL) then
+          order_algorithm_in(imaterial)=num_materials+1
+         else if (mofdata(vofcomp).le.VOFTOL) then
+          order_algorithm_in(imaterial)=num_materials+1  
+         else if ((mofdata(vofcomp).gt.VOFTOL).and. &
+                  (mofdata(vofcomp).lt.one-VOFTOL)) then
+          ! do nothing
+         else
+          print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
+          stop
+         endif
+
+        else
+         print *,"continuous_mof invalid: ",continuous_mof
+         stop 
+        endif
+
+        if (mofdata(vofcomp).ge.VOFTOL) then
+         num_materials_cell_elastic=num_materials_cell_elastic+1
+        else if (mofdata(vofcomp).lt.VOFTOL) then
+         ! do nothing
+        else
+         print *,"mofdata(vofcomp) is NaN ",mofdata(vofcomp)
+         stop
+        endif
+
+       else if ((is_rigid_local(imaterial).eq.0).and. &
+                (is_elastic_local(imaterial).eq.0)) then
 
         if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
 
@@ -16981,6 +17069,8 @@ contains
        else
         print *,"is_rigid_local invalid: ", &
           imaterial,is_rigid_local(imaterial)
+        print *,"or is_elastic_local invalid: ", &
+          imaterial,is_elastic_local(imaterial)
         stop
        endif
 
@@ -17000,7 +17090,20 @@ contains
           stop
          endif
 
-        else if (is_rigid_local(imaterial).eq.0) then
+        else if (is_elastic_local(imaterial).eq.1) then
+
+         if (order_algorithm_in(imaterial).eq.num_materials+1) then
+          ! do nothing
+         else if ((order_algorithm_in(imaterial).ge.1).and. &
+                  (order_algorithm_in(imaterial).le.num_materials)) then
+          ! do nothing
+         else
+          print *,"order_algorithm_in(imaterial) invalid(elastic): ", &
+           imaterial,order_algorithm_in(imaterial),num_materials
+         endif
+
+        else if ((is_rigid_local(imaterial).eq.0).and. &
+                 (is_elastic_local(imaterial).eq.0)) then
 
          if (order_algorithm_in(imaterial).eq.0) then
           order_algorithm_in(imaterial)=num_materials+1 
@@ -17017,6 +17120,8 @@ contains
         else
          print *,"is_rigid_local invalid: ", &
            imaterial,is_rigid_local(imaterial)
+         print *,"or is_elastic_local invalid: ", &
+           imaterial,is_elastic_local(imaterial)
          stop
         endif
 
@@ -17030,7 +17135,10 @@ contains
        do imaterial=1,num_materials
         if (is_rigid_local(imaterial).eq.1) then
          ! do nothing
-        else if (is_rigid_local(imaterial).eq.0) then
+        else if (is_elastic_local(imaterial).eq.1) then
+         ! do nothing
+        else if ((is_rigid_local(imaterial).eq.0).and. &
+                 (is_elastic_local(imaterial).eq.0)) then
          if (order_algorithm_in(imaterial).eq.0) then
           n_ndef=n_ndef+1
          else if (order_algorithm_in(imaterial).eq.num_materials+1) then
@@ -17044,7 +17152,8 @@ contains
           stop
          endif
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid: ",is_rigid_local
+         print *,"or is_elastic_local invalid: ",is_elastic_local
          stop
         endif
        enddo ! imaterial=1..num_materials
@@ -17053,7 +17162,10 @@ contains
         do imaterial=1,num_materials
          if (is_rigid_local(imaterial).eq.1) then
           ! do nothing
-         else if (is_rigid_local(imaterial).eq.0) then
+         else if (is_elastic_local(imaterial).eq.1) then
+          ! do nothing
+         else if ((is_rigid_local(imaterial).eq.0).and. &
+                  (is_elastic_local(imaterial).eq.0)) then
           if (order_algorithm_in(imaterial).eq.0) then
            order_algorithm_in(imaterial)=num_materials+1 
           else if (order_algorithm_in(imaterial).eq.num_materials+1) then
@@ -17067,7 +17179,8 @@ contains
            stop
           endif
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid: ",is_rigid_local
+          print *,"or is_elastic_local invalid: ",is_elastic_local
           stop
          endif
         enddo ! imaterial=1..num_materials
@@ -17092,11 +17205,13 @@ contains
        flexlist(imaterial)=0 ! list of fluid materials that need an ordering
       enddo !imaterial=1..num_materials
 
-
       do imaterial=1,num_materials
        if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
-       else if (is_rigid_local(imaterial).eq.0) then
+       else if (is_elastic_local(imaterial).eq.1) then
+        ! do nothing
+       else if ((is_rigid_local(imaterial).eq.0).and. &
+                (is_elastic_local(imaterial).eq.0)) then
         if (order_algorithm_in(imaterial).eq.0) then
          n_ndef=n_ndef+1
          !flexlist: list of fluid materials that need an ordering
@@ -17113,7 +17228,8 @@ contains
          stop
         endif
        else
-        print *,"is_rigid_local invalid"
+        print *,"is_rigid_local invalid: ",is_rigid_local
+        print *,"or is_elastic_local invalid: ",is_elastic_local
         stop
        endif
       enddo ! imaterial=1..num_materials
@@ -17216,6 +17332,81 @@ contains
        stop
       endif
 
+      if ((single_material_elastic.gt.0).and. &
+          (remaining_vfrac_elastic.le.EPS_UNCAPTURED)) then
+
+       if (is_rigid_local(single_material_elastic).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid_local(single_material_elastic) invalid: ", &
+          single_material_elastic,is_rigid_local(single_material_elastic)
+        stop
+       endif
+
+       if (is_elastic_local(single_material_elastic).eq.1) then
+        !do nothing
+       else
+        print *,"is_elastic_local(single_material_elastic) invalid: ", &
+          single_material_elastic,is_elastic_local(single_material_elastic)
+        stop
+       endif
+
+       vofcomp=(single_material_elastic-1)*ngeom_recon+1
+       mofdata(vofcomp+sdim+1)=one  ! order=1
+       do dir=1,sdim
+        nrecon(dir)=zero  
+       enddo
+       nrecon(1)=one ! null slope=(1 0 0) 
+        ! phi = n dot (x-x0) + int
+        ! int=-min (n dot (x-x0)) where x is a point in the cell.  
+        ! x0 is cell center (xcell)
+       mofdata(vofcomp+2*sdim+2)=null_intercept
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
+        multi_centroidA(single_material_elastic,dir)=zero  ! cell is full
+       enddo 
+
+      else if ((single_material_elastic.eq.0).or. &
+               (remaining_vfrac_elastic.ge.EPS_UNCAPTURED)) then
+
+        imaterial_count=1
+        do while ((imaterial_count.le.num_materials).and. &
+                  (uncaptured_volume_vof.gt.zero))
+         elastic_flag=1
+         call individual_MOF( &
+          elastic_flag, &
+          grid_index, &
+          grid_level, &
+          tid_in, &
+          ls_mof, &
+          lsnormal, &
+          lsnormal_valid, &
+          pls_normal, &
+          pls_normal_valid, &
+          bfact,dx, &
+          xsten0,nhalf0, &
+          order_algorithm_in, &
+          xtetlist_vof, & !intent(out)
+          xtetlist_cen, & !intent(out)
+          nlist_alloc, & !intent(in)
+          nmax, &
+          mofdata, &
+          imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+          uncaptured_volume_vof_elastic, &
+          uncaptured_volume_cen_elastic, &
+          multi_centroidA, &
+          continuous_mof_rigid, &
+          cmofsten, &
+          sdim)
+         imaterial_count=imaterial_count+1
+        enddo
+
+      else
+       print *,"single_material_elastic or remaining_vfrac_elastic invalid: ", &
+        single_material_elastic,remaining_vfrac_elastic
+       stop
+      endif
+
       if ((single_material.gt.0).and. &
           (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
@@ -17224,6 +17415,14 @@ contains
        else
         print *,"is_rigid_local(single_material) invalid: ", &
           single_material,is_rigid_local(single_material)
+        stop
+       endif
+
+       if (is_elastic_local(single_material).eq.0) then
+        !do nothing
+       else
+        print *,"is_elastic_local(single_material) invalid: ", &
+          single_material,is_elastic_local(single_material)
         stop
        endif
 
@@ -17251,7 +17450,9 @@ contains
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
+         elastic_flag=0
          call individual_MOF( &
+          elastic_flag, &
           grid_index, &
           grid_level, &
           tid_in, &
@@ -17333,6 +17534,7 @@ contains
           endif
 
           if ((is_rigid_local(imaterial).eq.0).and. &
+              (is_elastic_local(imaterial).eq.0).and. &
               (order_algorithm_in(imaterial).eq.0)) then
 
            irank=order_array(order_count,iflex)
@@ -17358,7 +17560,7 @@ contains
 
            order_algorithm_in(imaterial)=placelist(irank)
           else
-           print *,"is_rigid_local or order_algorithm_in invalid"
+           print *,"is_rigid|elastic_local or order_algorithm_in invalid"
            print *,"n_ndef,num_materials ",n_ndef,num_materials
            print *,"n_orderings ",n_orderings
            print *,"argmin_order ",argmin_order
@@ -17460,7 +17662,9 @@ contains
          imaterial_count=1
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
+          elastic_flag=0
           call individual_MOF( &
+           elastic_flag, &
            grid_index, &
            grid_level, &
            tid_in, &
@@ -17552,13 +17756,17 @@ contains
          do imaterial = 1,num_materials
           if (is_rigid_local(imaterial).eq.1) then
            ! do nothing
-          else if (is_rigid_local(imaterial).eq.0) then
+          else if (is_elastic_local(imaterial).eq.1) then
+           ! do nothing
+          else if ((is_rigid_local(imaterial).eq.0).and. &
+                   (is_elastic_local(imaterial).eq.0)) then
            do dir=1,sdim
             multi_centroidA(imaterial,dir)= &
              centroidA_array(argmin_order,imaterial,dir)
            enddo
           else
-           print *,"is_rigid invalid MOF.F90"
+           print *,"is_rigid_local invalid: ",is_rigid_local
+           print *,"or is_elastic_local invalid: ",is_elastic_local
            stop
           endif
          enddo ! do imaterial = 1,num_materials
@@ -17617,8 +17825,7 @@ contains
         stop
        endif
 
-      enddo 
-
+      enddo  !imaterial=1,num_materials
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
