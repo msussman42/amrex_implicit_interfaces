@@ -5995,6 +5995,7 @@ end subroutine volume_sanity_check
 !  multi_get_area_pairs(continuous_mof==STANDARD_MOF)
 ! tets_box_planes_super is called from individual_MOF
       subroutine tets_box_planes( &
+       elastic_flag, &
        continuous_mof, &
        tessellate, &
        bfact,dx, &
@@ -6012,6 +6013,7 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: elastic_flag
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: tessellate
@@ -6055,17 +6057,43 @@ end subroutine volume_sanity_check
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then ! called from slope recon routine
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then ! called from 1st or 2nd pass
+
+        !called from slope recon routine
+       else if (tessellate.eq.TESSELLATE_FLUIDS) then 
+       
+        if (elastic_flag.eq.0) then
+         if (is_elastic(im).eq.1) then
+          is_rigid_local(im)=1
+         else if (is_elastic(im).eq.0) then
+          !do nothing
+         else
+          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+          stop
+         endif
+        else if (elastic_flag.eq.1) then
+         if (is_elastic(im).eq.0) then
+          is_rigid_local(im)=1
+         else if (is_elastic(im).eq.1) then
+          !do nothing
+         else
+          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+          stop
+         endif
+        else
+         print *,"elastic_flag invalid(tets_box_planes): ",elastic_flag
+         stop
+        endif
+
+        ! called from 1st or 2nd pass
+       else if (tessellate.eq.TESSELLATE_ALL) then 
         ! do nothing
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
         print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        print *,"if non-raster cell, pass tessellate=TESSELLATE_FLUIDS, and make sure"
+        print *,"if non-raster cell, make sure"
         print *,"vfrac=0.0 for solids"
         stop
        else
-        print *,"tessellate invalid4"
+        print *,"tessellate invalid4 (tets_box_planes): ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -6205,7 +6233,8 @@ end subroutine volume_sanity_check
          ! do nothing, we do not subtract off solid
          ! regions from the original uncaptured region.
         else
-         print *,"tessellate or is_rigid_local invalid"
+         print *,"tessellate or is_rigid_local invalid: ",tessellate, &
+           is_rigid_local
          stop
         endif
        enddo ! im=1..num_materials
@@ -6299,11 +6328,11 @@ end subroutine volume_sanity_check
       end subroutine tets_box_planes
 
 ! tessellate:
-! 0=fluids tessellate, solids embedded; input and output
-! 1=fluids tessellate, solids embedded for inputs, but tessellating output
-! 2=is_rigid_local is zero for all materials; tessellating slopes (input) and
+! TESSELLATE_FLUIDS=fluids tessellate, solids embedded; input and output
+! TESSELLATE_ALL=fluids tessellate, solids embedded for inputs, but tessellating output
+! TESSELLATE_IGNORE_ISRIGID=is_rigid_local is zero for all materials; tessellating slopes (input) and
 !   tessellating output for all materials.
-! 3=if rigid materials dominate the cell, then that cell is considered
+! TESSELLATE_ALL_RASTER=if rigid materials dominate the cell, then that cell is considered
 !   to have only the one dominant rigid material.  This routine should
 !   not be called if tessellate=TESSELLATE_ALL_RASTER (it would be called with tessellate=TESSELLATE_FLUIDS
 !   in the non-raster cells)
@@ -6312,6 +6341,7 @@ end subroutine volume_sanity_check
 !  not subtracted from the uncaptured region.
 !
       subroutine tets_box_planes_super( &
+       elastic_flag, &
        continuous_mof, &
        tessellate, &
        tid_in, &
@@ -6328,6 +6358,7 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: elastic_flag
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
@@ -6349,6 +6380,13 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer ksten_low,ksten_high
+
+      if (tessellate.eq.TESSELLATE_FLUIDS) then
+       !do nothing
+      else
+       print *,"expecting tessellate.eq.TESSELLATE_FLUIDS"
+       stop
+      endif
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -6392,8 +6430,9 @@ end subroutine volume_sanity_check
        ! in: tets_box_planes_super
       if (use_super_cell.eq.0) then
        call tets_box_planes( &
+        elastic_flag, &
         continuous_mof, &
-        tessellate, &
+        tessellate, &  !TESSELLATE_FLUIDS
         bfact,dx, &
         xsten0,nhalf0, &
         xsten0,nhalf0, &
@@ -6434,8 +6473,9 @@ end subroutine volume_sanity_check
 
          ! in: tets_box_planes_super
          call tets_box_planes( &
+          elastic_flag, &
           continuous_mof, &
-          tessellate, &
+          tessellate, & !TESSELLATE_FLUIDS
           bfact,dx, &
           xsten0,nhalf0, &
           xsten2,nhalf2, &
@@ -6486,6 +6526,7 @@ end subroutine volume_sanity_check
 
        ! only called when tessellate=TESSELLATE_FLUIDS, TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID.
       subroutine tets_tet_planes( &
+        elastic_flag, &
         tessellate, &
         bfact,dx, &
         xsten0,nhalf0, &
@@ -6501,6 +6542,7 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: elastic_flag
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: sdim,bfact,nhalf0
@@ -6534,7 +6576,30 @@ end subroutine volume_sanity_check
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
+
+        if (elastic_flag.eq.0) then
+         if (is_elastic(im).eq.1) then
+          is_rigid_local(im)=1
+         else if (is_elastic(im).eq.0) then
+          !do nothing
+         else
+          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+          stop
+         endif
+        else if (elastic_flag.eq.1) then
+         if (is_elastic(im).eq.0) then
+          is_rigid_local(im)=1
+         else if (is_elastic(im).eq.1) then
+          !do nothing
+         else
+          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+          stop
+         endif
+        else
+         print *,"elastic_flag invalid: ",elastic_flag
+         stop
+        endif
+
        else if (tessellate.eq.TESSELLATE_ALL) then
         ! do nothing
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
@@ -13834,6 +13899,29 @@ contains
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
+       if (elastic_flag.eq.0) then
+        if (is_elastic(im).eq.1) then
+         is_rigid_local(im)=1
+        else if (is_elastic(im).eq.0) then
+         !do nothing
+        else
+         print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+         stop
+        endif
+       else if (elastic_flag.eq.1) then
+        if (is_elastic(im).eq.0) then
+         is_rigid_local(im)=1
+        else if (is_elastic(im).eq.1) then
+         !do nothing
+        else
+         print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+         stop
+        endif
+       else
+        print *,"elastic_flag invalid: ",elastic_flag
+        stop
+       endif
+
       enddo ! im=1..num_materials
 
       if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
@@ -13997,7 +14085,7 @@ contains
        else if (imaterial_count.eq.1) then
         fastflag=1
        else 
-        print *,"imaterial_count invalid"
+        print *,"imaterial_count invalid: ",imaterial_count
         stop
        endif
 
@@ -14009,12 +14097,12 @@ contains
        else if (imaterial_count.eq.1) then
         fastflag=1
        else 
-        print *,"imaterial_count invalid"
+        print *,"imaterial_count invalid: ",imaterial_count
         stop
        endif
 
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -14028,6 +14116,7 @@ contains
            (continuous_mof.eq.MOF_TRI_TET)) then 
         use_super_cell=0
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS (is_rigid==1 regions not subtracted)
          tid_in, &
@@ -14043,6 +14132,7 @@ contains
          sdim)
         use_super_cell=0
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
@@ -14059,6 +14149,7 @@ contains
        else if (continuous_mof.eq.CMOF_X) then !CMOF X
         use_super_cell=0
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
@@ -14074,6 +14165,7 @@ contains
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
@@ -14091,6 +14183,7 @@ contains
         use_super_cell=1
 
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
@@ -14106,6 +14199,7 @@ contains
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
+         elastic_flag, &
          continuous_mof, &
          tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
@@ -14120,7 +14214,7 @@ contains
          cmofsten, &
          sdim)
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
@@ -19335,6 +19429,7 @@ contains
       integer return_raster_info
       integer im_test
       integer fastflag
+      integer elastic_flag
 
       integer num_materials_solid
       integer num_materials_fluid
@@ -19654,7 +19749,8 @@ contains
        else if ((uncaptured_volume_fluid.ge.EPS_12_6*volcell).or. &
                 (uncaptured_volume_solid.ge.EPS_12_6*volcell)) then
 
-         ! if local_tessellate==TESSELATE_FLUIDS, then the uncaptured region will be
+         ! if local_tessellate==TESSELATE_FLUIDS, then 
+         ! the uncaptured region will be
          ! reset after the first sweep through the is_rigid==1 
          ! materials.
         if ((local_tessellate.eq.TESSELLATE_FLUIDS).or. &
@@ -19772,7 +19868,9 @@ contains
            if (shapeflag.eq.0) then ! volumes in a box
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
+            elastic_flag=0
             call tets_box_planes( &
+              elastic_flag, &
               continuous_mof, &
               new_tessellate_local, & ! new_tessellate_local=TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID
               bfact,dx, &
@@ -19787,9 +19885,12 @@ contains
 
            else if (shapeflag.eq.1) then ! volumes in a tet.
 
+            elastic_flag=0
+
              ! only xsten0(0,dir) dir=1..sdim used
              ! xtetlist=xtet - highest order material
             call tets_tet_planes( &
+              elastic_flag, &
               new_tessellate_local, &  ! new_tessellate_local=TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID
               bfact,dx, &
               xsten0,nhalf0, &
@@ -20148,7 +20249,9 @@ contains
            if (shapeflag.eq.0) then ! volumes in a box
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
+            elastic_flag=0
             call tets_box_planes( &
+             elastic_flag, &
              continuous_mof, &
              new_tessellate_local, & ! =TESSELLATE_FLUIDS,TESSELLATE_ALL, or TESSELLATE_IGNORE_ISRIGID
              bfact,dx,xsten0,nhalf0, &
@@ -20163,7 +20266,9 @@ contains
            else if (shapeflag.eq.1) then ! volumes in a tet.
 
              ! only xsten0(0,dir) dir=1..sdim used
+            elastic_flag=0
             call tets_tet_planes( &
+             elastic_flag, &
              new_tessellate_local, &  !=TESSELLATE_FLUIDS,TESSELLATE_ALL, or TESSELLATE_IGNORE_ISRIGID
              bfact,dx,xsten0,nhalf0, &
              xtet,mofdatalocal, &
@@ -20663,6 +20768,7 @@ contains
       real(amrex_real) :: mofdataproject_plus(num_materials*ngeom_recon)
       real(amrex_real) :: mofdataproject_minus(num_materials*ngeom_recon)
 
+      integer elastic_flag
       integer im,im_opp,im_test
       integer side
       integer dir_local
@@ -21117,7 +21223,9 @@ contains
          ! of already initialized (subtracted) materials. 
          ! (i.e. materials with 1<=material_used(im)<=num_materials)
 
+         elastic_flag=0
          call tets_box_planes( &
+           elastic_flag, &
            continuous_mof, &
            local_tessellate_in, & ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISRIGID
            bfact,dx, &
@@ -22144,7 +22252,9 @@ contains
 
             ! only xsten0(0,dir) dir=1..sdim used
             ! in: multi_volume_grid_simple
+           elastic_flag=0
            call tets_box_planes( &
+              elastic_flag, &
               continuous_mof, &
               new_tessellate_local, & ! TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID
               bfact,dx,xsten0,nhalf0, &
@@ -22486,7 +22596,9 @@ contains
 
             ! only xsten0(0,dir) dir=1..sdim used
             ! in: multi_volume_grid
+           elastic_flag=0
            call tets_box_planes( &
+            elastic_flag, &
             continuous_mof, &
             new_tessellate_local, & ! 0,1, or 2
             bfact,dx,xsten0,nhalf0, &
@@ -23105,7 +23217,9 @@ contains
            ! since tessellate_local==TESSELLATE_ALL, mofdata(vofcomp+sdim+1) is used.
            ! in: multi_volume_grid_and_map
            ! STILL in first sweep: only is_rigid==1 materials in this sweep.
+          elastic_flag=0
           call tets_box_planes( &
+            elastic_flag, &
             continuous_mof, &
             tessellate_local, &  ! =1 (recognize the is_rigid==1 mat.)
             bfact,dx,xsten0,nhalf0, &
@@ -23411,7 +23525,9 @@ contains
 
            ! only xsten0(0,dir) dir=1..sdim used
            ! in: multi_volume_grid
+          elastic_flag=0
           call tets_box_planes( &
+           elastic_flag, &
            continuous_mof, &
            tessellate_local, & ! =TESSELLATE_FLUIDS
            bfact,dx,xsten0,nhalf0, &
