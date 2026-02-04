@@ -21835,6 +21835,7 @@ contains
       integer is_rigid_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer im_raster_solid
+      integer elastic_flag
       integer new_tessellate_local
       integer return_raster_info
       real(amrex_real) vfrac_raster_solid
@@ -22891,6 +22892,7 @@ contains
       integer num_processed_fluid
       integer num_processed_total
       integer loop_counter
+      integer :: elastic_flag
       integer :: tessellate_local
       integer is_rigid_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
