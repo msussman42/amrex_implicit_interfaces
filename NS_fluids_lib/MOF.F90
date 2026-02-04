@@ -17371,7 +17371,8 @@ contains
 
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero))
+                  (uncaptured_volume_vof.gt.zero).and. &
+                  (1.eq.0))
          elastic_flag=1
          call individual_MOF( &
           elastic_flag, &
