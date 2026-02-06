@@ -23627,7 +23627,7 @@ contains
             critical_material=im
            else if ((testflag_save.eq.0).or. &
                     ((testflag_save.ge.1).and. &
-                     (testflag_save.le.num_materials_elastic)).or.
+                     (testflag_save.le.num_materials_elastic)).or. &
                     ((testflag.ge.1).and. &  
                      (testflag.le.num_materials_elastic)).or. &
                      ((material_used(im).ge.1).and. &
