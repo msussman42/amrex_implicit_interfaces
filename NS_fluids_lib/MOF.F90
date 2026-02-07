@@ -13922,6 +13922,12 @@ contains
          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
          stop
         endif
+        if (continuous_mof.eq.STANDARD_MOF) then
+         !do nothing
+        else
+         print *,"expecting continuous_mof==STANDARD_MOF"
+         stop
+        endif
        else
         print *,"layer_flag invalid: ",layer_flag
         stop
@@ -14123,7 +14129,7 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS (is_rigid==1 regions not subtracted)
+         tessellate, & ! =TESSELLATE_FLUIDS 
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14445,7 +14451,7 @@ contains
            stop
           endif 
          else
-          print *,"is_rigid invalid MOF.F90"
+          print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
           stop
          endif
 
@@ -14476,7 +14482,7 @@ contains
           stop
          endif
          if (is_rigid_local(critical_material).ne.0) then
-          print *,"is_rigid invalid MOF.F90"
+          print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
           stop
          endif
 
@@ -14609,7 +14615,7 @@ contains
           stop
          endif
          if (is_rigid_local(critical_material).ne.0) then
-          print *,"is_rigid invalid MOF.F90"
+          print *,"is_rigid invalid MOF.F90: ",is_rigid_local
           stop
          endif
           
@@ -14631,7 +14637,7 @@ contains
              mat_before=im
             endif
            else
-            print *,"is_rigid invalid MOF.F90"
+            print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
             stop
            endif
           enddo ! im=1..num_materials
@@ -14645,7 +14651,7 @@ contains
          if ((mat_before.ge.1).and. &
              (mat_before.le.num_materials)) then
            if (is_rigid_local(mat_before).ne.0) then
-            print *,"is_rigid invalid MOF.F90"
+            print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
             stop
            endif
            vofcomp_before=(mat_before-1)*ngeom_recon+1
@@ -16280,7 +16286,7 @@ contains
       real(amrex_real) remaining_vfrac_elastic
       real(amrex_real) nrecon(sdim)
       integer order_algorithm_in(num_materials)
-      integer num_materials_cell
+      integer num_materials_cell_fluids
       integer num_materials_cell_elastic
       integer, dimension(:,:), allocatable :: order_array
       integer, dimension(:,:), allocatable :: order_stack
@@ -16497,8 +16503,8 @@ contains
         stop
        endif
 
-       if ((is_rigid(imaterial).eq.1).or. &
-           (is_elastic(imaterial).eq.1)) then
+       if ((is_rigid_local(imaterial).eq.1).or. &
+           (is_elastic_local(imaterial).eq.1)) then
 
         if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
          !do nothing
@@ -16510,8 +16516,8 @@ contains
          stop
         endif
 
-       else if ((is_rigid(imaterial).eq.0).and. &
-                (is_elastic(imaterial).eq.0)) then
+       else if ((is_rigid_local(imaterial).eq.0).and. &
+                (is_elastic_local(imaterial).eq.0)) then
 
         if ((continuous_mof.eq.STANDARD_MOF).or. &
             (continuous_mof.eq.MOF_TRI_TET).or. & 
@@ -16542,8 +16548,9 @@ contains
         endif
 
        else
-        print *,"is_rigid(imaterial) invalid ",is_rigid(imaterial)
-        print *,"or is_elastic(imaterial) invalid ",is_elastic(imaterial)
+        print *,"is_rigid_local(imaterial) invalid ",is_rigid_local(imaterial)
+        print *,"or is_elastic_local(imaterial) invalid ", &
+           is_elastic_local(imaterial)
         stop
        endif
 
@@ -17003,7 +17010,7 @@ contains
 
       remaining_vfrac=zero
       single_material=0
-      num_materials_cell=0
+      num_materials_cell_fluids=0
 
       remaining_vfrac_elastic=zero
       single_material_elastic=0
@@ -17157,7 +17164,7 @@ contains
         endif
 
         if (mofdata(vofcomp).ge.VOFTOL) then
-         num_materials_cell=num_materials_cell+1
+         num_materials_cell_fluids=num_materials_cell_fluids+1
         else if (mofdata(vofcomp).lt.VOFTOL) then
          ! do nothing
         else
@@ -17175,7 +17182,9 @@ contains
 
       enddo  ! imaterial=1..num_materials
 
-      if (num_materials_cell.le.2) then
+       ! no need to check all order permutations if the number of materials
+       ! is less than 3.
+      if (num_materials_cell_fluids.le.2) then
 
        do imaterial=1,num_materials
 
@@ -17226,8 +17235,8 @@ contains
 
        enddo ! imaterial=1..num_materials
 
-      else if ((num_materials_cell.ge.3).and. &
-               (num_materials_cell.le.num_materials)) then
+      else if ((num_materials_cell_fluids.ge.3).and. &
+               (num_materials_cell_fluids.le.num_materials)) then
 
         !if n_ndef==1, then convert all order_algorithm_in==0 values.
        n_ndef=0
@@ -17285,14 +17294,14 @@ contains
         enddo ! imaterial=1..num_materials
        else if (n_ndef.eq.0) then
         !do nothing
-       else if ((n_ndef.ge.2).and.(n_ndef.le.num_materials_cell)) then
+       else if ((n_ndef.ge.2).and.(n_ndef.le.num_materials_cell_fluids)) then
         !do nothing
        else
         print *,"n_ndef invalid: ",n_ndef
         stop
        endif 
       else
-       print *,"num_materials_cell invalid: ",num_materials_cell
+       print *,"num_materials_cell_fluids invalid: ",num_materials_cell_fluids
        stop
       endif
 
@@ -17470,8 +17479,7 @@ contains
 
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero).and. &
-                  (1.eq.0))
+                  (uncaptured_volume_vof.gt.zero))
          layer_flag=ELASTIC_LAYER
          call individual_MOF( &
           layer_flag, &
@@ -17495,7 +17503,7 @@ contains
           uncaptured_volume_vof_elastic, &
           uncaptured_volume_cen_elastic, &
           multi_centroidA, &
-          continuous_mof_rigid, &
+          continuous_mof_rigid, & !STANDARD_MOF
           cmofsten, &
           sdim)
          imaterial_count=imaterial_count+1
@@ -17810,7 +17818,7 @@ contains
              mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
            enddo ! dir
           else
-           print *,"is_rigid invalid MOF.F90"
+           print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
            stop
           endif
          enddo ! imaterial=1,num_materials
@@ -19321,6 +19329,7 @@ contains
       return
       end subroutine project_slopes_to_face
 
+      FIX ME
 
         ! for tessellate==TESSELLATE_IGNORE_ISRIGID:
         !  it is assumed that the reconstruction is tessellating for all solids
@@ -19413,8 +19422,10 @@ contains
       real(amrex_real) uncaptured_volume_START
       real(amrex_real) uncaptured_volume_fluid
       real(amrex_real) uncaptured_volume_solid
+      real(amrex_real) uncaptured_volume_elastic
       real(amrex_real) uncaptured_centroid_fluid(sdim)
       real(amrex_real) uncaptured_centroid_solid(sdim)
+      real(amrex_real) uncaptured_centroid_elastic(sdim)
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) volcut,cencut(sdim)
@@ -19428,6 +19439,7 @@ contains
       real(amrex_real) remaining_vfrac
       real(amrex_real) uncaptured_volume_fraction_fluid
       real(amrex_real) uncaptured_volume_fraction_solid
+      real(amrex_real) uncaptured_volume_fraction_elastic
       real(amrex_real) uncaptured_volume_save
       integer material_used(num_materials)
       integer im_raster_solid
@@ -19436,11 +19448,14 @@ contains
       integer fastflag
       integer layer_flag
 
+      integer num_materials_elastic
       integer num_materials_solid
       integer num_materials_fluid
       real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_elastic_sum
       real(amrex_real) vfrac_solid_sum
       real(amrex_real) vfrac_mult
+      integer num_processed_elastic
       integer num_processed_solid
       integer num_processed_fluid
       integer num_processed_total
@@ -22877,7 +22892,8 @@ contains
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) volcut,cencut(sdim)
-      integer testflag,testflag_save,nlist
+      integer testflag,testflag_save
+      integer nlist
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer critical_material
       real(amrex_real) nrecon(sdim)
@@ -23326,13 +23342,15 @@ contains
                       (material_used(im).le.num_materials_solid))) then
             ! do nothing
            else
-            print *,"testflag invalid"
+            print *,"testflag invalid? ",testflag
+            print *,"testflag_save invalid? ",testflag_save
+            print *,"material_used invalid? ",material_used
             stop         
            endif 
           else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid MOF.F90"
+           print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
            stop
           endif
          enddo ! im=1..num_materials
@@ -23634,7 +23652,9 @@ contains
                       (material_used(im).le.num_materials_elastic))) then
             ! do nothing
            else
-            print *,"testflag invalid: ",testflag
+            print *,"testflag invalid? ",testflag
+            print *,"testflag_save invalid? ",testflag_save
+            print *,"material_used invalid? ",material_used
             stop         
            endif 
           else if (is_elastic_local(im).eq.0) then
@@ -23958,7 +23978,9 @@ contains
                      (material_used(im).le.num_materials))) then
             ! do nothing
            else
-            print *,"testflag invalid"
+            print *,"testflag invalid? ",testflag
+            print *,"testflag_save invalid? ",testflag_save
+            print *,"material_used invalid? ",material_used
             stop         
            endif 
           else if (is_rigid_local(im).eq.1) then
