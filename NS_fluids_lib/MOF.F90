@@ -18592,14 +18592,10 @@ contains
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
         is_elastic_local(im)=0
-       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-                (tessellate.eq.TESSELLATE_ALL)) then
+       else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing; fluids tessellate, rigid|elastic embedded.
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        stop
        else
-        print *,"tessellate invalid8: ",tessellate
+        print *,"tessellate invalid8 make_vfrac_sum_ok_base: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -18700,8 +18696,8 @@ contains
         vofelastic=vofelastic+mofdata(vofcomp)
         num_materials_elastic=num_materials_elastic+1
        else
-        print *,"is_rigid invalid MOF.F90 ",is_rigid_local
-        print *,"or is_elastic invalid MOF.F90 ",is_elastic_local
+        print *,"is_rigid_local invalid MOF.F90 ",is_rigid_local
+        print *,"or is_elastic_local invalid MOF.F90 ",is_elastic_local
         stop
        endif
       enddo ! im=1..num_materials
@@ -18709,7 +18705,6 @@ contains
        ! for all of the cases,
        !  (i) TESSELLATE_IGNORE_ISRIGID
        !  (i) TESSELLATE_FLUIDS
-       !  (i) TESSELLATE_ALL
        ! the "fluids" should tessellate the domain.
       if (voffluid.gt.zero) then
        ! do nothing
@@ -18750,7 +18745,7 @@ contains
        else if (is_rigid_local(im).eq.0) then
         !do nothing
        else
-        print *,"is_rigid invalid MOF.F90: ",im,is_rigid_local(im)
+        print *,"is_rigid_local invalid MOF.F90: ",im,is_rigid_local(im)
         stop
        endif
       enddo  ! im=1..num_materials
@@ -18763,6 +18758,7 @@ contains
             (is_elastic_local(im).eq.1)) then
          print *,"expecting is_rigid_local(im)==0"
          print *,"and expecting is_elastic_local(im)==0"
+         print *,"tessellate=",tessellate
          stop
         else if ((is_rigid_local(im).eq.0).and. &
                  (is_elastic_local(im).eq.0)) then
@@ -18775,8 +18771,7 @@ contains
        enddo  ! im=1..num_materials
 
        ! fluids tessellate, is_elastic and is_rigid embedded.
-      else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-               (tessellate.eq.TESSELLATE_ALL)) then
+      else if (tessellate.eq.TESSELLATE_FLUIDS) then
 
        if ((nonzero_ranks.eq.num_materials_fluids+num_materials_elastic).and. &
            (num_materials_fluids+num_materials_elastic.ge.1)) then
@@ -18812,20 +18807,23 @@ contains
         vofcomp=(im-1)*ngeom_recon+1
 
         if ((im.ge.1).and.(im.le.num_materials)) then
+
          if (is_rigid_local(im).eq.0) then
           !do nothing
          else
-          print *,"expecting is_rigid_local(im).eq.0"
+          print *,"expecting is_rigid_local(im).eq.0 if ranked"
+          print *,"tessellate=",tessellate
           print *,"im=",im
           print *,"irank=",irank
           stop
          endif 
+
         else
          print *,"im invalid ",im
          stop
         endif
 
-        if (is_elastic(im).eq.0) then
+        if (is_elastic_local(im).eq.0) then
 
          if (uncapt.gt.zero) then
           if ((im.ge.1).and.(im.le.num_materials)) then
@@ -18856,7 +18854,7 @@ contains
           stop
          endif
 
-        else if (is_elastic(im).eq.1) then
+        else if (is_elastic_local(im).eq.1) then
        
          if (uncapt_elastic.gt.zero) then
           if ((im.ge.1).and.(im.le.num_materials)) then
@@ -18888,7 +18886,7 @@ contains
          endif
 
         else
-         print *,"is_elastic(im) invalid: ",im,is_elastic(im)
+         print *,"is_elastic_local(im) invalid: ",im,is_elastic_local(im)
          stop
         endif
 
@@ -19093,14 +19091,10 @@ contains
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
         is_elastic_local(im)=0
-       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-                (tessellate.eq.TESSELLATE_ALL)) then
+       else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        stop
        else
-        print *,"tessellate invalid9: ",tessellate
+        print *,"tessellate invalid make_vfrac_sum_ok_copy: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -19148,8 +19142,8 @@ contains
        else if (is_elastic_local(im).eq.1) then
         vofelastic=vofelastic+vof_test
        else
-        print *,"is_rigid invalid MOF.F90 ",is_rigid_local
-        print *,"or is_elastic invalid MOF.F90 ",is_elastic_local
+        print *,"is_rigid_local invalid MOF.F90 ",is_rigid_local
+        print *,"or is_elastic_local invalid MOF.F90 ",is_elastic_local
         stop
        endif
        do dir=1,ngeom_recon
@@ -19329,7 +19323,6 @@ contains
       return
       end subroutine project_slopes_to_face
 
-      FIX ME
 
         ! for tessellate==TESSELLATE_IGNORE_ISRIGID:
         !  it is assumed that the reconstruction is tessellating for all solids
@@ -19454,7 +19447,6 @@ contains
       real(amrex_real) vfrac_fluid_sum
       real(amrex_real) vfrac_elastic_sum
       real(amrex_real) vfrac_solid_sum
-      real(amrex_real) vfrac_mult
       integer num_processed_elastic
       integer num_processed_solid
       integer num_processed_fluid
@@ -19462,6 +19454,7 @@ contains
       integer loop_counter
       integer new_tessellate_local
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer local_tessellate
       real(amrex_real) vfrac_raster_solid
@@ -19480,8 +19473,10 @@ contains
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
+        is_elastic_local(im)=0
        else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
                 (tessellate.eq.TESSELLATE_ALL)) then
         ! do nothing
@@ -19493,12 +19488,12 @@ contains
        endif
       enddo ! im=1..num_materials
 
-      if (tessellate.eq.TESSELLATE_ALL_RASTER) then
+      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_ALL).or. &
+          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        local_tessellate=TESSELLATE_FLUIDS
-      else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-               (tessellate.eq.TESSELLATE_ALL).or. &
-               (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
-       local_tessellate=tessellate
+      else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+       local_tessellate=TESSELLATE_IGNORE_ISRIGID    
       else
        print *,"tessellate invalid11: ",tessellate
        stop
@@ -19552,9 +19547,10 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
-        continuous_mof, & 
+        continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
-        local_tessellate, & !makes is_rigid_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
+          !is_rigid_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
+        local_tessellate, & 
         mofdata,mofdatavalid,sdim)
 
       do dir=1,num_materials*ngeom_recon
@@ -19584,8 +19580,10 @@ contains
       uncaptured_volume_START=uncaptured_volume_fluid
 
       uncaptured_volume_solid=uncaptured_volume_fluid
+      uncaptured_volume_elastic=uncaptured_volume_fluid
       do dir=1,sdim
        uncaptured_centroid_solid(dir)=uncaptured_centroid_fluid(dir)
+       uncaptured_centroid_elastic(dir)=uncaptured_centroid_fluid(dir)
       enddo
 
       if (volcell.gt.zero) then
@@ -19606,9 +19604,17 @@ contains
        print *,"uncaptured_volume_solid invalid: ",uncaptured_volume_solid
        stop
       endif
+      if (uncaptured_volume_elastic.ge.zero) then
+       ! do nothing
+      else
+       print *,"uncaptured_volume_elastic invalid:",uncaptured_volume_elastic
+       stop
+      endif
 
       vfrac_fluid_sum=zero
       vfrac_solid_sum=zero
+      vfrac_elastic_sum=zero
+      num_materials_elastic=0
       num_materials_solid=0
       num_materials_fluid=0
 
@@ -19617,10 +19623,12 @@ contains
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid_local(im).eq.0) then
+       if ((is_rigid_local(im).eq.0).and. &
+           (is_elastic_local(im).eq.0)) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
         num_materials_fluid=num_materials_fluid+1
        else if (is_rigid_local(im).eq.1) then
+
         if (im_raster_solid.eq.0) then
          im_raster_solid=im
          vfrac_raster_solid=mofdatasave(vofcomp)
@@ -19638,14 +19646,22 @@ contains
       
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         num_materials_solid=num_materials_solid+1
+
+       else if (is_elastic_local(im).eq.1) then
+        vfrac_elastic_sum=vfrac_elastic_sum+mofdatasave(vofcomp)
+        num_materials_elastic=num_materials_elastic+1
        else
-        print *,"is_rigid_local invalid"
+        print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
+        print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
         stop
        endif
       enddo ! im=1..num_materials
 
-      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
+      if (num_materials_fluid+ &
+          num_materials_solid+ &
+          num_materials_elastic.ne.num_materials) then
        print *,"num_materials_fluid or num_materials_solid invalid"
+       print *,"or num_materials_elastic invalid"
        stop
       endif
 
@@ -19655,6 +19671,15 @@ contains
        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
        stop
       endif
+
+      if ((vfrac_elastic_sum.le.one+EPS1).and. &
+          (vfrac_elastic_sum.ge.zero)) then
+       ! do nothing
+      else
+       print *,"vfrac_elastic_sum invalid: ",vfrac_elastic_sum
+       stop
+      endif
+
       if ((vfrac_solid_sum.gt.one+EPS1).or. &
           (vfrac_solid_sum.lt.zero)) then
        print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
@@ -19669,7 +19694,9 @@ contains
 
       return_raster_info=0
 
-      if (tessellate.eq.TESSELLATE_ALL_RASTER) then ! if majority=solid => all solid.
+       ! if majority=solid => all solid.
+      if (tessellate.eq.TESSELLATE_ALL_RASTER) then 
+
        if (vfrac_solid_sum.ge.half) then
         return_raster_info=1
 
@@ -19686,6 +19713,7 @@ contains
         endif
 
        else if (vfrac_solid_sum.lt.half) then
+
         vfrac_solid_sum=zero
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
@@ -19702,10 +19730,14 @@ contains
           stop
          endif
         enddo ! im=1..num_materials
+
        else
-        print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
+        print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
+        print *,"vfrac_fluid_sum: ",vfrac_fluid_sum
+        print *,"vfrac_elastic_sum: ",vfrac_elastic_sum
         stop
        endif
+
       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
                (tessellate.eq.TESSELLATE_ALL).or. &
                (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
@@ -19721,43 +19753,65 @@ contains
  
        uncaptured_volume_fraction_fluid=one
        uncaptured_volume_fraction_solid=one
+       uncaptured_volume_fraction_elastic=one
+       num_processed_elastic=0
        num_processed_solid=0
        num_processed_fluid=0
        num_processed_total=0
+
        do im=1,num_materials
         material_used(im)=0
        enddo ! im=1..num_materials
 
-       if (local_tessellate.eq.TESSELLATE_FLUIDS) then
-        vfrac_mult=one
-       else if (local_tessellate.eq.TESSELLATE_ALL) then 
-        vfrac_mult=abs(one-vfrac_solid_sum)
-       else if (local_tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then 
-        vfrac_mult=one
-       else
-        print *,"local_tessellate invalid13(multi_get_volume_grid)", &
-         local_tessellate
-        stop
-       endif
- 
        fastflag=1
 
         ! intersection of departure region with grid cell is 
         ! very small.
        if ((uncaptured_volume_fluid.le.EPS_12_6*volcell).and. &
+           (uncaptured_volume_elastic.le.EPS_12_6*volcell).and. &
            (uncaptured_volume_solid.le.EPS_12_6*volcell)) then
 
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
 
-         if (is_rigid_local(im).eq.0) then
-          multi_volume(im)=uncaptured_volume_fluid* &
-            vfrac_mult*mofdatasave(vofcomp)
-         else if (is_rigid_local(im).eq.1) then
-          multi_volume(im)=uncaptured_volume_fluid* &
-            mofdatasave(vofcomp)
+         multi_volume(im)=uncaptured_volume_fluid*mofdatasave(vofcomp)
+
+         if (is_rigid_local(im).eq.1) then
+          !do nothing
+         else if ((is_rigid_local(im).eq.0).and. &
+                  (is_elastic_local(im).eq.1)) then
+
+          if (tessellate.eq.TESSELLATE_FLUIDS) then
+           !do nothing
+          else if (tessellate.eq.TESSELLATE_ALL) then
+           multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)
+          else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
+           !do nothing
+          else
+           print *,"tessellate invalid: ",tessellate
+           stop
+          endif
+
+         else if ((is_rigid_local(im).eq.0).and. &
+                  (is_elastic_local(im).eq.0)) then
+
+          if (tessellate.eq.TESSELLATE_FLUIDS) then
+           !do nothing
+          else if (tessellate.eq.TESSELLATE_ALL) then
+           multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)* &
+              abs(one-vfrac_elastic_sum)
+          else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
+           multi_volume(im)=multi_volume(im)*abs(one-vfrac_elastic_sum)
+          else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then 
+           !do nothing
+          else
+           print *,"tessellate invalid: ",tessellate
+           stop
+          endif
+                  
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid: ",is_rigid_local
+          print *,"or is_elastic_local invalid: ",is_elastic_local
           stop
          endif
 
@@ -19767,7 +19821,13 @@ contains
         enddo ! im=1..num_materials
 
        else if ((uncaptured_volume_fluid.ge.EPS_12_6*volcell).or. &
+                (uncaptured_volume_elastic.ge.EPS_12_6*volcell).or. &
                 (uncaptured_volume_solid.ge.EPS_12_6*volcell)) then
+
+
+
+
+
 
          ! if local_tessellate==TESSELATE_FLUIDS, then 
          ! the uncaptured region will be
@@ -19790,6 +19850,18 @@ contains
            local_tessellate
          stop
         endif
+
+
+
+
+
+
+
+
+
+
+        ! first sweep: find volumes for non-tessellating is_rigid==1 
+        ! materials.
 
         loop_counter=0
         do while ((loop_counter.lt.num_materials_solid).and. &
@@ -19868,7 +19940,7 @@ contains
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid MOF.F90"
+            print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
             stop
            endif
           enddo ! im=1..num_materials
@@ -19885,14 +19957,17 @@ contains
 
           if (fastflag.eq.0) then
 
+           layer_flag=RIGID_LAYER
+           new_tessellate_local=TESSELLATE_FLUIDS
+
            if (shapeflag.eq.0) then ! volumes in a box
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
-            layer_flag=FLUIDS_LAYER
+             ! STILL in first sweep: only is_rigid==1 materials in this sweep.
             call tets_box_planes( &
               layer_flag, &
               continuous_mof, &
-              new_tessellate_local, & ! new_tessellate_local=TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID
+              new_tessellate_local, & !TESSELLATE_FLUIDS
               bfact,dx, &
               xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
@@ -19905,13 +19980,11 @@ contains
 
            else if (shapeflag.eq.1) then ! volumes in a tet.
 
-            layer_flag=FLUIDS_LAYER
-
              ! only xsten0(0,dir) dir=1..sdim used
              ! xtetlist=xtet - highest order material
             call tets_tet_planes( &
               layer_flag, &
-              new_tessellate_local, &  ! new_tessellate_local=TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID
+              new_tessellate_local, &  !TESSELLATE_FLUIDS
               bfact,dx, &
               xsten0,nhalf0, &
               xtet, &
@@ -19966,7 +20039,7 @@ contains
           critical_material=0
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
-
+FIX ME
            if (is_rigid_local(im).eq.1) then
             testflag=NINT(mofdatalocal(vofcomp+sdim+1))
             testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) ! old flag
@@ -23066,6 +23139,7 @@ contains
       num_materials_elastic=0
       num_materials_solid=0
       num_materials_fluid=0
+
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if ((is_rigid_local(im).eq.0).and. &
@@ -23083,7 +23157,8 @@ contains
         print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
         stop
        endif
-      enddo ! im
+      enddo ! im=1..num_materials
+
       if (num_materials_fluid+ &
           num_materials_solid+ &
           num_materials_elastic.ne.num_materials) then
@@ -23098,6 +23173,7 @@ contains
        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
        stop
       endif
+
       if ((vfrac_solid_sum.le.one+EPS_8_4).and. &
           (vfrac_solid_sum.ge.zero)) then
        ! do nothing
@@ -23105,6 +23181,7 @@ contains
        print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
        stop
       endif
+
       if ((vfrac_elastic_sum.le.one+EPS_8_4).and. &
           (vfrac_elastic_sum.ge.zero)) then
        ! do nothing
@@ -23211,6 +23288,7 @@ contains
           ! do nothing
          else
           print *,"material used bust: ",material_used
+          print *,"im_test: ",im_test
           stop
          endif
         enddo  ! im_test=1..num_materials
@@ -23253,7 +23331,7 @@ contains
           else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid MOF.F90"
+           print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
            stop
           endif
          enddo ! im=1..num_materials
@@ -23271,7 +23349,6 @@ contains
          if (fastflag.eq.0) then
 
            ! only xsten0(0,dir) dir=1..sdim used
-           ! since tessellate_local==TESSELLATE_ALL, mofdata(vofcomp+sdim+1) is used.
            ! in: multi_volume_grid_and_map
            ! STILL in first sweep: only is_rigid==1 materials in this sweep.
           layer_flag=RIGID_LAYER
@@ -23279,7 +23356,8 @@ contains
             layer_flag, &
             continuous_mof, & !STANDARD_MOF
             tessellate_local, &  ! TESSELLATE_FLUIDS
-            bfact,dx,xsten0,nhalf0, &
+            bfact,dx, &
+            xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
             mofdatalocal, &
             xtetlist, &
