@@ -5997,7 +5997,6 @@ end subroutine volume_sanity_check
       subroutine tets_box_planes( &
        layer_flag, &
        continuous_mof, &
-       tessellate, &
        bfact,dx, &
        xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
        xsten_box,nhalf_box, &!hex domain;might be different from xsten0 if CMOF
@@ -6016,7 +6015,6 @@ end subroutine volume_sanity_check
       integer, INTENT(in) :: layer_flag
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: sdim,bfact,nhalf0,nhalf_box
       integer symmetry_flag,ntetbox
       integer, INTENT(out) :: nlist
@@ -6052,52 +6050,48 @@ end subroutine volume_sanity_check
       real(amrex_real) nn(sdim)
       real(amrex_real) intercept
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+      integer is_masked(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
+       is_elastic_local(im)=is_elastic(im)
 
-        !called from slope recon routine
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then 
-       
-        if (layer_flag.eq.FLUIDS_LAYER) then
-         if (is_elastic(im).eq.1) then
-          is_rigid_local(im)=1
-         else if (is_elastic(im).eq.0) then
-          !do nothing
-         else
-          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
-          stop
-         endif
-        else if (layer_flag.eq.ELASTIC_LAYER) then
-         if (is_elastic(im).eq.0) then
-          is_rigid_local(im)=1
-         else if (is_elastic(im).eq.1) then
-          !do nothing
-         else
-          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
-          stop
-         endif
-        else if (layer_flag.eq.RIGID_LAYER) then
-         is_rigid_local(im)=1-is_rigid_local(im)
+       if (layer_flag.eq.FLUIDS_ELASTIC_RIGID_LAYER) then
+        is_masked(im)=0
+       else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
+        is_masked(im)=is_rigid_local(im)
+       else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
+        if ((is_rigid_local(im).eq.1).or. &
+            (is_elastic_local(im).eq.1)) then
+         is_masked(im)=0
+        else if ((is_rigid_local(im).eq.0).and. &
+                 (is_elastic_local(im).eq.0)) then
+         is_masked(im)=1
         else
-         print *,"layer_flag invalid(tets_box_planes): ",layer_flag
+         print *,"is_rigid_local or is_elastic_local invalid"
          stop
         endif
-
-        ! called from 1st or 2nd pass
-       else if (tessellate.eq.TESSELLATE_ALL) then 
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        print *,"if non-raster cell, make sure"
-        print *,"vfrac=0.0 for solids"
-        stop
+       else if (layer_flag.eq.RIGID_LAYER) then
+        is_masked(im)=1-is_rigid_local(im)
+       else if (layer_flag.eq.ELASTIC_LAYER) then
+        is_masked(im)=1-is_elastic_local(im)
+       else if (layer_flag.eq.FLUIDS_LAYER) then
+        if ((is_rigid_local(im).eq.1).or. &
+            (is_elastic_local(im).eq.1)) then
+         is_masked(im)=1
+        else if ((is_rigid_local(im).eq.0).and. &
+                 (is_elastic_local(im).eq.0)) then
+         is_masked(im)=0
+        else
+         print *,"is_rigid_local or is_elastic_local invalid"
+         stop
+        endif
        else
-        print *,"tessellate invalid4 (tets_box_planes): ",tessellate
+        print *,"layer_flag invalid(tets_box_planes): ",layer_flag
         stop
        endif
+
       enddo ! im=1..num_materials
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
@@ -6224,19 +6218,15 @@ end subroutine volume_sanity_check
        icrit=0
        do im=1,num_materials
         vofcomp=(im-1)*(2*sdim+3)+1
-        if ((tessellate.eq.TESSELLATE_ALL).or. &
-            (is_rigid_local(im).eq.0)) then
+        if (is_masked(im).eq.0) then
          iorder=NINT(mofdata(vofcomp+sdim+1))
          if (iorder.eq.iplane) then
           icrit=im
          endif
-        else if ((tessellate.eq.TESSELLATE_FLUIDS).and. &
-                 (is_rigid_local(im).eq.1)) then
-         ! do nothing, we do not subtract off solid
-         ! regions from the original uncaptured region.
+        else if (is_masked(im).eq.1) then
+         ! do nothing
         else
-         print *,"tessellate or is_rigid_local invalid: ",tessellate, &
-           is_rigid_local
+         print *,"is_masked invalid: ",is_masked
          stop
         endif
        enddo ! im=1..num_materials
@@ -6345,7 +6335,6 @@ end subroutine volume_sanity_check
       subroutine tets_box_planes_super( &
        layer_flag, &
        continuous_mof, &
-       tessellate, &
        tid_in, &
        bfact,dx, &
        xsten0,nhalf0, &
@@ -6364,7 +6353,6 @@ end subroutine volume_sanity_check
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: use_super_cell
@@ -6382,13 +6370,6 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer ksten_low,ksten_high
-
-      if (tessellate.eq.TESSELLATE_FLUIDS) then
-       !do nothing
-      else
-       print *,"expecting tessellate.eq.TESSELLATE_FLUIDS"
-       stop
-      endif
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -6434,7 +6415,6 @@ end subroutine volume_sanity_check
        call tets_box_planes( &
         layer_flag, &
         continuous_mof, &
-        tessellate, &  !TESSELLATE_FLUIDS
         bfact,dx, &
         xsten0,nhalf0, &
         xsten0,nhalf0, &
@@ -6477,7 +6457,6 @@ end subroutine volume_sanity_check
          call tets_box_planes( &
           layer_flag, &
           continuous_mof, &
-          tessellate, & !TESSELLATE_FLUIDS
           bfact,dx, &
           xsten0,nhalf0, &
           xsten2,nhalf2, &
@@ -6526,10 +6505,8 @@ end subroutine volume_sanity_check
       return
       end subroutine tets_box_planes_super
 
-       ! only called when tessellate=TESSELLATE_FLUIDS, TESSELLATE_ALL or TESSELLATE_IGNORE_ISRIGID.
       subroutine tets_tet_planes( &
         layer_flag, &
-        tessellate, &
         bfact,dx, &
         xsten0,nhalf0, &
         xtet,mofdata, &
@@ -6546,7 +6523,6 @@ end subroutine volume_sanity_check
 
       integer, INTENT(in) :: layer_flag
       integer, INTENT(in) :: nlist_alloc
-      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: sdim,bfact,nhalf0
       integer, INTENT(out) :: nlist
       integer, INTENT(in) :: nmax
@@ -6572,49 +6548,48 @@ end subroutine volume_sanity_check
       real(amrex_real) intercept
 
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+      integer is_masked(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
+       is_elastic_local(im)=is_elastic(im)
 
-        if (layer_flag.eq.FLUIDS_LAYER) then
-         if (is_elastic(im).eq.1) then
-          is_rigid_local(im)=1
-         else if (is_elastic(im).eq.0) then
-          !do nothing
-         else
-          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
-          stop
-         endif
-        else if (layer_flag.eq.ELASTIC_LAYER) then
-         if (is_elastic(im).eq.0) then
-          is_rigid_local(im)=1
-         else if (is_elastic(im).eq.1) then
-          !do nothing
-         else
-          print *,"is_elastic(im) invalid: ",im,is_elastic(im)
-          stop
-         endif
-        else if (layer_flag.eq.RIGID_LAYER) then
-         is_rigid_local(im)=1-is_rigid_local(im)
+       if (layer_flag.eq.FLUIDS_ELASTIC_RIGID_LAYER) then
+        is_masked(im)=0
+       else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
+        is_masked(im)=is_rigid_local(im)
+       else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
+        if ((is_rigid_local(im).eq.1).or. &
+            (is_elastic_local(im).eq.1)) then
+         is_masked(im)=0
+        else if ((is_rigid_local(im).eq.0).and. &
+                 (is_elastic_local(im).eq.0)) then
+         is_masked(im)=1
         else
-         print *,"layer_flag invalid: ",layer_flag
+         print *,"is_rigid_local or is_elastic_local invalid"
          stop
         endif
-
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"tessellate==TESSELLATE_ALL_RASTER invalid"
-        print *,"if non-raster cell, pass tessellate=TESSELLATE_FLUIDS or pass"
-        print *,"tessellate=TESSELLATE_ALL after zeroing out the solids"
-        stop
+       else if (layer_flag.eq.RIGID_LAYER) then
+        is_masked(im)=1-is_rigid_local(im)
+       else if (layer_flag.eq.ELASTIC_LAYER) then
+        is_masked(im)=1-is_elastic_local(im)
+       else if (layer_flag.eq.FLUIDS_LAYER) then
+        if ((is_rigid_local(im).eq.1).or. &
+            (is_elastic_local(im).eq.1)) then
+         is_masked(im)=1
+        else if ((is_rigid_local(im).eq.0).and. &
+                 (is_elastic_local(im).eq.0)) then
+         is_masked(im)=0
+        else
+         print *,"is_rigid_local or is_elastic_local invalid"
+         stop
+        endif
        else
-        print *,"tessellate invalid5"
+        print *,"layer_flag invalid(tets_tet_planes): ",layer_flag
         stop
        endif
+
       enddo ! im=1..num_materials
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
@@ -6653,18 +6628,15 @@ end subroutine volume_sanity_check
        icrit=0
        do im=1,num_materials
         vofcomp=(im-1)*(2*sdim+3)+1
-        if ((tessellate.eq.TESSELLATE_ALL).or. &
-            (is_rigid_local(im).eq.0)) then
+        if (is_masked(im).eq.0) then
          iorder=NINT(mofdata(vofcomp+sdim+1))
          if (iorder.eq.iplane) then
           icrit=im
          endif
-        else if ((tessellate.eq.TESSELLATE_FLUIDS).and. &
-                 (is_rigid_local(im).eq.1)) then
-         ! do nothing, we do not subtract off solid
-         ! regions from the original uncaptured region.
+        else if (is_masked(im).eq.1) then
+         ! do nothing
         else
-         print *,"tessellate or is_rigid_local invalid"
+         print *,"is_masked invalid: ",is_masked
          stop
         endif
        enddo ! im=1..num_materials
@@ -14129,7 +14101,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS 
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14145,7 +14116,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14162,7 +14132,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14178,7 +14147,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14196,7 +14164,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -14212,7 +14179,6 @@ contains
         call tets_box_planes_super( &
          layer_flag, &
          continuous_mof, &
-         tessellate, & ! =TESSELLATE_FLUIDS
          tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -19958,7 +19924,6 @@ contains
           if (fastflag.eq.0) then
 
            layer_flag=RIGID_LAYER
-           new_tessellate_local=TESSELLATE_FLUIDS
 
            if (shapeflag.eq.0) then ! volumes in a box
              ! only xsten0(0,dir) dir=1..sdim used
@@ -19967,7 +19932,6 @@ contains
             call tets_box_planes( &
               layer_flag, &
               continuous_mof, &
-              new_tessellate_local, & !TESSELLATE_FLUIDS
               bfact,dx, &
               xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
@@ -19984,7 +19948,6 @@ contains
              ! xtetlist=xtet - highest order material
             call tets_tet_planes( &
               layer_flag, &
-              new_tessellate_local, &  !TESSELLATE_FLUIDS
               bfact,dx, &
               xsten0,nhalf0, &
               xtet, &
@@ -23355,7 +23318,6 @@ FIX ME
           call tets_box_planes( &
             layer_flag, &
             continuous_mof, & !STANDARD_MOF
-            tessellate_local, &  ! TESSELLATE_FLUIDS
             bfact,dx, &
             xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
@@ -23664,7 +23626,6 @@ FIX ME
           call tets_box_planes( &
             layer_flag, &
             continuous_mof, & !STANDARD_MOF
-            tessellate_local, &  ! TESSELLATE_FLUIDS
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
             mofdatalocal, &
@@ -23986,7 +23947,6 @@ FIX ME
           call tets_box_planes( &
            layer_flag, &
            continuous_mof, & !STANDARD_MOF
-           tessellate_local, & ! =TESSELLATE_FLUIDS
            bfact,dx,xsten0,nhalf0, &
            xsten_grid,nhalf_grid, &
            mofdatalocal, &
