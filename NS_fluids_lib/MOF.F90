@@ -22347,7 +22347,7 @@ contains
       endif
 
       if (nmax.lt.4) then
-       print *,"nmax invalid multi_get_volume_grid nmax=",nmax
+       print *,"nmax invalid multi_get_volume_grid_simple nmax=",nmax
        stop
       endif
       if ((nhalf0.lt.1).or.(nhalf_grid.lt.1)) then
@@ -22359,7 +22359,7 @@ contains
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid multi_get_volume_grid"
+       print *,"sdim invalid multi_get_volume_grid_simple"
        stop
       endif
       if ((num_materials.lt.1).or. &
@@ -22384,7 +22384,7 @@ contains
 
        ! sum Frigid <=1
        ! sum Ffluid = 1
-       ! multi_get_volume_grid
+       ! multi_get_volume_grid_simple
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
@@ -22574,7 +22574,7 @@ contains
                (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
        ! do nothing
       else
-       print *,"tessellate invalid12 (multi_get_volume_grid): ",tessellate
+       print *,"tessellate invalid12 (multi_get_volume_grid_simple): ",tessellate
        stop
       endif
       
@@ -22762,7 +22762,7 @@ contains
            else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
             layer_flag=NULL_LAYER
            else
-            print *,"tessellate invalid16(multi_get_volume_grid):",tessellate
+            print *,"tessellate invalid16(multi_get_volume_grid_simple):",tessellate
             stop
            endif
 
@@ -22788,7 +22788,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi_get_volume_grid 1"
+            print *,"volcut invalid multi_get_volume_grid_simple 1"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
@@ -22862,7 +22862,7 @@ contains
 
            if (fastflag.eq.0) then
              !only xsten0(0,dir) dir=1..sdim used
-             !calling from "multi_get_volume_grid"
+             !calling from "multi_get_volume_grid_simple"
             call multi_cell_intersection_simple( &
               bfact,dx, &
               xsten0,nhalf0, &
@@ -22964,7 +22964,7 @@ contains
         else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
          ! do nothing (is_rigid_local(im)=1 materials all zapped out)
         else
-         print *,"tessellate invalid15(multi_get_volume_grid) ",tessellate
+         print *,"tessellate invalid15(multi_get_volume_grid_simple) ",tessellate
          stop
         endif
 
@@ -22998,12 +22998,12 @@ contains
                       mofdatasave(vofcomp)) then
               !do nothing
              else
-              print *,"mofdatasave invalid (multi_get_volume_grid) ", &
+              print *,"mofdatasave invalid (multi_get_volume_grid_simple) ", &
                 mofdatasave
               stop
              endif
             else
-             print *,"single_material invalid(multi_get_volume_grid)", &
+             print *,"single_material invalid(multi_get_volume_grid_simple)", &
               single_material
              stop
             endif
@@ -23016,7 +23016,7 @@ contains
                    (is_elastic_local(im_test).eq.0)) then
            ! do nothing
           else
-           print *,"material used bust(multi_get_volume_grid) ",im_test, &
+           print *,"material used bust(multi_get_volume_grid_simple) ",im_test, &
             material_used
            print *,"is_elastic_local: ",is_elastic_local
            stop
@@ -23046,7 +23046,7 @@ contains
           else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
            num_processed_total=num_processed_elastic
           else
-           print *,"tessellate invalid16(multi_get_volume_grid):",tessellate
+           print *,"tessellate invalid16(multi_get_volume_grid_simple):",tessellate
            stop
           endif
 
@@ -23142,7 +23142,7 @@ contains
            else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
             layer_flag=NULL_LAYER
            else
-            print *,"tessellate invalid16(multi_get_volume_grid):",tessellate
+            print *,"tessellate invalid16(multi_get_volume_grid_simple):",tessellate
             stop
            endif
 
@@ -23244,7 +23244,7 @@ contains
 
            if (fastflag.eq.0) then
              ! only xsten0(0,dir) dir=1..sdim used
-             ! calling from "multi_get_volume_grid"
+             ! calling from "multi_get_volume_grid_simple"
             call multi_cell_intersection_simple( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
@@ -23323,7 +23323,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material bad 18830(multi_get_volume_grid): ", &
+           print *,"critical_material bad 18830(multi_get_volume_grid_simple): ", &
              critical_material
            stop
           endif 
@@ -23359,7 +23359,7 @@ contains
         else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
          ! do nothing
         else
-         print *,"tessellate invalid15(multi_get_volume_grid) ",tessellate
+         print *,"tessellate invalid15(multi_get_volume_grid_simple) ",tessellate
          stop
         endif
 
@@ -23393,12 +23393,12 @@ contains
                       mofdatasave(vofcomp)) then
               !do nothing
              else
-              print *,"mofdatasave invalid (multi_get_volume_grid) ", &
+              print *,"mofdatasave invalid (multi_get_volume_grid_simple) ", &
                 mofdatasave
               stop
              endif
             else
-             print *,"single_material invalid(multi_get_volume_grid)", &
+             print *,"single_material invalid(multi_get_volume_grid_simple)", &
               single_material
              stop
             endif
@@ -23468,7 +23468,7 @@ contains
             else if (material_used(im).eq.0) then
              ! do nothing
             else
-             print *,"material_used invalid(multi_get_volume_grid1) ",im, &
+             print *,"material_used invalid(multi_get_volume_grid_simple1) ",im, &
                material_used
              stop
             endif
@@ -23516,7 +23516,7 @@ contains
            else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
             layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
            else
-            print *,"tessellate invalid16(multi_get_volume_grid):",tessellate
+            print *,"tessellate invalid16(multi_get_volume_grid_simple):",tessellate
             stop
            endif
 
@@ -23540,7 +23540,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi_get_volume_grid 2 "
+            print *,"volcut invalid multi_get_volume_grid_simple 2 "
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
             print *,"volcell= ",volcell
@@ -23622,7 +23622,7 @@ contains
 
            if (fastflag.eq.0) then
              ! only xsten0(0,dir) dir=1..sdim used
-             ! calling from "multi_get_volume_grid"
+             ! calling from "multi_get_volume_grid_simple"
             call multi_cell_intersection_simple( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
@@ -23721,7 +23721,7 @@ contains
         if (uncaptured_volume_fluid.le.four*EPS2*volcell) then
          !do nothing
         else
-         print *,"not all volume accounted for multi_get_volume_grid"
+         print *,"not all volume accounted for multi_get_volume_grid_simple"
          print *,"caller_id=",caller_id
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
