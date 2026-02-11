@@ -15916,6 +15916,24 @@ end subroutine print_visual_descriptor
       return
       end function is_elastic
 
+      function is_rigid_elastic(im)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer is_rigid_elastic
+      integer, INTENT(in) :: im
+
+      if ((is_rigid(im).eq.0).and. &
+          (is_elastic(im).eq.0)) then
+       is_rigid_elastic=0
+      else 
+       is_rigid_elastic=1
+      endif
+
+      return
+      end function is_rigid_elastic
+
       function fort_is_rigid_base(FSI_flag_local,im) &
       bind(c,name='fort_is_rigid_base')
       use probcommon_module
