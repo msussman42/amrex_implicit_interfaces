@@ -3971,7 +3971,7 @@ stop
        ngrow_dest, &
        tid, &
        dir, &
-       tessellate, & ! 0,1, or 3
+       tessellate, & ! TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
        level, &
        finest_level, &
        dstfab,DIMS(dstfab), &
@@ -3996,7 +3996,7 @@ stop
       integer, INTENT(in) :: ngrow_dest
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: dir
-      integer, INTENT(in) :: tessellate ! 0,1, or 3
+      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS|ALL|ALL_RASTER
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: nface_src,nface_dst
