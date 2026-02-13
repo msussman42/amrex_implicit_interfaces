@@ -27584,9 +27584,10 @@ contains
 
       end subroutine get_primary_material_VFRAC
 
-       ! tessellate==TESSELLATE_ALL => check solid materials and fluid materials
+       ! tessellate==TESSELLATE_ALL => check solid,elastic and fluid
        ! tessellate==TESSELATE_FLUIDS => check fluid materials only
-       ! tessellate==TESSELLATE_ALL_RASTER => same as tessellate==TESSELATE_FLUIDS if fluids dominate cell.
+       ! tessellate==TESSELLATE_ALL_RASTER => same as 
+       !  tessellate==TESSELATE_FLUIDS_ELASTIC if fluids|elastic dominate cell.
       subroutine check_full_cell_vfrac(vfrac,tessellate,im_full,tol)
       use probcommon_module
       use geometry_intersect_module
@@ -27599,10 +27600,11 @@ contains
       real(amrex_real), INTENT(in) :: vfrac(num_materials)
       integer, INTENT(out) :: im_full
       integer im
-      integer im_fluid_max,im_solid_max
-      real(amrex_real) sum_solid_vfrac,sum_fluid_vfrac
-      real(amrex_real) max_solid_vfrac,max_fluid_vfrac
+      integer im_fluid_max,im_solid_max,im_elastic_max
+      real(amrex_real) sum_solid_vfrac,sum_fluid_vfrac,sum_elastic_vfrac
+      real(amrex_real) max_solid_vfrac,max_fluid_vfrac,max_elastic_vfrac
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
       if ((tol.gt.zero).and.(tol.lt.one)) then
        !do nothing
@@ -27611,33 +27613,26 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        print *,"expecting tessellate=TESSELLATE_FLUIDS,TESSELLATE_ALL, or TESSELLATE_ALL_RASTER in check_full_cell_vfrac"
-        stop
-       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. & 
-                (tessellate.eq.TESSELLATE_ALL)) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        ! do nothing
-       else
-        print *,"tessellate invalid40"
-        stop
-       endif
-      enddo ! im=1..num_materials
-
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid check_full_cell_vfrac"
-       print *,"num_materials= ",num_materials
+      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
+          (tessellate.eq.TESSELLATE_ALL).or. &
+          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+       !do nothing
+      else
+       print *,"tessellate invalid check_full_cell_vfrac: ",tessellate
        stop
       endif
 
-      if ((tessellate.ne.TESSELLATE_FLUIDS).and. &
-          (tessellate.ne.TESSELLATE_ALL).and. &
-          (tessellate.ne.TESSELLATE_ALL_RASTER)) then
-       print *,"tessellate invalid (check_full_cell_vfrac): ",tessellate
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+      enddo ! im=1..num_materials
+
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials invalid check_full_cell_vfrac"
+       print *,"num_materials= ",num_materials
        stop
       endif
 
@@ -27653,21 +27648,29 @@ contains
       enddo ! im=1..num_materials
 
       im_full=0
+
       sum_solid_vfrac=zero
       sum_fluid_vfrac=zero
+      sum_elastic_vfrac=zero
+
       max_solid_vfrac=zero
       max_fluid_vfrac=zero
+      max_elastic_vfrac=zero
+
       im_fluid_max=0
       im_solid_max=0
+      im_elastic_max=0
 
       do im=1,num_materials
 
        if (is_rigid_local(im).eq.1) then
+
         sum_solid_vfrac=sum_solid_vfrac+vfrac(im)
         if (im_solid_max.eq.0) then
          im_solid_max=im
          max_solid_vfrac=vfrac(im)
-        else if ((im_solid_max.ge.1).and.(im_solid_max.le.num_materials)) then
+        else if ((im_solid_max.ge.1).and. &
+                 (im_solid_max.le.num_materials)) then
          if (vfrac(im).gt.vfrac(im_solid_max)) then
           im_solid_max=im
           max_solid_vfrac=vfrac(im)
@@ -27676,7 +27679,27 @@ contains
          print *,"im_solid_max invalid"
          stop
         endif
-       else if (is_rigid_local(im).eq.0) then
+
+       else if (is_elastic_local(im).eq.1) then
+
+        sum_elastic_vfrac=sum_elastic_vfrac+vfrac(im)
+        if (im_elastic_max.eq.0) then
+         im_elastic_max=im
+         max_elastic_vfrac=vfrac(im)
+        else if ((im_elastic_max.ge.1).and. &
+                 (im_elastic_max.le.num_materials)) then
+         if (vfrac(im).gt.vfrac(im_elastic_max)) then
+          im_elastic_max=im
+          max_elastic_vfrac=vfrac(im)
+         endif
+        else
+         print *,"im_elastic_max invalid"
+         stop
+        endif
+
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.0)) then
+
         sum_fluid_vfrac=sum_fluid_vfrac+vfrac(im)
         if (im_fluid_max.eq.0) then
          im_fluid_max=im
@@ -27690,25 +27713,45 @@ contains
          print *,"im_fluid_max invalid (check_full_cell_vfrac) ",im_fluid_max
          stop
         endif
+
        else
-        print *,"is_rigid invalid MOF.F90"
+        print *,"is_rigid_local or is_elastic_local invalid MOF.F90"
         stop
        endif
 
       enddo !im=1..num_materials
 
-      if ((tessellate.eq.TESSELLATE_ALL).or. &
-          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
-       if (max_solid_vfrac.ge.one-tol) then
-        im_full=im_solid_max
-       endif
-      endif
-
-      if ((sum_solid_vfrac.le.tol).or. &
-          (tessellate.eq.TESSELLATE_FLUIDS)) then
+      if (tessellate.eq.TESSELLATE_FLUIDS) then
        if (max_fluid_vfrac.ge.one-tol) then
         im_full=im_fluid_max
        endif
+      else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+       if (max_elastic_vfrac.ge.one-tol) then
+        im_full=im_elastic_max
+       endif
+       if (sum_elastic_vfrac.lt.tol) then
+        if (max_fluid_vfrac.ge.one-tol) then
+         im_full=im_fluid_max
+        endif
+       endif
+      else if ((tessellate.eq.TESSELLATE_ALL).or. &
+               (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+       if (max_solid_vfrac.ge.one-tol) then
+        im_full=im_solid_max
+       endif
+       if (sum_solid_vfrac.le.tol) then
+        if (max_elastic_vfrac.ge.one-tol) then
+         im_full=im_elastic_max
+        endif
+        if (sum_elastic_vfrac.le.tol) then
+         if (max_fluid_vfrac.ge.one-tol) then
+          im_full=im_fluid_max
+         endif
+        endif
+       endif
+      else
+       print *,"tessellate invalid check_full_cell_vfrac: ",tessellate
+       stop
       endif
 
       end subroutine check_full_cell_vfrac

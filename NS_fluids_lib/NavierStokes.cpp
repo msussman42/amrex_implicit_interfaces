@@ -28888,10 +28888,9 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
  int finest_level=parent->finestLevel();
 
- if ((tessellate!=TESSELLATE_FLUIDS)&&
-     (tessellate!=TESSELLATE_ALL)&&
+ if ((tessellate!=TESSELLATE_ALL)&&
      (tessellate!=TESSELLATE_ALL_RASTER))
-  amrex::Error("tessellate invalid60");
+  amrex::Error("tessellate invalid60 ProcessFaceFrac");
 
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid ProcessFaceFrac");
@@ -28960,7 +28959,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     &ngrow_dest,
     &tid_current,
     &dir,
-    &tessellate, //TESSELLATE_FLUIDS, TESSELLATE_ALL, or TESSELLATE_ALL_RASTER
+    &tessellate, //TESSELLATE_ALL, or TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     dstfab.dataPtr(),
@@ -28987,8 +28986,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
 
 // WARNING: makeFaceFrac allocates, but does not delete.
-// if caller from: makeStateDist (tessellate==TESSELLATE_FLUIDS)
-// if caller from: ColorSum (tessellate==TESSELLATE_ALL)
+// caller from: ColorSum (tessellate==TESSELLATE_ALL|TESSELLATE_ALL_RASTER)
 void
 NavierStokes::makeFaceFrac(
  int tessellate,int ngrow,int idx) {
@@ -29045,7 +29043,7 @@ NavierStokes::makeFaceFrac(
     // in: MOF_REDIST_3D.F90
    fort_faceinit( 
     &tid_current,
-    &tessellate, //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+    &tessellate, //TESSELLATE_ALL,TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     facefab.dataPtr(),
@@ -29073,7 +29071,7 @@ NavierStokes::makeFaceFrac(
 // WARNING: makeCellFrac allocates, but does not delete.
 void
 NavierStokes::makeCellFrac(
-  int tessellate, //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+  int tessellate, //TESSELLATE_ALL,TESSELLATE_ALL_RASTER
   int ngrow,int idx) {
  
  std::string local_caller_string="makeCellFrac";
@@ -29133,7 +29131,7 @@ NavierStokes::makeCellFrac(
     // in: LEVELSET_3D.F90
    fort_cellfaceinit( 
     &tid_current,
-    &tessellate,  //TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+    &tessellate,  //TESSELLATE_ALL,TESSELLATE_ALL_RASTER
     &level,
     &finest_level,
     facefab.dataPtr(),
