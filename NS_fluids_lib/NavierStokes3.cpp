@@ -6535,6 +6535,12 @@ NavierStokes::ColorSum(
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
+ if ((tessellate==TESSELLATE_ALL)||
+     (tessellate==TESSELLATE_ALL_RASTER)) {
+  //do nothing
+ } else
+  amrex::Error("expecting TESSELLATE_ALL|TESSELLATE_ALL_RASTER");
+
  if (sweep_num==0) {
   getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,local_caller_string);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
@@ -6665,7 +6671,7 @@ NavierStokes::ColorSum(
    &tid_current,
    &operation_flag,//OP_GATHER_MDOT || OP_SCATTER_MDOT
    &sweep_num,
-   &tessellate,
+   &tessellate, //TESSELLATE_ALL,TESSELLATE_ALL_RASTER
    distribute_mdot_evenly.dataPtr(),
    constant_volume_mdot.dataPtr(),
    distribute_from_target.dataPtr(),
