@@ -2449,7 +2449,6 @@ stop
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
        ! 
-       FIX ME
       subroutine fort_cellfaceinit( &
          tid, &
          tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
@@ -2792,7 +2791,11 @@ stop
          num_processed_fluid=0
          num_processed_elastic=0
 
-         if ((tessellate.eq.TESSELLATE_ALL).and.(vfrac_solid_sum.gt.zero)) then
+          !this loop unnecessary if TESSELLATE_ALL_RASTER since
+          !either (i) cell is all solid (no interfaces), or
+          !(ii) cell is all fluids+elastic (no solid interfaces)
+         if ((tessellate.eq.TESSELLATE_ALL).and. &
+             (vfrac_solid_sum.gt.zero)) then
 
           loop_counter=0
           do while ((loop_counter.lt.num_materials_rigid).and. &
@@ -2976,11 +2979,14 @@ stop
                 print *,"tessellate=",tessellate
                 print *,"num_materials_rigid=",num_materials_rigid
                 print *,"num_materials_fluid=",num_materials_fluid
+                print *,"num_materials_elastic=",num_materials_elastic
                 print *,"vfrac_fluid_sum ",vfrac_fluid_sum
+                print *,"vfrac_elastic_sum ",vfrac_elastic_sum
                 print *,"vfrac_solid_sum ",vfrac_solid_sum
                 print *,"loop_counter ",loop_counter
                 print *,"num_processed_solid ",num_processed_solid
                 print *,"num_processed_fluid ",num_processed_fluid
+                print *,"num_processed_elastic ",num_processed_elastic
                 print *,"uncaptured_volume_fraction ", &
                    uncaptured_volume_fraction
                 print *,"EPS_3_2 ",EPS_3_2
@@ -3038,10 +3044,12 @@ stop
 
          if (vfrac_elastic_sum.gt.zero) then
 
+          uncaptured_volume_fraction=one
+
           loop_counter=0
           do while ((loop_counter.lt.num_materials_elastic).and. &
                     (num_processed_elastic.lt.num_materials_elastic).and. &
-                    (uncaptured_volume_fraction.gt.zero))
+                    (uncaptured_volume_fraction.gt.one-vfrac_elastic_sum))
 
             ! F,CEN,ORDER,SLOPE,INTERCEPT
            do im=1,num_materials
@@ -3213,11 +3221,14 @@ stop
                 else
                  print *,"im boundary disappeared 3"
                  print *,"loop_counter=",loop_counter
+                 print *,"num_processed_elastic=",num_processed_elastic
                  print *,"num_processed_solid=",num_processed_solid
                  print *,"num_processed_fluid=",num_processed_fluid
                  print *,"uncaptured_volume_fraction ", &
                     uncaptured_volume_fraction
                  print *,"vfrac_solid_sum ",vfrac_solid_sum
+                 print *,"vfrac_elastic_sum ",vfrac_elastic_sum
+                 print *,"vfrac_fluid_sum ",vfrac_fluid_sum
                  print *,"im=",im
                  print *,"multi_volume(im)=",multi_volume(im)
                  print *,"multi_volume_offset(im)=",multi_volume_offset(im)
@@ -3289,7 +3300,7 @@ stop
           enddo  ! while 
                  ! loop_counter<num_materials_elastic and
                  ! num_processed_elastic<num_materials_elastic and
-                 ! uncaptured_volume_fraction>0
+                 ! uncaptured_volume_fraction>1-vfrac_elastic_sum
 
          else if (vfrac_elastic_sum.eq.zero) then
           ! do nothing
@@ -3298,7 +3309,7 @@ stop
           stop
          endif
 
-
+         uncaptured_volume_fraction=one
          loop_counter=0
          do while ((loop_counter.lt.num_materials_fluid).and. &
                    (num_processed_fluid.lt.num_materials_fluid).and. &
@@ -3359,7 +3370,7 @@ stop
 
                  do im_opp=1,num_materials
 
-                  if ((is_rigid_elastic(im_opp).eq.0).or. &
+                  if ((is_rigid(im_opp).eq.0).or. &
                       (tessellate.eq.TESSELLATE_ALL)) then
 
                    if (im_opp.ne.im) then
@@ -3380,7 +3391,7 @@ stop
                     print *,"im_opp or im bust"
                     stop
                    endif
-                  else if ((is_rigid_elastic(im_opp).eq.1).and. &
+                  else if ((is_rigid(im_opp).eq.1).and. &
                            (tessellate.eq.TESSELLATE_ALL_RASTER)) then
                    ! do nothing
                   else
@@ -3392,7 +3403,7 @@ stop
 
                  if (total_facearea.gt.zero) then
                   do im_opp=1,num_materials
-                   if ((is_rigid_elastic(im_opp).eq.0).or. &
+                   if ((is_rigid(im_opp).eq.0).or. &
                        (tessellate.eq.TESSELLATE_ALL)) then
 
                     if (im_opp.ne.im) then
@@ -3454,7 +3465,7 @@ stop
                      print *,"im_opp or im bust"
                      stop
                     endif
-                   else if ((is_rigid_elastic(im_opp).eq.1).and. &
+                   else if ((is_rigid(im_opp).eq.1).and. &
                             (tessellate.eq.TESSELLATE_ALL_RASTER)) then
                     ! do nothing
                    else
@@ -3535,7 +3546,7 @@ stop
 
             endif  ! testflag==num_processed_fluid+1
 
-           else if (is_rigid(im).eq.1) then
+           else if (is_rigid_elastic(im).eq.1) then
             ! do nothing
            else
             print *,"is_rigid invalid LEVELSET_3D.F90"
