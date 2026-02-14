@@ -19073,7 +19073,7 @@ contains
       if ((num_materials.ge.1).and.(num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
-       print *,"num_materials bust"
+       print *,"num_materials bust: ",num_materials
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
@@ -19340,7 +19340,7 @@ contains
        caller_id, &
        tid_in, &
        EPS_SINGLE, &
-       tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
+       tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_FLUIDS_ELASTIC,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -19367,7 +19367,7 @@ contains
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
-      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
+      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_FLUIDS_ELASTIC,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
       integer, INTENT(in) :: shapeflag,bfact
       integer, INTENT(in) :: nhalf0,nhalf_grid
       real(amrex_real), INTENT(in) :: EPS_SINGLE
@@ -19454,6 +19454,8 @@ contains
         ! do nothing
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
         ! do nothing
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        ! do nothing
        else
         print *,"tessellate invalid10: ",tessellate
         stop
@@ -19461,6 +19463,7 @@ contains
       enddo ! im=1..num_materials
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
           (tessellate.eq.TESSELLATE_ALL).or. &
           (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        local_tessellate=TESSELLATE_FLUIDS
@@ -19522,6 +19525,7 @@ contains
         continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
           !is_rigid_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
+          !is_elastic_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
         local_tessellate, & 
         mofdata,mofdatavalid,sdim)
 
@@ -19712,6 +19716,7 @@ contains
        endif
 
       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
                (tessellate.eq.TESSELLATE_ALL).or. &
                (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
        ! do nothing
@@ -19756,6 +19761,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            !do nothing
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           !do nothing
           else if (tessellate.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
@@ -19770,6 +19777,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            !do nothing
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           multi_volume(im)=multi_volume(im)*abs(one-vfrac_elastic_sum)
           else if (tessellate.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)* &
               abs(one-vfrac_elastic_sum)
@@ -19896,6 +19905,8 @@ contains
           if (fastflag.eq.0) then
 
            if (tessellate.eq.TESSELLATE_FLUIDS) then
+            layer_flag=RIGID_LAYER
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
             layer_flag=RIGID_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=NULL_LAYER
@@ -20111,7 +20122,8 @@ contains
         ! ABOVE: solid materials
         ! BELOW: elastic materials
 
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
+        if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+            (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          ! do nothing; uncaptured_volume_elastic remains to represent
          ! the original uncaptured space.
         else if (tessellate.eq.TESSELLATE_ALL) then
@@ -20201,7 +20213,8 @@ contains
 
           num_processed_elastic=num_processed_elastic+1
 
-          if (tessellate.eq.TESSELLATE_FLUIDS) then
+          if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+              (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
            num_processed_total=num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_elastic
@@ -20245,7 +20258,8 @@ contains
                material_used
               stop
              endif
-            else if (tessellate.eq.TESSELLATE_FLUIDS) then
+            else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                     (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials_elastic)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -20272,7 +20286,8 @@ contains
           enddo ! im=1..num_materials
 
 
-          if (tessellate.eq.TESSELLATE_FLUIDS) then
+          if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+              (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
            num_processed_total=num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_elastic
@@ -20297,7 +20312,8 @@ contains
 
           if (fastflag.eq.0) then
 
-           if (tessellate.eq.TESSELLATE_FLUIDS) then
+           if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             layer_flag=ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=ELASTIC_LAYER
@@ -20489,7 +20505,8 @@ contains
 
            num_processed_elastic=num_processed_elastic+1
 
-           if (tessellate.eq.TESSELLATE_FLUIDS) then
+           if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             num_processed_total=num_processed_elastic
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             num_processed_total=num_processed_elastic
@@ -20530,7 +20547,8 @@ contains
         if (tessellate.eq.TESSELLATE_FLUIDS) then
          ! do nothing; uncaptured_volume_fluid remains to represent
          ! the original uncaptured space.
-        else if (tessellate.eq.TESSELLATE_ALL) then
+        else if ((tessellate.eq.TESSELLATE_ALL).or. &
+                 (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
@@ -20619,6 +20637,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            num_processed_total=num_processed_fluid
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL) then
            num_processed_total= &
             num_processed_fluid+num_processed_elastic+num_processed_solid
@@ -20666,6 +20686,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            num_processed_total=num_processed_fluid
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL) then
            num_processed_total= &
              num_processed_fluid+num_processed_solid+num_processed_elastic
@@ -20693,6 +20715,8 @@ contains
 
            if (tessellate.eq.TESSELLATE_FLUIDS) then
             layer_flag=FLUIDS_LAYER
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+            layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL) then
@@ -20887,6 +20911,9 @@ contains
            num_processed_fluid=num_processed_fluid+1
            if (tessellate.eq.TESSELLATE_FLUIDS) then
             num_processed_total=num_processed_fluid
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+            num_processed_total= &
+             num_processed_fluid+num_processed_elastic
            else if (tessellate.eq.TESSELLATE_ALL) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic+num_processed_solid
@@ -22095,7 +22122,7 @@ contains
       subroutine multi_get_volume_grid_simple( &
        tid_in, &
        EPS_SINGLE, &
-       tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
+       tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_FLUIDS_ELASTIC,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -22118,7 +22145,7 @@ contains
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
-      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
+      integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_FLUIDS_ELASTIC,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0,nhalf_grid
       real(amrex_real), INTENT(in) :: EPS_SINGLE
@@ -22204,6 +22231,8 @@ contains
         ! do nothing
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
         ! do nothing
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        ! do nothing
        else
         print *,"tessellate invalid10: ",tessellate
         stop
@@ -22211,6 +22240,7 @@ contains
       enddo ! im=1..num_materials
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
           (tessellate.eq.TESSELLATE_ALL).or. &
           (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        local_tessellate=TESSELLATE_FLUIDS
@@ -22451,6 +22481,7 @@ contains
        endif
 
       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
                (tessellate.eq.TESSELLATE_ALL).or. &
                (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
        ! do nothing
@@ -22495,6 +22526,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            !do nothing
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           !do nothing
           else if (tessellate.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
@@ -22509,6 +22542,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            !do nothing
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           multi_volume(im)=multi_volume(im)*abs(one-vfrac_elastic_sum)
           else if (tessellate.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)* &
               abs(one-vfrac_elastic_sum)
@@ -22635,6 +22670,8 @@ contains
           if (fastflag.eq.0) then
 
            if (tessellate.eq.TESSELLATE_FLUIDS) then
+            layer_flag=RIGID_LAYER
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
             layer_flag=RIGID_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=NULL_LAYER
@@ -22828,7 +22865,8 @@ contains
         ! ABOVE: solid materials
         ! BELOW: elastic materials
 
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
+        if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+            (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          ! do nothing; uncaptured_volume_elastic remains to represent
          ! the original uncaptured space.
         else if (tessellate.eq.TESSELLATE_ALL) then
@@ -22918,7 +22956,8 @@ contains
 
           num_processed_elastic=num_processed_elastic+1
 
-          if (tessellate.eq.TESSELLATE_FLUIDS) then
+          if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+              (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
            num_processed_total=num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_elastic
@@ -22962,7 +23001,8 @@ contains
                material_used
               stop
              endif
-            else if (tessellate.eq.TESSELLATE_FLUIDS) then
+            else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+                     (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials_elastic)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
@@ -22989,7 +23029,8 @@ contains
           enddo ! im=1..num_materials
 
 
-          if (tessellate.eq.TESSELLATE_FLUIDS) then
+          if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+              (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
            num_processed_total=num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_elastic
@@ -23015,7 +23056,8 @@ contains
 
           if (fastflag.eq.0) then
 
-           if (tessellate.eq.TESSELLATE_FLUIDS) then
+           if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             layer_flag=ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=ELASTIC_LAYER
@@ -23187,7 +23229,8 @@ contains
 
            num_processed_elastic=num_processed_elastic+1
 
-           if (tessellate.eq.TESSELLATE_FLUIDS) then
+           if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             num_processed_total=num_processed_elastic
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             num_processed_total=num_processed_elastic
@@ -23228,7 +23271,8 @@ contains
         if (tessellate.eq.TESSELLATE_FLUIDS) then
          ! do nothing; uncaptured_volume_fluid remains to represent
          ! the original uncaptured space.
-        else if (tessellate.eq.TESSELLATE_ALL) then
+        else if ((tessellate.eq.TESSELLATE_ALL).or. &
+                 (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
@@ -23317,6 +23361,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            num_processed_total=num_processed_fluid
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL) then
            num_processed_total= &
             num_processed_fluid+num_processed_elastic+num_processed_solid
@@ -23364,6 +23410,8 @@ contains
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            num_processed_total=num_processed_fluid
+          else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+           num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_ALL) then
            num_processed_total= &
              num_processed_fluid+num_processed_solid+num_processed_elastic
@@ -23391,6 +23439,8 @@ contains
 
            if (tessellate.eq.TESSELLATE_FLUIDS) then
             layer_flag=FLUIDS_LAYER
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+            layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate.eq.TESSELLATE_ALL) then
@@ -23565,6 +23615,9 @@ contains
            num_processed_fluid=num_processed_fluid+1
            if (tessellate.eq.TESSELLATE_FLUIDS) then
             num_processed_total=num_processed_fluid
+           else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+            num_processed_total= &
+             num_processed_fluid+num_processed_elastic
            else if (tessellate.eq.TESSELLATE_ALL) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic+num_processed_solid
