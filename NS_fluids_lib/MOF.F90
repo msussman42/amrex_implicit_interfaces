@@ -8032,8 +8032,11 @@ end subroutine volume_sanity_check
       subroutine fast_cut_cell_intersection( &
         bfact,dx,xsten0,nhalf0, &
         slope,intercept, &
-        volume,centroid,area, &
-        xsten_grid,nhalf_grid,xtet,shapeflag,sdim)
+        volume,centroid, &
+        area, &
+        xsten_grid,nhalf_grid, &
+        xtet,shapeflag, &
+        sdim)
 
       use global_utility_module
 
@@ -8194,7 +8197,8 @@ end subroutine volume_sanity_check
         bfact,dx,xsten0,nhalf0, &
         slope,intercept, &
         volume,centroid, &
-        xsten_grid,nhalf_grid,sdim)
+        xsten_grid,nhalf_grid, &
+        sdim)
 
       use global_utility_module
 
@@ -8327,7 +8331,8 @@ end subroutine volume_sanity_check
         slope,intercept, &
         volume,centroid, &
         volume_map,centroid_map, &
-        xsten_grid,nhalf_grid,sdim)
+        xsten_grid,nhalf_grid, &
+        sdim)
 
       use global_utility_module
 
@@ -9475,7 +9480,9 @@ contains
          slope,intercept, &
          voln,centroid, &
          arean, &
-         xsten0,nhalf0,xtet,shapeflag,sdim) 
+         xsten0,nhalf0, &
+         xtet,shapeflag, &
+         sdim) 
        else
         print *,"continuous_mof invalid: ",continuous_mof
         print *,"fastflag=",fastflag
@@ -9545,7 +9552,9 @@ contains
        slope,intercept, &
        voln,centroid, &
        arean, &
-       xsten0,nhalf0,xtet,shapeflag,sdim) 
+       xsten0,nhalf0, &
+       xtet,shapeflag, &
+       sdim) 
 
       ff=(voln-vtarget)/volcell
 
@@ -11183,8 +11192,11 @@ contains
           bfact,dx,xsten0,nhalf0, &
           nslope, &
           intercept(1), &
-          volume_cut,testcen,facearea, &
-          xsten0,nhalf0,xtet,shapeflag,sdim) 
+          volume_cut,testcen, &
+          facearea, &
+          xsten0,nhalf0, &
+          xtet,shapeflag, &
+          sdim) 
         else if (continuous_mof.eq.CMOF_X) then !CMOF X
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
@@ -11222,8 +11234,11 @@ contains
             bfact,dx,xsten0,nhalf0, &
             nslope, &
             intercept(1), &
-            volsten,censten,areasten, &
-            xsten2,nhalf2,xtet,shapeflag,sdim) 
+            volsten,censten, &
+            areasten, &
+            xsten2,nhalf2, &
+            xtet,shapeflag, &
+            sdim) 
            volume_cut=volume_cut+volsten
            facearea=facearea+areasten
            do dir=1,sdim
@@ -11486,8 +11501,11 @@ contains
             bfact,dx,xsten0,nhalf0, &
             nslope, &
             intercept(1), &
-            volume_cut,testcen,facearea, &
-            xsten0,nhalf0,xtet,shapeflag,sdim) 
+            volume_cut,testcen, &
+            facearea, &
+            xsten0,nhalf0, &
+            xtet,shapeflag, &
+            sdim) 
           else
            print *,"expecting continuous_mof==STANDARD_MOF"
            stop
@@ -18287,14 +18305,20 @@ contains
            bfact,dx, &
            xsten0_LS,nhalf0, &
            nslope,intercept, &
-           volcut,cencut,areacut, &
-           xsten0_LS,nhalf0,xtet_domain,shapeflag,sdim)
+           volcut,cencut, &
+           areacut, &
+           xsten0_LS,nhalf0, &
+           xtet_domain,shapeflag, &
+           sdim)
          call fast_cut_cell_intersection( &
            bfact,dx, &
            xsten0_LS,nhalf0, &
            nslope2,intercept2, &
-           volcut2,cencut2,areacut2, &
-           xsten0_LS,nhalf0,xtet_domain,shapeflag,sdim)
+           volcut2,cencut2, &
+           areacut2, &
+           xsten0_LS,nhalf0, &
+           xtet_domain,shapeflag, &
+           sdim)
 
          do dir2=1,nrecon
           mofdata(dir2)=zero !pls_normal zapped out.
@@ -19368,7 +19392,8 @@ contains
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: tessellate !TESSELLATE_FLUIDS,TESSELLATE_FLUIDS_ELASTIC,TESSELLATE_ALL,TESSELLATE_IGNORE_ISRIGID,TESSELLATE_ALL_RASTER
-      integer, INTENT(in) :: shapeflag,bfact
+      integer, INTENT(in) :: shapeflag
+      integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0,nhalf_grid
       real(amrex_real), INTENT(in) :: EPS_SINGLE
       real(amrex_real), INTENT(in) :: xtet(sdim+1,sdim)
@@ -19383,7 +19408,8 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
       real(amrex_real), INTENT(out) :: multi_area(num_materials)
       integer dir
-      integer vofcomp,vofcomp_single
+      integer vofcomp
+      integer vofcomp_single
       integer im
       real(amrex_real) uncaptured_volume_START
       real(amrex_real) uncaptured_volume_fluid
@@ -19400,7 +19426,8 @@ contains
       integer critical_material
       real(amrex_real) nrecon(sdim)
       real(amrex_real) intercept
-      real(amrex_real) voltemp,centemp(sdim),areatemp
+      real(amrex_real) voltemp,centemp(sdim)
+      real(amrex_real) areatemp
       integer single_material
       real(amrex_real) remaining_vfrac
       real(amrex_real) uncaptured_volume_fraction_fluid
@@ -19527,7 +19554,8 @@ contains
           !is_rigid_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
           !is_elastic_local=0 if local_tessellate==TESSELLATE_IGNORE_ISRIGID
         local_tessellate, & 
-        mofdata,mofdatavalid,sdim)
+        mofdata, &
+        mofdatavalid,sdim)
 
       do dir=1,num_materials*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -20042,18 +20070,23 @@ contains
               bfact,dx, &
               xsten0,nhalf0, &
               nrecon,intercept, &
-              voltemp,centemp,areatemp, &
+              voltemp,centemp, &
+              areatemp, &
               xtetlist, &
               nlist_alloc, &
               nlist, &
-              nmax,sdim) 
+              nmax, &
+              sdim) 
            else if (fastflag.eq.1) then
              ! only xsten0(0,dir) dir=1..sdim used
             call fast_cut_cell_intersection( &
               bfact,dx,xsten0,nhalf0, &
               nrecon,intercept, &
-              voltemp,centemp,areatemp, &
-              xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
+              voltemp,centemp, &
+              areatemp, &
+              xsten_grid,nhalf_grid, &
+              xtet,shapeflag, &
+              sdim) 
            else 
             print *,"fastflag invalid multi get volume grid 2"
             stop
@@ -20447,7 +20480,8 @@ contains
             call multi_cell_intersection( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
-             voltemp,centemp,areatemp, &
+             voltemp,centemp, &
+             areatemp, &
              xtetlist, &
              nlist_alloc, &
              nlist, &
@@ -20458,8 +20492,11 @@ contains
             call fast_cut_cell_intersection( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
-             voltemp,centemp,areatemp, &
-             xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
+             voltemp,centemp, &
+             areatemp, &
+             xsten_grid,nhalf_grid, &
+             xtet,shapeflag, &
+             sdim) 
            else 
             print *,"fastflag invalid multi get volume grid 2"
             stop
@@ -20853,7 +20890,8 @@ contains
             call multi_cell_intersection( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
-             voltemp,centemp,areatemp, &
+             voltemp,centemp, &
+             areatemp, &
              xtetlist, &
              nlist_alloc, &
              nlist, &
@@ -20864,8 +20902,11 @@ contains
             call fast_cut_cell_intersection( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
-             voltemp,centemp,areatemp, &
-             xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
+             voltemp,centemp, &
+             areatemp, &
+             xsten_grid,nhalf_grid, &
+             xtet,shapeflag, &
+             sdim) 
            else 
             print *,"fastflag invalid multi get volume grid 2"
             stop
@@ -21956,9 +21997,11 @@ contains
             bfact,dx, &
             xsten0_minus,nhalf0, &
             nrecon,intercept, &
-            voltemp,centemp,areatemp, &
+            voltemp,centemp, &
+            areatemp, &
             xsten_thin,nhalf_thin, &
-            xtet,shapeflag,sdim) 
+            xtet,shapeflag, &
+            sdim) 
           else 
            print *,"fastflag invalid multi get area pairs 2:",fastflag
            stop
@@ -22797,7 +22840,8 @@ contains
               bfact,dx,xsten0,nhalf0, &
               nrecon,intercept, &
               voltemp,centemp, &
-              xsten_grid,nhalf_grid,sdim) 
+              xsten_grid,nhalf_grid, &
+              sdim) 
            else 
             print *,"fastflag invalid multi get volume grid simple 2"
             stop
@@ -23184,7 +23228,8 @@ contains
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
              voltemp,centemp, &
-             xsten_grid,nhalf_grid,sdim) 
+             xsten_grid,nhalf_grid, &
+             sdim) 
            else 
             print *,"fastflag invalid multi get volume grid simple 2"
             stop
@@ -23570,7 +23615,8 @@ contains
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
              voltemp,centemp, &
-             xsten_grid,nhalf_grid,sdim) 
+             xsten_grid,nhalf_grid, &
+             sdim) 
            else 
             print *,"fastflag invalid multi get volume grid simple2"
             stop
@@ -24259,7 +24305,8 @@ contains
              nrecon,intercept, &
              voltemp,centemp, &
              voltemp_map,centemp_map, &
-             xsten_grid,nhalf_grid,sdim) 
+             xsten_grid,nhalf_grid, &
+             sdim) 
           else 
            print *,"fastflag invalid multi get volume grid and map 2"
            stop
@@ -24570,7 +24617,8 @@ contains
              nrecon,intercept, &
              voltemp,centemp, &
              voltemp_map,centemp_map, &
-             xsten_grid,nhalf_grid,sdim) 
+             xsten_grid,nhalf_grid, &
+             sdim) 
           else 
            print *,"fastflag invalid multi get volume grid and map 2"
            stop
@@ -24900,7 +24948,8 @@ contains
             nrecon,intercept, &
             voltemp,centemp, &
             voltemp_map,centemp_map, &
-            xsten_grid,nhalf_grid,sdim) 
+            xsten_grid,nhalf_grid, &
+            sdim) 
 
           else 
            print *,"fastflag invalid multi get volume grid and map 2"
