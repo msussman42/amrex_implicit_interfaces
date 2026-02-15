@@ -18365,7 +18365,7 @@ stop
       real(amrex_real) Tgamma
       real(amrex_real) TorYgamma_BC
       integer tsat_comp
-      integer local_tessellate
+      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
       real(amrex_real) xclamped(SDIM)
       real(amrex_real) LS_clamped
       real(amrex_real) vel_clamped(SDIM)
@@ -18582,7 +18582,6 @@ stop
         !  and F_fluid=0.
         !  if fluid material(s) dominate the cell, then F_solid=0,
         !  sum F_fluid=1
-        local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2 tolerance
         call multi_get_volume_tessellate( &
          tid, &
@@ -19952,7 +19951,7 @@ stop
       real(amrex_real) temperature_clamped_plus
       integer prescribed_flag
       integer is_clamped_face
-      integer local_tessellate
+      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
 
       nmax=POLYGON_LIST_MAX ! in: COMBINEVELFACE
 
@@ -20130,7 +20129,6 @@ stop
          do im=1,num_materials*ngeom_recon
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
-         local_tessellate=TESSELLATE_ALL_RASTER
           !EPS2 tolerance
          call multi_get_volume_tessellate( &
           tid, &

@@ -28993,6 +28993,10 @@ NavierStokes::makeFaceFrac(
 
  std::string local_caller_string="makeFaceFrac";
  
+ if ((tessellate!=TESSELLATE_ALL)&&
+     (tessellate!=TESSELLATE_ALL_RASTER))
+  amrex::Error("tessellate invalid601 makeFaceFrac");
+
  bool use_tiling=ns_tiling;
 
   // (num_materials,sdim,2) area on each face of a cell.
@@ -29075,6 +29079,10 @@ NavierStokes::makeCellFrac(
   int ngrow,int idx) {
  
  std::string local_caller_string="makeCellFrac";
+
+ if ((tessellate!=TESSELLATE_ALL)&&
+     (tessellate!=TESSELLATE_ALL_RASTER))
+  amrex::Error("tessellate invalid602 makeCellFrac");
 
  bool use_tiling=ns_tiling;
 
