@@ -1031,7 +1031,7 @@ stop
       real(amrex_real) volcell
       real(amrex_real) cencell(SDIM)
       integer nmax
-      integer local_tessellate
+      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
       real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
       real(amrex_real) local_data_out
 
@@ -1061,7 +1061,6 @@ stop
        mofdata(im)=local_data_out
       enddo
 
-      local_tessellate=TESSELLATE_ALL_RASTER
        !EPS2
       call multi_get_volume_tessellate( &
         tid, &

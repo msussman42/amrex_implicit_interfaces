@@ -2437,7 +2437,7 @@ stop
         ! "single material" tolerance is EPS2.
        call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, &
+         local_tessellate, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &

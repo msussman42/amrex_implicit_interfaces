@@ -2552,6 +2552,7 @@ stop
       integer mask1,mask2
       integer iten
       integer is_processed(num_interfaces)
+      integer material_processed(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, parameter :: caller_id=4
@@ -2564,7 +2565,7 @@ stop
 
       if ((tessellate.ne.TESSELLATE_ALL).and. &
           (tessellate.ne.TESSELLATE_ALL_RASTER)) then
-       print *,"tessellate invalid1: ",tessellate
+       print *,"tessellate invalid fort_cellfaceinit: ",tessellate
        stop
       endif
 
@@ -2662,6 +2663,7 @@ stop
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vcenter(im)=mofdata(vofcomp)
+         material_processed(im)=0
         enddo ! im
 
          !in: fort_cellfaceinit
@@ -2809,8 +2811,9 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
              testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
-             if (testflag.eq.1) then
+             if ((testflag.eq.1).and.(material_processed(im).eq.0)) then
 
+              material_processed(im)=1
               num_processed_solid=num_processed_solid+1
 
               intercept=mofdatavalid(vofcomp+2*SDIM+2)
@@ -2953,6 +2956,7 @@ stop
                  print *,"loop_counter=",loop_counter
                  print *,"num_processed_solid=",num_processed_solid
                  print *,"num_processed_fluid=",num_processed_fluid
+                 print *,"num_processed_elastic=",num_processed_elastic
                  print *,"uncaptured_volume_fraction ", &
                     uncaptured_volume_fraction
                  print *,"vfrac_solid_sum ",vfrac_solid_sum
@@ -3010,13 +3014,20 @@ stop
                 enddo  ! im=1..num_materials
                 stop
                endif
-  
-              endif ! uncaptured_volume_fraction>0
+ 
+              else if (uncaptured_volume_fraction.eq.zero) then
+               !do nothing
+              else
+               print *,"uncaptured_volume_fraction invalid ", &
+                 uncaptured_volume_fraction
+               stop 
+              endif 
 
-             else if (testflag.eq.0) then
+             else if ((testflag.eq.0).or.(material_processed(im).eq.1)) then
               ! do nothing
              else
-              print *,"testflag invalid"
+              print *,"testflag invalid: ",testflag
+              print *,"or material_processed invalid: ",material_processed
               stop
              endif 
 
@@ -3057,8 +3068,10 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
              testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
-             if (testflag.eq.num_processed_elastic+1) then
+             if ((testflag.eq.num_processed_elastic+1).and. &
+                 (material_processed(im).eq.0)) then
 
+              material_processed(im)=1
               num_processed_elastic=num_processed_elastic+1
 
               intercept=mofdatavalid(vofcomp+2*SDIM+2)
@@ -3283,10 +3296,22 @@ stop
                 enddo  ! im=1..num_materials
                 stop
                endif
-  
-              endif ! uncaptured_volume_fraction>0
+ 
+              else if (uncaptured_volume_fraction.eq.zero) then
+               !do nothing
+              else
+               print *,"uncaptured_volume_fraction invalid: ", &
+                 uncaptured_volume_fraction
+               stop 
+              endif 
 
-             endif  ! testflag==num_processed_elastic+1
+             else if ((testflag.ne.num_processed_elastic+1).or. &
+                      (material_processed(im).eq.1)) then
+              !do nothing
+             else
+              print *,"testflag invalid: ",testflag
+              print *,"or, material_processed invalid: ",material_processed
+             endif  
 
             else if (is_elastic(im).eq.0) then
              ! do nothing
@@ -3305,7 +3330,7 @@ stop
          else if (vfrac_elastic_sum.eq.zero) then
           ! do nothing
          else
-          print *,"vfrac_elastic_sum invalid"
+          print *,"vfrac_elastic_sum invalid: ",vfrac_elastic_sum
           stop
          endif
 
@@ -3321,8 +3346,10 @@ stop
             vofcomp=(im-1)*ngeom_recon+1
             testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
-            if (testflag.eq.num_processed_fluid+1) then
+            if ((testflag.eq.num_processed_fluid+1).and. &
+                (material_processed(im).eq.0)) then
 
+             material_processed(im)=1
              num_processed_fluid=num_processed_fluid+1
 
              intercept=mofdatavalid(vofcomp+2*SDIM+2)
@@ -3541,10 +3568,23 @@ stop
                print *,"multi_volume(im) invalid: ",im,multi_volume(im)
                stop
               endif
- 
-             endif ! uncaptured_volume_fraction>0
 
-            endif  ! testflag==num_processed_fluid+1
+             else if (uncaptured_volume_fraction.eq.zero) then
+              !do nothing
+             else
+              print *,"uncaptured_volume_fraction invalid ", &
+               uncaptured_volume_fraction
+              stop 
+             endif 
+
+            else if ((testflag.ne.num_processed_fluid+1).or. &
+                     (material_processed(im).eq.1)) then
+             !do nothing
+            else
+             print *,"testflag invalid: ",testflag
+             print *,"or, material_processed invalid: ",material_processed
+             stop
+            endif  
 
            else if (is_rigid_elastic(im).eq.1) then
             ! do nothing

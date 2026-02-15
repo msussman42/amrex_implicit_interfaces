@@ -2443,6 +2443,7 @@ END SUBROUTINE SIMP
         SDIM)
 
        if ((visual_tessellate_vfrac.eq.TESSELLATE_ALL).or. & 
+           (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
            (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER)) then 
          ! rasterized solid.
          ! before (mofdata): only fluids tessellate
@@ -2450,7 +2451,7 @@ END SUBROUTINE SIMP
          ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
-         visual_tessellate_vfrac, &
+         visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
          bfact, &
          dx,xsten,nhalf, &
          mofdata, &
@@ -7647,7 +7648,7 @@ END SUBROUTINE SIMP
         ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, &
+         local_tessellate, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &

@@ -21032,7 +21032,6 @@ contains
       subroutine multi_get_volume_tetlist( &
        tid_in, &
        EPS_SINGLE, &
-       tessellate, & ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISRIGID
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
@@ -21058,7 +21057,7 @@ contains
       integer, INTENT(in) :: nlist_alloc_in
       integer, INTENT(in) :: nlist_in
       integer, INTENT(in) :: nmax
-      integer, INTENT(in) :: tessellate
+      integer, parameter :: tessellate=TESSELLATE_IGNORE_ISRIGID
       integer, INTENT(in) :: sdim,bfact
       integer, INTENT(in) :: nhalf0
       real(amrex_real), INTENT(in) :: EPS_SINGLE
@@ -21094,14 +21093,6 @@ contains
       endif
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
-       stop
-      endif
-      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-          (tessellate.eq.TESSELLATE_IGNORE_ISRIGID)) then
-       ! do nothing
-      else
-       print *,"expecting tessellate==TESSELLATE_FLUIDS or "
-       print *,"TESSELLATE_IGNORE_ISRIGID multi_get_volume_tetlist"
        stop
       endif
       if (nmax.lt.4) then
@@ -21158,7 +21149,7 @@ contains
           caller_id, &
           tid_in, &
           EPS_SINGLE, &
-          tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISRIGID
+          tessellate, &  !TESSELLATE_IGNORE_ISRIGID
           bfact,dx, &
           xsten0,nhalf0, &
           mofdata, &
@@ -21477,7 +21468,8 @@ contains
         continuous_mof, &
         bfact,dx, &
         normalize_tessellate, &  ! =TESSELLATE_FLUIDS
-        mofdata_plus,mofdatavalid_plus, &
+        mofdata_plus, &
+        mofdatavalid_plus, &
         sdim)
        !multi_get_area_pairs
       call make_vfrac_sum_ok_copy( &
@@ -21486,7 +21478,8 @@ contains
         continuous_mof, &
         bfact,dx, &
         normalize_tessellate, & ! =TESSELLATE_FLUIDS
-        mofdata_minus,mofdatavalid_minus, &
+        mofdata_minus, &
+        mofdatavalid_minus, &
         sdim)
 
       if ((tessellate_in.eq.TESSELLATE_ALL).or. &
@@ -21724,11 +21717,10 @@ contains
          ! of already initialized (subtracted) materials. 
          ! (i.e. materials with 1<=material_used(im)<=num_materials)
 
-         layer_flag=FLUIDS_LAYER
+         layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
          call tets_box_planes( &
            layer_flag, &
            continuous_mof, &
-           local_tessellate_in, & !TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISRIGID
            bfact,dx, &
            xsten0_minus,nhalf0, &
            xsten_thin,nhalf_thin, &
@@ -21773,7 +21765,6 @@ contains
             call multi_get_volume_tetlist( &
              tid_in, &
              EPS_FULL_WEAK, & !tolerance for "single material" criterion
-             local_tessellate_in, &  ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISRIGID
              bfact,dx, &
              xsten0_plus,nhalf0, &
              mofdataproject_plus, &
@@ -21874,7 +21865,6 @@ contains
            print *,"im_test,material_used ",im_test,material_used(im_test)
           enddo
           print *,"tessellate_in=",tessellate_in
-          print *,"local_tessellate_in=",local_tessellate_in
           do im_test=1,num_materials*ngeom_recon
            print *,"i,mofdatavalid_plus ",im_test,mofdatavalid_plus(im_test)
           enddo
@@ -22106,7 +22096,6 @@ contains
        else
         print *,"warning: voltemp invalid: ",voltemp
         print *,"tessellate_in=",tessellate_in
-        print *,"local_tessellate_in=",local_tessellate_in
         do im_test=1,num_materials*ngeom_recon
          print *,"i,mofdatavalid_plus ",im_test,mofdatavalid_plus(im_test)
         enddo

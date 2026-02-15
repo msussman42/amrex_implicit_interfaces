@@ -508,7 +508,7 @@ stop
 
       subroutine fort_isogrid( &
        tid, &
-       visual_tessellate_vfrac, &
+       visual_tessellate_vfrac, & !TESSELLATE_FLUIDS|ALL|ALL_RASTER|FLUIDS_ELA.
        recon,DIMS(recon), &
        xlo,dx, &
        mask,DIMS(mask), &
@@ -628,6 +628,7 @@ stop
        enddo
 
        if ((visual_tessellate_vfrac.eq.TESSELLATE_ALL).or. &
+           (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
            (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
@@ -652,7 +653,7 @@ stop
          ! EPS2
          call multi_get_volume_tessellate( &
           tid, &
-          visual_tessellate_vfrac, &
+          visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
           bfact, &
           dx,xsten,nhalf, &
           mofdata, &
