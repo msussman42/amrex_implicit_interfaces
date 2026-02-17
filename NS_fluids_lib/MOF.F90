@@ -14338,7 +14338,7 @@ contains
          print *,"is_masked invalid MOF.F90: ",im,is_masked(im)
          stop
         endif
-      enddo ! im
+      enddo ! do im=1,num_materials
 
       if (single_material_takes_all.eq.1) then
         uncaptured_volume_vof=zero
@@ -14426,6 +14426,7 @@ contains
           endif 
          else
           print *,"is_masked invalid MOF.F90: ",is_masked
+          print *,"im=",im
           stop
          endif
 
@@ -14455,8 +14456,10 @@ contains
           print *,"num_materials=",num_materials
           stop
          endif
+
          if (is_masked(critical_material).ne.0) then
           print *,"is_masked invalid MOF.F90: ",is_masked
+          print *,"critical_material=",critical_material
           stop
          endif
 
@@ -14588,12 +14591,14 @@ contains
           enddo
           stop
          endif
+
          if (is_masked(critical_material).ne.0) then
           print *,"is_masked invalid MOF.F90: ",is_masked
           stop
          endif
           
          vofcomp=(critical_material-1)*ngeom_recon+1
+
          test_order=NINT(mofdata(vofcomp+sdim+1))
          if (test_order.ne.0) then
           print *,"test_order invalid"
@@ -14624,10 +14629,12 @@ contains
 
          if ((mat_before.ge.1).and. &
              (mat_before.le.num_materials)) then
+
            if (is_masked(mat_before).ne.0) then
             print *,"is_masked invalid MOF.F90: ",is_masked
             stop
            endif
+
            vofcomp_before=(mat_before-1)*ngeom_recon+1
            do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
             do dir=1,sdim
@@ -14677,7 +14684,8 @@ contains
          enddo
 
          if ((single_material_takes_all.eq.1).and. &
-             (mat_before.ge.1).and.(mat_before.le.num_materials)) then
+             (mat_before.ge.1).and. &
+             (mat_before.le.num_materials)) then
 
           mofdata(vofcomp+sdim+1)=ordermax+1
 
@@ -14746,6 +14754,12 @@ contains
           print *,"single_material_takes_all or mat_before invalid"
           stop
          endif
+
+         if (is_masked(critical_material).ne.0) then
+          print *,"is_masked invalid MOF.F90: ",is_masked
+          stop
+         endif
+
       else
         print *,"distmax invalid: ",distmax
         stop
@@ -16111,64 +16125,8 @@ contains
       return
       end subroutine pop_order_stack
 
-
-
-!
-! continuous_mof=STANDARD_MOF (MOF )
-!  regular MOF  minimize E=||x_ij^ref-x_ij^derived||
-!  subject to the constraint that F_ij^ref=F_ij^derived
-!   x_ij^ref=reference centroid in cell ij
-!   x_ij^derived=derived centroid in cell ij for a given slope and
-!     intercept.
-!   F_ij^ref=reference volume fraction in cell ij
-!   F_ij^derived=derived volume fraction in cell ij for a given slope and
-!     intercept.   
-!continuous_mof==CMOF_X (CMOF X)
-!  CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
-!  subject to the constraint that F_ij^ref=F_ij^derived
-!   xS_ij^ref=reference centroid in cell stencil i'=i-1,..,i+1,
-!     j'=j-1,..,j+1
-!   xS_ij^derived=derived centroid in cell stencil for a given slope and
-!     intercept. 
-!   F_ij^ref=reference volume fraction in cell
-!   F_ij^derived=derived volume fraction in cell for a given
-!     slope and intercept.
-!continuous_mof=CMOF_F_AND_X (CMOF X and F)
-!  same as continuous_mof==CMOF_X except that:
-!   F_ij^ref=reference volume fraction in "super" cell
-!   F_ij^derived=derived volume fraction in "super" cell for a given
-!     slope and intercept.
-
-! normal points from light to dark   phi=n dot (x-x0) + intercept
-! vof, ref centroid, order,slope,intercept  x num_materials
-! ref centroid,multi_centroidA relative to supercell centroid(not cell center).
-! xcell is cell center (not cell centroid)
-!
-! if continuous_mof==CMOF_X:
-!  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmofsten)
-!  vfrac    : center cell
-!
-! RIGID materials are always reconstructed using standard MOF.
-!
-! xtetlist is workspace data (use POLYGON_LIST_MAX)
-!  i.e. nmax=POLYGON_LIST_MAX
-! mofdata:  num_materials*ngeom_recon elements; for each material:
-!   vfrac (input), ref centroid (input), order (output), slope (output),
-!   intercept (output)
-!
-! use_ls_data==1 => 
-!  1. LS_stencil is copied to ls_mof
-!  2. ls_mof is used to create initial guess
-!     in which "subroutine find_cut_geom_slope_CLSVOF" (reconstruction in
-!     a box) returns a normal
-!     (lsnormal) given ls_mof.
-!
-! COMMENTS ON THE order:
-! if the material is non-deforming, then its' order is always 1.
-! if just one fluid material occupies a cell, then the order for that
-! fluid is 1, and all other orders are 0.
-
       subroutine multimaterial_MOF( &
+        tessellate, &
         tid_in, &
         bfact,dx, &
         xsten0,nhalf0, &
@@ -16194,6 +16152,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT (IN) :: tessellate
       integer, INTENT (IN) :: tid_in
       integer, INTENT (IN) :: bfact,nhalf0
       integer, INTENT (IN) :: use_ls_data
@@ -16319,7 +16278,6 @@ contains
       integer, parameter :: continuous_mof_rigid=STANDARD_MOF
       integer nlist_vof,nlist_cen
 
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer, PARAMETER :: nMAT_OPT_standard=1
       integer, PARAMETER :: use_initial_guess=0
       integer :: nDOF_standard
@@ -16359,12 +16317,83 @@ contains
       nEQN_standard=sdim
 
       do imaterial=1,num_materials
+
        is_rigid_local(imaterial)=is_rigid(imaterial)
        is_elastic_local(imaterial)=is_elastic(imaterial)
+
+       if (is_rigid_local(imaterial).eq.1) then
+        ! order_algorithm is declared in mofdata.H
+        if (order_algorithm(imaterial).eq.1) then
+         !do nothing
+        else
+         print *,"expecting order_algorithm(imaterial)=1 if is_rigid"
+         stop
+        endif
+       else if (is_rigid_local(imaterial).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid_local invalid: ",imaterial,is_rigid_local(imaterial)
+        stop
+       endif
+
+       if (is_elastic_local(imaterial).eq.1) then
+        ! order_algorithm is declared in mofdata.H
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.num_materials-1)) then
+         !do nothing
+        else
+         print *,"expecting order_algorithm(imaterial)>=1 if is_elastic"
+         print *,"and expecting order_algorithm(imaterial)<=nmat-1"
+         stop
+        endif
+       else if (is_elastic_local(imaterial).eq.0) then
+        !do nothing
+       else
+        print *,"is_elastic_local invalid: ", &
+          imaterial,is_elastic_local(imaterial)
+        stop
+       endif
+
+       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+        if (continuous_mof.eq.STANDARD_MOF) then
+         !do nothing
+        else
+         print *,"expecting continuous_mof=STANDARD_MOF"
+         stop
+        endif
+        if (use_ls_data.eq.0) then
+         !do nothing
+        else
+         print *,"expecting use_ls_data==0"
+         stop
+        endif
+        is_rigid_local(im)=0
+        is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        if (continuous_mof.eq.STANDARD_MOF) then
+         !do nothing
+        else
+         print *,"expecting continuous_mof=STANDARD_MOF"
+         stop
+        endif
+        if (use_ls_data.eq.0) then
+         !do nothing
+        else
+         print *,"expecting use_ls_data==0"
+         stop
+        endif
+        is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_FLUIDS) then
+        ! do nothing; fluids tessellate, rigid|elastic embedded.
+       else
+        print *,"tessellate invalid8 make_vfrac_sum_ok_base: ",tessellate
+        stop
+       endif
+
       enddo ! imaterial=1..num_materials
 
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid135 multimaterial_mof ",bfact
        stop
       endif
 
@@ -16549,7 +16578,7 @@ contains
         nhalf0, &
         continuous_mof, & 
         bfact,dx, &
-        tessellate, &  ! =TESSELLATE_FLUIDS
+        tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
         mofdata, &
         sdim)
 
@@ -16980,7 +17009,7 @@ contains
         stop
        endif
 
-      enddo !imaterial=1,num_materials
+      enddo !imaterial=1,num_materials (loop to reconstruct is_rigid materials)
 
       remaining_vfrac=zero
       single_material=0
@@ -17451,6 +17480,8 @@ contains
       else if ((single_material_elastic.eq.0).or. &
                (remaining_vfrac_elastic.ge.EPS_UNCAPTURED)) then
 
+       if (tessellate.eq.TESSELLATE_FLUIDS) then
+
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
@@ -17481,7 +17512,17 @@ contains
           cmofsten, &
           sdim)
          imaterial_count=imaterial_count+1
-        enddo
+        enddo !while imaterial_count<=num_materials and 
+              !      uncaptured_volume_vof>0.0
+
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+        !do nothing
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        !do nothing
+       else
+        print *,"tessellate invalid: ",tessellate
+        stop
+       endif
 
       else
        print *,"single_material_elastic or remaining_vfrac_elastic invalid: ", &
@@ -17732,7 +17773,7 @@ contains
             sdim)
 
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof invalid: ",continuous_mof
            stop
           endif
 
