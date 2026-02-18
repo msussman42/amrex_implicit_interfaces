@@ -312,6 +312,7 @@ stop
         enddo
 
         call multimaterial_MOF( &
+          tessellate, & !=TESSELLATE_FLUIDS
           tid_in, &
           bfact_coarse,dxc,xsten,nhalf, &
           mof_verbose, &
@@ -1135,6 +1136,7 @@ stop
        enddo
 
        call multimaterial_MOF( &
+         tessellate, & !=TESSELLATE_FLUIDS
          tid_in, &
          bfact_fine,dxf,xstenfine,nhalf, &
          mof_verbose, &

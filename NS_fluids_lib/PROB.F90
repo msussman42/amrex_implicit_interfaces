@@ -20016,6 +20016,7 @@ end subroutine RatePhaseChange
         enddo
 
         call multimaterial_MOF( &
+         tessellate, & ! =TESSELLATE_FLUIDS
          nucleate_in%tid, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
@@ -29966,6 +29967,7 @@ end subroutine initialize2d
          enddo
 
          call multimaterial_MOF( &
+          tessellate, &  ! =TESSELLATE_FLUIDS
           tid_in, &
           bfact,dx,xsten,nhalf, &
           mof_verbose, & !=0

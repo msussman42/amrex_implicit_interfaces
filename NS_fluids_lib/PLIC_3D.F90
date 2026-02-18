@@ -1027,6 +1027,7 @@ stop
               num_fluid_materials_in_stencil))) then
 
          call multimaterial_MOF( &
+          tessellate, & ! =TESSELLATE_FLUIDS
           tid_in, &
           bfact,dx, &
           xsten, &
@@ -1134,6 +1135,7 @@ stop
            !mofdata_super_vfrac: centroid super cell, vfrac super cell
 
           call multimaterial_MOF( &
+           tessellate, & ! =TESSELLATE_FLUIDS
            tid_in, &
            bfact,dx, &
            xsten, &
@@ -1307,6 +1309,7 @@ stop
           continuous_mof_parm=STANDARD_MOF
 
           call multimaterial_MOF( &
+           tessellate, & ! =TESSELLATE_FLUIDS
            tid_in, &
            bfact,dx, &
            xsten, &
@@ -1360,6 +1363,7 @@ stop
            !mofdata_super_vfrac: centroid super cell, vfrac super cell
 
           call multimaterial_MOF( &
+           tessellate, & ! =TESSELLATE_FLUIDS
            tid_in, &
            bfact,dx, &
            xsten, &
