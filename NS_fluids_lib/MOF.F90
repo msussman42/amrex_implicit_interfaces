@@ -6457,7 +6457,6 @@ end subroutine volume_sanity_check
           sdim)
          if (nlist_local+nlist.gt.nmax) then
           print *,"too many tetrahedrons in tets_box_planes_super"
-          print *,"tessellate=",tessellate
           print *,"bfact=",bfact
           print *,"tid_in=",tid_in
           print *,"nlist_local=",nlist_local
@@ -16413,8 +16412,8 @@ contains
          print *,"expecting use_ls_data==0"
          stop
         endif
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
+        is_rigid_local(imaterial)=0
+        is_elastic_local(imaterial)=0
        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
         if (continuous_mof.eq.STANDARD_MOF) then
          !do nothing
@@ -16428,7 +16427,7 @@ contains
          print *,"expecting use_ls_data==0"
          stop
         endif
-        is_elastic_local(im)=0
+        is_elastic_local(imaterial)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing; fluids tessellate, rigid|elastic embedded.
        else
@@ -21965,9 +21964,6 @@ contains
          else
           print *,"warning critical_material invalid 19694:",critical_material
           do im_test=1,num_materials
-           print *,"im_test,is_rigid_local ",im_test,is_rigid_local(im_test)
-          enddo
-          do im_test=1,num_materials
            print *,"im_test,material_used ",im_test,material_used(im_test)
           enddo
           print *,"tessellate_in=",tessellate_in
@@ -23839,7 +23835,6 @@ contains
          !do nothing
         else
          print *,"not all volume accounted for multi_get_volume_grid_simple"
-         print *,"caller_id=",caller_id
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
