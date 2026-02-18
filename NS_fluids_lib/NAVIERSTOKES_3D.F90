@@ -14116,6 +14116,7 @@ END SUBROUTINE SIMP
                enddo
 
                call multimaterial_MOF( &
+                tessellate, & !TESSELLATE_FLUIDS
                 tid_in, &
                 bfact_f,dxf,xstenfine,nhalf, &
                 mof_verbose, & ! =0
@@ -14142,7 +14143,8 @@ END SUBROUTINE SIMP
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &
                 xstengrid,nhalfgrid, &
-                multi_volume,multi_cen, &
+                multi_volume, &
+                multi_cen, &
                 geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &

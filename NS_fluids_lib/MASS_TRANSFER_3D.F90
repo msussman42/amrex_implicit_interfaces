@@ -5514,7 +5514,9 @@ stop
             enddo ! u_im=1..num_materials
 
              ! LS=n dot (x-x0)+intercept
+            tessellate=TESSELLATE_FLUIDS
             call multimaterial_MOF( &
+             tessellate, & !TESSELLATE_FLUIDS
              tid, &
              bfact,dx,u_xsten_updatecell,nhalf, &
              mof_verbose, & !=0

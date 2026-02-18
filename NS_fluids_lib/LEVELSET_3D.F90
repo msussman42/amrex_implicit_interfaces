@@ -22335,6 +22335,7 @@ stop
             mof_verbose=0
 
             call multimaterial_MOF( &
+             tessellate, & !TESSELLATE_FLUIDS
              tid, &
              bfact,dx,xsten,nhalf, &
              mof_verbose, &
