@@ -19812,10 +19812,16 @@ end subroutine RatePhaseChange
         nucleate_in%pres,1,-1)
       call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%pres_eos,1,-1)
+
       call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%Snew,1,-1)
       call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%LSnew,1,-1)
+
+      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+        nucleate_out%Snew,1,-1)
+      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+        nucleate_out%LSnew,1,-1)
 
       if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
