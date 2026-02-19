@@ -7483,6 +7483,8 @@ stop
       dist_closest=-1.0d0
       do i=1,n_sites
        cur_dist=zero
+        !if radsite<=0.0 then 
+        !site "i" is not activated.
        call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite,temperature,i)
        do dir=1,SDIM
         cur_dist=cur_dist+(xpoint(dir)-x_site(dir))**2
@@ -7847,7 +7849,8 @@ stop
              if (fort_material_type(im_liquid).eq.0) then
               !do nothing
              else
-              print *,"expecting incompressible liquid"
+              print *,"expecting incompressible liquid: ",im_liquid, &
+                 fort_material_type
               stop
              endif
 
@@ -7891,6 +7894,10 @@ stop
 
                 !delta_ml_init is the initial value of microlayer thickness 
                 !units: meters
+                !To be more precise:
+                !When the bubble interface is advancing then
+                !we need \delta_{0} which is the distance of the current 
+                !cell to the nucleation site.
                 call get_delta_ml_init(delta_ml_init,xpoint)
 
                 delta_ml_temp=(area_new-area_old)*delta_ml_init 

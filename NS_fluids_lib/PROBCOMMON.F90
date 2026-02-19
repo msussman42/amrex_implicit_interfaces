@@ -84,6 +84,7 @@ module probcommon_module_types
        real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: visco
       end type user_defined_sum_int_type
 
+       !nucleation_parm_type_inout is declared in GLOBALUTIL.F90
       type nucleation_parm_type_input
        integer :: tid
        integer :: local_freezing_model
