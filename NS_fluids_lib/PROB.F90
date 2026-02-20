@@ -120,7 +120,7 @@ stop
       integer im_primary,im
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
-
+FIX ME
       if (tessellate.eq.TESSELLATE_FLUIDS) then
        call get_primary_material_VFRAC(vof,im_primary)
       else if ((tessellate.eq.TESSELLATE_ALL).or. &

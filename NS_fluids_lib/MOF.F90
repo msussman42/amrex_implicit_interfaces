@@ -27481,37 +27481,40 @@ contains
 
        ! called from: get_mach_number, 
        !        fort_derturbvisc, fort_derconductivity
-      subroutine get_primary_material_VFRAC(VFRAC,im_primary)
+      subroutine get_primary_material_VFRAC(VFRAC,im_primary,tessellate)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
       IMPLICIT NONE
-
+FIX ME
       real(amrex_real), INTENT(in) :: VFRAC(num_materials)
       integer, INTENT(out) :: im_primary
+      integer, INTENT(in) :: tessellate
       integer im
       integer im_crit_fluid,im_crit_solid
       real(amrex_real) sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         is_rigid_local(im)=0
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
+        is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
+        ! do nothing; fluids tessellate, rigid|elastic embedded.
        else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
+        is_rigid_local(im)=0
+        is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
+        is_rigid_local(im)=0
+        is_elastic_local(im)=0
        else
-        print *,"tessellate invalid39"
+        print *,"tessellate invalid get_primary_material_VFRAC: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -27892,6 +27895,7 @@ contains
 
       end subroutine get_tertiary_material
 
+      FIX ME
 
         ! sort from largest volume fraction to smallest
         ! FSI_exclude=1 => only consider fluid materials.
