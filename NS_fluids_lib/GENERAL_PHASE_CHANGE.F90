@@ -563,6 +563,7 @@ real(amrex_real) :: diameter_blob
 
     if ((axis_dir.eq.0).and. &
         (num_materials.eq.3).and. &
+        (is_elastic(3).eq.0).and. &
         (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
      if (LS(1).gt.-distsolid) then
       LS(1)=-distsolid

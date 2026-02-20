@@ -9348,6 +9348,11 @@ void NavierStokes::VOF_Recon_ALL(
   } // for (int ilev=level;ilev<=finest_level;ilev++)
 
 #ifdef AMREX_PARTICLES
+  if (material_extend_velocity_flag==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting material_extend_velocity_flag==0 if particles");
+
   int local_redistribute_main=0;
   int save_slab_step=slab_step;
   int save_project_slab_step=project_slab_step;

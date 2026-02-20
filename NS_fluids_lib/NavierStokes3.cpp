@@ -939,6 +939,11 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  } else
   amrex::Error("cannot do both particles and LSA");
 
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting material_extend_velocity_flag==0 if particles");
+
  if (local_smoothing_flag!=0)
   amrex::Error("expecting local_smoothing_flag==0 if particles");
  if (im_extension==-1) {
