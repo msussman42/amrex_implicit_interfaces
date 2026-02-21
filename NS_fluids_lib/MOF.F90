@@ -13819,7 +13819,8 @@ contains
       integer vofcomp_single
       integer, INTENT(in) :: imaterial_count
       real(amrex_real) distmax
-      integer ordermax,order_min
+      integer ordermax
+      integer order_min
       integer critical_material
       real(amrex_real) volcut_vof,volcell_vof
       real(amrex_real) volcut_cen,volcell_cen
@@ -13892,7 +13893,10 @@ contains
         endif
 
        else if (layer_flag.eq.NULL_LAYER) then
-        is_masked(im)=1
+
+        print *,"layer_flag invalid in individual_MOF"
+        stop
+
        else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
         is_masked(im)=is_rigid_local(im)
 
@@ -13904,33 +13908,14 @@ contains
         endif
 
        else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
-        if ((is_rigid_local(im).eq.1).or. &
-            (is_elastic_local(im).eq.1)) then
-         is_masked(im)=0
-        else if ((is_rigid_local(im).eq.0).and. &
-                 (is_elastic_local(im).eq.0)) then
-         is_masked(im)=1
-        else
-         print *,"is_rigid_local or is_elastic_local invalid"
-         stop
-        endif
 
-        if (continuous_mof.eq.STANDARD_MOF) then
-         !do nothing
-        else
-         print *,"expecting continuous_mof==STANDARD_MOF"
-         stop
-        endif
+        print *,"layer_flag invalid in individual_MOF"
+        stop
 
        else if (layer_flag.eq.RIGID_LAYER) then
-        is_masked(im)=1-is_rigid_local(im)
 
-        if (continuous_mof.eq.STANDARD_MOF) then
-         !do nothing
-        else
-         print *,"expecting continuous_mof==STANDARD_MOF"
-         stop
-        endif
+        print *,"layer_flag invalid in individual_MOF"
+        stop
 
        else if (layer_flag.eq.ELASTIC_LAYER) then
         is_masked(im)=1-is_elastic_local(im)
@@ -14383,7 +14368,7 @@ contains
          print *,"is_masked invalid MOF.F90: ",im,is_masked(im)
          stop
         endif
-      enddo ! do im=1,num_materials
+      enddo ! do im=1,num_materials (init single_material,crit_mat,distmax)
 
       if (single_material_takes_all.eq.1) then
         uncaptured_volume_vof=zero
@@ -14392,6 +14377,7 @@ contains
       else 
         print *,"bust individual_MOF"
         print *,"sdim,num_materials ",sdim,num_materials
+        print *,"single_material_takes_all ",single_material_takes_all
         stop
       endif
         
@@ -14609,18 +14595,20 @@ contains
            if (is_masked(im).eq.1) then
             ! do nothing
            else if (is_masked(im).eq.0) then
-            if ((test_order.eq.0).and.(test_vfrac.ge.max_vfrac)) then
+            if ((test_order.eq.0).and. &
+                (test_vfrac.ge.max_vfrac)) then
              max_vfrac=test_vfrac
              critical_material=im
             endif
            else
-            print *,"is_masked invalid"
+            print *,"is_masked invalid: ",im,is_masked
             stop
            endif
           enddo ! im=1..num_materials
         
          else 
-          print *,"single_material_takes_all invalid"
+          print *,"single_material_takes_all invalid: ", &
+            single_material_takes_all
           stop
          endif
 
@@ -14639,6 +14627,7 @@ contains
 
          if (is_masked(critical_material).ne.0) then
           print *,"is_masked invalid MOF.F90: ",is_masked
+          print *,"critical_material=",critical_material
           stop
          endif
           
@@ -14646,7 +14635,7 @@ contains
 
          test_order=NINT(mofdata(vofcomp+sdim+1))
          if (test_order.ne.0) then
-          print *,"test_order invalid"
+          print *,"test_order invalid: ",critical_material,test_order
           stop
          endif
 
@@ -14668,7 +14657,7 @@ contains
          else if (ordermax.eq.0) then
           ! do nothing
          else
-          print *,"ordermax invalid"
+          print *,"ordermax invalid: ",ordermax
           stop
          endif
 
@@ -14677,6 +14666,7 @@ contains
 
            if (is_masked(mat_before).ne.0) then
             print *,"is_masked invalid MOF.F90: ",is_masked
+            print *,"mat_before=",mat_before
             stop
            endif
 
@@ -14720,7 +14710,7 @@ contains
            endif
            intercept=mofdata(vofcomp)-half
          else
-          print *,"mat_before invalid"
+          print *,"mat_before invalid: ",mat_before
           stop
          endif
  
@@ -14783,7 +14773,8 @@ contains
           else if (single_material_takes_all.eq.0) then
            ! do nothing
           else
-           print *,"single material takes all invalid"
+           print *,"single material takes all invalid: ", &
+            single_material_takes_all
            stop
           endif
   
@@ -14797,6 +14788,8 @@ contains
           enddo 
          else
           print *,"single_material_takes_all or mat_before invalid"
+          print *,"single_material_takes_all=",single_material_takes_all
+          print *,"mat_before=",mat_before
           stop
          endif
 
@@ -17064,13 +17057,41 @@ contains
       single_material_elastic=0
       num_materials_cell_elastic=0
 
+       ! loop to check if a fluid(local) or elastic(local) 
+       ! material takes the remaining 
+       ! space.
       do imaterial=1,num_materials
 
        vofcomp=(imaterial-1)*ngeom_recon+1
 
        if (is_rigid_local(imaterial).eq.1) then
-        !do nothing
+
+        if (tessellate.eq.TESSELLATE_FLUIDS) then
+         !do nothing
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+         !do nothing
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+         print *,"expecting is_rigid_local=0"
+         stop
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
+
        else if (is_elastic_local(imaterial).eq.1) then
+
+        if (tessellate.eq.TESSELLATE_FLUIDS) then
+         !do nothing
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+         print *,"expecting is_elastic_local=0"
+         stop
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+         print *,"expecting is_elastic_local=0"
+         stop
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
 
         if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
 
@@ -17147,6 +17168,16 @@ contains
        else if ((is_rigid_local(imaterial).eq.0).and. &
                 (is_elastic_local(imaterial).eq.0)) then
 
+        if (tessellate.eq.TESSELLATE_FLUIDS) then
+         !do nothing
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+         !do nothing
+        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+         !do nothing
+        else
+         print *,"tessellate invalid"
+         stop
+        endif
         if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
 
          if (single_material.eq.0) then
@@ -17488,7 +17519,8 @@ contains
        stop
       endif
 
-      if ((single_material_elastic.gt.0).and. &
+      if ((single_material_elastic.ge.1).and. &
+          (single_material_elastic.le.num_materials).and. &
           (remaining_vfrac_elastic.le.EPS_UNCAPTURED)) then
 
        if (is_rigid_local(single_material_elastic).eq.0) then
@@ -20351,6 +20383,8 @@ contains
          else if ((single_material.eq.0).or. &
                   (remaining_vfrac.ge.EPS_SINGLE)) then
 
+           !first tag all the elastic materials that have been 
+           !processed.
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
            mofdatalocal(vofcomp+sdim+1)=zero ! order=0
@@ -20831,8 +20865,21 @@ contains
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
            num_processed_total=num_processed_fluid
+           if ((num_processed_elastic.eq.0).and. &
+               (num_processed_solid.eq.0)) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic|solid==0"
+            stop
+           endif
           else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
            num_processed_total=num_processed_fluid
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic==0"
+            stop
+           endif
           else
            print *,"tessellate invalid18: ",tessellate
            stop
@@ -21066,8 +21113,21 @@ contains
              num_processed_fluid+num_processed_elastic
            else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
             num_processed_total=num_processed_fluid
+            if ((num_processed_elastic.eq.0).and. &
+                (num_processed_solid.eq.0)) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic|solid==0"
+             stop
+            endif
            else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
             num_processed_total=num_processed_fluid
+            if (num_processed_elastic.eq.0) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic==0"
+             stop
+            endif
            else
             print *,"tessellate invalid19:",tessellate
             stop
@@ -23590,8 +23650,21 @@ contains
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
            num_processed_total=num_processed_fluid
+           if ((num_processed_elastic.eq.0).and. &
+               (num_processed_solid.eq.0)) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic|solid==0"
+            stop
+           endif
           else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
            num_processed_total=num_processed_fluid
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic==0"
+            stop
+           endif
           else
            print *,"tessellate invalid18: ",tessellate
            stop
@@ -23802,8 +23875,21 @@ contains
              num_processed_fluid+num_processed_elastic
            else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
             num_processed_total=num_processed_fluid
+            if ((num_processed_elastic.eq.0).and. &
+                (num_processed_solid.eq.0)) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic|solid==0"
+             stop
+            endif
            else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
             num_processed_total=num_processed_fluid
+            if (num_processed_elastic.eq.0) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic==0"
+             stop
+            endif
            else
             print *,"tessellate invalid19:",tessellate
             stop
@@ -25413,6 +25499,7 @@ contains
       integer im
       integer vofcomp
       real(amrex_real) volcell
+      real(amrex_real) volcell_compare
       real(amrex_real) cencell(sdim)
       integer dir
       real(amrex_real) vof_super(num_materials)
@@ -25497,6 +25584,43 @@ contains
       call Box_volumeFAST(bfact,dx, &
         xsten0,nhalf0, &
         volcell,cencell,sdim)
+
+      if (volcell.gt.zero) then
+       !do nothing
+      else
+       print *,"expecting volcell>0.0 ",volcell
+       stop
+      endif
+
+      volcell_compare=zero
+      do im=1,num_materials
+       vofcomp=(im-1)*ngeom_recon+1
+       if ((tessellate_in.eq.TESSELLATE_ALL).or. &
+           (tessellate_in.eq.TESSELLATE_ALL_RASTER)) then
+        volcell_compare=volcell_compare+multi_volume(im)
+       else if (tessellate_in.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        if (is_rigid(im).eq.1) then
+         !do nothing
+        else if (is_rigid(im).eq.0) then
+         volcell_compare=volcell_compare+multi_volume(im)
+        else
+         print *,"is_rigid(im) invalid ",im,is_rigid(im
+         stop
+        endif
+       else
+        print *,"tessellate_in invalid ",tessellate_in
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      if (abs(volcell-volcell_compare).le.EPS2*volcell) then
+       !do nothing
+      else
+       print *,"volcell or volcell_compare invalid: ", &
+         volcell,volcell_compare, &
+         (volcell-volcell_compare)/volcell 
+       stop
+      endif
 
       do im=1,num_materials*ngeom_recon
        mofdata_convert(im)=zero
