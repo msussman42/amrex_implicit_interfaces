@@ -114,6 +114,7 @@ stop
       integer im_primary
       integer im_local
       real(amrex_real) VFRAC(num_materials)
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
      
       nhalf=1
 
@@ -194,7 +195,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary)
+       call get_primary_material_VFRAC(VFRAC,im_primary,tessellate)
 
        do veldir=1,3
        do dir=1,3
@@ -375,7 +376,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary)
+         call get_primary_material_VFRAC(VFRAC,im_primary,tessellate)
          if (is_rigid(im_primary).eq.1) then
           near_solid=1
          else if (is_rigid(im_primary).eq.0) then
@@ -1366,6 +1367,7 @@ stop
       real(amrex_real) VFRAC(num_materials)
       integer near_interface
       real(amrex_real) nrm(SDIM)
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
       if (NS_sumdata_size.ne.IQ_TOTAL_SUM_COMP) then
@@ -1470,7 +1472,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary_center)
+       call get_primary_material_VFRAC(VFRAC,im_primary_center,tessellate)
 
        do dir=1,SDIM
         ii=0
@@ -1498,7 +1500,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary_side)
+         call get_primary_material_VFRAC(VFRAC,im_primary_side,tessellate)
 
          near_interface=0
          do dir_local=1,SDIM
@@ -1552,7 +1554,7 @@ stop
            vofcomp=(im_local-1)*ngeom_recon+1
            VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
           enddo
-          call get_primary_material_VFRAC(VFRAC,im_primary_probe)
+          call get_primary_material_VFRAC(VFRAC,im_primary_probe,tessellate)
           if ((is_rigid(im_primary_probe).eq.1).or. &
               (im_primary_probe.ne.im_parm)) then
            near_interface=0

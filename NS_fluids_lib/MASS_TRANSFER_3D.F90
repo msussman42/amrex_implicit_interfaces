@@ -83,7 +83,6 @@ stop
       real(amrex_real) :: T_I_interp(2)
       real(amrex_real) :: Y_I_interp(2)
       real(amrex_real) :: pres_I_interp(2)
-      real(amrex_real) :: vfrac_I(2) !solids and fluids tessellate
       real(amrex_real) :: dxprobe_target(2)
       integer :: interp_valid_flag(2)
       end type probe_out_type
@@ -884,6 +883,7 @@ stop
       integer cc_flag
       integer tsat_flag
       integer nsolve
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       real(amrex_real) Tsat
       real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
       real(amrex_real) local_data_out
@@ -946,8 +946,10 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
-       call get_primary_material_VFRAC(local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)))
+       call get_primary_material_VFRAC( &
+         local_VOF, &
+         im_primary_sten(D_DECL(i1,j1,k1)), &
+         tessellate) !TESSELLATE_FLUIDS
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -993,95 +995,6 @@ stop
 
       return 
       end subroutine interpfabFWEIGHT
-
-      subroutine interpfabVFRAC_tess( &
-       tid, &
-       bfact, &
-       level, &
-       finest_level, &
-       dx, &
-       xlo,x, &
-       lo,hi, &
-       recon, & ! fluids tess, solids overlay
-       dest)
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: tid
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: level
-      integer, INTENT(in) :: finest_level
-      real(amrex_real), INTENT(in) :: xlo(SDIM)
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(in) :: x(SDIM)
-      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
-      real(amrex_real), pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(out) :: dest(num_materials)
-
-      integer im
-      integer ic,jc,kc
-      integer, parameter :: nhalf=3
-      integer vofcomp
-      integer cell_index(SDIM)
-
-      real(amrex_real) mofdata(num_materials*ngeom_recon)
-      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) volcell
-      real(amrex_real) cencell(SDIM)
-      integer nmax
-      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
-      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
-      real(amrex_real) local_data_out
-
-      if (bfact.lt.1) then 
-       print *,"bfact invalid113"
-       stop
-      endif
-
-      nmax=POLYGON_LIST_MAX 
-      if ((nmax.lt.100).or.(nmax.gt.2000)) then
-       print *,"nmax invalid"
-       stop
-      endif
-      call containing_cell(bfact,dx,xlo,lo,x,cell_index)
-
-      ic=cell_index(1)
-      jc=cell_index(2)
-      kc=cell_index(SDIM)
-
-      call gridsten_level(xsten,ic,jc,kc,level,nhalf)
-      call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-        volcell,cencell,SDIM)
-
-      local_data_fab=>recon
-      do im=1,num_materials*ngeom_recon
-       call safe_data(ic,jc,kc,im,local_data_fab,local_data_out)
-       mofdata(im)=local_data_out
-      enddo
-
-       !EPS2
-      call multi_get_volume_tessellate( &
-        tid, &
-        local_tessellate, & ! =TESSELLATE_ALL_RASTER
-        bfact, &
-        dx, &
-        xsten,nhalf, &
-        mofdata, &
-        geom_xtetlist(1,1,1,tid+1), &
-        nmax, &
-        nmax, &
-        SDIM)
-
-      do im=1,num_materials
-       vofcomp=(im-1)*ngeom_recon+1
-       dest(im)=mofdata(vofcomp)
-      enddo
-
-      return 
-      end subroutine interpfabVFRAC_tess
-
 
       subroutine grad_probe_sanity(xI,xprobe,temp_probe,Tsat,LL)
       IMPLICIT NONE
@@ -1831,6 +1744,7 @@ stop
       integer cc_flag
       integer tsat_flag
       integer nsolve
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       DATA_FLOOR=zero
 
@@ -1896,8 +1810,10 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
-       call get_primary_material_VFRAC(local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)))
+       call get_primary_material_VFRAC( &
+         local_VOF, &
+         im_primary_sten(D_DECL(i1,j1,k1)), &
+         tessellate) !TESSELLATE_FLUIDS
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -1978,7 +1894,6 @@ stop
       integer dir
       integer mtype
       real(amrex_real) LSPROBE(num_materials)
-      real(amrex_real) F_tess(num_materials)
 
       if ((Y_I.ge.zero).and.(Y_I.le.one)) then
        ! do nothing
@@ -2001,20 +1916,6 @@ stop
        ! iprobe=2 dest
       POUT%interp_valid_flag(1)=0
       POUT%interp_valid_flag(2)=0
-
-       ! tessellating volume fractions at xI.
-      call interpfabVFRAC_tess( &
-       PROBE_PARMS%tid, &
-       PROBE_PARMS%bfact, &
-       PROBE_PARMS%level, &
-       PROBE_PARMS%finest_level, &
-       PROBE_PARMS%dx, &
-       PROBE_PARMS%xlo, &
-       PROBE_PARMS%xI, &
-       PROBE_PARMS%fablo, &
-       PROBE_PARMS%fabhi, &
-       PROBE_PARMS%recon, &
-       F_tess)
 
       do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
 
@@ -2043,8 +1944,6 @@ stop
         stop
        endif
   
-       POUT%vfrac_I(iprobe)=F_tess(im_target_probe(iprobe))
-
        mtype=fort_material_type(im_target_probe(iprobe))
        if ((mtype.ge.0).and. &
            (mtype.le.MAX_NUM_EOS)) then
@@ -5556,7 +5455,7 @@ stop
 
              tessellate=TESSELLATE_ALL_RASTER
              call multi_get_volumePOINT( &
-               tessellate, &
+               tessellate, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
@@ -5707,8 +5606,11 @@ stop
                    recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
                 enddo !im_local=1..num_materials
 
-                call get_primary_material_VFRAC(local_VOF, &
-                  im_primary_sten(D_DECL(i1,j1,k1)))
+                tessellate=TESSELLATE_FLUIDS
+                call get_primary_material_VFRAC( &
+                  local_VOF, &
+                  im_primary_sten(D_DECL(i1,j1,k1)), &
+                  tessellate) !TESSELLATE_FLUIDS
 
                 do udir=1,SDIM
                  XC_sten(D_DECL(i1,j1,k1),udir)= &
@@ -6085,7 +5987,7 @@ stop
 
               tessellate=TESSELLATE_ALL_RASTER
               call multi_get_volumePOINT( &
-               tessellate, &
+               tessellate, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
@@ -6094,7 +5996,7 @@ stop
 
               tessellate=TESSELLATE_ALL_RASTER
               call multi_get_volumePOINT( &
-                tessellate, &
+                tessellate, & !TESSELLATE_ALL_RASTER
                 bfact,dx, &
                 u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                 mofdata_new, &

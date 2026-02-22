@@ -27221,6 +27221,7 @@ contains
 !   option should never be used)
 ! tessellate==TESSELLATE_ALL_RASTER => same as tessellate==TESSELATE_FLUIDS if fluids dominate cell.
 ! in: MOF_routines_module
+FIX ME
       subroutine multi_get_volumePOINT( &
        tessellate, &
        bfact,dx, &
@@ -27611,13 +27612,19 @@ contains
       use global_utility_module
  
       IMPLICIT NONE
-FIX ME
+
       real(amrex_real), INTENT(in) :: VFRAC(num_materials)
       integer, INTENT(out) :: im_primary
       integer, INTENT(in) :: tessellate
       integer im
-      integer im_crit_fluid,im_crit_solid
-      real(amrex_real) sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
+      integer im_crit_fluid,im_crit_solid,im_crit_elastic
+      real(amrex_real) sum_vfrac_fluid
+      real(amrex_real) sum_vfrac_solid
+      real(amrex_real) sum_vfrac_elastic
+      real(amrex_real) crit_vfrac_fluid
+      real(amrex_real) crit_vfrac_solid
+      real(amrex_real) crit_vfrac_elastic
+      real(amrex_real) VOFSUM
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
 
@@ -27645,8 +27652,16 @@ FIX ME
 
       im_crit_fluid=0
       im_crit_solid=0
+      im_crit_elastic=0
+
       sum_vfrac_solid=zero
+      sum_vfrac_elastic=zero
       sum_vfrac_fluid=zero
+
+      crit_vfrac_solid=zero
+      crit_vfrac_elastic=zero
+      crit_vfrac_fluid=zero
+
       VOFSUM=zero
 
       do im=1,num_materials
@@ -27669,8 +27684,22 @@ FIX ME
          endif
         endif
         sum_vfrac_solid=sum_vfrac_solid+VFRAC(im)
+        crit_vfrac_solid=VFRAC(im_crit_solid)
 
-       else if (is_rigid_local(im).eq.0) then
+       else if (is_elastic_local(im).eq.1) then
+
+        if (im_crit_elastic.eq.0) then
+         im_crit_elastic=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_elastic)) then
+          im_crit_elastic=im
+         endif
+        endif
+        sum_vfrac_elastic=sum_vfrac_elastic+VFRAC(im)
+        crit_vfrac_elastic=VFRAC(im_crit_elastic)
+
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.0)) then
 
         if (im_crit_fluid.eq.0) then
          im_crit_fluid=im
@@ -27680,9 +27709,12 @@ FIX ME
          endif
         endif
         sum_vfrac_fluid=sum_vfrac_fluid+VFRAC(im)
+        crit_vfrac_fluid=VFRAC(im_crit_fluid)
 
        else
-        print *,"is_rigid invalid MOF.F90"
+        print *,"is_rigid_local or is_elastic_local invalid MOF.F90"
+        print *,"is_rigid_local=",is_rigid_local
+        print *,"is_elastic_local=",is_elastic_local
         stop
        endif
        VOFSUM=VOFSUM+VFRAC(im)
@@ -27692,23 +27724,38 @@ FIX ME
        print *,"sum_vfrac_fluid invalid"
        print *,"put breakpoint here to see caller"
        print *,"sum_vfrac_fluid=",sum_vfrac_fluid
+       print *,"sum_vfrac_elastic=",sum_vfrac_elastic
        print *,"sum_vfrac_solid=",sum_vfrac_solid
+       print *,"crit_vfrac_fluid=",crit_vfrac_fluid
+       print *,"crit_vfrac_elastic=",crit_vfrac_elastic
+       print *,"crit_vfrac_solid=",crit_vfrac_solid
        print *,"im_crit_fluid=",im_crit_fluid
+       print *,"im_crit_elastic=",im_crit_elastic
        print *,"im_crit_solid=",im_crit_solid
        stop
       endif
-      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid).gt.EPS3) then
-       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid
+      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid-sum_vfrac_elastic).gt. &
+          EPS3) then
+       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid,
+         sum_vfrac_elastic
        stop
       endif
       if ((im_crit_fluid.lt.1).or. &
           (im_crit_fluid.gt.num_materials)) then
-       print *,"im_crit_fluid invalid"
+       print *,"im_crit_fluid invalid: ",im_crit_fluid
        stop
       endif
 
       if (sum_vfrac_solid.ge.half) then
        im_primary=im_crit_solid
+      else if (sum_vfrac_elastic.ge.half) then
+       im_primary=im_crit_elastic
+      else if (sum_vfrac_solid+sum_vfrac_elastic.ge.half) then
+       if (sum_vfrac_solid.ge.sum_vfrac_elastic) then
+        im_primary=im_crit_solid
+       else
+        im_primary=im_crit_elastic
+       endif
       else
        im_primary=im_crit_fluid
       endif

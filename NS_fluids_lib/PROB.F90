@@ -120,23 +120,20 @@ stop
       integer im_primary,im
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
-FIX ME
-      if (tessellate.eq.TESSELLATE_FLUIDS) then
-       call get_primary_material_VFRAC(vof,im_primary)
-      else if ((tessellate.eq.TESSELLATE_ALL).or. &
-               (tessellate.eq.TESSELLATE_ALL_RASTER)) then
-       im_primary=0
-       do im=1,num_materials
-        if (im_primary.eq.0) then
-         im_primary=im
-        else if (vof(im).gt.vof(im_primary)) then
-         im_primary=im
-        endif
-       enddo ! im 
+
+      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_ALL).or. &
+          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+       !do nothing
       else
-       print *,"tessellate invalid63(get_mach_number) ",tessellate
+       print *,"tessellate invalid in get_mach_number: ",tessellate
        stop
       endif
+
+      call get_primary_material_VFRAC( &
+       vof, &
+       im_primary, &
+       tessellate)
      
       if ((im_primary.lt.1).or.(im_primary.gt.num_materials)) then
        print *,"im_primary invalid"
@@ -192,6 +189,8 @@ FIX ME
       return
       end subroutine get_mach_number 
 
+       !called from fort_init_elasticmask_and_elasticmaskpart (GODUNOV_3D.F90)
+       !called from fort_tagexpansion (GODUNOV_3D.F90)
       subroutine get_elasticmask_and_elasticmaskpart( &
         im_elastic_map, &
         num_FSI_outer_sweeps, &
@@ -248,6 +247,7 @@ FIX ME
       real(amrex_real) dxmax
       real(amrex_real) :: def_thermal(num_materials)
       integer :: im_local
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer im_rigid_CL !get_elasticmask_and_elasticmaskpart
 
        ! see subroutine eval_face_coeff
@@ -323,7 +323,12 @@ FIX ME
       call get_dxmax(dx,bfact,dxmax)
 
       call get_primary_material(LS,im_primary)
-      call get_primary_material_VFRAC(VOF,im_primary_vof)
+
+      call get_primary_material_VFRAC( &
+       VOF, &
+       im_primary_vof, &
+       tessellate) !TESSELLATE_FLUIDS
+
       call get_secondary_material(LS,im_primary,im_secondary)
 
       if ((im_primary.ge.1).and. &
