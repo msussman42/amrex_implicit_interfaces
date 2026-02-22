@@ -1820,7 +1820,7 @@ contains
         call safe_data(isten,jsten,ksten,im,local_data_fab_LS,LS_sten(im))
        enddo
 
-       call get_primary_material(LS_sten,im_primary_sten)
+       call get_primary_material(LOW%dx,LS_sten,im_primary_sten)
        if (im_primary_sten.eq.im_fluid) then
         ! do nothing
        else if (im_primary_sten.eq.im_solid) then
@@ -30671,50 +30671,43 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
-subroutine get_primary_material(LS,im_primary)
+subroutine get_primary_material(dx,LS,im_primary)
 use probcommon_module
 
 IMPLICIT NONE
 
+real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: LS(num_materials)
 integer, INTENT(out) :: im_primary
 integer im,imtest
-integer, parameter :: tessellate=TESSELLATE_FLUIDS
 integer is_rigid_local(num_materials)
+integer is_elastic_local(num_materials)
+real(amrex_real) :: dist_cutoff
+
+dist_cutoff=dx(1)*EPS3
 
 do im=1,num_materials
  is_rigid_local(im)=is_rigid(im)
- if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-  is_rigid_local(im)=0
-  print *,"expecting tessellate==TESSELLATE_FLUIDS"
-  stop
- else if (tessellate.eq.TESSELLATE_FLUIDS) then
-  ! do nothing
- else if (tessellate.eq.TESSELLATE_ALL) then
-  print *,"expecting tessellate==TESSELLATE_FLUIDS"
-  stop
- else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-  print *,"expecting tessellate==TESSELLATE_FLUIDS"
-  stop
- else
-  print *,"tessellate invalid38: ",tessellate
-  stop
- endif
+ is_elastic_local(im)=is_elastic(im)
 enddo ! im=1..num_materials
 
 im_primary=0
+
 do im=1,num_materials
  if (is_rigid_local(im).eq.1) then
-  if (LS(im).ge.zero) then
-   if (im_primary.ne.0) then
-    print *,"cannot have two rigid materials in same place"
-    do imtest=1,num_materials
-     print *,"imtest,LS(imtest) ",imtest,LS(imtest)
-    enddo
+  if (LS(im).ge.-dist_cutoff) then
+   if (im_primary.eq.0) then
+    im_primary=im
+   else if ((im_primary.ge.1).and. &
+            (im_primary.le.num_materials)) then
+    if (LS(im).gt.LS(im_primary)) then
+     im_primary=im
+    endif
+   else
+    print *,"im_primary invalid: ",im_primary
     stop
    endif
-   im_primary=im
-  else if (LS(im).le.zero) then
+  else if (LS(im).le.-dist_cutoff) then
    ! do nothing
   else
    print *,"LS bust in get_primary_material: ",im,LS(im)
@@ -30731,6 +30724,36 @@ enddo !im=1..num_materials
 if (im_primary.eq.0) then
 
  do im=1,num_materials
+  if (is_elastic_local(im).eq.1) then
+   if (LS(im).ge.-dist_cutoff) then
+    if (im_primary.eq.0) then
+     im_primary=im
+    else if ((im_primary.ge.1).and. &
+             (im_primary.le.num_materials)) then
+     if (LS(im).gt.LS(im_primary)) then
+      im_primary=im
+     endif
+    else
+     print *,"im_primary invalid: ",im_primary
+     stop
+    endif
+   else if (LS(im).le.-dist_cutoff) then
+    ! do nothing
+   else
+    print *,"LS bust in get_primary_material: ",im,LS(im)
+    stop
+   endif
+  else if (is_elastic_local(im).eq.0) then
+   ! do nothing
+  else
+   print *,"is_elastic_local invalid GLOBALUTIL.F90: ",im,is_elastic_local(im)
+   stop
+  endif
+ enddo !im=1..num_materials
+
+ if (im_primary.eq.0) then
+
+  do im=1,num_materials
    if (im_primary.eq.0) then
     im_primary=im
    else if ((im_primary.ge.1).and.(im_primary.lt.im)) then
@@ -30739,7 +30762,7 @@ if (im_primary.eq.0) then
     else if (LS(im).le.LS(im_primary)) then
      ! do nothing
     else
-     print *,"LS bust in get_primary_material(2): ", &
+     print *,"LS bust in get_primary_material(dx,2): ", &
              im,im_primary,LS(im),LS(im_primary)
      stop
     endif
@@ -30747,14 +30770,25 @@ if (im_primary.eq.0) then
     print *,"im_primary invalid: ",im_primary
     stop
    endif
- enddo !im=1..num_materials
+  enddo !im=1..num_materials
+
+ else if ((im_primary.ge.1).and. &
+          (im_primary.le.num_materials).and. &
+          (is_elastic_local(im_primary).eq.1)) then
+  ! do nothing
+ else
+  print *,"is_elastic_local or im_primary invalid"
+  print *,"im_primary=",im_primary
+  print *,"is_elastic_local(im_primary)=",is_elastic_local(im_primary)
+  stop
+ endif
 
 else if ((im_primary.ge.1).and. &
          (im_primary.le.num_materials).and. &
          (is_rigid_local(im_primary).eq.1)) then
  ! do nothing
 else
- print *,"is_rigid or im_primary invalid"
+ print *,"is_rigid_local or im_primary invalid"
  print *,"im_primary=",im_primary
  print *,"is_rigid_local(im_primary)=",is_rigid_local(im_primary)
  stop

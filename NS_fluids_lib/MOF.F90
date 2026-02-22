@@ -27945,13 +27945,20 @@ FIX ME
       integer, INTENT(in) :: im_primary
       integer, INTENT(out) :: im_secondary
       integer im
+      integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
       else
-       print *,"im_primary invalid get_secondary_material"
+       print *,"im_primary invalid get_secondary_material: ",im_primary
        stop
       endif
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+      enddo ! im=1..num_materials
 
       im_secondary=0
       do im=1,num_materials
