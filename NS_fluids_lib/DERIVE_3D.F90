@@ -1035,7 +1035,7 @@ stop
          do im_local=1,num_materials
           LS_local(im_local)=lsdata(D_DECL(i,j,k),im_local)
          enddo
-         call get_primary_material(LS_local,im_primary)
+         call get_primary_material(dx,LS_local,im_primary)
          if (abs(LS_local(im_primary)).le.cutoff) then
           mu=mu*visc_coef_boundary_layer_factor
          else if (abs(LS_local(im_primary)).gt.cutoff) then
@@ -2584,7 +2584,7 @@ stop
            ! "im_test" is the material in which we want to 
            ! calculate all of the forces exerted by the other materials.
            ! "get_primary_material" declared in GLOBALUTIL.F90
-          call get_primary_material(ls_sort,im_primary)
+          call get_primary_material(dx,ls_sort,im_primary)
 
           if (im_primary.eq.im_test) then
            ! do nothing
@@ -2640,7 +2640,7 @@ stop
              do im=1,num_materials
               ls_side(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
              enddo
-             call get_primary_material(ls_side,im_side)
+             call get_primary_material(dx,ls_side,im_side)
 
              if (im_side.eq.im_test) then
 
@@ -2724,7 +2724,7 @@ stop
                  ls_visc(im)= &
                     levelpc(D_DECL(i_side_visc,j_side_visc,k_side_visc),im)
                 enddo
-                call get_primary_material(ls_visc,im_visc)
+                call get_primary_material(dx,ls_visc,im_visc)
                 if (is_rigid(im_visc).eq.1) then
 
                  partid=0

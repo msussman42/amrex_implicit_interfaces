@@ -743,7 +743,7 @@ if ((istate.ge.1).and. &
    local_bcflag,nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- call get_primary_material(LS,im_crit)
+ call get_primary_material(dx,LS,im_crit)
 
  do im_loop=1,num_materials
   if (is_CONE3D_overlay(num_materials,im_loop).eq.1) then

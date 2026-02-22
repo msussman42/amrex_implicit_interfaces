@@ -237,7 +237,7 @@ stop
 
          ! the fluid cells closest to the substrate, but not
          ! in the substrate, have the most weight.
-         call get_primary_material(LS_virtual,im_primary_sub_stencil)
+         call get_primary_material(CP%dx,LS_virtual,im_primary_sub_stencil)
 
          if (is_rigid(im_primary_sub_stencil).eq.0) then
 
@@ -910,7 +910,7 @@ stop
          iten, &    !intent(in)
          vofdata(i,j,k)) !intent(out)
 
-       call get_primary_material(LSTEST,imhold)
+       call get_primary_material(dx,LSTEST,imhold)
        if ((imhold.ge.1).and.(imhold.le.num_materials)) then
         !do nothing
        else
@@ -4137,7 +4137,7 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call merge_levelset(xcenter,time,LS,LS_merge,merge_flag)
+         call merge_levelset(xcenter,dx,time,LS,LS_merge,merge_flag)
 
           ! FIX_LS_tessellate is declared in: MOF.F90
           ! input : fluids tessellate, solids are embedded
@@ -4145,8 +4145,8 @@ stop
          call FIX_LS_tessellate(LS_merge,LS_merge_fixed)
          call FIX_LS_tessellate(LS,LS_fixed)
 
-         call get_primary_material(LS_fixed,im_majority)
-         call get_primary_material(LS_merge_fixed,im_merge_majority)
+         call get_primary_material(dx,LS_fixed,im_majority)
+         call get_primary_material(dx,LS_merge_fixed,im_merge_majority)
 
          if ((is_rigid_CL(im_merge_majority).eq.1).or. &
              (is_rigid_CL(im_majority).eq.1)) then
@@ -4195,10 +4195,10 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
 
-            call merge_levelset(xcenter,time,LSSIDE,LS_merge,merge_flag)
+            call merge_levelset(xcenter,dx,time,LSSIDE,LS_merge,merge_flag)
              !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
-            call get_primary_material(LSSIDE_merge_fixed,im_opp)
+            call get_primary_material(dx,LSSIDE_merge_fixed,im_opp)
             do im=1,num_materials
              LS_STAR_merge_FIXED(sidestar,dirstar,im)=LSSIDE_merge_fixed(im)
             enddo
@@ -4206,7 +4206,7 @@ stop
 
              !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
-            call get_primary_material(LSSIDE_fixed,im_opp)
+            call get_primary_material(dx,LSSIDE_fixed,im_opp)
             do im=1,num_materials
              LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
             enddo
@@ -4474,7 +4474,9 @@ stop
              do im_curv=1,num_materials
               LS_PROBE(im_curv)=LSPC(D_DECL(i,j,k),im_curv)
              enddo
-             call merge_normal(xcenter,time, &
+             call merge_normal( &
+               xcenter,dx, &
+               time, &
                LS_PROBE, &
                nrmPROBE,nrmPROBE_merge)
 
@@ -4708,12 +4710,15 @@ stop
                  recon_ptr,vof_hold(im_curv))
               enddo !im_curv=1..num_materials
 
-              call merge_normal(xcenter,time, &
+              call merge_normal( &
+                 xcenter, &
+                 dx, &
+                 time, &
                  LSCEN_hold, &
                  nrm_local, & !intent(in)
                  nrm_local_merge) !intent(out)
 
-              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge, &
+              call merge_levelset(xcenter,dx,time,LSCEN_hold,LSCEN_hold_merge, &
                 merge_flag)
               call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
 
@@ -4951,9 +4956,9 @@ stop
                     LS_sub(im_sub)=data_out_LS%data_interp(im_sub)
                    enddo
                    call FIX_LS_tessellate(LS_sub,LS_sub_fixed)
-                   call get_primary_material(LS_sub_fixed,im_sub_primary)
-                   call get_secondary_material(LS_sub_fixed, &
-                     im_sub_primary,im_sub_secondary)
+                   call get_primary_material(dx,LS_sub_fixed,im_sub_primary)
+                   call get_secondary_material(dx,LS_sub_fixed, &
+                     im_sub_primary,im_sub_secondary,SDIM)
   
                    do im_sub=1,num_materials
                     if ((im_sub.eq.im_sub_primary).or. &
@@ -6056,7 +6061,7 @@ stop
           endif
          enddo ! im=1..num_materials
 
-         call get_primary_material(LSside,im_side_majority)
+         call get_primary_material(dx,LSside,im_side_majority)
          if (is_rigid(im_side_majority).eq.1) then
           local_solid=1
          else if (is_rigid(im_side_majority).eq.0) then
@@ -7790,7 +7795,7 @@ stop
        enddo
        area_new=VOF_local(im_vapor)*dx(1)*dx(2)
        area_old=VOF_local_old(im_vapor)*dx(1)*dx(2)
-       call get_primary_material(LS_local,im_primary)
+       call get_primary_material(dx,LS_local,im_primary)
        if ((im_primary.eq.im_liquid).or.(im_primary.eq.im_vapor)) then
         if (VOF_local(im_vapor).ge.EPS2) then
          do dir=1,SDIM
@@ -8242,7 +8247,7 @@ stop
          LScen(im)=LS(D_DECL(i,j,k),im)
         enddo
 
-        call get_primary_material(LScen,im_primary)
+        call get_primary_material(dx,LScen,im_primary)
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
          volcell,cencell,SDIM)
@@ -10009,8 +10014,8 @@ stop
          enddo
 
           ! checks rigid and non-rigid materials.
-         call get_primary_material(LSplus,implus_majority)
-         call get_primary_material(LSminus,imminus_majority)
+         call get_primary_material(dx,LSplus,implus_majority)
+         call get_primary_material(dx,LSminus,imminus_majority)
 
          if ((implus_majority.lt.1).or. &
              (implus_majority.gt.num_materials).or. &
@@ -10291,6 +10296,7 @@ stop
           ! "is_rigid" is called.
           ! fluid_interface is declared in: PROB.F90
           call fluid_interface( &
+            dx, &
             LSminus,LSplus, &
             gradh, &
             im_main_opp,im_main, &
@@ -10328,7 +10334,7 @@ stop
                (is_rigid_CL(im_main).eq.0).and. &
                (gradh.ne.zero)) then
             call fluid_interface_tension( &
-             xstenMAC_center,time, &
+             xstenMAC_center,dx,time, &
              LSminus,LSplus, &
              gradh_tension, &
              im_opp_tension,im_tension, & !INTENT(out)
@@ -11935,8 +11941,9 @@ stop
          ! checks rigid and non-rigid materials.
          ! get_primary_material is declared in: GLOBALUTIL.F90
          ! get_secondary_material is declared in: MOF.F90
-        call get_primary_material(LSIDE_MAT,implus_majority)
-        call get_secondary_material(LSIDE_MAT,implus_majority,im_secondary)
+        call get_primary_material(dx,LSIDE_MAT,implus_majority)
+        call get_secondary_material(dx,LSIDE_MAT,implus_majority, &
+          im_secondary,SDIM)
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped_center,time,LS_clamped_center, &
@@ -14142,7 +14149,7 @@ stop
         do im=1,num_materials
          LStest(im)=levelPC(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LStest,im_majority)
+        call get_primary_material(dx,LStest,im_majority)
 
         is_rigid_near=0
         do im=1,num_materials
@@ -16088,8 +16095,8 @@ stop
            LSright(im)=levelPC(D_DECL(i,j,k),im)
            localLS(im)=half*(LSright(im)+LSleft(im))
           enddo
-          call get_primary_material(LSleft,im_left)
-          call get_primary_material(LSright,im_right)
+          call get_primary_material(dx,LSleft,im_left)
+          call get_primary_material(dx,LSright,im_right)
 
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
@@ -16241,7 +16248,7 @@ stop
            LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
           enddo
 
-          call get_primary_material(LSupwind,im)
+          call get_primary_material(dx,LSupwind,im)
           if ((im.ge.1).and.(im.le.num_materials)) then
            ibase=num_state_material*(im-1) 
            denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+ENUM_DENVAR+1) 
@@ -17353,6 +17360,7 @@ stop
              ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
                xstenMAC_center, &
+               dx, &
                time, &
                LSleft,LSright, &
                gradh_tension, &
@@ -17365,6 +17373,7 @@ stop
               ! im_gravity<im_opp_gravity
               ! i.e. gradh=grad h_{im_gravity}
              call fluid_interface( &
+               dx, &
                LSleft,LSright, &
                gradh_gravity, &
                im_opp_gravity,im_gravity, &
@@ -18357,8 +18366,8 @@ stop
         LSright(im)=levelPC(D_DECL(i,j,k),im)
         localLS(im)=half*(LSright(im)+LSleft(im))
        enddo
-       call get_primary_material(LSleft,im_left)
-       call get_primary_material(LSright,im_right)
+       call get_primary_material(dx,LSleft,im_left)
+       call get_primary_material(dx,LSright,im_right)
 
        call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
        call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
@@ -18640,7 +18649,7 @@ stop
        do im=1,num_materials
         localLS(im)=levelPC(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(localLS,im_left)
+       call get_primary_material(dx,localLS,im_left)
 
        call SUB_clamped_LS( &
          xstenMAC_center, & !intent(in)
@@ -19101,8 +19110,8 @@ stop
         LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
         LSright(im)=levelPC(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(LSleft,im_left)
-       call get_primary_material(LSright,im_right)
+       call get_primary_material(dx,LSleft,im_left)
+       call get_primary_material(dx,LSright,im_right)
 
        call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
        call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
@@ -19251,8 +19260,8 @@ stop
                  local_LSleft(im)=levelPC(D_DECL(im1+i1,jm1+j1,km1+k1),im)
                  local_LSright(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
                 enddo
-                call get_primary_material(local_LSleft,loc_im_left)
-                call get_primary_material(local_LSright,loc_im_right)
+                call get_primary_material(dx,local_LSleft,loc_im_left)
+                call get_primary_material(dx,local_LSright,loc_im_right)
 
                 call gridsten_level(loc_xclamped_minus_sten, &
                   im1+i1,jm1+j1,km1+k1,level,nhalf)
@@ -19461,7 +19470,7 @@ stop
        do im=1,num_materials
         localLS(im)=levelPC(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(localLS,im_left)
+       call get_primary_material(dx,localLS,im_left)
 
        call SUB_clamped_LS( &
          xstenMAC_center, & !intent(in)
@@ -19871,8 +19880,8 @@ stop
         LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
         LSright(im)=levelPC(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(LSleft,im_left)
-       call get_primary_material(LSright,im_right)
+       call get_primary_material(dx,LSleft,im_left)
+       call get_primary_material(dx,LSright,im_right)
 
        call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
        call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
@@ -20030,8 +20039,8 @@ stop
               local_LSleft(im)=levelPC(D_DECL(im1+i1,jm1+j1,km1+k1),im)
               local_LSright(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
              enddo
-             call get_primary_material(local_LSleft,loc_im_left)
-             call get_primary_material(local_LSright,loc_im_right)
+             call get_primary_material(dx,local_LSleft,loc_im_left)
+             call get_primary_material(dx,local_LSright,loc_im_right)
 
              call gridsten_level(loc_xclamped_minus_sten, &
                im1+i1,jm1+j1,km1+k1,level,nhalf)
@@ -20231,7 +20240,7 @@ stop
        do im=1,num_materials
         localLS(im)=levelPC(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(localLS,im_left)
+       call get_primary_material(dx,localLS,im_left)
 
        call SUB_clamped_LS( &
          xstenMAC_center, & !intent(in)
@@ -21984,7 +21993,7 @@ stop
             do im=1,num_materials
              LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
             enddo
-            call get_primary_material(LS_predict,im_primary_stencil)
+            call get_primary_material(dx,LS_predict,im_primary_stencil)
 
              !fluid stencil cell, we trust this LS value.
              !if (at_center==1) then cell is (i,j,k) cell which is solid.
@@ -23865,7 +23874,7 @@ stop
          ! get_primary_material is declared in: GLOBALUTIL.F90
          ! get_primary_material can select either an "is_rigid" material
          ! or "fluid" material.
-        call get_primary_material(LS_sub,im_primary_sub)
+        call get_primary_material(dx,LS_sub,im_primary_sub)
 
          !sanity check
         if ((is_rigid(im_primary_sub).eq.1).or. &
@@ -23874,8 +23883,8 @@ stop
          if (is_rigid(im_primary_sub).eq.1) then
           im_secondary=im_primary_sub
          else if (is_rigid(im_primary_sub).eq.0) then
-          call get_secondary_material(LS_sub, &
-           im_primary_sub,im_secondary)
+          call get_secondary_material(dx,LS_sub, &
+           im_primary_sub,im_secondary,SDIM)
          else
           print *,"is_rigid(im_primary_sub) invalid: ", &
             im_primary_sub,is_rigid(im_primary_sub)
@@ -24161,10 +24170,10 @@ stop
                  LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
                 enddo
                 ! get_primary_material is declared in: GLOBALUTIL.F90
-                call get_primary_material(LS_sub,im_primary_sub)
+                call get_primary_material(dx,LS_sub,im_primary_sub)
                 ! get_secondary_material is declared in: MOF.F90
-                call get_secondary_material(LS_sub,im_primary_sub, &
-                      im_secondary)
+                call get_secondary_material(dx,LS_sub,im_primary_sub, &
+                      im_secondary,SDIM)
 
                 if ((im_primary_sub.ge.1).and. &
                     (im_primary_sub.le.num_materials).and. &
@@ -24427,10 +24436,10 @@ stop
               enddo
 
                ! get_primary_material is declared in: GLOBALUTIL.F90
-              call get_primary_material(LS_sub,im_primary_sub)
+              call get_primary_material(dx,LS_sub,im_primary_sub)
                ! get_secondary_material is declared in: MOF.F90
-              call get_secondary_material(LS_sub,im_primary_sub, &
-                      im_secondary)
+              call get_secondary_material(dx,LS_sub,im_primary_sub, &
+                      im_secondary,SDIM)
 
               if ((is_rigid(im_primary_sub).eq.1).or. &
                   (is_rigid(im_primary_sub).eq.0)) then
@@ -24673,7 +24682,7 @@ stop
           do im_loop=1,num_materials
            LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
           enddo
-          call get_primary_material(LS_sub,im_primary_sub)
+          call get_primary_material(dx,LS_sub,im_primary_sub)
 
           if ((im_primary_sub.ge.1).and. &
               (im_primary_sub.le.num_materials)) then
@@ -25598,8 +25607,8 @@ stop
         do im_loop=1,num_materials
          LS(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
         enddo
-        call get_primary_material(LS,im_primary)
-        call get_secondary_material(LS,im_primary,im_secondary)
+        call get_primary_material(dx,LS,im_primary)
+        call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
         if ((abs(LS(im_primary)).le.DXMAXLS).and. &
             (abs(LS(im_secondary)).le.DXMAXLS)) then
          call get_iten(im_primary,im_secondary,iten)

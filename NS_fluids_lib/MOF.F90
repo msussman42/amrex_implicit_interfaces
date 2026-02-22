@@ -25360,11 +25360,13 @@ contains
 
         ! input: fluids tessellate, solids embedded
         ! output: fluids and solids tessellate.
-      subroutine LS_tessellate(LS,LS_new)
+      subroutine LS_tessellate(dx,LS,LS_new,sdim)
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: LS(num_materials)
       real(amrex_real), INTENT(out) :: LS_new(num_materials)
       real(amrex_real) :: LS_new_hold(num_materials)
@@ -25394,7 +25396,7 @@ contains
        endif
       enddo ! im=1..num_materials
 
-      call get_primary_material(LS,im_primary)
+      call get_primary_material(dx,LS,im_primary)
 
       if (is_rigid_local(im_primary).eq.0) then
        do im=1,num_materials
@@ -25604,7 +25606,7 @@ contains
         else if (is_rigid(im).eq.0) then
          volcell_compare=volcell_compare+multi_volume(im)
         else
-         print *,"is_rigid(im) invalid ",im,is_rigid(im
+         print *,"is_rigid(im) invalid ",im,is_rigid(im)
          stop
         endif
        else
@@ -26466,29 +26468,13 @@ contains
        integer sorted_list(num_materials)
        real(amrex_real) uncaptured_volume
        real(amrex_real) mag
-       integer im,vofcomp,FSI_exclude,irank,testflag,dir
+       integer im,vofcomp,irank,testflag,dir
        integer is_rigid_local(num_materials)
        integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
        integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
        do im=1,num_materials
         is_rigid_local(im)=is_rigid(im)
-        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-         is_rigid_local(im)=0
-         print *,"expecting tessellate==TESSELATE_FLUIDS here"
-         stop
-        else if (tessellate.eq.TESSELLATE_FLUIDS) then
-         ! do nothing
-        else if (tessellate.eq.TESSELLATE_ALL) then
-         print *,"expecting tessellate==TESSELATE_FLUIDS here"
-         stop
-        else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-         print *,"expecting tessellate==TESSELATE_FLUIDS here"
-         stop
-        else
-         print *,"tessellate invalid32"
-         stop
-        endif
        enddo ! im=1..num_materials
 
        if (bfact.lt.1) then
@@ -26523,15 +26509,14 @@ contains
          xsten0,nhalf0, &
          continuous_mof, &
          bfact,dx, &
-         tessellate, & ! =TESSELLATE_FLUIDS  (if tessellate==TESSELLATE_IGNORE_ISRIGID then is_rigid=0)
+         tessellate, & ! =TESSELLATE_FLUIDS 
          mofdata,mofdatavalid,sdim)
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         vfrac_data(im)=mofdatavalid(vofcomp)
        enddo
-       FSI_exclude=1
-       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list)
+       call sort_volume_fraction(vfrac_data,tessellate,sorted_list)
        im=sorted_list(1)
        if (is_rigid_local(im).eq.0) then
         ! do nothing
@@ -26651,7 +26636,6 @@ contains
       real(amrex_real), INTENT(inout) :: maxLS(num_materials)
       integer irank,vofcomp,im,im_plus,im_minus,im0
       integer im_plus2,im_minus2
-      integer FSI_exclude
       real(amrex_real) vfrac_data(num_materials)
       integer sorted_list(num_materials)
       real(amrex_real) uncaptured_volume
@@ -26683,24 +26667,6 @@ contains
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-        ! force non-tessellating materials to behave like tessellating
-        ! material.
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then 
-        is_rigid_local(im)=0
-        print *,"expecting tessellate==TESSELATE_FLUIDS here"
-        stop
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS here"
-        stop
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS here"
-        stop
-       else
-        print *,"tessellate invalid33"
-        stop
-       endif
       enddo ! im=1..num_materials
 
       if (nhalf_recon.lt.1) then
@@ -26747,15 +26713,14 @@ contains
         xsten_recon,nhalf_recon, &
         continuous_mof, &
         bfact,dx, &
-        tessellate, &  ! =TESSELLATE_FLUIDS (if tessellate==TESSELLATE_IGNORE_ISRIGID, set is_rigid=0)
+        tessellate, &  ! =TESSELLATE_FLUIDS 
         mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        vfrac_data(im)=mofdatavalid(vofcomp)
       enddo
-      FSI_exclude=1
-      call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list)
+      call sort_volume_fraction(vfrac_data,tessellate,sorted_list)
       im=sorted_list(1)
       if (is_rigid_local(im).eq.0) then
        ! do nothing
@@ -27221,7 +27186,7 @@ contains
 !   option should never be used)
 ! tessellate==TESSELLATE_ALL_RASTER => same as tessellate==TESSELATE_FLUIDS if fluids dominate cell.
 ! in: MOF_routines_module
-FIX ME
+!FIX ME
       subroutine multi_get_volumePOINT( &
        tessellate, &
        bfact,dx, &
@@ -27736,7 +27701,7 @@ FIX ME
       endif
       if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid-sum_vfrac_elastic).gt. &
           EPS3) then
-       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid,
+       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid, &
          sum_vfrac_elastic
        stop
       endif
@@ -27934,19 +27899,23 @@ FIX ME
 
       end subroutine check_full_cell_vfrac
 
-      subroutine get_secondary_material(LS,im_primary,im_secondary)
+      subroutine get_secondary_material(dx,LS,im_primary,im_secondary,sdim)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
       IMPLICIT NONE
 
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: LS(num_materials)
       integer, INTENT(in) :: im_primary
       integer, INTENT(out) :: im_secondary
       integer im
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      real(amrex_real) :: dist_cutoff
+      real(amrex_real) :: second_dist_cutoff
 
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
@@ -27955,32 +27924,94 @@ FIX ME
        stop
       endif
 
+      dist_cutoff=dx(1)*EPS3
+
+      second_dist_cutoff=-abs(LS(im_primary))-dist_cutoff
+
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        is_elastic_local(im)=is_elastic(im)
       enddo ! im=1..num_materials
 
       im_secondary=0
+
       do im=1,num_materials
        if (im.ne.im_primary) then
-        if (im_secondary.eq.0) then
-         im_secondary=im
-        else if (LS(im).gt.LS(im_secondary)) then
-         im_secondary=im
-        else if (LS(im).le.LS(im_secondary)) then
+
+        if (is_rigid_local(im).eq.1) then
+         if (LS(im).ge.second_dist_cutoff) then
+          im_secondary=im
+         endif
+        endif
+
+       else if (im.eq.im_primary) then
+        ! do nothing
+       else
+        print *,"im bust: ",im,im_primary
+        stop
+       endif
+      enddo !im=1..num_materials
+
+      if (im_secondary.eq.0) then
+
+       do im=1,num_materials
+        if (im.ne.im_primary) then
+
+         if (is_elastic_local(im).eq.1) then
+          if (LS(im).ge.second_dist_cutoff) then
+           im_secondary=im
+          endif
+         endif
+
+        else if (im.eq.im_primary) then
          ! do nothing
         else
-         print *,"LS bust in get_secondary_material: ",LS(im)
+         print *,"im bust: ",im,im_primary
          stop
         endif
-       else if (im.eq.im_primary) then
-         ! do nothing
+
+       enddo !im=1..num_materials
+
+       if (im_secondary.eq.0) then
+        do im=1,num_materials
+         if (im.ne.im_primary) then
+
+          if (im_secondary.eq.0) then
+           im_secondary=im
+          else if (LS(im).gt.LS(im_secondary)) then
+           im_secondary=im
+          else if (LS(im).le.LS(im_secondary)) then
+           ! do nothing
+          else
+           print *,"LS bust in get_secondary_material: ",LS(im)
+           stop
+          endif
+         else if (im.eq.im_primary) then
+          ! do nothing
+         else
+          print *,"im bust: ",im,im_primary
+          stop
+         endif
+
+        enddo !im=1..num_materials
+
+       else if ((im_secondary.ge.1).and. &
+                (im_secondary.le.num_materials).and. &
+                (im_secondary.ne.im_primary)) then
+        !do nothing
        else
-        print *,"im bust"
+        print *,"im_secondary invalid: ",im_secondary
         stop
        endif
 
-      enddo !im=1..num_materials
+      else if ((im_secondary.ge.1).and. &
+               (im_secondary.le.num_materials).and. &
+               (im_secondary.ne.im_primary)) then
+       !do nothing
+      else
+       print *,"im_secondary invalid: ",im_secondary
+       stop
+      endif
 
       end subroutine get_secondary_material
 
@@ -27997,28 +28028,12 @@ FIX ME
       integer, INTENT(in) :: im_secondary
       integer, INTENT(out) :: im_tertiary
       integer im_3
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
-      integer im
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
-       else
-        print *,"tessellate invalid42"
-        stop
-       endif
+      do im_3=1,num_materials
+       is_rigid_local(im_3)=is_rigid(im_3)
+       is_elastic_local(im_3)=is_elastic(im_3)
       enddo ! im=1..num_materials
 
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
@@ -28041,7 +28056,8 @@ FIX ME
       im_tertiary=0
 
       do im_3=1,num_materials
-       if (is_rigid_local(im_3).eq.0) then
+       if ((is_rigid_local(im_3).eq.0).and. &
+           (is_elastic_local(im_3).eq.0)) then
         if ((im_3.ne.im_primary).and. &
             (im_3.ne.im_secondary)) then
          if (im_tertiary.eq.0) then
@@ -28059,28 +28075,29 @@ FIX ME
                  (im_3.eq.im_secondary)) then
          ! do nothing
         else
-         print *,"im_3 invalid"
+         print *,"im_3 invalid: ",im_3
          stop
         endif
-       else if (is_rigid_local(im_3).eq.1) then
+       else if ((is_rigid_local(im_3).eq.1).or. &
+                (is_elastic_local(im_3).eq.1)) then
         ! do nothing
        else
         print *,"is_rigid_local(im_3) invalid: ", &
          im_3,is_rigid_local(im_3)
+        print *,"or, is_elastic_local(im_3) invalid: ", &
+         im_3,is_elastic_local(im_3)
         stop
        endif
       enddo !im_3=1..num_materials
 
       end subroutine get_tertiary_material
 
-      FIX ME
-
-        ! sort from largest volume fraction to smallest
-        ! FSI_exclude=1 => only consider fluid materials.
-        ! FSI_exclude=0 => only consider solid materials.
-        ! FSI_exclude=-1 => consider both
+!tessellate==TESSELLATE_FLUIDS exclude rigid and elastic
+!tessellate==TESSELLATE_FLUIDS_ELASTIC exclude rigid 
       subroutine sort_volume_fraction( &
-       vfrac_data,FSI_exclude,sorted_list)
+       vfrac_data, &
+       tessellate, &
+       sorted_list)
 
       use probcommon_module
       use geometry_intersect_module
@@ -28088,29 +28105,22 @@ FIX ME
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: FSI_exclude
+      integer, INTENT(in) :: tessellate
       real(amrex_real), INTENT(in) :: vfrac_data(num_materials)
       integer, INTENT(out) :: sorted_list(num_materials)
       integer im,changed,nsweeps,swap,do_swap
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
+       is_elastic_local(im)=is_elastic(im)
+       if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        print *,"expecting tessellate==TESSELATE_FLUIDS"
-        stop
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        is_elastic_local(im)=0
        else
-        print *,"tessellate invalid43"
+        print *,"tessellate invalid sort_volume_fraction ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -28118,12 +28128,6 @@ FIX ME
       if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid sort_volume_fraction"
        print *,"num_materials= ",num_materials
-       stop
-      endif
-      if ((FSI_exclude.ne.0).and. &
-          (FSI_exclude.ne.-1).and. &
-          (FSI_exclude.ne.1)) then
-       print *,"FSI_exclude invalid"
        stop
       endif
 
@@ -28137,7 +28141,18 @@ FIX ME
        do im=1,num_materials-nsweeps-1
         do_swap=0
 
-        if (FSI_exclude.eq.-1) then ! consider both solid and fluids
+        if (is_rigid_local(sorted_list(im)).eq.1) then
+         do_swap=1
+        else if (is_elastic_local(sorted_list(im)).eq.1) then
+         do_swap=1
+        else if (is_rigid_local(sorted_list(im+1)).eq.1) then
+         do_swap=0
+        else if (is_elastic_local(sorted_list(im+1)).eq.1) then
+         do_swap=0
+        else if ((is_rigid_local(sorted_list(im)).eq.0).and. &
+                 (is_rigid_local(sorted_list(im+1)).eq.0).and. &
+                 (is_elastic_local(sorted_list(im)).eq.0).and. &
+                 (is_elastic_local(sorted_list(im+1)).eq.0)) then
          if (vfrac_data(sorted_list(im)).lt. &
              vfrac_data(sorted_list(im+1))) then
           do_swap=1
@@ -28145,35 +28160,14 @@ FIX ME
                   vfrac_data(sorted_list(im+1))) then
           do_swap=0
          else
-          print *,"vfrac_data invalid"
+          print *,"vfrac_data invalid: ",vfrac_data
+          print *,"sorted_list= ",sorted_list
           stop
          endif
-        else if ((FSI_exclude.eq.1).or. & ! consider only fluids
-                 (FSI_exclude.eq.0)) then ! consider only solids
-
-         if (is_rigid_local(sorted_list(im)).eq.FSI_exclude) then
-          do_swap=1
-         else if (is_rigid_local(sorted_list(im+1)).eq.FSI_exclude) then
-          do_swap=0
-         else if ((is_rigid_local(sorted_list(im)).eq.1-FSI_exclude).and. &
-                  (is_rigid_local(sorted_list(im+1)).eq.1-FSI_exclude)) then
-          if (vfrac_data(sorted_list(im)).lt. &
-              vfrac_data(sorted_list(im+1))) then
-           do_swap=1
-          else if (vfrac_data(sorted_list(im)).ge. &
-                   vfrac_data(sorted_list(im+1))) then
-           do_swap=0
-          else
-           print *,"vfrac_data invalid"
-           stop
-          endif
-         else
-          print *,"is_rigid invalid MOF.F90"
-          stop 
-         endif
         else
-         print *,"FSI_exclude invalid"
-         stop
+         print *,"is_rigid_local invalid MOF.F90 ",is_rigid_local
+         print *,"or is_elastic_local invalid MOF.F90 ",is_elastic_local
+         stop 
         endif
        
         if (do_swap.eq.1) then

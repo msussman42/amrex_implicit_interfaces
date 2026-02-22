@@ -439,8 +439,8 @@ stop
        do im=1,num_materials
         local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
        enddo
-       call get_primary_material(local_LS,im_primary)
-       call get_secondary_material(local_LS,im_primary,im_secondary)
+       call get_primary_material(dx,local_LS,im_primary)
+       call get_secondary_material(dx,local_LS,im_primary,im_secondary,SDIM)
        triple_point_flag=0
        do im=1,num_materials
         if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
@@ -1104,8 +1104,8 @@ stop
         do im_local=1,num_materials
          local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
         enddo
-        call get_primary_material(local_LS,im_primary)
-        call get_secondary_material(local_LS,im_primary,im_secondary)
+        call get_primary_material(dx,local_LS,im_primary)
+        call get_secondary_material(dx,local_LS,im_primary,im_secondary,SDIM)
 
         local_status=1
 
@@ -1795,7 +1795,6 @@ stop
       integer istar_array(3)
       integer istar_array_offset(3)
       integer sorted_list(num_materials)
-      integer FSI_exclude
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       integer istar
       integer im_crit
@@ -1845,6 +1844,7 @@ stop
       real(amrex_real) bypass_cutoff
       real(amrex_real) crude_dist,dotprod,crude_normal
       integer bypass_update_closest
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       newfab_ptr=>newfab
       touchfab_ptr=>touchfab
@@ -2136,8 +2136,11 @@ stop
         vcenter(im)=mofdata(vofcomp)
        enddo
 
-       FSI_exclude=1
-       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list)
+       call sort_volume_fraction( &
+         vcenter, &
+         tessellate, & !TESSELLATE_FLUIDS
+         sorted_list)
+
        im_crit=sorted_list(1)
        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
         ! do nothing
@@ -2417,8 +2420,10 @@ stop
          ! type at the node, so the material type is assigned
          ! to be the material with the dominant "nodal volume fraction"
         if (im_corner.eq.-1) then !stenfab conflict at the corner!
-         FSI_exclude=1
-         call sort_volume_fraction(FSUM,FSI_exclude,sorted_list)
+         call sort_volume_fraction( &
+           FSUM, &
+           tessellate, & !TESSELLATE_FLUIDS
+           sorted_list)
          im_corner=sorted_list(1)
          if (is_rigid_elastic(im_corner).eq.0) then
           ! do nothing
@@ -3052,7 +3057,7 @@ stop
         do im=1,num_materials
          LS_stencil(im)=newfab(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LS_stencil,im_primary)
+        call get_primary_material(dx,LS_stencil,im_primary)
         if (is_rigid_elastic(im_primary).eq.1) then
          !do nothing
         else if (is_rigid_elastic(im_primary).eq.0) then
@@ -3315,7 +3320,7 @@ stop
       integer im_test
       integer dir
       integer mask1,mask2
-      integer, parameter :: tessellate=0
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS
  
       stenfab_ptr=>stenfab
 
@@ -3416,7 +3421,7 @@ stop
          !in: fort_steninit
         call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, &  ! =0
+          tessellate, &  ! =TESSELLATE_FLUIDS
           im_crit, &
           EPS_FULL_WEAK)
 
@@ -3449,7 +3454,7 @@ stop
           istar_array(3)=k3
 
           call multi_get_volumePOINT( &
-           tessellate, &  ! =0
+           tessellate, &  ! =TESSELLATE_FLUIDS
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
            im_test,SDIM)
@@ -3512,7 +3517,7 @@ stop
          !in: fort_steninit
          call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, &  ! =0
+          tessellate, &  ! =TESSELLATE_FLUIDS
           im_crit, &
           EPS_FULL_WEAK)
 
