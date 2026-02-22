@@ -4507,6 +4507,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: LSright(num_materials)
       real(amrex_real), INTENT(out) :: gradh
       integer, INTENT(out) :: imL,imR
+      real(amrex_real) :: dx_sanity
+      integer dir
+
+      do dir=1,SDIM
+       dx_sanity=problen_array(dir)*half
+       if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
+        !do nothing
+       else
+        print *,"dx invalid in fluid_interface: ",dx
+        print *,"problen_array=",problen_array
+        stop
+       endif
+      enddo !dir=1,SDIM
 
       im=0
       im_opp=0
@@ -4734,6 +4747,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer im_tertiary
       real(amrex_real) :: user_tension(num_interfaces)
       real(amrex_real) :: def_thermal(num_materials)
+      real(amrex_real) :: dx_sanity
+      integer dir
+
+      do dir=1,SDIM
+       dx_sanity=problen_array(dir)*half
+       if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
+        !do nothing
+       else
+        print *,"dx invalid in fluid_interface: ",dx
+        print *,"problen_array=",problen_array
+        stop
+       endif
+      enddo !dir=1,SDIM
 
       merge_flag=0
 
@@ -5297,6 +5323,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: LSright_merge(num_materials)
       integer :: merge_flag
       integer, INTENT(out) :: imL,imR
+      real(amrex_real) :: dx_sanity
+      integer dir
+
+      do dir=1,SDIM
+       dx_sanity=problen_array(dir)*half
+       if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
+        !do nothing
+       else
+        print *,"dx invalid in fluid_interface_tension: ",dx
+        print *,"problen_array=",problen_array
+        stop
+       endif
+      enddo !dir=1,SDIM
 
       im=0
       im_opp=0

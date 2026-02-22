@@ -27916,6 +27916,15 @@ contains
       integer is_elastic_local(num_materials)
       real(amrex_real) :: dist_cutoff
       real(amrex_real) :: second_dist_cutoff
+      real(amrex_real) :: dx_sanity
+      integer dir
+
+      if ((sdim.eq.2).or.(sdim.eq.3)) then
+       !do nothing
+      else
+       print *,"sdim invalid: ",sdim
+       stop
+      endif
 
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
@@ -27923,6 +27932,17 @@ contains
        print *,"im_primary invalid get_secondary_material: ",im_primary
        stop
       endif
+
+      do dir=1,sdim
+       dx_sanity=problen_array(dir)*half
+       if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
+        !do nothing
+       else
+        print *,"dx invalid in get_secondary_material: ",dx
+        print *,"problen_array=",problen_array
+        stop
+       endif
+      enddo !dir=1,SDIM
 
       dist_cutoff=dx(1)*EPS3
 
