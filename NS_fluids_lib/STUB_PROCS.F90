@@ -980,7 +980,7 @@ if ((istate.ge.1).and. &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- call get_primary_material(LS,im_crit)
+ call get_primary_material(dx,LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 
@@ -1465,7 +1465,7 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
   do im=1,num_materials
    LS(im)=GRID_DATA_IN%lsfab(D_DECL(i,j,k),im)
   enddo
-  call get_primary_material(LS,im_primary)
+  call get_primary_material(GRID_DATA_IN%dx,LS,im_primary)
 
    !liquid,jwl,aluminum side walls,gas
   if (im_primary.eq.1) then

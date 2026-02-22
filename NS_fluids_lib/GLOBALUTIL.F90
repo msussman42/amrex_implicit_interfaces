@@ -30679,11 +30679,24 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real), INTENT(in) :: LS(num_materials)
 integer, INTENT(out) :: im_primary
-integer im,imtest
+integer im
 integer is_rigid_local(num_materials)
 integer is_elastic_local(num_materials)
 real(amrex_real) :: dist_cutoff
+real(amrex_real) :: dx_sanity
+integer dir
 
+do dir=1,SDIM
+ dx_sanity=problen_array(dir)*half
+ if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
+  !do nothing
+ else
+  print *,"dx invalid in get_primary_material: ",dx
+  print *,"problen_array=",problen_array
+  stop
+ endif
+enddo !dir=1,SDIM
+ 
 dist_cutoff=dx(1)*EPS3
 
 do im=1,num_materials
@@ -30762,7 +30775,7 @@ if (im_primary.eq.0) then
     else if (LS(im).le.LS(im_primary)) then
      ! do nothing
     else
-     print *,"LS bust in get_primary_material(dx,2): ", &
+     print *,"LS bust in get_primary_material 30765: ", &
              im,im_primary,LS(im),LS(im_primary)
      stop
     endif

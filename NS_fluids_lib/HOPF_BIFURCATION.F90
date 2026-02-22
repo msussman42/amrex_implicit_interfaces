@@ -485,7 +485,7 @@ else
  stop
 endif
 
-call get_primary_material(LS,im_crit)
+call get_primary_material(dx,LS,im_crit)
 if (im_crit.eq.1) then
  ! do nothing
 else

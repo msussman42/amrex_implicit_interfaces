@@ -117,7 +117,7 @@ stop
       real(amrex_real) den_local
       real(amrex_real) temp_local
       real(amrex_real) energy_local
-      integer im_primary,im
+      integer im_primary
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
 
@@ -322,14 +322,14 @@ stop
 
       call get_dxmax(dx,bfact,dxmax)
 
-      call get_primary_material(LS,im_primary)
+      call get_primary_material(dx,LS,im_primary)
 
       call get_primary_material_VFRAC( &
        VOF, &
        im_primary_vof, &
        tessellate) !TESSELLATE_FLUIDS
 
-      call get_secondary_material(LS,im_primary,im_secondary)
+      call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
 
       if ((im_primary.ge.1).and. &
           (im_primary.le.num_materials)) then
@@ -4491,6 +4491,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! largest value.
         !
       subroutine fluid_interface( &
+        dx, &
         LSleft,LSright, &
         gradh, & !intent(out)
         im_opp,im, & !intent(out)
@@ -4500,6 +4501,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       integer, INTENT(out) :: im_opp,im
       real(amrex_real), INTENT(in) :: LSleft(num_materials)
       real(amrex_real), INTENT(in) :: LSright(num_materials)
@@ -4510,8 +4512,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call get_primary_material(LSleft,imL)
-      call get_primary_material(LSright,imR)
+      call get_primary_material(dx,LSleft,imL)
+      call get_primary_material(dx,LSright,imR)
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
           (imR.lt.1).or.(imR.gt.num_materials)) then
@@ -4712,12 +4714,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! => merge materials j and k.
        !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
        ! => merge materials i and k.
-      subroutine merge_levelset(xpos,time,LS,LS_merge,merge_flag)
+      subroutine merge_levelset(xpos,dx,time,LS,LS_merge,merge_flag)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
       real(amrex_real), INTENT(in) :: xpos(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: LS(num_materials)
       real(amrex_real), INTENT(out) :: LS_merge(num_materials)
@@ -4765,9 +4768,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (user_tension(iten).eq.zero) then
 
              !get_primary_material is declared in GLOBALUTIL.F90
-            call get_primary_material(LS,im_primary)
+            call get_primary_material(dx,LS,im_primary)
              !get_secondary_material is declared in MOF.F90
-            call get_secondary_material(LS,im_primary,im_secondary)
+            call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
              !get_tertiary_material is declared in MOF.F90
              !is_rigid(im_tertiary)=0
             call get_tertiary_material(LS, &
@@ -4922,12 +4925,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! => merge materials j and k.
        !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
        ! => merge materials i and k.
-      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge)
+      subroutine merge_normal(xpos,dx,time,LS,nrm,nrm_merge)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
       real(amrex_real), INTENT(in) :: xpos(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: LS(num_materials)
       real(amrex_real), INTENT(in) :: nrm(num_materials*SDIM)
@@ -4974,9 +4978,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (user_tension(iten).eq.zero) then
 
              !get_primary_material is declared in GLOBALUTIL.F90
-            call get_primary_material(LS,im_primary)
+            call get_primary_material(dx,LS,im_primary)
              !get_secondary_material is declared in MOF.F90
-            call get_secondary_material(LS,im_primary,im_secondary)
+            call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
              !get_tertiary_material is declared in MOF.F90
              !is_rigid(im_tertiary)=0
             call get_tertiary_material(LS, &
@@ -5272,7 +5276,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_init_physics_vars
        !   fort_cell_to_mac (surface tension force on MAC grid)
       subroutine fluid_interface_tension( &
-         xpos,time, &
+         xpos,dx,time, &
          LSleft,LSright, &
          gradh, & !INTENT(out)
          im_opp,im, & !INTENT(out)
@@ -5283,6 +5287,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: xpos(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(out) :: im_opp,im
       real(amrex_real), INTENT(in) :: LSleft(num_materials)
@@ -5297,11 +5302,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call merge_levelset(xpos,time,LSleft,LSleft_merge,merge_flag)
-      call merge_levelset(xpos,time,LSright,LSright_merge,merge_flag)
+      call merge_levelset(xpos,dx,time,LSleft,LSleft_merge,merge_flag)
+      call merge_levelset(xpos,dx,time,LSright,LSright_merge,merge_flag)
 
-      call get_primary_material(LSleft_merge,imL)
-      call get_primary_material(LSright_merge,imR)
+      call get_primary_material(dx,LSleft_merge,imL)
+      call get_primary_material(dx,LSright_merge,imR)
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
           (imR.lt.1).or.(imR.gt.num_materials)) then
@@ -5554,7 +5559,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      call get_primary_material(LS_temp,im_primary)
+      call get_primary_material(dx,LS_temp,im_primary)
 
       material_present_flag(im_primary)=1
 
@@ -5581,7 +5586,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         do im=1,num_materials 
          LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
         enddo
-        call get_primary_material(LS_temp,im_primary)
+        call get_primary_material(dx,LS_temp,im_primary)
         material_present_flag(im_primary)=1
         if (is_rigid(im_primary).eq.0) then
          if (probtype.eq.46) then ! cavitation (calc_error_indicator)

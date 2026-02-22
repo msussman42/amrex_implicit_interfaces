@@ -330,7 +330,7 @@ if ((istate.ge.1).and. &
  call ZEYU_droplet_impact_STATE(xghost,t,LS,local_STATE)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- call get_primary_material(LS,im_crit)
+ call get_primary_material(dx,LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 else

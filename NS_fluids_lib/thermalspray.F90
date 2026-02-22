@@ -479,7 +479,7 @@ contains
   call TSPRAY_STATE(xghost,t,LS,local_STATE)
   ibase=(im-1)*num_state_material
   STATE=local_STATE(ibase+istate)
-  call get_primary_material(LS,im_crit)
+  call get_primary_material(dx,LS,im_crit)
 
   do im_loop=1,num_materials
    if (is_TSPRAY_overlay(num_materials,im_loop).eq.1) then

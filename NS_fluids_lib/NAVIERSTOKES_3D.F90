@@ -3059,7 +3059,7 @@ END SUBROUTINE SIMP
             do im=1,num_materials
              local_LS_data(im)=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
             enddo
-            call get_primary_material(local_LS_data,im_crit_SEM)
+            call get_primary_material(dx,local_LS_data,im_crit_SEM)
 
              ! velocity 
             do dir=1,SDIM
@@ -3601,7 +3601,7 @@ END SUBROUTINE SIMP
           enddo
 
            ! primary material w.r.t. both fluids and solids.
-          call get_primary_material(lsdistnd,im_crit)
+          call get_primary_material(dx,lsdistnd,im_crit)
 
           do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
            velnd(dir)=vel(D_DECL(i,j,k),dir)
@@ -3915,7 +3915,7 @@ END SUBROUTINE SIMP
             lsdistnd(dir)=lsdist(D_DECL(iBL,jBL,kBL),dir)
            enddo
             ! primary material w.r.t. both fluids and solids.
-           call get_primary_material(lsdistnd,im_crit)
+           call get_primary_material(dx,lsdistnd,im_crit)
 
            do dir=1,SDIM
             vel_uniform(VISUALCOMP_U+dir-SDIM)= &
@@ -3978,7 +3978,7 @@ END SUBROUTINE SIMP
            lsdist_interp(im)=localfab(VISUALCOMP_LS+im)
           enddo
            ! primary material w.r.t. both fluids and solids.
-          call get_primary_material(lsdist_interp,im_interp)
+          call get_primary_material(dx,lsdist_interp,im_interp)
 
           if ((im_interp.ge.1).and.(im_interp.le.num_materials)) then
            !do nothing
@@ -4165,7 +4165,7 @@ END SUBROUTINE SIMP
              lsdistnd(dir)=lsdist(D_DECL(iSEM,jSEM,kSEM),dir)
             enddo
              ! primary material w.r.t. both fluids and solids.
-            call get_primary_material(lsdistnd,im_crit)
+            call get_primary_material(dx,lsdistnd,im_crit)
 
             do dir=1,SDIM
              vel_uniform(VISUALCOMP_U+dir-SDIM)= &
@@ -5374,7 +5374,7 @@ END SUBROUTINE SIMP
          do im=1,num_materials
           LS_local(im)=fine_LS(D_DECL(ifine,jfine,kfine),im)
          enddo
-         call get_primary_material(LS_local,imcrit)
+         call get_primary_material(dx,LS_local,imcrit)
          if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
           mat_freq(imcrit)=mat_freq(imcrit)+1
          else
@@ -6140,7 +6140,7 @@ END SUBROUTINE SIMP
            do im=1,num_materials
             coarseLS_local(im)=coarseLS(D_DECL(ilocal,jlocal,klocal),im)
            enddo
-           call get_primary_material(coarseLS_local,imcrit)
+           call get_primary_material(dx,coarseLS_local,imcrit)
            if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
             mat_freq(imcrit)=mat_freq(imcrit)+1
            else
@@ -7729,7 +7729,7 @@ END SUBROUTINE SIMP
         do im=1,num_materials
          LS_LOCAL(im)=lsfab(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LS_LOCAL,im_primary)
+        call get_primary_material(dx,LS_LOCAL,im_primary)
 
         do im=1,num_materials
 
@@ -10957,7 +10957,7 @@ END SUBROUTINE SIMP
         LS(im)=levelpc(D_DECL(i,j,k),im)
        enddo ! im
 
-       call get_primary_material(LS,im_primary)
+       call get_primary_material(dx,LS,im_primary)
 
        ibase=(im_primary-1)*num_state_material
 
@@ -14676,7 +14676,7 @@ END SUBROUTINE SIMP
         do im=1,num_materials
          LStest(im)=LS(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LStest,im)
+        call get_primary_material(dx,LStest,im)
 
         if (is_rigid(im).eq.0) then
 

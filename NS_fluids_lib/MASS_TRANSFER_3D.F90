@@ -2174,7 +2174,8 @@ stop
          LSPROBE(imls))
        enddo ! imls=1..num_materials
 
-       call get_primary_material(LSPROBE,im_primary_probe(iprobe))
+       call get_primary_material(PROBE_PARMS%dx,LSPROBE, &
+         im_primary_probe(iprobe))
 
        if (DEBUG_TRIPLE.eq.1) then
         if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
@@ -3173,7 +3174,7 @@ stop
         do im=1,num_materials
          LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
         enddo
-        call get_primary_material(LS_local,im_primary)
+        call get_primary_material(dx,LS_local,im_primary)
         if (is_rigid(im_primary).eq.0) then
          ! do nothing
         else if (is_rigid(im_primary).eq.1) then
@@ -3490,7 +3491,7 @@ stop
 
         enddo !im=1..num_materials
 
-        call get_primary_material(local_LS,im_primary)
+        call get_primary_material(dx,local_LS,im_primary)
 
         if (abs(species_vfrac_sum-one).le.EPS3) then
          ! do nothing
@@ -4216,7 +4217,7 @@ stop
         do im=1,num_materials
          lsmat(im)=LSold(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(lsmat,im_primary)
+        call get_primary_material(dx,lsmat,im_primary)
 
         if (is_rigid(im_primary).eq.0) then
 
@@ -4912,8 +4913,8 @@ stop
 
             ! declared in MOF.F90: checks both is_rigid and non is_rigid
             ! materials.
-           call get_primary_material(unsplit_lsnew,im_primary_new)
-           call get_primary_material(oldLS_point,im_primary_old)
+           call get_primary_material(dx,unsplit_lsnew,im_primary_new)
+           call get_primary_material(dx,oldLS_point,im_primary_old)
            call combine_solid_VOF(newvfrac,solid_vof_new,im_primary_local)
            call combine_solid_VOF(oldvfrac,solid_vof_old,im_primary_local)
 
@@ -6664,7 +6665,7 @@ stop
            do im_local=1,num_materials
             ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
            enddo
-           call get_primary_material(ls_local,im_local)
+           call get_primary_material(dx,ls_local,im_local)
            if (is_rigid(im_local).eq.0) then
 
             if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
@@ -8057,7 +8058,7 @@ stop
          do im=1,num_materials
           LShere(im)=LS(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(LShere,im_primary)
+         call get_primary_material(dx,LShere,im_primary)
 
          if (is_rigid(im_primary).eq.0) then
 
@@ -8535,11 +8536,11 @@ stop
                   enddo ! imls=1..num_materials*(SDIM+1)
 
                    ! checks rigid materials and fluids (all materials)
-                  call get_primary_material(LSINT,imls_I)
+                  call get_primary_material(dx,LSINT,imls_I)
                   if (found_path.eq.1) then
                    if ((imls_I.eq.im_dest).or. &
                        (imls_I.eq.im_source)) then
-                    call get_secondary_material(LSINT,imls_I,imls_I2)
+                    call get_secondary_material(dx,LSINT,imls_I,imls_I2,SDIM)
                     if (imls_I2.ne.imls_I) then
                      if ((imls_I2.eq.im_dest).or. &
                          (imls_I2.eq.im_source)) then
@@ -10174,7 +10175,7 @@ stop
          do im=1,num_materials
           LShere(im)=LSnew(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(LShere,im_primary)
+         call get_primary_material(dx,LShere,im_primary)
          if (is_rigid(im_primary).eq.0) then
           do im=1,num_materials-1
            do im_opp=im+1,num_materials

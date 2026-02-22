@@ -3426,7 +3426,7 @@ if ((istate.ge.1).and. &
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  im_crit=1
- call get_primary_material(LS,im_crit)
+ call get_primary_material(dx,LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 else
