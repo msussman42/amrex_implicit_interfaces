@@ -3249,7 +3249,7 @@ void NavierStokes::nucleation_code_segment(
 
  int update_particles=1;
  int local_redistribute_main=0;
- int tessellate=TESSELLATE_FLUIDS;
+ tessellate=TESSELLATE_FLUIDS;
 
  makeStateDistALL(update_particles,local_redistribute_main,tessellate);
 
