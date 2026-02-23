@@ -5454,6 +5454,10 @@ stop
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EPS1)) then
 
+               !FIX ME for freezing
+               !FIX ME ALSO AS FOLLOWS:
+               !1. call multi_get_volume_tessellate using TESSELLATE_ALL_RASTER
+               !2. call multi_get_volumePOINT using TESSELLATE_IGNORE_ISRIGID
              tessellate=TESSELLATE_ALL_RASTER
              call multi_get_volumePOINT( &
                tessellate, & !TESSELLATE_ALL_RASTER

@@ -25808,7 +25808,10 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   int update_particles=0;
 
   int local_redistribute_main=0; //global
-  makeStateDistALL(update_particles,local_redistribute_main);
+
+  int tessellate=TESSELLATE_FLUIDS;
+
+  makeStateDistALL(update_particles,local_redistribute_main,tessellate);
 
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
@@ -28266,7 +28269,7 @@ void NavierStokes::putStateDIV_DATA(
 // NavierStokes::do_the_advance
 void
 NavierStokes::makeStateDistALL(int update_particles,
-  int local_redistribute_main) {
+  int local_redistribute_main,int tessellate) {
 
  interface_touch_flag=1; //makeStateDistALL
 
@@ -28319,7 +28322,7 @@ NavierStokes::makeStateDistALL(int update_particles,
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist();
+  ns_level.makeStateDist(tessellate);
  }
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -28455,7 +28458,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 } // end subroutine build_NRM_FD_MF
 
 void
-NavierStokes::makeStateDist() {
+NavierStokes::makeStateDist(int tessellate) {
 
  std::string local_caller_string="makeStateDist";
 
@@ -28589,9 +28592,9 @@ NavierStokes::makeStateDist() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // fort_steninit is declared in: MOF_REDIST_3D.F90
-    // internally sets tessellate=TESSELLATE_FLUIDS
     // fluid material id for each cell edge point is initialized.
    fort_steninit( 
+    &tessellate, //TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
     &level,
     &finest_level,
     stencilfab.dataPtr(),
@@ -28673,6 +28676,7 @@ NavierStokes::makeStateDist() {
 
     // in: MOF_REDIST_3D.F90
    fort_levelstrip( 
+    &tessellate, //TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
     &nprocessed[tid_current],
     minLS[tid_current].dataPtr(),
     maxLS[tid_current].dataPtr(),

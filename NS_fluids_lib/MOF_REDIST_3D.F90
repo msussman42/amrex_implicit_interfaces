@@ -33,6 +33,7 @@ stop
         contains
 
       subroutine update_closest( &
+        tessellate, &
         xsten_accept,xsten_donate,nhalf, &
         dx,xlo,bfact,level,fablo, &
         mofdata, &
@@ -50,6 +51,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: level
       integer, INTENT(in) :: nhalf
       integer, INTENT(in) :: bfact
@@ -258,7 +260,9 @@ stop
        ! only uses donateflag(1..num_materials+1)
        ! multi_get_distance is declared in: MOF.F90
       call multi_get_distance( &
-        bfact,dx,xsten_donate,nhalf,xaccept_point, &
+        tessellate, &
+        bfact,dx, &
+        xsten_donate,nhalf,xaccept_point, &
         mofdata, &
         newLS, &
         touch_hold, &
@@ -1697,6 +1701,7 @@ stop
         ! newfab has num_materials*(sdim+1) components
         !
       subroutine fort_levelstrip( &
+         tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
          nprocessed, &
          minLS, &
          maxLS, &
@@ -2758,6 +2763,7 @@ stop
           enddo
 
           call update_closest( &
+           tessellate, &
            xsten_accept, &
            xsten_donate, &
            nhalf, &
@@ -3260,6 +3266,7 @@ stop
 
 
       subroutine fort_steninit( &
+       tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
        level, &
        finest_level, &
        stenfab,DIMS(stenfab), &
@@ -3320,7 +3327,6 @@ stop
       integer im_test
       integer dir
       integer mask1,mask2
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
  
       stenfab_ptr=>stenfab
 
@@ -3421,7 +3427,7 @@ stop
          !in: fort_steninit
         call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, &  ! =TESSELLATE_FLUIDS
+          tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
           im_crit, &
           EPS_FULL_WEAK)
 
@@ -3454,7 +3460,7 @@ stop
           istar_array(3)=k3
 
           call multi_get_volumePOINT( &
-           tessellate, &  ! =TESSELLATE_FLUIDS
+           tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
            im_test,SDIM)

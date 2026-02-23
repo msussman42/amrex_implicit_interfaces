@@ -51,6 +51,7 @@ namespace amrex{
 
 
      void fort_levelstrip(
+       int* tessellate,
        int* nprocessed,
        Real* minLS,
        Real* maxLS,
@@ -92,7 +93,9 @@ namespace amrex{
        int* ncomp_vof);
 
      void fort_steninit(
-       int* level,int* finest_level,
+       int* tessellate,
+       int* level,
+       int* finest_level,
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
        Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
        Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
