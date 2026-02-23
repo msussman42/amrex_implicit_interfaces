@@ -1731,6 +1731,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate
       integer, INTENT(inout) :: nprocessed
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -1849,7 +1850,6 @@ stop
       real(amrex_real) bypass_cutoff
       real(amrex_real) crude_dist,dotprod,crude_normal
       integer bypass_update_closest
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       newfab_ptr=>newfab
       touchfab_ptr=>touchfab
@@ -3286,6 +3286,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: DIMDEC(stenfab)
