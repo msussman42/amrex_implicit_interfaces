@@ -18715,6 +18715,8 @@ contains
         is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
         is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing; fluids tessellate, rigid|elastic embedded.
        else
@@ -18829,6 +18831,7 @@ contains
        !  TESSELLATE_IGNORE_ISRIGID
        !  TESSELLATE_IGNORE_ISELASTIC
        !  TESSELLATE_FLUIDS
+       !  TESSELLATE_FLUIDS_ELASTIC
        ! the "fluids" should tessellate the domain.
       if (voffluid.gt.zero) then
        ! do nothing
@@ -18898,6 +18901,7 @@ contains
 
        ! fluids tessellate, is_elastic and is_rigid embedded.
       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
                (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
 
        if ((nonzero_ranks.eq.num_materials_fluids+num_materials_elastic).and. &
@@ -26601,7 +26605,9 @@ contains
 
        
       subroutine multi_get_distance( &
-        bfact,dx,xsten_recon,nhalf_recon, &
+        tessellate, &
+        bfact,dx, &
+        xsten_recon,nhalf_recon, &
         xgrid, &
         mofdata, &
         multi_distance, &
@@ -26617,6 +26623,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: nhalf_recon
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
@@ -26661,7 +26668,6 @@ contains
       real(amrex_real) xgrid_minus(sdim)
       real(amrex_real) xgrid_plus2(sdim)
       real(amrex_real) xgrid_minus2(sdim)
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer is_rigid_local(num_materials)
       integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
@@ -26713,14 +26719,16 @@ contains
         xsten_recon,nhalf_recon, &
         continuous_mof, &
         bfact,dx, &
-        tessellate, &  ! =TESSELLATE_FLUIDS 
+        tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
         mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        vfrac_data(im)=mofdatavalid(vofcomp)
       enddo
-      call sort_volume_fraction(vfrac_data,tessellate,sorted_list)
+      call sort_volume_fraction(vfrac_data, &
+         tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+         sorted_list)
       im=sorted_list(1)
       if (is_rigid_local(im).eq.0) then
        ! do nothing
@@ -26739,7 +26747,7 @@ contains
         x0(dir)=xsten_recon(0,dir)
        enddo
        call multi_get_volumePOINT( &
-        tessellate, &  ! =TESSELLATE_FLUIDS
+        tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
         bfact,dx,xsten_recon,nhalf_recon, &
         mofdata,x0,im0,sdim)
 
@@ -26783,12 +26791,12 @@ contains
 
             if (inboxflag.eq.1) then
              call multi_get_volumePOINT( &
-              tessellate, & ! =TESSELLATE_FLUIDS
+              tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_plus, &
               im_plus,sdim)
              call multi_get_volumePOINT( &
-              tessellate, & ! =TESSELLATE_FLUIDS
+              tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
               bfact,dx,xsten_recon,nhalf_recon, &
               mofdata,xgrid_minus, &
               im_minus,sdim)
@@ -26860,12 +26868,12 @@ contains
 
               if (inboxflag.eq.1) then
                call multi_get_volumePOINT( &
-                 tessellate, & ! =TESSELLATE_FLUIDS
+                 tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_plus, &
                  im_plus,sdim)
                call multi_get_volumePOINT( &
-                 tessellate, & ! =TESSELLATE_FLUIDS
+                 tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
                  bfact,dx,xsten_recon,nhalf_recon, &
                  mofdata,xgrid_minus, &
                  im_minus,sdim)
@@ -26940,12 +26948,12 @@ contains
 
                   if (inboxflag.eq.1) then
                    call multi_get_volumePOINT( &
-                    tessellate, & ! =TESSELLATE_FLUIDS
+                    tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_plus, &
                     im_plus,sdim)
                    call multi_get_volumePOINT( &
-                    tessellate, & ! =TESSELLATE_FLUIDS
+                    tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
                     bfact,dx,xsten_recon,nhalf_recon, &
                     mofdata,xgrid_minus, &
                     im_minus,sdim)
@@ -27023,22 +27031,22 @@ contains
           inboxflag)
          if (inboxflag.eq.1) then
           call multi_get_volumePOINT( &
-            tessellate, &  ! =TESSELLATE_FLUIDS
+            tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus, &
             im_plus,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &  ! =TESSELLATE_FLUIDS
+            tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus, &
             im_minus,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &  ! =TESSELLATE_FLUIDS
+            tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_plus2, &
             im_plus2,sdim)
           call multi_get_volumePOINT( &
-            tessellate, &  ! =TESSELLATE_FLUIDS
+            tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
             bfact,dx,xsten_recon,nhalf_recon, &
             mofdata,xgrid_minus2, &
             im_minus2,sdim)
@@ -27102,22 +27110,22 @@ contains
 
            if (inboxflag.eq.1) then
             call multi_get_volumePOINT( &
-             tessellate, & ! =TESSELLATE_FLUIDS
+             tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus, &
              im_plus,sdim)
             call multi_get_volumePOINT( &
-             tessellate, & ! =TESSELLATE_FLUIDS
+             tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus, &
              im_minus,sdim)
             call multi_get_volumePOINT( &
-             tessellate, & ! =TESSELLATE_FLUIDS
+             tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_plus2, &
              im_plus2,sdim)
             call multi_get_volumePOINT( &
-             tessellate, & ! =TESSELLATE_FLUIDS
+             tessellate, & ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
              bfact,dx,xsten_recon,nhalf_recon, &
              mofdata,xgrid_minus2, &
              im_minus2,sdim)
@@ -27182,11 +27190,11 @@ contains
 ! phi=n dot (x-x0) + intercept
 ! x0 is center of cell (not centroid)
 ! tessellate==TESSELATE_FLUIDS => consider only fluid materials.
-! tessellate==TESSELLATE_ALL => consider both rigid and fluid materials. (this
-!   option should never be used)
+! tessellate==TESSELATE_FLUIDS_ELASTIC => consider fluid and elastic materials.
+! FIX ME
 ! tessellate==TESSELLATE_ALL_RASTER => same as tessellate==TESSELATE_FLUIDS if fluids dominate cell.
+! tessellate==TESSELLATE_IGNORE_ISRIGID
 ! in: MOF_routines_module
-!FIX ME
       subroutine multi_get_volumePOINT( &
        tessellate, &
        bfact,dx, &
@@ -27219,6 +27227,7 @@ contains
       real(amrex_real) vfrac_data(num_materials)
       integer vfrac_checked(num_materials)
       integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer im_raster_solid
       integer return_raster_info
@@ -27232,19 +27241,18 @@ contains
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-        stop
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then !consider only fluids
+       is_elastic_local(im)=is_elastic(im)
+       if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-        stop
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then !same as tessellate=TESSELLATE_FLUIDS if fluids dominate
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+        is_rigid_local(im)=0
+        is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        is_elastic_local(im)=0
+       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then 
         ! do nothing
        else
-        print *,"tessellate invalid34"
+        print *,"tessellate invalid multi_get_volumePOINT: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
@@ -27253,14 +27261,12 @@ contains
        local_tessellate=TESSELLATE_FLUIDS
       else if (tessellate.eq.TESSELLATE_FLUIDS) then
        local_tessellate=tessellate
-      else if (tessellate.eq.TESSELLATE_ALL) then
-       print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-       stop
+      else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+       local_tessellate=tessellate
       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-       print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-       stop
+       local_tessellate=tessellate
       else
-       print *,"tessellate invalid35"
+       print *,"tessellate invalid multi_get_volumePOINT"
        stop
       endif
 
@@ -27289,7 +27295,7 @@ contains
         xsten0,nhalf0, &
         continuous_mof, &
         bfact,dx, &
-        local_tessellate, & ! =TESSELLATE_FLUIDS
+        local_tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC|IGNORE_ISRIGID
         mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
@@ -27315,8 +27321,11 @@ contains
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
-        if (is_rigid_local(im).eq.0) then
+        if ((is_rigid_local(im).eq.0).and. &
+            (is_elastic_local(im).eq.0)) then
          vfrac_fluid_sum=vfrac_fluid_sum+mofdatavalid(vofcomp)
+        else if (is_elastic_local(im).eq.1) then
+         !FIX ME
         else if (is_rigid_local(im).eq.1) then
          if (im_raster_solid.eq.0) then
           im_raster_solid=im
@@ -27335,7 +27344,7 @@ contains
       
          vfrac_solid_sum=vfrac_solid_sum+mofdatavalid(vofcomp)
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid: ",is_rigid_local
          stop
         endif
        enddo ! im=1..num_materials
@@ -27392,14 +27401,10 @@ contains
         endif
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-        stop
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        print *,"expecting tessellate=TESSELLATE_FLUIDS or TESSELLATE_ALL_RASTER"
-        stop
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        ! do nothing
        else
-        print *,"tessellate invalid36"
+        print *,"tessellate invalid multi_get_volumePOINT: ",tessellate
         stop
        endif
       
@@ -27413,16 +27418,6 @@ contains
         endif
 
        else if (return_raster_info.eq.0) then
-
-        if (local_tessellate.eq.TESSELLATE_ALL) then
-         print *,"expecting local_tessellate=TESSELLATE_FLUIDS"
-         stop
-        else if (local_tessellate.eq.TESSELLATE_FLUIDS) then
-         ! do nothing
-        else
-         print *,"local_tessellate invalid37: ",local_tessellate
-         stop
-        endif
 
         if (im_crit.eq.0) then
 
