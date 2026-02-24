@@ -19226,6 +19226,8 @@ contains
         is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
+       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+        is_elastic_local(im)=0
        else
         print *,"tessellate invalid make_vfrac_sum_ok_copy: ",tessellate
         stop
@@ -27191,8 +27193,6 @@ contains
 ! x0 is center of cell (not centroid)
 ! tessellate==TESSELATE_FLUIDS => consider only fluid materials.
 ! tessellate==TESSELATE_FLUIDS_ELASTIC => consider fluid and elastic materials.
-! FIX ME
-! tessellate==TESSELLATE_ALL_RASTER => same as tessellate==TESSELATE_FLUIDS if fluids dominate cell.
 ! tessellate==TESSELLATE_IGNORE_ISRIGID
 ! in: MOF_routines_module
       subroutine multi_get_volumePOINT( &
@@ -27201,7 +27201,8 @@ contains
        xsten0,nhalf0, & ! absolute coordinate system.
        mofdata, &
        xgrid, &  ! absolute coordinate system.
-       im_crit,sdim)
+       im_crit, &
+       sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -27222,6 +27223,7 @@ contains
       integer irank,vofcomp,im
       real(amrex_real) uncaptured_volume_fraction
       integer testflag,dir
+      real(amrex_real) maxvof
       real(amrex_real) slopes(sdim)
       real(amrex_real) intercept,ls,maxvof
       real(amrex_real) vfrac_data(num_materials)
@@ -27229,12 +27231,6 @@ contains
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer im_raster_solid
-      integer return_raster_info
-      integer local_tessellate
-      real(amrex_real) vfrac_fluid_sum
-      real(amrex_real) vfrac_solid_sum
-      real(amrex_real) vfrac_raster_solid
 
 
 #include "mofdata.H"
@@ -27249,26 +27245,11 @@ contains
         is_elastic_local(im)=0
        else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
         is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then 
-        ! do nothing
        else
         print *,"tessellate invalid multi_get_volumePOINT: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
-
-      if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-       local_tessellate=TESSELLATE_FLUIDS
-      else if (tessellate.eq.TESSELLATE_FLUIDS) then
-       local_tessellate=tessellate
-      else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
-       local_tessellate=tessellate
-      else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-       local_tessellate=tessellate
-      else
-       print *,"tessellate invalid multi_get_volumePOINT"
-       stop
-      endif
 
       if (ngeom_recon.ne.(2*sdim+3)) then
        print *,"ngeom_recon invalid"
@@ -27295,7 +27276,7 @@ contains
         xsten0,nhalf0, &
         continuous_mof, &
         bfact,dx, &
-        local_tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC|IGNORE_ISRIGID
+        tessellate, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC|IGNORE_ISRIGID
         mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
@@ -27313,250 +27294,142 @@ contains
 
       else if (im_crit.eq.0) then
       
-       vfrac_fluid_sum=zero
-       vfrac_solid_sum=zero
-
-       im_raster_solid=0
-       vfrac_raster_solid=zero
-
        do im=1,num_materials
-        vofcomp=(im-1)*ngeom_recon+1
-        if ((is_rigid_local(im).eq.0).and. &
-            (is_elastic_local(im).eq.0)) then
-         vfrac_fluid_sum=vfrac_fluid_sum+mofdatavalid(vofcomp)
-        else if (is_elastic_local(im).eq.1) then
-         !FIX ME
-        else if (is_rigid_local(im).eq.1) then
-         if (im_raster_solid.eq.0) then
-          im_raster_solid=im
-          vfrac_raster_solid=mofdatavalid(vofcomp)
-         else if ((im_raster_solid.ge.1).and. &
-                  (im_raster_solid.le.num_materials).and. &
-                  (is_rigid_local(im_raster_solid).eq.1)) then
-          if (vfrac_raster_solid.lt.mofdatavalid(vofcomp)) then
-           im_raster_solid=im
-           vfrac_raster_solid=mofdatavalid(vofcomp)
-          endif
+        vfrac_checked(im)=0
+       enddo
+
+       uncaptured_volume_fraction=one
+       irank=1
+       do while ((irank.le.num_materials).and. &
+                 (uncaptured_volume_fraction.gt.zero))
+
+        do im=1,num_materials
+         vofcomp=(im-1)*ngeom_recon+1
+         testflag=NINT(mofdatavalid(vofcomp+sdim+1))
+
+         if ((is_rigid_local(im).eq.0).and. &
+             (is_elastic_local(im).eq.0)) then
+
+          if (testflag.eq.irank) then
+           vfrac_checked(im)=1
+           do dir=1,sdim
+            slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
+           enddo
+           intercept=mofdatavalid(vofcomp+2*sdim+2)
+           call distfunc(bfact,dx,xsten0,nhalf0, &
+            intercept,slopes,xgrid,ls,sdim)
+
+           if ((ls.ge.zero).or. &
+               (mofdatavalid(vofcomp).ge. &
+                (one-EPS_FULL_WEAK)*uncaptured_volume_fraction)) then
+            im_crit=im
+            uncaptured_volume_fraction=zero
+           else 
+            uncaptured_volume_fraction=uncaptured_volume_fraction- &
+              mofdatavalid(vofcomp)
+           endif
+          endif  ! testflag=irank
+         else if ((is_rigid_local(im).eq.1).or. &
+                  (is_elastic_local(im).eq.1)) then
+          ! do nothing
          else
-          print *,"im_raster_solid invalid: ",im_raster_solid
+          print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
+          print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
           stop
          endif
-      
-         vfrac_solid_sum=vfrac_solid_sum+mofdatavalid(vofcomp)
+           
+        enddo ! im=1..num_materials
+        irank=irank+1
+       enddo  ! while irank<=num_materials and uncaptured_volume_fraction>0 
+
+       if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+
+        if (uncaptured_volume_fraction.eq.zero) then
+         !do nothing
         else
-         print *,"is_rigid_local invalid: ",is_rigid_local
+         print *,"uncaptured_volume_fraction invalid: ", &
+           uncaptured_volume_fraction
          stop
         endif
-       enddo ! im=1..num_materials
 
-       if (abs(one-vfrac_fluid_sum).le.EPS_UNCAPTURED) then
-        ! do nothing
-       else
-        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
-        stop
-       endif
+       else if (im_crit.eq.0) then
 
-       if ((vfrac_solid_sum.le.one+EPS_UNCAPTURED).and. &
-           (vfrac_solid_sum.ge.zero)) then
-        ! do nothing
-       else
-        print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
-        stop
-       endif
-
-       return_raster_info=0
-
-       if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        if (vfrac_solid_sum.ge.half) then
-         return_raster_info=1
-
-         if ((im_raster_solid.ge.1).and. &
-             (im_raster_solid.le.num_materials)) then
-          im_crit=im_raster_solid
+        maxvof=zero
+        do im=1,num_materials
+         if ((is_rigid_local(im).eq.0).and. &
+             (is_elastic_local(im).eq.0)) then
+          if (vfrac_checked(im).eq.1) then
+           ! do nothing
+          else if (vfrac_checked(im).eq.0) then
+           if (vfrac_data(im).gt.maxvof) then
+            maxvof=vfrac_data(im)
+            im_crit=im
+           endif
+          else
+           print *,"vfrac_checked invalid"
+           stop
+          endif
+         else if ((is_rigid_local(im).eq.1).or. &
+                  (is_elastic_local(im).eq.1)) then
+          ! do nothing
          else
-          print *,"im_raster_solid invalid: ",im_raster_solid
+          print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
+          print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
           stop
          endif
+        enddo ! im=1..num_materials
 
-        else if (vfrac_solid_sum.lt.half) then
-         vfrac_solid_sum=zero
+        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+         ! do nothing
+        else if (im_crit.eq.0) then
+
+         maxvof=zero
          do im=1,num_materials
-          vofcomp=(im-1)*ngeom_recon+1
-          if (is_rigid_local(im).eq.0) then
+          if ((is_rigid_local(im).eq.0).and. &
+              (is_elastic_local(im).eq.0)) then
+           if (vfrac_data(im).gt.maxvof) then
+            maxvof=vfrac_data(im)
+            im_crit=im
+           endif
+          else if ((is_rigid_local(im).eq.1).or. &
+                   (is_elastic_local(im).eq.1)) then
            ! do nothing
-          else if (is_rigid_local(im).eq.1) then
-           do dir=0,sdim
-            mofdatavalid(vofcomp+dir)=zero
-           enddo
           else
-           print *,"is_rigid_local invalid"
+           print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
+           print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
            stop
           endif
          enddo ! im=1..num_materials
-        else
-         print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
-         print *,"vfrac_solid_sum: ",vfrac_solid_sum
-         print *,"vfrac_fluid_sum: ",vfrac_fluid_sum
-         stop
-        endif
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
-        ! do nothing
-       else
-        print *,"tessellate invalid multi_get_volumePOINT: ",tessellate
-        stop
-       endif
-      
-       if (return_raster_info.eq.1) then
 
-        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
-         !do nothing
-        else
-         print *,"im_crit invalid 24213: ",im_crit
-         stop
-        endif
-
-       else if (return_raster_info.eq.0) then
-
-        if (im_crit.eq.0) then
-
-         do im=1,num_materials
-          vfrac_checked(im)=0
-         enddo
-
-         uncaptured_volume_fraction=one
-         irank=1
-         do while ((irank.le.num_materials).and. &
-                   (uncaptured_volume_fraction.gt.zero))
-
+         if (maxvof.gt.zero) then
+          ! do nothing
+         else if (maxvof.le.zero) then
+          print *,"failed to find material that covers point"
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
-           testflag=NINT(mofdatavalid(vofcomp+sdim+1))
-
-           if (is_rigid_local(im).eq.0) then
-            if (testflag.eq.irank) then
-             vfrac_checked(im)=1
-             do dir=1,sdim
-              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
-             enddo
-             intercept=mofdatavalid(vofcomp+2*sdim+2)
-             call distfunc(bfact,dx,xsten0,nhalf0, &
-              intercept,slopes,xgrid,ls,sdim)
-
-             if ((ls.ge.zero).or. &
-                 (mofdatavalid(vofcomp).ge. &
-                  (one-EPS_FULL_WEAK)*uncaptured_volume_fraction)) then
-              im_crit=im
-              uncaptured_volume_fraction=zero
-             else 
-              uncaptured_volume_fraction=uncaptured_volume_fraction- &
-                mofdatavalid(vofcomp)
-             endif
-            endif  ! testflag=irank
-           else if (is_rigid_local(im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid invalid MOF.F90"
-            stop
-           endif
-           
+           print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
+            NINT(mofdatavalid(vofcomp+sdim+1)), &
+            mofdatavalid(vofcomp+2*sdim+2)
           enddo ! im=1..num_materials
-          irank=irank+1
-         enddo  ! while irank<=num_materials and uncaptured_volume_fraction>0 
-
-         if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
-
-          if (uncaptured_volume_fraction.eq.zero) then
-           !do nothing
-          else
-           print *,"uncaptured_volume_fraction invalid: ", &
-             uncaptured_volume_fraction
-           stop
-          endif
-
-         else if (im_crit.eq.0) then
-
-          maxvof=zero
-          do im=1,num_materials
-           if (is_rigid_local(im).eq.0) then
-            if (vfrac_checked(im).eq.1) then
-             ! do nothing
-            else if (vfrac_checked(im).eq.0) then
-             if (vfrac_data(im).gt.maxvof) then
-              maxvof=vfrac_data(im)
-              im_crit=im
-             endif
-            else
-             print *,"vfrac_checked invalid"
-             stop
-            endif
-           else if (is_rigid_local(im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid invalid MOF.F90"
-            stop
-           endif
-          enddo ! im=1..num_materials
-
-          if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
-           ! do nothing
-          else if (im_crit.eq.0) then
-
-           maxvof=zero
-           do im=1,num_materials
-            if (is_rigid_local(im).eq.0) then
-             if (vfrac_data(im).gt.maxvof) then
-              maxvof=vfrac_data(im)
-              im_crit=im
-             endif
-            else if (is_rigid_local(im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid invalid MOF.F90"
-             stop
-            endif
-           enddo ! im=1..num_materials
-
-           if (maxvof.gt.zero) then
-            ! do nothing
-           else if (maxvof.le.zero) then
-            print *,"failed to find material that covers point"
-            do im=1,num_materials
-             vofcomp=(im-1)*ngeom_recon+1
-             print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
-              NINT(mofdatavalid(vofcomp+sdim+1)), &
-              mofdatavalid(vofcomp+2*sdim+2)
-            enddo ! im=1..num_materials
-            print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
-            stop
-           else
-            print *,"maxvof invalid: ",maxvof
-            stop
-           endif 
-
-          else 
-           print *,"im_crit invalid 24338: ",im_crit
-           stop
-          endif
-
-         else
-          print *,"im_crit invalid 24343"
+          print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
           stop
-         endif
+         else
+          print *,"maxvof invalid: ",maxvof
+          stop
+         endif 
 
-        else
-         print *,"im_crit invalid 24348: ",im_crit
+        else 
+         print *,"im_crit invalid 24338: ",im_crit
          stop
         endif
 
        else
-        print *,"return_raster_info invalid: ",return_raster_info
+        print *,"im_crit invalid 24343"
         stop
        endif
 
       else
-       print *,"im_crit invalid 24358: ",im_crit
+       print *,"im_crit invalid 24348: ",im_crit
        stop
       endif
 
@@ -27722,10 +27595,6 @@ contains
 
       end subroutine get_primary_material_VFRAC
 
-       ! tessellate==TESSELLATE_ALL => check solid,elastic and fluid
-       ! tessellate==TESSELATE_FLUIDS => check fluid materials only
-       ! tessellate==TESSELLATE_ALL_RASTER => same as 
-       !  tessellate==TESSELATE_FLUIDS_ELASTIC if fluids|elastic dominate cell.
       subroutine check_full_cell_vfrac(vfrac,tessellate,im_full,tol)
       use probcommon_module
       use geometry_intersect_module
@@ -27753,6 +27622,7 @@ contains
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
           (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
+          (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
           (tessellate.eq.TESSELLATE_ALL).or. &
           (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        !do nothing
@@ -27872,7 +27742,8 @@ contains
          im_full=im_fluid_max
         endif
        endif
-      else if ((tessellate.eq.TESSELLATE_ALL).or. &
+      else if ((tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+               (tessellate.eq.TESSELLATE_ALL).or. &
                (tessellate.eq.TESSELLATE_ALL_RASTER)) then
        if (max_solid_vfrac.ge.one-tol) then
         im_full=im_solid_max

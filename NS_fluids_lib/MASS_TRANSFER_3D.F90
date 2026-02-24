@@ -3847,6 +3847,7 @@ stop
  
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) mofdata_new(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) volmat(num_materials)
       real(amrex_real) lsmat(num_materials)
@@ -4550,7 +4551,9 @@ stop
                geom_xtetlist_old(1,1,1,tid+1), &
                geom_xtetlist(1,1,1,tid+1), &
                nmax, &
-               nlist,nmax,SDIM)
+               nlist, &
+               nmax, &
+               SDIM)
 
              if (nlist.gt.0) then
 
@@ -5418,7 +5421,8 @@ stop
             call multimaterial_MOF( &
              tessellate, & !TESSELLATE_FLUIDS
              tid, &
-             bfact,dx,u_xsten_updatecell,nhalf, &
+             bfact,dx, &
+             u_xsten_updatecell,nhalf, &
              mof_verbose, & !=0
              use_ls_data, & !=0
              LS_stencil, &
@@ -5454,16 +5458,31 @@ stop
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EPS1)) then
 
-               !FIX ME for freezing
-               !FIX ME ALSO AS FOLLOWS:
-               !1. call multi_get_volume_tessellate using TESSELLATE_ALL_RASTER
-               !2. call multi_get_volumePOINT using TESSELLATE_IGNORE_ISRIGID
+              !mofdata is the original moment data before phase change 
+              !advection
+              !mofdata_new is after.
+              !FIX ME for freezing
              tessellate=TESSELLATE_ALL_RASTER
+             do u_im=1,num_materials*ngeom_recon
+              mofdata_tess(u_im)=mofdata(u_im)
+             enddo
+             call multi_get_volume_tessellate( &
+               tid, &
+               tessellate, &
+               bfact,dx, &
+               u_xsten_updatecell,nhalf, &
+               mofdata_tess, &
+               geom_xtetlist(1,1,1,tid+1), &
+               nmax, &
+               nmax, &
+               SDIM)
+
+             tessellate=TESSELLATE_IGNORE_ISRIGID
              call multi_get_volumePOINT( &
-               tessellate, & !TESSELLATE_ALL_RASTER
+               tessellate, & !TESSELLATE_IGNORE_ISRIGID
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
-               mofdata, &
+               mofdata_tess, &
                xPOINT_supermesh, & !new centroid: absolute coordinate system
                im_old_crit, &
                SDIM)
@@ -5498,7 +5517,7 @@ stop
                do u_im=1,num_materials
                 do udir=1,ngeom_recon
                  print *,"im,mofcomp,mofdata ",u_im,udir, &
-                         mofdata((u_im-1)*ngeom_recon+udir)
+                   mofdata((u_im-1)*ngeom_recon+udir)
                 enddo
                enddo
               endif
@@ -5991,22 +6010,54 @@ stop
               LS_dest_old=LSold(D_DECL(i,j,k),im_dest)
 
               tessellate=TESSELLATE_ALL_RASTER
+              do u_im=1,num_materials*ngeom_recon
+               mofdata_tess(u_im)=mofdata(u_im)
+              enddo
+              call multi_get_volume_tessellate( &
+               tid, &
+               tessellate, &
+               bfact,dx, &
+               u_xsten_updatecell,nhalf, &
+               mofdata_tess, &
+               geom_xtetlist(1,1,1,tid+1), &
+               nmax, &
+               nmax, &
+               SDIM)
+
+              tessellate=TESSELLATE_IGNORE_ISRIGID
               call multi_get_volumePOINT( &
-               tessellate, & !TESSELLATE_ALL_RASTER
+               tessellate, & !TESSELLATE_IGNORE_ISRIGID
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
-               mofdata, &
+               mofdata_tess, &
                xPOINT_GFM, & ! absolute coordinate system
-               im_old_crit,SDIM)
+               im_old_crit, &
+               SDIM)
 
               tessellate=TESSELLATE_ALL_RASTER
+              do u_im=1,num_materials*ngeom_recon
+               mofdata_tess(u_im)=mofdata_new(u_im)
+              enddo
+              call multi_get_volume_tessellate( &
+               tid, &
+               tessellate, &
+               bfact,dx, &
+               u_xsten_updatecell,nhalf, &
+               mofdata_tess, &
+               geom_xtetlist(1,1,1,tid+1), &
+               nmax, &
+               nmax, &
+               SDIM)
+
+              tessellate=TESSELLATE_IGNORE_ISRIGID
               call multi_get_volumePOINT( &
-                tessellate, & !TESSELLATE_ALL_RASTER
+                tessellate, & !TESSELLATE_IGNORE_ISRIGID
                 bfact,dx, &
                 u_xsten_updatecell,nhalf, &  ! absolute coordinate system
-                mofdata_new, &
+                mofdata_tess, &
                 xPOINT_GFM, & ! absolute coordinate system
-                im_new_crit,SDIM)
+                im_new_crit, &
+                SDIM)
 
               if ((newvfrac(im_dest).gt.zero).and. &
                   (newvfrac(im_dest).le.one+EPS1)) then
@@ -7824,7 +7875,7 @@ stop
       else if (nucleation_flag.eq.1) then
        ! do nothing
       else
-       print *,"nucleation_flag invalid"
+       print *,"nucleation_flag invalid: ",nucleation_flag
        stop
       endif
 
@@ -7946,7 +7997,7 @@ stop
       else if (nucleation_flag.eq.1) then
        ! do nothing
       else
-       print *,"nucleation_flag invalid"
+       print *,"nucleation_flag invalid: ",nucleation_flag
        stop
       endif
 
@@ -10230,7 +10281,7 @@ stop
                         (im_primary.le.num_materials)) then
                 ! do nothing
                else
-                print *,"im_primary invalid"
+                print *,"im_primary invalid: ",im_primary
                 stop
                endif
               else

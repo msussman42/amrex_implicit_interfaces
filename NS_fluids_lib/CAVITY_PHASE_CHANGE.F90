@@ -34,7 +34,10 @@ integer, parameter :: max_sitesnum=1000
 
 
 integer :: sitesnum,sitesnum2,sitesnum3
-real(amrex_real),allocatable :: sites(:,:),sites2(:,:),sites3(:,:)  ! nucleate sites list
+real(amrex_real),allocatable :: &
+        sites(:,:), &
+        sites2(:,:), &
+        sites3(:,:)  ! nucleate sites list
 integer,allocatable  :: active_flag(:),active_flag2(:),active_flag3(:)
 integer,allocatable  :: flagrecord(:)
 
@@ -535,12 +538,20 @@ end subroutine CAVITY_PHASE_CHANGE_NUCLEATION_SITES
 
 
 ! this routine called from PROB.F90
-subroutine Satomodel_nucleation(nucleate_in,xsten,nhalf,make_seed)
+subroutine Satomodel_nucleation( &
+     nucleate_in, & !in
+     xsten, & !in
+     nhalf, & !in
+     subscale_spec_id, & !out
+     subscale_vfrac, & !out
+     make_seed) !inout
 use probcommon_module_types
 use probcommon_module
 IMPLICIT NONE
 integer, INTENT(in) :: nhalf
 real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+integer, INTENT(out) :: subscale_spec_id
+real(amrex_real), INTENT(out) :: subscale_vfrac
 integer, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 integer    :: i,j,k,im_l,im_s
@@ -551,6 +562,10 @@ real(amrex_real)       :: tempvec1(SDIM),tempvec2(SDIM)
 real(amrex_real)       :: tempdist
 
 !  print *,"in Satomodel_nucleation"
+
+ subscale_spec_id=0
+ subscale_vfrac=0.0
+
  if(axis_dir.eq.8.or.axis_dir.eq.9)then
   i=nucleate_in%i
   j=nucleate_in%j

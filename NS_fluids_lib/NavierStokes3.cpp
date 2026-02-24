@@ -4020,6 +4020,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (use_sato_model==0) {
         //do nothing
        } else if (use_sato_model>0) {
+	   //NavierStokes::sato_model_QDOT_MDOT_SPECIES declared in
+	   //NavierStokes.cpp
+	   //fort_sato_qdot_mdot is called (LEVELSET_3D.F90)
         ns_finest.sato_model_QDOT_MDOT_SPECIES();
        } else
         amrex::Error("use_sato_model invalid");

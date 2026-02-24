@@ -1316,11 +1316,17 @@ implicit none
       real(amrex_real), INTENT(in)    :: problen(SDIM)
       end subroutine TEMPLATE_velfreestream
 
-      subroutine TEMPLATE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+      subroutine TEMPLATE_nucleation(nucleate_in, &
+         xsten,nhalf, &
+         subscale_spec_id, & !set to 0 if not applicable
+         subscale_vfrac, &
+         make_seed)
       use amrex_fort_module, only : amrex_real
       use probcommon_module_types
       integer, INTENT(in) :: nhalf
       real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+      integer, INTENT(out) :: subscale_spec_id
+      real(amrex_real), INTENT(out) :: subscale_vfrac
       integer, INTENT(inout) :: make_seed
       type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
       end subroutine TEMPLATE_nucleation

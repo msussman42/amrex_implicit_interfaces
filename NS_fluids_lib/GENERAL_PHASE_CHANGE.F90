@@ -1532,13 +1532,21 @@ return
 end subroutine GENERAL_PHASE_CHANGE_velfreestream
 
 
-subroutine GENERAL_PHASE_CHANGE_nucleation(nucleate_in,xsten,nhalf,make_seed)
+subroutine GENERAL_PHASE_CHANGE_nucleation( &
+     nucleate_in, & !in
+     xsten, & !in
+     nhalf, & !in
+     subscale_spec_id, & !out
+     subscale_vfrac, & !out
+     make_seed) !inout
 use probcommon_module_types
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 integer, INTENT(in) :: nhalf
 real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+integer, INTENT(out) :: subscale_spec_id
+real(amrex_real), INTENT(out) :: subscale_vfrac
 integer, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 real(amrex_real) :: LL
@@ -1547,6 +1555,9 @@ real(amrex_real) :: x_point(SDIM)
 integer :: dir
 
 LL=nucleate_in%LL
+
+subscale_spec_id=0
+subscale_vfrac=0.0
 
 if (probtype.eq.55) then
 

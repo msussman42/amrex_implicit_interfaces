@@ -7677,9 +7677,10 @@ stop
        stop
       endif
 
-       !TODO: SUBTRACT qdot from the temperature field in veldiffuseALL
+       !SUBTRACT qdot from the temperature field:
+       !NavierStokes::veldiffuseALL calls NavierStokes::make_heat_source
        !qdot units temperature
-       !mdot units ???
+       !mdot units: kg/(meter^2 sec) .... -> m^3/s^2
       mdot_ptr=>mdot
       qdot_ptr=>qdot
 
@@ -7903,6 +7904,8 @@ stop
                 !When the bubble interface is advancing then
                 !we need \delta_{0} which is the distance of the current 
                 !cell to the nucleation site.
+                !get_delta_ml_init calls "SUB_NUCLEATION_SITES"
+                !ASHWANI II
                 call get_delta_ml_init(delta_ml_init,xpoint)
 
                 delta_ml_temp=(area_new-area_old)*delta_ml_init 
