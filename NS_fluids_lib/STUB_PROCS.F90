@@ -1095,11 +1095,19 @@ return
 end subroutine STUB_velfreestream
 
 ! this routine called from PROB.F90
-subroutine STUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
+subroutine STUB_nucleation( &
+     nucleate_in, & !in
+     xsten, & !in
+     nhalf, & !in
+     subscale_spec_id, & !out
+     subscale_vfrac, & !out
+     make_seed) !inout
 use probcommon_module_types
 IMPLICIT NONE
 integer, INTENT(in) :: nhalf
 real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+integer, INTENT(out) :: subscale_spec_id
+real(amrex_real), INTENT(out) :: subscale_vfrac
 integer, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 
@@ -1110,6 +1118,8 @@ type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 ! temperature_component=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 ! temperature=nucleate_in%EOS(D_DECL(i,j,k),temperature_component)
 make_seed=0
+subscale_spec_id=0
+subscale_vfrac=0.0
 
 return
 end subroutine STUB_nucleation

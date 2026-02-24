@@ -19811,6 +19811,10 @@ end subroutine RatePhaseChange
       integer im_liquid
       real(amrex_real) LL
       integer make_seed ! 0 no seed, 1 yes to seed
+
+      integer subscale_spec_id ! 0 no modify species
+      real(amrex_real) subscale_vfrac
+
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) prev_time,cur_time,dt
@@ -19875,12 +19879,13 @@ end subroutine RatePhaseChange
       if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
       else
-       print *,"nstate invalid"
+       print *,"nucleate_in%nstate invalid: ",nucleate_in%nstate
        stop
       endif
       if (n_sites.gt.0) then
        if (nucleate_in%nucleate_pos_size.ne.n_sites*4) then
-        print *,"nucleate_pos_size invalid"
+        print *,"nucleate_in%nucleate_pos_size invalid: ", &
+            nucleate_in%nucleate_pos_size,n_sites
         stop
        endif
       endif
@@ -19906,6 +19911,8 @@ end subroutine RatePhaseChange
 
        LL=nucleate_in%LL
        make_seed=0
+       subscale_spec_id=0
+       subscale_vfrac=zero
 
        grid_index(1)=i
        grid_index(2)=j
@@ -19920,7 +19927,13 @@ end subroutine RatePhaseChange
            (local_freezing_model.eq.6)) then !TSAT variable evap/condensation
 
         if (is_in_probtype_list().eq.1) then
-         call SUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
+         call SUB_nucleation( &
+              nucleate_in, & !in
+              xsten, & !in
+              nhalf, & !in
+              subscale_spec_id, & !out
+              subscale_vfrac, & !out
+              make_seed) !inout
         else
          ! do nothing
         endif
@@ -20097,7 +20110,8 @@ end subroutine RatePhaseChange
          !  if solid material(s) dominate the cell, then F_solid_raster=1
          !  and F_fluid=0.
          !  if fluid material(s) dominate the cell, then F_solid=0,
-         !  sum F_fluid=1
+         !  sum F_fluid=1 
+         !FIX ME?
         local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2
         call multi_get_volume_tessellate( &
@@ -20126,6 +20140,18 @@ end subroutine RatePhaseChange
          ! is there enough "source material" in the cell to be 
          ! converted to "destination material"?
         if (mofdata(ibasesrc).gt.VOFTOL_NUCLEATE) then
+
+         if ((subscale_spec_id.ge.1).and. &
+             (subscale_spec_id.le.num_species_var)) then
+          nucleate_out%Snew(D_DECL(i,j,k), &
+             STATECOMP_STATES+(im_dest-1)*num_state_material+ &
+             ENUM_SPECIESVAR+subscale_spec_id)=subscale_vfrac
+         else if (subscale_spec_id.eq.0) then
+          !do nothing
+         else
+          print *,"subscale_spec_id invalid: ",subscale_spec_id
+          stop
+         endif
 
          nucleate_out%LSnew(D_DECL(i,j,k),im_source)=-nucleate_in%dx(1)
          nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=nucleate_in%dx(1)
@@ -20189,11 +20215,15 @@ end subroutine RatePhaseChange
        else if (make_seed.eq.0) then
         ! do nothing
        else
-        print *,"make_seed invalid"
+        print *,"make_seed invalid: ",make_seed
         stop
        endif
       else
        print *,"Snew(vofcomp) invalid"
+       print *,"vofcomp=",vofcomp
+       print *,"i,j,k ",i,j,k
+       print *,"nucleate_out%Snew(D_DECL(i,j,k),vofcomp) ", &
+         nucleate_out%Snew(D_DECL(i,j,k),vofcomp)
        stop
       endif
 

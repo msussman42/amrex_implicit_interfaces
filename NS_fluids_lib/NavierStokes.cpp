@@ -15522,6 +15522,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    } else if (nucleation_flag==1) {
 
+     //fort_ratemasschange is declared in MASS_TRANSFER_3D.F90
+     //fort_ratemasschange calls
+     // get_vel_phasechange_NUCLEATE(create_in,create_inout)
+     // get_vel_phasechange_NUCLEATE calls
+     // SUB_nucleation(nuceate_in,xsten,nhalf,make_seed)
     fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
