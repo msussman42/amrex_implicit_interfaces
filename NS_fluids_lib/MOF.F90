@@ -27225,7 +27225,7 @@ contains
       integer testflag,dir
       real(amrex_real) maxvof
       real(amrex_real) slopes(sdim)
-      real(amrex_real) intercept,ls,maxvof
+      real(amrex_real) intercept,ls
       real(amrex_real) vfrac_data(num_materials)
       integer vfrac_checked(num_materials)
       integer is_rigid_local(num_materials)
