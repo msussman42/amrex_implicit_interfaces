@@ -28787,6 +28787,8 @@ NavierStokes::build_elastic_fluid_moment() {
 
  const Real* dx = geom.CellSize();
 
+ MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
+
  delete_localMF_if_exist(ELASTIC_FLUID_MOMENT_MF,1); 
  delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
 
@@ -28810,7 +28812,7 @@ NavierStokes::build_elastic_fluid_moment() {
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
