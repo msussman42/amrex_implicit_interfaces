@@ -28319,6 +28319,25 @@ NavierStokes::makeStateDistALL(int update_particles,
   } // tid
  }
 
+ if (tessellate==TESSELLATE_FLUIDS_ELASTIC) {
+  if (material_extend_velocity_flag==0) {
+   amrex::Error("expecting material_extend_velocity_flag>0");
+  } else if (material_extend_velocity_flag>0) {
+
+   for (int ilev=level;ilev<=finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.build_elastic_fluid_moment();
+   }
+
+  } else {
+   amrex::Error("material_extend_velocity_flag invalid");
+  }
+ } else if (tessellate==TESSELLATE_FLUIDS) {
+  //do nothing
+ } else {
+  amrex::Error("tessellate invalid");
+ }
+
   // traverse from coarsest to finest so that
   // coarse data normals will be available for filling in
   // ghost values.
@@ -28756,6 +28775,84 @@ NavierStokes::makeStateDist(int tessellate) {
 
 } // end subroutine makeStateDist
 
+
+void
+NavierStokes::build_elastic_fluid_moment() {
+
+ std::string local_caller_string="build_elastic_fluid_moment";
+
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+
+ const Real* dx = geom.CellSize();
+
+ delete_localMF_if_exist(ELASTIC_FLUID_MOMENT_MF,1); 
+ delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
+
+ new_localMF(ELASTIC_FLUID_MOMENT_MF,num_materials*ngeom_recon,
+   ngrow_distance,-1); 
+ getStateDist_localMF(ELASTIC_FLUID_LEVELSET_MF,ngrow_distance,cur_time_slab,
+		local_caller_string);
+
+ resize_mask_nbr(ngrow_distance);
+ debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
+ if (localMF[MASK_NBR_MF]->nComp()!=4)
+  amrex::Error("invalid ncomp for mask nbr");
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
+   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+   FArrayBox& old_vof_fab=(*localMF[ELASTIC_FLUID_MOMENT_MF])[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // fort_build_old_vof is declared in: MOF_REDIST_3D.F90
+   fort_build_old_vof( 
+    &tid_current,
+    &level,
+    &finest_level,
+    maskfab.dataPtr(),
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    voffab.dataPtr(),
+    ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+    old_vof_fab.dataPtr(),
+    ARLIM(old_vof_fab.loVect()),ARLIM(old_vof_fab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    xlo,dx,
+    &cur_time_slab);
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_BUILDELASTICFLUID,"build_elastic_fluid_moment");
+
+} // end subroutine build_elastic_fluid_moment()
 
 void
 NavierStokes::correct_dist_uninit() {

@@ -3564,6 +3564,152 @@ stop
       return
       end subroutine fort_steninit
 
+      subroutine fort_build_old_vof( &
+       tid, &
+       level, &
+       finest_level, &
+       maskfab,DIMS(maskfab), &
+       vofrecon,DIMS(vofrecon), &
+       old_vof,DIMS(old_vof), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       time) &
+      bind(c,name='fort_build_old_vof')
+
+      use global_utility_module
+      use probcommon_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: DIMDEC(maskfab)
+      integer, INTENT(in) :: DIMDEC(vofrecon)
+      integer, INTENT(in) :: DIMDEC(old_vof)
+
+      real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),2)
+      real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: &
+        vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: &
+        old_vof(DIMV(old_vof),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: old_vof_ptr(D_DECL(:,:,:),:)
+
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real), INTENT(in) :: time
+
+      integer i,j,k
+
+      integer, parameter :: tessellate=TESSELLATE_FLUIDS_ELASTIC
+
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+
+      integer im
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      integer nmax
+ 
+      if (bfact.lt.1) then
+       print *,"bfact invalid144"
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in fort_build_old_vof"
+       stop
+      endif
+
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance<4 error in fort_build_old_vof: ", &
+           ngrow_distance
+       stop
+      endif
+
+      nmax=POLYGON_LIST_MAX ! in: fort_build_old_vof
+      if ((nmax.lt.100).or.(nmax.gt.2000)) then
+       print *,"nmax invalid: ",nmax
+       stop
+      endif
+
+      maskfab_ptr=>maskfab
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
+      vofrecon_ptr=>vofrecon
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1)
+      old_vof_ptr=>old_vof
+      call checkbound_array(fablo,fabhi,old_vof_ptr,ngrow_distance,-1)
+      
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid build_old_vof"
+       print *,"ngeom_recon=",ngeom_recon
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid build_old_vof"
+       print *,"ngeom_raw=",ngeom_raw
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_distance) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       ! mask1=1 at interior cells or fine/fine ghost cells
+       ! mask1=0 at coarse/fine ghost cells or outside domain.
+       ! mask2=1 at interior cells
+       mask1=NINT(maskfab(D_DECL(i,j,k),1))
+       mask2=NINT(maskfab(D_DECL(i,j,k),2))
+
+       if ((mask2.eq.1).or.(mask1.eq.0).or.(1.eq.1)) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do im=1,num_materials*ngeom_recon
+         mofdata(im)=vofrecon(D_DECL(i,j,k),im)
+        enddo
+ 
+        call multi_get_volume_tessellate( &
+          tid, &
+          tessellate, & !TESSELLATE_FLUIDS_ELASTIC
+          bfact,dx, &
+          xsten,nhalf, &
+          mofdata, &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          SDIM)
+
+        do im=1,num_materials*ngeom_recon
+         old_vof(D_DECL(i,j,k),im)=mofdata(im)
+        enddo
+
+       else if ((mask2.eq.0).and.(mask1.eq.1).and.(1.eq.0)) then
+        ! do nothing
+       else
+        print *,"mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine fort_build_old_vof
+
+
 
        ! fort_faceinit is called from NavierStokes.cpp,
        !  NavierStokes::makeFaceFrac

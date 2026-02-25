@@ -1402,6 +1402,7 @@ void apply_pressure_grad(
           int tessellate);
 
     void makeStateDist(int tessellate);
+    void build_elastic_fluid_moment();
 
     void correct_dist_uninit();
 
