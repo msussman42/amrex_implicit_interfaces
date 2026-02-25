@@ -107,6 +107,20 @@ namespace amrex{
        Real* time);
 
 
+     void fort_build_old_vof(
+       int* tid,
+       int* level,
+       int* finest_level,
+       Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
+       Real* old_vof,AMREX_ARLIM_P(old_voflo),AMREX_ARLIM_P(old_vofhi),
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,
+       int* bfact,
+       const Real* xlo,const Real* dx,
+       Real* time);
+
+
      void fort_faceinit(
        int* tid,
        int* tessellate,
