@@ -3580,6 +3580,7 @@ stop
 
       use global_utility_module
       use probcommon_module
+      use geometry_intersect_module
       use MOF_routines_module
       use mof_redist_module
 
@@ -3597,7 +3598,7 @@ stop
       real(amrex_real), INTENT(in), target :: &
         vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
+      real(amrex_real), INTENT(inout), target :: &
         old_vof(DIMV(old_vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: old_vof_ptr(D_DECL(:,:,:),:)
 
@@ -3615,6 +3616,7 @@ stop
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
+      integer mask1,mask2
       integer im
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       integer nmax
