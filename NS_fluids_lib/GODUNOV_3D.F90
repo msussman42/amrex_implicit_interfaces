@@ -18378,7 +18378,6 @@ stop
       real(amrex_real) vel_clamped(SDIM)
       real(amrex_real) temperature_clamped
       integer prescribed_flag
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       DATA_FLOOR=zero
 
@@ -19195,8 +19194,7 @@ stop
 
              call get_primary_material_VFRAC( &
                local_VOF, &
-               im_primary_sten(D_DECL(i1,j1,k1)), &
-               tessellate) !TESSELLATE_FLUIDS
+               im_primary_sten(D_DECL(i1,j1,k1)))
 
              VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
              LS_sten(D_DECL(i1,j1,k1))= &

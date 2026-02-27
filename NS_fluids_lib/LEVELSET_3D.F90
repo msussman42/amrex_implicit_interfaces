@@ -2713,6 +2713,7 @@ stop
           caller_id, &
           tid, &
           EPS2, &
+          local_tessellate, & !TESSELLATE_FLUIDS 
           tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact,dx, &
           xsten,nhalf, &
@@ -2837,6 +2838,7 @@ stop
                call multi_get_volume_grid_simple( &
                 tid, &
                 EPS2, &
+                local_tessellate, & !TESSELLATE_FLUIDS 
                 tessellate, &  !TESSELLATE_ALL
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, & !fluids tessellate, solids embedded
@@ -3095,6 +3097,7 @@ stop
                call multi_get_volume_grid_simple( &
                 tid, &
                 EPS2, &
+                local_tessellate, & !TESSELLATE_FLUIDS 
                 tessellate, &  !TESSELLATE_ALL or TESSELLATE_ALL_RASTER
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, & !fluids tessellate, solids embedded
@@ -3371,6 +3374,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid, &
                EPS2, &
+               local_tessellate, & !TESSELLATE_FLUIDS 
                tessellate, &  !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
                bfact,dx,xsten,nhalf, &
                mofdatavalid, & !fluids tessellate, solids embedded
@@ -12225,6 +12229,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: project_option
+      integer, parameter :: tessellate_base=TESSELLATE_FLUIDS
       integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: ngrow_refine
       integer, INTENT(in) :: tid
@@ -12489,6 +12494,7 @@ stop
          call multi_get_volume_grid_simple( &
           tid, &
           EPS2, &
+          tessellate_base, & !TESSELLATE_FLUIDS 
           tessellate, & !TESSELLATE_FLUIDS,TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact,dx, &
           xsten_recon,1, &

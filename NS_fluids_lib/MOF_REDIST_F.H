@@ -73,6 +73,7 @@ namespace amrex{
        Real* time);
 
      void fort_correct_uninit(
+       int* tessellate,
        Real* minLS,
        Real* maxLS,
        Real* max_problen,
@@ -80,17 +81,13 @@ namespace amrex{
        int* finest_level,
        Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
-       Real* statefab,AMREX_ARLIM_P(statefablo),AMREX_ARLIM_P(statefabhi),
-       Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
        Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
        Real* time, 
-       int* nstate, 
-       int* ncompLS,
-       int* ncomp_vof);
+       int* ncompLS);
 
      void fort_steninit(
        int* tessellate,

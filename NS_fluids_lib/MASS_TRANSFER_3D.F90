@@ -883,7 +883,6 @@ stop
       integer cc_flag
       integer tsat_flag
       integer nsolve
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       real(amrex_real) Tsat
       real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
       real(amrex_real) local_data_out
@@ -948,8 +947,7 @@ stop
 
        call get_primary_material_VFRAC( &
          local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)), &
-         tessellate) !TESSELLATE_FLUIDS
+         im_primary_sten(D_DECL(i1,j1,k1)))
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -1744,7 +1742,6 @@ stop
       integer cc_flag
       integer tsat_flag
       integer nsolve
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       DATA_FLOOR=zero
 
@@ -1812,8 +1809,7 @@ stop
 
        call get_primary_material_VFRAC( &
          local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)), &
-         tessellate) !TESSELLATE_FLUIDS
+         im_primary_sten(D_DECL(i1,j1,k1)))
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -4710,6 +4706,7 @@ stop
                  tid, &
                  EPS_11_4, &
                  tessellate, & ! =TESSELLATE_FLUIDS
+                 tessellate, & ! =TESSELLATE_FLUIDS
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
                  mofdata, &
@@ -5630,11 +5627,9 @@ stop
                    recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
                 enddo !im_local=1..num_materials
 
-                tessellate=TESSELLATE_FLUIDS
                 call get_primary_material_VFRAC( &
                   local_VOF, &
-                  im_primary_sten(D_DECL(i1,j1,k1)), &
-                  tessellate) !TESSELLATE_FLUIDS
+                  im_primary_sten(D_DECL(i1,j1,k1)))
 
                 do udir=1,SDIM
                  XC_sten(D_DECL(i1,j1,k1),udir)= &

@@ -99,13 +99,12 @@ stop
       contains
 
 
-      subroutine get_mach_number(tessellate, &
+      subroutine get_mach_number( &
         vel,den,vof,mach)
       use MOF_routines_module
       use global_utility_module
       IMPLICIT NONE
  
-      integer, INTENT(in) :: tessellate
       real(amrex_real), INTENT(in) :: vel(SDIM+1)
       real(amrex_real), INTENT(in) :: den(num_materials*num_state_material)
       real(amrex_real), INTENT(in) :: vof(num_materials)
@@ -121,19 +120,9 @@ stop
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
 
-      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-          (tessellate.eq.TESSELLATE_ALL).or. &
-          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
-       !do nothing
-      else
-       print *,"tessellate invalid in get_mach_number: ",tessellate
-       stop
-      endif
-
       call get_primary_material_VFRAC( &
        vof, &
-       im_primary, &
-       tessellate)
+       im_primary)
      
       if ((im_primary.lt.1).or.(im_primary.gt.num_materials)) then
        print *,"im_primary invalid"
@@ -247,7 +236,6 @@ stop
       real(amrex_real) dxmax
       real(amrex_real) :: def_thermal(num_materials)
       integer :: im_local
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer im_rigid_CL !get_elasticmask_and_elasticmaskpart
 
        ! see subroutine eval_face_coeff
@@ -326,8 +314,7 @@ stop
 
       call get_primary_material_VFRAC( &
        VOF, &
-       im_primary_vof, &
-       tessellate) !TESSELLATE_FLUIDS
+       im_primary_vof)
 
       call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
 
@@ -5925,6 +5912,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       ! get_symmetric_error
       real(amrex_real), INTENT(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       integer nmax
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: tessellate=TESSELLATE_ALL
       integer vofcomp
       real(amrex_real) multi_volume(num_materials)
@@ -6172,6 +6160,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call multi_get_volume_grid_simple( &
         tid_local, &
         EPS2, &
+        tessellate_source, &  ! =TESSELLATE_FLUIDS
         tessellate, &  ! =TESSELLATE_ALL
         bfact,dx,xsten0,nhalf0, &
         mofdata, & !input: fluids tessellate, solids embedded
