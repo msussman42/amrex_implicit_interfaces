@@ -1198,6 +1198,7 @@ stop
            tid_in, &
            EPS_11_4, &
            tessellate, & ! =TESSELLATE_FLUIDS
+           tessellate, & ! =TESSELLATE_FLUIDS
            bfact,dx, &
            xsten,nhalf, & ! phi = n dot (x-x0) + intercept
            mofdata_super, &
@@ -1424,6 +1425,7 @@ stop
          caller_id2, &
          tid_in, &
          EPS_11_4, &
+         tessellate, & ! =TESSELLATE_FLUIDS
          tessellate, & ! =TESSELLATE_FLUIDS
          bfact,dx, &
          xsten,nhalf, & ! phi = n dot (x-x0) + intercept

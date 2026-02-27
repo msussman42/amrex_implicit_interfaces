@@ -456,6 +456,7 @@ stop
                tid_in, &
                EPS3, &
                tessellate, &  !=TESSELLATE_FLUIDS
+               tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
                xstengrid,nhalfgrid, &
@@ -996,6 +997,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid_in, &
                EPS3, &
+               tessellate, &  !=TESSELLATE_FLUIDS
                tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &

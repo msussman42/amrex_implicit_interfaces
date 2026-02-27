@@ -28272,9 +28272,12 @@ void NavierStokes::putStateDIV_DATA(
 // called from:
 // NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
+// tessellate=TESSELLATE_FLUIDS|FLUIDS_ELASTIC
 void
-NavierStokes::makeStateDistALL(int update_particles,
-  int local_redistribute_main,int tessellate) {
+NavierStokes::makeStateDistALL(
+  int update_particles,
+  int local_redistribute_main,
+  int tessellate) {
 
  interface_touch_flag=1; //makeStateDistALL
 
@@ -28326,6 +28329,9 @@ NavierStokes::makeStateDistALL(int update_particles,
 
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
+     //calls fort_build_old_vof
+     //which calls multi_get_volume_tessellate(TESSELLATE_FLUIDS_ELASTIC)
+     //the output is placed in localMF[ELASTIC_FLUID_MOMENT_MF]
     ns_level.build_elastic_fluid_moment();
    }
 
@@ -28351,7 +28357,7 @@ NavierStokes::makeStateDistALL(int update_particles,
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.correct_dist_uninit();
+  ns_level.correct_dist_uninit(tessellate);
  }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -28374,6 +28380,11 @@ NavierStokes::makeStateDistALL(int update_particles,
  if (update_particles==1) {
 
 #ifdef AMREX_PARTICLES
+
+  if (tessellate==TESSELLATE_FLUIDS) {
+   //do nothing
+  } else
+   amrex::Error("expecting tessellate==TESSELLATE_FLUIDS if particles");
 
    // calling from NavierStokes::makeStateDistALL (after reinitialization)
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -28857,7 +28868,7 @@ NavierStokes::build_elastic_fluid_moment() {
 } // end subroutine build_elastic_fluid_moment()
 
 void
-NavierStokes::correct_dist_uninit() {
+NavierStokes::correct_dist_uninit(int tessellate) {
 
  std::string local_caller_string="correct_dist_uninit";
 
@@ -28882,16 +28893,6 @@ NavierStokes::correct_dist_uninit() {
  debug_ngrow(VOLUME_MF,2,local_caller_string); 
 
  MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
- MultiFab& S_new = get_new_data(State_Type,project_slab_step+1);
-
- int ncomp_vof=num_materials*ngeom_raw;
-
- MultiFab* vofmf=
-    getState(2,STATECOMP_MOF,ncomp_vof,cur_time_slab);
-
- int nstate=STATE_NCOMP;
- if (nstate!=S_new.nComp())
-  amrex::Error("nstate invalid");
 
  int ncompLS=num_materials*(BL_SPACEDIM+1);
  if (ncompLS!=LS_new.nComp())
@@ -28923,23 +28924,11 @@ NavierStokes::correct_dist_uninit() {
 
    FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
 
-   FArrayBox& statefab=S_new[mfi];
-   if (statefab.nComp()==nstate) {
-    //do nothing
-   } else
-    amrex::Error("statefab.nComp()==nstate failed");
-
    FArrayBox& lsfab=LS_new[mfi];
    if (lsfab.nComp()==ncompLS) {
     //do nothing
    } else
     amrex::Error("lsfab.nComp()==ncompLS failed");
-
-   FArrayBox& voffab=(*vofmf)[mfi];
-   if (voffab.nComp()==ncomp_vof) {
-    //do nothing
-   } else
-    amrex::Error("voffab.nComp()==ncomp_vof failed");
 
    FArrayBox& touchfab=(*localMF[DIST_TOUCH_MF])[mfi];
 
@@ -28948,7 +28937,9 @@ NavierStokes::correct_dist_uninit() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    //MOF_REDIST_3D.F90
    fort_correct_uninit( 
+    &tessellate,
     minLS[0].dataPtr(),
     maxLS[0].dataPtr(),
     &max_problen,
@@ -28957,23 +28948,17 @@ NavierStokes::correct_dist_uninit() {
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    statefab.dataPtr(),
-    ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     touchfab.dataPtr(),
     ARLIM(touchfab.loVect()),ARLIM(touchfab.hiVect()),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,
+    &bfact,
     xlo,dx,
     &cur_time_slab,
-    &nstate,
-    &ncompLS,
-    &ncomp_vof);
+    &ncompLS);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_CORRECT_UNINIT,"correct_dist_uninit");
-
- delete vofmf;
 
 } // end subroutine correct_dist_uninit
 

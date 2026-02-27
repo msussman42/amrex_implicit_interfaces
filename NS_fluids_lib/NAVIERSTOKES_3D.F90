@@ -2882,8 +2882,7 @@ END SUBROUTINE SIMP
           gradvelocitynd(dir)=gradvelocitynd(dir)+ &
             localwt*gradvelocity(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
-         call get_mach_number(visual_tessellate_vfrac, &
-           velcell,dencell,vofcell,machcell)
+         call get_mach_number(velcell,dencell,vofcell,machcell)
 
          machnd=machnd+localwt*machcell
 
@@ -14139,6 +14138,7 @@ END SUBROUTINE SIMP
                call multi_get_volume_grid_simple( &
                 tid_in, &
                 EPS2, &
+                tessellate, &  !=TESSELLATE_FLUIDS
                 tessellate, &  !=TESSELLATE_FLUIDS
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &

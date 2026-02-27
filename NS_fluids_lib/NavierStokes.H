@@ -1404,7 +1404,7 @@ void apply_pressure_grad(
     void makeStateDist(int tessellate);
     void build_elastic_fluid_moment();
 
-    void correct_dist_uninit();
+    void correct_dist_uninit(int tessellate);
 
     void makeStateCurv(int project_option,
 	  const std::string& caller_string);
