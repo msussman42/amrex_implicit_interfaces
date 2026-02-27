@@ -120,6 +120,7 @@ stop
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
 
+       !get_mach_number
       call get_primary_material_VFRAC( &
        vof, &
        im_primary)
@@ -312,6 +313,7 @@ stop
 
       call get_primary_material(dx,LS,im_primary)
 
+       !get_elasticmask_and_elasticmaskpart
       call get_primary_material_VFRAC( &
        VOF, &
        im_primary_vof)

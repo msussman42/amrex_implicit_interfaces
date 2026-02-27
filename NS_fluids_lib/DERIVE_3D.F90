@@ -194,6 +194,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
+        !fort_derturbvisc
        call get_primary_material_VFRAC( &
           VFRAC, &
           im_primary)
@@ -377,6 +378,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
+          !fort_derturbvisc
          call get_primary_material_VFRAC( &
                  VFRAC, &
                  im_primary)
@@ -1474,6 +1476,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
+        !fort_derconductivity
        call get_primary_material_VFRAC( &
              VFRAC, &
              im_primary_center)
@@ -1504,6 +1507,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
          enddo
+          !fort_derconductivity
          call get_primary_material_VFRAC( &
              VFRAC, &
              im_primary_side)
@@ -1560,6 +1564,7 @@ stop
            vofcomp=(im_local-1)*ngeom_recon+1
            VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
           enddo
+           !fort_derconductivity
           call get_primary_material_VFRAC( &
                  VFRAC, &
                  im_primary_probe)

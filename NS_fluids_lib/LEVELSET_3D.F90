@@ -2667,7 +2667,9 @@ stop
         enddo ! im
 
          !in: fort_cellfaceinit
-        call check_full_cell_vfrac(vcenter, &
+        call check_full_cell_vfrac( &
+          vcenter, &
+          local_tessellate, & !TESSELLATE_FLUIDS 
           tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           im_crit, &
           EPS_8_4)
