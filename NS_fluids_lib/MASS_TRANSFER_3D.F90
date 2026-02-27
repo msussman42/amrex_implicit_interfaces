@@ -945,6 +945,7 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
+        !interpfabFWEIGHT
        call get_primary_material_VFRAC( &
          local_VOF, &
          im_primary_sten(D_DECL(i1,j1,k1)))
@@ -1807,6 +1808,7 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
+        !interpfabTEMP
        call get_primary_material_VFRAC( &
          local_VOF, &
          im_primary_sten(D_DECL(i1,j1,k1)))
@@ -5465,7 +5467,7 @@ stop
              enddo
              call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &
@@ -5627,6 +5629,7 @@ stop
                    recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
                 enddo !im_local=1..num_materials
 
+                 !fort_convertmaterial
                 call get_primary_material_VFRAC( &
                   local_VOF, &
                   im_primary_sten(D_DECL(i1,j1,k1)))
@@ -6010,7 +6013,7 @@ stop
               enddo
               call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &
@@ -6035,7 +6038,7 @@ stop
               enddo
               call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &

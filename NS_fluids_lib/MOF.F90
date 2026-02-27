@@ -27389,7 +27389,10 @@ contains
 
 
        ! called from: get_mach_number, 
-       !        fort_derturbvisc, fort_derconductivity
+       !        fort_derturbvisc, fort_derconductivity,
+       !        fort_combinevel,interpfabFWEIGHT,
+       !        interpfabTEMP,fort_convertmaterial,
+       !        get_elasticmask_and_elasticmaskpart
       subroutine get_primary_material_VFRAC( &
           VFRAC, &
           im_primary)
@@ -27532,7 +27535,8 @@ contains
 
       subroutine check_full_cell_vfrac( &
              vfrac, &
-             tessellate, &
+             tessellate_in, &
+             tessellate_out, &
              im_full,tol)
       use probcommon_module
       use geometry_intersect_module
@@ -27541,7 +27545,8 @@ contains
       IMPLICIT NONE
 
       real(amrex_real), intent(in) :: tol
-      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: tessellate_in
+      integer, INTENT(in) :: tessellate_out
       real(amrex_real), INTENT(in) :: vfrac(num_materials)
       integer, INTENT(out) :: im_full
       integer im
@@ -27558,32 +27563,38 @@ contains
        stop
       endif
 
-      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-          (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
-          (tessellate.eq.TESSELLATE_ALL).or. &
-          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
-       !do nothing
+      if (tessellate_in.eq.TESSELLATE_FLUIDS) then
+       if ((tessellate_out.eq.TESSELLATE_FLUIDS).or. &
+           (tessellate_out.eq.TESSELLATE_ALL).or. &
+           (tessellate_out.eq.TESSELLATE_ALL_RASTER)) then
+        !do nothing
+       else
+        print *,"tessellate_out invalid"
+        stop
+       endif
+      else if (tessellate_in.eq.TESSELLATE_IGNORE_ISELASTIC) then
+       if (tessellate_out.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        !do nothing
+       else
+        print *,"tessellate_out invalid"
+        stop
+       endif
       else
-       print *,"tessellate invalid check_full_cell_vfrac: ",tessellate
+       print *,"tessellate_in invalid check_full_cell_vfrac: ",tessellate_in
        stop
       endif
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
+       if (tessellate_in.eq.TESSELLATE_FLUIDS) then
         ! do nothing; fluids tessellate, rigid|elastic embedded.
-       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+       else if (tessellate_in.eq.TESSELLATE_IGNORE_ISELASTIC) then
         is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_ALL) then
-        !do nothing
-       else if (tessellate.eq.TESSELLATE_ALL_RASTER) then
-        !do nothing
        else
-        print *,"tessellate invalid check_full_cell_vfrac: ",tessellate
+        print *,"tessellate_in invalid check_full_cell_vfrac: ",tessellate
         stop
        endif
-      enddo ! im=1..num_materials
       enddo ! im=1..num_materials
 
       if ((num_materials.lt.1).or. &

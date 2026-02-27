@@ -1701,7 +1701,7 @@ stop
         ! newfab has num_materials*(sdim+1) components
         !
       subroutine fort_levelstrip( &
-         tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+         tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
          nprocessed, &
          minLS, &
          maxLS, &
@@ -2883,7 +2883,7 @@ stop
        is_elastic_local(im)=is_elastic(im)
        if (tessellate.eq.TESSELLATE_FLUIDS) then
         ! do nothing
-       else if (tessellate.eq.TESSELLATE_FLUIDS_ELASTIC) then
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
         is_elastic_local(im)=0
        else
         print *,"tessellate invalid fort_correct_uninit: ",tessellate
@@ -2995,7 +2995,7 @@ stop
 
 
       subroutine fort_steninit( &
-       tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+       tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
        level, &
        finest_level, &
        stenfab,DIMS(stenfab), &
@@ -3155,9 +3155,11 @@ stop
         enddo ! im
 
          !in: fort_steninit
+         !vcenter is TESSELLATE_FLUIDS|TESSELLATE_IGNORE_ISELASTIC
         call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, & ! =TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+          tessellate, & ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
+          tessellate, & ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
           im_crit, &
           EPS_FULL_WEAK)
 
@@ -3190,7 +3192,7 @@ stop
           istar_array(3)=k3
 
           call multi_get_volumePOINT( &
-           tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+           tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
            im_test,SDIM)
@@ -3251,6 +3253,7 @@ stop
          enddo ! im
 
          !in: fort_steninit
+         !vcenter is TESSELLATE_FLUIDS|FLUIDS_ELASTIC
          call check_full_cell_vfrac( &
           vcenter, &
           tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
@@ -3649,6 +3652,7 @@ stop
         enddo ! im
 
          !in: fort_faceinit
+         !vcenter is TESSELLATE_FLUIDS
         call check_full_cell_vfrac( &
           vcenter, &
           tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER

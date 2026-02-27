@@ -19191,7 +19191,8 @@ stop
               local_VOF(im_local)= &
                 vof(D_DECL(i+i1,j+j1,k+k1),local_vofcomp)
              enddo !im_local=1..num_materials
-
+      
+               !fort_combinevel
              call get_primary_material_VFRAC( &
                local_VOF, &
                im_primary_sten(D_DECL(i1,j1,k1)))
