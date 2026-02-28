@@ -1971,6 +1971,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: elastic_ncomp
       integer :: elastic_mag_ncomp
       integer, INTENT(in) :: refineden_ncomp
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: visual_tessellate_vfrac
        ! x,u,pmg,den,temp,spec,mag vort,LS
       integer, INTENT(in) :: visual_ncomp
@@ -2433,7 +2434,8 @@ END SUBROUTINE SIMP
        ! EPS2
        call multi_get_volume_tessellate( &
         tid, &
-        tessellate_raster, & !=TESSELLATE_ALL_RASTER
+        tessellate_source, & !TESSELLATE_FLUIDS
+        tessellate_raster, & !TESSELLATE_ALL_RASTER
         bfact, &
         dx,xsten,nhalf, &
         mofdata_raster, &
@@ -2451,6 +2453,7 @@ END SUBROUTINE SIMP
          ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
+         tessellate_source, & !TESSELLATE_FLUIDS
          visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
          bfact, &
          dx,xsten,nhalf, &
@@ -7441,7 +7444,8 @@ END SUBROUTINE SIMP
 
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
-      integer, parameter ::  local_tessellate=TESSELLATE_ALL
+      integer, parameter ::  tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter ::  tessellate_dest=TESSELLATE_ALL
 
       type(user_defined_sum_int_type) :: GRID_DATA_PARM
       real(amrex_real) local_user_out1(ncomp_sum_int_user1+1)
@@ -7647,7 +7651,8 @@ END SUBROUTINE SIMP
         ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, & !TESSELLATE_ALL
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &
@@ -8658,7 +8663,8 @@ END SUBROUTINE SIMP
       integer :: dir
       integer :: local_dir
       integer :: local_mask,local_mask_L
-      integer, parameter :: tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_L(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_R(-nhalf:nhalf,SDIM)
@@ -8790,7 +8796,8 @@ END SUBROUTINE SIMP
           ! EPS2
          call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & !tessellate_source=TESSELLATE_FLUIDS
+           tessellate_dest, & !tessellate_dest=TESSELLATE_ALL
            bfact, &
            dx, &
            xsten,nhalf, &
@@ -9252,7 +9259,8 @@ END SUBROUTINE SIMP
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & ! TESSELLATE_FLUIDS
+           tessellate_dest, & ! TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_R,nhalf, &
@@ -9265,7 +9273,8 @@ END SUBROUTINE SIMP
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & ! TESSELLATE_FLUIDS
+           tessellate_dest, & ! TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_L,nhalf, &
@@ -13931,7 +13940,7 @@ END SUBROUTINE SIMP
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: mof_verbose=0
       integer, parameter :: use_ls_data=0
@@ -14105,7 +14114,7 @@ END SUBROUTINE SIMP
                  xstenfine,nhalf, &
                  continuous_mof, &
                  bfact_f,dxf, &
-                 tessellate, & !TESSELLATE_FLUIDS
+                 tessellate_source, & !TESSELLATE_FLUIDS
                  mofdatafine, &
                  SDIM)
 
@@ -14115,7 +14124,7 @@ END SUBROUTINE SIMP
                enddo
 
                call multimaterial_MOF( &
-                tessellate, & !TESSELLATE_FLUIDS
+                tessellate_source, & !TESSELLATE_FLUIDS
                 tid_in, &
                 bfact_f,dxf,xstenfine,nhalf, &
                 mof_verbose, & ! =0
@@ -14138,8 +14147,8 @@ END SUBROUTINE SIMP
                call multi_get_volume_grid_simple( &
                 tid_in, &
                 EPS2, &
-                tessellate, &  !=TESSELLATE_FLUIDS
-                tessellate, &  !=TESSELLATE_FLUIDS
+                tessellate_source, &  !=TESSELLATE_FLUIDS
+                tessellate_source, &  !=TESSELLATE_FLUIDS
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &
                 xstengrid,nhalfgrid, &

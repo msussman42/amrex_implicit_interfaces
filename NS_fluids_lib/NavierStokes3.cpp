@@ -3089,9 +3089,9 @@ void NavierStokes::phase_change_code_segment(
 
  int local_redistribute_main=0;
 
- int tessellate=TESSELLATE_FLUIDS;
+ int tessellate_source=TESSELLATE_FLUIDS;
 
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+ makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -3127,9 +3127,9 @@ void NavierStokes::no_mass_transfer_code_segment(
  int update_particles=1;
  int local_redistribute_main=0;
 
- int tessellate=TESSELLATE_FLUIDS;
+ int tessellate_source=TESSELLATE_FLUIDS;
 
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+ makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -3249,9 +3249,9 @@ void NavierStokes::nucleation_code_segment(
 
  int update_particles=1;
  int local_redistribute_main=0;
- tessellate=TESSELLATE_FLUIDS;
+ tessellate_source=TESSELLATE_FLUIDS;
 
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+ makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);

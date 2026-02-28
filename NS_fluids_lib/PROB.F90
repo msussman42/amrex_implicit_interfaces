@@ -5915,7 +5915,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       integer nmax
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
-      integer, parameter :: tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
       integer vofcomp
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
@@ -6163,7 +6163,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         tid_local, &
         EPS2, &
         tessellate_source, &  ! =TESSELLATE_FLUIDS
-        tessellate, &  ! =TESSELLATE_ALL
+        tessellate_dest, &  ! =TESSELLATE_ALL
         bfact,dx,xsten0,nhalf0, &
         mofdata, & !input: fluids tessellate, solids embedded
         xsten,nhalf, &
@@ -19830,7 +19830,7 @@ end subroutine RatePhaseChange
       integer :: grid_index(SDIM)
       integer, parameter :: grid_level=-1
 
-      integer tessellate
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer ibasesrc,ibasedst
       integer ibase_raw,ibase_recon
 
@@ -19846,7 +19846,7 @@ end subroutine RatePhaseChange
       real(amrex_real) cen_dst(SDIM)
       real(amrex_real) vfluid_sum
       real(amrex_real) VOF_source,VOF_dest
-      integer local_tessellate
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL_RASTER
 
       nmax=POLYGON_LIST_MAX 
 
@@ -20043,7 +20043,6 @@ end subroutine RatePhaseChange
         ! create unidirectional seed
         ! initialize volume fraction, level set function, centroid,
         ! density, temperature, and vapor mass fraction.
-        tessellate=TESSELLATE_FLUIDS
 
         do im_local=1,num_materials
          ibase_raw=(im_local-1)*ngeom_raw+1
@@ -20065,7 +20064,7 @@ end subroutine RatePhaseChange
           continuous_mof, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
-          tessellate, &  ! =TESSELLATE_FLUIDS
+          tessellate_source, &  ! =TESSELLATE_FLUIDS
           mofdata, &
           SDIM)
 
@@ -20075,7 +20074,7 @@ end subroutine RatePhaseChange
         enddo
 
         call multimaterial_MOF( &
-         tessellate, & ! =TESSELLATE_FLUIDS
+         tessellate_source, & ! =TESSELLATE_FLUIDS
          nucleate_in%tid, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
@@ -20096,18 +20095,18 @@ end subroutine RatePhaseChange
          grid_level, &
          SDIM)
 
-         ! if local_tessellate==TESSELLATE_ALL_RASTER: 
+         ! tessellate_dest==TESSELLATE_ALL_RASTER: 
          !  (rasterized reconstruction for solids)
          !  if solid material(s) dominate the cell, then F_solid_raster=1
          !  and F_fluid=0.
          !  if fluid material(s) dominate the cell, then F_solid=0,
          !  sum F_fluid=1 
          !FIX ME?
-        local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2
         call multi_get_volume_tessellate( &
          nucleate_in%tid, &
-         local_tessellate, & ! =TESSELLATE_ALL_RASTER
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL_RASTER
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
@@ -24910,7 +24909,7 @@ end subroutine initialize2d
        real(amrex_real) local_state(num_materials*num_state_material)
        real(amrex_real) massfrac_parm(num_species_var+1)
        integer local_ibase
-       integer, parameter :: tessellate=TESSELLATE_FLUIDS
+       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
        integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
        integer, parameter :: continuous_mof=STANDARD_MOF
@@ -26213,7 +26212,7 @@ end subroutine initialize2d
           xsten,nhalf, &
           continuous_mof, &
           bfact,dx, &
-          tessellate, & ! =TESSELLATE_FLUIDS
+          tessellate_source, & ! =TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -26459,7 +26458,7 @@ end subroutine initialize2d
       real(amrex_real) cencell(SDIM)
       real(amrex_real) mofdata(ngeom_recon*num_materials)
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
+      integer, PARAMETER :: tessellate_source=TESSELLATE_FLUIDS
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
 
@@ -26627,7 +26626,7 @@ end subroutine initialize2d
           xsten,nhalf, &
           continuous_mof_parm, &
           bfact,dx, &
-          tessellate, & !=TESSELLATE_FLUIDS
+          tessellate_source, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -29826,7 +29825,7 @@ end subroutine initialize2d
       real(amrex_real) voffluid_bound,vofsolid_bound
       real(amrex_real) voftest_wall,voftest_bound
 
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
 
       integer, parameter :: nhalf=3
 
@@ -30033,7 +30032,7 @@ end subroutine initialize2d
            xsten,nhalf, &
            continuous_mof, &
            bfact,dx, &
-           tessellate, &  ! =TESSELLATE_FLUIDS
+           tessellate_source, &  ! =TESSELLATE_FLUIDS
            mofdata, &
            SDIM)
 
@@ -30043,7 +30042,7 @@ end subroutine initialize2d
          enddo
 
          call multimaterial_MOF( &
-          tessellate, &  ! =TESSELLATE_FLUIDS
+          tessellate_source, &  ! =TESSELLATE_FLUIDS
           tid_in, &
           bfact,dx,xsten,nhalf, &
           mof_verbose, & !=0

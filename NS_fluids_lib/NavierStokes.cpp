@@ -25814,9 +25814,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
   int local_redistribute_main=0; //global
 
-  int tessellate=TESSELLATE_FLUIDS;
+  int tessellate_source=TESSELLATE_FLUIDS;
 
-  makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+  makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
 
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
@@ -28272,12 +28272,12 @@ void NavierStokes::putStateDIV_DATA(
 // called from:
 // NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
-// tessellate=TESSELLATE_FLUIDS|FLUIDS_ELASTIC
+// tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
 void
 NavierStokes::makeStateDistALL(
   int update_particles,
   int local_redistribute_main,
-  int tessellate) {
+  int tessellate_source) {
 
  interface_touch_flag=1; //makeStateDistALL
 
@@ -28322,7 +28322,7 @@ NavierStokes::makeStateDistALL(
   } // tid
  }
 
- if (tessellate==TESSELLATE_FLUIDS_ELASTIC) {
+ if (tessellate_source==TESSELLATE_IGNORE_ISELASTIC) {
   if (material_extend_velocity_flag==0) {
    amrex::Error("expecting material_extend_velocity_flag>0");
   } else if (material_extend_velocity_flag>0) {
@@ -28967,8 +28967,10 @@ NavierStokes::correct_dist_uninit(int tessellate) {
 // called from NavierStokes::ColorSum
 // called from NavierStokes::makeStateDist
 void
-NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
-		int ngrow_dest) {
+NavierStokes::ProcessFaceFrac(
+  int tessellate,
+  int idxsrc,int idxdst,
+  int ngrow_dest) {
   
  std::string local_caller_string="ProcessFaceFrac";
 

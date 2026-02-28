@@ -1398,8 +1398,10 @@ void apply_pressure_grad(
     void makeFaceFrac(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int update_particles,int local_redistribute_main,
-          int tessellate);
+    void makeStateDistALL(
+        int update_particles,
+        int local_redistribute_main,
+        int tessellate_source);
 
     void makeStateDist(int tessellate);
     void build_elastic_fluid_moment();

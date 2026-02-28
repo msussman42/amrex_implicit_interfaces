@@ -18372,7 +18372,8 @@ stop
       real(amrex_real) Tgamma
       real(amrex_real) TorYgamma_BC
       integer tsat_comp
-      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL_RASTER
       real(amrex_real) xclamped(SDIM)
       real(amrex_real) LS_clamped
       real(amrex_real) vel_clamped(SDIM)
@@ -18592,7 +18593,8 @@ stop
          !EPS2 tolerance
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, &  !TESSELLATE_ALL_RASTER
+         tessellate_source, &  !TESSELLATE_FLUIDS
+         tessellate_dest, &  !TESSELLATE_ALL_RASTER
          bfact, &
          dx,xsten, &
          nhalf, & !nhalf=3
@@ -19961,7 +19963,8 @@ stop
       real(amrex_real) temperature_clamped_plus
       integer prescribed_flag
       integer is_clamped_face
-      integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL_RASTER
 
       nmax=POLYGON_LIST_MAX ! in: COMBINEVELFACE
 
@@ -20142,7 +20145,8 @@ stop
           !EPS2 tolerance
          call multi_get_volume_tessellate( &
           tid, &
-          local_tessellate, & !TESSELLATE_ALL_RASTER 
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tessellate_dest, & !TESSELLATE_ALL_RASTER 
           bfact, &
           dx,xsten, &
           nhalf, & !=3

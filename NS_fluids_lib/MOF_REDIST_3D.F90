@@ -3343,7 +3343,8 @@ stop
 
       integer i,j,k
 
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS_ELASTIC
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_FLUIDS_ELASTIC
 
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -3416,7 +3417,8 @@ stop
  
         call multi_get_volume_tessellate( &
           tid, &
-          tessellate, & !TESSELLATE_FLUIDS_ELASTIC
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tessellate_dest, & !TESSELLATE_FLUIDS_ELASTIC
           bfact,dx, &
           xsten,nhalf, &
           mofdata, &
@@ -3455,7 +3457,7 @@ stop
        ! 
       subroutine fort_faceinit( &
          tid, &
-         tessellate, &  !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+         tessellate_dest, &  !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
          level, &
          finest_level, &
          facefab,DIMS(facefab), &
@@ -3479,7 +3481,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: tessellate !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+      integer, INTENT(in) :: tessellate_dest !TESSELLATE_ALL|ALL_RASTER
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: nface
@@ -3532,7 +3534,7 @@ stop
       real(amrex_real) multi_area(num_materials)
       real(amrex_real) total_vol
       integer mask1,mask2
-      integer, parameter :: normalize_tessellate=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer local_tessellate
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -3545,9 +3547,9 @@ stop
        stop
       endif
 
-      if ((tessellate.ne.TESSELLATE_ALL).and. &
-          (tessellate.ne.TESSELLATE_ALL_RASTER)) then
-       print *,"tessellate invalid45"
+      if ((tessellate_dest.ne.TESSELLATE_ALL).and. &
+          (tessellate_dest.ne.TESSELLATE_ALL_RASTER)) then
+       print *,"tessellate_dest invalid fort_faceinit ",tessellate_dest
        stop
       endif
 
@@ -3640,7 +3642,7 @@ stop
          xsten,nhalf, &
          continuous_mof, &
          bfact,dx, &
-         normalize_tessellate, &  !TESSELLATE_FLUIDS
+         tessellate_source, &  !TESSELLATE_FLUIDS
          mofdata, &
          mofdatavalid, &
          SDIM)
@@ -3655,7 +3657,8 @@ stop
          !vcenter is TESSELLATE_FLUIDS
         call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tessellate_dest, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           im_crit, &
           EPS_8_4)
 
@@ -3701,10 +3704,11 @@ stop
           !EPS_FULL_WEAK=EPS2
          call multi_get_volume_tessellate( &
           tid, &
-          tessellate, &  !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tessellate_dest, &  !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
           bfact,dx, &
           xsten,nhalf, &
-          mofdatavalid, &
+          mofdatavalid, & !intent(inout)
           geom_xtetlist_uncapt(1,1,1,tid+1), &
           nmax, &
           nmax, &
@@ -3841,7 +3845,7 @@ stop
        ngrow_dest, &
        tid, &
        dir, &
-       tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+       tessellate_dest, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
        level, &
        finest_level, &
        dstfab,DIMS(dstfab), &
@@ -3866,7 +3870,8 @@ stop
       integer, INTENT(in) :: ngrow_dest
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: dir
-      integer, INTENT(in) :: tessellate !TESSELLATE_ALL|ALL_RASTER
+      integer, INTENT(in) :: tessellate_dest !TESSELLATE_ALL|ALL_RASTER
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: nface_src,nface_dst
@@ -3946,9 +3951,10 @@ stop
        print *,"bfact invalid87"
        stop
       endif
-      if ((tessellate.ne.TESSELLATE_ALL).and. &
-          (tessellate.ne.TESSELLATE_ALL_RASTER)) then 
-       print *,"tessellate invalid51: ",tessellate
+      if ((tessellate_dest.ne.TESSELLATE_ALL).and. &
+          (tessellate_dest.ne.TESSELLATE_ALL_RASTER)) then 
+       print *,"tessellate_dest invalid(fort_faceprocess): ", &
+          tessellate_dest
        stop
       endif
 
@@ -4147,12 +4153,13 @@ stop
          frac_left(im)=leftface(im)
          frac_right(im)=rightface(im)
 
-         if ((tessellate.eq.TESSELLATE_ALL).or. &
-             (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+         if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+             (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
           left_total=left_total+frac_left(im)
           right_total=right_total+frac_right(im)
          else 
-          print *,"tessellate invalid MOF_REDIST_3D.F90"
+          print *,"tessellate_dest invalid MOF_REDIST_3D.F90: ", &
+            tessellate_dest
           stop
          endif 
 
@@ -4189,8 +4196,8 @@ stop
 
         do im = 1,num_materials
 
-         if ((tessellate.eq.TESSELLATE_ALL).or. &
-             (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+         if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+             (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
 
           if ((frac_left(im).gt.one+EPS_FULL_WEAK).or. &
               (frac_left(im).lt.zero).or. &
@@ -4213,7 +4220,8 @@ stop
           endif
 
          else
-          print *,"tessellate invalid MOF_REDIST_3D.F90:",tessellate
+          print *,"tessellate_dest invalid MOF_REDIST_3D.F90:", &
+            tessellate_dest
           stop
          endif 
 
@@ -4229,11 +4237,12 @@ stop
 
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
-          if ((tessellate.eq.TESSELLATE_ALL).or. &
-              (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+          if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+              (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
            ! do nothing
           else
-           print *,"tessellate invalid MOF_REDIST_3D.F90 ",tessellate
+           print *,"tessellate_dest invalid MOF_REDIST_3D.F90 ", &
+             tessellate_dest
            stop
           endif
 
@@ -4244,7 +4253,7 @@ stop
 
          enddo ! im=1..num_materials
 
-          ! tessellate==TESSELLATE_ALL or TESSELLATE_ALL_RASTER:
+          ! tessellate_dest==TESSELLATE_ALL or TESSELLATE_ALL_RASTER:
           !  a) call multi_get_volume_tessellate
           !  b) tessellate_in=TESSELLATE_IGNORE_ISRIGID
           !  c) is_rigid_local=0 for all materials
@@ -4252,7 +4261,8 @@ stop
           ! 
          call multi_get_area_pairs( &
            tid, &
-           tessellate, & ! =TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+           tessellate_source, & !TESSELLATE_FLUIDS
+           tessellate_dest, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
            bfact, &
            dx, &
            xsten_right, &
