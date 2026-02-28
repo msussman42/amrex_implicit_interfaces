@@ -525,6 +525,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: visual_tessellate_vfrac
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
@@ -653,6 +654,7 @@ stop
          ! EPS2
          call multi_get_volume_tessellate( &
           tid, &
+          tessellate_source, & !TESSELLATE_FLUIDS
           visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
           bfact, &
           dx,xsten,nhalf, &

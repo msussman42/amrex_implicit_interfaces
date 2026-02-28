@@ -2223,7 +2223,8 @@ stop
       integer ibase
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
-      integer, parameter :: local_tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer nmax
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -2452,7 +2453,8 @@ stop
         ! "single material" tolerance is EPS2.
        call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, & !TESSELLATE_ALL
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &
