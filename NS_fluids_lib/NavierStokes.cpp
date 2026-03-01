@@ -28338,10 +28338,10 @@ NavierStokes::makeStateDistALL(
   } else {
    amrex::Error("material_extend_velocity_flag invalid");
   }
- } else if (tessellate==TESSELLATE_FLUIDS) {
+ } else if (tessellate_source==TESSELLATE_FLUIDS) {
   //do nothing
  } else {
-  amrex::Error("tessellate invalid");
+  amrex::Error("tessellate_source invalid");
  }
 
   // traverse from coarsest to finest so that
@@ -28352,12 +28352,34 @@ NavierStokes::makeStateDistALL(
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist(tessellate);
+  ns_level.makeStateDist(tessellate_source);
  }
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.correct_dist_uninit(tessellate);
+  ns_level.correct_dist_uninit(tessellate_source);
+ }
+
+ if (tessellate_source==TESSELLATE_IGNORE_ISELASTIC) {
+  if (material_extend_velocity_flag==0) {
+   amrex::Error("expecting material_extend_velocity_flag>0");
+  } else if (material_extend_velocity_flag>0) {
+
+   for (int ilev=level;ilev<=finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+     //calls fort_build_old_vof
+     //which calls multi_get_volume_tessellate(TESSELLATE_FLUIDS_ELASTIC)
+     //the output is placed in localMF[ELASTIC_FLUID_MOMENT_MF]
+    ns_level.save_elastic_LS();
+   }
+
+  } else {
+   amrex::Error("material_extend_velocity_flag invalid");
+  }
+ } else if (tessellate_source==TESSELLATE_FLUIDS) {
+  //do nothing
+ } else {
+  amrex::Error("tessellate_source invalid");
  }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -28381,10 +28403,10 @@ NavierStokes::makeStateDistALL(
 
 #ifdef AMREX_PARTICLES
 
-  if (tessellate==TESSELLATE_FLUIDS) {
+  if (tessellate_source==TESSELLATE_FLUIDS) {
    //do nothing
   } else
-   amrex::Error("expecting tessellate==TESSELLATE_FLUIDS if particles");
+   amrex::Error("expecting tessellate_source==TESSELLATE_FLUIDS if particles");
 
    // calling from NavierStokes::makeStateDistALL (after reinitialization)
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -28629,7 +28651,7 @@ NavierStokes::makeStateDist(int tessellate) {
     // fort_steninit is declared in: MOF_REDIST_3D.F90
     // fluid material id for each cell edge point is initialized.
    fort_steninit( 
-    &tessellate, //TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+    &tessellate, //TESSELLATE_FLUIDS|IGNORE_ISELASTIC
     &level,
     &finest_level,
     stencilfab.dataPtr(),
@@ -28711,7 +28733,7 @@ NavierStokes::makeStateDist(int tessellate) {
 
     // in: MOF_REDIST_3D.F90
    fort_levelstrip( 
-    &tessellate, //TESSELLATE_FLUIDS or TESSELLATE_FLUIDS_ELASTIC
+    &tessellate, //TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
     &nprocessed[tid_current],
     minLS[tid_current].dataPtr(),
     maxLS[tid_current].dataPtr(),
@@ -28867,6 +28889,25 @@ NavierStokes::build_elastic_fluid_moment() {
 
 } // end subroutine build_elastic_fluid_moment()
 
+
+void
+NavierStokes::save_elastic_LS() {
+
+ std::string local_caller_string="save_elastic_LS";
+
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+
+ const Real* dx = geom.CellSize();
+
+ delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
+ getStateDist_localMF(ELASTIC_FLUID_LEVELSET_MF,ngrow_distance,cur_time_slab,
+		local_caller_string);
+
+} // end subroutine save_elastic_LS()
+
+
 void
 NavierStokes::correct_dist_uninit(int tessellate) {
 
@@ -28965,10 +29006,9 @@ NavierStokes::correct_dist_uninit(int tessellate) {
 
 // WARNING:  allocates, but does not delete.
 // called from NavierStokes::ColorSum
-// called from NavierStokes::makeStateDist
 void
 NavierStokes::ProcessFaceFrac(
-  int tessellate,
+  int tessellate, //TESSELLATE_ALL|ALL_RASTER
   int idxsrc,int idxdst,
   int ngrow_dest) {
   

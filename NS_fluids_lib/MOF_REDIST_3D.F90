@@ -33,7 +33,7 @@ stop
         contains
 
       subroutine update_closest( &
-        tessellate, &
+        tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
         xsten_accept,xsten_donate,nhalf, &
         dx,xlo,bfact,level,fablo, &
         mofdata, &
@@ -221,6 +221,7 @@ stop
          endif
           ! compare_distance is declared in: MOF.F90
          call compare_distance( &
+          tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
           bfact,dx, &
           xsten_donate,nhalf, &
           xaccept_point, &
@@ -260,7 +261,7 @@ stop
        ! only uses donateflag(1..num_materials+1)
        ! multi_get_distance is declared in: MOF.F90
       call multi_get_distance( &
-        tessellate, &
+        tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
         bfact,dx, &
         xsten_donate,nhalf,xaccept_point, &
         mofdata, &
@@ -471,6 +472,7 @@ stop
         enddo
 
         do im=1,num_materials
+!FIX ME
          if (is_rigid_elastic(im).eq.0) then
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
@@ -513,6 +515,7 @@ stop
            print *,"local_LS invalid"
            stop
           endif
+!FIX ME
          else if (is_rigid_elastic(im).eq.1) then
           ! do nothing
          else
@@ -1113,6 +1116,7 @@ stop
 
         local_status=1
 
+!FIX ME
         if (is_rigid_elastic(im_primary).eq.1) then
 
          local_status=0
@@ -1121,10 +1125,12 @@ stop
 
          if ((im.ge.1).and.(im.le.num_materials)) then
 
+!FIX ME
           if (is_rigid_elastic(im).eq.1) then
 
            local_status=0
 
+!FIX ME
           else if (is_rigid_elastic(im).eq.0) then
 
            if ((im.ne.im_primary).and. &
@@ -1133,6 +1139,7 @@ stop
            endif
 
           else
+!FIX ME
            print *,"is_rigid_elastic(im) invalid"
            stop
           endif
@@ -1142,6 +1149,7 @@ stop
 
           iten=im-num_materials
           call get_inverse_iten(im1,im2,iten)
+!FIX ME
           if (is_rigid_elastic(im1).eq.1) then
            local_status=0
           else if (is_rigid_elastic(im1).eq.0) then
@@ -1850,6 +1858,22 @@ stop
       real(amrex_real) bypass_cutoff
       real(amrex_real) crude_dist,dotprod,crude_normal
       integer bypass_update_closest
+      integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+       if (tessellate.eq.TESSELLATE_FLUIDS) then
+        ! do nothing
+       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        is_elastic_local(im)=0
+       else
+        print *,"tessellate invalid fort_correct_uninit: ",tessellate
+        stop
+       endif
+      enddo ! im=1..num_materials
 
       newfab_ptr=>newfab
       touchfab_ptr=>touchfab
@@ -1977,8 +2001,6 @@ stop
         growlo,growhi,0)
 
        ! initialize LS
-       ! if is_rigid_elastic==0, then use coarse data or init to + or - bigdist
-       ! if is_rigid_elastic==1, then use existing solid dist funct.
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
@@ -2003,7 +2025,8 @@ stop
 
        do im=1,num_materials
 
-        if (is_rigid_elastic(im).eq.0) then
+        if ((is_rigid_local(im).eq.0).and. &
+            (is_elastic_local(im).eq.0)) then
 
          crse_dist_valid=1
          if (level.eq.0) then
@@ -2076,7 +2099,8 @@ stop
                   im,init_dist_from_crse
          endif 
 
-        else if (is_rigid_elastic(im).eq.1) then
+        else if ((is_rigid_local(im).eq.1).or. &
+                 (is_elastic_local(im).eq.1)) then
 
          init_dist_from_crse=newfab(D_DECL(i,j,k),im)
          touchfab(D_DECL(i,j,k),im)=two
@@ -2088,7 +2112,9 @@ stop
          endif
 
         else
-         print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90"
+         print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+         print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+          is_elastic_local
          stop
         endif
 
@@ -2143,7 +2169,7 @@ stop
 
        call sort_volume_fraction( &
          vcenter, &
-         tessellate, & !TESSELLATE_FLUIDS
+         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
          sorted_list)
 
        im_crit=sorted_list(1)
@@ -2153,10 +2179,13 @@ stop
         print *,"im_crit invalid: ",im_crit
         stop
        endif
-       if (is_rigid_elastic(im_crit).eq.0) then
+       if ((is_rigid_local(im_crit).eq.0).and. &
+           (is_elastic_local(im_crit).eq.0)) then
         ! do nothing
        else
-        print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90"
+        print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+        print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+         is_elastic_local
         stop
        endif
 
@@ -2178,7 +2207,8 @@ stop
          ! initialize: cell_test
        do im=1,num_materials
 
-        if (is_rigid_elastic(im).eq.0) then
+        if ((is_rigid_local(im).eq.0).and. &
+            (is_elastic_local(im).eq.0)) then
          if (vcenter(im).gt.EPS_FULL_WEAK) then
           cell_test(im)=1
          else if (vcenter(im).le.EPS_FULL_WEAK) then
@@ -2187,10 +2217,13 @@ stop
           print *,"vcenter invalid: ",vcenter
           stop
          endif
-        else if (is_rigid_elastic(im).eq.1) then
+        else if ((is_rigid_local(im).eq.1).or. &
+                 (is_elastic_local(im).eq.1)) then
          ! do nothing
         else
-         print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90: ",im,is_rigid_elastic(im)
+         print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+         print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+          is_elastic_local
          stop
         endif
 
@@ -2209,11 +2242,13 @@ stop
         stop
        endif
         ! im_test_center must be a fluid material.
-       if (is_rigid_elastic(im_test_center).eq.0) then 
+       if ((is_rigid_local(im_test_center).eq.0).and. &
+           (is_elastic_local(im_test_center).eq.0)) then
         ! do nothing
        else
-        print *,"is_rigid_elastic(im_test_center).ne.0 (0): ", &
-         im_test_center,is_rigid_elastic(im_test_center)
+        print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+        print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+          is_elastic_local
         stop
        endif
         !num_materials+1+nsten:
@@ -2260,7 +2295,8 @@ stop
          call safe_data(isten,jsten,ksten,vofcomp, &
            vofrecon_ptr, &
            VFRAC_TEMP)
-         if (is_rigid_elastic(im).eq.0) then
+         if ((is_rigid_local(im).eq.0).and. &
+             (is_elastic_local(im).eq.0)) then
 
           if (VFRAC_TEMP.ge.half) then
 !          cell_test(im)=1
@@ -2286,13 +2322,16 @@ stop
           if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
            stencil_test(im)=1
           endif
-         else if (is_rigid_elastic(im).eq.1) then
+         else if ((is_rigid_local(im).eq.1).or. &
+                  (is_elastic_local(im).eq.1)) then
            ! EPS_FULL_WEAK < 1/10
           if (VFRAC_TEMP.ge.EPS_FULL_WEAK) then
            rigid_in_stencil=1
           endif
          else
-          print *,"is_rigid_elastic(im) invalid: ",im,is_rigid_elastic(im)
+          print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+          print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+           is_elastic_local
           stop
          endif
         enddo  ! im=1..num_materials
@@ -2380,11 +2419,13 @@ stop
           print *,"im_test_stencil out of range 1: ",im_test_stencil
           stop
          endif
-         if (is_rigid_elastic(im_test_stencil).eq.0) then
+         if ((is_rigid_local(im_test_stencil).eq.0).and. &
+             (is_elastic_local(im_test_stencil).eq.0)) then
           ! do nothing
          else
-          print *,"is_rigid_elastic(im_test_stencil).ne.0 (1): ",im_test_stencil, &
-            is_rigid_elastic(im_test_stencil)
+          print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+          print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+           is_elastic_local
           stop
          endif
 
@@ -2427,13 +2468,16 @@ stop
         if (im_corner.eq.-1) then !stenfab conflict at the corner!
          call sort_volume_fraction( &
            FSUM, &
-           tessellate, & !TESSELLATE_FLUIDS
+           tessellate, & !TESSELLATE_FLUIDS|IGNORE_ELASTIC
            sorted_list)
          im_corner=sorted_list(1)
-         if (is_rigid_elastic(im_corner).eq.0) then
+         if ((is_rigid_local(im_corner).eq.0).and. &
+             (is_elastic_local(im_corner).eq.0)) then
           ! do nothing
          else
-          print *,"is_rigid_elastic(im_corner).ne.0"
+          print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+          print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+            is_elastic_local
           stop
          endif
         else if (im_corner.eq.0) then
@@ -2498,7 +2542,8 @@ stop
          istar_array(3)=k3
 
          do im=1,num_materials
-          if (is_rigid_elastic(im).eq.0) then
+          if ((is_rigid_local(im).eq.0).and. &
+              (is_elastic_local(im).eq.0)) then
            vofcomp=(im-1)*ngeom_recon+1
 
            call safe_data(iside,jside,kside,vofcomp, &
@@ -2521,10 +2566,13 @@ stop
              stop
             endif
            endif
-          else if (is_rigid_elastic(im).eq.1) then
+          else if ((is_rigid_local(im).eq.1).or. &
+                   (is_elastic_local(im).eq.1)) then
            ! do nothing
           else
-           print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90"
+           print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+           print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+            is_elastic_local
            stop
           endif
          enddo ! im=1..num_materials 
@@ -2539,7 +2587,8 @@ stop
 
        do im=1,num_materials
 
-        if (is_rigid_elastic(im).eq.0) then
+        if ((is_rigid_local(im).eq.0).and. &
+            (is_elastic_local(im).eq.0)) then
 
          legitimate_material=0
          if ((vcenter(im).ge.half).or. &
@@ -2568,7 +2617,8 @@ stop
            call put_istar(istar,istar_array)
            if ((istar.ge.1).and.(istar.le.NCOMP_STENCIL/2)) then
             im_test_stencil=NINT(stenfab(D_DECL(i,j,k),istar))
-            if (is_rigid_elastic(im_test_stencil).eq.0) then
+            if ((is_rigid_local(im_test_stencil).eq.0).and. &
+                (is_elastic_local(im_test_stencil).eq.0)) then
              if (im_test_stencil.eq.im) then
               !num_materials+1+nsten:
               !1<=nsten<=NCOMP_STENCIL/2 donateflag=im "im" at cell center
@@ -2577,8 +2627,9 @@ stop
               donateflag(num_materials+1+istar)=im
              endif
             else
-             print *,"is_rigid_elastic(im_test_stencil).ne.0 (1): ", &
-              im_test_stencil,is_rigid_elastic(im_test_stencil)
+             print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+             print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+               is_elastic_local
              stop
             endif
            else
@@ -2607,10 +2658,13 @@ stop
           stop
          endif 
 
-        else if (is_rigid_elastic(im).eq.1) then
+        else if ((is_rigid_local(im).eq.1).or. &
+                 (is_elastic_local(im).eq.1)) then
          ! do nothing
         else
-         print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90: ",im,is_rigid_elastic(im)
+         print *,"is_rigid_local invalid MOF_REDIST_3D.F90 ",is_rigid_local
+         print *,"or is_elastic_local invalid MOF_REDIST_3D.F90 ", &
+          is_elastic_local
          stop
         endif
        enddo ! im=1..num_materials
@@ -2663,6 +2717,7 @@ stop
 
          !LSslope_center is normalized
         call get_primary_slope( &
+         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
          bfact,dx,xsten_donate,nhalf, &
          mofdata, &
          LSslope_center,imslope_center,SDIM) 
@@ -3065,6 +3120,15 @@ stop
        stop
       endif
 
+      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+       !do nothing
+      else
+       print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISELASTIC", &
+          tessellate
+       stop
+      endif
+   
        !num_materials+1+nsten:
        !1<=nsten<=NCOMP_STENCIL/2 donateflag=im if "im" occupies cell center
        !NCOMP_STENCIL/2+1<=nsten<=NCOMP_STENCIL donateflag=im if "im" is full
@@ -3192,7 +3256,7 @@ stop
           istar_array(3)=k3
 
           call multi_get_volumePOINT( &
-           tessellate, &  ! =TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
+           tessellate, &  ! TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
            im_test,SDIM)
@@ -3256,7 +3320,8 @@ stop
          !vcenter is TESSELLATE_FLUIDS|FLUIDS_ELASTIC
          call check_full_cell_vfrac( &
           vcenter, &
-          tessellate, &  ! =TESSELLATE_FLUIDS|FLUIDS_ELASTIC
+          tessellate, &  ! =TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+          tessellate, &  ! =TESSELLATE_FLUIDS|IGNORE_ISELASTIC
           im_crit, &
           EPS_FULL_WEAK)
 
@@ -3839,6 +3904,7 @@ stop
        ! 2. NavierStokes::ProcessFaceFrac
        !      -> fort_faceprocess
        ! called from: NavierStokes::ProcessFaceFrac (NavierStokes.cpp)
+       ! which is called from:: NavierStokes::ColorSum
        ! facefab is initialized in fort_faceinit
       subroutine fort_faceprocess( &
        ngrow_source, &
@@ -4254,10 +4320,15 @@ stop
          enddo ! im=1..num_materials
 
           ! tessellate_dest==TESSELLATE_ALL or TESSELLATE_ALL_RASTER:
+          !  inside of multi_get_area_pairs:
           !  a) call multi_get_volume_tessellate
-          !  b) tessellate_in=TESSELLATE_IGNORE_ISRIGID
-          !  c) is_rigid_local=0 for all materials
-          !     is_elastic_local=0 for all materials
+          !       tessellate_source=TESSELLATE_FLUIDS
+          !       tessellate_dest=TESSELLATE_ALL|ALL_RASTER
+          !  b) call multi_get_volume_grid
+          !      tessellate_source=TESSELLATE_IGNORE_ISRIGID
+          !      tessellate_dest=TESSELLATE_IGNORE_ISRIGID
+          !      (is_rigid_local=0 for all materials
+          !       is_elastic_local=0 for all materials)
           ! 
          call multi_get_area_pairs( &
            tid, &
@@ -4334,13 +4405,13 @@ stop
 
         do ml = 1, num_materials
 
-         if ((tessellate.eq.TESSELLATE_ALL).or. &
-             (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+         if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+             (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
 
           do mr = 1, num_materials
 
-           if ((tessellate.eq.TESSELLATE_ALL).or. &
-               (tessellate.eq.TESSELLATE_ALL_RASTER)) then
+           if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+               (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
 
             if ((frac_pair(ml,mr).lt.-EPS1).or. &
                 (frac_pair(ml,mr).gt.one+EPS1)) then
@@ -4384,14 +4455,16 @@ stop
             endif ! dir==1 ?
 
            else
-            print *,"tessellate invalid MOF_REDIST_3D.F90 ",tessellate
+            print *,"tessellate_dest invalid MOF_REDIST_3D.F90 ", &
+              tessellate_dest
             stop
            endif 
 
           enddo ! mr=1..num_materials
 
          else
-          print *,"tessellate invalid MOF_REDIST_3D.F90 ",tessellate
+          print *,"tessellate_dest invalid MOF_REDIST_3D.F90 ", &
+            tessellate_dest
           stop
          endif 
 
