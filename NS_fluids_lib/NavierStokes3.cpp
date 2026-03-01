@@ -3249,9 +3249,9 @@ void NavierStokes::nucleation_code_segment(
 
  int update_particles=1;
  int local_redistribute_main=0;
- tessellate_source=TESSELLATE_FLUIDS;
+ tessellate=TESSELLATE_FLUIDS;
 
- makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
+ makeStateDistALL(update_particles,local_redistribute_main,tessellate);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
@@ -6563,6 +6563,7 @@ NavierStokes::ColorSum(
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
+   //TESSELLATE_ALL|ALL_RASTER
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
