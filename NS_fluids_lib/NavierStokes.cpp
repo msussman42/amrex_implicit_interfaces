@@ -25814,9 +25814,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
   int local_redistribute_main=0; //global
 
-  int tessellate_source=TESSELLATE_FLUIDS;
-
-  makeStateDistALL(update_particles,local_redistribute_main,tessellate_source);
+  makeStateDistALL(update_particles,local_redistribute_main);
 
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
@@ -28276,15 +28274,37 @@ void NavierStokes::putStateDIV_DATA(
 void
 NavierStokes::makeStateDistALL(
   int update_particles,
+  int local_redistribute_main) {
+
+ int tessellate_source=TESSELLATE_FLUIDS;
+
+ if (material_extend_velocity_flag>0) {
+  tessellate_source=TESSELLATE_IGNORE_ISELASTIC;
+  sub_makeStateDistALL(update_particles,local_redistribute_main,
+    tessellate_source);
+ } else if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+
+ tessellate_source=TESSELLATE_FLUIDS;
+ sub_makeStateDistALL(update_particles,local_redistribute_main,
+   tessellate_source);
+
+} //subroutine makeStateDistALL
+
+void
+NavierStokes::sub_makeStateDistALL(
+  int update_particles,
   int local_redistribute_main,
   int tessellate_source) {
 
- interface_touch_flag=1; //makeStateDistALL
+ interface_touch_flag=1; //sub_makeStateDistALL
 
- std::string local_caller_string="makeStateDistALL";
+ std::string local_caller_string="sub_makeStateDistALL";
 
  if (level!=0)
-  amrex::Error("level invalid in makeStateDistALL");
+  amrex::Error("level invalid in sub_makeStateDistALL");
 
  int finest_level=parent->finestLevel();
 
@@ -28408,7 +28428,7 @@ NavierStokes::makeStateDistALL(
   } else
    amrex::Error("expecting tessellate_source==TESSELLATE_FLUIDS if particles");
 
-   // calling from NavierStokes::makeStateDistALL (after reinitialization)
+   // calling from NavierStokes::sub_makeStateDistALL (after reinitialization)
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
       local_redistribute_main);
@@ -28429,13 +28449,13 @@ NavierStokes::makeStateDistALL(
  } else if (update_particles==0) {
   //do nothing
  } else
-  amrex::Error("update_particles invalid makeStateDistALL");
+  amrex::Error("update_particles invalid sub_makeStateDistALL");
 
 #if (NS_profile_solver==1)
  bprof.stop();
 #endif
 
-} // end subroutine makeStateDistALL()
+} // end subroutine sub_makeStateDistALL()
 
 // called from: NavierStokes::do_the_advance 
 // (prior to level_phase_change_rate) and
@@ -28553,6 +28573,19 @@ NavierStokes::makeStateDist(int tessellate) {
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
 
+ if (tessellate==TESSELLATE_IGNORE_ISELASTIC) {
+  debug_ngrow(ELASTIC_FLUID_MOMENT_MF,ngrow_distance,local_caller_string);
+ }
+
+ int recon_id=SLOPE_RECON_MF;
+
+ if (tessellate==TESSELLATE_IGNORE_ISELASTIC) {
+  recon_id=ELASTIC_FLUID_MOMENT_MF;
+ } else if (tessellate==TESSELLATE_FLUIDS) {
+  recon_id=SLOPE_RECON_MF;
+ } else
+  amrex::Error("tessellate invalid");
+
  if (profile_dist==1)
   before_profile = ParallelDescriptor::second();
 
@@ -28640,7 +28673,7 @@ NavierStokes::makeStateDist(int tessellate) {
    const Real* xlo = grid_loc[gridno].lo();
 
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+   FArrayBox& voffab=(*localMF[recon_id])[mfi];
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
 
    int tid_current=ns_thread();
@@ -28713,7 +28746,7 @@ NavierStokes::makeStateDist(int tessellate) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+   FArrayBox& voffab=(*localMF[recon_id])[mfi];
    FArrayBox& lsfab=LS_new[mfi];
 
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
@@ -28907,7 +28940,7 @@ NavierStokes::save_elastic_LS() {
 
 } // end subroutine save_elastic_LS()
 
-
+//called from: sub_makeStateDistALL
 void
 NavierStokes::correct_dist_uninit(int tessellate) {
 
