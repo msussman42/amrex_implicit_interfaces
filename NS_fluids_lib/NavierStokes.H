@@ -1398,7 +1398,12 @@ void apply_pressure_grad(
     void makeFaceFrac(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
+
     void makeStateDistALL(
+        int update_particles,
+        int local_redistribute_main);
+
+    void sub_makeStateDistALL(
         int update_particles,
         int local_redistribute_main,
         int tessellate_source);

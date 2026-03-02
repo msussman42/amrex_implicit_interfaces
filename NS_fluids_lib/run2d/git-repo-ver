@@ -1,0 +1,5 @@
+#do not use safari, use chrome
+git rev-parse FECTH_HEAD
+git rev-parse origin/master
+git clone https://github.com/msussman42/amrex_implicit_interfaces.git
+git checkout <repo version>
