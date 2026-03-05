@@ -10467,6 +10467,9 @@ void NavierStokes::post_restart() {
 
  if (level==0) {
 
+   //calling from NavierStokes::post_restart
+  github_repo_ver();
+
   Vector<int> bfact_space_level(max_level+1);
   Vector<int> bfact_grid_level(max_level+1);
   for (int ilev=0;ilev<=max_level;ilev++) {
@@ -10651,6 +10654,9 @@ NavierStokes::initData () {
   amrex::Error("cur_time_slab should be zero at the very beginning");
 
  if (level==0) {
+
+   //calling from NavierStokes::initData
+  github_repo_ver();
 
   Vector<int> bfact_space_level(max_level+1);
   Vector<int> bfact_grid_level(max_level+1);
@@ -22395,6 +22401,29 @@ NavierStokes::debug_memory() {
   amrex::Error("show_mem invalid");
 
 } // end subroutine debug_memory()
+
+
+
+void 
+NavierStokes::github_repo_ver() {
+
+ if (level!=0)
+  amrex::Error("level invalid github_repo_ver");
+
+ std::fflush(NULL);
+ ParallelDescriptor::Barrier();
+
+ if (ParallelDescriptor::IOProcessor()) {
+
+  fort_github_repo_version();
+
+ }
+
+ std::fflush(NULL);
+ ParallelDescriptor::Barrier();
+
+} // end subroutine github_repo_ver()
+
 
 void NavierStokes::writeInterfaceReconstruction() {
 

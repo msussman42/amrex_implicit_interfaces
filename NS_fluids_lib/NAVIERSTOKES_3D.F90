@@ -4390,6 +4390,65 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_memstatus
 
+       ! only call this on the IOprocessor
+      subroutine fort_github_repo_version() &
+      bind(c,name='fort_github_repo_version')
+
+      IMPLICIT NONE
+
+      character*80 git_cmd_a
+      character*80 git_cmd_b
+      character*80 git_rm_cmd_a
+      character*80 git_rm_cmd_b
+      character*80 git_cat_cmd_a
+      character*80 git_cat_cmd_b
+
+      integer sysret
+
+      call FLUSH(6)  ! unit=6 screen
+
+      git_cmd_a='git rev-parse FETCH_HEAD > git_a'
+      git_cmd_b='git rev-parse origin/master > git_b'
+      git_rm_cmd_a='rm git_a'
+      git_rm_cmd_b='rm git_b'
+      git_cat_cmd_a='cat git_a'
+      git_cat_cmd_b='cat git_b'
+      print *,"issuing command ",git_rm_cmd_a
+      print *,"issuing command ",git_rm_cmd_b
+      print *,"issuing command ",git_cmd_a
+      print *,"issuing command ",git_cmd_b
+      print *,"issuing command ",git_cat_cmd_a
+      print *,"issuing command ",git_cat_cmd_b
+
+      sysret=0
+
+#ifdef PGIFORTRAN
+      call system(git_rm_cmd_a)
+      call system(git_rm_cmd_b)
+      call system(git_cmd_a)
+      call system(git_cmd_b)
+      call system(git_cat_cmd_a)
+      call system(git_cat_cmd_b)
+#else
+      call execute_command_line(git_rm_cmd_a,exitstat=sysret)
+      call execute_command_line(git_rm_cmd_b,exitstat=sysret)
+      call execute_command_line(git_cmd_a,exitstat=sysret)
+      call execute_command_line(git_cmd_b,exitstat=sysret)
+      call execute_command_line(git_cat_cmd_a,exitstat=sysret)
+      call execute_command_line(git_cat_cmd_b,exitstat=sysret)
+#endif
+
+      if (sysret.ne.0) then
+       print *,"execute_command_line has sysret=",sysret
+       stop
+      endif
+
+      call FLUSH(6)  ! unit=6 screen
+
+      return
+      end subroutine fort_github_repo_version
+
+
        ! fort_combinezones is called after calls to:
        !  fort_cellgrid
       subroutine fort_combinezones( &

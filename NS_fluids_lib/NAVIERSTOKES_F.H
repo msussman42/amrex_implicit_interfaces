@@ -149,6 +149,8 @@ extern "C" {
  
     void fort_memstatus(int* procnum);
 
+    void fort_github_repo_version();
+
     void fort_combinezones(
      int* total_number_grids,
      int* grids_per_level_array,
