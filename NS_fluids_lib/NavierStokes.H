@@ -274,6 +274,7 @@ public:
     //
 
     void debug_memory();
+    void github_repo_ver();
 
     void allocate_mdot(int zap_mdot_flag);
 

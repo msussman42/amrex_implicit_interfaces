@@ -2761,6 +2761,9 @@ stop
            vfrac_elastic_sum=vfrac_elastic_sum+vcenter(im)
           else
            print *,"is_rigid or is_elastic invalid LEVELSET_3D.F90"
+           print *,"im=",im
+           print *,"is_rigid(im)=",is_rigid(im)
+           print *,"is_elastic(im)=",is_elastic(im)
            stop
           endif
          enddo ! im=1..num_materials
@@ -3038,7 +3041,7 @@ stop
             else if (is_rigid(im).eq.0) then
              ! do nothing
             else
-             print *,"is_rigid invalid LEVELSET_3D.F90"
+             print *,"is_rigid invalid LEVELSET_3D.F90: ",im,is_rigid(im)
              stop
             endif
 
@@ -3322,7 +3325,7 @@ stop
             else if (is_elastic(im).eq.0) then
              ! do nothing
             else
-             print *,"is_elastic invalid LEVELSET_3D.F90"
+             print *,"is_elastic invalid LEVELSET_3D.F90: ",im,is_elastic(im)
              stop
             endif
 
@@ -3348,7 +3351,8 @@ stop
 
            ! F,CEN,ORDER,SLOPE,INTERCEPT
           do im=1,num_materials
-           if (is_rigid_elastic(im).eq.0) then
+           if ((is_rigid(im).eq.0).and. &
+               (is_elastic(im).eq.0)) then
             vofcomp=(im-1)*ngeom_recon+1
             testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
@@ -3593,10 +3597,12 @@ stop
              stop
             endif  
 
-           else if (is_rigid_elastic(im).eq.1) then
+           else if ((is_rigid(im).eq.1).or. &
+                    (is_elastic(im).eq.1)) then
             ! do nothing
            else
-            print *,"is_rigid invalid LEVELSET_3D.F90"
+            print *,"is_rigid invalid LEVELSET_3D.F90: ",im,is_rigid(im)
+            print *,"or is_elastic invalid LEVELSET_3D.F90: ",im,is_elastic(im)
             stop
            endif
 
