@@ -2360,7 +2360,7 @@ end subroutine dynamic_contact_angle
        if (is_rigid(im_solid).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid(im_solid) invalid"
+        print *,"is_rigid(im_solid) invalid: ",im_solid,is_rigid(im_solid)
         stop
        endif
        if (LOW%dt.gt.zero) then
@@ -2470,7 +2470,7 @@ end subroutine dynamic_contact_angle
               stop
              endif
             else 
-             print *,"is_rigid invalid GLOBALUTIL.F90"
+             print *,"is_rigid invalid GLOBALUTIL.F90: ",im,is_rigid(im)
              stop
             endif
            enddo ! im=1..num_materials
@@ -2897,11 +2897,12 @@ end subroutine dynamic_contact_angle
                else if (is_rigid(im_secondary_image).eq.0) then
                 ! do nothing
                else
-                print *,"is_rigid(im_secondary_image) invalid"
+                print *,"is_rigid(im_secondary_image) invalid: ", &
+                        im_secondary_image,is_rigid(im_secondary_image)
                 stop
                endif
               else
-               print *,"im_secondary_image invalid"
+               print *,"im_secondary_image invalid: ",im_secondary_image
                stop
               endif
 
@@ -8900,12 +8901,17 @@ end subroutine print_visual_descriptor
          cen(dir,imaterial)=zero
         enddo
        endif
-       if (is_rigid(imaterial).eq.0) then
+       if ((is_rigid(imaterial).eq.0).and. &
+           (is_elastic(imaterial).eq.0)) then
         voftotal=voftotal+vfrac(imaterial)
-       else if (is_rigid(imaterial).eq.1) then
+       else if ((is_rigid(imaterial).eq.1).or. &
+                (is_elastic(imaterial).eq.1)) then
         ! do nothing
        else
-        print *,"is_rigid invalid GLOBALUTIL.F90"
+        print *,"is_rigid invalid GLOBALUTIL.F90: ", &
+                imaterial,is_rigid(imaterial)
+        print *,"or is_elastic invalid GLOBALUTIL.F90: ", &
+                imaterial,is_elastic(imaterial)
         stop
        endif
       enddo ! imaterial

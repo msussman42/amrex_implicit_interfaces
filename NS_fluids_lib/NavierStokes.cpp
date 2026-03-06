@@ -8368,6 +8368,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
 
 } // end subroutine init_FSI_GHOST_MAC_MF_ALL
 
+//init_FSI_GHOST_MAC_MF is called from:
+//init_FSI_GHOST_MAC_MF_ALL
 void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  int finest_level=parent->finestLevel();
@@ -28486,8 +28488,6 @@ NavierStokes::sub_makeStateDistALL(
 
 } // end subroutine sub_makeStateDistALL()
 
-// called from: NavierStokes::do_the_advance 
-// (prior to level_phase_change_rate) and
 // called from: NavierStokes::init_FSI_GHOST_MAC_MF
 // fd_mf used by the GNBC algorithm.
 void 
@@ -28539,7 +28539,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      // fort_dt_normal is declared in: MOF_REDIST_3D.F90
+      // fort_fd_normal is declared in: MOF_REDIST_3D.F90
      fort_fd_normal( 
       &level,
       &finest_level,

@@ -15564,17 +15564,17 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid find_cut_geom_slope_CLSVOF ",bfact
        stop
       endif
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid find_cut_geom_slope_CLSVOF"
+       print *,"sdim invalid find_cut_geom_slope_CLSVOF: ",sdim
        stop
       endif
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid35"
+       print *,"im invalid find_cut_geom_slope_CLSVOF ",im
        stop
       endif
       if (num_materials.lt.1) then

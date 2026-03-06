@@ -11310,7 +11310,7 @@ stop
       if (ngrow_distance.ge.4) then
        ! do nothing
       else
-       print *,"ngrow_distance invalid"
+       print *,"ngrow_distance invalid fort_wallfunction: ",ngrow_distance
        stop
       endif
       if (nden.ne.num_materials*num_state_material) then
@@ -11356,13 +11356,13 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_wallfunction: ",dt
        stop
       endif 
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid fort_wallfunction ",time
        stop
       endif 
       if (visc_coef.ge.zero) then
@@ -11485,7 +11485,7 @@ stop
                   ufluid(D_DECL(i-ii,j-jj,k-kk),dir))
          enddo
         else
-         print *,"nparts_ghost invalid"
+         print *,"expecting nparts_ghost=1: ",nparts_ghost
          stop
         endif
        else if ((nparts.ge.1).and.(nparts.le.num_materials)) then
@@ -11529,7 +11529,7 @@ stop
          if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
           ! do nothing
          else
-          print *,"im_solid invalid fort_wallfunction"
+          print *,"im_solid invalid fort_wallfunction: ",im_solid
           stop
          endif
 
@@ -11772,16 +11772,18 @@ stop
           else if (is_rigid(im_solid).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im_solid) invalid"
+           print *,"is_rigid(im_solid) invalid: ",im_solid, &
+              is_rigid(im_solid)
            stop
           endif
          else 
-          print *,"is_lag_part(im_solid) invalid"
+          print *,"is_lag_part(im_solid) invalid: ",im_solid, &
+             is_lag_part(im_solid)
           stop
          endif
         enddo ! partid=1..nparts
        else
-        print *,"nparts invalid"
+        print *,"nparts invalid: ",nparts
         stop
        endif
       enddo ! k
