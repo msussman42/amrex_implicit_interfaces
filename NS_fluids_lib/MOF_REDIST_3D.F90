@@ -284,6 +284,10 @@ stop
        ! prior to calling this routine, copy LS_new normal information
        ! to LS_NRM_FD.
        ! called from: NavierStokes::build_NRM_FD_MF (NavierStokes.cpp)
+       ! build_NRM_FS_MF is called from 
+       ! NavierStokes::init_FSI_GHOST_MAC_MF
+       ! NavierStokes::init_FSI_GHOST_MAC_MF is called from:
+       ! NavierStokes::init_FSI_GHOST_MAC_MF_ALL
        ! The output from this routine is used by the GNBC algorithm
       subroutine fort_fd_normal( &
        level, &
@@ -472,8 +476,7 @@ stop
         enddo
 
         do im=1,num_materials
-!FIX ME
-         if (is_rigid_elastic(im).eq.0) then
+         if (is_rigid(im).eq.0) then
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
@@ -515,11 +518,11 @@ stop
            print *,"local_LS invalid"
            stop
           endif
-!FIX ME
-         else if (is_rigid_elastic(im).eq.1) then
+         else if (is_rigid(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_elastic invalid MOF_REDIST_3D.F90"
+          print *,"is_rigid invalid MOF_REDIST_3D.F90: ", &
+             im,is_rigid(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -1116,22 +1119,19 @@ stop
 
         local_status=1
 
-!FIX ME
-        if (is_rigid_elastic(im_primary).eq.1) then
+        if (is_rigid(im_primary).eq.1) then
 
          local_status=0
 
-        else if (is_rigid_elastic(im_primary).eq.0) then
+        else if (is_rigid(im_primary).eq.0) then
 
          if ((im.ge.1).and.(im.le.num_materials)) then
 
-!FIX ME
-          if (is_rigid_elastic(im).eq.1) then
+          if (is_rigid(im).eq.1) then
 
            local_status=0
 
-!FIX ME
-          else if (is_rigid_elastic(im).eq.0) then
+          else if (is_rigid(im).eq.0) then
 
            if ((im.ne.im_primary).and. &
                (im.ne.im_secondary)) then
@@ -1139,8 +1139,7 @@ stop
            endif
 
           else
-!FIX ME
-           print *,"is_rigid_elastic(im) invalid"
+           print *,"is_rigid(im) invalid: ",im,is_rigid(im)
            stop
           endif
 
@@ -1149,13 +1148,13 @@ stop
 
           iten=im-num_materials
           call get_inverse_iten(im1,im2,iten)
-!FIX ME
-          if (is_rigid_elastic(im1).eq.1) then
+
+          if (is_rigid(im1).eq.1) then
            local_status=0
-          else if (is_rigid_elastic(im1).eq.0) then
-           if (is_rigid_elastic(im2).eq.1) then
+          else if (is_rigid(im1).eq.0) then
+           if (is_rigid(im2).eq.1) then
             local_status=0
-           else if (is_rigid_elastic(im2).eq.0) then
+           else if (is_rigid(im2).eq.0) then
            
             if ((im1.ne.im_primary).and. &
                 (im1.ne.im_secondary)) then
@@ -1167,17 +1166,17 @@ stop
             endif
 
            else
-            print *,"is_rigid_elastic(im2) invalid"
+            print *,"is_rigid(im2) invalid: ",im2,is_rigid(im2)
             stop
            endif
 
           else
-           print *,"is_rigid_elastic(im1) invalid"
+           print *,"is_rigid(im1) invalid: ",im1,is_rigid(im1)
            stop
           endif
 
          else
-          print *,"im invalid 112"
+          print *,"im invalid fort_node_to_cell ",im
           stop
          endif
 
@@ -1306,7 +1305,7 @@ stop
            !   L_m should change sign in the "cross" stencil.
            !   L_m should be primary or secondary in the center,
            !   and center should not be dominated by an 
-           !   "is_rigid_elastic" material.
+           !   "is_rigid" material.
            ! for num_materials+1<=im<=num_materials+num_interfaces:
            !  iten=im-num_materials
            !  iten => m1,m2
@@ -1680,7 +1679,8 @@ stop
          endif
 
         else
-         print *,"is_rigid_elastic(im_primary) invalid"
+         print *,"is_rigid(im_primary) invalid: ",im_primary, &
+                 is_rigid(im_primary)
          stop
         endif
  
