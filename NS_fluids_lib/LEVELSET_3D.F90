@@ -44,7 +44,7 @@ stop
          integer, pointer :: fabhi(:)
          real(amrex_real), pointer :: dx(:)
          real(amrex_real) :: time
-         integer :: im_solid_max
+         integer :: im_hard_material
          integer :: least_sqr_radius
          integer :: least_sqrZ
          real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: LS
@@ -72,43 +72,54 @@ stop
 
         ASSOCIATE(CP=>cell_CP_parm)
 
-        if ((CP%im_solid_max.ge.1).and. &
-            (CP%im_solid_max.le.num_materials)) then
+        if ((CP%im_hard_material.ge.1).and. &
+            (CP%im_hard_material.le.num_materials)) then
 
-         if (is_rigid(CP%im_solid_max).eq.1) then
+         if ((is_rigid(CP%im_hard_material).eq.1).or. & 
+             (is_elastic(CP%im_hard_material).eq.1)) then
 
           call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
 
+          if (is_rigid(CP%im_hard_material).eq.1) then
+   
            ! positive in the rigid body
-          call materialdistsolid( &
+           call materialdistsolid( &
             xsten(0,1),xsten(0,2),xsten(0,SDIM), &
-            LS_cell,CP%time,CP%im_solid_max)
+            LS_cell,CP%time,CP%im_hard_material)
 
            ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
            ! slope points into the solid
            ! this slope ignores 1/R term for dphi/dtheta
-          call find_LS_stencil_slope( &
+           call find_LS_stencil_slope( &
             CP%bfact, &
             CP%dx, &
             xsten,nhalf, &
             nslope_cell, &
             CP%time, &
-            CP%im_solid_max)
+            CP%im_hard_material)
+          else if (is_elastic(CP%im_hard_material).eq.1) then
+           !do nothing
+          else
+           print *,"is_rigid or is_elastic invalid"
+           stop
+          endif
 
-          if ((FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_NODES).or. & 
-              (FSI_flag(CP%im_solid_max).eq.FSI_SHOELE_CTML)) then 
-           LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_solid_max)
+          if ((FSI_flag(CP%im_hard_material).eq.FSI_PRESCRIBED_NODES).or. & 
+              (FSI_flag(CP%im_hard_material).eq.FSI_SHOELE_CTML).or. &
+              (is_elastic(CP%im_hard_material).eq.1)) then 
+           LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_hard_material)
            do dir=1,SDIM
             nslope_cell(dir)= &
               CP%LS(D_DECL(CP%i,CP%j,CP%k), &
-              num_materials+SDIM*(CP%im_solid_max-1)+dir)
+              num_materials+SDIM*(CP%im_hard_material-1)+dir)
            enddo
-          else if (FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_PROBF90) then 
+          else if ((FSI_flag(CP%im_hard_material).eq.FSI_PRESCRIBED_PROBF90).and. &
+                   (is_elastic(CP%im_hard_material).eq.0)) then
            ! do nothing
           else
            print *,"FSI_flag invalid in cell_xCP"
-           print *,"CP%im_solid_max=",CP%im_solid_max
-           print *,"FSI_flag(CP%im_solid_max)=",FSI_flag(CP%im_solid_max)
+           print *,"CP%im_hard_material=",CP%im_hard_material
+           print *,"FSI_flag(CP%im_hard_material)=",FSI_flag(CP%im_hard_material)
            stop
           endif
 
@@ -127,11 +138,12 @@ stop
           endif
 
          else 
-          print *,"is_rigid(CP%im_solid_max) invalid"
+          print *,"is_rigid(CP%im_hard_material) invalid"
+          print *,"or is_elastic(CP%im_hard_material) invalid"
           stop
          endif
         else
-         print *,"CP%im_solid_max invalid"
+         print *,"CP%im_hard_material invalid"
          stop
         endif
 
@@ -147,7 +159,7 @@ stop
          xSOLID_BULK, &
          cell_index, &
          LS_interp, &
-         im_solid, &
+         im_hard_material, &
          im_fluid_critical)
         use global_utility_module
         use global_distance_module
@@ -158,7 +170,7 @@ stop
         real(amrex_real), INTENT(in) :: xSOLID_BULK(SDIM)
         integer, INTENT(in) :: cell_index(SDIM)
         real(amrex_real), INTENT(out) :: LS_interp(num_materials)
-        integer, INTENT(in) :: im_solid 
+        integer, INTENT(in) :: im_hard_material
         integer, INTENT(out) :: im_fluid_critical
         integer, parameter :: nhalf=1
         real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
@@ -241,29 +253,41 @@ stop
 
          if (is_rigid(im_primary_sub_stencil).eq.0) then
 
-          if (shortest_dist_to_fluid.eq.-one) then
-           im_fluid_critical=im_primary_sub_stencil
-           shortest_dist_to_fluid=dist_stencil_to_bulk
-           do im_local=1,num_materials
-            LS_interp_low_order(im_local)=LS_virtual(im_local)
-           enddo
-          else if (shortest_dist_to_fluid.ge.zero) then
-           if (dist_stencil_to_bulk.lt. &
-               shortest_dist_to_fluid) then
+          if ((is_elastic(im_primary_sub_stencil).eq.0).or. &
+              (is_rigid(CP%im_hard_material).eq.1)) then
+         
+           if (shortest_dist_to_fluid.eq.-one) then
             im_fluid_critical=im_primary_sub_stencil
             shortest_dist_to_fluid=dist_stencil_to_bulk
             do im_local=1,num_materials
              LS_interp_low_order(im_local)=LS_virtual(im_local)
             enddo
-           else if (dist_stencil_to_bulk.ge. &
-                    shortest_dist_to_fluid) then
-            ! do nothing
+           else if (shortest_dist_to_fluid.ge.zero) then
+            if (dist_stencil_to_bulk.lt. &
+                shortest_dist_to_fluid) then
+             im_fluid_critical=im_primary_sub_stencil
+             shortest_dist_to_fluid=dist_stencil_to_bulk
+             do im_local=1,num_materials
+              LS_interp_low_order(im_local)=LS_virtual(im_local)
+             enddo
+            else if (dist_stencil_to_bulk.ge. &
+                     shortest_dist_to_fluid) then
+             ! do nothing
+            else
+             print *,"dist_stencil_bulk invalid"
+             stop
+            endif
            else
-            print *,"dist_stencil_bulk invalid"
+            print *,"shortest_dist_to_fluid invalid"
             stop
            endif
+
+          else if ((is_elastic(im_primary_sub_stencil).eq.1).and. &
+                   (is_elastic(CP%im_hard_material).eq.1)) then
+           !do nothing
           else
-           print *,"shortest_dist_to_fluid invalid"
+           print *,"im_primary_sub_stencil invalid: ",im_primary_sub_stencil
+           print *,"or CP%im_hard_material invalid: ",CP%im_hard_material
            stop
           endif
 
@@ -19723,11 +19747,11 @@ stop
 
       local_homflag=0
 
-      if (local_smoothing_flag.eq.-1) then
+      if (local_smoothing_flag.eq.-1) then !tensor_advection_update
        local_homflag=0
-      else if (local_smoothing_flag.eq.0) then
+      else if (local_smoothing_flag.eq.0) then !regular advection
        local_homflag=0
-      else if (local_smoothing_flag.gt.0) then
+      else if (local_smoothing_flag.gt.0) then !smoothing advection
        local_homflag=1
       else
        print *,"local_smoothing_flag invalid: ",local_smoothing_flag
@@ -21002,6 +21026,9 @@ stop
       integer im_refine_density
       integer im_primary_stencil
       integer im_solid_max
+      integer im_hard_material
+      integer check_elastic,im_elastic_max,trust_flag
+      real(amrex_real) sum_vfrac_elastic
       integer vofcomp,vofcompraw
       integer i1,j1,k1
       real(amrex_real) centroid(SDIM)
@@ -21393,7 +21420,7 @@ stop
           else if (is_rigid(im).eq.1) then 
            local_density(im)=fort_denconst(im)
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid: ",im,is_rigid(im)
            stop
           endif
 
@@ -21647,6 +21674,7 @@ stop
          sum_vfrac_solid_new=zero
          max_solid_LS=-99999.0
          im_solid_max=0
+         im_hard_material=0
          partid_max=0
 
          if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
@@ -21765,7 +21793,7 @@ stop
             
             sum_vfrac_solid_new=sum_vfrac_solid_new+vfrac_solid_new(im)
 
-            ! level set for rigid solid
+            ! level set for prescribed rigid solid replaces ls_hold
             ls_hold(im)=LS_solid_new(im)
             do dir=1,SDIM
              ls_hold(num_materials+SDIM*(im-1)+dir)=nslope_solid(dir)
@@ -21889,7 +21917,8 @@ stop
            print *,"expecting is_rigid(im_solid_max)=1"
            stop
           else
-           print *,"is_rigid(im_solid_max) invalid"
+           print *,"is_rigid(im_solid_max) invalid: ", &
+            im_solid_max,is_rigid(im_solid_max)
            stop
           endif
 
@@ -21943,39 +21972,136 @@ stop
           endif
          enddo ! im=1..num_materials
 
-          ! extend fluid LS,F,X into the solid.
+         check_elastic=1
+         
          if ((im_solid_max.ge.1).and. &
              (im_solid_max.le.num_materials)) then
-
-           ! (i,j,k) is a "solid" cell
-           ! ls_hold will be modified
           if ((LS_solid_new(im_solid_max).ge.zero).or. &
               (sum_vfrac_solid_new.ge.half)) then
+           check_elastic=0
+          else if ((LS_solid_new(im_solid_max).le.zero).and. &
+                   (sum_vfrac_solid_new.le.half)) then
+           ! do nothing
+          else
+           print *,"LS_solid_new or sum_vfrac_solid_new invalid"
+           stop
+          endif 
+         else if (im_solid_max.eq.0) then
+          ! do nothing
+         else
+          print *,"im_solid_max invalid: ",im_solid_max
+          stop
+         endif
 
-           center_stencil_im_only=0
-           center_stencil_wetting_im=0
+         im_hard_material=0
 
-           im1_substencil=0
-           im2_substencil=0
+         if (check_elastic.eq.0) then
+          im_hard_material=im_solid_max
+         else if (check_elastic.eq.1) then
+          sum_vfrac_elastic=zero
+          im_elastic_max=0
+          do im=1,num_materials
+           if (is_elastic(im).eq.1) then
 
-           cell_CP_parm%im_solid_max=im_solid_max
+            vofcomp=(im-1)*ngeom_recon+1
+            sum_vfrac_elastic=sum_vfrac_elastic+mofnew(vofcomp)
+
+            if (im_elastic_max.eq.0) then
+             im_elastic_max=im
+            else if ((im_elastic_max.ge.1).and. &
+                     (im_elastic_max.le.num_materials)) then
+             if (ls_hold(im_elastic_max).lt. &
+                 ls_hold(im)) then
+              im_elastic_max=im
+             endif
+            else
+             print *,"im_elastic_max invalid: ",im_elastic_max
+             stop
+            endif
+           else if (is_elastic(im).eq.0) then
+            !do nothing
+           else
+            print *,"is_elastic invalid: ",im,is_elastic(im)
+            stop
+           endif
+          enddo !im=1,num_materials
+       
+          if ((sum_vfrac_elastic.ge.zero).and. &
+              (sum_vfrac_elastic.le.one+EPS1)) then
+           !do nothing
+          else
+           print *,"sum_vfrac_elastic invalid: ",sum_vfrac_elastic
+           stop
+          endif
+          
+          if ((ls_hold(im_elastic_max).ge.zero).or. &
+              (sum_vfrac_elastic.ge.half)) then
+
+           im_hard_material=im_elastic_max
+           LS_solid_new(im_hard_material)=LS(D_DECL(i,j,k),im_hard_material)
+           vofcompraw=(im_hard_material-1)*ngeom_raw+1
+           vfrac_solid_new(im_hard_material)=vofnew(D_DECL(i,j,k),vofcompraw)
+           do dir=1,SDIM
+            centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
+           enddo
+           do dir=1,SDIM
+            censolid_new(im,dir)=centroid(dir)-cencell(dir)
+           enddo
+           do dir=1,SDIM
+            nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
+           enddo
+           if (vfrac_solid_new(im_hard_material).le.VOFTOL) then
+            vfrac_solid_new(im_hard_material)=zero
+           else if (vfrac_solid_new(im_hard_material).ge.one-VOFTOL) then
+            vfrac_solid_new(im_hard_material)=one
+           else if ((vfrac_solid_new(im_hard_material).ge.VOFTOL).and. &
+                    (vfrac_solid_new(im_hard_material).le.one-VOFTOL)) then
+            ! do nothing
+           else
+            print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
+            stop
+           endif  
+          else if ((ls_hold(im_elastic_max).le.zero).and. &
+                   (sum_vfrac_elastic.le.half)) then
+           check_elastic=0
+          else
+           print *,"ls_hold(im_elastic_max) or sum_vfrac_elastic invalid"
+           stop
+          endif 
+         else
+          print *,"check_elastic invalid: ",check_elastic
+          stop
+         endif
+            
+
+          ! extend fluid LS,F,X into the solid.
+         if ((im_hard_material.ge.1).and. &
+             (im_hard_material.le.num_materials)) then
+
+          center_stencil_im_only=0
+          center_stencil_wetting_im=0
+
+          im1_substencil=0
+          im2_substencil=0
+
+          cell_CP_parm%im_hard_material=im_hard_material
 
             ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
-           do k1=LSstenlo(3),LSstenhi(3)
-           do j1=LSstenlo(2),LSstenhi(2)
-           do i1=LSstenlo(1),LSstenhi(1)
+          do k1=LSstenlo(3),LSstenhi(3)
+          do j1=LSstenlo(2),LSstenhi(2)
+          do i1=LSstenlo(1),LSstenhi(1)
 
-            cell_CP_parm%i=i+i1
-            cell_CP_parm%j=j+j1
-            cell_CP_parm%k=k+k1
+           cell_CP_parm%i=i+i1
+           cell_CP_parm%j=j+j1
+           cell_CP_parm%k=k+k1
              ! inside of "cell_xCP":
              ! xSOLID_BULK(dir)=xsten(i+i1,j+j1,k+k1,dir)
              ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
-            call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
+           call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
 
-            call containing_cell(bfact, &
+           call containing_cell(bfact, &
               dx, &
               xlo, &
               fablo, &
@@ -21992,174 +22118,161 @@ stop
              !within the radius 1 stencil about cell_index
              !LS_solid(<found stencil closest>)<0
              !LS_FLUID(<found stencil closest>)>0
-            call interp_fluid_LS( &
+           call interp_fluid_LS( &
              cell_CP_parm, &
              xCP, &
              xSOLID_BULK, &
              cell_index, & ! containing cell for xCP
              LS_virtual_new, & 
-             im_solid_max, &
+             im_hard_material, &
              im_fluid_critical) !primary fluid closest to xSOLID_BULK and 
                                 !within the radius 1 stencil about cell_index
                                 !LS_solid(<found stencil>)<0
                                 !LS_FLUID(<found stencil>)>0
 
 
-            if ((i1.eq.0).and. &
-                (j1.eq.0).and. &
-                (k1.eq.0)) then
-             at_center=1
-            else
-             at_center=0
-            endif
+           if ((i1.eq.0).and. &
+               (j1.eq.0).and. &
+               (k1.eq.0)) then
+            at_center=1
+           else
+            at_center=0
+           endif
 
-            do im=1,num_materials
-             LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
-            enddo
-            call get_primary_material(dx,LS_predict,im_primary_stencil)
+           do im=1,num_materials
+            LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
+           enddo
+           call get_primary_material(dx,LS_predict,im_primary_stencil)
 
-             !fluid stencil cell, we trust this LS value.
-             !if (at_center==1) then cell is (i,j,k) cell which is solid.
-            if ((is_rigid(im_primary_stencil).eq.0).and. & 
-                (at_center.eq.0)) then
+            !fluid stencil cell, we trust this LS value.
+            !if (at_center==1) then cell is (i,j,k) cell which is solid.
+
+           trust_flag=0
+
+           if ((is_rigid(im_primary_stencil).eq.0).and. & 
+               (at_center.eq.0)) then
+
+            if ((is_rigid(im_hard_material).eq.1).or. &
+                (is_elastic(im_primary_stencil).eq.0)) then
+
+             trust_flag=1
 
              do im=1,num_materials
               LS_virtual_new(im)=LS_predict(im)
               LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
 
+            else if ((is_elastic(im_hard_material).eq.1).and. &
+                     (is_elastic(im_primary_stencil).eq.1)) then
+             !do nothing
+            else
+             print *,"im_hard_material invalid ",im_hard_material
+             print *,"or im_primary_stencil invalid ",im_primary_stencil
+             stop
+            endif
+
              !solid stencil cell, extrapolate from the fluid side.
-            else if ((is_rigid(im_primary_stencil).eq.1).or. & 
-                     (at_center.eq.1)) then
+           else if ((is_rigid(im_primary_stencil).eq.1).or. & 
+                    (at_center.eq.1)) then
+            !do nothing
+           else
+            print *,"im_primary_stencil invalid ",im_primary_stencil
+            print *,"or at_center invalid: ",at_center
+            stop
+           endif 
+           
+           if (trust_flag.eq.0) then
 
-             do im=1,num_materials
-              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
-             enddo
+            do im=1,num_materials
+             LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
+            enddo
 
-             if (im_fluid_critical.eq.0) then
-              ! do nothing
-             else if ((im_fluid_critical.ge.1).and. &
-                      (im_fluid_critical.le.num_materials)) then
-              if (is_rigid(im_fluid_critical).eq.0) then
-               if (im1_substencil.eq.0) then
-                im1_substencil=im_fluid_critical
-               else if ((im1_substencil.ge.1).and. &
-                        (im1_substencil.le.num_materials)) then
-                if (im_fluid_critical.eq.im1_substencil) then
-                 ! do nothing
-                else
-                 im2_substencil=im_fluid_critical
-                endif
+            if (im_fluid_critical.eq.0) then
+             ! do nothing
+            else if ((im_fluid_critical.ge.1).and. &
+                     (im_fluid_critical.le.num_materials)) then
+             if (is_rigid(im_fluid_critical).eq.0) then
+              if (im1_substencil.eq.0) then
+               im1_substencil=im_fluid_critical
+              else if ((im1_substencil.ge.1).and. &
+                       (im1_substencil.le.num_materials)) then
+               if (im_fluid_critical.eq.im1_substencil) then
+                ! do nothing
                else
-                print *,"im1_substencil invalid"
-                stop
+                im2_substencil=im_fluid_critical
                endif
               else
-               print *,"is_rigid(im_fluid_critical) invalid"
+               print *,"im1_substencil invalid"
                stop
               endif
              else
-              print *,"im_fluid_critical invalid"
+              print *,"is_rigid(im_fluid_critical) invalid"
               stop
              endif
-
             else
-             print *,"is_rigid(im_primary_stencil) or at_center invalid"
+             print *,"im_fluid_critical invalid"
              stop
             endif
+
+           else if (trust_flag.eq.1) then
+            ! do nothing
+           else
+            print *,"trust_flag invalid ",trust_flag
+            stop
+           endif
                            
-           enddo
-           enddo
-           enddo ! i1,j1,k1=LSstenlo ... LSstenhi
+          enddo
+          enddo
+          enddo ! i1,j1,k1=LSstenlo ... LSstenhi
 
 
-           if (im1_substencil.eq.0) then
+          if (im1_substencil.eq.0) then
 
-            if (abs(LS_solid_new(im_solid_max)).le.VOFTOL*dxmaxLS) then
-             print *,"all materials disappeared in fort_renormalize_prescribe?"
-             print *,"abs(LS_solid_new(im_solid_max)) very small, ", &
-              abs(LS_solid_new(im_solid_max))
-             print *,"but yet no negative values for "
-             print *,"LS_solid_new(im_solid_max) were found nearby."
-             print *,"level,finest_level ",level,finest_level
-             cell_CP_parm%i=i
-             cell_CP_parm%j=j
-             cell_CP_parm%k=k
-              ! xSOLID_BULK(dir)=xsten(i,j,k,dir)
-              ! xCP=xSOLID_BULK(dir)-LS_cell*nslope_cell(dir)
-             call cell_xCP(cell_CP_parm,xCP,xSOLID_BULK)
-             local_mag=zero
-             do dir=1,SDIM
-              print *,"dir,xCP,xSOLID_BULK ",dir,xCP(dir),xSOLID_BULK(dir)
-              local_mag=local_mag+(xCP(dir)-xSOLID_BULK(dir))**2
-             enddo
-             local_mag=sqrt(local_mag)
-             print *,"im_solid_max,LS_solid_new(im_solid_max) ", &
-                     im_solid_max,LS_solid_new(im_solid_max)
-             print *,"dx,dy,dz,local_mag ",dx(1),dx(2),dx(SDIM),local_mag
+           !do nothing
 
-             do im=1,num_materials
-              print *,"im,is_rigid(im),ls_hold(im) ", &
-                      im,is_rigid(im),ls_hold(im)
-             enddo
-             do k1=LSstenlo(3),LSstenhi(3)
-             do j1=LSstenlo(2),LSstenhi(2)
-             do i1=LSstenlo(1),LSstenhi(1)
-              call gridsten_level(xsten_debug,i+i1,j+j1,k+k1,level,nhalf)
-              print *,"i1,j1,k1,x,y,z ",i1,j1,k1, &
-                 xsten_debug(0,1),xsten_debug(0,2),xsten_debug(0,SDIM)
-              do im=1,num_materials
-               print *,"i1,j1,k1,im,LS_extend ",i1,j1,k1,im, &
-                       LS_extend(D_DECL(i1,j1,k1),im)
-              enddo
-             enddo
-             enddo
-             enddo
+          else if ((im1_substencil.ge.1).and. &
+                   (im1_substencil.le.num_materials)) then
 
-             stop
-
-            else if (abs(LS_solid_new(im_solid_max)).ge.VOFTOL*dxmaxLS) then
-             ! do nothing
+           if (im2_substencil.eq.0) then
+            !fluid: center_stencil_im_only owns the whole cell
+            center_stencil_im_only=im1_substencil 
+           else if ((im2_substencil.ge.1).and. &
+                    (im2_substencil.le.num_materials)) then
+            if (im1_substencil.lt.im2_substencil) then
+             im=im1_substencil
+             im_opp=im2_substencil
+            else if (im1_substencil.gt.im2_substencil) then
+             im=im2_substencil
+             im_opp=im1_substencil
             else
-             print *,"LS_solid_new(im_solid_max) invalid"
+             print *,"im1_substencil or im2_substencil invalid"
              stop
             endif
-           else if ((im1_substencil.ge.1).and. &
-                    (im1_substencil.le.num_materials)) then
-            if (im2_substencil.eq.0) then
-             !fluid: center_stencil_im_only owns the whole cell
-             center_stencil_im_only=im1_substencil 
-            else if ((im2_substencil.ge.1).and. &
-                     (im2_substencil.le.num_materials)) then
-             if (im1_substencil.lt.im2_substencil) then
-              im=im1_substencil
-              im_opp=im2_substencil
-             else if (im1_substencil.gt.im2_substencil) then
-              im=im2_substencil
-              im_opp=im1_substencil
-             else
-              print *,"im1_substencil or im2_substencil invalid"
-              stop
-             endif
-             call get_iten(im,im_opp,iten)
-             do im_local=1,num_materials
-              dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
-              local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
-             enddo
-              ! coordinate of (i,j,k)
-             do dir=1,SDIM
-              local_XPOS(dir)=xsten(0,dir)
-             enddo
-             call get_user_tension( &
+            call get_iten(im,im_opp,iten)
+            do im_local=1,num_materials
+             dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
+             local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
+            enddo
+             ! coordinate of (i,j,k)
+            do dir=1,SDIM
+             local_XPOS(dir)=xsten(0,dir)
+            enddo
+            call get_user_tension( &
               local_XPOS, &
               time, &
               fort_tension,user_tension, &
               local_temperature)
+
+            if ((is_rigid(im).eq.0).and. &
+                (is_elastic(im).eq.0).and. &
+                (is_rigid(im_opp).eq.0).and. &
+                (is_elastic(im_opp).eq.0)) then
+
              ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
              ! theta_{ik}=0 => material i wets material k.
              ! im is material "i"  ("fluid" material)
              ! im_opp is material "j"
-             call get_CL_iten(im,im_opp,im_solid_max, &
+             call get_CL_iten(im,im_opp,im_hard_material, &
               iten_13,iten_23, &
               user_tension,cos_angle,sin_angle)
              if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
@@ -22175,30 +22288,44 @@ stop
               print *,"sin_angle or cos_angle invalid"
               stop
              endif
+
+            else if ((is_rigid(im).eq.1).or. &
+                     (is_elastic(im).eq.1).or. &
+                     (is_rigid(im_opp).eq.1).or. &
+                     (is_elastic(im_opp).eq.1)) then
+             !do nothing
             else
-             print *,"im2_substencil invalid"
+             print *,"im or im_opp invalid:",im,im_opp
              stop
             endif
            else
-            print *,"im1_substencil invalid"
+            print *,"im2_substencil invalid: ",im2_substencil
             stop
            endif
+          else
+           print *,"im1_substencil invalid: ",im1_substencil
+           stop
+          endif
 
             ! default radius: extrap_radius=1 cell
             ! make the extension fluid level set tessellating
-           do k1=istenlo(3),istenhi(3)
-           do j1=istenlo(2),istenhi(2)
-           do i1=istenlo(1),istenhi(1)
+          do k1=istenlo(3),istenhi(3)
+          do j1=istenlo(2),istenhi(2)
+          do i1=istenlo(1),istenhi(1)
 
-            do im=1,num_materials
-             LS_virtual(im)=LS_extend(D_DECL(i1,j1,k1),im)
-             LS_virtual_new(im)=LS_virtual(im)
-            enddo
+           do im=1,num_materials
+            LS_virtual(im)=LS_extend(D_DECL(i1,j1,k1),im)
+            LS_virtual_new(im)=LS_virtual(im)
+           enddo
  
-            do im=1,num_materials
-             if (is_rigid(im).eq.1) then
+           do im=1,num_materials
+
+            if (is_rigid(im).eq.1) then
               ! do nothing
-             else if (is_rigid(im).eq.0) then
+            else if (is_rigid(im).eq.0) then
+
+             if ((is_elastic(im_hard_material).eq.0).or. &
+                 (is_elastic(im).eq.0)) then
 
               LS_virtual_max=-99999.0
               im_primary_stencil=0
@@ -22206,28 +22333,41 @@ stop
                if (is_rigid(im_opp).eq.1) then
                 ! do nothing
                else if (is_rigid(im_opp).eq.0) then
-                if (im.ne.im_opp) then
-                 if (im_primary_stencil.eq.0) then
-                  im_primary_stencil=im_opp
-                  LS_virtual_max=LS_virtual(im_opp)
-                 else if ((im_primary_stencil.ge.1).and. &
-                          (im_primary_stencil.le.num_materials)) then
-                  if (LS_virtual(im_opp).gt.LS_virtual_max) then
+
+                if ((is_rigid(im_hard_material).eq.1).or. &
+                    (is_elastic(im_opp).eq.0)) then 
+
+                 if (im.ne.im_opp) then
+                  if (im_primary_stencil.eq.0) then
                    im_primary_stencil=im_opp
                    LS_virtual_max=LS_virtual(im_opp)
+                  else if ((im_primary_stencil.ge.1).and. &
+                           (im_primary_stencil.le.num_materials)) then
+                   if (LS_virtual(im_opp).gt.LS_virtual_max) then
+                    im_primary_stencil=im_opp
+                    LS_virtual_max=LS_virtual(im_opp)
+                   endif
+                  else
+                   print *,"im_primary_stencil invalid"
+                   stop
                   endif
+                 else if (im.eq.im_opp) then
+                  ! do nothing
                  else
-                  print *,"im_primary_stencil invalid"
+                  print *,"im_opp invalid: ",im_opp
                   stop
                  endif
-                else if (im.eq.im_opp) then
-                 ! do nothing
+
+                else if ((is_elastic(im_hard_material).eq.1).and. &
+                         (is_elastic(im_opp).eq.1)) then
+                 !do nothing
                 else
-                 print *,"im_opp invalid"
+                 print *,"im_hard_material invalid: ",im_hard_material
+                 print *,"or im_opp invalid: ",im_opp
                  stop
                 endif
                else
-                print *,"is_rigid invalid LEVELSET_3D.F90"
+                print *,"is_rigid invalid LEVELSET_3D.F90: ",im_opp,is_rigid(im_opp)
                 stop
                endif
               enddo ! im_opp=1..num_materials
@@ -22249,18 +22389,31 @@ stop
                stop
               endif
 
+             else if ((is_elastic(im_hard_material).eq.1).and. &
+                      (is_elastic(im).eq.1)) then
+              !do nothing
              else
-              print *,"is_rigid invalid LEVELSET_3D.F90"
+              print *,"im_hard_material invalid: ",im_hard_material
+              print *,"or im invalid: ",im
               stop
              endif
 
-            enddo ! im=1..num_materials
+            else
+             print *,"is_rigid invalid LEVELSET_3D.F90: ",im,is_rigid(im)
+             stop
+            endif
 
-            if ((center_stencil_wetting_im.ge.1).and. &
-                (center_stencil_wetting_im.le.num_materials)) then 
-             if (LS_virtual_new(im_solid_max).ge.zero) then
-              do im=1,num_materials
-               if (is_rigid(im).eq.0) then
+           enddo ! im=1..num_materials
+
+           if ((center_stencil_wetting_im.ge.1).and. &
+               (center_stencil_wetting_im.le.num_materials)) then 
+            if (LS_virtual_new(im_hard_material).ge.zero) then
+             do im=1,num_materials
+              if (is_rigid(im).eq.0) then
+
+               if ((is_rigid(im_hard_material).eq.1).or. &
+                   (is_elastic(im).eq.0)) then
+
                 if (im.eq.center_stencil_wetting_im) then
                  if (LS_virtual_new(im).lt.zero) then
                   LS_virtual_new(im)=zero
@@ -22276,88 +22429,108 @@ stop
                  else if (LS_virtual_new(im).lt.zero) then
                   ! do nothing
                  else
-                  print *,"LS_virtual_new invalid"
+                  print *,"LS_virtual_new invalid: ",LS_virtual_new
                   stop
                  endif
                 endif
-               else if (is_rigid(im).eq.1) then
-                ! do nothing
+
+               else if ((is_elastic(im_hard_material).eq.1).and. &
+                        (is_elastic(im).eq.1)) then
+                !do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"im_hard_material invalid: ",im_hard_material 
+                print *,"or im invalid: ",im
                 stop
                endif
-              enddo ! im=1..num_materials
-             else if (LS_virtual_new(im_solid_max).lt.zero) then
-              ! do nothing
-             else
-              print *,"LS_virtual_new(im_solid_max) invalid"
-              stop
-             endif
-            else if (center_stencil_wetting_im.eq.0) then
+
+              else if (is_rigid(im).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid(im) invalid ",im,is_rigid(im)
+               stop
+              endif
+             enddo ! im=1..num_materials
+
+            else if (LS_virtual_new(im_hard_material).lt.zero) then
              ! do nothing
             else
-             print *,"center_stencil_wetting_im invalid"
+             print *,"LS_virtual_new(im_hard_material) invalid: ", &
+               im_hard_material,LS_virtual_new(im_hard_material)
              stop
             endif
+           else if (center_stencil_wetting_im.eq.0) then
+            ! do nothing
+           else
+            print *,"center_stencil_wetting_im invalid: ", &
+             center_stencil_wetting_im
+            stop
+           endif
 
-            do im=1,num_materials
-             LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
-            enddo
-
+           do im=1,num_materials
+            LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
            enddo
-           enddo
-           enddo ! i1,j1,k1=-extend_radius..extend_radius
 
-           if ((center_stencil_wetting_im.ge.1).and. &
-               (center_stencil_wetting_im.le.num_materials)) then 
+          enddo
+          enddo
+          enddo ! i1,j1,k1=-extend_radius..extend_radius
 
-            if (1.eq.0) then
-             print *,"center_stencil_wetting_im=", &
-                center_stencil_wetting_im
-             print *,"i,j,k ",i,j,k
-             print *,"level,finest_level ",level,finest_level
-            endif
+          if ((center_stencil_wetting_im.ge.1).and. &
+              (center_stencil_wetting_im.le.num_materials)) then 
 
-            use_ls_data=0
+           use_ls_data=0
 
-            do im=1,num_materials
-             vofcomprecon=(im-1)*ngeom_recon+1
-             vofcompraw=(im-1)*ngeom_raw+1
+           do im=1,num_materials
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vofcompraw=(im-1)*ngeom_raw+1
 
-             if (is_rigid(im).eq.0) then
+            if (is_rigid(im).eq.0) then
+
+             if ((is_rigid(im_hard_material).eq.1).or. &
+                 (is_elastic(im).eq.0)) then
+
               do dir=0,SDIM
                local_mof(vofcomprecon+dir)= &
                   state_mof(D_DECL(i,j,k),vofcompraw+dir)
               enddo
-             else if (is_rigid(im).eq.1) then
-              local_mof(vofcomprecon)=vfrac_solid_new(im) 
-              do dir=1,SDIM
-               local_mof(vofcomprecon+dir)=censolid_new(im,dir)
-              enddo
+
+             else if ((is_elastic(im_hard_material).eq.1).and. &
+                      (is_elastic(im).eq.1)) then
+              !do nothing
              else
-              print *,"is_rigid invalid LEVELSET_3D.F90"
+              print *,"im_hard_material invalid ",im_hard_material
+              print *,"or im invalid ",im
               stop
-             endif
+             endif 
 
-             if ((local_mof(vofcomprecon).lt.-0.1).or. &
-                 (local_mof(vofcomprecon).gt.1.1)) then
-              print *,"local_mof(vofcomprecon) invalid"
-              print *,"local_mof(vofcomprecon)=",local_mof(vofcomprecon)
-              stop
-             endif
-
-             orderflag=zero
-             local_mof(vofcomprecon+SDIM+1)=orderflag
-
-             do dir=SDIM+3,ngeom_recon
-              local_mof(vofcomprecon+dir-1)=zero
+            else if (is_rigid(im).eq.1) then
+             local_mof(vofcomprecon)=vfrac_solid_new(im) 
+             do dir=1,SDIM
+              local_mof(vofcomprecon+dir)=censolid_new(im,dir)
              enddo
+            else
+             print *,"is_rigid invalid LEVELSET_3D.F90 ",im,is_rigid(im)
+             stop
+            endif
 
-            enddo  ! im=1..num_materials
+            if ((local_mof(vofcomprecon).lt.-0.1).or. &
+                (local_mof(vofcomprecon).gt.1.1)) then
+             print *,"local_mof(vofcomprecon) invalid"
+             print *,"local_mof(vofcomprecon)=",local_mof(vofcomprecon)
+             stop
+            endif
 
-            ! sum of F_fluid=1
-            ! sum of F_rigid<=1
-            call make_vfrac_sum_ok_base( &
+            orderflag=zero
+            local_mof(vofcomprecon+SDIM+1)=orderflag
+
+            do dir=SDIM+3,ngeom_recon
+             local_mof(vofcomprecon+dir-1)=zero
+            enddo
+
+           enddo  ! im=1..num_materials
+
+           ! sum of F_fluid=1
+           ! sum of F_rigid<=1
+           call make_vfrac_sum_ok_base( &
               cmofsten, &
               xsten,nhalf, &
               continuous_mof_parm, &
@@ -22366,14 +22539,14 @@ stop
               local_mof, &
               SDIM)
 
-            do im=1,num_materials
-             vofcomprecon=(im-1)*ngeom_recon+1
-             vof_super(im)=local_mof(vofcomprecon)
-            enddo
+           do im=1,num_materials
+            vofcomprecon=(im-1)*ngeom_recon+1
+            vof_super(im)=local_mof(vofcomprecon)
+           enddo
 
-            mof_verbose=0
+           mof_verbose=0
 
-            call multimaterial_MOF( &
+           call multimaterial_MOF( &
              tessellate_source, & !TESSELLATE_FLUIDS
              tid, &
              bfact,dx,xsten,nhalf, &
@@ -22394,7 +22567,7 @@ stop
              SDIM)
      
              !EPS2
-            call multi_get_volume_tessellate( &
+           call multi_get_volume_tessellate( &
              tid, &
              tessellate_source, & !TESSELLATE_FLUIDS
              tessellate_transfer, & !TESSELLATE_ALL
@@ -22407,38 +22580,41 @@ stop
              SDIM)
 
              ! change the solid material into the wetting fluid
-             ! vfrac_solid_new(im_solid_max)
-             ! censolid_new(im_solid_max,dir)
+             ! vfrac_solid_new(im_hard_material)
+             ! censolid_new(im_hard_material,dir)
              ! vof_fluid_new=vof_fluid_old + vof_solid
              ! x_fluid_new F_fluid_new = x_fluid_old F_fluid_old + x_sol F_sol
-            vofcomprecon=(center_stencil_wetting_im-1)*ngeom_recon+1
+           vofcomprecon=(center_stencil_wetting_im-1)*ngeom_recon+1
 
-            F_fluid_new=local_mof(vofcomprecon)+vfrac_solid_new(im_solid_max)
-            if (F_fluid_new.gt.zero) then
-             do dir=1,SDIM
-              x_fluid_new(dir)= &
-               local_mof(vofcomprecon+dir)*local_mof(vofcomprecon)+ &
-               censolid_new(im_solid_max,dir)*vfrac_solid_new(im_solid_max)
-              x_fluid_new(dir)=x_fluid_new(dir)/F_fluid_new
-              local_mof(vofcomprecon+dir)=x_fluid_new(dir)
-             enddo
-             local_mof(vofcomprecon)=F_fluid_new
-            else
-             print *,"F_fluid_new invalid"
-             stop
-            endif
-           else if (center_stencil_wetting_im.eq.0) then
-            ! do nothing
+           F_fluid_new=local_mof(vofcomprecon)+vfrac_solid_new(im_hard_material)
+           if (F_fluid_new.gt.zero) then
+            do dir=1,SDIM
+             x_fluid_new(dir)= &
+              local_mof(vofcomprecon+dir)*local_mof(vofcomprecon)+ &
+              censolid_new(im_hard_material,dir)*vfrac_solid_new(im_hard_material)
+             x_fluid_new(dir)=x_fluid_new(dir)/F_fluid_new
+             local_mof(vofcomprecon+dir)=x_fluid_new(dir)
+            enddo !dir=1,sdim
+            local_mof(vofcomprecon)=F_fluid_new
            else
-            print *,"center_stencil_wetting_im invalid"
+            print *,"F_fluid_new invalid"
             stop
            endif
+          else if (center_stencil_wetting_im.eq.0) then
+           ! do nothing
+          else
+           print *,"center_stencil_wetting_im invalid"
+           stop
+          endif
 
-           do im=1,num_materials
+          do im=1,num_materials
 
-            if (is_rigid(im).eq.1) then
-             ! do nothing
-            else if (is_rigid(im).eq.0) then
+           if (is_rigid(im).eq.1) then
+            ! do nothing
+           else if (is_rigid(im).eq.0) then
+
+            if ((is_rigid(im_hard_material).eq.1).or. &
+                (is_elastic(im).eq.0)) then
 
              do k1=istenlo(3),istenhi(3)
              do j1=istenlo(2),istenhi(2)
@@ -22499,25 +22675,26 @@ stop
               print *,"mofnew(vofcomp) invalid"
               stop
              endif
+
+            else if ((is_elastic(im_hard_material).eq.1).and. &
+                     (is_elastic(im).eq.1)) then
+             !do nothing
             else
-             print *,"is_rigid invalid LEVELSET_3D.F90"
+             print *,"im_hard_material or im invalid: ",im_hard_material,im
              stop
             endif
 
-           enddo ! im=1..num_materials
+           else
+            print *,"is_rigid invalid LEVELSET_3D.F90: ",im,is_rigid(im)
+            stop
+           endif
 
-          else if ((LS_solid_new(im_solid_max).le.zero).and. &
-                   (sum_vfrac_solid_new.le.half)) then
-           ! do nothing
-          else
-           print *,"LS_solid_new or sum_vfrac_solid_new invalid"
-           stop
-          endif
+          enddo ! im=1..num_materials
 
-         else if (im_solid_max.eq.0) then
+         else if (im_hard_material.eq.0) then
           ! do nothing
          else
-          print *,"im_solid_max invalid: ",im_solid_max
+          print *,"im_hard_material invalid: ",im_hard_material
           stop
          endif
 

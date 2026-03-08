@@ -515,12 +515,12 @@ void NavierStokes::save_interface_data(
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //ncomp=1 ngrow=0
     new_localMF(standard_interface_velocity_hold_MF+dir,1,0,dir);
-    if (local_smoothing_flag==0) {
+    if (local_smoothing_flag==0) { //regular advection
      MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
      MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],*velmf,
         0,0,1,0);
      delete velmf;
-    } else if (local_smoothing_flag>0) {
+    } else if (local_smoothing_flag>0) { //smoothing advection
      int homflag=1;
      int local_project_option=SOLVETYPE_VISC;
      fort_overridepbc(&homflag,&local_project_option);
@@ -546,9 +546,21 @@ void NavierStokes::save_interface_data(
    MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
 
    for (int im=0;im<num_materials;im++) {
+
     if (material_extend_velocity[im]==0) {
      //do nothing
     } else if (material_extend_velocity[im]>0) {
+
+     if ((FSI_flag[im]==FSI_ICE_PROBF90)||
+         (FSI_flag[im]==FSI_ICE_STATIC)||
+         (FSI_flag[im]==FSI_ICE_NODES_INIT)||
+         (FSI_flag[im]==FSI_EULERIAN_ELASTIC)||
+         (FSI_flag[im]==FSI_ICE_EULERIAN_ELASTIC)||
+         (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)) {
+      //do nothing
+     } else
+      amrex::Error("expecting ice, elastic, or FSI rigid");
+
 
      MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
       im*ngeom_raw,
@@ -564,12 +576,13 @@ void NavierStokes::save_interface_data(
    delete lsmf;
 
     //correct the volume fractions, centroids, and level set function(s)
+    //with corresponding values derived from the extended velocity 
+    //field.
    correct_flotsam();
-   correct_for_shear();
 
    //restore the velocity field
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    if (local_smoothing_flag==0) {
+    if (local_smoothing_flag==0) { //regular advection
      MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
      MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
        0,0,1,0);
@@ -577,7 +590,7 @@ void NavierStokes::save_interface_data(
      MultiFab::Copy(Umac_new_new,
        *localMF[standard_interface_velocity_hold_MF+dir],
        0,0,1,0);
-    } else if (local_smoothing_flag>0) {
+    } else if (local_smoothing_flag>0) { //smoothing advection
      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
       *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
      MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
@@ -15168,14 +15181,14 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
 
  MultiFab* levelset_extend=nullptr;
 
- if (local_smoothing_flag==-1) {
+ if (local_smoothing_flag==-1) { //called from tensor_advection_update
   resize_levelset(ngrow_distance,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
   levelset_extend=localMF[LEVELPC_MF];
- } else if (local_smoothing_flag==0) {
+ } else if (local_smoothing_flag==0) { //regular advection
   levelset_extend=getStateDist(ngrow_distance,vel_time_slab,
     local_caller_string);
- } else if (local_smoothing_flag>0) {
+ } else if (local_smoothing_flag>0) { //use UMAC_STATIC_MF
   levelset_extend=getStateDist(ngrow_distance,cur_time_slab,
     local_caller_string);
  } else
