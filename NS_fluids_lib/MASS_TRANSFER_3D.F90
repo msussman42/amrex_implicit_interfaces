@@ -8113,6 +8113,7 @@ stop
          do im=1,num_materials
           LShere(im)=LS(D_DECL(i,j,k),im)
          enddo
+          !get_primary_material is declared in GLOBALUTIL.F90
          call get_primary_material(dx,LShere,im_primary)
 
          if (is_rigid(im_primary).eq.0) then
@@ -8318,13 +8319,10 @@ stop
 
                found_path=0
 
-                ! FOR YANG:
-                ! BOTH LEVELSET FUNCTIONS WITHIN 2 dx of interface and
-                ! at least one of them is positive.
-                ! note: is_rigid(im_primary).eq.0 so we are not in 
-                ! a solid material.
                if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
-                   (abs(LShere(im_dest)).le.two*dxmaxLS)) then
+                   (abs(LShere(im_dest)).le.two*dxmaxLS).and. &
+                   ((im_source.eq.im_primary).or. &
+                    (im_dest.eq.im_primary))) then
 
                 test_k_source=conductstate(D_DECL(i,j,k),im_source)
                 test_k_dest=conductstate(D_DECL(i,j,k),im_dest)
@@ -8342,15 +8340,36 @@ stop
                   ! centers, therefore, we find the jump in heat
                   ! flux at the closest point on the interface from the
                   ! cell center (xsten(0,dir)).
-                 if ((LShere(im_dest).ge.zero).or. &
-                     (LShere(im_source).ge.zero)) then
+                 if ((im_dest.eq.im_primary).or. &
+                     (im_source.eq.im_primary)) then
 
-                  if (LShere(im_dest).ge.zero) then
-                   LS_pos=LShere(im_source) !expecting LS_pos<0
+                  if (im_dest.ge.im_primary) then
+
+                   if (is_elastic(im_dest).eq.0) then
+                    LS_pos=LShere(im_source) !expecting LS_pos<0
+                   else if (is_elastic(im_dest).eq.1) then
+                    LS_pos=-LShere(im_dest) !expecting LS_pos<0
+                   else
+                    print *,"is_elastic invalid: ", &
+                      im_dest,is_elastic(im_dest)
+                    stop
+                   endif
+
                    do dir=1,SDIM
                       ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
-                    nrmCP(dir)= &
+
+                    if (is_elastic(im_dest).eq.0) then
+                     nrmCP(dir)= &
                       LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+                    else if (is_elastic(im_dest).eq.1) then
+                     nrmCP(dir)= &
+                      -LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+                    else
+                     print *,"is_elastic invalid: ", &
+                       im_dest,is_elastic(im_dest)
+                     stop
+                    endif
+
                       ! Least squares slope: see Sussman and Puckett (2000)
                     xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
 
@@ -8365,11 +8384,31 @@ stop
                     xsrc_micro(dir)=xI(dir)+ &
                      microscale_probe_size*dxmin*nrmCP(dir)
                    enddo ! dir=1..sdim
-                  else if (LShere(im_source).ge.zero) then
-                   LS_pos=LShere(im_dest) !expecting LS_pos<0
+
+                  else if (im_source.ge.im_primary) then
+
+                   if (is_elastic(im_source).eq.0) then
+                    LS_pos=LShere(im_dest) !expecting LS_pos<0
+                   else if (is_elastic(im_source).eq.1) then
+                    LS_pos=-LShere(im_source) !expecting LS_pos<0
+                   else
+                    print *,"is_elastic invalid: ", &
+                      im_source,is_elastic(im_source)
+                    stop
+                   endif
+             
                    do dir=1,SDIM
-                    nrmCP(dir)= &
+                    if (is_elastic(im_source).eq.0) then
+                     nrmCP(dir)= &
                       LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+                    else if (is_elastic(im_source).eq.1) then
+                     nrmCP(dir)= &
+                      -LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+                    else
+                     print *,"is_elastic invalid: ", &
+                       im_source,is_elastic(im_source)
+                     stop
+                    endif
 
                     xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                     xdst(dir)=xI(dir)+ &
@@ -8381,17 +8420,19 @@ stop
                     xsrc_micro(dir)=xI(dir)- &
                        microscale_probe_size*dxmin*nrmCP(dir)
                    enddo ! dir=1..sdim
+
                   else
                    print *,"LShere bust1"
                    print *,"LShere(im_dest) ",LShere(im_dest)
                    print *,"LShere(im_source) ",LShere(im_source)
+                   print *,"im_primary ",im_primary
                    stop
                   endif
 
                   found_path=1
 
-                 else if ((LShere(im_dest).lt.zero).and. &
-                          (LShere(im_source).lt.zero)) then
+                 else if ((im_dest.ne.im_primary).and. &
+                          (im_source.ne.im_primary)) then
 
                   found_path=0
 
@@ -9965,12 +10006,16 @@ stop
                 endif
 
                else if ((abs(LShere(im_source)).gt.two*dxmaxLS).or. &
-                        (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
+                        (abs(LShere(im_dest)).gt.two*dxmaxLS).or. &
+                        ((im_source.ne.im_primary).and. &
+                         (im_dest.ne.im_primary))) then
                 ! do nothing
                else
                 print *,"LShere bust3:"
                 print *,"LShere(im_source) ",LShere(im_source)
                 print *,"LShere(im_dest) ",LShere(im_dest)
+                print *,"im_primary ",im_primary
+                print *,"LShere: ",LShere
                 stop
                endif
 
@@ -10029,18 +10074,40 @@ stop
                LSnew(D_DECL(i,j,k),im_dest)+dt*vel_phasechange(ireverse)
 
              do dir=1,SDIM
-              if (LShere(im_dest).ge.zero) then
+              if (im_dest.ge.im_primary) then
                SIGNVEL=one
-               nrmCP(dir)= &
+               if (is_elastic(im_dest).eq.0) then
+                nrmCP(dir)= &
                   LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-              else if (LShere(im_source).ge.zero) then
+               else if (is_elastic(im_dest).eq.1) then
+                nrmCP(dir)= &
+                  -LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+               else
+                print *,"is_elastic invalid: ", &
+                  im_dest,is_elastic(im_dest)
+                stop
+               endif
+
+              else if (im_source.ge.im_primary) then
+
                SIGNVEL=-one
-               nrmCP(dir)= &
+               if (is_elastic(im_source).eq.0) then
+                nrmCP(dir)= &
                   LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+               else if (is_elastic(im_source).eq.1) then
+                nrmCP(dir)= &
+                  -LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+               else
+                print *,"is_elastic invalid: ", &
+                  im_source,is_elastic(im_source)
+                stop
+               endif
+
               else
                print *,"LShere bust4"
                print *,"LShere(im_dest) ",LShere(im_dest)
                print *,"LShere(im_source) ",LShere(im_source)
+               print *,"im_primary ",im_primary
                stop
               endif
              enddo ! dir=1..sdim
@@ -10225,6 +10292,7 @@ stop
          endif
 
         else if (nucleation_flag.eq.1) then
+
          ! see RatePhaseChange in PROB.F90
          ! LEVELSET FUNCTION AT CELL CENTERS.
          do im=1,num_materials

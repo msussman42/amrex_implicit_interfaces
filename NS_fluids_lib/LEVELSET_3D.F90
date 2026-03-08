@@ -21038,7 +21038,6 @@ stop
 
       integer, parameter :: nhalf=9
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) xsten_debug(-nhalf:nhalf,SDIM)
 
       real(amrex_real) mofnew(num_materials*ngeom_recon)
       integer istenlo(3),istenhi(3)
@@ -21123,7 +21122,6 @@ stop
       real(amrex_real) xCP(SDIM)
       real(amrex_real) xSOLID_BULK(SDIM)
       real(amrex_real) local_XPOS(SDIM)
-      real(amrex_real) local_mag
 
       if (renormalize_only.eq.1) then
        if (num_LS_extrap_iter.eq.1) then
