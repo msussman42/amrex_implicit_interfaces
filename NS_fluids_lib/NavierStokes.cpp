@@ -14912,6 +14912,7 @@ NavierStokes::prepare_displacement(int local_smoothing_flag) {
 
 //if nucleation_flag==0, then prior to call:
 // allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+// allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_ALT_MF);
 // level_phase_change_rate called from NavierStokes::phase_change_code_segment
 // level_phase_change_rate called from NavierStokes::nucleation_code_segment
 void
@@ -15244,10 +15245,17 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
   debug_ixType(FD_CURV_CELL_MF,-1,local_caller_string);
 
+   //we are in: NavierStokes::level_phase_change_rate
   debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
   if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
   debug_ixType(HOLD_LS_DATA_MF,-1,local_caller_string);
+
+   //we are in: NavierStokes::level_phase_change_rate
+  debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
+  if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
+   amrex::Error("localMF[HOLD_LS_DATA_ALT_MF]->nComp() invalid");
+  debug_ixType(HOLD_LS_DATA_ALT_MF,-1,local_caller_string);
 
   debug_ngrow(MDOT_MF,0,local_caller_string);
   debug_ixType(MDOT_MF,-1,local_caller_string);
@@ -15416,6 +15424,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    if (nucleation_flag==0) {
 
     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+    FArrayBox& ls_alt_fab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     if (burnvelfab.nComp()!=nburning)
@@ -15696,9 +15705,15 @@ NavierStokes::level_phase_change_rate_extend() {
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
+  //in: NavierStokes::level_phase_change_rate
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+  //in: NavierStokes::level_phase_change_rate
+ debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
+ if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
+  amrex::Error("localMF[HOLD_LS_DATA_ALT_MF]->nComp() invalid");
 
  for (int velflag=0;velflag<=1;velflag++) {
 
@@ -15778,6 +15793,7 @@ NavierStokes::level_phase_change_rate_extend() {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
+   FIX ME
    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
    FArrayBox& burnvelfab=(*localMF[local_mf])[mfi];
    if (burnvelfab.nComp()==ncomp) {
@@ -16030,9 +16046,15 @@ NavierStokes::level_phase_change_convertALL() {
   } // im_opp=im+1..num_materials
  } // im=1..num_materials-1
 
+  //in: NavierStokes::level_phase_change_convertALL
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+  //in: NavierStokes::level_phase_change_convertALL
+ debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
+ if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
+  amrex::Error("localMF[HOLD_LS_DATA_ALT_MF]->nComp() invalid");
 
  debug_ngrow(DEN_RECON_MF,1,local_caller_string);
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
@@ -16058,6 +16080,7 @@ NavierStokes::level_phase_change_convertALL() {
        //   im and im_opp materials.
        // (ii) updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
        // if i_phase_change+1<n_phase_change
+       // FIX ME
        //  a) copies LS_new[im_opp-1],LS_new[im-1] to HOLD_LS_DATA.
        //  b) copies S_new to DEN_RECON_MF for density, temperature, Y
        //     (im, im_opp)
@@ -16122,12 +16145,14 @@ NavierStokes::level_phase_change_convertALL() {
       Vector<int> scompBC_map_LS;
       scompBC_map_LS.resize(num_materials*(AMREX_SPACEDIM+1));
        // spectral_override==0 => always low order
+       FIX ME
       avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,num_materials*(AMREX_SPACEDIM+1),
 		  LOW_ORDER_AVGDOWN);
       for (int im_group=0;im_group<num_materials*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
        //scomp=0
+       FIX ME
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
@@ -16248,9 +16273,15 @@ NavierStokes::level_phase_change_convert(
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
+  //in: NavierStokes::level_phase_change_convert
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+  //in: NavierStokes::level_phase_change_convert
+ debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
+ if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
+  amrex::Error("localMF[HOLD_LS_DATA_ALT_MF]->nComp() invalid");
 
  MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)) 
@@ -17214,6 +17245,7 @@ NavierStokes::phase_change_redistributeALL() {
 
  delete_array(LSNEW_MF);
  delete_array(HOLD_LS_DATA_MF);
+ delete_array(HOLD_LS_DATA_ALT_MF);
  delete_array(JUMP_STRENGTH_COMPLEMENT_MF);
 
 } // end subroutine phase_change_redistributeALL
@@ -20485,6 +20517,7 @@ void NavierStokes::GetDragALL() {
   ns_level.avgDownDRAG_MF();
  }
 
+  //we are in:NavierStokes::GetDragALL()
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("hold_LS_DATA_MF (nComp()) !=num_materials*(AMREX_SPACEDIM+1)");
