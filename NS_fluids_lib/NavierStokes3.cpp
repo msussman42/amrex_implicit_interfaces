@@ -2898,10 +2898,27 @@ void NavierStokes::phase_change_code_segment(
   // piecewise constant interpolation at coarse/fine borders.
   // fluid LS can be positive in the solid regions.
   // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
+  // HOLD_LS_DATA_ALT_MF is deleted in phase_change_redistributeALL()
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+
+ allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_ALT_MF);
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+	 FIX ME
+  Copy_array(HOLD_LS_DATA_ALT_MF,ELASTIC_FLUID_LEVELSET_MF,0,0,
+    num_mateials*(AMREX_SPACEDIM+1),ngrow_distance)
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
-  amrex::Error("hold_LS_DATA_MF (nComp())!=num_materials*(AMREX_SPACEDIM+1)");
+  amrex::Error("hold_LS_DATA_MF->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
+
+ if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error(
+    "hold_LS_DATA_ALT_MF->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
+ debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
 
   // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
   // e.g. u dot n = [k grad T dot n]/(rho L)

@@ -14912,6 +14912,8 @@ NavierStokes::prepare_displacement(int local_smoothing_flag) {
 
 //if nucleation_flag==0, then prior to call:
 // allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+// level_phase_change_rate called from NavierStokes::phase_change_code_segment
+// level_phase_change_rate called from NavierStokes::nucleation_code_segment
 void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 	int color_count,int nucleation_flag) {

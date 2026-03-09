@@ -23470,6 +23470,7 @@ stop
 
          ! if a point is far from the interface, then we zero out the
          ! eigenvector there.
+         ! FIX ME NARROW BAND SIZE LSA
         if (testLS.ge.three*dxmaxLS) then
          cell_evec(D_DECL(i,j,k))=zero
         else if (testLS.le.three*dxmaxLS) then
