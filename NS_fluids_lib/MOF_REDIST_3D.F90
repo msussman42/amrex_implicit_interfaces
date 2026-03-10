@@ -540,11 +540,12 @@ stop
       return
       end subroutine fort_fd_normal
 
+       !called from: NavierStokes::level_phase_change_rate
       subroutine fort_fd_node_normal( &
        level, &
        finest_level, &
-       LS_new, &
-       DIMS(LS_new), &
+       LS_data, &
+       DIMS(LS_data), &
        FD_NRM_ND_fab, &
        DIMS(FD_NRM_ND_fab), &
        tilelo,tilehi, &
@@ -562,10 +563,10 @@ stop
 
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: n_normal
-      integer, INTENT(in) :: DIMDEC(LS_new)
+      integer, INTENT(in) :: DIMDEC(LS_data)
       integer, INTENT(in) :: DIMDEC(FD_NRM_ND_fab)
       real(amrex_real), INTENT(in), target :: &
-              LS_new(DIMV(LS_new),num_materials*(1+SDIM))
+              LS_data(DIMV(LS_data),num_materials*(1+SDIM))
       real(amrex_real), INTENT(out), target :: &
               FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
       real(amrex_real), pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
@@ -622,7 +623,7 @@ stop
        stop
       endif
  
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,LS_data,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
               ngrow_distance,-1)
 
@@ -680,13 +681,13 @@ stop
          do j1=0,1
          do i1=0,1
           if ((im.ge.1).and.(im.le.num_materials)) then
-           local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
+           local_LS=LS_data(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
           else if ((im.ge.num_materials+1).and. &
                    (im.le.num_materials+num_interfaces)) then
            iten=im-num_materials
            call get_inverse_iten(im1,im2,iten)
-           local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
-                LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
+           local_LS=half*(LS_data(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
+                LS_data(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
           else
            print *,"im invalid 111"
            stop
@@ -858,10 +859,10 @@ stop
        level, &
        finest_level, &
        height_function_flag, &  ! 1=> use height function 0 => use FD
-       F_new, &  !F_new(i,j,k,im)  im=1..num_materials*ngeom_recon
-       DIMS(F_new), &
-       LS_new, &
-       DIMS(LS_new), &
+       F_data, &  !F_data(i,j,k,im)  im=1..num_materials*ngeom_recon
+       DIMS(F_data), &
+       LS_data, &
+       DIMS(LS_data), &
        FD_NRM_ND_fab, &
        DIMS(FD_NRM_ND_fab), &
        CURV_CELL, &
@@ -884,17 +885,17 @@ stop
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: height_function_flag
       integer, INTENT(in) :: n_normal
-      integer, INTENT(in) :: DIMDEC(LS_new)
-      integer, INTENT(in) :: DIMDEC(F_new)
+      integer, INTENT(in) :: DIMDEC(LS_data)
+      integer, INTENT(in) :: DIMDEC(F_data)
       integer, INTENT(in) :: DIMDEC(FD_NRM_ND_fab)
       integer, INTENT(in) :: DIMDEC(CURV_CELL)
       real(amrex_real), INTENT(in), target :: &
-        F_new(DIMV(F_new),num_materials*ngeom_recon)
-      real(amrex_real), pointer :: F_new_ptr(D_DECL(:,:,:),:)
+        F_data(DIMV(F_data),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: F_data_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
-         LS_new(DIMV(LS_new),num_materials*(1+SDIM))
-      real(amrex_real), pointer :: LS_new_ptr(D_DECL(:,:,:),:)
+         LS_data(DIMV(LS_data),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LS_data_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
               FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
       real(amrex_real), pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
@@ -1026,10 +1027,10 @@ stop
        stop
       endif
 
-      F_new_ptr=>F_new 
-      call checkbound_array(fablo,fabhi,F_new_ptr,ngrow_distance,-1)
-      LS_new_ptr=>LS_new 
-      call checkbound_array(fablo,fabhi,LS_new_ptr,ngrow_distance,-1)
+      F_data_ptr=>F_data 
+      call checkbound_array(fablo,fabhi,F_data_ptr,ngrow_distance,-1)
+      LS_data_ptr=>LS_data 
+      call checkbound_array(fablo,fabhi,LS_data_ptr,ngrow_distance,-1)
       FD_NRM_ND_fab_ptr=>FD_NRM_ND_fab
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
               ngrow_distance,-1)
@@ -1112,7 +1113,7 @@ stop
        do im=1,num_materials+num_interfaces
 
         do im_local=1,num_materials
-         local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
+         local_LS(im_local)=LS_data(D_DECL(i,j,k),im_local)
         enddo
         call get_primary_material(dx,local_LS,im_primary)
         call get_secondary_material(dx,local_LS,im_primary,im_secondary,SDIM)
@@ -1335,7 +1336,7 @@ stop
              ! we do not look at the tessellating volume fractions since
              ! we need the curvature near embedded walls.
             call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-              F_new_ptr, &
+              F_data_ptr, &
               vof_local(im_local))
            enddo
            if ((im.ge.1).and.(im.le.num_materials)) then
@@ -1546,12 +1547,15 @@ stop
                  endif
                 endif
                else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                if (xsten_grow(-2,1).le.zero) then
-                 print *,"xsten_grow cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
+                if (xsten_grow(-2,1).gt.zero) then
+                 !do nothing
+                else
+                 print *,"xsten_grow cannot be negative "
+                 print *,"for levelrz==COORDSYS_CYLINDRICAL"
                  stop
                 endif
                else
-                print *,"levelrz invalid node_to_cell"
+                print *,"levelrz invalid node_to_cell: ",levelrz
                 stop
                endif
          
@@ -1580,6 +1584,7 @@ stop
                 stop
                endif
 
+                !get_col_ht_LS is declared in MOF.F90
                call get_col_ht_LS( &
                 height_function_flag, &
                 crossing_status, &  !crossing_status=1=>success
@@ -1654,6 +1659,7 @@ stop
            curv_choice=curv_LS
           else if ((height_function_flag.eq.1).and. &
                    (local_status.eq.1)) then
+            !analyze_heights is declared in GLOBALUTIL.F90
            call analyze_heights( &
             htfunc_LS, &
             htfunc_VOF, &

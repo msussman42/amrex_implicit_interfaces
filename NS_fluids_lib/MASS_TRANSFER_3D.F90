@@ -7557,7 +7557,7 @@ stop
        conductstate,DIMS(conductstate), &
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
-       LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_MF]
+       LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_ALT_MF]
        LSnew,DIMS(LSnew), & ! get_new_data(LS_Type,slab_step+1);
        Snew,DIMS(Snew), & 
        EOS,DIMS(EOS), &
@@ -8345,30 +8345,13 @@ stop
 
                   if (im_dest.ge.im_primary) then
 
-                   if (is_elastic(im_dest).eq.0) then
-                    LS_pos=LShere(im_source) !expecting LS_pos<0
-                   else if (is_elastic(im_dest).eq.1) then
-                    LS_pos=-LShere(im_dest) !expecting LS_pos<0
-                   else
-                    print *,"is_elastic invalid: ", &
-                      im_dest,is_elastic(im_dest)
-                    stop
-                   endif
+                   LS_pos=LShere(im_source) !expecting LS_pos<0
 
                    do dir=1,SDIM
                       ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
 
-                    if (is_elastic(im_dest).eq.0) then
-                     nrmCP(dir)= &
-                      LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-                    else if (is_elastic(im_dest).eq.1) then
-                     nrmCP(dir)= &
-                      -LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
-                    else
-                     print *,"is_elastic invalid: ", &
-                       im_dest,is_elastic(im_dest)
-                     stop
-                    endif
+                    nrmCP(dir)= &
+                     LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
 
                       ! Least squares slope: see Sussman and Puckett (2000)
                     xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
@@ -8387,28 +8370,12 @@ stop
 
                   else if (im_source.ge.im_primary) then
 
-                   if (is_elastic(im_source).eq.0) then
-                    LS_pos=LShere(im_dest) !expecting LS_pos<0
-                   else if (is_elastic(im_source).eq.1) then
-                    LS_pos=-LShere(im_source) !expecting LS_pos<0
-                   else
-                    print *,"is_elastic invalid: ", &
-                      im_source,is_elastic(im_source)
-                    stop
-                   endif
+                   LS_pos=LShere(im_dest) !expecting LS_pos<0
              
                    do dir=1,SDIM
-                    if (is_elastic(im_source).eq.0) then
-                     nrmCP(dir)= &
+
+                    nrmCP(dir)= &
                       LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
-                    else if (is_elastic(im_source).eq.1) then
-                     nrmCP(dir)= &
-                      -LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-                    else
-                     print *,"is_elastic invalid: ", &
-                       im_source,is_elastic(im_source)
-                     stop
-                    endif
 
                     xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                     xdst(dir)=xI(dir)+ &
@@ -10075,33 +10042,16 @@ stop
 
              do dir=1,SDIM
               if (im_dest.ge.im_primary) then
+
                SIGNVEL=one
-               if (is_elastic(im_dest).eq.0) then
-                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-               else if (is_elastic(im_dest).eq.1) then
-                nrmCP(dir)= &
-                  -LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
-               else
-                print *,"is_elastic invalid: ", &
-                  im_dest,is_elastic(im_dest)
-                stop
-               endif
+               nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
 
               else if (im_source.ge.im_primary) then
 
                SIGNVEL=-one
-               if (is_elastic(im_source).eq.0) then
-                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
-               else if (is_elastic(im_source).eq.1) then
-                nrmCP(dir)= &
-                  -LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-               else
-                print *,"is_elastic invalid: ", &
-                  im_source,is_elastic(im_source)
-                stop
-               endif
+               nrmCP(dir)= &
+                 LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
 
               else
                print *,"LShere bust4"
