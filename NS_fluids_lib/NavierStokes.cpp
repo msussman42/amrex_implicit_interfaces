@@ -15284,7 +15284,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
    FArrayBox& FD_NRM_ND_fab=(*localMF[FD_NRM_ND_MF])[mfi];
 
    int tid_current=ns_thread();
@@ -15332,8 +15332,21 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& F_fab=(*localMF[SLOPE_RECON_MF])[mfi];
-   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+   int slope_index=SLOPE_RECON_MF;
+   if (material_extend_velocity_flag==0) {
+    //do nothing
+   } else if (material_extend_velocity_flag>0) {
+    slope_index=ELASTIC_FLUID_MOMENT_MF;
+   } else
+    amrex::Error("material_extend_velocity_flag invalid");
+
+   FArrayBox& F_fab=(*localMF[slope_index])[mfi];
+   if (F_fab.nComp()==num_materials*ngeom_recon) {
+    //do nothing
+   } else
+    amrex::Error("F_fab.nComp() invalid");
+
+   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
    FArrayBox& FD_NRM_ND_fab=(*localMF[FD_NRM_ND_MF])[mfi];
    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
 
@@ -15423,8 +15436,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    if (nucleation_flag==0) {
 
-    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-    FArrayBox& ls_alt_fab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
+    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     if (burnvelfab.nComp()!=nburning)
@@ -15448,8 +15460,21 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
     FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
     FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+
      // fluids tessellate; solids overlap
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
+    int slope_index=SLOPE_RECON_MF;
+    if (material_extend_velocity_flag==0) {
+     //do nothing
+    } else if (material_extend_velocity_flag>0) {
+     slope_index=ELASTIC_FLUID_MOMENT_MF;
+    } else
+     amrex::Error("material_extend_velocity_flag invalid");
+
+    FArrayBox& reconfab=(*localMF[slope_index])[mfi];
+    if (reconfab.nComp()==num_materials*ngeom_recon) {
+     //do nothing
+    } else
+     amrex::Error("reconfab.nComp() invalid");
 
     FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
 
@@ -15793,8 +15818,8 @@ NavierStokes::level_phase_change_rate_extend() {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-   FIX ME
-   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+
+   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
    FArrayBox& burnvelfab=(*localMF[local_mf])[mfi];
    if (burnvelfab.nComp()==ncomp) {
     // do nothing
@@ -15884,6 +15909,7 @@ NavierStokes::level_DRAG_extend() {
  if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[DRAG_MF] incorrect ngrow");
 
+  //in: level_DRAG_extend()
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
