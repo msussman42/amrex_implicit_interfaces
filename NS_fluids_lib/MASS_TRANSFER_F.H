@@ -60,8 +60,10 @@ extern "C"
     Real* jumpfab,AMREX_ARLIM_P(jumpfablo),AMREX_ARLIM_P(jumpfabhi),
     Real* tsatfab,AMREX_ARLIM_P(tsatfablo),AMREX_ARLIM_P(tsatfabhi),
     Real* LSold,AMREX_ARLIM_P(LSoldlo),AMREX_ARLIM_P(LSoldhi),
+    Real* LSold_alt,AMREX_ARLIM_P(LSold_altlo),AMREX_ARLIM_P(LSold_althi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),      
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),      
+    Real* recon_alt,AMREX_ARLIM_P(recon_altlo),AMREX_ARLIM_P(recon_althi),      
     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),      
     Real* EOS,AMREX_ARLIM_P(EOSlo),AMREX_ARLIM_P(EOShi),
     Real* swept,AMREX_ARLIM_P(sweptlo),AMREX_ARLIM_P(swepthi)); 

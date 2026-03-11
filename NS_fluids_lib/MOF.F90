@@ -19564,10 +19564,13 @@ contains
         endif
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
         is_elastic_local(im)=0
-        if (tessellate_source.eq.tessellate_dest) then
+        if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
+            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
          !do nothing
         else
-         print *,"expecting tessellate_source==tessellate_dest"
+         print *,"tessellate_source or tessellate_dest invalid"
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
          stop
         endif
        else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
@@ -19895,6 +19898,9 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)* &
               abs(one-vfrac_elastic_sum)
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           !do nothing
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_elastic_sum)
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then 
@@ -20318,7 +20324,8 @@ contains
                    (is_elastic_local(im_test).eq.0)) then
            ! do nothing
           else
-           print *,"material used bust(multi_get_volume_grid) ",im_test, &
+           print *,"material used bust(multi_get_volume_grid) ", &
+            im_test, &
             material_used
            print *,"is_elastic_local: ",is_elastic_local
            stop
@@ -20374,18 +20381,24 @@ contains
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid1) ",im, &
+              print *,"material_used invalid(multi_get_volume_grid1) ", &
+               im, &
                material_used
               stop
              endif
             else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+             if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+              print *,"expecting is_elastic_local=0: ",is_elastic_local
+              stop
+             endif
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials_elastic)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid15) ",im, &
+              print *,"material_used invalid(multi_get_volume_grid15)", &
+               im, &
                material_used
               stop
              endif
@@ -20397,7 +20410,8 @@ contains
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid2)",im, &
+              print *,"material_used invalid(multi_get_volume_grid2)", &
+                im, &
                 material_used
               stop
              endif
@@ -20432,7 +20446,8 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
            num_processed_total=num_processed_elastic
           else
-           print *,"tessellate_dest invalid16(multi_get_volume_grid):",tessellate_dest
+           print *,"tessellate_dest invalid16(multi_get_volume_grid):", &
+                   tessellate_dest
            stop
           endif
 
@@ -20451,6 +20466,9 @@ contains
            if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
                (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             layer_flag=ELASTIC_LAYER
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            layer_flag=NULL_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
@@ -20460,7 +20478,8 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
             layer_flag=NULL_LAYER
            else
-            print *,"tessellate_dest invalid16(multi_get_volume_grid):",tessellate_dest
+            print *,"tessellate_dest invalid16(multi_get_volume_grid)", &
+                    tessellate_dest
             stop
            endif
 
@@ -20668,7 +20687,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material bad 18830(multi_get_volume_grid): ", &
+           print *,"critical_material bad(multi_get_volume_grid): ", &
              critical_material
            stop
           endif 
@@ -20707,7 +20726,8 @@ contains
         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
          ! do nothing
         else
-         print *,"tessellate_dest invalid15(multi_get_volume_grid) ",tessellate_dest
+         print *,"tessellate_dest invalid15(multi_get_volume_grid) ", &
+                 tessellate_dest
          stop
         endif
 
@@ -20788,6 +20808,15 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            num_processed_total= &
             num_processed_fluid+num_processed_elastic+num_processed_solid
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic=0"
+            stop
+           endif
+           num_processed_total=num_processed_fluid
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -20795,7 +20824,8 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
            num_processed_total=num_processed_fluid
           else
-           print *,"tessellate_dest invalid16(multi_get_volume_grid)",tessellate_dest
+           print *,"tessellate_dest invalid16(multi_get_volume_grid)", &
+                   tessellate_dest
            stop
           endif
 
@@ -20839,6 +20869,15 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            num_processed_total= &
              num_processed_fluid+num_processed_solid+num_processed_elastic
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic=0"
+            stop
+           endif
+           num_processed_total=num_processed_fluid
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -20880,6 +20919,9 @@ contains
             layer_flag=FLUIDS_LAYER
            else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
             layer_flag=FLUIDS_ELASTIC_LAYER
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
@@ -20889,7 +20931,8 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else
-            print *,"tessellate_dest invalid16(multi_get_volume_grid):",tessellate_dest
+            print *,"tessellate_dest invalid(multi_get_volume_grid):", &
+                    tessellate_dest
             stop
            endif
 
@@ -21086,6 +21129,15 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic+num_processed_solid
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            if (num_processed_elastic.eq.0) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic=0"
+             stop
+            endif
+            num_processed_total=num_processed_fluid
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic
@@ -21116,7 +21168,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material bad 18830(multi_get_volume_grid): ", &
+           print *,"critical_material bad(multi_get_volume_grid): ", &
              critical_material
            stop
           endif 
@@ -22376,10 +22428,13 @@ contains
         endif
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
         is_elastic_local(im)=0
-        if (tessellate_source.eq.tessellate_dest) then
+        if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
+            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
          !do nothing
         else
-         print *,"expecting tessellate_source==tessellate_dest"
+         print *,"tessellate_source or tessellate_dest invalid"
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
          stop
         endif
        else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
@@ -22694,6 +22749,9 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_solid_sum)* &
               abs(one-vfrac_elastic_sum)
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           !do nothing
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            multi_volume(im)=multi_volume(im)*abs(one-vfrac_elastic_sum)
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then 
@@ -23091,7 +23149,8 @@ contains
                    (is_elastic_local(im_test).eq.0)) then
            ! do nothing
           else
-           print *,"material used bust(multi_get_volume_grid_simple) ",im_test, &
+           print *,"material used bust(multi_get_volume_grid_simple) ", &
+            im_test, &
             material_used
            print *,"is_elastic_local: ",is_elastic_local
            stop
@@ -23145,18 +23204,24 @@ contains
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid_simple1) ",im, &
+              print *,"material_used invalid(multi_get_volume_grid_simple1) ", &
+               im, &
                material_used
               stop
              endif
             else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+             if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+              print *,"expecting is_elastic_local=0: ",is_elastic_local
+              stop
+             endif
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials_elastic)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid_simple15) ",im, &
+              print *,"material_used invalid(multi_get_volume_grid_simple15)", &
+               im, &
                material_used
               stop
              endif
@@ -23168,7 +23233,8 @@ contains
              else if (material_used(im).eq.0) then
               ! do nothing
              else
-              print *,"material_used invalid(multi_get_volume_grid_simple2)",im, &
+              print *,"material_used invalid(multi_get_volume_grid_simple2)", &
+                im, &
                 material_used
               stop
              endif
@@ -23223,6 +23289,9 @@ contains
            if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
                (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
             layer_flag=ELASTIC_LAYER
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            layer_flag=NULL_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
@@ -23232,7 +23301,8 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
             layer_flag=NULL_LAYER
            else
-            print *,"tessellate_dest invalid16(multi_get_volume_grid_simple):",tessellate_dest
+            print *,"tessellate_dest invalid16(multi_get_volume_grid_simple)", &
+                    tessellate_dest
             stop
            endif
 
@@ -23417,7 +23487,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material bad 18830(multi_get_volume_grid_simple): ", &
+           print *,"critical_material bad(multi_get_volume_grid_simple): ", &
              critical_material
            stop
           endif 
@@ -23456,7 +23526,8 @@ contains
         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
          ! do nothing
         else
-         print *,"tessellate_dest invalid15(multi_get_volume_grid_simple) ",tessellate_dest
+         print *,"tessellate_dest invalid15(multi_get_volume_grid_simple) ", &
+                 tessellate_dest
          stop
         endif
 
@@ -23537,6 +23608,15 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            num_processed_total= &
             num_processed_fluid+num_processed_elastic+num_processed_solid
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic=0"
+            stop
+           endif
+           num_processed_total=num_processed_fluid
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -23544,7 +23624,8 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
            num_processed_total=num_processed_fluid
           else
-           print *,"tessellate_dest invalid16(multi_get_volume_grid_simple)",tessellate_dest
+           print *,"tessellate_dest invalid16(multi_get_volume_grid_simple)", &
+                   tessellate_dest
            stop
           endif
 
@@ -23588,6 +23669,15 @@ contains
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            num_processed_total= &
              num_processed_fluid+num_processed_solid+num_processed_elastic
+          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+           if (num_processed_elastic.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_elastic=0"
+            stop
+           endif
+           num_processed_total=num_processed_fluid
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            num_processed_total=num_processed_fluid+num_processed_elastic
           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -23629,6 +23719,9 @@ contains
             layer_flag=FLUIDS_LAYER
            else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
             layer_flag=FLUIDS_ELASTIC_LAYER
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
@@ -23638,7 +23731,8 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
             layer_flag=FLUIDS_ELASTIC_LAYER
            else
-            print *,"tessellate_dest invalid16(multi_get_volume_grid_simple):",tessellate_dest
+            print *,"tessellate_dest invalid(multi_get_volume_grid_simple):", &
+                    tessellate_dest
             stop
            endif
 
@@ -23812,6 +23906,15 @@ contains
            else if (tessellate_dest.eq.TESSELLATE_ALL) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic+num_processed_solid
+           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+            if (num_processed_elastic.eq.0) then
+             !do nothing
+            else
+             print *,"expecting num_processed_elastic=0"
+             stop
+            endif
+            num_processed_total=num_processed_fluid
            else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
             num_processed_total= &
              num_processed_fluid+num_processed_elastic
@@ -23842,7 +23945,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material bad 18830(multi_get_volume_grid_simple): ", &
+           print *,"critical_material bad(multi_get_volume_grid_simple): ", &
              critical_material
            stop
           endif 
@@ -25401,7 +25504,7 @@ contains
 
       subroutine multi_get_volume_tessellate( &
        tid_in, &
-       tessellate_source, & !TESSELLATE_FLUIDS
+       tessellate_source, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
        tessellate_dest, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
        bfact,dx, &
        xsten0,nhalf0, &
@@ -25465,7 +25568,8 @@ contains
        stop
       endif 
 
-      if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+      if ((tessellate_source.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC)) then
        !do nothing
       else
        print *,"tessellate_source invalid ",tessellate_source
@@ -25515,7 +25619,7 @@ contains
        nhalf0, &
        continuous_mof, & !STANDARD_MOF
        bfact,dx, &
-       tessellate_source, & !=TESSELLATE_FLUIDS
+       tessellate_source, & !=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
        mofdata, &
        sdim)
 
@@ -25523,7 +25627,7 @@ contains
        caller_id, &
        tid_in, &
        EPS_FULL_WEAK, & ! tolerance for "single material" criterion
-       tessellate_source, & !=TESSELLATE_FLUIDS
+       tessellate_source, & !=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
        tessellate_dest, & ! =TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
        bfact,dx, &
        xsten0,nhalf0, &
@@ -25605,7 +25709,7 @@ contains
       endif
 
       call multimaterial_MOF( &
-        local_tessellate, &
+        local_tessellate, & !TESSELLATE_IGNORE_ISRIGID|ISELASTIC
         tid_in, &
         bfact,dx, &
         xsten0,nhalf0, &

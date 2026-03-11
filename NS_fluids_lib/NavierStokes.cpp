@@ -15461,7 +15461,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
     FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
 
-     // fluids tessellate; solids overlap
     int slope_index=SLOPE_RECON_MF;
     if (material_extend_velocity_flag==0) {
      //do nothing
@@ -16379,6 +16378,7 @@ NavierStokes::level_phase_change_convert(
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
+
     if (burnvelfab.nComp()==nburning) {
      // do nothing
     } else 
@@ -16389,7 +16389,7 @@ NavierStokes::level_phase_change_convert(
     } else 
      amrex::Error("nodevelfab.nComp() invalid");
 
-    FArrayBox& olddistfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+    FArrayBox& olddistfab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
 
@@ -16483,11 +16483,27 @@ NavierStokes::level_phase_change_convert(
     amrex::Error("nodevelfab.nComp() invalid");
 
    FArrayBox& olddistfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+   FArrayBox& olddist_alt_fab=(*localMF[HOLD_LS_DATA_ALT_MF])[mfi];
+
    FArrayBox& sweptfab=(*localMF[SWEPT_CROSSING_MF])[mfi];
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& snewfab=S_new[mfi];
 
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
+
+   int slope_index=SLOPE_RECON_MF;
+   if (material_extend_velocity_flag==0) {
+    //do nothing
+   } else if (material_extend_velocity_flag>0) {
+    slope_index=ELASTIC_FLUID_MOMENT_MF;
+   } else
+    amrex::Error("material_extend_velocity_flag invalid");
+
+   FArrayBox& recon_alt_fab=(*localMF[slope_index])[mfi]; 
+   if (recon_alt_fab.nComp()==num_materials*ngeom_recon) {
+    //do nothing
+   } else
+    amrex::Error("recon_alt_fab.nComp() invalid");
 
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
 
@@ -16544,10 +16560,14 @@ NavierStokes::level_phase_change_convert(
     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     olddistfab.dataPtr(),
     ARLIM(olddistfab.loVect()),ARLIM(olddistfab.hiVect()),
+    olddist_alt_fab.dataPtr(),
+    ARLIM(olddist_alt_fab.loVect()),ARLIM(olddist_alt_fab.hiVect()),
     lsnewfab.dataPtr(),
     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
     reconfab.dataPtr(),
     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    recon_alt_fab.dataPtr(),
+    ARLIM(recon_alt_fab.loVect()),ARLIM(recon_alt_fab.hiVect()),
     snewfab.dataPtr(),
     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     eosfab.dataPtr(),
