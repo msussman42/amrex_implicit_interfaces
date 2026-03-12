@@ -16170,15 +16170,26 @@ NavierStokes::level_phase_change_convertALL() {
       Vector<int> scompBC_map_LS;
       scompBC_map_LS.resize(num_materials*(AMREX_SPACEDIM+1));
        // spectral_override==0 => always low order
-       FIX ME
-      avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,num_materials*(AMREX_SPACEDIM+1),
-		  LOW_ORDER_AVGDOWN);
+      avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,
+		 num_materials*(AMREX_SPACEDIM+1),
+		 LOW_ORDER_AVGDOWN);
+      avgDown_localMF_ALL(HOLD_LS_DATA_ALT_MF,0,
+		 num_materials*(AMREX_SPACEDIM+1),
+		 LOW_ORDER_AVGDOWN);
+
       for (int im_group=0;im_group<num_materials*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
+
       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
        //scomp=0
-       FIX ME
+       //GetStateFromLocalALL declared in: NavierStokes3.cpp
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
+         0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
+
+      debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
+       //scomp=0
+       //GetStateFromLocalALL declared in: NavierStokes3.cpp
+      GetStateFromLocalALL(HOLD_LS_DATA_ALT_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
       interface_touch_flag=1; //level_phase_change_convertALL
@@ -16190,6 +16201,19 @@ NavierStokes::level_phase_change_convertALL() {
          cur_time_slab,
 	 RECON_UPDATE_STATE_CENTROID,
 	 init_vof_prev_time);
+
+      if (material_extend_velocity_flag>0) {
+       for (int ilev=level;ilev<=finest_level;ilev++) {
+        NavierStokes& ns_level=getLevel(ilev);
+        //calls fort_build_old_vof
+        //which calls multi_get_volume_tessellate(TESSELLATE_FLUIDS_ELASTIC)
+        //the output is placed in localMF[ELASTIC_FLUID_MOMENT_MF]
+        ns_level.build_elastic_fluid_moment();
+       }
+      } else if (material_extend_velocity_flag==0) {
+       //do nothing
+      } else
+       amrex::Error("material_extend_velocity_flag invalid");
 
      } else if (i_phase_change+1==n_phase_change) {
       // do nothing
@@ -28858,10 +28882,12 @@ NavierStokes::build_elastic_fluid_moment() {
  MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
 
  delete_localMF_if_exist(ELASTIC_FLUID_MOMENT_MF,1); 
+FIX ME DO THIS SOMEWHERE ELSE
  delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
 
  new_localMF(ELASTIC_FLUID_MOMENT_MF,num_materials*ngeom_recon,
    ngrow_distance,-1); 
+FIX ME DO THIS SOMEWHERE ELSE
  getStateDist_localMF(ELASTIC_FLUID_LEVELSET_MF,ngrow_distance,cur_time_slab,
 		local_caller_string);
 

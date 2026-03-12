@@ -4990,12 +4990,22 @@ stop
               ! im_source,im_dest,im_primary_new
              else if (im_primary_old.eq.im_primary_new) then
               if (is_elastic(im_dest).eq.1) then
-               !do nothing
+               if (is_elastic(im_source).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_source)==0"
+                stop
+               endif
               else
                LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
               endif
               if (is_elastic(im_source).eq.1) then
-               !do nothing
+               if (is_elastic(im_dest).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_dest)==0"
+                stop
+               endif
               else
                LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
               endif
@@ -5021,12 +5031,22 @@ stop
                        (unsplit_lsnew(im_source).le. &
                         oldLS_point(im_source))) then
                if (is_elastic(im_dest).eq.1) then
-                !do nothing
+                if (is_elastic(im_source).eq.0) then
+                 !do nothing
+                else
+                 print *,"expecting is_elastic(im_source)==0"
+                 stop
+                endif
                else
                 LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
                endif
                if (is_elastic(im_source).eq.1) then
-                !do nothing
+                if (is_elastic(im_dest).eq.0) then
+                 !do nothing
+                else
+                 print *,"expecting is_elastic(im_dest)==0"
+                 stop
+                endif
                else
                 LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
                endif
@@ -5113,12 +5133,22 @@ stop
              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
             enddo
             if (is_elastic(im_dest).eq.1) then
-             !do nothing
+             if (is_elastic(im_source).eq.0) then
+              !do nothing
+             else
+              print *,"expecting is_elastic(im_source)==0"
+              stop
+             endif
             else
              LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
             endif
             if (is_elastic(im_source).eq.1) then
-             !do nothing
+             if (is_elastic(im_dest).eq.0) then
+              !do nothing
+             else
+              print *,"expecting is_elastic(im_dest)==0"
+              stop
+             endif
             else
              LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
             endif
@@ -5144,12 +5174,22 @@ stop
               new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
              enddo
              if (is_elastic(im_dest).eq.1) then
-              !do nothing
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
              else
               LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
              endif
              if (is_elastic(im_source).eq.1) then
-              !do nothing
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
              else
               LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
              endif
@@ -5203,12 +5243,22 @@ stop
                new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
               enddo
               if (is_elastic(im_dest).eq.1) then
-               !do nothing
+               if (is_elastic(im_source).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_source)==0"
+                stop
+               endif
               else
                LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
               endif
               if (is_elastic(im_source).eq.1) then
-               !do nothing
+               if (is_elastic(im_dest).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_dest)==0"
+                stop
+               endif
               else
                LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
               endif
@@ -5827,13 +5877,23 @@ stop
              ! centroids updated here.
             do udir=1,SDIM
              if (is_elastic(im_source).eq.1) then
-              !do nothing
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
              else
               snew(D_DECL(i,j,k),vcompdst_snew+udir)= &
                new_centroid(im_dest,udir)-cengrid(udir)
              endif
              if (is_elastic(im_dest).eq.1) then
-              !do nothing
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
              else
               snew(D_DECL(i,j,k),vcompsrc_snew+udir)= &
                new_centroid(im_source,udir)-cengrid(udir)
@@ -10130,10 +10190,29 @@ stop
               stop
              endif
 
-             LSnew(D_DECL(i,j,k),im_source)= &
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_source)= &
                LSnew(D_DECL(i,j,k),im_source)-dt*vel_phasechange(ireverse)
-             LSnew(D_DECL(i,j,k),im_dest)= &
+             endif
+
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_dest)= &
                LSnew(D_DECL(i,j,k),im_dest)+dt*vel_phasechange(ireverse)
+             endif
 
              do dir=1,SDIM
               if (im_dest.ge.im_primary) then
