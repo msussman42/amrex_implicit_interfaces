@@ -15881,7 +15881,7 @@ end subroutine print_visual_descriptor
       else if (material_extend_velocity_local.eq.0) then 
        fort_is_elastic_base=0
       else
-       print *,"material_extend_velocity_local  invalid in fort_is_elastic_base"
+       print *,"material_extend_velocity_local invalid in fort_is_elastic_base"
        print *,"material_extend_velocity_local=", &
         material_extend_velocity_local
        print *,"im=",im

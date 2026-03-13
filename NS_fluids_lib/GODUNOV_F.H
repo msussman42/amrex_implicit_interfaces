@@ -662,7 +662,13 @@ extern "C"
     Real* denstate,
     AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
+    Real* LS_alt,
+    AMREX_ARLIM_P(LS_altlo),
+    AMREX_ARLIM_P(LS_althi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+    Real* recon_alt,
+    AMREX_ARLIM_P(recon_altlo),
+    AMREX_ARLIM_P(recon_althi));
 
 
    void fort_accept_weight(
