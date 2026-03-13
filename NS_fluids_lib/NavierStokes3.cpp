@@ -3807,6 +3807,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
+	//calls makeStateDistALL at the end.
        phase_change_code_segment(
 	local_caller_string,
 	color_count,

@@ -12011,8 +12011,10 @@ stop
        expan,DIMS(expan), &
        expan_comp,DIMS(expan_comp), &
        denstate,DIMS(denstate), &
-       LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
-       recon,DIMS(recon)) &
+       LS,DIMS(LS), & 
+       LSalt,DIMS(LSalt), & 
+       recon,DIMS(recon), &
+       recon_alt,DIMS(recon_alt)) &
       bind(c,name='fort_tagexpansion')
 
       use probf90_module
@@ -12048,7 +12050,9 @@ stop
       integer, INTENT(in) :: DIMDEC(expan_comp)
       integer, INTENT(in) :: DIMDEC(denstate)
       integer, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(LSalt)
       integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(recon_alt)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(out), target :: tag(DIMV(tag))
@@ -12063,12 +12067,22 @@ stop
       real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: &
         LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+        LSalt(DIMV(LSalt),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: &
            recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+           recon_alt(DIMV(recon_alt),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: recon_alt_ptr(D_DECL(:,:,:),:)
 
       integer local_freezing_model
       integer vofbc(SDIM,2)
@@ -12159,13 +12173,20 @@ stop
 
       maskcov_ptr=>maskcov
       LS_ptr=>LS
+      LSalt_ptr=>LSalt
       recon_ptr=>recon
+      recon_alt_ptr=>recon_alt
       expan_ptr=>expan
       expan_comp_ptr=>expan_comp
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_distance,-1)
+
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
+
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,recon_alt_ptr,ngrow_distane,-1)
+
       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
@@ -12264,8 +12285,8 @@ stop
 
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
-         VFRAC(im)=recon(D_DECL(i,j,k),vofcomp)
-         LSCELL(im)=LS(D_DECL(i,j,k),im)
+         VFRAC(im)=recon_alt(D_DECL(i,j,k),vofcomp)
+         LSCELL(im)=LSalt(D_DECL(i,j,k),im)
         enddo
         do im=1,nden
          local_denstate(im)=denstate(D_DECL(i,j,k),im)

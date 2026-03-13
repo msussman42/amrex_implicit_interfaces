@@ -16105,9 +16105,10 @@ NavierStokes::level_phase_change_convertALL() {
        //   im and im_opp materials.
        // (ii) updates: JUMP_STRENGTH_MF  (rho_1/rho_2  - 1) expansion factor
        // if i_phase_change+1<n_phase_change
-       // FIX ME
        //  a) copies LS_new[im_opp-1],LS_new[im-1] to HOLD_LS_DATA.
-       //  b) copies S_new to DEN_RECON_MF for density, temperature, Y
+       //  b) copies LS_new[im_opp-1],LS_new[im-1] to HOLD_LS_ALT_DATA 
+       //     depending on elastic_flag.
+       //  c) copies S_new to DEN_RECON_MF for density, temperature, Y
        //     (im, im_opp)
       ns_level.level_phase_change_convert(im,im_opp,
        i_phase_change,n_phase_change);
@@ -16250,6 +16251,21 @@ NavierStokes::level_phase_change_convert(
   int i_phase_change,int n_phase_change) {
 
  std::string local_caller_string="level_phase_change_convert";
+
+ if ((im_outer>=1)&&(im_outer<=num_materials)) {
+  //do nothing
+ } else
+  amrex::Error("im_outer invalid");
+
+ if ((im_opp_outer>=1)&&(im_opp_outer<=num_materials)) {
+  //do nothing
+ } else
+  amrex::Error("im_opp_outer invalid");
+
+ if (im_opp_outer>im_outer) {
+  //do nothing
+ } else
+  amrex::Error("im_opp_outer>im_outer failed");
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -16640,6 +16656,43 @@ NavierStokes::level_phase_change_convert(
    // dest,src,srccomp,dstcomp,ncomp,ngrow
    MultiFab::Copy(*localMF[HOLD_LS_DATA_MF],LS_new,
 		  im_current-1,im_current-1,1,0);
+
+   if (im_current==im_outer) {
+
+    if (fort_is_elastic_base(&material_extend_velocity[im_opp_outer-1],
+	   &im_opp_outer)==1) {
+
+     if (fort_is_elastic_base(&material_extend_velocity[im_outer-1],
+	   &im_outer)==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting im_outer to be not is_elastic");
+
+    } else {
+     // dest,src,srccomp,dstcomp,ncomp,ngrow
+     MultiFab::Copy(*localMF[HOLD_LS_DATA_ALT_MF],LS_new,
+	  im_current-1,im_current-1,1,0);
+    }
+
+   } else if (im_current==im_opp_outer) {
+
+    if (fort_is_elastic_base(&material_extend_velocity[im_outer-1],
+	   &im_outer)==1) {
+
+     if (fort_is_elastic_base(&material_extend_velocity[im_opp_outer-1],
+	   &im_opp_outer)==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting im_opp_outer to be not is_elastic");
+
+    } else {
+     // dest,src,srccomp,dstcomp,ncomp,ngrow
+     MultiFab::Copy(*localMF[HOLD_LS_DATA_ALT_MF],LS_new,
+	  im_current-1,im_current-1,1,0);
+    }
+   } else 
+    amrex::Error("im_current invalid");
+
    int dstcomp=(im_current-1)*num_state_material;
    int srccomp=STATECOMP_STATES+(im_current-1)*num_state_material;
    // density
@@ -16929,6 +16982,11 @@ NavierStokes::phase_change_redistributeALL() {
  if (level!=0)
   amrex::Error("level invalid phase_change_redistributeALL");
 
+ if (ngrow_make_distance+1==ngrow_distance) {
+  //do nothing
+ } else
+  amrex::Error("expecting ngrow_make_distance+1==ngrow_distance");
+
  if ((ngrow_distance>=4)&&
      (ngrow_distance<=64)) {
   // do nothing
@@ -17051,14 +17109,14 @@ NavierStokes::phase_change_redistributeALL() {
       scompBC_map[0]=0; //set_extrap_bc, fort_extrapfill
 
       if (isweep_redistribute==0) {
-       PCINTERP_fill_bordersALL(donorflag_MF,1,0,
+       PCINTERP_fill_bordersALL(donorflag_MF,ngrow_distance,0,
          1,State_Type,scompBC_map);
-       PCINTERP_fill_bordersALL(donorflag_complement_MF,1,0,
+       PCINTERP_fill_bordersALL(donorflag_complement_MF,ngrow_distance,0,
          1,State_Type,scompBC_map);
       } else if (isweep_redistribute==1) {
-       PCINTERP_fill_bordersALL(accept_weight_MF,1,0,
+       PCINTERP_fill_bordersALL(accept_weight_MF,ngrow_distance,0,
          1,State_Type,scompBC_map);
-       PCINTERP_fill_bordersALL(accept_weight_complement_MF,1,0,
+       PCINTERP_fill_bordersALL(accept_weight_complement_MF,ngrow_distance,0,
          1,State_Type,scompBC_map);
       } else if (isweep_redistribute==2) { //fort_distributeexpansion
        // do nothing
@@ -17351,12 +17409,24 @@ NavierStokes::level_phase_change_redistribute(
  if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_int");
 
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+ resize_maskfiner(ngrow_distance,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,ngrow_distance,local_caller_string);
  
  if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
  debug_ngrow(LSNEW_MF,ngrow_distance,local_caller_string);
+
+ int LS_alt_index=LSNEW_MF;
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+  LS_alt_index=ELASTIC_FLUID_LEVELSET_MF;
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+
+ if (localMF[LS_alt_index]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
+  amrex::Error("localMF[LS_alt_index]->nComp() invalid");
+ debug_ngrow(LS_alt_index,ngrow_distance,local_caller_string);
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -17408,7 +17478,7 @@ NavierStokes::level_phase_change_redistribute(
  } else
   amrex::Error("isweep invalid");
 
- VOF_Recon_resize(1); //output:SLOPE_RECON_MF
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
   
  if (isweep==0) { //fort_tagexpansion
 
@@ -17429,7 +17499,7 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("indexEXP invalid");
 
   int nden=num_materials*num_state_material;
-  MultiFab* state_var_mf=getStateDen(1,cur_time_slab);
+  MultiFab* state_var_mf=getStateDen(ngrow_distance,cur_time_slab);
   if (state_var_mf->nComp()!=nden)
    amrex::Error("state_var_mf->nComp()!=nden");
   
@@ -17475,7 +17545,25 @@ NavierStokes::level_phase_change_redistribute(
 
 
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
+
+   int slope_index=SLOPE_RECON_MF;
+   if (material_extend_velocity_flag==0) {
+    //do nothing
+   } else if (material_extend_velocity_flag>0) {
+    slope_index=ELASTIC_FLUID_MOMENT_MF;
+   } else
+    amrex::Error("material_extend_velocity_flag invalid");
+
+   FArrayBox& recon_alt_fab=(*localMF[slope_index])[mfi]; 
+   if (recon_alt_fab.nComp()==num_materials*ngeom_recon) {
+    //do nothing
+   } else
+    amrex::Error("recon_alt_fab.nComp() invalid");
+
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+
+   FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
+
    FArrayBox& denstatefab=(*state_var_mf)[mfi];
 
    int bfact=parent->Space_blockingFactor(level);
@@ -17525,8 +17613,15 @@ NavierStokes::level_phase_change_redistribute(
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+    newdist_alt_fab.dataPtr(),
+    ARLIM(newdist_alt_fab.loVect()),
+    ARLIM(newdist_alt_fab.hiVect()),
     reconfab.dataPtr(),
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
+    ARLIM(reconfab.loVect()),
+    ARLIM(reconfab.hiVect()),
+    recon_alt_fab.dataPtr(),
+    ARLIM(recon_alt_fab.loVect()),
+    ARLIM(recon_alt_fab.hiVect()));
  
   } // mfi
 } // omp
@@ -28415,9 +28510,6 @@ NavierStokes::sub_makeStateDistALL(
 
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
-     //calls fort_build_old_vof
-     //which calls multi_get_volume_tessellate(TESSELLATE_FLUIDS_ELASTIC)
-     //the output is placed in localMF[ELASTIC_FLUID_MOMENT_MF]
     ns_level.save_elastic_LS();
    }
 
@@ -28435,7 +28527,6 @@ NavierStokes::sub_makeStateDistALL(
   ns_level.delete_localMF(STENCIL_MF,1);
   ns_level.delete_localMF(DIST_TOUCH_MF,1);
  }
-
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -28882,14 +28973,9 @@ NavierStokes::build_elastic_fluid_moment() {
  MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
 
  delete_localMF_if_exist(ELASTIC_FLUID_MOMENT_MF,1); 
-FIX ME DO THIS SOMEWHERE ELSE
- delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
 
  new_localMF(ELASTIC_FLUID_MOMENT_MF,num_materials*ngeom_recon,
    ngrow_distance,-1); 
-FIX ME DO THIS SOMEWHERE ELSE
- getStateDist_localMF(ELASTIC_FLUID_LEVELSET_MF,ngrow_distance,cur_time_slab,
-		local_caller_string);
 
  resize_mask_nbr(ngrow_distance);
  debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
