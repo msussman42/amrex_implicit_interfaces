@@ -12811,7 +12811,7 @@ stop
        weightfab_ptr=>weightfab
        weight_comp_ptr=>weight_comp
 
-       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
 
