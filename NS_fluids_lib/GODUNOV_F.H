@@ -597,7 +597,9 @@ extern "C"
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
+    Real* LSaltnew,AMREX_ARLIM_P(LSaltnewlo),AMREX_ARLIM_P(LSaltnewhi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+    Real* recon_alt,AMREX_ARLIM_P(recon_altlo),AMREX_ARLIM_P(recon_althi));
 
 
    void fort_init_elasticmask_and_elasticmaskpart(
@@ -683,6 +685,7 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* LSalt,AMREX_ARLIM_P(LSaltlo),AMREX_ARLIM_P(LSalthi),
     Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
     Real* tag_comp,
     AMREX_ARLIM_P(tag_comp_lo),
@@ -713,6 +716,7 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* LSalt,AMREX_ARLIM_P(LSaltlo),AMREX_ARLIM_P(LSalthi),
     Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
     Real* tag_comp,
     AMREX_ARLIM_P(tag_comp_lo),

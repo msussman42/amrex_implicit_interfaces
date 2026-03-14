@@ -8070,8 +8070,11 @@ stop
        stop
       endif
 
-      if (ngrow_distance.lt.4) then
-       print *,"expecting ngrow_distance>=4 in fort_ratemasschange"
+      if (ngrow_distance.ge.6) then
+       !do nothing
+      else
+       print *,"require ns.ngrow_distance>=6 (fort_ratemasschange) ", &
+          ngrow_distance
        stop
       endif
 

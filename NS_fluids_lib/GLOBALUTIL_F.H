@@ -44,6 +44,10 @@ extern "C"
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials
 
+   int fort_is_elastic_base(
+        int* material_extend_velocity_local,
+	int* im);  // 1<=im<=num_materials
+
    int fort_is_lag_part_base(
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials

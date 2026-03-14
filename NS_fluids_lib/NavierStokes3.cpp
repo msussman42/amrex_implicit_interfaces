@@ -2907,7 +2907,7 @@ void NavierStokes::phase_change_code_segment(
   //do nothing
  } else if (material_extend_velocity_flag>0) {
   Copy_array(HOLD_LS_DATA_ALT_MF,ELASTIC_FLUID_LEVELSET_MF,0,0,
-    num_materials*(AMREX_SPACEDIM+1),ngrow_distance)
+    num_materials*(AMREX_SPACEDIM+1),ngrow_distance);
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 

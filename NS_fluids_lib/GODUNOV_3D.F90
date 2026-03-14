@@ -4732,7 +4732,9 @@ stop
        JUMPFAB,DIMS(JUMPFAB), &
        mdot,DIMS(mdot), &
        LSnew,DIMS(LSnew), &
-       recon,DIMS(recon) ) &
+       LSaltnew,DIMS(LSaltnew), &
+       recon,DIMS(recon), &
+       recon_alt,DIMS(recon_alt)) &
       bind(c,name='fort_initjumpterm')
 
       use probf90_module
@@ -4762,7 +4764,9 @@ stop
       integer, INTENT(in) :: DIMDEC(JUMPFAB)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(LSnew)
+      integer, INTENT(in) :: DIMDEC(LSaltnew)
       integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(recon_alt)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: &
@@ -4770,11 +4774,22 @@ stop
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: LSnew(DIMV(LSnew),num_materials)
+
+      real(amrex_real), INTENT(in), target :: &
+        LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+        LSaltnew(DIMV(LSaltnew),num_materials)
+      real(amrex_real), pointer :: LSaltnew_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target ::  &
         recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target ::  &
+        recon_alt(DIMV(recon_alt),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: recon_alt_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k
       integer im,im_opp,ireverse,iten
@@ -4816,6 +4831,19 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.6) then
+       ! do nothing
+      else
+       print *,"require ns.ngrow_distance>=6(fort_initjumpterm)) ", &
+          ngrow_distance
        stop
       endif
 
@@ -4878,14 +4906,22 @@ stop
       enddo ! im
 
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+
       JUMPFAB_ptr=>JUMPFAB
       call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
+
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+
       LSnew_ptr=>LSnew
-      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,ngrow_distance,-1)
+      LSaltnew_ptr=>LSaltnew
+      call checkbound_array(fablo,fabhi,LSaltnew_ptr,ngrow_distance,-1)
+
       recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
+      recon_alt_ptr=>recon_alt
+      call checkbound_array(fablo,fabhi,recon_alt_ptr,ngrow_distance,-1)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -4929,10 +4965,10 @@ stop
       
             F_solid_sum=zero 
             do imlocal=1,num_materials
-             LS_local(imlocal)=LSnew(D_DECL(i,j,k),imlocal)
+             LS_local(imlocal)=LSaltnew(D_DECL(i,j,k),imlocal)
              if (is_rigid(imlocal).eq.1) then
               vofcomp=(imlocal-1)*ngeom_recon+1
-              F_solid_sum=F_solid_sum+recon(D_DECL(i,j,k),vofcomp)
+              F_solid_sum=F_solid_sum+recon_alt(D_DECL(i,j,k),vofcomp)
              else if (is_rigid(imlocal).eq.0) then
               ! do nothing
              else
@@ -12107,6 +12143,8 @@ stop
       integer index_compare
       integer complement_flag
       real(amrex_real) LL
+      real(amrex_real) dxmaxLS
+      real(amrex_real) LS_DONOR_CUTOFF
 
       tag_ptr=>tag
       tag_comp_ptr=>tag_comp
@@ -12115,7 +12153,14 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      !! Sanity checks
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
+       stop
+      endif
+      LS_DONOR_CUTOFF=two*dxmaxLS
 
       if (time.ge.zero) then
        ! do nothing
@@ -12154,10 +12199,17 @@ stop
        stop
       endif
 
-      if (ngrow_distance.ge.4) then
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.6) then
        ! do nothing
       else
-       print *,"ngrow_distance invalid"
+       print *,"require ns.ngrow_distance>=6 (fort_tagexpansion) ", &
+          ngrow_distance
        stop
       endif
       if (num_state_base.ne.2) then
@@ -12185,7 +12237,7 @@ stop
       call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
 
       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
-      call checkbound_array(fablo,fabhi,recon_alt_ptr,ngrow_distane,-1)
+      call checkbound_array(fablo,fabhi,recon_alt_ptr,ngrow_distance,-1)
 
       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
@@ -12419,7 +12471,8 @@ stop
              .eq.0) then
 
             if ((VFRAC(im_dest).lt.half).or. &
-                (elasticmask.eq.zero)) then
+                (elasticmask.eq.zero).or. &
+                (LSCELL(im_dest).lt.LS_DONOR_CUTOFF)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12430,11 +12483,12 @@ stop
              endif
             else if ((VFRAC(im_dest).ge.half).and. &
                      (elasticmask.gt.zero).and. &
-                     (elasticmask.le.one)) then
+                     (elasticmask.le.one).and. &
+                     (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or elasticmask bust: ",im_dest,VFRAC(im_dest), &
-              elasticmask
+             print *,"VFRAC, LSCELL or elasticmask bust: ", &
+              im_dest,VFRAC,LSCELL,elasticmask
              stop      
             endif
 
@@ -12443,7 +12497,8 @@ stop
              .eq.1) then
 
             if ((VFRAC(im_source).lt.half).or. &
-                (elasticmask.eq.zero)) then
+                (elasticmask.eq.zero).or. &
+                (LSCELL(im_source).lt.LS_DONOR_CUTOFF)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12454,11 +12509,12 @@ stop
              endif
             else if ((VFRAC(im_source).ge.half).and. &
                      (elasticmask.gt.zero).and. &
-                     (elasticmask.le.one)) then
+                     (elasticmask.le.one).and. &
+                     (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or elasticmask bust: ", &
-               im_source,VFRAC(im_source),elasticmask 
+             print *,"VFRAC, LSCELL, or elasticmask bust: ", &
+               im_source,VFRAC,LSCELL,elasticmask 
              stop
             endif
 
@@ -12481,7 +12537,8 @@ stop
 
            if ((VFRAC(im_dest).ge.half).and. &
                (elasticmask.gt.zero).and. &
-               (elasticmask.le.one)) then
+               (elasticmask.le.one).and. &
+               (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12491,11 +12548,12 @@ stop
              stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
-                    (elasticmask.eq.zero)) then
+                    (elasticmask.eq.zero).or. &
+                    (LSCELL(im_dest).le.LS_DONOR_CUTOFF)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or elasticmask bust: ",im_dest,VFRAC(im_dest), &
-             elasticmask
+            print *,"VFRAC,LSCELL or elasticmask bust: ", &
+             im_dest,VFRAC,LSCELL,elasticmask
             stop      
            endif
  
@@ -12505,7 +12563,8 @@ stop
 
            if ((VFRAC(im_source).ge.half).and. &
                (elasticmask.gt.zero).and. &
-               (elasticmask.le.one)) then
+               (elasticmask.le.one).and. &
+               (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12515,11 +12574,12 @@ stop
              stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
-                    (elasticmask.eq.zero)) then
+                    (elasticmask.eq.zero).or. &
+                    (LSCELL(im_source).le.LS_DONOR_CUTOFF)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or elasticmask bust: ",im_source,VFRAC(im_source), &
-              elasticmask
+            print *,"VFRAC,LSCELL or elasticmask bust: ", &
+             im_source,VFRAC,LSCELL,elasticmask
             stop
            endif
  
@@ -12605,6 +12665,7 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
+       LSalt,DIMS(LSalt),&
        tag, &
        DIMS(tag),&
        tag_comp, &
@@ -12640,6 +12701,7 @@ stop
        real(amrex_real), INTENT(in) :: dt
        integer, INTENT(in) :: DIMDEC(maskcov)
        integer, INTENT(in) :: DIMDEC(LS)
+       integer, INTENT(in) :: DIMDEC(LSalt)
        integer, INTENT(in) :: DIMDEC(tag)
        integer, INTENT(in) :: DIMDEC(tag_comp)
        integer, INTENT(in) :: DIMDEC(weightfab)
@@ -12648,8 +12710,13 @@ stop
        integer, INTENT(in) :: DIMDEC(expan_comp)
        real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
        real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
        real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
        real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), INTENT(in), target :: LSalt(DIMV(LSalt),num_materials)
+       real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
+
        real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
        real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in), target :: tag_comp(DIMV(tag_comp))
@@ -12658,13 +12725,15 @@ stop
        real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in), target :: weight_comp(DIMV(weight_comp))
        real(amrex_real), pointer :: weight_comp_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
+       real(amrex_real), INTENT(inout), target :: &
+          expan(DIMV(expan),2*num_interfaces)
        real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(inout), target ::  &
          expan_comp(DIMV(expan_comp),2*num_interfaces)
        real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
-       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable,target :: expan_new
+       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable,target :: &
+         expan_new
        real(amrex_real), pointer :: expan_new_ptr(D_DECL(:,:,:),:)
        real(amrex_real) local_expan_new
        real(amrex_real) local_expan_old
@@ -12717,10 +12786,17 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (ngrow_distance.ge.4) then
+       if (ngrow_make_distance.eq.ngrow_distance-1) then
+        !do nothing
+       else
+        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+        stop
+       endif
+       if (ngrow_distance.ge.6) then
         ! do nothing
        else
-        print *,"ngrow_distance invalid"
+        print *,"require ns.ngrow_distance>=6(fort_distributeexpansion) ", &
+          ngrow_distance
         stop
        endif
 
@@ -12729,6 +12805,7 @@ stop
 
        maskcov_ptr=>maskcov
        LS_ptr=>LS
+       LSalt_ptr=>LSalt
        tag_ptr=>tag
        tag_comp_ptr=>tag_comp
        weightfab_ptr=>weightfab
@@ -12736,6 +12813,7 @@ stop
 
        call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
 
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
@@ -12787,6 +12865,8 @@ stop
           do j_n=stenlo(2),stenhi(2)
           do i_n=stenlo(1),stenhi(1)
 
+            !both doner and receiver cells are distributed
+            !to the receiver side.
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
            if ((TAGSIDE.eq.one).or. & ! doner
                (TAGSIDE.eq.two)) then ! receiver
@@ -12798,7 +12878,6 @@ stop
             call redistribute_weight(xmain,xside,crit_weight)
             total_weight=weightfab(D_DECL(i_n,j_n,k_n))
             if (total_weight.gt.zero) then
-             call redistribute_weight(xmain,xside,crit_weight)
              if (crit_weight.le.total_weight) then
               expan_new(D_DECL(i,j,k),1) = &
                expan_new(D_DECL(i,j,k),1) + &
@@ -12861,6 +12940,8 @@ stop
           do j_n=stenlo(2),stenhi(2)
           do i_n=stenlo(1),stenhi(1)
 
+            !both doner and receiver cells are distributed
+            !to the receiver side.
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
            if ((TAGSIDE.eq.one).or. & ! doner
                (TAGSIDE.eq.two)) then ! receiver
@@ -12872,7 +12953,6 @@ stop
             call redistribute_weight(xmain,xside,crit_weight)
             total_weight=weight_comp(D_DECL(i_n,j_n,k_n))
             if (total_weight.gt.zero) then
-             call redistribute_weight(xmain,xside,crit_weight)
              if (crit_weight.le.total_weight) then
               expan_new(D_DECL(i,j,k),2) = &
                expan_new(D_DECL(i,j,k),2) + &
@@ -12965,6 +13045,7 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
+       LSalt,DIMS(LSalt),&
        tag, &
        DIMS(tag),&
        tag_comp, &
@@ -12998,6 +13079,7 @@ stop
        real(amrex_real), INTENT(in) :: dt
        integer, INTENT(in) :: DIMDEC(maskcov)
        integer, INTENT(in) :: DIMDEC(LS)
+       integer, INTENT(in) :: DIMDEC(LSalt)
        integer, INTENT(in) :: DIMDEC(tag)
        integer, INTENT(in) :: DIMDEC(tag_comp)
        integer, INTENT(in) :: DIMDEC(weightfab)
@@ -13006,8 +13088,13 @@ stop
        integer, INTENT(in) :: DIMDEC(expan_comp)
        real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
        real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
        real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
        real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), INTENT(in), target :: LSalt(DIMV(LSalt),num_materials)
+       real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
+
        real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
        real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in), target :: tag_comp(DIMV(tag_comp))
@@ -13016,7 +13103,8 @@ stop
        real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(out), target :: weight_comp(DIMV(weight_comp))
        real(amrex_real), pointer :: weight_comp_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
+       real(amrex_real), INTENT(inout), target :: &
+         expan(DIMV(expan),2*num_interfaces)
        real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(inout), target ::  &
          expan_comp(DIMV(expan_comp),2*num_interfaces)
@@ -13070,22 +13158,31 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if (ngrow_distance.ge.4) then
+       if (ngrow_make_distance.eq.ngrow_distance-1) then
+        !do nothing
+       else
+        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+        stop
+       endif
+       if (ngrow_distance.ge.6) then
         ! do nothing
        else
-        print *,"ngrow_distance invalid"
+        print *,"require ns.ngrow_distance>=6 (fort_accept_weight) ", &
+          ngrow_distance
         stop
        endif
 
        maskcov_ptr=>maskcov
        LS_ptr=>LS
+       LSalt_ptr=>LSalt
        tag_ptr=>tag
        tag_comp_ptr=>tag_comp
        weightfab_ptr=>weightfab
        weight_comp_ptr=>weight_comp
 
-       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
@@ -13102,6 +13199,8 @@ stop
 
         if (local_mask.eq.1) then
 
+          !both doner and receiver data are redistributed to the
+          !receiver side.
          TAGLOC=tag(D_DECL(i,j,k))
          if ((TAGLOC.eq.one).or. & ! doner cell
              (TAGLOC.eq.two)) then ! receiver cell
@@ -13163,12 +13262,14 @@ stop
          else if (TAGLOC.eq.zero) then
           ! do nothing
          else
-          print *,"TAGLOC invalid"
+          print *,"TAGLOC invalid: ",TAGLOC
           stop
          endif 
 
           ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
 
+          !both doner and receiver data are redistributed to the
+          !receiver side.
          TAGLOC=tag_comp(D_DECL(i,j,k))
          if ((TAGLOC.eq.one).or. & ! doner cell
              (TAGLOC.eq.two)) then ! receiver cell
