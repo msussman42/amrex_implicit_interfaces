@@ -4838,6 +4838,10 @@ NavierStokes::read_params ()
 
        Real LL=get_user_latent_heat(iten_local+1,293.0,1);
        if (LL!=0.0) {
+
+        if (ngrow_distance<6)
+         amrex::Error("require ns.ngrow_distance>=6 if latent_heat<>0");
+
         int im1=0;
         int im2=0;
         int im_source=0;
@@ -17612,7 +17616,8 @@ NavierStokes::level_phase_change_redistribute(
     denstatefab.dataPtr(),
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     newdistfab.dataPtr(),
-    ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+    ARLIM(newdistfab.loVect()),
+    ARLIM(newdistfab.hiVect()),
     newdist_alt_fab.dataPtr(),
     ARLIM(newdist_alt_fab.loVect()),
     ARLIM(newdist_alt_fab.hiVect()),
@@ -17688,7 +17693,9 @@ NavierStokes::level_phase_change_redistribute(
 
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
     FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
+
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+    FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
 
@@ -17714,7 +17721,11 @@ NavierStokes::level_phase_change_redistribute(
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+     ARLIM(newdistfab.loVect()),
+     ARLIM(newdistfab.hiVect()),
+     newdist_alt_fab.dataPtr(),
+     ARLIM(newdist_alt_fab.loVect()),
+     ARLIM(newdist_alt_fab.hiVect()),
      donorfab.dataPtr(),
      ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
      donor_comp_fab.dataPtr(),
@@ -17808,6 +17819,7 @@ NavierStokes::level_phase_change_redistribute(
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
     FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+    FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
 
@@ -17837,7 +17849,11 @@ NavierStokes::level_phase_change_redistribute(
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+     ARLIM(newdistfab.loVect()),
+     ARLIM(newdistfab.hiVect()),
+     newdist_alt_fab.dataPtr(),
+     ARLIM(newdist_alt_fab.loVect()),
+     ARLIM(newdist_alt_fab.hiVect()),
      donorfab.dataPtr(),
      ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
      donor_comp_fab.dataPtr(),
@@ -17916,8 +17932,25 @@ NavierStokes::level_phase_change_redistribute(
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+    FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
+
     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+    int slope_index=SLOPE_RECON_MF;
+    if (material_extend_velocity_flag==0) {
+     //do nothing
+    } else if (material_extend_velocity_flag>0) {
+     slope_index=ELASTIC_FLUID_MOMENT_MF;
+    } else
+     amrex::Error("material_extend_velocity_flag invalid");
+
+    FArrayBox& recon_alt_fab=(*localMF[slope_index])[mfi]; 
+    if (recon_alt_fab.nComp()==num_materials*ngeom_recon) {
+     //do nothing
+    } else
+     amrex::Error("recon_alt_fab.nComp() invalid");
 
     int bfact=parent->Space_blockingFactor(level);
 
@@ -17972,9 +18005,17 @@ NavierStokes::level_phase_change_redistribute(
       // mdotfab is incremented.
      mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
      newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+     ARLIM(newdistfab.loVect()),
+     ARLIM(newdistfab.hiVect()),
+     newdist_alt_fab.dataPtr(),
+     ARLIM(newdist_alt_fab.loVect()),
+     ARLIM(newdist_alt_fab.hiVect()),
      reconfab.dataPtr(),
-     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
+     ARLIM(reconfab.loVect()),
+     ARLIM(reconfab.hiVect()),
+     recon_alt_fab.dataPtr(),
+     ARLIM(recon_alt_fab.loVect()),
+     ARLIM(recon_alt_fab.hiVect()));
 
   } // mfi
 } // omp
