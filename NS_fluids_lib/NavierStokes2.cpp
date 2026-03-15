@@ -5108,6 +5108,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
+   //NavierStokes::makeStateCurv is declared in NavierStokes.cpp
   ns_level.makeStateCurv(project_option,local_caller_string);
  }
   // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)

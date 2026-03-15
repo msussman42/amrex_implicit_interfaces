@@ -32,6 +32,10 @@ extern "C"
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials
 
+   int fort_is_rigid_CL(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
    int fort_is_FSI_rigid_base(
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials

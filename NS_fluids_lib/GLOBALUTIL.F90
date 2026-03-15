@@ -16019,13 +16019,64 @@ end subroutine print_visual_descriptor
       return
       end function is_rigid
 
+      function fort_is_rigid_CL(FSI_flag_local,im) &
+      bind(c,name='fort_is_rigid_CL')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer fort_is_rigid_CL
+      integer, INTENT(in) :: FSI_flag_local
+      integer, INTENT(in) :: im ! 1<=im<=num_materials
+      integer dummy_input
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+
+       print *,"im invalid in fort_is_rigid_CL: im=",im
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:16040"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+
+      endif
+
+      fort_is_rigid_CL=0
+      if ((fort_is_rigid_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_FSI_elastic_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_ice_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_FSI_rigid_base(FSI_flag_local,im).eq.1)) then
+       fort_is_rigid_CL=1
+      else if ((fort_is_rigid_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_FSI_elastic_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_ice_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_FSI_rigid_base(FSI_flag_local,im).eq.0)) then
+       !do nothing
+      else
+       print *,"FSI_flag_local invalid in fort_is_rigid_CL"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
+       stop
+      endif
+
+      return
+      end function fort_is_rigid_CL
+
+
+
       function is_rigid_CL(im)
       use probcommon_module
       IMPLICIT NONE
 
       integer is_rigid_CL
       integer, INTENT(in) :: im
-      integer dummy_input
+      integer :: FSI_flag_local
+      integer :: dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid in is_rigid_CL: im=",im
@@ -16042,20 +16093,8 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if ((is_rigid(im).eq.1).or. &
-          (is_FSI_elastic(im).eq.1).or. &
-          (is_ice_or_FSI_rigid_material(im).eq.1)) then
-       is_rigid_CL=1
-      else if ((is_rigid(im).eq.0).and. &
-               (is_FSI_elastic(im).eq.0).and. &
-               (is_ice_or_FSI_rigid_material(im).eq.0)) then
-       is_rigid_CL=0
-      else
-       print *,"is_rigid, FSI_elastic,or is_ice_or_FSI_rigid_material invalid"
-       print *,"im,is_rigid,is_FSI_elastic,is_ice_or_FSI_rigid_material ", &
-        im,is_rigid(im),is_FSI_elastic(im),is_ice_or_FSI_rigid_material(im)
-       stop
-      endif
+      FSI_flag_local=FSI_flag(im)
+      is_rigid_CL=fort_is_rigid_CL(FSI_flag_local,im)
 
       return
       end function is_rigid_CL

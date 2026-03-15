@@ -3849,15 +3849,10 @@ stop
       integer i1,j1,k1
       integer ii,jj,kk
 
-      integer merge_flag
-
       real(amrex_real) LS(num_materials)
       real(amrex_real) LS_fixed(num_materials)
-      real(amrex_real) LS_merge(num_materials)
-      real(amrex_real) LS_merge_fixed(num_materials)
       real(amrex_real) LSSIDE(num_materials)
       real(amrex_real) LSSIDE_fixed(num_materials)
-      real(amrex_real) LSSIDE_merge_fixed(num_materials)
 
       real(amrex_real) xcenter(SDIM)
       integer dirloc
@@ -3866,12 +3861,10 @@ stop
       integer at_RZ_axis
 
       integer im,im_opp
-      integer im_opp_merge_test
       integer im_opp_test
       integer im_curv
       integer vofcomp
       integer im_majority
-      integer im_merge_majority
       integer im_main,im_main_opp
       integer iten
       integer iten_local
@@ -3897,12 +3890,10 @@ stop
       real(amrex_real) least_squares_normal_material_wt(num_materials)
 
       real(amrex_real) nrmPROBE(SDIM*num_materials)
-      real(amrex_real) nrmPROBE_merge(SDIM*num_materials)
       real(amrex_real) LS_PROBE(num_materials)
 
       real(amrex_real) nrmFD(SDIM*num_materials)
       real(amrex_real) nrm_local(SDIM*num_materials)
-      real(amrex_real) nrm_local_merge(SDIM*num_materials)
       real(amrex_real) nrm_mat(SDIM)
       real(amrex_real) nrm_test(SDIM)
       real(amrex_real) nrm_center(SDIM)
@@ -3925,11 +3916,9 @@ stop
       integer local_rigid_flag
 
       real(amrex_real) LSCEN_hold(num_materials)
-      real(amrex_real) LSCEN_hold_merge(num_materials)
       real(amrex_real) LSCEN_hold_fixed(num_materials)
 
       real(amrex_real) vof_hold(num_materials)
-      real(amrex_real) vof_hold_merge(num_materials)
 
       real(amrex_real) LCEN,LSIDE
       real(amrex_real) LSLEFT_EXTEND,LSRIGHT_EXTEND
@@ -3937,9 +3926,7 @@ stop
       real(amrex_real) LSRIGHT_fixed(num_materials)
       real(amrex_real) XLEFT,XRIGHT,XCEN
 
-      real(amrex_real) LS_STAR_merge_FIXED(-1:1,SDIM,num_materials)
       real(amrex_real) LS_STAR_FIXED(-1:1,SDIM,num_materials)
-      integer im_star_merge_majority(-1:1,SDIM)
       integer im_star_majority(-1:1,SDIM)
 
       real(amrex_real) velsten(-1:1,-1:1,-1:1,SDIM)
@@ -4174,19 +4161,14 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call merge_levelset(xcenter,dx,time,LS,LS_merge,merge_flag)
-
           ! FIX_LS_tessellate is declared in: MOF.F90
           ! input : fluids tessellate, solids are embedded
           ! output: fluids tessellate and one and only one fluid LS is positive
-         call FIX_LS_tessellate(LS_merge,LS_merge_fixed)
          call FIX_LS_tessellate(LS,LS_fixed)
 
          call get_primary_material(dx,LS_fixed,im_majority)
-         call get_primary_material(dx,LS_merge_fixed,im_merge_majority)
 
-         if ((is_rigid_CL(im_merge_majority).eq.1).or. &
-             (is_rigid_CL(im_majority).eq.1)) then
+         if (is_rigid_CL(im_majority).eq.1) then
 
           ! do nothing, all interface forces are 0
   
@@ -4195,8 +4177,7 @@ stop
          
           ! do nothing, all interface forces are 0
          
-         else if ((is_rigid_CL(im_merge_majority).eq.0).and. &
-                  (is_rigid_CL(im_majority).eq.0)) then
+         else if (is_rigid_CL(im_majority).eq.0) then
 
           if (vol_sten.gt.zero) then
            ! do nothing
@@ -4232,15 +4213,6 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
 
-            call merge_levelset(xcenter,dx,time,LSSIDE,LS_merge,merge_flag)
-             !FIX_LS_tessellate is declared in MOF.F90
-            call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
-            call get_primary_material(dx,LSSIDE_merge_fixed,im_opp)
-            do im=1,num_materials
-             LS_STAR_merge_FIXED(sidestar,dirstar,im)=LSSIDE_merge_fixed(im)
-            enddo
-            im_star_merge_majority(sidestar,dirstar)=im_opp
-
              !FIX_LS_tessellate is declared in MOF.F90
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
             call get_primary_material(dx,LSSIDE_fixed,im_opp)
@@ -4253,28 +4225,28 @@ stop
 
           enddo ! dirstar=1..sdim
 
-           ! loop through all possible interfaces involving im_merge_majority
+           ! loop through all possible interfaces involving im_majority
            ! and initialize curvfab
            ! curvfab has num_interfaces * CURVCOMP_NCOMP components.
           do im_opp=1,num_materials
 
            donate_flag=0
   
-           if (im_opp.eq.im_merge_majority) then
+           if (im_opp.eq.im_majority) then
             ! do nothing
            else if (is_rigid_CL(im_opp).eq.1) then
             ! do nothing
            else if (is_rigid_CL(im_opp).eq.0) then
 
              ! im_main < im_main_opp
-            if (im_merge_majority.lt.im_opp) then
-             im_main=im_merge_majority
+            if (im_majority.lt.im_opp) then
+             im_main=im_majority
              im_main_opp=im_opp
-            else if (im_merge_majority.gt.im_opp) then
+            else if (im_majority.gt.im_opp) then
              im_main=im_opp
-             im_main_opp=im_merge_majority
+             im_main_opp=im_majority
             else
-             print *,"im_merge_majority bust"
+             print *,"im_majority bust"
              stop
             endif
             call get_iten(im_main,im_main_opp,iten)
@@ -4282,8 +4254,8 @@ stop
             do dirloc=1,SDIM
        
              do im=1,num_materials 
-              LSLEFT_fixed(im)=LS_STAR_merge_FIXED(-1,dirloc,im)
-              LSRIGHT_fixed(im)=LS_STAR_merge_FIXED(1,dirloc,im)
+              LSLEFT_fixed(im)=LS_STAR_FIXED(-1,dirloc,im)
+              LSRIGHT_fixed(im)=LS_STAR_FIXED(1,dirloc,im)
              enddo
 
              call get_LS_extend(LSLEFT_fixed,iten,LSLEFT_EXTEND)
@@ -4353,13 +4325,11 @@ stop
               x1dside=xsten0(2*sidestar,dirstar)
   
               do im=1,num_materials
-               LSSIDE_merge_fixed(im)=LS_STAR_merge_FIXED(sidestar,dirstar,im)
                LSSIDE_fixed(im)=LS_STAR_FIXED(sidestar,dirstar,im)
               enddo
-              im_opp_merge_test=im_star_merge_majority(sidestar,dirstar)
               im_opp_test=im_star_majority(sidestar,dirstar)
 
-              if (im_opp_merge_test.eq.im_opp) then
+              if (im_opp_test.eq.im_opp) then
 
                at_RZ_axis=0
                if ((levelrz.eq.COORDSYS_RZ).and. &
@@ -4369,15 +4339,15 @@ stop
                 at_RZ_axis=1
                endif
 
-               LCEN=LS_merge_fixed(im_merge_majority)
-               LSIDE=LSSIDE_merge_fixed(im_opp)
+               LCEN=LS_fixed(im_majority)
+               LSIDE=LSSIDE_fixed(im_opp)
 
                if ((LCEN*LSIDE.ge.zero).and. &
                    (abs(LCEN)+abs(LSIDE).gt.zero).and. &
                    (at_RZ_axis.eq.0)) then
 
-                LCEN=-LS_merge_fixed(im_opp)
-                LSIDE=-LSSIDE_merge_fixed(im_merge_majority)
+                LCEN=-LS_fixed(im_opp)
+                LSIDE=-LSSIDE_fixed(im_majority)
 
                 if ((LCEN*LSIDE.ge.zero).and. &
                     (abs(LCEN)+abs(LSIDE).gt.zero)) then
@@ -4386,7 +4356,7 @@ stop
 
                  dxside=abs(x1dcross-x1dcen)
 
-                  ! signcrossing points to im_merge_majority material
+                  ! signcrossing points to im_majority material
                  if (donate_flag.eq.0) then
                   donate_flag=1
                   dircrossing=dirstar
@@ -4424,10 +4394,10 @@ stop
                 stop
                endif 
 
-              else if (im_opp_merge_test.ne.im_opp) then
+              else if (im_opp_test.ne.im_opp) then
                ! do nothing
               else
-               print *,"im_opp_merge_test invalid: ",im_opp_merge_test
+               print *,"im_opp_test invalid: ",im_opp_test
                stop
               endif 
 
@@ -4436,35 +4406,35 @@ stop
 
             if (donate_flag.eq.1) then
 
-              ! sidestar points away from im_merge_majority and towards the
+              ! sidestar points away from im_majority and towards the
               ! opposite material.
-              ! signcrossing points towards im_merge_majority.
+              ! signcrossing points towards im_majority.
              sidestar=-signcrossing
 
-             if (im_merge_majority.lt.im_opp) then
-               ! signside points to im_merge_majority=im_main
+             if (im_majority.lt.im_opp) then
+               ! signside points to im_majority=im_main
               signside=signcrossing
-              if ((im_merge_majority.eq.im_main).and. &
+              if ((im_majority.eq.im_main).and. &
                   (im_opp.eq.im_main_opp)) then
                ! do nothing
               else
-               print *,"im_merge_majority or im_opp invalid"
+               print *,"im_majority or im_opp invalid"
                stop
               endif
-             else if (im_merge_majority.gt.im_opp) then
-               ! signcrossing points towards im_merge_majority.
-               ! signside points away from im_merge_majority
+             else if (im_majority.gt.im_opp) then
+               ! signcrossing points towards im_majority.
+               ! signside points away from im_majority
                ! signside points towards im_opp=im_main
               signside=-signcrossing
-              if ((im_merge_majority.eq.im_main_opp).and. &
+              if ((im_majority.eq.im_main_opp).and. &
                   (im_opp.eq.im_main)) then
                ! do nothing
               else
-               print *,"im_merge_majority or im_opp invalid"
+               print *,"im_majority or im_opp invalid",im_majority,im_opp
                stop
               endif
              else
-              print *,"im_merge_majority bust"
+              print *,"im_majority bust: ",im_majority
               stop
              endif
 
@@ -4511,11 +4481,6 @@ stop
              do im_curv=1,num_materials
               LS_PROBE(im_curv)=LSPC(D_DECL(i,j,k),im_curv)
              enddo
-             call merge_normal( &
-               xcenter,dx, &
-               time, &
-               LS_PROBE, &
-               nrmPROBE,nrmPROBE_merge)
 
               ! get normals at the cell center using finite differences. 
              do dirstar=1,SDIM
@@ -4532,9 +4497,9 @@ stop
               endif
 
               do im_curv=1,num_materials
-               LSRIGHT_EXTEND=LS_STAR_merge_FIXED(1,dirstar,im_curv)
-               LSLEFT_EXTEND=LS_STAR_merge_FIXED(-1,dirstar,im_curv)
-               LCEN=LS_merge_fixed(im_curv)
+               LSRIGHT_EXTEND=LS_STAR_FIXED(1,dirstar,im_curv)
+               LSLEFT_EXTEND=LS_STAR_FIXED(-1,dirstar,im_curv)
+               LCEN=LS_fixed(im_curv)
 
                inormal=(im_curv-1)*SDIM+dirstar
 
@@ -4562,7 +4527,7 @@ stop
 
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrm_mat(dirloc)=nrmPROBE_merge(inormal)
+               nrm_mat(dirloc)=nrmPROBE(inormal)
                nrm_test(dirloc)=nrmFD(inormal)
               enddo ! dirloc=1..sdim
               call prepare_normal(nrm_test,RR_unit,mag,SDIM)
@@ -4594,7 +4559,7 @@ stop
                 print *,"dxcrossing= ",dxcrossing
                 print *,"critsign=",critsign
                 print *,"im_curv=",im_curv
-                print *,"im_merge_majority= ",im_merge_majority
+                print *,"im_majority= ",im_majority
                 print *,"im_main=",im_main
                 print *,"im_main_opp=",im_main_opp
                 print *,"iten= ",iten
@@ -4607,11 +4572,11 @@ stop
                 do dirloc=1,SDIM
                  print *,"dirloc,nrm_center ",dirloc,nrm_center(dirloc)
                 enddo
-                print *,"nrmPROBE_merge points towards im_curv= ",im_curv
+                print *,"nrmPROBE points towards im_curv= ",im_curv
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
-                 print *,"dirloc,nrmPROBE_merge ", &
-                    dirloc,nrmPROBE_merge(inormal)
+                 print *,"dirloc,nrmPROBE ", &
+                    dirloc,nrmPROBE(inormal)
                 enddo
                 print *,"nrmFD points towards im_curv= ",im_curv
                 do dirloc=1,SDIM
@@ -4696,7 +4661,7 @@ stop
 
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrmPROBE_merge(inormal)=nrm_mat(dirloc)
+               nrmPROBE(inormal)=nrm_mat(dirloc)
               enddo
 
              enddo ! im_curv=1..num_materials
@@ -4704,8 +4669,8 @@ stop
              if (1.eq.0) then
               print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
               print *,"dircrossing ",dircrossing
-              print *,"im_merge_majority,im_opp,im_main,im_main_opp ", &
-               im_merge_majority,im_opp,im_main,im_main_opp
+              print *,"im_majority,im_opp,im_main,im_main_opp ", &
+               im_majority,im_opp,im_main,im_main_opp
              endif
 
              do iten_local=1,num_interfaces
@@ -4747,20 +4712,8 @@ stop
                  recon_ptr,vof_hold(im_curv))
               enddo !im_curv=1..num_materials
 
-              call merge_normal( &
-                 xcenter, &
-                 dx, &
-                 time, &
-                 LSCEN_hold, &
-                 nrm_local, & !intent(in)
-                 nrm_local_merge) !intent(out)
-
-              call merge_levelset(xcenter,dx,time,LSCEN_hold,LSCEN_hold_merge, &
-                merge_flag)
-              call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
-
               do im_curv=1,num_materials
-               vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
+               vofsten(i1,j1,k1,im_curv)=vof_hold(im_curv)
               enddo
 
               RR=one
@@ -4782,7 +4735,7 @@ stop
               ! input : fluids tessellate, solids are embedded
               ! output: fluids tessellate, solids are embedded,
               !         and one and only one fluid LS is positive
-              call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
+              call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
 
               do im_wt=1,num_materials
                LCEN=LSCEN_hold_fixed(im_wt)
@@ -4797,14 +4750,14 @@ stop
                 wt_local= &
                   one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
 
-                if (is_rigid(im_wt).eq.1) then
+                if (is_rigid_CL(im_wt).eq.1) then
                  wt_local=wt_local*wt_local_triple(im_wt)
                  local_rigid_flag=1
-                else if (is_rigid(im_opp_wt).eq.1) then
+                else if (is_rigid_CL(im_opp_wt).eq.1) then
                  wt_local=wt_local*wt_local_triple(im_opp_wt)
                  local_rigid_flag=1
-                else if ((is_rigid(im_wt).eq.0).and. &
-                         (is_rigid(im_opp_wt).eq.0)) then
+                else if ((is_rigid_CL(im_wt).eq.0).and. &
+                         (is_rigid_CL(im_opp_wt).eq.0)) then
                  LCEN=half*(LSCEN_hold_fixed(im_wt)- &
                             LSCEN_hold_fixed(im_opp_wt))
                  LCEN=abs(LCEN)
@@ -4812,10 +4765,10 @@ stop
                     (one+(four*LCEN/dx(1))**weight_power)
                  local_rigid_flag=0
                 else
-                 print *,"is_rigid(im_wt) or is_rigid(im_opp_wt) invalid"
-                 print *,"im_wt,is_rigid(im_wt) ",im_wt,is_rigid(im_wt)
-                 print *,"im_opp_wt,is_rigid(im_opp_wt) ", &
-                   im_opp_wt,is_rigid(im_opp_wt)
+                 print *,"is_rigid_CL(im_wt) or is_rigid_CL(im_opp_wt) invalid"
+                 print *,"im_wt,is_rigid_CL(im_wt) ",im_wt,is_rigid_CL(im_wt)
+                 print *,"im_opp_wt,is_rigid_CL(im_opp_wt) ", &
+                   im_opp_wt,is_rigid_CL(im_opp_wt)
                  stop
                 endif
 
@@ -4846,14 +4799,14 @@ stop
 
                 if (local_rigid_flag.eq.1) then
 
-                 if ((is_rigid(im_wt).eq.1).and. &
-                     (is_rigid(im_opp_wt).eq.1)) then
+                 if ((is_rigid_CL(im_wt).eq.1).and. &
+                     (is_rigid_CL(im_opp_wt).eq.1)) then
                 
                   if (LSCEN_hold_fixed(im_wt).ge. &
                       LSCEN_hold_fixed(im_opp_wt)) then
 
                    do dirloc=1,SDIM
-                    n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                    n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
                    enddo
                    dist_local=-LSCEN_hold_fixed(im_opp_wt)
 
@@ -4861,39 +4814,39 @@ stop
                            LSCEN_hold_fixed(im_opp_wt)) then
 
                    do dirloc=1,SDIM
-                    n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                    n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
                    enddo
                    dist_local=LSCEN_hold_fixed(im_wt)
 
                   else
                    print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
                    print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
-                   print *,"is_rigid(im_wt): ",is_rigid(im_wt)
-                   print *,"is_rigid(im_opp_wt): ",is_rigid(im_opp_wt)
+                   print *,"is_rigid_CL(im_wt): ",is_rigid_CL(im_wt)
+                   print *,"is_rigid_CL(im_opp_wt): ",is_rigid_CL(im_opp_wt)
                    stop
                   endif
 
-                 else if ((is_rigid(im_wt).eq.1).and. &
-                          (is_rigid(im_opp_wt).eq.0)) then
+                 else if ((is_rigid_CL(im_wt).eq.1).and. &
+                          (is_rigid_CL(im_opp_wt).eq.0)) then
 
                   do dirloc=1,SDIM
-                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                   n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
                   enddo
                   dist_local=LSCEN_hold_fixed(im_wt)
 
-                 else if ((is_rigid(im_wt).eq.0).and. &
-                          (is_rigid(im_opp_wt).eq.1)) then
+                 else if ((is_rigid_CL(im_wt).eq.0).and. &
+                          (is_rigid_CL(im_opp_wt).eq.1)) then
 
                   do dirloc=1,SDIM
-                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                   n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
                   dist_local=-LSCEN_hold_fixed(im_opp_wt)
   
                  else
-                  print *,"is_rigid(im_wt or im_opp_wt) invalid: ", &
+                  print *,"is_rigid_CL(im_wt or im_opp_wt) invalid: ", &
                    im_wt,im_opp_wt, &
-                   is_rigid(im_wt), &
-                   is_rigid(im_opp_wt)
+                   is_rigid_CL(im_wt), &
+                   is_rigid_CL(im_opp_wt)
                   stop
                  endif
  
@@ -4902,14 +4855,14 @@ stop
                  if (LSCEN_hold_fixed(im_wt).ge. &
                      LSCEN_hold_fixed(im_opp_wt)) then
                   do dirloc=1,SDIM
-                   n_loc(dirloc)=-nrm_local_merge(dirloc+(im_opp_wt-1)*SDIM)
+                   n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
                   enddo
                   dist_local=-LSCEN_hold_fixed(im_opp_wt)
 
                  else if (LSCEN_hold_fixed(im_wt).le. &
                           LSCEN_hold_fixed(im_opp_wt)) then
                   do dirloc=1,SDIM
-                   n_loc(dirloc)=nrm_local_merge(dirloc+(im_wt-1)*SDIM)
+                   n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
                   enddo
                   dist_local=LSCEN_hold_fixed(im_wt)
 
@@ -4921,10 +4874,10 @@ stop
 
                 else
                  print *,"local_rigid_flag invalid: ",local_rigid_flag
-                 print *,"is_rigid(im_wt or im_opp_wt) invalid: ", &
+                 print *,"is_rigid_CL(im_wt or im_opp_wt) invalid: ", &
                    im_wt,im_opp_wt, &
-                   is_rigid(im_wt), &
-                   is_rigid(im_opp_wt)
+                   is_rigid_CL(im_wt), &
+                   is_rigid_CL(im_opp_wt)
                  stop
                 endif
 
@@ -4974,9 +4927,6 @@ stop
 
                  if (normal_local.eq.1) then
 
-                  if ((merge_flag.eq.0).or. &
-                      (local_rigid_flag.eq.1)) then
-
                    data_out_LS%data_interp=>data_interp_local_LS
                    data_in%scomp=1 
                    data_in%ncomp=num_materials
@@ -5010,10 +4960,10 @@ stop
                     endif
                    enddo !im_sub=1,..,nmat
 
-                   if ((is_rigid(im_wt).eq.1).and. &
+                   if ((is_rigid_CL(im_wt).eq.1).and. &
                        (in_top_two(im_wt).eq.1)) then
                     !do nothing
-                   else if ((is_rigid(im_opp_wt).eq.1).and. &
+                   else if ((is_rigid_CL(im_opp_wt).eq.1).and. &
                             (in_top_two(im_opp_wt).eq.1)) then
                     !do nothing
                    else if ((in_top_two(im_wt).eq.1).and. &
@@ -5045,15 +4995,6 @@ stop
                     print *,"in_top_two invalid ",in_top_two
                     stop
                    endif
-
-                  else if ((merge_flag.eq.1).and. &
-                           (local_rigid_flag.eq.0)) then
-                   !do nothing
-                  else
-                   print *,"merge_flag or local_rigid_flag invalid: ", &
-                     merge_flag,local_rigid_flag
-                   stop
-                  endif
 
                  else if (normal_local.eq.0) then
                   !do nothing
@@ -5110,7 +5051,7 @@ stop
                wt_local=wt_local*wt_local_triple(im_curv)
 
                do dirloc=1,SDIM
-                n_loc(dirloc)=nrm_local_merge(dirloc+(im_curv-1)*SDIM)
+                n_loc(dirloc)=nrm_local(dirloc+(im_curv-1)*SDIM)
                enddo
                call prepare_normal(n_loc,RR,mag_loc,SDIM)
                if (mag_loc.eq.zero) then
@@ -5135,7 +5076,7 @@ stop
                if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
-                 nrm_mat(dirloc)=nrm_local_merge(inormal)
+                 nrm_mat(dirloc)=nrm_local(inormal)
                 enddo
 
                 call prepare_normal(nrm_mat,RR,mag,SDIM)
@@ -5254,9 +5195,9 @@ stop
               bfact,dx, &
               xcenter, &
               !num_materials x sdim components("nrmcenter" in initheightLS)
-              !nrmPROBE_merge is derived from both the closest point
+              !nrmPROBE is derived from both the closest point
               !normal and the FD normal.
-              nrmPROBE_merge, &
+              nrmPROBE, &
               dircrossing, & !intent(in)
               sidestar, & !intent(in)
               signside, &
@@ -5350,7 +5291,7 @@ stop
           enddo ! im_opp=1...num_materials
 
          else
-          print *,"im_majority or im_merge_majority invalid"
+          print *,"im_majority invalid"
           stop
          endif
   
@@ -10335,7 +10276,6 @@ stop
           iten_main=0
          else if (is_solid_face.eq.0) then
 
-          ! "merge_levelset" is NOT called inside of "fluid_interface"
           ! "is_rigid" is called.
           ! fluid_interface is declared in: PROB.F90
           call fluid_interface( &
@@ -10371,7 +10311,6 @@ stop
           else if ((covered_face.eq.0).or. & !maskL=maskR=1
                    (covered_face.eq.1)) then !maskL=1 or maskR=1
              ! fluid_interface_tension is declared in: PROB.F90
-             ! "merge_levelset" is called inside of "fluid_interface_tension"
              ! "is_rigid_CL" is called.
            if ((is_rigid_CL(im_main_opp).eq.0).and. &
                (is_rigid_CL(im_main).eq.0).and. &
@@ -17404,7 +17343,6 @@ stop
              pgrad_FORCE=zero
 
              ! fluid_interface_tension is declared in: PROB.F90
-             ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
                xstenMAC_center, &
                dx, &

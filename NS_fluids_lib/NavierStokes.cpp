@@ -6065,6 +6065,32 @@ NavierStokes::read_params ()
     for (int im=0;im<num_materials;im++) {
      int imp1=im+1;
      is_rigid_local[im]=fort_is_rigid_base(&FSI_flag[im],&imp1);
+
+     if (is_rigid_local[im]==1) {
+
+      if (material_extend_velocity[im]==0) {
+        //do nothing
+      } else
+       amrex::Error("expecting material_extend_velocity[im]==0");
+
+     } else if (is_rigid_local[im]==0) {
+
+      int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
+      if (is_rigid_CL_flag==0) {
+       if (material_extend_velocity[im]==0) {
+        //do nothing
+       } else
+        amrex::Error("expecting material_extend_velocity[im]==0");
+      } else if (is_rigid_CL_flag==1) {
+       if (material_extend_velocity[im]>=1) {
+        //do nothing
+       } else
+        amrex::Error("expecting material_extend_velocity[im]>=1");
+      } else
+       amrex::Error("is_rigid_CL_flag invalid");
+
+     } else
+      amrex::Error("is_rigid_local[im] invalid");
     }
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
