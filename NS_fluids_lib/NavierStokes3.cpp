@@ -13288,7 +13288,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
      (num_materials_viscoelastic<=num_materials)) {
 
   for (int im=0;im<num_materials;im++) {
+
     if (ns_is_rigid(im)==0) {
+
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
 
@@ -13328,19 +13330,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else
         amrex::Error("localMF[VISCOTEN_MF]->nGrow() invalid");
 
-       int is_rigid_CL_flag=0;
        int imp1=im+1;
-
-       if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
-        //do nothing
-       } else
-        amrex::Error("FSI_flag[im] invalid");
+       int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
 
        int im_cutoff=num_materials;
        if (FSI_outer_sweeps==0) {
@@ -13407,6 +13398,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
      // do nothing
     } else
      amrex::Error("ns_is_rigid invalid");
+
   } // im=0..num_materials-1
    
   // spectral_override==1 => order derived from "enable_spectral"
