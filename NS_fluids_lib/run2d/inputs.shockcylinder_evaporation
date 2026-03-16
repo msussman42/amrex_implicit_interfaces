@@ -151,7 +151,6 @@ ns.pressure_error_cutoff=1.0e+6 0.01
 # GALINSTAN COMPRESSIBLE: make material_type(1)=34
 ns.material_conservation_form=1 1 0
 ns.material_type=7 5
-#ns.material_type_interface=0
 #liquid gas
 ns.stiffCP=4.1855e+7 10.07e+6
 ns.stiffCV=4.1855e+7 7.2e+6

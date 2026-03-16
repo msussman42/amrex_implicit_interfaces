@@ -444,7 +444,6 @@ stop
         ccnum_materials, &
         ccmaterial_extend_velocity, &
         ccmaterial_type, &
-        ccmaterial_type_interface, &
         ccmaterial_conservation_form, &
         ccnten, &
         ccDrhoDT, &
@@ -623,7 +622,6 @@ stop
       
       integer, INTENT(in) :: ccmaterial_extend_velocity(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
-      integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
       integer, INTENT(in) :: ccmaterial_conservation_form(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
@@ -1878,8 +1876,6 @@ stop
 
       do iten=1,num_interfaces
 
-       fort_material_type_interface(iten)=ccmaterial_type_interface(iten)
-
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
        fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
@@ -2055,9 +2051,6 @@ stop
        print *,"lever_arm= ",lever_arm
 
        do iten=1,num_interfaces
-
-        print *,"iten,fort_material_type_interface ",iten, &
-                fort_material_type_interface(iten)
 
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_init ",iten,fort_tension_init(iten)

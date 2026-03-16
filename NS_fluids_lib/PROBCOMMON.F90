@@ -399,8 +399,6 @@ implicit none
 
       real(amrex_real), PARAMETER :: room_temperature=293.0d0
 
-      real(amrex_real), PARAMETER :: incomp_thickness=2.0d0
-
 #ifdef BL_USE_FLOAT
 
       real(amrex_real), PARAMETER :: EVAPORATION_TOL=BL_REAL_E(1.0,-6)

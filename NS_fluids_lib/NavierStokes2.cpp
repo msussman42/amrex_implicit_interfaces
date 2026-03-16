@@ -499,8 +499,6 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
     //do nothing
    } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
     //do nothing
-   } else if (pattern_test(local_caller_string,"smoothing_advection")==1) {
-    //do nothing
    } else
     amrex::Error("local_caller_string invalid getStateVISC_ALL");
 
@@ -5694,8 +5692,10 @@ void NavierStokes::make_physics_vars(int project_option,
     ARLIM(cDeDTfab.loVect()),ARLIM(cDeDTfab.hiVect()),
     cdenfab.dataPtr(),
     ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
-    cvoffab.dataPtr(),ARLIM(cvoffab.loVect()),ARLIM(cvoffab.hiVect()),
-    cviscfab.dataPtr(),ARLIM(cviscfab.loVect()),ARLIM(cviscfab.hiVect()),
+    cvoffab.dataPtr(),
+    ARLIM(cvoffab.loVect()),ARLIM(cvoffab.hiVect()),
+    cviscfab.dataPtr(),
+    ARLIM(cviscfab.loVect()),ARLIM(cviscfab.hiVect()),
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     levelpcfab.dataPtr(),
     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
@@ -10516,7 +10516,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
   amrex::Error("project_option invalid28 init_advective_pressure");
 
  MultiFab& S_new=get_new_data(state_index,project_slab_step+1);
- MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -10548,10 +10547,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
   FArrayBox& voffab=(*localMF[CELL_VOF_MF])[mfi];
   FArrayBox& csoundfab=(*localMF[CELL_SOUND_MF])[mfi];
   FArrayBox& mdotfab=(*localMF[DIFFUSIONRHS_MF])[mfi];
-  FArrayBox& lsnewfab=LS_new[mfi];
- 
-  if (lsnewfab.nComp()!=num_materials*(AMREX_SPACEDIM+1))
-   amrex::Error("lsnewfab.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  
   if (mdotfab.nComp()!=1)
    amrex::Error("mdotfab.nComp() invalid");
@@ -10576,8 +10571,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
    volumefab.dataPtr(),
    ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
-   lsnewfab.dataPtr(),
-   ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
    csoundfab.dataPtr(),
    ARLIM(csoundfab.loVect()),ARLIM(csoundfab.hiVect()),
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),

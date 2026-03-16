@@ -9486,7 +9486,6 @@ stop
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: local_tessellate=TESSELLATE_ALL_RASTER
-      integer, parameter :: incompressible_interface_flag=0
 
       real(amrex_real) local_cenvisc
       real(amrex_real) local_cenden  !1/rho
@@ -11990,7 +11989,6 @@ stop
           ! derive_density is declared in GODUNOV_3D.F90
         
          call derive_density( &
-          incompressible_interface_flag, & ! =0
           voldepart, &
           voldepart, &
           voltotal, & !intent(in)
@@ -12908,8 +12906,7 @@ stop
       integer i,j,k
       integer dir,side
       integer veldir
-      integer im,im_opp
-      integer iten
+      integer im
       integer sidecomp,ibase
       integer ii,jj,kk
       integer iface,jface,kface
@@ -12951,7 +12948,6 @@ stop
       integer scomp,scomp_bc,dcomp,ncomp ! in: mac_to_cell
       integer ncomp_xvel
       integer ncomp_cterm
-      integer is_rigid_near
       real(amrex_real) LStest(num_materials)
       integer velcomp
       integer partid
@@ -14137,83 +14133,18 @@ stop
         enddo
         call get_primary_material(dx,LStest,im_majority)
 
-        is_rigid_near=0
-        do im=1,num_materials
-         if (is_rigid(im).eq.1) then
-           !incomp_thickness declared in PROBCOMMON.F90
-          if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
-           is_rigid_near=1
-          else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
-           ! do nothing
-          else
-           print *,"LStest(im) is corrupt: ",im,LStest(im)
-           stop
-          endif 
-         else if (is_rigid(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_rigid(im) invalid: ",is_rigid(im)
-          stop
-         endif
-        enddo ! im=1..num_materials
-
-        if (is_rigid_near.eq.1) then
-
+        if (is_rigid(im_majority).eq.1) then
          use_face_pres_cen=0
-
-        else if (is_rigid_near.eq.0) then
-
-         do im=1,num_materials
-           !incomp_thickness declared in PROBCOMMON.F90
-          if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
-
-            !material_type=0 or 999
-           if (is_compressible_mat(im).eq.0) then
-            use_face_pres_cen=0
-           else if (is_compressible_mat(im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_compressible_mat invalid: ",im,is_compressible_mat(im)
-            stop
-           endif
-
-           do im_opp=im+1,num_materials
-            call get_iten(im,im_opp,iten)
-            if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
-             if (fort_material_type_interface(iten).eq.0) then
-              use_face_pres_cen=0
-             else if (fort_material_type_interface(iten).eq.999) then
-              use_face_pres_cen=0
-             else if ((fort_material_type_interface(iten).ge.1).and. &
-                      (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
-              !do nothing
-             else
-              print *,"fort_material_type_interface(iten) invalid: ", &
-               iten,fort_material_type_interface(iten)
-              stop
-             endif
-            else if (LStest(im_opp).le.-incomp_thickness*dxmaxLS) then
-             ! do nothing
-            else
-             print *,"LStest(im_opp) corrupt,mac_to_cell"
-             print *,"im_opp,LStest(im_opp): ",im_opp,LStest(im_opp)
-             stop
-            endif
-           enddo !im_opp=im+1,num_materials
-
-          else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
-           ! do nothing
-          else
-           print *,"LStest(im) corrupt(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
-           print *,"im,LStest(im): ",im,LStest(im)
-           stop
-          endif 
-         enddo ! im=1..num_materials
-
+        else if (is_compressible_mat(im_majority).eq.0) then
+         use_face_pres_cen=0
+        else if (is_compressible_mat(im_majority).eq.1) then
+         ! do nothing
+        else if (is_rigid(im_majority).eq.0) then
+         ! do nothing
         else
-         print *,"is_rigid_near inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
+         print *,"is_rigid or is_compressible_mat invalid"
          stop
-        endif 
+        endif
 
         Eforce_conservative=zero
         Eforce_non_conservative=zero
@@ -19581,7 +19512,7 @@ stop
        !called from: NavierStokes::extend_FSI_data()
       subroutine fort_extend_elastic_velocity( &
        material_extend_velocity, &
-       local_smoothing_flag, &
+       tensor_extend, &
        im_critical, & ! 1<=im_critical<=num_materials+1
        dir, & !0,1,2
        velbc_in, &
@@ -19606,7 +19537,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: material_extend_velocity(num_materials)
-      integer, INTENT(in) :: local_smoothing_flag
+      integer, INTENT(in) :: tensor_extend
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -19685,14 +19616,12 @@ stop
 
       local_homflag=0
 
-      if (local_smoothing_flag.eq.-1) then !tensor_advection_update
+      if (tensor_extend.eq.1) then !tensor_advection_update
        local_homflag=0
-      else if (local_smoothing_flag.eq.0) then !regular advection
+      else if (tensor_extend.eq.0) then !regular advection
        local_homflag=0
-      else if (local_smoothing_flag.gt.0) then !smoothing advection
-       local_homflag=1
       else
-       print *,"local_smoothing_flag invalid: ",local_smoothing_flag
+       print *,"tensor_extend invalid: ",tensor_extend
        stop
       endif
 
@@ -21065,18 +20994,21 @@ stop
        if (num_LS_extrap_iter.eq.1) then
         ! do nothing
        else
-        print *,"num_LS_extrap_iter invalid"
+        print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
+        print *,"renormalize_only=",renormalize_only
         stop
        endif
       else if (renormalize_only.eq.0) then
        if (num_LS_extrap_iter.ge.2) then
         ! do nothing
        else
-        print *,"num_LS_extrap_iter invalid"
+        print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
+        print *,"renormalize_only=",renormalize_only
         stop
        endif
       else
        print *,"renormalize_only invalid"
+       print *,"renormalize_only=",renormalize_only
        stop
       endif
 
@@ -21084,13 +21016,18 @@ stop
           (LS_extrap_iter.lt.num_LS_extrap_iter)) then
       ! do nothing
       else
-       print *,"LS_extrap_iter invalid"
+       print *,"LS_extrap_iter invalid ",LS_extrap_iter
+       print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
+       print *,"renormalize_only=",renormalize_only
        stop
       endif
       if (num_LS_extrap.ge.0) then
        ! do nothing
       else
        print *,"num_LS_extrap invalid"
+       print *,"LS_extrap_iter invalid ",LS_extrap_iter
+       print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
+       print *,"renormalize_only=",renormalize_only
        stop
       endif
 
@@ -21154,7 +21091,7 @@ stop
        print *,"time invalid in renormalize"
        stop
       else
-       print *,"time bust in renormalize"
+       print *,"time bust in renormalize: ",time
        stop
       endif
 
@@ -21457,7 +21394,9 @@ stop
 
             F_stencil_sum=zero
             density_stencil_sum=zero
-   
+  
+             ! -extrap_radius ... +extrap_radius
+             ! extrap_radius=1 
             do k1=istenlo(3),istenhi(3)
             do j1=istenlo(2),istenhi(2)
             do i1=istenlo(1),istenhi(1)
@@ -21568,7 +21507,7 @@ stop
         else if (LS_extrap_iter.gt.0) then
          ! do nothing
         else
-         print *,"LS_extrap_iter invalid"
+         print *,"LS_extrap_iter invalid: ",LS_extrap_iter
          stop
         endif
 
@@ -21622,7 +21561,7 @@ stop
 
           im=im_solid_map(partid)+1
           if ((im.lt.1).or.(im.gt.num_materials)) then
-           print *,"im invalid33"
+           print *,"im invalid fort_renormalize_prescribe ",im
            stop
           endif
 

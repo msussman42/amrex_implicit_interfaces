@@ -24007,6 +24007,8 @@ contains
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
       subroutine multi_get_volume_grid_and_map( &
+       tessellate_source, & !TESSELLATE_FLUIDS
+       tessellate_dest, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
        tid_in, &
        normdir, &
        coeff, &
@@ -24029,6 +24031,8 @@ contains
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate_source
+      integer, INTENT(in) :: tessellate_dest
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax

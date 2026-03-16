@@ -1238,9 +1238,8 @@ END SUBROUTINE SIMP
         dt, &
         maskcov,DIMS(maskcov), &
         vol,DIMS(vol), &
-        lsnew,DIMS(lsnew), &
         csnd,DIMS(csnd), &
-        cvof,DIMS(cvof), & ! tessellating
+        cvof,DIMS(cvof), & ! TESSELLATE_ALL_RASTER
         den,DIMS(den), &
         mdot,DIMS(mdot), & ! passed from localMF[DIFFUSIONRHS_MF]
         tilelo,tilehi, &
@@ -1274,7 +1273,6 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(vol)
-      integer, INTENT(in) :: DIMDEC(lsnew)
       integer, INTENT(in) :: DIMDEC(csnd)
       integer, INTENT(in) :: DIMDEC(cvof)
       integer, INTENT(in) :: DIMDEC(den)
@@ -1283,9 +1281,6 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: &
-              lsnew(DIMV(lsnew),num_materials*(1+SDIM))
-      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: csnd(DIMV(csnd),2) 
       real(amrex_real), pointer :: csnd_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: cvof(DIMV(cvof),num_materials) 
@@ -1304,7 +1299,6 @@ END SUBROUTINE SIMP
       real(amrex_real) rho(num_materials)
       real(amrex_real) one_over_c(num_materials)
       real(amrex_real) one_over_c2(num_materials)
-      real(amrex_real) localLS(num_materials)
       real(amrex_real) vfrac(num_materials)
       real(amrex_real) vfrac_weight(num_materials)
       real(amrex_real) vfrac_solid_sum
@@ -1323,7 +1317,7 @@ END SUBROUTINE SIMP
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid164"
+       print *,"bfact invalid fort_advective_pressure ",bfact
        stop
       endif
       if (num_state_base.eq.2) then
@@ -1373,7 +1367,6 @@ END SUBROUTINE SIMP
 
       maskcov_ptr=>maskcov
       vol_ptr=>vol
-      lsnew_ptr=>lsnew
       csnd_ptr=>csnd
       cvof_ptr=>cvof
       den_ptr=>den
@@ -1381,7 +1374,6 @@ END SUBROUTINE SIMP
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,csnd_ptr,0,-1)
       call checkbound_array(fablo,fabhi,cvof_ptr,0,-1)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
@@ -1415,7 +1407,7 @@ END SUBROUTINE SIMP
         vfrac_fluid_sum=zero
 
         do im=1,num_materials
-         vfrac(im)=cvof(D_DECL(i,j,k),im)
+         vfrac(im)=cvof(D_DECL(i,j,k),im) !TESSELLATE_ALL_RASTER
          if ((vfrac(im).ge.-EPS1).and.(vfrac(im).le.one+EPS1)) then
           ! do nothing
          else
@@ -1467,10 +1459,6 @@ END SUBROUTINE SIMP
 
 
         if (project_option.eq.SOLVETYPE_PRES) then !sanity check
-
-         do im=1,num_materials
-          localLS(im)=lsnew(D_DECL(i,j,k),im)
-         enddo
 
          do im=1,num_materials
 
@@ -1529,37 +1517,12 @@ END SUBROUTINE SIMP
             one_over_c2(im)=one/soundsqr
             one_over_c(im)=sqrt(one_over_c2(im))
 
-            do im_opp=1,num_materials
-             if (im_opp.ne.im) then
-              call get_iten(im,im_opp,iten)
-              if ((fort_material_type_interface(iten).eq.0).or. &
-                  (fort_material_type_interface(iten).eq.999)) then
-               if (localLS(im_opp).ge.-incomp_thickness*DXMAXLS) then
-                pres(im)=zero
-                one_over_c2(im)=zero
-                one_over_c(im)=zero
-               else if (localLS(im_opp).le.-incomp_thickness*DXMAXLS) then
-                !do nothing
-               else
-                print *,"localLS(im_opp) invalid:",im,localLS(im_opp)
-                stop
-               endif
-              else if ((fort_material_type_interface(iten).ge.1).and. &
-                       (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
-               !do nothing
-              else
-               print *,"fort_material_type_interface(iten) invalid: ", &
-                 iten,fort_material_type_interface(iten)
-               stop
-              endif
-             endif !im_opp<>im
-            enddo !im_opp=1,num_materials
-
            else if ((fort_material_type(im).eq.0).or. &
                     (vfrac(im).eq.zero)) then
             pres(im)=zero
             one_over_c2(im)=zero
             one_over_c(im)=zero
+
            else
             print *,"material type or vfrac invalid: ",im, &
                fort_material_type(im),vfrac(im)
