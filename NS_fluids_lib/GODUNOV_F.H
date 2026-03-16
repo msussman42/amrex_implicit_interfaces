@@ -323,7 +323,6 @@ extern "C"
     int* bfact);
 
    void fort_estdt(
-      int* surface_tension_smoothing,
       int* interface_mass_transfer_model,
       int* tid,
       int* enable_spectral,
@@ -809,8 +808,6 @@ extern "C"
 
 
    void fort_vfrac_split_smooth(
-     int* im_extension, //im_extension==-1, or 0.
-     int* local_smoothing_flag,
      int* nprocessed,
      int* tid,
      int* velbc,

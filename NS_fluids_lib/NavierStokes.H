@@ -319,7 +319,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement(int local_smoothing_flag);
+    void prepare_displacement();
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -335,7 +335,7 @@ public:
     void manage_FSI_data();
 
      //1<=im_critical<=num_materials
-    void extend_FSI_data(int im_critical,int local_smoothing_flag); 
+    void extend_FSI_data(int im_critical,int tensor_extend); 
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
@@ -422,7 +422,6 @@ public:
     static int CTML_FSI_num_scalars;
 
     static Vector<int> material_type; // 0 incomp   
-    static Vector<int> material_type_interface; 
     static Vector<int> material_conservation_form; 
     static Vector<int> material_extend_velocity; 
     static int material_extend_velocity_flag;
@@ -789,8 +788,8 @@ protected:
 
     void correct_flotsam();
 
-    void split_scalar_advection(int local_smoothing_flag,int im_extension); 
-    void split_scalar_advectionALL(int local_smoothing_flag,int im_extension);
+    void split_scalar_advection(int im_extension); 
+    void split_scalar_advectionALL(int im_extension);
  
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
@@ -858,18 +857,13 @@ protected:
 
     void solid_temperature();
 
-    void save_interface_data(int control_flag,int local_smoothing_flag,
-      int im_extension);
-    void save_interface_dataALL(int control_flag,int local_smoothing_flag,
-      int im_extension);
+    void save_interface_data(int control_flag,int im_extension);
+    void save_interface_dataALL(int control_flag,int im_extension);
 
-    void nonlinear_advection(const std::string& caller_string,
-      int smoothing_iter);
+    void nonlinear_advection(const std::string& caller_string);
 
     void sub_nonlinear_advection(const std::string& caller_string,
-      int smoothing_iter,int local_smoothing_flag,int im_extension);
-
-    void smoothing_advection();
+      int im_extension);
 
     void advance_MAC_velocity(int project_option);
 
@@ -1778,8 +1772,6 @@ protected:
     static int Tensor_Type;
     static int Refine_Density_Type;
     static int NUM_STATE_TYPE;
-
-    static int surface_tension_smoothing;
 
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;

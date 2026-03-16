@@ -22,7 +22,6 @@ extern "C" {
      Real* dt,
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
-     Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
      Real* csound,AMREX_ARLIM_P(csoundlo),AMREX_ARLIM_P(csoundhi),
      Real* cvof,AMREX_ARLIM_P(cvoflo),AMREX_ARLIM_P(cvofhi),
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),

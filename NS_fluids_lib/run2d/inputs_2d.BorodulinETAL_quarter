@@ -171,7 +171,6 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_conservation_form=1 1
-ns.material_type_interface=0 
 ns.shock_timestep=1 1 #compressible
 #ns.shock_timestep=2 2 #incompressible
 #ns.material_type=0 0  # incompressible

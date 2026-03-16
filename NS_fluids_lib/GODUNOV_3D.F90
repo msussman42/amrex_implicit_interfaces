@@ -125,7 +125,6 @@ stop
       end subroutine departure_node_split
 
       subroutine derive_density( &
-       incompressible_interface_flag, &
        voldepart, &
        voltarget, &
        voltotal_depart, & !intent(in)
@@ -137,7 +136,6 @@ stop
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: incompressible_interface_flag
       integer, INTENT(in) :: im
       integer, INTENT(in) :: constant_density_all_time(num_materials)
       real(amrex_real), INTENT(in) :: voldepart,voltarget,voltotal_depart
@@ -192,15 +190,7 @@ stop
        else if (fort_material_type(im).gt.0) then
 
         if (constant_density_all_time(im).eq.0) then 
-         if (incompressible_interface_flag.eq.1) then
-          density=fort_denconst(im)
-         else if (incompressible_interface_flag.eq.0) then
-          density=massdepart/voltarget
-         else
-          print *,"incompressible_interface_flag invalid ", &
-           incompressible_interface_flag
-          stop
-         endif
+         density=massdepart/voltarget
         else
          print *,"constant_density_all_time invalid: ", &
             constant_density_all_time
@@ -2029,82 +2019,23 @@ stop
           ! do nothing
          else if (compressible_face.eq.1) then
 
-          do im=1,num_materials
-
-           do side=1,2
-            if (side.eq.1) then
-             local_LS=LSleft(im)
-            else if (side.eq.2) then
-             local_LS=LSright(im)
-            else
-             print *,"side invalid (im) : ",im,side
-             stop
-            endif
-            if (local_LS.ge.-incomp_thickness*dxmaxLS) then
-             if (is_rigid(im).eq.1) then
-              compressible_face=0
-             else if (is_rigid(im).eq.0) then
-              if (is_compressible_mat(im).eq.0) then
-               compressible_face=0
-              else if (is_compressible_mat(im).eq.1) then
-               !do nothing
-              else
-               print *,"is_compressible_mat(im) invalid: ", &
-                im,is_compressible_mat(im)
-               stop
-              endif
-
-              do im_opp=im+1,num_materials
-               call get_iten(im,im_opp,iten)
-
-               if (side.eq.1) then
-                local_LS=LSleft(im_opp)
-               else if (side.eq.2) then
-                local_LS=LSright(im_opp)
-               else
-                print *,"side invalid (im_opp) : ",im_opp,side
-                stop
-               endif
- 
-                ! LS(im_opp)>-alpha dx
-                ! LS(im)>-alpha dx
-               if (local_LS.ge.-incomp_thickness*dxmaxLS) then
-                if (fort_material_type_interface(iten).eq.0) then
-                 compressible_face=0
-                else if (fort_material_type_interface(iten).eq.999) then
-                 compressible_face=0
-                else if ((fort_material_type_interface(iten).ge.1).and. &
-                         (fort_material_type_interface(iten).le. &
-                          MAX_NUM_EOS)) then
-                 !do nothing
-                else
-                 print *,"fort_material_type_interface(iten) invalid: ", &
-                   iten,fort_material_type_interface(iten)
-                 stop
-                endif
-               else if (local_LS.le.-incomp_thickness*dxmaxLS) then
-                ! do nothing
-               else
-                print *,"local_LS corrupt,fort_crossterm"
-                print *,"im_opp,local_LS: ",im_opp,local_LS
-                stop
-               endif 
-              enddo !im_opp=im+1,num_materials
-
-             else 
-              print *,"is_rigid(im) invalid: ",im,is_rigid(im)
-              stop
-             endif
-            else if (local_LS.le.-incomp_thickness*dxmaxLS) then
-             ! do nothing
-            else
-             print *,"local_LS corrupt,fort_crossterm"
-             print *,"im,local_LS: ",im,local_LS
-             stop
-            endif 
-           enddo !side=1,2
-
-          enddo !im=1,num_materials
+          if (is_rigid(imL).eq.1) then
+           compressible_face=0
+          else if (is_rigid(imR).eq.1) then
+           compressible_face=0
+          else if (is_compressible_mat(imL).eq.0) then
+           compressible_face=0
+          else if (is_compressible_mat(imR).eq.0) then
+           compressible_face=0
+          else if ((is_rigid(imL).eq.0).and. &
+                   (is_rigid(imR).eq.0).and. &
+                   (is_compressible_mat(imL).eq.1).and. & 
+                   (is_compressible_mat(imR).eq.1)) then
+           !do nothing
+          else
+           print *,"is_rigid or is_compressible invalid"
+           stop
+          endif
 
          else 
           print *,"compressible_face invalid: ",compressible_face
@@ -2459,7 +2390,6 @@ stop
       ! uu_estdt_max(sdim+1) is max c^2
       ! called from: void NavierStokes::MaxAdvectSpeed when static_flag==0
       subroutine fort_estdt( &
-        surface_tension_smoothing, &
         interface_mass_transfer_model, &
         tid, &
         enable_spectral, &
@@ -2522,7 +2452,6 @@ stop
       use hydrateReactor_module
       IMPLICIT NONE
 
-      integer, INTENT(in) :: surface_tension_smoothing
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: nparts
       integer, INTENT(in) :: nparts_def
@@ -2941,17 +2870,6 @@ stop
            stop
           endif
 
-          if (surface_tension_smoothing.eq.0) then
-           !do nothing
-          else if (surface_tension_smoothing.ge.1) then
-           den1=one
-           den2=one
-          else
-           print *,"surface_tension_smoothing invalid: ", &
-             surface_tension_smoothing
-           stop
-          endif
-
            ! capillary_wave_speed declared in PROB.F90
            ! theory:
            ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
@@ -2972,17 +2890,6 @@ stop
            visc1,visc2, &
            user_tension(iten), &
            cap_wave_speed(iten)) !INTENT(out)
-
-          if (surface_tension_smoothing.eq.0) then
-           !do nothing
-          else if (surface_tension_smoothing.ge.1) then
-           cap_wave_speed(iten)=cap_wave_speed(iten)/ &
-             surface_tension_smoothing
-          else
-           print *,"surface_tension_smoothing invalid: ", &
-             surface_tension_smoothing
-           stop
-          endif
 
          else
           print *,"user_tension invalid fort_estdt"
@@ -13779,7 +13686,6 @@ stop
       integer vofcomp
       integer im,im_opp
       integer iten
-      integer incompressible_interface_flag
       real(amrex_real) dxmaxLS
 
       real(amrex_real) mom2(SDIM)
@@ -13857,7 +13763,6 @@ stop
       real(amrex_real) tennew_hold(NUM_CELL_ELASTIC_REFINE)
       real(amrex_real) mom_dencore(num_materials)
       real(amrex_real) dencore(num_materials)
-      real(amrex_real) oldLS(num_materials)
       real(amrex_real) newLS(num_materials)
       real(amrex_real) newvfrac_weymouth(num_materials)
       real(amrex_real) newvfrac_cor(num_materials)
@@ -13905,6 +13810,10 @@ stop
       real(amrex_real) :: temperature_clamped
       real(amrex_real) :: local_temperature
       integer :: prescribed_flag
+
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer :: tessellate_dest !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
+
       CHARACTER(:), ALLOCATABLE :: fort_caller_string
       integer :: fort_caller_string_len
 
@@ -14701,61 +14610,6 @@ stop
         veldata(istate)=zero
        enddo
 
-       incompressible_interface_flag=0
-
-       do im=1,num_materials
-        oldLS(im)=LS(D_DECL(icrse,jcrse,kcrse),im)
-       enddo
-
-       do im=1,num_materials
-
-        if (oldLS(im).ge.-incomp_thickness*dxmaxLS) then
-         if (is_rigid(im).eq.1) then
-          incompressible_interface_flag=1
-         else if (is_rigid(im).eq.0) then 
-          !do nothing
-         else 
-          print *,"is_rigid(im) invalid: ",im,is_rigid(im)
-          stop
-         endif
-
-         do im_opp=im+1,num_materials
-          call get_iten(im,im_opp,iten)
-
-           !LS(im_opp)>=-alpha dx
-           !LS(im)>=-alpha dx
-          if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
-           if (fort_material_type_interface(iten).eq.0) then
-            incompressible_interface_flag=1
-           else if (fort_material_type_interface(iten).eq.999) then
-            incompressible_interface_flag=1
-           else if ((fort_material_type_interface(iten).ge.1).and. &
-                    (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
-            !do nothing
-           else
-            print *,"fort_material_type_interface(iten) invalid: ", &
-              iten,fort_material_type_interface(iten)
-            stop
-           endif 
-          else if (oldLS(im_opp).le.-incomp_thickness*dxmaxLS) then
-           ! do nothing
-          else
-           print *,"oldLS(im_opp) corrupt,fort_vfrac_split"
-           print *,"im,oldLS(im_opp): ",im,oldLS(im_opp)
-           stop
-          endif 
-
-         enddo !im_opp=im+1,num_materials
-
-        else if (oldLS(im).le.-incomp_thickness*dxmaxLS) then
-         ! do nothing
-        else
-         print *,"oldLS(im) corrupt,fort_vfrac_split"
-         print *,"im,oldLS(im): ",im,oldLS(im)
-         stop
-        endif 
-
-       enddo !im=1,num_materials
 
        idonate=icrse
        jdonate=jcrse
@@ -15052,7 +14906,11 @@ stop
               ! materials, but not the solid materials.  Solid materials are
               ! immersed into the domain.
 
+            tessellate_dest=TESSELLATE_FLUIDS
+
             call multi_get_volume_grid_and_map( &
+              tessellate_source, & !TESSELLATE_FLUIDS
+              tessellate_dest, & !TESSELLATE_FLUIDS
               tid, &
               normdir, & ! normdir=0..sdim-1
               coeff, &
@@ -15074,13 +14932,14 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
   
               ! fluid materials tessellate the domain. 
-             if (is_rigid(im).eq.0) then 
+             if (is_rigid(im).eq.0) then
               LS_voltotal_depart=LS_voltotal_depart+ &
                multi_volume_grid(im)
              else if (is_rigid(im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
+              print *,"is_rigid invalid GODUNOV_3D.F90: ", &
+               im,is_rigid(im)
               stop
              endif
 
@@ -15640,15 +15499,7 @@ stop
          vol_target_local=volmat_depart_cor(im)
         else if ((is_compressible_mat(im).eq.1).and. &
                  (fort_material_conservation_form(im).eq.1)) then
-         if (incompressible_interface_flag.eq.0) then
-          ! do nothing
-         else if (incompressible_interface_flag.eq.1) then
-          vol_target_local=volmat_depart_cor(im)
-         else 
-          print *,"incompressible_interface_flag invalid: ", &
-             incompressible_interface_flag
-          stop
-         endif
+         !do nothing
         else
          print *, &
            "is_compressible_mat or fort_material_conservation_form invalid"
@@ -15671,7 +15522,6 @@ stop
         !   return error.
         ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
         call derive_density( &
-         incompressible_interface_flag, &
          volmat_depart_cor(im), &
          vol_target_local, &
          voltotal_depart, &
@@ -16311,8 +16161,6 @@ stop
       end subroutine fort_vfrac_split
 
       subroutine fort_vfrac_split_smooth( &
-       im_extension, & !im_extension==-1, or 0.
-       local_smoothing_flag, &
        nprocessed, &
        tid, &
        velbc, &
@@ -16361,8 +16209,6 @@ stop
       integer, PARAMETER :: nhalf=1
       integer, INTENT(inout) :: nprocessed
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: im_extension
-      integer, INTENT(in) :: local_smoothing_flag
 
       integer, PARAMETER :: ngrow=2
 
@@ -16512,6 +16358,9 @@ stop
       real(amrex_real) :: critical_cutoff_low
       real(amrex_real) :: critical_cutoff_high
 
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer :: tessellate_dest !TESSELLATE_FLUIDS|FLUIDS_ELASTIC
+
       CHARACTER(:), ALLOCATABLE :: fort_caller_string
       integer :: fort_caller_string_len
 
@@ -16569,20 +16418,6 @@ stop
       endif
       if ((bfact.ne.bfact_f).and.(bfact.ne.2*bfact_f)) then
        print *,"bfact invalid71"
-       stop
-      endif
-
-      if (local_smoothing_flag.ge.0) then
-       !do nothing
-      else
-       print *,"local_smoothing_flag invalid: ",local_smoothing_flag
-       stop
-      endif
-
-      if ((im_extension.ge.-1).and.(im_extension.le.0)) then
-       !do nothing
-      else
-       print *,"im_extension invalid: ",im_extension
        stop
       endif
 
@@ -17045,7 +16880,6 @@ stop
 
            !DEBUGGING
            if (1.eq.0) then
-            if (im_extension.eq.0) then
              if (LS(D_DECL(icrse,jcrse,kcrse),3).ge. &
                  -two*dx(1)) then
               if ((usten_donate(0).ne.zero).or. &
@@ -17065,7 +16899,6 @@ stop
                stop
               endif
              endif
-            endif
            endif
 
              ! normdir=0..sdim-1
@@ -17101,7 +16934,11 @@ stop
               ! materials, but not the solid materials.  Solid materials are
               ! immersed into the domain.
 
+            tessellate_dest=TESSELLATE_FLUIDS_ELASTIC
+
             call multi_get_volume_grid_and_map( &
+              tessellate_source, & !TESSELLATE_FLUIDS
+              tessellate_dest, & !TESSELLATE_FLUIDS_ELASTIC
               tid, &
               normdir, & ! normdir=0..sdim-1
               coeff, &

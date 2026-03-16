@@ -122,7 +122,6 @@ ns.pressure_error_cutoff=1.0e+6 0.01
 # for air: material_type=5 EOS_air
 # LIQUID COMPRESSIBLE: make material_type(1)=7
 ns.material_type=7 5
-#ns.material_type_interface=0
 ns.stiffCP=4.1855e+7 10.07e+6
 ns.stiffCV=4.1855e+7 7.2e+6
 #R=2.87e+6 ergs/(K g)

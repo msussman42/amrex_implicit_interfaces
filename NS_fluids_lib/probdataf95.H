@@ -166,7 +166,6 @@
       integer fort_adapt_whole_material(MAX_NUM_MATERIALS)
       integer fort_material_extend_velocity(MAX_NUM_MATERIALS)
       integer fort_material_type(MAX_NUM_MATERIALS)
-      integer fort_material_type_interface(MAX_NUM_INTERFACES)
       integer fort_material_conservation_form(MAX_NUM_MATERIALS)
       integer fort_ZEYU_DCA_SELECT
       integer pres_homflag

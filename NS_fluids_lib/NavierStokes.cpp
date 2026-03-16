@@ -650,8 +650,6 @@ int NavierStokes::idx_scalar_mask_material_mf=-1;
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
-int NavierStokes::surface_tension_smoothing=0;
-
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
@@ -989,7 +987,6 @@ Vector<Real> NavierStokes::species_molar_mass; // def=1
 int NavierStokes::solidheat_flag=0; 
 
 Vector<int> NavierStokes::material_type;
-Vector<int> NavierStokes::material_type_interface;
 Vector<int> NavierStokes::material_conservation_form;
 //nmat components.
 //values range from 0 to nmat-1
@@ -1648,8 +1645,6 @@ void fortran_parameters() {
 
  NavierStokes::material_extend_velocity.resize(NavierStokes::num_materials);
 
- NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
-
  NavierStokes::material_conservation_form.resize(NavierStokes::num_materials);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
@@ -2004,66 +1999,12 @@ void fortran_parameters() {
  pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,
 	NavierStokes::num_interfaces);
 
- Vector<int> preset_flag;
- preset_flag.resize(NavierStokes::num_interfaces);
-
  for (int im=0;im<NavierStokes::num_materials;im++) {
   NavierStokes::material_conservation_form[im]=1;
  }
 
- for (int im=0;im<NavierStokes::num_materials;im++) {
-  for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
-   int iten=0;
-   NavierStokes::get_iten_cpp(im+1,im_opp+1,iten);
-   if ((iten<1)||(iten>NavierStokes::num_interfaces))
-    amrex::Error("iten invalid");
-   preset_flag[iten-1]=-1;
-   if ((NavierStokes::material_type[im]==999)||
-       (NavierStokes::material_type[im_opp]==999)) {
-    NavierStokes::material_type_interface[iten-1]=999;
-    preset_flag[iten-1]=999;
-   } else if ((NavierStokes::material_type[im]==0)||
-              (NavierStokes::material_type[im_opp]==0)) {
-    NavierStokes::material_type_interface[iten-1]=0;
-    preset_flag[iten-1]=0;
-   } else if ((latent_heat_temp[iten-1]!=0.0)||
-  	      (latent_heat_temp[iten-1+NavierStokes::num_interfaces]!=0.0)) {
-    NavierStokes::material_type_interface[iten-1]=0;
-    preset_flag[iten-1]=0;
-   } else {
-    NavierStokes::material_type_interface[iten-1]= 
-      NavierStokes::material_type[im];
-   }
-  } // im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++
- } // im=0;im<NavierStokes::num_materials;im++
-
- pp.queryAdd("material_type_interface",
-   NavierStokes::material_type_interface,NavierStokes::num_interfaces);
-
  pp.queryAdd("material_conservation_form",
    NavierStokes::material_conservation_form,NavierStokes::num_materials);
-
- for (int im=0;im<NavierStokes::num_materials;im++) {
-  for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
-   int iten=0;
-   NavierStokes::get_iten_cpp(im+1,im_opp+1,iten);
-   if ((iten<1)||(iten>NavierStokes::num_interfaces))
-    amrex::Error("iten invalid");
-   if (preset_flag[iten-1]==-1) {
-    if ((NavierStokes::material_type_interface[iten-1]>=0)&&
-        (NavierStokes::material_type_interface[iten-1]<=999)) {
-     //do nothing
-    } else
-     amrex::Error("NavierStokes::material_type_interface invalid");
-   } else if (preset_flag[iten-1]>=0) {
-    if (NavierStokes::material_type_interface[iten-1]==preset_flag[iten-1]) {
-     //do nothing
-    } else
-     amrex::Error("NavierStokes::material_type_interface invalid");
-   } else
-    amrex::Error("preset flag invalid");
-  } // im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++
- } // im=0;im<NavierStokes::num_materials;im++
 
  ParallelDescriptor::Barrier();
 
@@ -2368,7 +2309,6 @@ void fortran_parameters() {
   &NavierStokes::num_materials,
   NavierStokes::material_extend_velocity.dataPtr(),
   NavierStokes::material_type.dataPtr(),
-  NavierStokes::material_type_interface.dataPtr(),
   NavierStokes::material_conservation_form.dataPtr(),
   &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
@@ -3614,7 +3554,6 @@ NavierStokes::read_params ()
     FSI_bounding_box_ngrow.resize(num_materials);
 
     material_type.resize(num_materials);
-    material_type_interface.resize(num_interfaces);
     material_conservation_form.resize(num_materials);
 
     material_extend_velocity.resize(num_materials);
@@ -4417,8 +4356,6 @@ NavierStokes::read_params ()
 
      // in: read_params
 
-    pp.queryAdd("surface_tension_smoothing",surface_tension_smoothing);
-
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
 
@@ -5048,65 +4985,12 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
-    Vector<int> preset_flag;
-    preset_flag.resize(num_interfaces);
-
     for (int im=0;im<num_materials;im++) {
      material_conservation_form[im]=1;
     }
 
-    for (int im=0;im<num_materials;im++) {
-     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
-      int iten=0;
-      get_iten_cpp(im+1,im_opp+1,iten);
-      if ((iten<1)||(iten>num_interfaces))
-       amrex::Error("iten invalid");
-      preset_flag[iten-1]=-1;
-      if ((material_type[im]==999)||
-          (material_type[im_opp]==999)) {
-       material_type_interface[iten-1]=999;
-       preset_flag[iten-1]=999;
-      } else if ((material_type[im]==0)||
-                 (material_type[im_opp]==0)) {
-       material_type_interface[iten-1]=0;
-       preset_flag[iten-1]=0;
-      } else if ((latent_heat[iten-1]!=0.0)||
-    	         (latent_heat[iten-1+num_interfaces]!=0.0)) {
-       material_type_interface[iten-1]=0;
-       preset_flag[iten-1]=0;
-      } else {
-       material_type_interface[iten-1]=material_type[im];
-      }
-     } // im_opp=im+1;im_opp<navierStokes::num_materials;im_opp++
-    } // im=0;im<navierstokes::num_materials;im++
-
-    pp.queryAdd("material_type_interface",
-      material_type_interface,num_interfaces);
-
     pp.queryAdd("material_conservation_form",
       material_conservation_form,num_materials);
-
-    for (int im=0;im<num_materials;im++) {
-     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
-      int iten=0;
-      get_iten_cpp(im+1,im_opp+1,iten);
-      if ((iten<1)||(iten>NavierStokes::num_interfaces))
-       amrex::Error("iten invalid");
-      if (preset_flag[iten-1]==-1) {
-       if ((material_type_interface[iten-1]>=0)&&
-           (material_type_interface[iten-1]<=999)) {
-        //do nothing
-       } else
-        amrex::Error("material_type_interface invalid");
-      } else if (preset_flag[iten-1]>=0) {
-       if (material_type_interface[iten-1]==preset_flag[iten-1]) {
-        //do nothing
-       } else
-        amrex::Error("material_type_interface invalid");
-      } else
-       amrex::Error("preset flag invalid");
-     } // im_opp=im+1;im_opp<num_materials;im_opp++
-    } // im=0;im<num_materials;im++
 
     for (int iten=0;iten<num_interfaces;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -5115,10 +4999,7 @@ NavierStokes::read_params ()
 
        Real LL=get_user_latent_heat(iten_local+1,293.0,1);
        if (LL!=0.0) {
-        if (material_type_interface[iten]==0) {
-         // do nothing
-        } else
-         amrex::Error("comp. divu source term model for phase change invalid");
+        //do nothing
        } else if (LL==0.0) {
         //do nothing
        } else
@@ -5990,11 +5871,6 @@ NavierStokes::read_params ()
         if (LL>0.0) { //evaporation
          spec_material_id_LIQUID[massfrac_id-1]=im_source;
          spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
-
-         if (material_type_interface[iten-1]==0) {
-          // do nothing
-         } else
-          amrex::Error("material_type_interface[iten-1] invalid for evap");
         } else if (LL<0.0) { // condensation
           spec_material_id_LIQUID[massfrac_id-1]=im_dest;
           spec_material_id_AMBIENT[massfrac_id-1]=im_source;
@@ -6398,9 +6274,6 @@ NavierStokes::read_params ()
      std::cout << "material_extend_velocity_flag= " << 
        material_extend_velocity_flag << '\n';
 
-     std::cout << "surface_tension_smoothing= " << 
-       surface_tension_smoothing << '\n';
-
      std::cout << "stokes_flow= " << stokes_flow << '\n';
      std::cout << "cancel_advection= " << cancel_advection << '\n';
 
@@ -6552,9 +6425,6 @@ NavierStokes::read_params ()
       std::cout << "nucleation_mach i+num_interfaces=" << 
 	     i+num_interfaces << "  " << 
        nucleation_mach[i+num_interfaces] << '\n';
-
-      std::cout << "material_type_interface i=" << i << "  " << 
-       material_type_interface[i] << '\n';
 
       std::cout << "latent_heat i=" << i << "  " << 
        latent_heat[i] << '\n';
@@ -14789,7 +14659,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 } // end subroutine prepare_mask_nbr(int ngrow)
 
 void 
-NavierStokes::prepare_displacement(int local_smoothing_flag) {
+NavierStokes::prepare_displacement() {
  
  std::string local_caller_string="prepare_displacement";
 
@@ -14806,37 +14676,13 @@ NavierStokes::prepare_displacement(int local_smoothing_flag) {
  Real local_dt=dt_slab;
  int local_project_option=SOLVETYPE_VISC;
 
- if (local_smoothing_flag==0) {
-  //do nothing 
- } else if (local_smoothing_flag>0) {
-  homflag=1;
-  local_dt=local_dt/local_smoothing_flag;
- } else
-  amrex::Error("local_smoothing_flag invalid");
-
  fort_overridepbc(&homflag,&local_project_option); 
 
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
   MultiFab* temp_mac_velocity=nullptr;
-  if (local_smoothing_flag==0) {
-    //Umac_Type
-   temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
-  } else if (local_smoothing_flag>0) {
-   Vector<int> scompBC_map;
-   scompBC_map.resize(1);
-   scompBC_map[0]=0;
-   debug_ngrow(UMAC_STATIC_MF+normdir,mac_grow,local_caller_string);
-   GetStateFromLocal(UMAC_STATIC_MF+normdir,mac_grow,0,1,
-      Umac_Type+normdir,scompBC_map);
-   BoxArray edge_boxes(grids);
-   edge_boxes.surroundingNodes(normdir);
-   temp_mac_velocity=new MultiFab(edge_boxes,dmap,1,mac_grow,
-     MFInfo().SetTag("temp_mac_velocity"),FArrayBoxFactory());
-   MultiFab::Copy(*temp_mac_velocity,*localMF[UMAC_STATIC_MF+normdir],
-		  0,0,1,mac_grow);
-  } else
-   amrex::Error("local_smoothing_flag invalid");
+   //Umac_Type
+  temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
 
 
    // RAW_MAC_VELOCITY_MF and
@@ -19605,8 +19451,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 } // end subroutine SEM_scalar_advection
 
 void 
-NavierStokes::split_scalar_advectionALL(int local_smoothing_flag,
-  int im_extension) { 
+NavierStokes::split_scalar_advectionALL(int im_extension) { 
 
  interface_touch_flag=1; //split_scalar_advectionALL
 
@@ -19626,7 +19471,7 @@ NavierStokes::split_scalar_advectionALL(int local_smoothing_flag,
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.split_scalar_advection(local_smoothing_flag,im_extension);
+  ns_level.split_scalar_advection(im_extension);
  } // ilev
 
 #if (NS_profile_solver==1)
@@ -19640,8 +19485,7 @@ NavierStokes::split_scalar_advectionALL(int local_smoothing_flag,
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
 void 
-NavierStokes::split_scalar_advection(int local_smoothing_flag,
-   int im_extension) { 
+NavierStokes::split_scalar_advection(int im_extension) { 
 
  std::string local_caller_string="split_scalar_advection";
 
@@ -19810,7 +19654,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
  int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
  int nc_bucket=CISLCOMP_NCOMP;
 
- if ((local_smoothing_flag==0)&&(im_extension==-1)) {
+ if (im_extension==-1) {
 
   // in: split_scalar_advection
   getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
@@ -20182,7 +20026,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
 
   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
- } else if ((local_smoothing_flag>0)||(im_extension==0)) {
+ } else if (im_extension==0) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -20248,8 +20092,6 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
    }
 
    fort_vfrac_split_smooth(
-    &im_extension, //im_extension==-1 or 0
-    &local_smoothing_flag,
     &nprocessed[tid_current],
     &tid_current,
     velbc.dataPtr(),
@@ -20301,7 +20143,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
 } // omp
   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
  } else
-  amrex::Error("local_smoothing_flag or im_extension invalid");
+  amrex::Error("im_extension invalid");
 
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
   ParallelDescriptor::ReduceIntSum(grids_per_proc[iproc]);
@@ -20339,7 +20181,7 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
  } else
   amrex::Error("level invalid23");
 
- if ((local_smoothing_flag==0)&&(im_extension==-1)) {
+ if (im_extension==-1) {
 
   delete conserve;
  
@@ -20406,12 +20248,12 @@ NavierStokes::split_scalar_advection(int local_smoothing_flag,
   } else
    amrex::Error("level invalid23");
 
- } else if ((local_smoothing_flag>0)||(im_extension==0)) {
+ } else if (im_extension==0) {
 
   //do nothing
 
  } else
-  amrex::Error("local_smoothing_flag or im_extension invalid");
+  amrex::Error("im_extension invalid");
 
 }  // end subroutine split_scalar_advection
 
@@ -24740,7 +24582,6 @@ void NavierStokes::MaxAdvectSpeed(
 
    // declared in: GODUNOV_3D.F90
    fort_estdt(
-    &surface_tension_smoothing,
     interface_mass_transfer_model.dataPtr(),
     &tid_current,
     &local_enable_spectral,
@@ -29526,8 +29367,6 @@ NavierStokes::makeStateCurv(int project_option,
  } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
   //do nothing
  } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
-  //do nothing
- } else if (pattern_test(local_caller_string,"smoothing_advection")==1) {
   //do nothing
  } else {
   std::cout << "local_caller_string=" << local_caller_string << '\n';
