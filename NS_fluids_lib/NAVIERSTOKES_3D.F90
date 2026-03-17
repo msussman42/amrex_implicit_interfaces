@@ -1291,8 +1291,7 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
 
       integer i,j,k
-      integer im,imcrit,im_weight,im_opp
-      integer iten
+      integer im,imcrit,im_weight
       integer ibase
       real(amrex_real) temperature,internal_energy,soundsqr
       real(amrex_real) pres(num_materials)

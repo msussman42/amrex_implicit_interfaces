@@ -815,12 +815,10 @@ stop
       integer side
       integer nbase
 
-      integer im,im_opp
-      integer iten
+      integer im
 
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
-      real(amrex_real) local_LS
 
       real(amrex_real) divterm
       integer compressible_face
@@ -13684,8 +13682,7 @@ stop
       integer dir2
       integer iside
       integer vofcomp
-      integer im,im_opp
-      integer iten
+      integer im
       real(amrex_real) dxmaxLS
 
       real(amrex_real) mom2(SDIM)
@@ -13771,12 +13768,21 @@ stop
       real(amrex_real) volmat_target(num_materials)
       real(amrex_real) volmat_depart_cor(num_materials)
       real(amrex_real) volmat_target_cor(num_materials)
+
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_volume_grid(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
       real(amrex_real) multi_cen_grid(SDIM,num_materials)
+
+      real(amrex_real) multi_volume_fluid(num_materials)
+      real(amrex_real) multi_volume_grid_fluid(num_materials)
+      real(amrex_real) multi_cen_fluid(SDIM,num_materials)
+      real(amrex_real) multi_cen_grid_fluid(SDIM,num_materials)
+
       real(amrex_real) newcen(SDIM,num_materials)
       real(amrex_real) veldata(nc_bucket)
+
+      integer any_elastic
 
       integer ihalf
       integer check_intersection
@@ -13966,7 +13972,18 @@ stop
 
       all_incomp=1
 
+      any_elastic=0
+
       do im=1,num_materials
+
+       if (is_elastic(im).eq.1) then
+        any_elastic=1
+       else if (is_elastic(im).eq.0) then
+        !do nothing
+       else
+        print *,"is_elastic(im) invalid ",im,is_elastic(im)
+        stop
+       endif
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -14906,11 +14923,11 @@ stop
               ! materials, but not the solid materials.  Solid materials are
               ! immersed into the domain.
 
-            tessellate_dest=TESSELLATE_FLUIDS
+            tessellate_dest=TESSELLATE_FLUIDS_ELASTIC
 
             call multi_get_volume_grid_and_map( &
               tessellate_source, & !TESSELLATE_FLUIDS
-              tessellate_dest, & !TESSELLATE_FLUIDS
+              tessellate_dest, & !TESSELLATE_FLUIDS_ELASTIC
               tid, &
               normdir, & ! normdir=0..sdim-1
               coeff, &
@@ -14927,19 +14944,61 @@ stop
               nmax, &
               SDIM)
 
+            if (any_elastic.eq.0) then
+             do im=1,num_materials
+              multi_volume_grid_fluid(im)=multi_volume_grid(im)
+              multi_volume_fluid(im)=multi_volume(im)
+              do dir2=1,SDIM
+               multi_cen_grid_fluid(dir2,im)=multi_cen_grid(dir2,im)
+               multi_cen_fluid(dir2,im)=multi_cen(dir2,im)
+              enddo
+             enddo
+            else if (any_elastic.eq.1) then
+
+             tessellate_dest=TESSELLATE_FLUIDS
+
+             call multi_get_volume_grid_and_map( &
+              tessellate_source, & !TESSELLATE_FLUIDS
+              tessellate_dest, & !TESSELLATE_FLUIDS
+              tid, &
+              normdir, & ! normdir=0..sdim-1
+              coeff, &
+              bfact,dx, &
+              xsten_recon,nhalf, &
+              mofdata_grid, &
+              xsten_depart,nhalf, &
+              multi_volume_grid_fluid, & ! intersection of departure with grid.
+              multi_cen_grid_fluid, &
+              multi_volume_fluid, & ! intersection of target with grid.
+              multi_cen_fluid, &
+              geom_xtetlist_uncapt(1,1,1,tid+1), &
+              nmax, &
+              nmax, &
+              SDIM)
+
+            else
+             print *,"any_elastic invalid: ",any_elastic
+             stop
+            endif
+
+
              ! normdir=0..sdim-1
             do im=1,num_materials
              vofcomp=(im-1)*ngeom_recon+1
   
               ! fluid materials tessellate the domain. 
-             if (is_rigid(im).eq.0) then
+             if ((is_rigid(im).eq.0).and. &
+                 (is_elastic(im).eq.0)) then
               LS_voltotal_depart=LS_voltotal_depart+ &
-               multi_volume_grid(im)
-             else if (is_rigid(im).eq.1) then
+               multi_volume_grid_fluid(im)
+             else if ((is_rigid(im).eq.1).or. &
+                      (is_elastic(im).eq.1)) then
               ! do nothing
              else
               print *,"is_rigid invalid GODUNOV_3D.F90: ", &
                im,is_rigid(im)
+              print *,"or is_elastic invalid GODUNOV_3D.F90: ", &
+               im,is_elastic(im)
               stop
              endif
 
@@ -14963,7 +15022,10 @@ stop
              do im=1,num_materials 
               vofcomp=(im-1)*ngeom_recon+1
               print *,"im,multi_volume_grid ",im,multi_volume_grid(im)
+              print *,"im,multi_volume_grid_fluid ", &
+                im,multi_volume_grid_fluid(im)
               print *,"im,multi_volume ",im,multi_volume(im)
+              print *,"im,multi_volume_fluid ",im,multi_volume_fluid(im)
               print *,"im,vfrac ",im,mofdata_grid(vofcomp)
               print *,"im,flag ",im,mofdata_grid(vofcomp+SDIM+1)
              enddo
@@ -15031,6 +15093,8 @@ stop
                print *,"im ",im
                print *,"donate_density ",donate_density
                print *,"multi_volume_grid(im) ",multi_volume_grid(im)
+               print *,"multi_volume_grid_fluid(im) ", &
+                 multi_volume_grid_fluid(im)
                print *,"massdepart ",massdepart
                stop
               endif
@@ -15044,6 +15108,8 @@ stop
                print *,"im ",im
                print *,"donate_density ",donate_density
                print *,"multi_volume_grid(im) ",multi_volume_grid(im)
+               print *,"multi_volume_grid_fluid(im) ", &
+                multi_volume_grid_fluid(im)
                print *,"massdepart_mom ",massdepart_mom
                stop
               endif
@@ -15055,7 +15121,7 @@ stop
                mom2(veldir)=multi_volume_grid(im)*massdepart_mom*donate_data
               enddo  ! veldir=1..sdim (velocity)
 
-              massdepart=massdepart*multi_volume_grid(im)
+              massdepart=massdepart*multi_volume_grid_fluid(im)
               massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
               veldata(CISLCOMP_DEN_MOM+im)= &
@@ -15092,7 +15158,7 @@ stop
                
                veldata(CISLCOMP_STATES+statecomp_data)= &
                 veldata(CISLCOMP_STATES+statecomp_data)+ & 
-                multi_volume_grid(im)*donate_data
+                multi_volume_grid_fluid(im)*donate_data
 
                if (istate.eq.ENUM_TEMPERATUREVAR+1) then
                 if (veldata(CISLCOMP_STATES+statecomp_data).ge.zero) then
@@ -15168,16 +15234,16 @@ stop
               vofcomp=(im-1)*ngeom_raw+1
               ! material volume from departure (donating) region
               veldata(CISLCOMP_MOF+vofcomp)= &
-               veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid(im)
+               veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid_fluid(im)
               ! material volume from target (accepting) region
               veldata(CISLCOMP_FTARGET+im)= &
-               veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
+               veldata(CISLCOMP_FTARGET+im)+multi_volume_fluid(im)
 
               if (is_compressible_mat(im).eq.0) then
                !do nothing
               else if (is_compressible_mat(im).eq.1) then
                refine_vol_bucket(im_refine_density)= &
-                refine_vol_bucket(im_refine_density)+multi_volume(im)
+                refine_vol_bucket(im_refine_density)+multi_volume_fluid(im)
               else
                print *,"is_compressible_mat(im) invalid"
                stop
@@ -15188,7 +15254,7 @@ stop
               do dir2=1,SDIM
                veldata(CISLCOMP_MOF+vofcomp+dir2)= &
                 veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
-                multi_volume(im)*multi_cen(dir2,im)
+                multi_volume_fluid(im)*multi_cen_fluid(dir2,im)
               enddo 
 
               do veldir=1,SDIM
@@ -15361,13 +15427,16 @@ stop
         volmat_depart_cor(im)=volmat_depart(im)
 
          ! fluid materials tessellate the domain.
-        if (is_rigid(im).eq.0) then
+        if ((is_rigid(im).eq.0).and. &
+            (is_elastic(im).eq.0)) then
          voltotal_target=voltotal_target+volmat_target(im)
          voltotal_depart=voltotal_depart+volmat_depart(im)
-        else if (is_rigid(im).eq.1) then
+        else if ((is_rigid(im).eq.1).or. &
+                 (is_elastic(im).eq.1)) then
          ! do nothing
         else
-         print *,"is_rigid invalid GODUNOV_3D.F90"
+         print *,"is_rigid invalid GODUNOV_3D.F90 ",im,is_rigid(im)
+         print *,"or is_elastic invalid GODUNOV_3D.F90 ",im,is_elastic(im)
          stop
         endif
        enddo ! im=1..num_materials
@@ -16934,11 +17003,11 @@ stop
               ! materials, but not the solid materials.  Solid materials are
               ! immersed into the domain.
 
-            tessellate_dest=TESSELLATE_FLUIDS_ELASTIC
+            tessellate_dest=TESSELLATE_FLUIDS
 
             call multi_get_volume_grid_and_map( &
               tessellate_source, & !TESSELLATE_FLUIDS
-              tessellate_dest, & !TESSELLATE_FLUIDS_ELASTIC
+              tessellate_dest, & !TESSELLATE_FLUIDS
               tid, &
               normdir, & ! normdir=0..sdim-1
               coeff, &
@@ -16960,13 +17029,18 @@ stop
              vofcomp=(im-1)*ngeom_recon+1
   
               ! fluid materials tessellate the domain. 
-             if (is_rigid(im).eq.0) then 
+             if ((is_rigid(im).eq.0).and. &
+                 (is_elastic(im).eq.0)) then 
               LS_voltotal_depart=LS_voltotal_depart+ &
                multi_volume_grid(im)
-             else if (is_rigid(im).eq.1) then
+             else if ((is_rigid(im).eq.1).or. &
+                      (is_elastic(im).eq.1)) then
               ! do nothing
              else
-              print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
+              print *,"is_rigid invalid GODUNOV_3D.F90: ", &
+                im,is_rigid(im)
+              print *,"or is_elastic invalid GODUNOV_3D.F90: ", &
+                im,is_elastic(im)
               stop
              endif
 
@@ -17075,13 +17149,18 @@ stop
         volmat_depart_cor(im)=volmat_depart(im)
 
          ! fluid materials tessellate the domain.
-        if (is_rigid(im).eq.0) then
+        if ((is_rigid(im).eq.0).and. &
+            (is_elastic(im).eq.0)) then 
          voltotal_target=voltotal_target+volmat_target(im)
          voltotal_depart=voltotal_depart+volmat_depart(im)
-        else if (is_rigid(im).eq.1) then
+        else if ((is_rigid(im).eq.1).or. &
+                 (is_elastic(im).eq.1)) then
          ! do nothing
         else
-         print *,"is_rigid invalid GODUNOV_3D.F90"
+         print *,"is_rigid invalid GODUNOV_3D.F90: ", &
+          im,is_rigid(im)
+         print *,"or is_elastic invalid GODUNOV_3D.F90: ", &
+          im,is_elastic(im)
          stop
         endif
        enddo ! im=1..num_materials
