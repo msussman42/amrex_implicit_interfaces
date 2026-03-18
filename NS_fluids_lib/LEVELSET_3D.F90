@@ -254,7 +254,9 @@ stop
          if (is_rigid(im_primary_sub_stencil).eq.0) then
 
           if ((is_elastic(im_primary_sub_stencil).eq.0).or. &
-              (is_rigid(CP%im_hard_material).eq.1)) then
+              ((is_rigid(CP%im_hard_material).eq.1).and. &
+               (is_elastic(CP%im_hard_material).eq.0).and. &
+               (is_elastic(im_primary_sub_stencil).eq.1))) then
          
            if (shortest_dist_to_fluid.eq.-one) then
             im_fluid_critical=im_primary_sub_stencil
@@ -274,11 +276,12 @@ stop
                      shortest_dist_to_fluid) then
              ! do nothing
             else
-             print *,"dist_stencil_bulk invalid"
+             print *,"dist_stencil_to_bulk invalid: ",dist_stencil_to_bulk
              stop
             endif
            else
-            print *,"shortest_dist_to_fluid invalid"
+            print *,"shortest_dist_to_fluid invalid ", &
+               shortest_dist_to_fluid
             stop
            endif
 
@@ -317,7 +320,7 @@ stop
          enddo
 
         else
-         print *,"shortest_dist_to_fluid invalid"
+         print *,"shortest_dist_to_fluid invalid: ",shortest_dist_to_fluid
          stop
         endif
 
@@ -20894,7 +20897,8 @@ stop
       integer im_primary_stencil
       integer im_solid_max
       integer im_hard_material
-      integer check_elastic,im_elastic_max,trust_flag
+      integer check_elastic,im_elastic_max
+      integer trust_flag
       real(amrex_real) sum_vfrac_elastic
       integer vofcomp,vofcompraw
       integer i1,j1,k1
@@ -21016,7 +21020,8 @@ stop
           (LS_extrap_iter.lt.num_LS_extrap_iter)) then
       ! do nothing
       else
-       print *,"LS_extrap_iter invalid ",LS_extrap_iter
+       print *,"LS_extrap_iter invalid fort_renormalize_prescribe ", &
+           LS_extrap_iter
        print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
        print *,"renormalize_only=",renormalize_only
        stop
@@ -21024,7 +21029,7 @@ stop
       if (num_LS_extrap.ge.0) then
        ! do nothing
       else
-       print *,"num_LS_extrap invalid"
+       print *,"num_LS_extrap invalid fort_renormalize_prescribe"
        print *,"LS_extrap_iter invalid ",LS_extrap_iter
        print *,"num_LS_extrap_iter invalid: ",num_LS_extrap_iter
        print *,"renormalize_only=",renormalize_only
@@ -21038,7 +21043,7 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid102"
+       print *,"bfact invalid fort_renormalize_prescribe ",bfact
        stop
       endif 
 
@@ -21047,7 +21052,8 @@ stop
       if (ngrow_distance.ge.4) then
        ! do nothing
       else
-       print *,"ngrow_distance invalid: ",ngrow_distance
+       print *,"ngrow_distance invalid fort_renormalize_prescribe: ", &
+               ngrow_distance
        stop
       endif
 
@@ -21380,7 +21386,9 @@ stop
            if (constant_density_all_time(im).eq.1) then
             ! do nothing
            else
-            print *,"constant_density_all_time(im) invalid"
+            print *,"constant_density_all_time(im) invalid: ", &
+               im,constant_density_all_time(im)
+            print *,"im,is_rigid(im) ",im,is_rigid(im)
             print *,"in: fort_renormalize_prescribe"
             stop
            endif
@@ -21538,7 +21546,8 @@ stop
 
 
          ! 1. prescribe solid materials. (F,X,LS,velocity,temperature)
-         ! 2. extend the fluid level set functions into the solids.
+         ! 2. extend the fluid level set functions into the solids and 
+         !    elastic materials..
          !   (F,X,LS fluid)
         if (renormalize_only.eq.0) then
 
@@ -21763,7 +21772,11 @@ stop
               (partid_max.lt.1).or. &
               (partid_max.gt.nparts).or. &
               (is_rigid(im_solid_max).ne.1)) then
-           print *,"im_solid_max or partid_max became corrupt"
+           print *,"im_solid_max/partid_max corrupt fort_renormalize_pescribe "
+           print *,"im_solid_max=",im_solid_max
+           print *,"partid_max=",partid_max
+           print *,"is_rigid(im_solid_max) ", &
+              im_solid_max,is_rigid(im_solid_max)
            stop
           endif
 
@@ -21790,10 +21803,14 @@ stop
 
           else if (is_rigid(im_solid_max).eq.0) then
            print *,"expecting is_rigid(im_solid_max)=1"
+           print *,"is_rigid(im_solid_max) ", &
+              im_solid_max,is_rigid(im_solid_max)
            stop
           else
            print *,"is_rigid(im_solid_max) invalid: ", &
             im_solid_max,is_rigid(im_solid_max)
+           print *,"is_rigid(im_solid_max) ", &
+              im_solid_max,is_rigid(im_solid_max)
            stop
           endif
 
@@ -21842,7 +21859,8 @@ stop
             mofnew(vofcomp+istate-1)=zero
            enddo
           else
-           print *,"is_rigid invalid LEVELSET_3D.F90"
+           print *,"is_rigid invalid LEVELSET_3D.F90 ", &
+              im,is_rigid(im)
            stop
           endif
          enddo ! im=1..num_materials
@@ -21858,7 +21876,8 @@ stop
                    (sum_vfrac_solid_new.le.half)) then
            ! do nothing
           else
-           print *,"LS_solid_new or sum_vfrac_solid_new invalid"
+           print *,"LS_solid_new or sum_vfrac_solid_new invalid ", &
+             im_solid_max,LS_solid_new(im_solid_max),sum_vfrac_solid_new
            stop
           endif 
          else if (im_solid_max.eq.0) then
@@ -21923,7 +21942,8 @@ stop
             censolid_new(im,dir)=centroid(dir)-cencell(dir)
            enddo
            do dir=1,SDIM
-            nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
+            nslope_solid(dir)= &
+               LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
            enddo
            if (vfrac_solid_new(im_hard_material).le.VOFTOL) then
             vfrac_solid_new(im_hard_material)=zero
@@ -21961,9 +21981,10 @@ stop
 
           cell_CP_parm%im_hard_material=im_hard_material
 
-            ! inner loop is needed since the volume fraction
-            ! at (i,j,k) depends on the levelset function values
+            ! inner loop is needed since the fluid volume fraction
+            ! at (i,j,k) depends on the fluid levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
+            ! LS_extrap_radius=1
           do k1=LSstenlo(3),LSstenhi(3)
           do j1=LSstenlo(2),LSstenhi(2)
           do i1=LSstenlo(1),LSstenhi(1)
@@ -22027,8 +22048,10 @@ stop
            if ((is_rigid(im_primary_stencil).eq.0).and. & 
                (at_center.eq.0)) then
 
-            if ((is_rigid(im_hard_material).eq.1).or. &
-                (is_elastic(im_primary_stencil).eq.0)) then
+            if ((is_elastic(im_primary_stencil).eq.0).or. &
+                ((is_rigid(im_hard_material).eq.1).and. &
+                 (is_elastic(im_hard_material).eq.0).and. &
+                 (is_elastic(im_primary_stencil).eq.1))) then
 
              trust_flag=1
 
@@ -22056,17 +22079,61 @@ stop
             stop
            endif 
            
-           if (trust_flag.eq.0) then
-
-            do im=1,num_materials
-             LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
-            enddo
+           if (trust_flag.eq.0) then !extrapolate fluid to the stencil cell
 
             if (im_fluid_critical.eq.0) then
-             ! do nothing
+             do im=1,num_materials
+              LS_extend(D_DECL(i1,j1,k1),im)=LS_predict(im) !preven uninit.
+             enddo
             else if ((im_fluid_critical.ge.1).and. &
                      (im_fluid_critical.le.num_materials)) then
              if (is_rigid(im_fluid_critical).eq.0) then
+              if ((is_elastic(im_fluid_critical).eq.0).or. &
+                  ((is_rigid(im_hard_material).eq.1).and. &
+                   (is_elastic(im_hard_material).eq.0).and. &
+                   (is_elastic(im_fluid_critical).eq.1))) then
+
+               !LS_virtual_new initialized in "interp_fluid_LS"
+               do im=1,num_materials
+                LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
+               enddo
+
+              else
+               print *,"im_fluid_critical invalid: ",im_fluid_critical
+               print *,"im_hard_material: ",im_hard_material
+               stop
+              endif
+             else
+              print *,"is_rigid(im_fluid_critical) invalid: ", &
+                im_fluid_critical,is_rigid(im_fluid_critical)
+              stop
+             endif
+            else
+             print *,"im_fluid_critical invalid ",im_fluid_critical
+             stop
+            endif
+
+           else if (trust_flag.eq.1) then !stencil cell already fluid
+
+            im_fluid_critical=im_primary_stencil
+
+           else
+            print *,"trust_flag invalid ",trust_flag
+            stop
+           endif
+
+           if (im_fluid_critical.eq.0) then
+            ! do nothing
+           else if ((im_fluid_critical.ge.1).and. &
+                    (im_fluid_critical.le.num_materials)) then
+
+            if (is_rigid(im_fluid_critical).eq.0) then
+
+             if ((is_elastic(im_fluid_critical).eq.0).or. &
+                 ((is_rigid(im_hard_material).eq.1).and. &
+                  (is_elastic(im_hard_material).eq.0).and. &
+                  (is_elastic(im_fluid_critical).eq.1))) then
+
               if (im1_substencil.eq.0) then
                im1_substencil=im_fluid_critical
               else if ((im1_substencil.ge.1).and. &
@@ -22077,25 +22144,26 @@ stop
                 im2_substencil=im_fluid_critical
                endif
               else
-               print *,"im1_substencil invalid"
+               print *,"im1_substencil invalid: ",im1_substencil
                stop
               endif
+
              else
-              print *,"is_rigid(im_fluid_critical) invalid"
+              print *,"im_fluid_critical invalid: ",im_fluid_critical
+              print *,"im_hard_material: ",im_hard_material
               stop
              endif
+
             else
-             print *,"im_fluid_critical invalid"
+             print *,"is_rigid(im_fluid_critical) invalid: ", &
+               im_fluid_critical,is_rigid(im_fluid_critical)
              stop
             endif
-
-           else if (trust_flag.eq.1) then
-            ! do nothing
            else
-            print *,"trust_flag invalid ",trust_flag
+            print *,"im_fluid_critical invalid"
             stop
            endif
-                           
+
           enddo
           enddo
           enddo ! i1,j1,k1=LSstenlo ... LSstenhi
@@ -22103,7 +22171,7 @@ stop
 
           if (im1_substencil.eq.0) then
 
-           !do nothing
+           !do nothing (no fluids found nearby)
 
           else if ((im1_substencil.ge.1).and. &
                    (im1_substencil.le.num_materials)) then
@@ -22138,10 +22206,8 @@ stop
               fort_tension,user_tension, &
               local_temperature)
 
-            if ((is_rigid(im).eq.0).and. &
-                (is_elastic(im).eq.0).and. &
-                (is_rigid(im_opp).eq.0).and. &
-                (is_elastic(im_opp).eq.0)) then
+            if ((is_rigid_CL(im).eq.0).and. &
+                (is_rigid_CL(im_opp).eq.0)) then
 
              ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
              ! theta_{ik}=0 => material i wets material k.
@@ -22164,10 +22230,8 @@ stop
               stop
              endif
 
-            else if ((is_rigid(im).eq.1).or. &
-                     (is_elastic(im).eq.1).or. &
-                     (is_rigid(im_opp).eq.1).or. &
-                     (is_elastic(im_opp).eq.1)) then
+            else if ((is_rigid_CL(im).eq.1).or. &
+                     (is_rigid_CL(im_opp).eq.1)) then
              !do nothing
             else
              print *,"im or im_opp invalid:",im,im_opp
@@ -22199,8 +22263,10 @@ stop
               ! do nothing
             else if (is_rigid(im).eq.0) then
 
-             if ((is_elastic(im_hard_material).eq.0).or. &
-                 (is_elastic(im).eq.0)) then
+             if ((is_elastic(im).eq.0).or. &
+                 ((is_rigid(im_hard_material).eq.1).and. &
+                  (is_elastic(im_hard_material).eq.0).and. &
+                  (is_elastic(im).eq.1))) then
 
               LS_virtual_max=-99999.0
               im_primary_stencil=0
@@ -22209,8 +22275,10 @@ stop
                 ! do nothing
                else if (is_rigid(im_opp).eq.0) then
 
-                if ((is_rigid(im_hard_material).eq.1).or. &
-                    (is_elastic(im_opp).eq.0)) then 
+                if ((is_elastic(im_opp).eq.0).or. &
+                    ((is_rigid(im_hard_material).eq.1).and. &
+                     (is_elastic(im_hard_material).eq.0).and. &
+                     (is_elastic(im_opp).eq.1))) then
 
                  if (im.ne.im_opp) then
                   if (im_primary_stencil.eq.0) then
@@ -22242,7 +22310,8 @@ stop
                  stop
                 endif
                else
-                print *,"is_rigid invalid LEVELSET_3D.F90: ",im_opp,is_rigid(im_opp)
+                print *,"is_rigid invalid LEVELSET_3D.F90: ", &
+                        im_opp,is_rigid(im_opp)
                 stop
                endif
               enddo ! im_opp=1..num_materials
@@ -22690,7 +22759,7 @@ stop
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       if (bfact.lt.1) then
-       print *,"bfact invalid103"
+       print *,"bfact invalid fort_purgeflotsam ",bfact
        stop
       endif
       if (num_state_base.ne.2) then
@@ -22698,11 +22767,11 @@ stop
        stop
       endif
       if (level.lt.0) then
-       print *,"level invalid purge flotsam 1"
+       print *,"level invalid purge flotsam 1 ",level
        stop
       endif
       if (level.gt.finest_level) then
-       print *,"finest_level invalid purge flotsam 2"
+       print *,"finest_level invalid purge flotsam 2 ",finest_level
        stop
       endif
 
@@ -22731,7 +22800,7 @@ stop
         if (volgrid.gt.zero) then
          !do nothing
         else
-         print *,"volgrid invalid: ",volgrid
+         print *,"volgrid invalid fort_purgeflotsam: ",volgrid
          stop
         endif
 

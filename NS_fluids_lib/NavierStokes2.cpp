@@ -6810,6 +6810,11 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 #ifdef AMREX_PARTICLES
 
    //calling from NavierStokes::prescribe_solid_geometryALL
+
+  if (material_extend_velocity_flag==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting material_extend_velocity_flag==0 if particles");
    
   int local_redistribute_main=0; 
 
@@ -7402,10 +7407,10 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-// trunate_volume_fractions:
-// default: tessellating fluid => default==1
-//          non-tesselating or tesselating solid => default==0
-//  in: LEVELSET_3D.F90
+// F<VOFTOL => F=0.0
+// F>1-VOFTOL => F=1.0
+// sum F_fluid=1  sum F_solid <=1
+// fort_purgeflotsam is declared in: LEVELSET_3D.F90
    fort_purgeflotsam(
      local_delta_mass[tid_current].dataPtr(),
      &level,&finest_level,
