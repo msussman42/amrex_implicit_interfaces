@@ -25504,6 +25504,11 @@ contains
             print *,"im_tessellate invalid: ",im_tessellate
             stop
            endif
+          else if (im.eq.im_opp) then
+           !do nothing
+          else
+           print *,"im or im_opp invalid: ",im,im_opp
+           stop
           endif
          else if ((is_rigid_local(im_opp).eq.1).or. &
                   (is_elastic_local(im_opp).eq.1)) then
