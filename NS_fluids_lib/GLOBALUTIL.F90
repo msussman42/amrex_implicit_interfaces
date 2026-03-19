@@ -6757,6 +6757,316 @@ end subroutine print_visual_descriptor
       return
       end subroutine checkbound3D_array
 
+
+       ! called from: get_mach_number, 
+       !        fort_derturbvisc, fort_derconductivity,
+       !        fort_combinevel,interpfabFWEIGHT,
+       !        interpfabTEMP,fort_convertmaterial,
+       !        get_elasticmask_and_elasticmaskpart
+      subroutine get_primary_material_VFRAC( &
+          VFRAC, &
+          im_primary)
+      use probcommon_module
+ 
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: VFRAC(num_materials)
+      integer, INTENT(out) :: im_primary
+      integer im
+      integer im_crit_fluid,im_crit_solid,im_crit_elastic
+      real(amrex_real) sum_vfrac_fluid
+      real(amrex_real) sum_vfrac_solid
+      real(amrex_real) sum_vfrac_elastic
+      real(amrex_real) crit_vfrac_fluid
+      real(amrex_real) crit_vfrac_solid
+      real(amrex_real) crit_vfrac_elastic
+      real(amrex_real) VOFSUM
+      integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+      enddo ! im=1..num_materials
+
+      im_crit_fluid=0
+      im_crit_solid=0
+      im_crit_elastic=0
+
+      sum_vfrac_solid=zero
+      sum_vfrac_elastic=zero
+      sum_vfrac_fluid=zero
+
+      crit_vfrac_solid=zero
+      crit_vfrac_elastic=zero
+      crit_vfrac_fluid=zero
+
+      VOFSUM=zero
+
+      do im=1,num_materials
+
+       if ((VFRAC(im).ge.-EPS_8_4).and. &
+           (VFRAC(im).le.one+EPS_8_4)) then
+        ! do nothing
+       else
+        print *,"VFRAC out of range: ",im,VFRAC(im)
+        stop
+       endif
+
+       if (is_rigid_local(im).eq.1) then
+
+        if (im_crit_solid.eq.0) then
+         im_crit_solid=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_solid)) then
+          im_crit_solid=im
+         endif
+        endif
+        sum_vfrac_solid=sum_vfrac_solid+VFRAC(im)
+        crit_vfrac_solid=VFRAC(im_crit_solid)
+
+       else if (is_elastic_local(im).eq.1) then
+
+        if (im_crit_elastic.eq.0) then
+         im_crit_elastic=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_elastic)) then
+          im_crit_elastic=im
+         endif
+        endif
+        sum_vfrac_elastic=sum_vfrac_elastic+VFRAC(im)
+        crit_vfrac_elastic=VFRAC(im_crit_elastic)
+
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.0)) then
+
+        if (im_crit_fluid.eq.0) then
+         im_crit_fluid=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_fluid)) then
+          im_crit_fluid=im
+         endif
+        endif
+        sum_vfrac_fluid=sum_vfrac_fluid+VFRAC(im)
+        crit_vfrac_fluid=VFRAC(im_crit_fluid)
+
+       else
+        print *,"is_rigid_local or is_elastic_local invalid MOF.F90"
+        print *,"is_rigid_local=",is_rigid_local
+        print *,"is_elastic_local=",is_elastic_local
+        stop
+       endif
+       VOFSUM=VOFSUM+VFRAC(im)
+      enddo ! im=1..num_materials
+
+      if (sum_vfrac_fluid.gt.one+EPS3) then
+       print *,"sum_vfrac_fluid invalid"
+       print *,"put breakpoint here to see caller"
+       print *,"sum_vfrac_fluid=",sum_vfrac_fluid
+       print *,"sum_vfrac_elastic=",sum_vfrac_elastic
+       print *,"sum_vfrac_solid=",sum_vfrac_solid
+       print *,"crit_vfrac_fluid=",crit_vfrac_fluid
+       print *,"crit_vfrac_elastic=",crit_vfrac_elastic
+       print *,"crit_vfrac_solid=",crit_vfrac_solid
+       print *,"im_crit_fluid=",im_crit_fluid
+       print *,"im_crit_elastic=",im_crit_elastic
+       print *,"im_crit_solid=",im_crit_solid
+       stop
+      endif
+      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid-sum_vfrac_elastic).gt. &
+          EPS3) then
+       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid, &
+         sum_vfrac_elastic
+       stop
+      endif
+      if ((im_crit_fluid.lt.1).or. &
+          (im_crit_fluid.gt.num_materials)) then
+       print *,"im_crit_fluid invalid: ",im_crit_fluid
+       stop
+      endif
+
+      if (sum_vfrac_solid.ge.half) then
+       im_primary=im_crit_solid
+      else if (sum_vfrac_elastic.ge.half) then
+       im_primary=im_crit_elastic
+      else if (sum_vfrac_solid+sum_vfrac_elastic.ge.half) then
+       if (sum_vfrac_solid.ge.sum_vfrac_elastic) then
+        im_primary=im_crit_solid
+       else
+        im_primary=im_crit_elastic
+       endif
+      else
+       im_primary=im_crit_fluid
+      endif
+
+      end subroutine get_primary_material_VFRAC
+
+
+      subroutine get_primary_material_group(dx,LS_ptr, &
+         im_primary,im_secondary,im_tertiary,i,j,k,vof_flag)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: i,j,k,vof_flag
+      integer, INTENT(out) :: im_primary,im_secondary,im_tertiary
+      real(amrex_real) :: LS(num_materials)
+      real(amrex_real) :: max_second,max_third
+      integer i1,j1,k1,k1lo,k1hi,rank_loop
+      integer im,vofcomp,im_primary_local
+
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      endif
+      im_primary=0
+      im_secondary=0
+      im_tertiary=0
+      max_second=zero
+      max_third=zero
+
+      do im=1,num_materials
+       if (vof_flag.eq.0) then
+        LS(im)=LS_ptr(D_DECL(i,j,k),im)
+       else if (vof_flag.eq.1) then
+        vofcomp=(im-1)*ngeom_recon+1
+        LS(im)=LS_ptr(D_DECL(i,j,k),vofcomp)
+       else
+        print *,"vof_flag invalid"
+        stop
+       endif
+      enddo !im=1..num_materials
+
+      if (vof_flag.eq.0) then
+       call get_primary_material(dx,LS,im_primary)
+      else if (vof_flag.eq.1) then
+       call get_primary_material_VFRAC(LS,im_primary)
+      else
+       print *,"vof_flag invalid"
+       stop
+      endif
+
+      if ((im_primary.ge.1).and. &
+          (im_primary.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_primary invalid ",im_primary
+       stop
+      endif
+
+      do rank_loop=0,1
+
+       do i1=-1,1
+       do j1=-1,1
+       do k1=k1lo,k1hi
+        do im=1,num_materials
+         if (vof_flag.eq.0) then
+          LS(im)=LS_ptr(D_DECL(i+i1,j+j1,k+k1),im)
+         else if (vof_flag.eq.1) then
+          vofcomp=(im-1)*ngeom_recon+1
+          LS(im)=LS_ptr(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+         else
+          print *,"vof_flag invalid"
+          stop
+         endif
+        enddo !im=1..num_materials
+        if (vof_flag.eq.0) then
+         call get_primary_material(dx,LS,im_primary_local)
+        else if (vof_flag.eq.1) then
+         call get_primary_material_VFRAC(LS,im_primary_local)
+        else
+         print *,"vof_flag invalid"
+         stop
+        endif
+        if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+         !do nothing
+        else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
+         if (im_primary_local.ne.im_primary) then
+
+          if (rank_loop.eq.0) then
+
+           if (im_secondary.eq.0) then
+            im_secondary=im_primary_local
+            max_second=LS(im_secondary)
+           else if ((im_secondary.ge.1).and. &
+                    (im_secondary.le.num_materials)) then
+            if (LS(im_primary_local).ge.max_second) then
+             im_secondary=im_primary_local
+             max_second=LS(im_secondary)
+            else if (LS(im_primary_local).le.max_second) then
+             !do nothing
+            else
+             print *,"LS invalid: ",LS
+             stop
+            endif
+           else
+            print *,"im_secondary invalid ",im_secondary
+            stop
+           endif
+
+          else if (rank_loop.eq.1) then
+           
+           if (im_primary_local.ne.im_secondary) then 
+            if (im_tertiary.eq.0) then
+             im_tertiary=im_primary_local
+             max_third=LS(im_tertiary)
+            else if ((im_tertiary.ge.1).and. &
+                     (im_tertiary.le.num_materials)) then
+             if (LS(im_primary_local).ge.max_third) then
+              im_tertiary=im_primary_local
+              max_third=LS(im_tertiary)
+             else if (LS(im_primary_local).le.max_third) then
+              !do nothing
+             else
+              print *,"LS invalid: ",LS
+              stop
+             endif
+            else
+             print *,"im_tertiary invalid ",im_tertiary
+             stop
+            endif
+           else if (im_primary_local.eq.im_secondary) then
+            !do nothing
+           else
+            print *,"im_primary_local invalid ",im_primary_local
+            stop
+           endif
+
+          else
+           print *,"rank_loop invalid ",rank_loop
+           stop
+          endif
+
+         else if (im_primary_local.eq.im_primary) then
+          !do nothing
+         else
+          print *,"im_primary_local invalid ",im_primary_local
+          stop
+         endif
+        else
+         print *,"i1,j1,k1 invalid ",i1,j1,k1
+         stop
+        endif
+       enddo !k1
+       enddo !j1
+       enddo !i1
+
+      enddo !rank_loop=0,1 
+        
+      if (im_secondary.eq.0) then
+       im_secondary=num_materials+1
+      endif 
+      if (im_tertiary.eq.0) then
+       im_tertiary=num_materials+1
+      endif 
+
+      return
+      end subroutine get_primary_material_group
+
        ! grid_type=-1..5
       subroutine checkbound_array(lo,hi, &
        data_array, &

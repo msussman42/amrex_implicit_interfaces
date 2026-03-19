@@ -6732,7 +6732,7 @@ NavierStokes::read_params ()
        if (enable_spectral==0) {
         // do nothing
        } else if (enable_spectral==1) {
-        // do nothing
+        amrex::Error("spectral method not allowed if ice or fsi_rigid");
        } else
         amrex::Error("enable_spectral invalid");
 
@@ -6742,7 +6742,9 @@ NavierStokes::read_params ()
 
     if (enable_spectral==1) {
 
-     // do nothing
+     if (material_extend_velocity_flag>0) {
+      amrex::Error("cannot have elastic materials and enable_spectral==1");
+     }
 
     } else if (enable_spectral==0) {
 
@@ -17923,9 +17925,9 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
   amrex::Error("level invalid level_init_elasticmask_and_elasticmaskpart");
 
  resize_maskfiner(1,MASKCOEF_MF);
- VOF_Recon_resize(1); //output:SLOPE_RECON_MF
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
 
- debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
@@ -17953,9 +17955,10 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
 
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
- getStateDist_localMF(LSNEW_MF,1,cur_time_slab,local_caller_string);
+ getStateDist_localMF(LSNEW_MF,ngrow_distance,
+    cur_time_slab,local_caller_string);
 
- debug_ngrow(LSNEW_MF,1,local_caller_string);
+ debug_ngrow(LSNEW_MF,ngrow_distance,local_caller_string);
  if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
 
@@ -18047,7 +18050,7 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
 } // end subroutine level_init_elasticmask_and_elasticmaskpart
 
 
-// 1. called if "is_GFM_freezing_model"
+// 1. stefan_solver_init called if "is_GFM_freezing_model"
 //
 // 2. multiphase_project->allocate_project_variables->stefan_solver_init
 //    (project_option=SOLVETYPE_HEAT or SOLVETYPE_SPEC)
@@ -18211,11 +18214,25 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  const Real* dx = geom.CellSize();
 
- MultiFab* LSmf=getStateDist(1,cur_time_slab,local_caller_string);
+ MultiFab* LSmf_tessellate=nullptr;
+
+ MultiFab* LSmf=getStateDist(ngrow_distance,cur_time_slab,local_caller_string);
  if (LSmf->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("LSmf invalid ncomp");
- if (LSmf->nGrow()!=1)
-  amrex::Error("LSmf->nGrow()!=1");
+ if (LSmf->nGrow()!=ngrow_distance)
+  amrex::Error("LSmf->nGrow()!=ngrow_distance");
+
+ if (material_extend_velocity_flag==0) {
+  LSmf_tessellate=LSmf;
+ } else if (material_extend_velocity_flag>0) {
+  LSmf_tessellate=localMF[ELASTIC_FLUID_LEVELSET_MF];
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+
+ if (LSmf_tessellate->nComp()!=num_materials*(1+AMREX_SPACEDIM))
+  amrex::Error("LSmf_tessellate invalid ncomp");
+ if (LSmf_tessellate->nGrow()!=ngrow_distance)
+  amrex::Error("LSmf_tessellate->nGrow()!=ngrow_distance");
 
   // temperature and density for all of the materials.
  int nden=num_materials*num_state_material;
@@ -18261,13 +18278,13 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+ thread_class::init_d_numPts(LSmf_tessellate->boxArray().d_numPts());
  
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*LSmf_tessellate,use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -18287,7 +18304,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
    FArrayBox& denstatefab=(*state_var_mf)[mfi];
 
-   FArrayBox& lsfab=(*LSmf)[mfi];
+   FArrayBox& lsfab=(*LSmf_tessellate)[mfi];
    FArrayBox& T_fab=(*T_list_mf)[mfi];
    FArrayBox& TorY_fab=(*TorY_list_mf)[mfi];
 
