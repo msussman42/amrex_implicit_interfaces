@@ -5104,6 +5104,18 @@ stop
        print *,"num_state_base bad fort_init_elasticmask_and_elasticmaskpart"
        stop
       endif
+      if (ngrow_distance.ge.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance bad fort_init_elasticmask_and_elasticmaskpart"
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
@@ -5149,8 +5161,8 @@ stop
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cell_den_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cell_visc_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
  
       do dir=0,SDIM-1
        ii=0
@@ -5201,6 +5213,7 @@ stop
           ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
           ! this routine: fort_init_elasticmask_and_elasticmaskpart
          call get_elasticmask_and_elasticmaskpart( &
+          i-ii,j-jj,k-kk, &
           im_elastic_map, &
           num_FSI_outer_sweeps, &
           FSI_outer_sweeps, &
@@ -5215,8 +5228,8 @@ stop
           im_primary_left, &
           ireverse_left, &
           denstateleft, &
-          LSleft, &
-          VOFleft, &
+          LSnew_ptr, &
+          recon_ptr, &
           distribute_from_target, &
           complement_flag)
 
@@ -5229,6 +5242,7 @@ stop
           ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
           ! this routine: fort_init_elasticmask_and_elasticmaskpart
          call get_elasticmask_and_elasticmaskpart( &
+          i,j,k, &
           im_elastic_map, &
           num_FSI_outer_sweeps, &
           FSI_outer_sweeps, &
@@ -5243,8 +5257,8 @@ stop
           im_primary_right, &
           ireverse_right, &
           denstateright, &
-          LSright, &
-          VOFright, &
+          LSnew_ptr, &
+          recon_ptr, &
           distribute_from_target, &
           complement_flag)
 
@@ -9794,11 +9808,13 @@ stop
       real(amrex_real), pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(in) :: swept(DIMV(swept),num_materials)
       real(amrex_real), pointer :: swept_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
+      real(amrex_real), target, INTENT(in) :: &
+        LS(DIMV(LS),num_materials*(SDIM+1))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(in) :: T_fab(DIMV(T_fab),num_materials)
       real(amrex_real), pointer :: T_fab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: TorY_fab(DIMV(TorY_fab),num_materials)
+      real(amrex_real), target, INTENT(in) :: &
+        TorY_fab(DIMV(TorY_fab),num_materials)
       real(amrex_real), pointer :: TorY_fab_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), target, INTENT(out) :: Snew(DIMV(Snew),nstate)
@@ -9901,6 +9917,7 @@ stop
       real(amrex_real) T_or_Y_min_sanity
       real(amrex_real) thermal_k(num_materials)
       integer maskcell
+      integer, parameter :: tessellate_source=TESSELLATE_IGNORE_ISELASTIC
 
       snew_ptr=>snew
       coeff_ptr=>coeff
@@ -9938,14 +9955,26 @@ stop
        print *,"nstate invalid"
        stop
       endif
+      if (ngrow_distance.ge.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid fort_stefansolver: ",ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level or finest_level invalid stefan solver"
+       print *,"level or finest_level invalid fort_stefansolver"
        stop
       endif
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_stefansolver ",dt
        stop
       endif
        ! solidheat_flag==0 diffuse in solid
@@ -10004,7 +10033,7 @@ stop
       call checkbound_array(fablo,fabhi,swept_ptr,0,-1)
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
       T_fab_ptr=>T_fab
       call checkbound_array(fablo,fabhi,T_fab_ptr,1,-1)
       TorY_fab_ptr=>TorY_fab
@@ -10053,7 +10082,7 @@ stop
          LS_no_tess(im)=LS(D_DECL(i,j,k),im)
          thermal_k(im)=conductstate(D_DECL(i,j,k),im)
         enddo
-        call LS_tessellate(dx,LS_no_tess,LS_center,SDIM)
+        call LS_tessellate(dx,LS_no_tess,LS_center,SDIM,tessellate_source)
         im_primary=1
         do im=2,num_materials
          if (LS_center(im).gt.LS_center(im_primary)) then
@@ -10078,7 +10107,7 @@ stop
           do im=1,num_materials
            LS_no_tess(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
           enddo
-          call LS_tessellate(dx,LS_no_tess,LS_side,SDIM)
+          call LS_tessellate(dx,LS_no_tess,LS_side,SDIM,tessellate_source)
           im_side_primary=1
           do im=2,num_materials
            if (LS_side(im).gt.LS_side(im_side_primary)) then
@@ -10563,7 +10592,7 @@ stop
              do im_loop=1,num_materials
               LS_no_tess(im_loop)=LS(D_DECL(ic,jc,kc),im_loop)
              enddo
-             call LS_tessellate(dx,LS_no_tess,LS_side,SDIM)
+             call LS_tessellate(dx,LS_no_tess,LS_side,SDIM,tessellate_source)
 
              ! thermal diffusivity==0 where LS changes sign
              ! and latent_heat <> 0.
@@ -12309,6 +12338,7 @@ stop
           ! elasticmask=1 => do nothing
           ! get_elasticmask_and_elasticmaskpart declared in PROB.F90
           call get_elasticmask_and_elasticmaskpart( &
+           i,j,k, &
            im_elastic_map, &
            num_FSI_outer_sweeps, &
            FSI_outer_sweeps, &
@@ -12323,14 +12353,26 @@ stop
            im_primary_elasticmask, &
            ireverse, &
            local_denstate, &
-           LSCELL, &
-           VFRAC, &
+           LSalt_ptr, &
+           recon_alt_ptr, &
            distribute_from_target, &
            complement_flag)
 
-          if (ireverse.eq.-1) then!both source and dest can be distributed to.
+          if (im_opp.eq.num_materials+1) then
+
+           if (is_ice(im_primary_elasticmask).eq.1) then
+            elasticmask=zero
+           else
+            elasticmask=one
+           endif
+         
+           !both source and dest can be distributed to.
+          else if (ireverse.eq.-1) then
+
            elasticmask=one
-          else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
+
+          else if ((ireverse.eq.0).or. &
+                   (ireverse.eq.1)) then
            call get_iten(im,im_opp,iten)
            index_compare=iten+ireverse*num_interfaces-1
            if ((index_compare.ge.0).and. &
@@ -20234,7 +20276,8 @@ stop
       real(amrex_real), INTENT(in) :: time
  
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM) 
-      real(amrex_real), INTENT(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      real(amrex_real), INTENT(inout), target :: &
+        semflux(DIMV(semflux),ncfluxreg)
       real(amrex_real), pointer :: semflux_ptr(D_DECL(:,:,:),:)
 
        ! INTENT(inout) instead of INTENT(in) since

@@ -25548,11 +25548,12 @@ contains
 
       end subroutine FIX_LS_tessellate
 
-      subroutine LS_tessellate(dx,LS,LS_new,sdim)
+      subroutine LS_tessellate(dx,LS,LS_new,sdim,tessellate_source)
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: tessellate_source
       integer, INTENT(in) :: sdim
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: LS(num_materials)
@@ -25567,6 +25568,14 @@ contains
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        is_elastic_local(im)=is_elastic(im)
+       if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+        !do nothing
+       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        is_elastic_local(im)=0
+       else
+        print *,"tessellate_source invalid ",tessellate_source
+        stop
+       endif
       enddo ! im=1..num_materials
 
       call get_primary_material(dx,LS,im_primary)
@@ -27706,151 +27715,6 @@ contains
       return
       end subroutine multi_get_volumePOINT
 
-
-       ! called from: get_mach_number, 
-       !        fort_derturbvisc, fort_derconductivity,
-       !        fort_combinevel,interpfabFWEIGHT,
-       !        interpfabTEMP,fort_convertmaterial,
-       !        get_elasticmask_and_elasticmaskpart
-      subroutine get_primary_material_VFRAC( &
-          VFRAC, &
-          im_primary)
-      use probcommon_module
-      use geometry_intersect_module
-      use global_utility_module
- 
-      IMPLICIT NONE
-
-      real(amrex_real), INTENT(in) :: VFRAC(num_materials)
-      integer, INTENT(out) :: im_primary
-      integer im
-      integer im_crit_fluid,im_crit_solid,im_crit_elastic
-      real(amrex_real) sum_vfrac_fluid
-      real(amrex_real) sum_vfrac_solid
-      real(amrex_real) sum_vfrac_elastic
-      real(amrex_real) crit_vfrac_fluid
-      real(amrex_real) crit_vfrac_solid
-      real(amrex_real) crit_vfrac_elastic
-      real(amrex_real) VOFSUM
-      integer is_rigid_local(num_materials)
-      integer is_elastic_local(num_materials)
-
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-      enddo ! im=1..num_materials
-
-      im_crit_fluid=0
-      im_crit_solid=0
-      im_crit_elastic=0
-
-      sum_vfrac_solid=zero
-      sum_vfrac_elastic=zero
-      sum_vfrac_fluid=zero
-
-      crit_vfrac_solid=zero
-      crit_vfrac_elastic=zero
-      crit_vfrac_fluid=zero
-
-      VOFSUM=zero
-
-      do im=1,num_materials
-
-       if ((VFRAC(im).ge.-EPS_8_4).and. &
-           (VFRAC(im).le.one+EPS_8_4)) then
-        ! do nothing
-       else
-        print *,"VFRAC out of range: ",im,VFRAC(im)
-        stop
-       endif
-
-       if (is_rigid_local(im).eq.1) then
-
-        if (im_crit_solid.eq.0) then
-         im_crit_solid=im
-        else
-         if (VFRAC(im).gt.VFRAC(im_crit_solid)) then
-          im_crit_solid=im
-         endif
-        endif
-        sum_vfrac_solid=sum_vfrac_solid+VFRAC(im)
-        crit_vfrac_solid=VFRAC(im_crit_solid)
-
-       else if (is_elastic_local(im).eq.1) then
-
-        if (im_crit_elastic.eq.0) then
-         im_crit_elastic=im
-        else
-         if (VFRAC(im).gt.VFRAC(im_crit_elastic)) then
-          im_crit_elastic=im
-         endif
-        endif
-        sum_vfrac_elastic=sum_vfrac_elastic+VFRAC(im)
-        crit_vfrac_elastic=VFRAC(im_crit_elastic)
-
-       else if ((is_rigid_local(im).eq.0).and. &
-                (is_elastic_local(im).eq.0)) then
-
-        if (im_crit_fluid.eq.0) then
-         im_crit_fluid=im
-        else
-         if (VFRAC(im).gt.VFRAC(im_crit_fluid)) then
-          im_crit_fluid=im
-         endif
-        endif
-        sum_vfrac_fluid=sum_vfrac_fluid+VFRAC(im)
-        crit_vfrac_fluid=VFRAC(im_crit_fluid)
-
-       else
-        print *,"is_rigid_local or is_elastic_local invalid MOF.F90"
-        print *,"is_rigid_local=",is_rigid_local
-        print *,"is_elastic_local=",is_elastic_local
-        stop
-       endif
-       VOFSUM=VOFSUM+VFRAC(im)
-      enddo ! im=1..num_materials
-
-      if (sum_vfrac_fluid.gt.one+EPS3) then
-       print *,"sum_vfrac_fluid invalid"
-       print *,"put breakpoint here to see caller"
-       print *,"sum_vfrac_fluid=",sum_vfrac_fluid
-       print *,"sum_vfrac_elastic=",sum_vfrac_elastic
-       print *,"sum_vfrac_solid=",sum_vfrac_solid
-       print *,"crit_vfrac_fluid=",crit_vfrac_fluid
-       print *,"crit_vfrac_elastic=",crit_vfrac_elastic
-       print *,"crit_vfrac_solid=",crit_vfrac_solid
-       print *,"im_crit_fluid=",im_crit_fluid
-       print *,"im_crit_elastic=",im_crit_elastic
-       print *,"im_crit_solid=",im_crit_solid
-       stop
-      endif
-      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid-sum_vfrac_elastic).gt. &
-          EPS3) then
-       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid, &
-         sum_vfrac_elastic
-       stop
-      endif
-      if ((im_crit_fluid.lt.1).or. &
-          (im_crit_fluid.gt.num_materials)) then
-       print *,"im_crit_fluid invalid: ",im_crit_fluid
-       stop
-      endif
-
-      if (sum_vfrac_solid.ge.half) then
-       im_primary=im_crit_solid
-      else if (sum_vfrac_elastic.ge.half) then
-       im_primary=im_crit_elastic
-      else if (sum_vfrac_solid+sum_vfrac_elastic.ge.half) then
-       if (sum_vfrac_solid.ge.sum_vfrac_elastic) then
-        im_primary=im_crit_solid
-       else
-        im_primary=im_crit_elastic
-       endif
-      else
-       im_primary=im_crit_fluid
-      endif
-
-      end subroutine get_primary_material_VFRAC
 
       subroutine check_full_cell_vfrac( &
          vfrac, &

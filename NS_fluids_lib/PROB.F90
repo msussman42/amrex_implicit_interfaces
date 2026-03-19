@@ -182,6 +182,7 @@ stop
        !called from fort_init_elasticmask_and_elasticmaskpart (GODUNOV_3D.F90)
        !called from fort_tagexpansion (GODUNOV_3D.F90)
       subroutine get_elasticmask_and_elasticmaskpart( &
+        i,j,k, &
         im_elastic_map, &
         num_FSI_outer_sweeps, &
         FSI_outer_sweeps, &
@@ -196,14 +197,15 @@ stop
         im_primary, &
         ireverse, &
         denstate, &
-        LS, &
-        VOF, &
+        LS_ptr, &
+        VOF_ptr, &
         distribute_from_target, &
         complement_flag)
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: i,j,k
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
@@ -219,13 +221,16 @@ stop
       real(amrex_real), INTENT(out) :: elasticmask
       real(amrex_real), INTENT(out) :: elasticmaskpart
       real(amrex_real), INTENT(in) :: denstate(nden)
-      real(amrex_real), INTENT(in) :: LS(num_materials)
-      real(amrex_real), INTENT(in) :: VOF(num_materials)
+      real(amrex_real), INTENT(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), pointer :: VOF_ptr(D_DECL(:,:,:),:)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
       integer, INTENT(in) :: complement_flag
 
       real(amrex_real) dist_mask_override
+      integer vof_flag
       integer im_primary_vof
+      integer im_secondary_vof
+      integer im_tertiary_vof
       integer im_secondary
       integer im_tertiary
       integer im_ice
@@ -311,47 +316,17 @@ stop
 
       call get_dxmax(dx,bfact,dxmax)
 
-      call get_primary_material(dx,LS,im_primary)
-
        !get_elasticmask_and_elasticmaskpart
-      call get_primary_material_VFRAC( &
-       VOF, &
-       im_primary_vof)
+      vof_flag=0
+      call get_primary_material_group(dx,LS_ptr, &
+        im_primary,im_secondary,im_tertiary, &
+        i,j,k,vof_flag)
+      vof_flag=1
+      call get_primary_material_group(dx,VOF_ptr, &
+        im_primary_vof,im_secondary_vof,im_tertiary_vof, &
+        i,j,k,vof_flag)
 
-      call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
-
-      if ((im_primary.ge.1).and. &
-          (im_primary.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_primary invalid : ",im_primary
-       stop
-      endif
-
-      if ((im_secondary.ge.1).and. &
-          (im_secondary.le.num_materials)) then
-        ! get_tertiary_material is declared in MOF.F90
-        ! is_rigid(im_tertiary)=0
-       call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
-      else
-       print *,"im_secondary invalid : ",im_secondary
-       stop
-      endif
-
-      if ((im_tertiary.ge.0).and.(im_tertiary.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_tertiary invalid: ",im_tertiary
-       stop
-      endif
-
-      if (im_primary.eq.im_secondary) then
-       print *,"im_primary.eq.im_secondary"
-       stop
-      else if (im_primary.eq.im_tertiary) then
-       print *,"im_primary.eq.im_tertiary"
-       stop
-      else if (im_primary.lt.im_secondary) then
+      if (im_primary.lt.im_secondary) then
        im=im_primary
        im_opp=im_secondary
       else if (im_primary.gt.im_secondary) then
@@ -362,275 +337,304 @@ stop
        stop
       endif
 
-      call get_iten(im,im_opp,iten)
+      if ((im_opp.ge.1).and.(im_opp.le.num_materials)) then
 
-      do ireverse=0,1
-       LL(ireverse)= &
-        get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
-      enddo
+       call get_iten(im,im_opp,iten)
 
-      if ((is_ice(im).eq.0).and. &
-          (is_ice(im_opp).eq.0)) then
-       im_ice=0
-      else if ((is_ice(im).eq.1).and. &
-               (is_ice(im_opp).eq.0)) then
-       im_ice=im
-      else if ((is_ice(im).eq.0).and. &
-               (is_ice(im_opp).eq.1)) then
-       im_ice=im_opp
-      else if ((is_ice(im).eq.1).and. &
-               (is_ice(im_opp).eq.1)) then
-       im_ice=im_primary
-      else
-       print *,"is_ice invalid"
-       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
-       print *,"is_ice(im) ",is_ice(im)
-       print *,"is_ice(im_opp) ",is_ice(im_opp)
-       stop
-      endif
+       do ireverse=0,1
+        LL(ireverse)= &
+         get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+       enddo
+
+       if ((is_ice(im).eq.0).and. &
+           (is_ice(im_opp).eq.0)) then
+        im_ice=0
+       else if ((is_ice(im).eq.1).and. &
+                (is_ice(im_opp).eq.0)) then
+        im_ice=im
+       else if ((is_ice(im).eq.0).and. &
+                (is_ice(im_opp).eq.1)) then
+        im_ice=im_opp
+       else if ((is_ice(im).eq.1).and. &
+                (is_ice(im_opp).eq.1)) then
+        im_ice=im_primary
+       else
+        print *,"is_ice invalid"
+        print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+        print *,"is_ice(im) ",is_ice(im)
+        print *,"is_ice(im_opp) ",is_ice(im_opp)
+        stop
+       endif
      
-      if ((is_FSI_rigid(im).eq.0).and. &
-          (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=0
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=im
-      else if ((is_FSI_rigid(im).eq.0).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_opp
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_primary
-      else
-       print *,"is_FSI_rigid invalid"
-       print *,"im,im_opp ",im,im_opp
-       print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
-       print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
-       stop
-      endif
-
-      if ((is_FSI_elastic(im).eq.0).and. &
-          (is_FSI_elastic(im_opp).eq.0)) then
-       im_FSI_elastic=0
-      else if ((is_FSI_elastic(im).eq.1).and. &
-               (is_FSI_elastic(im_opp).eq.0)) then
-       im_FSI_elastic=im
-      else if ((is_FSI_elastic(im).eq.0).and. &
-               (is_FSI_elastic(im_opp).eq.1)) then
-       im_FSI_elastic=im_opp
-      else if ((is_FSI_elastic(im).eq.1).and. &
-               (is_FSI_elastic(im_opp).eq.1)) then
-       im_FSI_elastic=im_primary
-      else
-       print *,"is_FSI_elastic invalid"
-       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
-       print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
-       print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
-       stop
-      endif
-
-       !if SOLVETYPE_INITPROJ then
-       ! cc_group=cc*cc_elasticmask
-       !if SOLVETYPE_SMOOTH then
-       ! cc_group=cc*cc_elasticmask
-       !if SOLVETYPE_PRES then
-       ! if (num_FSI_outer_sweeps.eq.1) then
-       !  cc_group=cc*cc_elasticmask
-       ! else if (FSI_outer_sweeps>=1)
-       !  cc_group=cc*cc_elasticmaskpart
-       ! else if (FSI_outer_sweeps==0)
-       !  cc_group=cc
-      if (im_FSI_rigid.eq.im_primary) then
-
-       ireverse=-1
-       elasticmask=zero
-       elasticmaskpart=one
-       if (im_primary.le.im_rigid_CL) then
-        elasticmaskpart=zero
-       endif
-
-       ! a "non-ice" elastic material.
-      else if ((im_FSI_elastic.eq.im_primary).and. &
-               (im_ice.ne.im_primary)) then
-
-       ireverse=-1
-       elasticmask=zero
-       elasticmaskpart=one
-       if (im_primary.le.im_rigid_CL) then
-        elasticmaskpart=zero
-       endif
-
-      else if ((im_FSI_rigid.ne.im_primary).and. &
-               ((im_FSI_elastic.ne.im_primary).or. &
-                (im_ice.eq.im_primary))) then
-
-       if ((im_FSI_rigid.lt.0).or. &
-           (im_FSI_rigid.gt.num_materials).or. &
-           (im_FSI_elastic.lt.0).or. &
-           (im_FSI_elastic.gt.num_materials)) then
-        print *,"im_FSI_rigid or im_FSI_elastic invalid", &
-          im_FSI_rigid,im_FSI_elastic
+       if ((is_FSI_rigid(im).eq.0).and. &
+           (is_FSI_rigid(im_opp).eq.0)) then
+        im_FSI_rigid=0
+       else if ((is_FSI_rigid(im).eq.1).and. &
+                (is_FSI_rigid(im_opp).eq.0)) then
+        im_FSI_rigid=im
+       else if ((is_FSI_rigid(im).eq.0).and. &
+                (is_FSI_rigid(im_opp).eq.1)) then
+        im_FSI_rigid=im_opp
+       else if ((is_FSI_rigid(im).eq.1).and. &
+                (is_FSI_rigid(im_opp).eq.1)) then
+        im_FSI_rigid=im_primary
+       else
+        print *,"is_FSI_rigid invalid"
+        print *,"im,im_opp ",im,im_opp
+        print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
+        print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
         stop
        endif
 
-        ! either the primary or secondary material is "ice"
-       if ((im_ice.ge.1).and. &
-           (im_ice.le.num_materials)) then 
+       if ((is_FSI_elastic(im).eq.0).and. &
+           (is_FSI_elastic(im_opp).eq.0)) then
+        im_FSI_elastic=0
+       else if ((is_FSI_elastic(im).eq.1).and. &
+                (is_FSI_elastic(im_opp).eq.0)) then
+        im_FSI_elastic=im
+       else if ((is_FSI_elastic(im).eq.0).and. &
+                (is_FSI_elastic(im_opp).eq.1)) then
+        im_FSI_elastic=im_opp
+       else if ((is_FSI_elastic(im).eq.1).and. &
+                (is_FSI_elastic(im_opp).eq.1)) then
+        im_FSI_elastic=im_primary
+       else
+        print *,"is_FSI_elastic invalid"
+        print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+        print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
+        print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
+        stop
+       endif
 
-         ! if the associated "melt" material
-         ! is not the primary or secondary material,
-         ! then check if it is the tertiary material.
-        if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
-         if ((im_tertiary.ge.1).and. &
-             (im_tertiary.le.num_materials)) then
-          if (is_rigid(im_tertiary).eq.0) then
-           if (is_FSI_rigid(im_tertiary).eq.0) then
-            if (is_FSI_elastic(im_tertiary).eq.0) then
-             if (is_ice(im_tertiary).eq.0) then
-              if (im_ice.lt.im_tertiary) then
-               im=im_ice
-               im_opp=im_tertiary
-              else if (im_ice.gt.im_tertiary) then
-               im_opp=im_ice
-               im=im_tertiary
-              else
-               print *,"im_ice or im_tertiary invalid"
-               stop
-              endif
+        !if SOLVETYPE_INITPROJ then
+        ! cc_group=cc*cc_elasticmask
+        !if SOLVETYPE_SMOOTH then
+        ! cc_group=cc*cc_elasticmask
+        !if SOLVETYPE_PRES then
+        ! if (num_FSI_outer_sweeps.eq.1) then
+        !  cc_group=cc*cc_elasticmask
+        ! else if (FSI_outer_sweeps>=1)
+        !  cc_group=cc*cc_elasticmaskpart
+        ! else if (FSI_outer_sweeps==0)
+        !  cc_group=cc
+       if (im_FSI_rigid.eq.im_primary) then
 
-              call get_iten(im,im_opp,iten)
-              do ireverse=0,1
-               LL(ireverse)= &
-                get_user_latent_heat(iten+ireverse*num_interfaces, &
-                   room_temperature,1)
-              enddo
-             else if (is_ice(im_tertiary).eq.1) then
-              ! do nothing
-             else
-              print *,"is_ice(im_tertiary) invalid"
-              print *,"im_tertiary ",im_tertiary
-              print *,"is_ice(im_tertiary): ",is_ice(im_tertiary)
-              stop
-             endif
-            else if (is_FSI_elastic(im_tertiary).eq.1) then
-             ! do nothing
-            else
-             print *,"is_FSI_elastic(im_tertiary) invalid"
-             print *,"im_tertiary ",im_tertiary
-             print *,"is_FSI_elastic(im_tertiary): ", &
-              is_FSI_elastic(im_tertiary)
-             stop
-            endif
-           else if (is_FSI_rigid(im_tertiary).eq.1) then
-            ! do nothing
-           else
-            print *,"is_FSI_rigid(im_tertiary) invalid"
-            print *,"im_tertiary ",im_tertiary
-            print *,"is_FSI_rigid(im_tertiary): ", &
-             is_FSI_rigid(im_tertiary)
-            stop
-           endif
-          else
-           print *,"is_rigid(im_tertiary) invalid"
-           print *,"contradiction with: get_tertiary_material"
-           print *,"im_tertiary ",im_tertiary
-           print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
-           stop
-          endif
-         else if (im_tertiary.eq.0) then
-          print *,"expecting im_tertiary>=1 and <=num_materials"
-          print *,"im_tertiary: ",im_tertiary
-          print *,"im_ice: ",im_ice
-          print *,"im_FSI_rigid: ",im_FSI_rigid
-          print *,"im_FSI_elastic: ",im_FSI_elastic
-          stop
-         else
-          print *,"im_tertiary invalid: ",im_tertiary
-          stop
-         endif
-        else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
-         ! do nothing
-        else
-         print *,"LL invalid: ",LL
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+
+        ! a "non-ice" elastic material.
+       else if ((im_FSI_elastic.eq.im_primary).and. &
+                (im_ice.ne.im_primary)) then
+
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+
+       else if ((im_FSI_rigid.ne.im_primary).and. &
+                ((im_FSI_elastic.ne.im_primary).or. &
+                 (im_ice.eq.im_primary))) then
+
+        if ((im_FSI_rigid.lt.0).or. &
+            (im_FSI_rigid.gt.num_materials).or. &
+            (im_FSI_elastic.lt.0).or. &
+            (im_FSI_elastic.gt.num_materials)) then
+         print *,"im_FSI_rigid or im_FSI_elastic invalid", &
+           im_FSI_rigid,im_FSI_elastic
          stop
         endif
 
-         ! an associated melt material was not found:
-        if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+         ! either the primary or secondary material is "ice"
+        if ((im_ice.ge.1).and. &
+            (im_ice.le.num_materials)) then 
 
-         ireverse=-1
+          ! if the associated "melt" material
+          ! is not the primary or secondary material,
+          ! then check if it is the tertiary material.
+         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+          if ((im_tertiary.ge.1).and. &
+              (im_tertiary.le.num_materials)) then
+           if (is_rigid(im_tertiary).eq.0) then
+            if (is_FSI_rigid(im_tertiary).eq.0) then
+             if (is_FSI_elastic(im_tertiary).eq.0) then
+              if (is_ice(im_tertiary).eq.0) then
+               if (im_ice.lt.im_tertiary) then
+                im=im_ice
+                im_opp=im_tertiary
+               else if (im_ice.gt.im_tertiary) then
+                im_opp=im_ice
+                im=im_tertiary
+               else
+                print *,"im_ice or im_tertiary invalid"
+                stop
+               endif
 
-         if (is_ice(im_primary).eq.1) then ! in ice bulk region
-
-          elasticmask=zero
-          elasticmaskpart=one
-          if (im_primary.le.im_rigid_CL) then
-           elasticmaskpart=zero
+               call get_iten(im,im_opp,iten)
+               do ireverse=0,1
+                LL(ireverse)= &
+                 get_user_latent_heat(iten+ireverse*num_interfaces, &
+                    room_temperature,1)
+               enddo
+              else if (is_ice(im_tertiary).eq.1) then
+               ! do nothing
+              else
+               print *,"is_ice(im_tertiary) invalid"
+               print *,"im_tertiary ",im_tertiary
+               print *,"is_ice(im_tertiary): ",is_ice(im_tertiary)
+               stop
+              endif
+             else if (is_FSI_elastic(im_tertiary).eq.1) then
+              ! do nothing
+             else
+              print *,"is_FSI_elastic(im_tertiary) invalid"
+              print *,"im_tertiary ",im_tertiary
+              print *,"is_FSI_elastic(im_tertiary): ", &
+               is_FSI_elastic(im_tertiary)
+              stop
+             endif
+            else if (is_FSI_rigid(im_tertiary).eq.1) then
+             ! do nothing
+            else
+             print *,"is_FSI_rigid(im_tertiary) invalid"
+             print *,"im_tertiary ",im_tertiary
+             print *,"is_FSI_rigid(im_tertiary): ", &
+              is_FSI_rigid(im_tertiary)
+             stop
+            endif
+           else
+            print *,"is_rigid(im_tertiary) invalid"
+            print *,"contradiction with: get_tertiary_material"
+            print *,"im_tertiary ",im_tertiary
+            print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
+            stop
+           endif
+          else if (im_tertiary.eq.num_materials+1) then
+           !do nothing (melt not found nearby)
+          else
+           print *,"im_tertiary invalid: ",im_tertiary
+           stop
           endif
-
-         else if (is_ice(im_primary).eq.0) then
-          elasticmask=one
-          elasticmaskpart=one
+         else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
+          ! do nothing
          else
-          print *,"is_ice(im_primary) invalid"
-          print *,"im_primary ",im_primary
-          print *,"is_ice(im_primary) ",is_ice(im_primary)
+          print *,"LL invalid: ",LL
           stop
          endif
 
-        else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
-         ireverse=0
-         im_source=im
-         im_dest=im_opp
-        else if ((LL(0).eq.zero).and.(LL(1).ne.zero)) then
-         ireverse=1
-         im_source=im_opp
-         im_dest=im
-        else if ((LL(0).ne.zero).and.(LL(1).ne.zero)) then
-         if (LS(im).ge.LS(im_opp)) then
+          ! an associated melt material was not found:
+         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+
+          ireverse=-1
+
+          if (is_ice(im_primary).eq.1) then ! in ice bulk region
+
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_primary.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
+
+          else if (is_ice(im_primary).eq.0) then
+           elasticmask=one
+           elasticmaskpart=one
+          else
+           print *,"is_ice(im_primary) invalid"
+           print *,"im_primary ",im_primary
+           print *,"is_ice(im_primary) ",is_ice(im_primary)
+           stop
+          endif
+
+         else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
           ireverse=0
           im_source=im
           im_dest=im_opp
-         else if (LS(im_opp).ge.LS(im)) then
+         else if ((LL(0).eq.zero).and.(LL(1).ne.zero)) then
           ireverse=1
           im_source=im_opp
           im_dest=im
-         else
-          print *,"LS(im) or LS(im_opp) invalid"
-          print *,"im, im_opp ",im,im_opp
-          print *,"LS(im),LS(im_opp) ",LS(im),LS(im_opp)
-          stop
-         endif
-        else
-         print *,"LL invalid"
-         print *,"LL(0),LL(1) ",LL(0),LL(1)
-         stop
-        endif
-   
-        if (ireverse.eq.-1) then
-         ! do nothing
-        else if ((ireverse.eq.0).or. &
-                 (ireverse.eq.1)) then
-
-         if (im_ice.eq.im_dest) then  ! freezing
-
-          if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
-           ! do nothing
+         else if ((LL(0).ne.zero).and.(LL(1).ne.zero)) then
+          if (im.eq.im_primary) then
+           ireverse=0
+           im_source=im
+           im_dest=im_opp
+          else if (im_opp.eq.im_primary) then
+           ireverse=1
+           im_source=im_opp
+           im_dest=im
           else
-           print *,"required freezing: "
-           print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+           print *,"im_primary invalid ",im_primary
+           print *,"im, im_opp ",im,im_opp
            stop
           endif
+         else
+          print *,"LL invalid"
+          print *,"LL(0),LL(1) ",LL(0),LL(1)
+          stop
+         endif
+    
+         if (ireverse.eq.-1) then
+          ! do nothing
+         else if ((ireverse.eq.0).or. &
+                  (ireverse.eq.1)) then
 
-          ! dist_mask_override>0 in the substrate. (dest is ice)  this routine
-          ! tells one whether to force mask=0
-          call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
+          if (im_ice.eq.im_dest) then  ! freezing
 
-          if (dist_mask_override.ge.zero) then
-           elasticmask=zero
-           elasticmaskpart=zero
-          else if (dist_mask_override.le.zero) then
-           if (LS(im_ice).ge.zero) then
+           if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
+            ! do nothing
+           else
+            print *,"required freezing: "
+            print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+            stop
+           endif
+
+           ! dist_mask_override>0 in the substrate. (dest is ice)  this routine
+           ! tells one whether to force mask=0
+           call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
+
+           if (dist_mask_override.ge.zero) then
+            elasticmask=zero
+            elasticmaskpart=zero
+           else if (dist_mask_override.le.zero) then
+
+            if (im_primary.eq.im_ice) then
+             elasticmask=zero
+             elasticmaskpart=one
+             if (im_ice.le.im_rigid_CL) then
+              elasticmaskpart=zero
+             endif
+            else if (im_primary_vof.eq.im_ice) then
+             elasticmask=zero
+             elasticmaskpart=one
+             if (im_ice.le.im_rigid_CL) then
+              elasticmaskpart=zero
+             endif
+            else
+             elasticmask=one
+             elasticmaskpart=one
+            endif
+
+           else
+            print *,"dist_mask_override bust: ",dist_mask_override
+            stop
+           endif
+
+          else if (im_ice.eq.im_source) then ! melting
+
+           if (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
+            ! dist. from the ice to the liquid
+           else
+            print *,"required melting:"
+            print *,"distribute_from_target(iten+num_interfaces*ireverse)=0"
+            stop
+           endif
+
+           if (im_primary.eq.im_ice) then
             elasticmask=zero
             elasticmaskpart=one
             if (im_ice.le.im_rigid_CL) then
@@ -642,94 +646,92 @@ stop
             if (im_ice.le.im_rigid_CL) then
              elasticmaskpart=zero
             endif
-           else if (im_primary.eq.im_ice) then
-            elasticmask=zero
-            elasticmaskpart=one
-            if (im_ice.le.im_rigid_CL) then
-             elasticmaskpart=zero
-            endif
-           else if (VOF(im_ice).ge.0.5d0) then
-            elasticmask=zero
-            elasticmaskpart=one
-            if (im_ice.le.im_rigid_CL) then
-             elasticmaskpart=zero
-            endif
            else
             elasticmask=one
             elasticmaskpart=one
            endif
 
           else
-           print *,"dist_mask_override bust: ",dist_mask_override
+           print *,"im_ice invalid: ",im_ice
            stop
-          endif
-
-         else if (im_ice.eq.im_source) then ! melting
-
-          if (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
-           ! dist. from the ice to the liquid
-          else
-           print *,"required melting:"
-           print *,"distribute_from_target(iten+num_interfaces*ireverse)=0"
-           stop
-          endif
-
-          if (LS(im_ice).ge.zero) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (im_primary_vof.eq.im_ice) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (im_primary.eq.im_ice) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (VOF(im_ice).ge.0.5d0) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else
-           elasticmask=one
-           elasticmaskpart=one
           endif
 
          else
-          print *,"im_ice invalid: ",im_ice
+          print *,"ireverse invalid: ",ireverse
           stop
          endif
+  
+        else if (im_ice.eq.0) then
+
+         ireverse=-1
+         elasticmask=one
+         elasticmaskpart=one
 
         else
-         print *,"ireverse invalid: ",ireverse
+         print *,"im_ice invalid:",im_ice
          stop
         endif
- 
-       else if (im_ice.eq.0) then
-
-        ireverse=-1
-        elasticmask=one
-        elasticmaskpart=one
 
        else
-        print *,"im_ice invalid:",im_ice
+        print *,"im_FSI_rigid invalid? ",im_FSI_rigid
+        print *,"im_FSI_elastic invalid? ",im_FSI_elastic
+        print *,"im_ice invalid? ",im_ice
+        print *,"num_materials: ",num_materials
+        print *,"im_primary: ",im_primary
+        stop
+       endif
+
+      else if (im_opp.eq.num_materials+1) then
+
+       ireverse=-1
+       elasticmask=one
+       elasticmaskpart=one
+
+       if (is_ice(im).eq.0) then
+        im_ice=0
+       else if (is_ice(im).eq.1) then
+        im_ice=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+       if (is_FSI_rigid(im).eq.0) then
+        im_FSI_rigid=0
+       else if (is_FSI_rigid(im).eq.1) then
+        im_FSI_rigid=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_FSI_rigid invalid"
+        stop
+       endif
+       if (is_FSI_elastic(im).eq.0) then
+        im_FSI_elastic=0
+       else if (is_FSI_elastic(im).eq.1) then
+        im_FSI_elastic=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_FSI_elastic invalid"
         stop
        endif
 
       else
-       print *,"im_FSI_rigid invalid? ",im_FSI_rigid
-       print *,"im_FSI_elastic invalid? ",im_FSI_elastic
-       print *,"im_ice invalid? ",im_ice
-       print *,"num_materials: ",num_materials
-       print *,"im_primary: ",im_primary
+       print *,"im_opp invalid ",im_opp
        stop
       endif
 
