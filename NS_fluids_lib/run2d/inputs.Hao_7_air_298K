@@ -187,7 +187,6 @@ ns.material_type=0 0 0 999
 # k_s/k_l=2.2/0.55=4.0
 ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K)
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 # 1 Pa = 10 CGS
 #ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
 ns.viscconst=1.79e-2 1.724e-4 2.0e-2 2.0e-2 # derive CGS:  CGS= Pa s x 10

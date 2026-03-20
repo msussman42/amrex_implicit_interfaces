@@ -2406,9 +2406,6 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
-        denconst_interface, & !fort_estdt
-        denconst_interface_min, & !fort_estdt
-        lamb_capillary_wave_speed, & !fort_estdt 1 => (rho_a+rho_w)/2
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -2477,9 +2474,6 @@ stop
       integer, INTENT(in) :: mass_fraction_id(2*num_interfaces)
       real(amrex_real), INTENT(in) :: molar_mass(num_materials)
       real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var+1)
-      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
-      integer, INTENT(in) :: lamb_capillary_wave_speed !1 => (rho_a+rho_w)/2
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real) uu_estdt
@@ -2832,42 +2826,6 @@ stop
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+EPS10
 
-          if (denconst_interface(iten).eq.zero) then
-           ! do nothing
-          else if (denconst_interface(iten).gt.zero) then
-           den1=denconst_interface(iten)
-           den2=den1
-          else
-           print *,"denconst_interface invalid fort_estdt"
-           stop
-          endif
-
-          if (denconst_interface_min(iten).eq.zero) then
-           ! do nothing
-          else if (denconst_interface_min(iten).gt.zero) then
-
-           if (lamb_capillary_wave_speed.eq.1) then
-            den1=half*(den1+den2)
-            den2=den1
-           else if (lamb_capillary_wave_speed.eq.0) then
-
-            if (min(den1,den2).lt.denconst_interface_min(iten)) then
-             den1=denconst_interface_min(iten)
-             den2=den1
-            endif
-
-           else
-            print *,"lamb_capillary_wave_speed invalid ", &
-              lamb_capillary_wave_speed
-            stop
-           endif
-
-          else
-           print *,"denconst_interface_min invalid fort_estdt: ", &
-            iten,denconst_interface_min(iten)
-           stop
-          endif
-
            ! capillary_wave_speed declared in PROB.F90
            ! theory:
            ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
@@ -2987,7 +2945,7 @@ stop
        ! denjump_scale=max_{im,im_opp (fluids)} 
        !   |den(im)-den(im_opp)|/max(den(im),den(im_opp),den_added)
        ! denjump_scale in [0,1]
-      call get_max_denjump_scale(denjump_scale,denconst_interface)
+      call get_max_denjump_scale(denjump_scale)
 
       if ((denjump_scale.ge.zero).and.(denjump_scale.le.one)) then
        ! do nothing
@@ -13542,7 +13500,6 @@ stop
        ymac_old,DIMS(ymac_old), &
        zmac_old,DIMS(zmac_old), &
        stokes_flow, &
-       denconst_interface, & !unused: fort_vfrac_split
        nc_conserve, &
        map_forward, &
        recon_ncomp, &
@@ -13571,7 +13528,6 @@ stop
       integer, INTENT(in) :: nc_conserve
       integer, PARAMETER :: ngrow=2
       integer, INTENT(in) :: stokes_flow
-      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       integer, INTENT(in) :: solidheat_flag
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -14003,18 +13959,6 @@ stop
        print *,"ncomp_state invalid"
        stop
       endif
-
-      do im=1,num_interfaces
-       if (denconst_interface(im).gt.zero) then
-        ! do nothing
-       else if (denconst_interface(im).eq.zero) then
-        ! do nothing
-       else
-        print *,"denconst_interface invalid fort_vfrac_split"
-        print *,"index,value ",im,denconst_interface(im)
-        stop
-       endif
-      enddo !im=1,num_interfaces
 
       all_incomp=1
 

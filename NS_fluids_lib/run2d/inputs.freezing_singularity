@@ -221,7 +221,6 @@ ns.material_type=0 0 0 999
 # KTOT approx L/(2.5 L/K + L/K)=K/3.5=0.9/3.5=0.26
 ns.heatviscconst=1.0 0.0413793 3.7586207 2.5862069 # dimensionless
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #ns.viscconst=0.02 0.0001 0.02 0.02 # dimensional
 #ns.viscconst=1.0 0.005 1.0 1.0 # dimensionless
 ns.viscconst=1.0 0.005 10.0 1.0 # dimensionless

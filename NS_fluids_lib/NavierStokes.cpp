@@ -898,13 +898,6 @@ Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::molar_mass;  // def=1
 					//
 Vector<Real> NavierStokes::denconst;
-Vector<Real> NavierStokes::denconst_interface;
-Vector<Real> NavierStokes::denconst_interface_min;
-Vector<Real> NavierStokes::viscconst_interface_min;
-Real NavierStokes::density_ratio_relaxation_factor=10.0;
-Real NavierStokes::viscosity_ratio_relaxation_factor=0.0;
-int NavierStokes::lamb_capillary_wave_speed=0; //def=0 0=>min(rho_a,rho_w)
-                                               //1=>(rho_a+rho_w)/2
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -976,11 +969,8 @@ Vector<Real> NavierStokes::heatflux_factor;
 Vector<Real> NavierStokes::heatviscconst;
 Real NavierStokes::heatviscconst_max=0.0;
 Real NavierStokes::heatviscconst_min=0.0;
-Vector<Real> NavierStokes::viscconst_interface;
-Vector<Real> NavierStokes::heatviscconst_interface;
 Vector<Real> NavierStokes::speciesconst;  
 Vector<Real> NavierStokes::speciesreactionrate;  
-Vector<Real> NavierStokes::speciesviscconst_interface;
 // 1..num_species_var
 Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
@@ -4013,26 +4003,15 @@ NavierStokes::read_params ()
     heatviscconst_eddy_bulk.resize(num_materials);
     viscosity_state_model.resize(num_materials);
     les_model.resize(num_materials);
-    viscconst_interface.resize(num_interfaces);
     speciesreactionrate.resize((num_species_var+1)*num_materials);
     speciesconst.resize((num_species_var+1)*num_materials);
     speciesviscconst.resize((num_species_var+1)*num_materials);
-    speciesviscconst_interface.resize((num_species_var+1)*num_interfaces);
     species_molar_mass.resize(num_species_var+1);
 
     for (int j=0;j<=num_species_var;j++)
      species_molar_mass[j]=1.0;
 
-    for (int i=0;i<num_interfaces;i++) {
-     viscconst_interface[i]=0.0;
-     for (int j=0;j<=num_species_var;j++)
-      speciesviscconst_interface[j*num_interfaces+i]=0.0;
-    }
-    pp.queryAdd("viscconst_interface",viscconst_interface,num_interfaces);
     if (num_species_var>0) {
-     pp.queryAdd("speciesviscconst_interface",
-      speciesviscconst_interface,num_species_var*num_interfaces);
-
      pp.queryAdd("species_molar_mass",
       species_molar_mass,num_species_var);
     }
@@ -4306,53 +4285,6 @@ NavierStokes::read_params ()
 
     pp.queryAdd("molar_mass",molar_mass,num_materials);
 
-    denconst_interface.resize(num_interfaces);
-    denconst_interface_min.resize(num_interfaces);
-    viscconst_interface_min.resize(num_interfaces);
-
-    for (int iten=0;iten<num_interfaces;iten++) {
-     denconst_interface[iten]=0.0;
-     denconst_interface_min[iten]=0.0;
-     viscconst_interface_min[iten]=0.0;
-    }
-
-    pp.queryAdd("denconst_interface",
-      denconst_interface,num_interfaces);
-
-    pp.queryAdd("density_ratio_relaxation_factor",
-		density_ratio_relaxation_factor);
-    pp.queryAdd("viscosity_ratio_relaxation_factor",
-		viscosity_ratio_relaxation_factor);
-    pp.queryAdd("lamb_capillary_wave_speed",
-		lamb_capillary_wave_speed);
-
-    for (int im=0;im<num_materials;im++) {
-     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
-      Real max_den=std::max(denconst[im],denconst[im_opp]);
-      Real max_visc=std::max(viscconst[im],viscconst[im_opp]);
-      int iten=0;
-      get_iten_cpp(im+1,im_opp+1,iten);
-      if ((iten<1)||(iten>num_interfaces))
-       amrex::Error("iten invalid");
-      denconst_interface_min[iten-1]=
-        max_den/density_ratio_relaxation_factor;
-
-      viscconst_interface_min[iten-1]=0.0;
-      if (viscosity_ratio_relaxation_factor==0.0) {
-       //do nothing
-      } else if (viscosity_ratio_relaxation_factor>0.0) {
-       viscconst_interface_min[iten-1]=
-         max_visc/viscosity_ratio_relaxation_factor;
-      } else
-       amrex::Error("viscosity_ratio_relaxation_factor invalid");
-
-     } //im_opp
-    } //im
-
-    pp.queryAdd("denconst_interface_min",
-      denconst_interface_min,num_interfaces);
-    pp.queryAdd("viscconst_interface_min",
-      viscconst_interface_min,num_interfaces);
 
      // in: read_params
 
@@ -4507,7 +4439,6 @@ NavierStokes::read_params ()
     pp.queryAdd("les_model",les_model,num_materials);
 
     heatviscconst.resize(num_materials);
-    heatviscconst_interface.resize(num_interfaces);
     pp.queryAdd("heatflux_factor",heatflux_factor,num_materials);
     pp.getarr("heatviscconst",heatviscconst,0,num_materials);
 
@@ -4521,12 +4452,6 @@ NavierStokes::read_params ()
       heatviscconst_max=heatviscconst[i];
     }
 
-    for (int i=0;i<num_interfaces;i++) {
-     heatviscconst_interface[i]=0.0;
-    }
-
-    pp.queryAdd("heatviscconst_interface",heatviscconst_interface,
-		num_interfaces);
     if (num_species_var>0) {
      pp.queryAdd("speciesreactionrate",speciesreactionrate,
 		 num_species_var*num_materials);
@@ -6056,32 +5981,6 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
-
-     std::cout << "density_ratio_relaxation_factor= " << 
-	     density_ratio_relaxation_factor << '\n';
-     std::cout << "lamb_capillary_wave_speed= " << 
-	     lamb_capillary_wave_speed << '\n';
-     std::cout << "viscosity_ratio_relaxation_factor= " << 
-	     viscosity_ratio_relaxation_factor << '\n';
-
-     for (int i=0;i<num_interfaces;i++) {
-      std::cout << "i= " << i << " denconst_interface "  << 
-        denconst_interface[i] << '\n';
-      std::cout << "i= " << i << " denconst_interface_min "  << 
-        denconst_interface_min[i] << '\n';
-      std::cout << "i= " << i << " viscconst_interface_min "  << 
-        viscconst_interface_min[i] << '\n';
-      std::cout << "i= " << i << " viscconst_interface "  << 
-        viscconst_interface[i] << '\n';
-      std::cout << "i= " << i << " heatviscconst_interface "  << 
-        heatviscconst_interface[i] << '\n';
-      for (int j=0;j<num_species_var;j++) {
-       std::cout << "i= " << i << " j= " << j << 
-         " speciesviscconst_interface "  << 
-         speciesviscconst_interface[j*num_interfaces+i] << '\n';
-      }
-
-     } // i=0 ... num_interfaces-1
 
      for (int j=0;j<num_species_var;j++) {
       std::cout << " j= " << j << 
@@ -20024,7 +19923,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
     ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
     zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
     &stokes_flow,
-    denconst_interface.dataPtr(), //unused in fort_vfrac_split
     &nc_conserve,
     &map_forward_direct_split[normdir_here],
     &vofrecon_ncomp,
@@ -24617,9 +24515,6 @@ void NavierStokes::MaxAdvectSpeed(
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
-    denconst_interface.dataPtr(), //fort_estdt
-    denconst_interface_min.dataPtr(), //fort_estdt
-    &lamb_capillary_wave_speed, //fort_estdt 1 => (rho_a+rho_w)/2
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),

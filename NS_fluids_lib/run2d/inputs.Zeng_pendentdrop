@@ -230,7 +230,6 @@ ns.material_type=0 0 0 999
 #ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K) #thermal diffusivity
 ns.heatviscconst=1.0 0.0469 4.302 4.302 # erg/(s cm K) #thermal diffusivity
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10  4.302
 # 1 Pa = 10 CGS
 #ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
 #ns.viscconst=1.79e-2 1.724e-4 2.0e-2 2.0e-2 # derive CGS:  CGS= Pa s x 10

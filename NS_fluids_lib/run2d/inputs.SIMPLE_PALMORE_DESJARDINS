@@ -128,7 +128,6 @@ ns.heatviscconst=10000.0 1000.0 #CODY:k_liquid=10^-1 W/(m*K),
 #1joule=1 kg m^2/s^2
 #1 W/(m K)=J/(m s K)=kg m^2/(m s^3 K)=kg m/(s^3 K)=10^5 g cm/(s^3 K)
 #k_gas = 10^-2 W/(m*K) = 10^3 g*cm/(s^3*K)
-ns.heatviscconst_interface=0.0 
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
 # D is here:
 ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s

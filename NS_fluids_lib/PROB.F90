@@ -2426,22 +2426,18 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
-       ! if denconst_interface==0.0 (default), then
        !  denjump_scale=(rhoA - rhoB)/max(rhoA,rhoB)
       subroutine get_max_denjump_scale( &
-              denjump_scale, &
-              denconst_interface)
+              denjump_scale)
       use global_utility_module
 
       IMPLICIT NONE
 
       integer im,im_opp
       integer iten
-      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(out) :: denjump_scale
       real(amrex_real) denjump_scale_temp
       real(amrex_real) max_den_interface
-      real(amrex_real) den_interface
       integer internal_wave_exists
 
       denjump_scale=zero
@@ -2460,21 +2456,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
           if (max_den_interface.gt.zero) then
       
-           den_interface=denconst_interface(iten)
-           if (den_interface.eq.zero) then
-            ! do nothing
-           else if (den_interface.gt.zero) then 
-            if (den_interface.gt.max_den_interface) then
-             max_den_interface=den_interface
-            else
-             print *,"need den_interface.gt.max_den_interface"
-             stop
-            endif
-           else
-            print *,"den_interface invalid"
-            stop
-           endif
-
            denjump_scale_temp=abs(fort_denconst(im)-fort_denconst(im_opp))/ &
              max_den_interface
 
@@ -18757,6 +18738,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: wavelen,den1,den2,visc1,visc2,tension
       real(amrex_real), INTENT(out) :: wavespeed
       real(amrex_real) omega,k
+      real(amrex_real) den_mix
 
       if ((wavelen.gt.zero).and.(den1.gt.zero).and. &
           (den2.gt.zero).and.(visc1.gt.zero).and. &
@@ -18776,7 +18758,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx ^ {3/2}/sqrt( pi * tension / den ) =
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
-      omega=(k**(1.5d0))*sqrt(tension/min(den1,den2))
+!      den_mix=min(den1,den2)
+      den_mix=half*(den1+den2)
+      if (den_mix.gt.zero) then
+       !do nothing
+      else
+       print *,"den_mix invalid ",den_mix
+       stop
+      endif
+      omega=(k**(1.5d0))*sqrt(tension/den_mix)
        ! wavespeed=omega/k=
        ! sqrt(k)*sqrt(tension/(den1+den2))=
        ! sqrt(2\pi tension/((den1+den2)*dx)=

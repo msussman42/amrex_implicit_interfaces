@@ -341,9 +341,6 @@ extern "C"
       int* mass_fraction_id,
       Real* molar_mass,
       Real* species_molar_mass,
-      Real* denconst_interface,
-      Real* denconst_interface_min,
-      int* lamb_capillary_wave_speed, //1=>(rho_a+rho_w)/2
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
@@ -792,7 +789,6 @@ extern "C"
      Real* ymac_old,AMREX_ARLIM_P(ymac_oldlo),AMREX_ARLIM_P(ymac_oldhi),
      Real* zmac_old,AMREX_ARLIM_P(zmac_oldlo),AMREX_ARLIM_P(zmac_oldhi),
      int* stokes_flow,
-     Real* denconst_interface,
      int* nc_conserve,
      int* map_forward,
      int* recon_ncomp,
