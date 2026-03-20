@@ -5402,6 +5402,9 @@ void NavierStokes::make_physics_vars(int project_option,
   amrex::Error("num_state_base invalid");
 
   // in: make_physics_vars
+  // FACE_VAR, FACE_DEN_HOLD, FACE_VISC_HOLD, SWEPT_CROSSING,
+  // CELL_DEDT, CELL_DEN, CELL_DEN_HOLD, CELL_SOUND, CELL_VOF,
+  // CELL_VISC, CELL_VISC_HOLD
  allocate_physics_vars();
 
  MultiFab& tempmf=get_new_data(State_Type,project_slab_step+1);
