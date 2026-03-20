@@ -12346,7 +12346,7 @@ stop
            xsten_center, &
            time, &
            dx,bfact, &
-           elasticmask, &
+           elasticmask, & !intent(out)
            elasticmaskpart, &
            im, &
            im_opp, &
@@ -12358,14 +12358,18 @@ stop
            distribute_from_target, &
            complement_flag)
 
+          if ((elasticmask.eq.zero).or. &
+              (elasticmask.eq.one)) then
+           !do nothing
+          else
+           print *,"elasticmask invalid ",elasticmask
+           stop
+          endif
+
           if (im_opp.eq.num_materials+1) then
 
-           if (is_ice(im_primary_elasticmask).eq.1) then
-            elasticmask=zero
-           else
-            elasticmask=one
-           endif
-         
+           !do nothing
+
            !both source and dest can be distributed to.
           else if (ireverse.eq.-1) then
 
@@ -19564,7 +19568,8 @@ stop
       integer, INTENT(in) :: dir
       real(amrex_real), INTENT(in) :: cur_time
 
-      real(amrex_real), INTENT(in),target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in),target :: &
+              vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout),target :: mac(DIMV(mac))
       real(amrex_real), pointer :: mac_ptr(D_DECL(:,:,:))

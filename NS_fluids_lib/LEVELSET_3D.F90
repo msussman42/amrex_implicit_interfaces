@@ -9195,7 +9195,8 @@ stop
        vol,DIMS(vol), &
        levelPC,DIMS(levelPC), &
        vofC,DIMS(vofC), &
-       vofF,DIMS(vofF), & !vofF: see fort_build_semirefinevof, tessellate==TESSELLATE_ALL_RASTER
+       !vofF: see fort_build_semirefinevof, tessellate==TESSELLATE_ALL_RASTER
+       vofF,DIMS(vofF), & 
        massF,DIMS(massF), & !massF: "            "
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
