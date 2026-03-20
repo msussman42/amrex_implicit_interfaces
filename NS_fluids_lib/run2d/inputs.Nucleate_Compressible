@@ -199,8 +199,6 @@ ns.material_type=13 14 999
 ns.heatviscconst=0.680e+5 0.0248e+5 0.680e+5
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
-#ns.heatviscconst_interface=0.0 2.0 2.0 Sandipan
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 # 1 N=1e+5 dyne  1 N s/m^2=1e+5 dyne s/(1e+4 cm^2)
 ns.viscconst=279E-5 12.02e-5 279E-5

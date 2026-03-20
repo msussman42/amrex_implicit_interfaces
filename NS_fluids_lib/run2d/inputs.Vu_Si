@@ -202,12 +202,10 @@ ns.material_type=0 0 0 999
 # k_s/k_l=2.2/0.55=4.0
 ns.heatviscconst=1.0 0.01 0.5 0.5
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 0.5
 # 1 Pa = 10 CGS
 # 12 13 14 23 24 34  
 #liquid, gas, ice, substrate
 # liquid-ice=13, gas-ice=23
-#ns.viscconst_interface=0.0 1.0e-10 0.0 1.0e-10 0.0 0.0
 
 ns.uncoupled_viscosity=0 # uncoupled_viscosity=1 => div(mu grad u)
 #liquid, gas, ice, substrate

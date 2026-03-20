@@ -141,7 +141,6 @@ mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = 0.0
 ns.gravityangle = 0.0
 ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
-ns.density_ratio_relaxation_factor=1000.0
 
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 

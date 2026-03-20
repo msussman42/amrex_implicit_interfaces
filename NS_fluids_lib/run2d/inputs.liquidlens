@@ -155,10 +155,7 @@ ns.viscconst=1.0 1.0 1.0 # liquid lens
 #ns.denconst=1.0 0.001 1.0 # gas lens
 ns.denconst=1.0 1.0 1.0 # liquid lens
 #12 13 23
-ns.denconst_interface_min=0.0 0.0 0.0
-#ns.denconst_interface_min=0.1 1.0 0.1 #gas lens
 #air-oil air-water oil-water
-#ns.denconst_interface_min=0.0577 0.1 0.577 #floating lens
 ns.tempconst=293.0 293.0 293.0 
 ns.material_type=0 0 0 
 ns.pressure_error_cutoff=0.0 0.0 0.0 

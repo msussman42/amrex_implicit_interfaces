@@ -2260,14 +2260,6 @@ protected:
      // S corresponding to velocity, interface, or state variables.
     static int cancel_advection;  // def=0
 
-    static Vector<Real> denconst_interface;
-    static Vector<Real> denconst_interface_min;
-    static Vector<Real> viscconst_interface_min;
-    static Real density_ratio_relaxation_factor; //def=10.0
-    static Real viscosity_ratio_relaxation_factor; //def=0.0
-    static int lamb_capillary_wave_speed; //def=0 0=>min(rho_a,rho_w) 
-                                          //1=>(rho_a+rho_w)/2
-
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
     static Vector<Real> prerecalesce_stiffCV; // def=4.1855E+7
@@ -2323,7 +2315,6 @@ protected:
     static Vector<Real> heatviscconst_eddy_bulk;
     static Vector<Real> prerecalesce_viscconst;
 
-    static Vector<Real> viscconst_interface;
 
     static Vector<Real> heatflux_factor;
     static Vector<Real> heatviscconst;
@@ -2331,7 +2322,6 @@ protected:
     static Real heatviscconst_min;
     static Vector<Real> prerecalesce_heatviscconst;
 
-    static Vector<Real> heatviscconst_interface;
 
       // num_species * num_materials size.
     static Vector<Real> speciesreactionrate;
@@ -2339,9 +2329,6 @@ protected:
     static Vector<Real> speciesconst;
       // num_species * num_materials size.
     static Vector<Real> speciesviscconst;
-
-      // num_species * num_interfaces
-    static Vector<Real> speciesviscconst_interface;
 
       // num_species
     static Vector<Real> species_molar_mass;  // def=1

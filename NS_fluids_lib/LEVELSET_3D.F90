@@ -9146,12 +9146,6 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
-       denconst_interface, &
-       denconst_interface_min, &
-       viscconst_interface, &
-       viscconst_interface_min, &
-       heatviscconst_interface, &
-       speciesviscconst_interface, &
        freezing_model, &
        distribute_from_target, &
        solidheat_flag, &
@@ -9344,14 +9338,6 @@ stop
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
-      real(amrex_real), INTENT(in) :: viscconst_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: viscconst_interface_min(num_interfaces)
-      real(amrex_real), INTENT(in) :: heatviscconst_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: &
-          speciesviscconst_interface(num_interfaces*num_species_var)
-
       integer im1,jm1,km1
       integer i,j,k
       integer ii,jj,kk
@@ -9390,7 +9376,6 @@ stop
       integer im_main,im_main_opp,im_opp
       integer im_left_main,im_right_main
       integer ireverse
-      integer iten_FFACE
       integer iten_main
       integer iten_majority
       integer local_iten
@@ -9419,13 +9404,11 @@ stop
       real(amrex_real) theta,visc1,visc2,heat1,heat2
       real(amrex_real) spec1(num_species_var+1)
       real(amrex_real) spec2(num_species_var+1)
-      real(amrex_real) spec_test
       real(amrex_real) localvisc_plus(num_materials)
       real(amrex_real) localvisc_minus(num_materials)
       real(amrex_real) localheatvisc_plus(num_materials)
       real(amrex_real) localheatvisc_minus(num_materials)
       integer implus_majority,imminus_majority
-      integer im_secondary
 
       real(amrex_real) local_face(FACECOMP_NCOMP)
       real(amrex_real) local_volumes(2,num_materials)
@@ -9439,10 +9422,6 @@ stop
 
       real(amrex_real) LSIDE(2)
       real(amrex_real) LSIDE_tension(2)
-      real(amrex_real) LSIDE_MAT(num_materials)
-      real(amrex_real) LSIDE_MAT_fixed(num_materials)
-      real(amrex_real) LSIDE_tension_MAT(num_materials)
-      real(amrex_real) LSIDE_tension_MAT_fixed(num_materials)
 
       real(amrex_real) DXMAXLS
       real(amrex_real) FFACE(num_materials)
@@ -9675,31 +9654,6 @@ stop
        endif
 
       enddo !im=1,2*num_interfaces
-
-      do im=1,num_interfaces
-
-       if ((denconst_interface(im).ge.zero).and. &
-           (denconst_interface_min(im).ge.zero).and. &
-           (viscconst_interface(im).ge.zero).and. &
-           (viscconst_interface_min(im).ge.zero).and. &
-           (heatviscconst_interface(im).ge.zero)) then
-        ! do nothing
-       else
-        print *,"den,visc, or heat interface coeff wrong"
-        stop
-       endif
-       do imspec=1,num_species_var
-        if (speciesviscconst_interface(num_interfaces*(imspec-1)+im).ge. &
-            zero) then
-         !do nothing
-        else
-         print *,"speciesviscconst_interface coeff wrong: ", &
-             speciesviscconst_interface
-         stop
-        endif
-       enddo
-
-      enddo ! im=1..num_interfaces
 
       do im=1,num_materials
 
@@ -10002,7 +9956,6 @@ stop
          do im=1,num_materials
           LSplus(im)=levelPC(D_DECL(i,j,k),im)
           LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
-          LSIDE_MAT(im)=half*(LSplus(im)+LSminus(im))
          enddo
 
           ! checks rigid and non-rigid materials.
@@ -10288,13 +10241,15 @@ stop
           ! fluid_interface is declared in: PROB.F90
           call fluid_interface( &
             dx, &
-            LSminus,LSplus, &
-            gradh, &
-            im_main_opp,im_main, &
-            im_left_main,im_right_main)
+            LSminus,LSplus, & !intent(in)
+            gradh, & !intent(out)
+            im_main_opp,im_main, & !intent(out)
+            im_left_main,im_right_main) !intent(out)
 
           if (gradh.ne.zero) then
-           if (im_main.ge.im_main_opp) then
+           if (im_main.lt.im_main_opp) then
+            !do nothing
+           else
             print *,"fluid_interface bust"
             print *,"im_main=",im_main
             print *,"im_main_opp=",im_main_opp
@@ -10358,9 +10313,11 @@ stop
           localheatvisc_minus(im)=conductstate(D_DECL(im1,jm1,km1),im)
          enddo
 
-         if (gradh.ne.zero) then
+         if (gradh.ne.zero) then !both materials are not "is_rigid"
 
-          if (im_main.ge.im_main_opp) then
+          if (im_main.lt.im_main_opp) then
+           !do nothing
+          else
            print *,"fluid_interface bust"
            print *,"im_main=",im_main
            print *,"im_main_opp=",im_main_opp
@@ -10373,17 +10330,22 @@ stop
            stop
           endif
 
-          do im=1,num_materials
-           LSIDE_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
-          enddo
-          call FIX_LS_tessellate(LSIDE_MAT,LSIDE_MAT_fixed)
-          call get_LS_extend(LSIDE_MAT_fixed,iten_main,LSIDE(1))
-
-          do im=1,num_materials
-           LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
-          enddo
-          call FIX_LS_tessellate(LSIDE_MAT,LSIDE_MAT_fixed)
-          call get_LS_extend(LSIDE_MAT_fixed,iten_main,LSIDE(2))
+          if (is_elastic(im_main).eq.1) then
+           LSIDE(1)=LSminus(im_main)
+           LSIDE(2)=LSplus(im_main)
+          else if (is_elastic(im_main_opp).eq.1) then
+           LSIDE(1)=-LSminus(im_main_opp)
+           LSIDE(2)=-LSplus(im_main_opp)
+          else if ((is_elastic(im_main).eq.0).and. &
+                   (is_elastic(im_main_opp).eq.0).and. &
+                   (is_rigid(im_main).eq.0).and. &
+                   (is_rigid(im_main_opp).eq.0)) then
+           LSIDE(1)=half*(LSminus(im_main)-LSminus(im_main_opp)) 
+           LSIDE(2)=half*(LSplus(im_main)-LSplus(im_main_opp)) 
+          else
+           print *,"invalid is_elastic or is_rigid"
+           stop
+          endif
 
           if (LSIDE(1)*LSIDE(2).le.zero) then
            LS_consistent=1
@@ -10404,25 +10366,24 @@ stop
 
          if (gradh_tension.ne.zero) then
 
-          if (im_tension.ge.im_opp_tension) then
+          if (im_tension.lt.im_opp_tension) then 
+           !do nothing
+          else
            print *,"fluid_interface_tension bust"
            stop
           endif
           call get_iten(im_tension,im_opp_tension,iten_tension)
 
-          do im=1,num_materials
-           LSIDE_tension_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
-          enddo
-          call FIX_LS_tessellate(LSIDE_tension_MAT,LSIDE_tension_MAT_fixed)
-          call get_LS_extend(LSIDE_tension_MAT_fixed,iten_tension, &
-                  LSIDE_tension(1))
-
-          do im=1,num_materials
-           LSIDE_tension_MAT(im)=levelPC(D_DECL(i,j,k),im)
-          enddo
-          call FIX_LS_tessellate(LSIDE_tension_MAT,LSIDE_tension_MAT_fixed)
-          call get_LS_extend(LSIDE_tension_MAT_fixed,iten_tension, &
-                  LSIDE_tension(2))
+          if ((is_elastic(im_tension).eq.0).and. &
+              (is_elastic(im_opp_tension).eq.0).and. &
+              (is_rigid(im_tension).eq.0).and. &
+              (is_rigid(im_opp_tension).eq.0)) then
+           LSIDE_tension(1)=half*(LSminus(im_tension)-LSminus(im_opp_tension)) 
+           LSIDE_tension(2)=half*(LSplus(im_tension)-LSplus(im_opp_tension)) 
+          else
+           print *,"invalid is_elastic or is_rigid"
+           stop
+          endif
 
           sign_test=gradh_tension*(LSIDE_tension(2)-LSIDE_tension(1))
           if (sign_test.ge.zero) then
@@ -10632,35 +10593,6 @@ stop
 
             call get_iten(imminus_majority,implus_majority,iten_majority)
 
-            if (heatviscconst_interface(iten_majority).eq.zero) then
-             ! do nothing
-            else if (heatviscconst_interface(iten_majority).gt.zero) then
-
-             do ireverse=0,1
-              local_iten=iten_majority+ireverse*num_interfaces
-              if (get_user_latent_heat(local_iten,room_temperature,1).ne. &
-                  zero) then
-               if ((freezing_model(local_iten).eq.0).or. &
-                   (freezing_model(local_iten).eq.5)) then
-                print *,"heatviscconst_interface invalid"
-                stop
-               endif 
-              else if (get_user_latent_heat(local_iten,room_temperature,1).eq. &
-                       zero) then
-               !do nothing
-              else
-               print *,"get_user_latent_heat invalid"
-               stop
-              endif 
-             enddo !do ireverse=0,1
-
-             faceheat_local=heatviscconst_interface(iten_majority)
-
-            else
-             print *,"heatviscconst_interface invalid: ", &
-                 heatviscconst_interface
-             stop
-            endif
            else if (implus_majority.eq.imminus_majority) then
             ! do nothing
            else
@@ -10748,14 +10680,10 @@ stop
            endif
 
            if (LSIDE(1).ge.LSIDE(2)) then
-            visc1=localvisc_minus(im_main)
             heat1=localheatvisc_minus(im_main)
-            visc2=localvisc_plus(im_main_opp)
             heat2=localheatvisc_plus(im_main_opp)
            else if (LSIDE(1).le.LSIDE(2)) then
-            visc1=localvisc_plus(im_main)
             heat1=localheatvisc_plus(im_main)
-            visc2=localvisc_minus(im_main_opp)
             heat2=localheatvisc_minus(im_main_opp)
            else
             print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
@@ -10776,67 +10704,6 @@ stop
              fort_speciesviscconst((imspec-1)*num_materials+im_main_opp)
            enddo
   
-             ! 1/s = (wL/sL + wR/sR)/(wL+wR)=(wL sR + wR sL)/(sL sR)*1/(wL+wR)
-           if ((visc1.lt.zero).or.(visc2.lt.zero)) then
-            print *,"visc1 or visc2 cannot be negative: ",visc1,visc2
-            stop
-           else if ((visc1.eq.zero).or.(visc2.eq.zero)) then
-            facevisc_local=zero
-           else if ((visc1.gt.zero).and.(visc2.gt.zero)) then
-
-            if ((LSIDE(1).eq.zero).and.(LSIDE(2).eq.zero)) then
-             facevisc_local=two*visc1*visc2/(visc1+visc2)
-            else if ((LSIDE(1).ge.zero).and.(LSIDE(2).ge.zero))  then
-             facevisc_local=visc1
-            else if ((LSIDE(1).le.zero).and.(LSIDE(2).le.zero)) then
-             facevisc_local=visc2
-            else if (LSIDE(2).gt.LSIDE(1)) then
-             theta=LSIDE(2)/(LSIDE(2)-LSIDE(1))
-             facevisc_local=theta/visc1+(one-theta)/visc2
-             facevisc_local=one/facevisc_local
-            else if (LSIDE(1).gt.LSIDE(2)) then
-             theta=LSIDE(1)/(LSIDE(1)-LSIDE(2))
-             facevisc_local=theta/visc1+(one-theta)/visc2
-             facevisc_local=one/facevisc_local
-            else
-             print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
-             print *,"visc1,visc2 ",visc1,visc2
-             stop
-            endif
-
-           else
-            print *,"visc1 or visc2 is nan: ",visc1,visc2
-            stop
-           endif
-
-           if (viscconst_interface(iten_main).eq.zero) then
-            ! do nothing
-           else if (viscconst_interface(iten_main).gt.zero) then
-
-            facevisc_local=viscconst_interface(iten_main)
-
-           else
-            print *,"viscconst_interface invalid: ",iten_main, &
-              viscconst_interface
-            stop
-           endif
-
-           if (viscconst_interface_min(iten_main).eq.zero) then
-            ! do nothing
-           else if (viscconst_interface_min(iten_main).gt.zero) then
-
-            if (facevisc_local.lt. &
-                viscconst_interface_min(iten_main)) then
-
-             facevisc_local=viscconst_interface_min(iten_main)
-
-            endif
-
-           else
-            print *,"viscconst_interface_min invalid"
-            stop
-           endif
-
            if ((heat1.ge.zero).and.(heat2.ge.zero)) then
             !do nothing
            else
@@ -10865,32 +10732,6 @@ stop
            else
             print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
             print *,"heat1,heat2 ",heat1,heat2
-            stop
-           endif
-
-           if (heatviscconst_interface(iten_main).eq.zero) then
-            ! do nothing
-           else if (heatviscconst_interface(iten_main).gt.zero) then
-
-            if (get_user_latent_heat(iten_main,room_temperature,1).ne.zero) then
-             if ((freezing_model(iten_main).eq.0).or. &
-                 (freezing_model(iten_main).eq.5)) then
-              print *,"heatviscconst_interface invalid"
-              stop
-             endif 
-            endif 
-            if (get_user_latent_heat( &
-                 iten_main+num_interfaces,room_temperature,1).ne.zero) then
-             if ((freezing_model(iten_main+num_interfaces).eq.0).or. &
-                 (freezing_model(iten_main+num_interfaces).eq.5)) then
-              print *,"heatviscconst_interface invalid"
-              stop
-             endif 
-            endif 
-
-            faceheat_local=heatviscconst_interface(iten_main)
-           else
-            print *,"heatviscconst_interface invalid"
             stop
            endif
 
@@ -10928,17 +10769,6 @@ stop
             else
              print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
              print *,"spec1,spec2 ",imspec,spec1(imspec),spec2(imspec)
-             stop
-            endif
-
-            spec_test= &
-              speciesviscconst_interface((imspec-1)*num_interfaces+iten_main)
-            if (spec_test.eq.zero) then
-             ! do nothing
-            else if (spec_test.gt.zero) then
-             facespecies_local(imspec)=spec_test
-            else
-             print *,"spec_test invalid: ",spec_test
              stop
             endif
 
@@ -11006,56 +10836,6 @@ stop
            print *,"is_zero_visc invalid: ",is_zero_visc
            stop
           endif
-
-          do im=1,num_materials
-           do im_opp=im+1,num_materials 
- 
-            call get_iten(im,im_opp,iten_FFACE)
-
-            if (((FFACE(im).gt.EPS1).and. &
-                 (FFACE(im_opp).gt.EPS1)).or. &
-                (iten_main.eq.iten_FFACE)) then
-
-             if (viscconst_interface(iten_FFACE).eq.zero) then
-              ! do nothing
-             else if (viscconst_interface(iten_FFACE).gt.zero) then
-              facevisc_local=viscconst_interface(iten_FFACE)
-             else
-              print *,"viscconst_interface invalid: ",viscconst_interface
-              print *,"iten_FFACE=",iten_FFACE
-              stop
-             endif
-
-             if (viscconst_interface_min(iten_FFACE).eq.zero) then
-              ! do nothing
-             else if (viscconst_interface_min(iten_FFACE).gt.zero) then
-
-              if (facevisc_local.lt. &
-                  viscconst_interface_min(iten_FFACE)) then
-
-               facevisc_local=viscconst_interface_min(iten_FFACE)
-
-              endif
-
-             else
-              print *,"viscconst_interface_min invalid: ", &
-                   viscconst_interface_min
-              print *,"iten_FFACE=",iten_FFACE
-              stop
-             endif
-
-            else if (iten_main.ne.iten_FFACE) then
-             ! do nothing
-            else if ((FFACE(im).gt.-EPS1).and. &
-                     (FFACE(im_opp).gt.-EPS1)) then
-             ! do nothing
-            else
-             print *,"FFACE invalid: ",im,im_opp,FFACE(im),FFACE(im_opp)
-             stop
-            endif
-
-           enddo ! im_opp=1..num_materials
-          enddo ! im=1..num_materials
 
          else
           print *,"solid_present_flag bust"
@@ -11351,86 +11131,6 @@ stop
             one/density_for_mass_fraction_diffusion
 
          local_face(FACECOMP_FACEDEN_BASE+1)=local_face(FACECOMP_FACEDEN+1)
-
-         do im=1,num_materials
-          do im_opp=im+1,num_materials
-
-           call get_iten(im,im_opp,iten_FFACE)
-
-           if (((FFACE(im).gt.EPS1).and. &
-                (FFACE(im_opp).gt.EPS1)).or. &
-               (iten_main.eq.iten_FFACE)) then
-
-            if (denconst_interface(iten_FFACE).eq.zero) then
-             ! do nothing
-            else if (denconst_interface(iten_FFACE).gt.zero) then
-             if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
-
-              local_face(FACECOMP_FACEDEN+1)=one/ &
-                 denconst_interface(iten_FFACE)
-
-              if (local_face(FACECOMP_FACEDEN_BASE+1).gt. &
-                  local_face(FACECOMP_FACEDEN+1)) then
-               ! do nothing
-              else
-               print *,"local_face(FACECOMP_FACEDEN_BASE+1) invalid"
-               stop
-              endif
-
-             else
-              print *,"local_face(FACECOMP_FACEDEN+1) invalid"
-              stop
-             endif
-            else
-             print *,"denconst_interface invalid"
-             stop
-            endif
-
-            if (denconst_interface_min(iten_FFACE).eq.zero) then
-             ! do nothing
-            else if (denconst_interface_min(iten_FFACE).gt.zero) then
-
-             if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
-
-              if (one/local_face(FACECOMP_FACEDEN+1).lt. &
-                  denconst_interface_min(iten_FFACE)) then
-
-               local_face(FACECOMP_FACEDEN+1)=one/ &
-                 denconst_interface_min(iten_FFACE)
-
-               if (local_face(FACECOMP_FACEDEN_BASE+1).gt. &
-                   local_face(FACECOMP_FACEDEN+1)) then
-                ! do nothing
-               else
-                print *,"local_face(FACECOMP_FACEDEN_BASE+1) invalid"
-                stop
-               endif
-
-              endif
-
-             else
-              print *,"local_face(FACECOMP_FACEDEN+1) invalid"
-              stop
-             endif
-
-            else
-             print *,"denconst_interface_min invalid"
-             stop
-            endif
-
-           else if (iten_main.ne.iten_FFACE) then
-            ! do nothing
-           else if ((FFACE(im).gt.-EPS1).and. &
-                    (FFACE(im_opp).gt.-EPS1)) then
-            ! do nothing
-           else
-            print *,"FFACE invalid: ",im,im_opp, &
-               FFACE(im),FFACE(im_opp)
-            stop
-           endif
-
-          enddo ! im_opp=im+1..num_materials
-         enddo ! im=1..num_materials
 
          if ((project_option.eq.SOLVETYPE_PRES).or. &
              (project_option.eq.SOLVETYPE_INITPROJ)) then
@@ -11926,15 +11626,13 @@ stop
         null_viscosity=0
 
         do im=1,num_materials
-         LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
+         LSplus(im)=levelPC(D_DECL(i,j,k),im)
         enddo
 
          ! checks rigid and non-rigid materials.
          ! get_primary_material is declared in: GLOBALUTIL.F90
          ! get_secondary_material is declared in: MOF.F90
-        call get_primary_material(dx,LSIDE_MAT,implus_majority)
-        call get_secondary_material(dx,LSIDE_MAT,implus_majority, &
-          im_secondary,SDIM)
+        call get_primary_material(dx,LSplus,implus_majority)
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped_center,time,LS_clamped_center, &
@@ -12108,25 +11806,6 @@ stop
 
          local_cenden=mass_total/voltotal
 
-         if (abs(LSIDE_MAT(im_secondary)).le.DXMAXLS) then
-          call get_iten(implus_majority,im_secondary,iten_main)
-          if ((denconst_interface_min(iten_main).eq.zero).or. &
-              (1.eq.1)) then
-           ! do nothing
-          else if (denconst_interface_min(iten_main).gt.zero) then
-           if (local_cenden.lt.denconst_interface_min(iten_main)) then
-            local_cenden=denconst_interface_min(iten_main)
-           endif
-          else
-           print *,"denconst_interface_min(iten_main) invalid"
-           stop
-          endif
-         else if (abs(LSIDE_MAT(im_secondary)).gt.DXMAXLS) then
-          !do nothing
-         else
-          print *,"abs(LSIDE_MAT(im_secondary) invalid"
-          stop
-         endif
          if (local_cenden.gt.zero) then
           local_cenden=one/local_cenden
          else
@@ -12135,7 +11814,7 @@ stop
          endif
 
         else
-         print *,"voltotal invalid"
+         print *,"voltotal invalid: ",voltotal
          stop
         endif
 

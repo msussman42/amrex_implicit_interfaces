@@ -118,7 +118,6 @@ ns.material_type=0 0 0
 # thermal conductivity: erg/(s cm Kelvin)
 ns.heatviscconst=58000.0 2400.0 58000.0
 # 0.0 means do not use.
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.viscconst=0.01 1.0e-4 100.0
 # density: g/cm^3
 ns.denconst=1.0 0.00125 0.1

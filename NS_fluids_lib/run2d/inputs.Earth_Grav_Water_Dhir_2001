@@ -160,7 +160,6 @@ ns.material_type=0 0 999
 ns.heatviscconst=0.680 0.0248 0.680 # dimensional MKS
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 # ns.viscconst=7.4273E-04 3.1999E-05 7.4273E-04 # dimensionless
 ns.viscconst=279E-6 12.02e-6 279E-6 # dimensional MKS
