@@ -8250,6 +8250,15 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,
   		      local_caller_string);
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+
+  build_elastic_fluid_levelset(localMF[LS_NRM_CP_MF]);
+
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+ 
  if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance");
  if (localMF[LS_NRM_CP_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
@@ -28861,6 +28870,11 @@ void
 NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
 
  std::string local_caller_string="build_elastic_fluid_levelset";
+
+ if (material_extend_velocity_flag>0) {
+  //do nothing
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
 
  bool use_tiling=ns_tiling;
 

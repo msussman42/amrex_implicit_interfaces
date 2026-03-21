@@ -448,6 +448,8 @@ stop
        do im=1,num_materials
         local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
        enddo
+        !in: fort_fd_normal
+        !results used by the GNBC algorithm.
        call get_primary_material(dx,local_LS,im_primary)
        call get_secondary_material(dx,local_LS,im_primary,im_secondary,SDIM)
        triple_point_flag=0
@@ -1115,6 +1117,7 @@ stop
         do im_local=1,num_materials
          local_LS(im_local)=LS_data(D_DECL(i,j,k),im_local)
         enddo
+         !in: fort_node_to_cell
         call get_primary_material(dx,local_LS,im_primary)
         call get_secondary_material(dx,local_LS,im_primary,im_secondary,SDIM)
 

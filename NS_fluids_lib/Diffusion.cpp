@@ -779,15 +779,20 @@ void NavierStokes::combine_state_variable(
 
  int ntsat=EXTRAP_NCOMP_TSAT;
 
- MultiFab* LEVEL_COMBINE=nullptr;
+ MultiFab* LEVEL_COMBINE=getStateDist(ngrow_distance,cur_time_slab,
+    local_caller_string);
+
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+  build_elastic_fluid_levelset(LEVEL_COMBINE);
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
 
  MultiFab* STATE_INTERFACE=nullptr;
 
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
-
-  resize_levelset(2,LEVELPC_MF);
-  LEVEL_COMBINE=localMF[LEVELPC_MF];
 
   if (interface_cond_avail==1) {
    if (is_phasechange==1) {
@@ -804,41 +809,38 @@ void NavierStokes::combine_state_variable(
   } else
    amrex::Error("interface_cond_avail invalid");
 
-
-  debug_ngrow(LEVELPC_MF,2,local_caller_string);
-
  } else if (combine_flag==2) { // combine if vfrac<VOFTOL
 
   STATE_INTERFACE=&LS_new; // placeholder
+
   if (update_flux==0) {
-   LEVEL_COMBINE=&LS_new;
+   //do nothing
   } else if (update_flux==1) {
-   resize_levelset(2,LEVELPC_MF);
-   LEVEL_COMBINE=localMF[LEVELPC_MF];
-   debug_ngrow(LEVELPC_MF,2,local_caller_string);
+   //do nothing
   } else
    amrex::Error("update_flux invalid");
 
  } else
   amrex::Error("combine_flag invalid");
   
- if (LEVEL_COMBINE->nGrow()<1) {
+ if (LEVEL_COMBINE->nGrow()!=ngrow_distance) {
   std::cout << "LEVEL_COMBINE->nGrow()= " << LEVEL_COMBINE->nGrow() << '\n';
   std::cout << "combine_flag= " << combine_flag << '\n';
   std::cout << "update_flux= " << update_flux << '\n';
-  amrex::Error("LEVEL_COMBINE->nGrow()<1");
+  amrex::Error("LEVEL_COMBINE->nGrow()!=ngrow_distance");
  }
  if (LEVEL_COMBINE->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LEVEL_COMBINE->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,local_caller_string);
- VOF_Recon_resize(1); //output:SLOPE_RECON_MF
- debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  MultiFab* signed_distance=nullptr;
+
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
 
@@ -855,9 +857,10 @@ void NavierStokes::combine_state_variable(
  } else
   amrex::Error("combine_flag invalid");
 
- if ((signed_distance->nGrow()==1)||
-     (signed_distance->nGrow()==2)) {
+ if (signed_distance->nGrow()==ngrow_distance) {
+
   // do nothing
+
  } else {
   std::cout << "signed_distance->nGrow()= " <<
    signed_distance->nGrow() << '\n';
@@ -865,6 +868,7 @@ void NavierStokes::combine_state_variable(
  }
  
  if (update_flux==0) {
+
   if (combine_idx==-1) {
    if ((combine_flag==0)||(combine_flag==1)) {
     init_boundary_list(scomp,ncomp);
@@ -1204,6 +1208,8 @@ void NavierStokes::combine_state_variable(
 
  } else
   amrex::Error("update_flux invalid"); 
+
+ delete LEVEL_COMBINE;
 
 }  // end subroutine combine_state_variable
 

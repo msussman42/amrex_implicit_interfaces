@@ -5829,7 +5829,7 @@ stop
       call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1)
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
       VEL_ptr=>VEL
       call checkbound_array(fablo,fabhi,VEL_ptr,1,-1)
       DEN_ptr=>DEN
@@ -15053,7 +15053,6 @@ stop
       real(amrex_real) LSleft_grav
       real(amrex_real) LSright_grav
       real(amrex_real) LSupwind(num_materials)
-      real(amrex_real) localLS(num_materials)
       real(amrex_real) mgoni_temp(num_materials)
       integer local_maskSEM
       integer maskcov
@@ -15669,7 +15668,7 @@ stop
           stop
          endif
 
-          ! set LSleft, LSright, localLS
+          ! set LSleft, LSright
          if ((operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
              (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
              (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
@@ -15710,7 +15709,6 @@ stop
           do im=1,num_materials
            LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
            LSright(im)=levelPC(D_DECL(i,j,k),im)
-           localLS(im)=half*(LSright(im)+LSleft(im))
           enddo
           call get_primary_material(dx,LSleft,im_left)
           call get_primary_material(dx,LSright,im_right)
@@ -17070,8 +17068,25 @@ stop
               endif
 
                !im_gravity<im_opp_gravity
-              LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
-              LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
+              if ((is_elastic(im_gravity).eq.1).and. &
+                  (is_elastic(im_opp_gravity).eq.1)) then
+               LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
+               LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
+              else if ((is_elastic(im_gravity).eq.0).and. &
+                       (is_elastic(im_opp_gravity).eq.0)) then
+               LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
+               LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
+              else if (is_elastic(im_gravity).eq.1) then
+               LSleft_grav=two*LSleft(im_gravity)
+               LSright_grav=two*LSright(im_gravity)
+              else if (is_elastic(im_opp_gravity).eq.1) then
+               LSleft_grav=-two*LSleft(im_opp_gravity)
+               LSright_grav=-two*LSright(im_opp_gravity)
+              else
+               print *,"is_elastic invalid"
+               stop
+              endif
+               
              
               dencomp_im=(im_gravity-1)*num_state_material+1+ENUM_DENVAR 
               dencomp_im_opp=(im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 

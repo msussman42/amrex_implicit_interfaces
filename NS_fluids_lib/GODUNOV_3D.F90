@@ -6687,7 +6687,8 @@ stop
       real(amrex_real), pointer :: Tnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: lsfab(DIMV(lsfab),num_materials)
       real(amrex_real), pointer :: lsfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: recon(DIMV(recon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in),target :: &
+        recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
@@ -18148,10 +18149,10 @@ stop
       call checkbound_array(fablo,fabhi,LSNEW_ptr,1,-1)
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
 
       vof_ptr=>vof
-      call checkbound_array(fablo,fabhi,vof_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow_distance,-1)
       cellfab_ptr=>cellfab
       call checkbound_array(fablo,fabhi,cellfab_ptr,1,-1)
       newcell_ptr=>newcell
@@ -18407,7 +18408,7 @@ stop
           else if (is_rigid(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im) invalid"
+           print *,"is_rigid(im) invalid ",im,is_rigid(im)
            stop
           endif
           partid=partid+1
@@ -18910,6 +18911,7 @@ stop
 
                   if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
 
+                    !in: fort_combinevel
                    call get_secondary_material(dx,cell_LS, &
                      im_primary,im_secondary,SDIM)
 
@@ -19521,7 +19523,8 @@ stop
       real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: LS(DIMV(LS),num_materials*(SDIM+1))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solfab(DIMV(solfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target ::  &
+        solfab(DIMV(solfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solfab_ptr(D_DECL(:,:,:),:)
 
       integer ii,jj,kk 
@@ -19857,7 +19860,7 @@ stop
          else if (is_rigid(im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
           stop
          endif
 
