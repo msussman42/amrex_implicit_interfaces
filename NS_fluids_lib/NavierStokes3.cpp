@@ -6357,7 +6357,15 @@ NavierStokes::ColorSum(
   amrex::Error("expecting TESSELLATE_ALL|TESSELLATE_ALL_RASTER");
 
  if (sweep_num==0) {
-  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,local_caller_string);
+  getStateDist_localMF(LS_COLORSUM_MF,ngrow_distance,
+     cur_time_slab,local_caller_string);
+  if (material_extend_velocity_flag==0) {
+   //do nothing
+  } else if (material_extend_velocity_flag>0) {
+   build_elastic_fluid_levelset(localMF[LS_COLORSUM_MF]);
+  } else
+   amrex::Error("material_extend_velocity_flag invalid");
+
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
@@ -6372,8 +6380,8 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("sweep_num invalid");
 
- if (localMF[LS_COLORSUM_MF]->nGrow()!=1)
-  amrex::Error("localMF[LS_COLORSUM_MF]->nGrow()!=1");
+ if (localMF[LS_COLORSUM_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[LS_COLORSUM_MF]->nGrow()!=ngrow_distance");
 
  if (localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*num_materials)
   amrex::Error("localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*num_materials");

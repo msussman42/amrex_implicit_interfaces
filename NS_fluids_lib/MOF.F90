@@ -28026,6 +28026,7 @@ contains
 
       im_secondary=0
 
+       ! check if rigid material is second.
       do im=1,num_materials
        if (im.ne.im_primary) then
 
@@ -28045,6 +28046,7 @@ contains
 
       if (im_secondary.eq.0) then
 
+        ! check if elastic material is second.
        do im=1,num_materials
         if (im.ne.im_primary) then
 
