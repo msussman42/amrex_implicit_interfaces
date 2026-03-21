@@ -484,7 +484,7 @@ stop
              ls_stencil, & ! (-1,1)^3,num_materials
              particle_list, &
              num_particles, &
-             lsnormal, &  ! (num_materials,sdim)
+             lsnormal, &  ! (num_materials,SDIM)
              lsnormal_valid, &  ! num_materials
              ls_intercept, & ! num_materials
              bfact,dx, &
@@ -737,7 +737,7 @@ stop
          endif
          local_normal(dir)=local_normal(dir)/RR
          local_mag=local_mag+local_normal(dir)**2
-        enddo ! dir=1..sdim 
+        enddo ! dir=1..SDIM 
         if (local_mag.eq.zero) then
          ! do nothing
         else if (local_mag.gt.zero) then
@@ -1293,7 +1293,7 @@ stop
             stop
            endif
            local_curv(dir)=local_curv(dir)/RR
-          enddo ! dir=1..sdim 
+          enddo ! dir=1..SDIM 
 
           total_curv=zero
           do dir=1,SDIM
@@ -1439,7 +1439,7 @@ stop
             print *,"normal_test invalid"
             stop
            endif
-          enddo ! dir=1..sdim
+          enddo ! dir=1..SDIM
           if (sign_change.eq.0) then
            local_status=0
           endif
@@ -1580,7 +1580,7 @@ stop
                else if ((SDIM.eq.2).and.(jtan.eq.3)) then
                 !do nothing
                else
-                print *,"sdim or jtan invalid"
+                print *,"SDIM or jtan invalid"
                 stop
                endif
 
@@ -1712,7 +1712,7 @@ stop
       end subroutine fort_node_to_cell
 
         ! vofrecon=vof,ref centroid,order,slope,intercept
-        ! newfab has num_materials*(sdim+1) components
+        ! newfab has num_materials*(SDIM+1) components
         !
       subroutine fort_levelstrip( &
          tessellate, & !TESSELLATE_FLUIDS or TESSELLATE_IGNORE_ISELASTIC
@@ -2292,7 +2292,7 @@ stop
          xmid(dir)=xsten_donate(icur(dir),dir)
          theta_nbr=theta_nbr+(xnbr(dir)-xmid(dir))**2
          theta_cen=theta_cen+(xmid(dir)-xsten_donate(0,dir))**2
-        enddo !dir=1..sdim
+        enddo !dir=1..SDIM
         theta_nbr=sqrt(theta_nbr)
         theta_cen=sqrt(theta_cen)
 
@@ -2719,7 +2719,7 @@ stop
          if (icur(dir)+ihicut(dir).gt.tilehi(dir)) then
           ihicut(dir)=tilehi(dir)-icur(dir)
          endif
-        enddo ! dir=1..sdim
+        enddo ! dir=1..SDIM
 
          !LSslope_center is normalized
         call get_primary_slope( &
@@ -3516,6 +3516,213 @@ stop
       return
       end subroutine fort_build_old_vof
 
+      subroutine fort_build_old_ls( &
+       tid, &
+       level, &
+       finest_level, &
+       maskfab,DIMS(maskfab), &
+       old_ls,DIMS(old_ls), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       time) &
+      bind(c,name='fort_build_old_ls')
+
+      use global_utility_module
+      use probcommon_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use mof_redist_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: DIMDEC(maskfab)
+      integer, INTENT(in) :: DIMDEC(old_ls)
+
+      real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),2)
+      real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+        old_ls(DIMV(old_ls),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: old_ls_ptr(D_DECL(:,:,:),:)
+
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real), INTENT(in) :: time
+
+      integer i,j,k
+
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: ls_local(num_materials*(1+SDIM))
+      real(amrex_real) :: LS_max
+      real(amrex_real) :: LS_test
+
+      integer :: dir
+      integer :: im_primary
+
+      integer mask1,mask2
+      integer im
+      integer im_opp
+      integer im_crit
+ 
+      if (bfact.lt.1) then
+       print *,"bfact invalid fort_build_old_ls ",bfact
+       stop
+      endif
+
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid in fort_build_old_ls"
+       stop
+      endif
+
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance<4 error in fort_build_old_ls: ", &
+           ngrow_distance
+       stop
+      endif
+
+      maskfab_ptr=>maskfab
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
+      old_ls_ptr=>old_ls
+      call checkbound_array(fablo,fabhi,old_ls_ptr,ngrow_distance,-1)
+      
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_distance) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       ! mask1=1 at interior cells or fine/fine ghost cells
+       ! mask1=0 at coarse/fine ghost cells or outside domain.
+       ! mask2=1 at interior cells
+       mask1=NINT(maskfab(D_DECL(i,j,k),1))
+       mask2=NINT(maskfab(D_DECL(i,j,k),2))
+
+       if ((mask2.eq.1).or.(mask1.eq.0).or.(1.eq.1)) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do im=1,num_materials*(1+SDIM)
+         ls_local(im)=old_ls(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(dx,ls_local,im_primary)
+ 
+        do im=1,num_materials
+         if (is_rigid(im).eq.1) then
+          !do nothing
+         else if (is_elastic(im).eq.1) then
+          !do nothing
+         else if ((is_rigid(im).eq.0).and. &
+                  (is_elastic(im).eq.0)) then
+          if (im.eq.im_primary) then
+           ls_local(im)=max(ls_local(im),zero)
+
+           LS_max=zero
+           im_crit=0
+           do im_opp=1,num_materials
+            if (im_opp.ne.im) then
+             LS_test=min(ls_local(im_opp),zero)
+             if (im_crit.eq.0) then
+              im_crit=im_opp
+              LS_max=LS_test
+             else if ((im_crit.ge.1).and. &
+                      (im_crit.le.num_materials)) then
+              if (LS_max.lt.LS_test) then
+               LS_max=LS_test
+               im_crit=im_opp
+              else if (LS_max.ge.LS_test) then
+               !do nothing
+              else
+               print *,"LS_test invalid ",LS_test
+               stop
+              endif
+             else
+              print *,"im_crit invalid"
+              stop
+             endif
+            else if (im_opp.eq.im) then
+             !do nothing
+            else
+             print *,"im_opp or im invalid ",im,im_opp
+             stop
+            endif
+           enddo !im_opp=1,num_materials
+           if (im_crit.eq.0) then
+            !do nothing
+           else if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+            if (ls_local(im).gt.-LS_max) then
+             ls_local(im)=-LS_max
+             do dir=1,SDIM
+              ls_local(num_materials+(im-1)*SDIM+dir)= &
+                -ls_local(num_materials+(im_crit-1)*SDIM+dir)
+             enddo
+            else if (ls_local(im).le.-LS_max) then
+             !do nothing
+            else
+             print *,"ls_local(im) invalid: ",im,ls_local(im)
+             stop
+            endif
+           else
+            print *,"im_crit invalid"
+            stop
+           endif
+          else if (im.ne.im_primary) then
+           if (is_rigid(im_primary).eq.1) then
+            !do nothing
+           else if (is_rigid(im_primary).eq.0) then
+            if (ls_local(im).gt.-ls_local(im_primary)) then
+             ls_local(im)=min(-ls_local(im_primary),zero)
+             do dir=1,SDIM
+              ls_local(num_materials+(im-1)*SDIM+dir)= &
+                -ls_local(num_materials+(im_primary-1)*SDIM+dir)
+             enddo
+            else if (ls_local(im).le.-ls_local(im_primary)) then
+             !do nothing
+            else
+             print *,"ls_local invalid ",ls_local
+             stop
+            endif
+           else 
+            print *,"is_rigid(im_primary) invalid ",im_primary, &
+              is_rigid(im_primary)
+            stop
+           endif      
+          else
+           print *,"im invalid"
+           stop
+          endif
+
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+         endif
+        enddo !im=1,num_materials
+
+        do im=1,num_materials*(1+SDIM)
+         old_ls(D_DECL(i,j,k),im)=ls_local(im)
+        enddo
+
+       else if ((mask2.eq.0).and.(mask1.eq.1).and.(1.eq.0)) then
+        ! do nothing
+       else
+        print *,"mask invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo  !i,j,k 
+
+      return
+      end subroutine fort_build_old_ls
 
 
        ! fort_faceinit is called from NavierStokes.cpp,
@@ -3639,7 +3846,7 @@ stop
       endif
 
        ! area for all faces of a cell.
-       ! (num_materials,sdim,2)
+       ! (num_materials,SDIM,2)
       nface_test=num_materials*SDIM*2
       if (nface_test.ne.nface) then
        print *,"nface invalid faceinit nface nface_test ",nface,nface_test
@@ -3810,7 +4017,7 @@ stop
            ! xsten_thin box: xsten_thin(0,dir) = center of thin box
            ! xsten_thin(1,dir) right side in dir direction
            ! xsten_thin(-1,dir) left side
-           ! multi_cen(sdim,num_materials) is "absolute" 
+           ! multi_cen(SDIM,num_materials) is "absolute" 
           call project_slopes_to_face( &
            bfact,dx,xsten,nhalf, &
            mofdatavalid, &

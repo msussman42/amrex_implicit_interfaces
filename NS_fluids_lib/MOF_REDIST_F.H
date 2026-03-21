@@ -118,6 +118,20 @@ namespace amrex{
        Real* time);
 
 
+     void fort_build_old_ls(
+       int* tid,
+       int* level,
+       int* finest_level,
+       Real* mask,
+       AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+       Real* old_ls,
+       AMREX_ARLIM_P(old_lslo),AMREX_ARLIM_P(old_lshi),
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,
+       int* bfact,
+       const Real* xlo,const Real* dx,
+       Real* time);
+
      void fort_faceinit(
        int* tid,
        int* tessellate,

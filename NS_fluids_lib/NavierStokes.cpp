@@ -28856,6 +28856,82 @@ NavierStokes::build_elastic_fluid_moment() {
 
 } // end subroutine build_elastic_fluid_moment()
 
+//mf is initialized with the "regular" levelset.
+void
+NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
+
+ std::string local_caller_string="build_elastic_fluid_levelset";
+
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+
+ const Real* dx = geom.CellSize();
+
+ resize_mask_nbr(ngrow_distance);
+ debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
+ if (localMF[MASK_NBR_MF]->nComp()!=4)
+  amrex::Error("invalid ncomp for mask nbr");
+
+ if (mf->nGrow()==ngrow_distance) {
+  //do nothing
+ } else 
+  amrex::Error("mf->nGrow()<>ngrow_distance");
+
+ if (mf->nComp()==num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("mf->nComp()<>num_materials*(1+sdim)");
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mf->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*mf,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
+   FArrayBox& lsfab=(*mf)[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // fort_build_old_ls is declared in: MOF_REDIST_3D.F90
+   fort_build_old_ls( 
+    &tid_current,
+    &level,
+    &finest_level,
+    maskfab.dataPtr(),
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    lsfab.dataPtr(),
+    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    xlo,dx,
+    &cur_time_slab);
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_BUILDELASTICFLUID_LS,"build_elastic_fluid_ls");
+
+} // end subroutine build_elastic_fluid_levelset()
+
 
 void
 NavierStokes::save_elastic_LS() {

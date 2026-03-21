@@ -509,7 +509,6 @@ stop
             endif
            else
             print *,"is_rigid(im_tertiary) invalid"
-            print *,"contradiction with: get_tertiary_material"
             print *,"im_tertiary ",im_tertiary
             print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
             stop
