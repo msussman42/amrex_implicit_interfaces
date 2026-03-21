@@ -9371,8 +9371,8 @@ stop
       integer LS_consistent
       integer LS_consistent_tension
 
-      real(amrex_real) LSplus(num_materials)
-      real(amrex_real) LSminus(num_materials)
+      real(amrex_real) LSright(num_materials)
+      real(amrex_real) LSleft(num_materials)
       integer im_main,im_main_opp,im_opp
       integer im_left_main,im_right_main
       integer ireverse
@@ -9954,13 +9954,13 @@ stop
          endif
 
          do im=1,num_materials
-          LSplus(im)=levelPC(D_DECL(i,j,k),im)
-          LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
+          LSright(im)=levelPC(D_DECL(i,j,k),im)
+          LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
          enddo
 
           ! checks rigid and non-rigid materials.
-         call get_primary_material(dx,LSplus,implus_majority)
-         call get_primary_material(dx,LSminus,imminus_majority)
+         call get_primary_material(dx,LSright,implus_majority)
+         call get_primary_material(dx,LSleft,imminus_majority)
 
          if ((implus_majority.lt.1).or. &
              (implus_majority.gt.num_materials).or. &
@@ -10039,7 +10039,7 @@ stop
           ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            predict_face_afrac_solid, & !intent(in) "facecut_solid"
-           LSminus,LSplus, & !intent(in)
+           LSleft,LSright, & !intent(in)
            is_solid_face, & !intent(out)
            im_solid, & !intent(out)
            im_solid_valid, & !intent(out)
@@ -10241,7 +10241,7 @@ stop
           ! fluid_interface is declared in: PROB.F90
           call fluid_interface( &
             dx, &
-            LSminus,LSplus, & !intent(in)
+            LSleft,LSright, & !intent(in)
             gradh, & !intent(out)
             im_main_opp,im_main, & !intent(out)
             im_left_main,im_right_main) !intent(out)
@@ -10280,7 +10280,7 @@ stop
                (gradh.ne.zero)) then
             call fluid_interface_tension( &
              xstenMAC_center,dx,time, &
-             LSminus,LSplus, &
+             LSleft,LSright, &
              gradh_tension, &
              im_opp_tension,im_tension, & !INTENT(out)
              im_left_tension,im_right_tension) !INTENT(out)
@@ -10330,18 +10330,30 @@ stop
            stop
           endif
 
-          if (is_elastic(im_main).eq.1) then
-           LSIDE(1)=LSminus(im_main)
-           LSIDE(2)=LSplus(im_main)
+          if ((is_rigid(im_main).eq.0).and. &
+              (is_rigid(im_main_opp).eq.0)) then
+           !do nothing
+          else
+           print *,"expecting is_rigid.eq.0"
+           stop
+          endif
+
+          if ((is_elastic(im_main).eq.1).and. &
+              (is_elastic(im_main_opp).eq.1)) then
+           LSIDE(1)=half*(LSleft(im_main)-LSleft(im_main_opp)) 
+           LSIDE(2)=half*(LSright(im_main)-LSright(im_main_opp)) 
+          else if (is_elastic(im_main).eq.1) then
+           LSIDE(1)=LSleft(im_main)
+           LSIDE(2)=LSright(im_main)
           else if (is_elastic(im_main_opp).eq.1) then
-           LSIDE(1)=-LSminus(im_main_opp)
-           LSIDE(2)=-LSplus(im_main_opp)
+           LSIDE(1)=-LSleft(im_main_opp)
+           LSIDE(2)=-LSright(im_main_opp)
           else if ((is_elastic(im_main).eq.0).and. &
                    (is_elastic(im_main_opp).eq.0).and. &
                    (is_rigid(im_main).eq.0).and. &
                    (is_rigid(im_main_opp).eq.0)) then
-           LSIDE(1)=half*(LSminus(im_main)-LSminus(im_main_opp)) 
-           LSIDE(2)=half*(LSplus(im_main)-LSplus(im_main_opp)) 
+           LSIDE(1)=half*(LSleft(im_main)-LSleft(im_main_opp)) 
+           LSIDE(2)=half*(LSright(im_main)-LSright(im_main_opp)) 
           else
            print *,"invalid is_elastic or is_rigid"
            stop
@@ -10378,8 +10390,8 @@ stop
               (is_elastic(im_opp_tension).eq.0).and. &
               (is_rigid(im_tension).eq.0).and. &
               (is_rigid(im_opp_tension).eq.0)) then
-           LSIDE_tension(1)=half*(LSminus(im_tension)-LSminus(im_opp_tension)) 
-           LSIDE_tension(2)=half*(LSplus(im_tension)-LSplus(im_opp_tension)) 
+           LSIDE_tension(1)=half*(LSleft(im_tension)-LSleft(im_opp_tension)) 
+           LSIDE_tension(2)=half*(LSright(im_tension)-LSright(im_opp_tension)) 
           else
            print *,"invalid is_elastic or is_rigid"
            stop
@@ -11525,7 +11537,7 @@ stop
             print *,"LSIDE_tension(1) ",LSIDE_tension(1) 
             print *,"LSIDE_tension(2) ",LSIDE_tension(2) 
             do im=1,num_materials
-             print *,"im,lsminus,lsplus ",im,LSminus(im),LSplus(im)
+             print *,"im,LSleft,LSright ",im,LSleft(im),LSright(im)
             enddo
             print *,"level,finest_level ",level,finest_level
            else
@@ -11626,13 +11638,13 @@ stop
         null_viscosity=0
 
         do im=1,num_materials
-         LSplus(im)=levelPC(D_DECL(i,j,k),im)
+         LSright(im)=levelPC(D_DECL(i,j,k),im)
         enddo
 
          ! checks rigid and non-rigid materials.
          ! get_primary_material is declared in: GLOBALUTIL.F90
          ! get_secondary_material is declared in: MOF.F90
-        call get_primary_material(dx,LSplus,implus_majority)
+        call get_primary_material(dx,LSright,implus_majority)
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped_center,time,LS_clamped_center, &

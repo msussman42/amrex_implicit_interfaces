@@ -1404,6 +1404,7 @@ void apply_pressure_grad(
 
     void makeStateDist(int tessellate);
     void build_elastic_fluid_moment();
+    void build_elastic_fluid_levelset(MultiFab* mf);
     void save_elastic_LS();
 
     void correct_dist_uninit(int tessellate);
