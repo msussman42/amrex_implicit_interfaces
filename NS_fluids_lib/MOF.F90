@@ -13764,6 +13764,7 @@ contains
         nmax, &
         mofdata, &
         imaterial_count, & !imaterial_count-1=#mat already reconstructed
+        uncaptured_volume_fraction, &
         uncaptured_volume_vof, &
         uncaptured_volume_cen, &
         multi_centroidA, &
@@ -13794,6 +13795,7 @@ contains
       integer i_stencil_node
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: order_algorithm_in(num_materials)
+      real(amrex_real), INTENT(inout) :: uncaptured_volume_fraction
       real(amrex_real), INTENT(inout) :: uncaptured_volume_vof 
       real(amrex_real), INTENT(inout) :: uncaptured_volume_cen
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
@@ -13938,6 +13940,14 @@ contains
        print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
+      if (uncaptured_volume_fraction.gt.zero) then
+       ! do nothing
+      else
+       print *,"uncaptured_volume_fraction invalid: ", &
+         uncaptured_volume_fraction
+       stop
+      endif
+
       if (uncaptured_volume_vof.gt.zero) then
        ! do nothing
       else
@@ -14266,6 +14276,7 @@ contains
         print *,"cencell_vof ",cencell_vof
         print *,"volcut_vof ",volcut_vof
         print *,"cencut_vof ",cencut_vof
+        print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
         print *,"uncaptured_volume_vof ",uncaptured_volume_vof
         print *,"uncaptured_volume_cen ",uncaptured_volume_cen
         do im=1,num_materials
@@ -14318,7 +14329,7 @@ contains
         if (is_masked(im).eq.1) then
          ! do nothing
         else if (is_masked(im).eq.0) then
-         if (mofdata(vofcomp+sdim+1).eq.zero) then
+         if (NINT(mofdata(vofcomp+sdim+1)).eq.0) then
           single_volume=mofdata(vofcomp)*volcell_vof
           if (single_volume.ge.(one-EPS_UNCAPTURED)*uncaptured_volume_vof) then
 
@@ -14356,10 +14367,11 @@ contains
 
       if (single_material_takes_all.eq.1) then
         uncaptured_volume_vof=zero
+        uncaptured_volume_fraction=zero
       else if (single_material_takes_all.eq.0) then
         ! do nothing
       else 
-        print *,"bust individual_MOF"
+        print *,"bust individual_MOF (1)"
         print *,"sdim,num_materials ",sdim,num_materials
         print *,"single_material_takes_all ",single_material_takes_all
         stop
@@ -14367,7 +14379,8 @@ contains
         
           ! if uncaptured_volume_vof=0, then there is no need to find the
           ! slope since "single_material_takes_all=1". 
-      if (uncaptured_volume_vof.gt.zero) then
+      if ((uncaptured_volume_vof.gt.zero).and. &
+          (uncaptured_volume_fraction.gt.zero)) then
 
          ! find unprocessed material whose moment is furthest from cencut. 
 
@@ -14384,7 +14397,8 @@ contains
           ! only find the slope if refvfrac<>0 and refvfrac<available vol.
           if ((NINT(mofdata(vofcomp+sdim+1)).eq.0).and. & ! order==0?
               (single_volume.ge.EPS_UNCAPTURED*volcell_vof).and. & ! 0<V<Vavail?
-              (single_volume.le.(one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
+              (single_volume.le. &
+               (one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
 
            do dir=1,sdim
             centroid_free(dir)=cencut_cen(dir)
@@ -14431,7 +14445,8 @@ contains
 
           else if ((NINT(mofdata(vofcomp+sdim+1)).ge.1).or. & ! order>=1?
                    (abs(single_volume).le.EPS_UNCAPTURED*volcell_vof).or. &
-                   (single_volume.ge.(one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
+                   (single_volume.ge. &
+                    (one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
            ! do nothing
           else
            print *,"order or single_volume invalid"
@@ -14447,7 +14462,8 @@ contains
 
         enddo ! im=1..num_materials
 
-      else if (uncaptured_volume_vof.eq.zero) then
+      else if ((uncaptured_volume_vof.eq.zero).or. &
+               (uncaptured_volume_fraction.eq.zero)) then
 
         if (distmax.lt.zero) then
          ! do nothing
@@ -14458,6 +14474,8 @@ contains
 
       else
         print *,"uncaptured_volume_vof invalid: ",uncaptured_volume_vof
+        print *,"or uncaptured_volume_fraction invalid: ", &
+          uncaptured_volume_fraction
         stop
       endif 
 
@@ -14466,7 +14484,7 @@ contains
 
          if ((critical_material.lt.1).or. &
              (critical_material.gt.num_materials)) then
-          print *,"bust individual_MOF"
+          print *,"bust individual_MOF (2)"
           print *,"critical_material=",critical_material
           print *,"num_materials=",num_materials
           stop
@@ -14559,6 +14577,10 @@ contains
          if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
           uncaptured_volume_vof=zero
          endif
+         uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
+         if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
+          uncaptured_volume_fraction=zero
+         endif
 
          ! above MOF reconstruct, below default slopes.
       else if (distmax.le.EPS_8_4*dx(1)) then
@@ -14598,13 +14620,16 @@ contains
 
          if ((critical_material.lt.1).or. &
              (critical_material.gt.num_materials)) then
-          print *,"bust individual_MOF"
+          print *,"bust individual_MOF (3)"
           print *,"sdim,num_materials,critical_material ", &
                   sdim,num_materials,critical_material
           print *,"ngeom_recon= ",ngeom_recon
+          print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
+          print *,"uncaptured_volume_vof ",uncaptured_volume_vof
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
            print *,"im,vf ",im,mofdata(vofcomp)
+           print *,"im,status ",im,NINT(mofdata(vofcomp+sdim+1))
           enddo
           stop
          endif
@@ -14747,6 +14772,10 @@ contains
           uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
           if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
            uncaptured_volume_vof=zero
+          endif
+          uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
+          if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
+           uncaptured_volume_fraction=zero
           endif
   
           if (single_material_takes_all.eq.1) then
@@ -16215,6 +16244,9 @@ contains
 
       real(amrex_real) centroid_absolute(sdim)
 
+      real(amrex_real) uncaptured_volume_fraction_elastic
+      real(amrex_real) uncaptured_volume_fraction_fluids
+
       real(amrex_real) uncaptured_volume_vof_rigid
       real(amrex_real) uncaptured_centroid_vof_rigid(sdim)
 
@@ -16836,6 +16868,26 @@ contains
         multi_centroidA(imaterial,dir)=zero
        enddo
 
+      enddo !imaterial=1,num_materials
+
+      uncaptured_volume_fraction_elastic=zero
+      uncaptured_volume_fraction_fluids=zero
+      do imaterial=1,num_materials
+       vofcomp=(imaterial-1)*ngeom_recon+1
+       if (is_rigid_local(imaterial).eq.1) then
+        !do nothing
+       else if (is_elastic_local(imaterial).eq.1) then
+        uncaptured_volume_fraction_elastic= &
+          uncaptured_volume_fraction_elastic+mofdata(vofcomp)
+       else if ((is_rigid_local(imaterial).eq.0).and. &
+                (is_elastic_local(imaterial).eq.0)) then
+        uncaptured_volume_fraction_fluids= &
+          uncaptured_volume_fraction_fluids+mofdata(vofcomp)
+       else
+        print *,"is_rigid_local invalid ",is_rigid_local
+        print *,"or is_elastic_local invalid ",is_elastic_local
+        stop
+       endif
       enddo !imaterial=1,num_materials
 
        !This loop reconstructs the rigid materials.
@@ -17545,7 +17597,8 @@ contains
 
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero))
+                  (uncaptured_volume_vof.gt.zero).and. &
+                  (uncaptured_volume_fraction_elastic.gt.zero))
          layer_flag=ELASTIC_LAYER
          call individual_MOF( &
           layer_flag, &
@@ -17566,6 +17619,7 @@ contains
           nmax, &
           mofdata, &
           imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+          uncaptured_volume_fraction_elastic, &
           uncaptured_volume_vof_elastic, &
           uncaptured_volume_cen_elastic, &
           multi_centroidA, &
@@ -17575,6 +17629,7 @@ contains
          imaterial_count=imaterial_count+1
         enddo !while imaterial_count<=num_materials and 
               !      uncaptured_volume_vof>0.0
+              !      uncaptured_volume_fraction_elastic>0.0
 
        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
         !do nothing
@@ -17633,7 +17688,8 @@ contains
 
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero))
+                  (uncaptured_volume_vof.gt.zero).and. &
+                  (uncaptured_volume_fraction_fluids.gt.zero))
 
          if (tessellate.eq.TESSELLATE_FLUIDS) then
           layer_flag=FLUIDS_LAYER
@@ -17665,6 +17721,7 @@ contains
           nmax, &
           mofdata, &
           imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+          uncaptured_volume_fraction_fluids, &
           uncaptured_volume_vof, &
           uncaptured_volume_cen, &
           multi_centroidA, &
@@ -17677,6 +17734,20 @@ contains
          ! multiple orderings must be tested.
        else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
 
+        do imaterial=1,num_materials
+         if (is_elastic(imaterial).eq.0) then
+          !do nothing
+         else
+          print *,"expecting is_elastic(imaterial).eq.0 if order"
+          print *,"by MOF error.  If elastic materials, then"
+          print *,"set all the ordering so that ties are resolved"
+          print *,"by the farthest centroid from the uncaptured centroid"
+          print *,"imaterial, is_elastic(imaterial) ",imaterial, &
+            is_elastic(imaterial)
+          stop
+         endif
+        enddo !imaterial=1,num_matarials
+ 
         allocate(mofdata_array(n_orderings,num_materials*ngeom_recon))
         allocate(centroidA_array(n_orderings,num_materials,sdim))
         allocate(moferror_array(n_orderings))
@@ -17856,7 +17927,8 @@ contains
 
          imaterial_count=1
          do while ((imaterial_count.le.num_materials).and. &
-                   (uncaptured_volume_vof.gt.zero))
+                   (uncaptured_volume_vof.gt.zero).and. &
+                   (uncaptured_volume_fraction_fluids.gt.zero))
 
           if (tessellate.eq.TESSELLATE_FLUIDS) then
            layer_flag=FLUIDS_LAYER
@@ -17887,6 +17959,7 @@ contains
            nmax, &
            mofdata_in, &
            imaterial_count, &
+           uncaptured_volume_fraction_fluids, &
            uncaptured_volume_vof, &
            uncaptured_volume_cen, &
            multi_centroidA, &
@@ -19942,6 +20015,7 @@ contains
          do im_test=1,num_materials
           vofcomp=(im_test-1)*ngeom_recon+1
 
+           !uncaptured_volume_fraction_solid initialized to 1.0
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
@@ -20259,7 +20333,9 @@ contains
          ! modify the uncaptured regions to recognize the presence
          ! of the is_rigid==1 materials.
          uncaptured_volume_elastic=uncaptured_volume_solid
+         uncaptured_volume_fraction_elastic=uncaptured_volume_fraction_solid
          uncaptured_volume_fluid=uncaptured_volume_solid
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_solid
          do dir=1,sdim
           uncaptured_centroid_elastic(dir)=uncaptured_centroid_solid(dir)
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
@@ -20277,6 +20353,7 @@ contains
          stop
         endif
 
+         !uncaptured_volume_fraction_elastic=1.0 initially
         loop_counter=0
         do while ((loop_counter.lt.num_materials_elastic).and. &
                   (num_processed_elastic.lt.num_materials_elastic).and. &
@@ -20290,6 +20367,7 @@ contains
          do im_test=1,num_materials
           vofcomp=(im_test-1)*ngeom_recon+1
 
+           !uncaptured_volume_fraction_elastic=1.0 initially
           if ((material_used(im_test).eq.0).and. &
               (is_elastic_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
@@ -20712,11 +20790,13 @@ contains
         else if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
                  (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
          enddo
         else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
          enddo
@@ -22793,6 +22873,7 @@ contains
          do im_test=1,num_materials
           vofcomp=(im_test-1)*ngeom_recon+1
 
+           !uncaptured_volume_fraction_solid initialized to 1.0
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
@@ -23083,7 +23164,9 @@ contains
          ! modify the uncaptured regions to recognize the presence
          ! of the is_rigid==1 materials.
          uncaptured_volume_elastic=uncaptured_volume_solid
+         uncaptured_volume_fraction_elastic=uncaptured_volume_fraction_solid
          uncaptured_volume_fluid=uncaptured_volume_solid
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_solid
          do dir=1,sdim
           uncaptured_centroid_elastic(dir)=uncaptured_centroid_solid(dir)
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
@@ -23101,6 +23184,7 @@ contains
          stop
         endif
 
+         !uncaptured_volume_fraction_elastic=1.0 initially
         loop_counter=0
         do while ((loop_counter.lt.num_materials_elastic).and. &
                   (num_processed_elastic.lt.num_materials_elastic).and. &
@@ -23114,6 +23198,7 @@ contains
          do im_test=1,num_materials
           vofcomp=(im_test-1)*ngeom_recon+1
 
+           !uncaptured_volume_fraction_elastic=1.0 initially
           if ((material_used(im_test).eq.0).and. &
               (is_elastic_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
@@ -23513,11 +23598,13 @@ contains
         else if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
                  (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
          enddo
         else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
          uncaptured_volume_fluid=uncaptured_volume_elastic
+         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_elastic
          do dir=1,sdim
           uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
          enddo
@@ -24402,6 +24489,7 @@ contains
         do im_test=1,num_materials
          vofcomp=(im_test-1)*ngeom_recon+1
 
+          !uncaptured_volume_fraction_solid initialized to 1.0
           ! material_used initialized to 0 above.
          if ((material_used(im_test).eq.0).and. &
              (is_rigid_local(im_test).eq.1)) then
@@ -24668,6 +24756,7 @@ contains
            endif
           enddo ! dir=1..sdim
   
+            !uncaptured_volume_fraction_solid=1.0 initially. 
           uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
            mofdatalocal(vofcomp)
           if (uncaptured_volume_fraction_solid.lt. &
@@ -24710,6 +24799,7 @@ contains
         stop
        endif
 
+         !uncaptured_volume_fraction_elastic=1.0 initially
        loop_counter=0
        do while ((loop_counter.lt.num_materials_elastic).and. &
                  (num_processed_elastic.lt.num_materials_elastic).and. &
@@ -24723,6 +24813,7 @@ contains
         do im_test=1,num_materials
          vofcomp=(im_test-1)*ngeom_recon+1
 
+          !uncaptured_volume_fraction_elastic=1.0 initially
           ! material_used initialized to 0 above.
          if ((material_used(im_test).eq.0).and. &
              (is_elastic_local(im_test).eq.1)) then
@@ -25074,6 +25165,7 @@ contains
        else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
         uncaptured_volume_fluid=uncaptured_volume_elastic
         uncaptured_volume_fluid_map=uncaptured_volume_elastic_map
+        uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_elastic
         do dir=1,sdim
          uncaptured_centroid_fluid(dir)=uncaptured_centroid_elastic(dir)
          uncaptured_centroid_fluid_map(dir)=uncaptured_centroid_elastic_map(dir)
@@ -25449,6 +25541,8 @@ contains
        else
         print *,"not all volume accounted for multi_get_volume_grid_and_map"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
+        print *,"uncaptured_volume_fraction_fluid ", &
+          uncaptured_volume_fraction_fluid
         print *,"volcell ",volcell
         print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
         print *,"tolerance: ",four*EPS2

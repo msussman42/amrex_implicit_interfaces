@@ -4187,6 +4187,14 @@ stop
          
          else if (is_rigid_CL(im_majority).eq.0) then
 
+          if (is_elastic(im_majority).eq.0) then
+           !do nothing
+          else
+           print *,"expecting is_elastic(im_majority).eq.0 ", &
+            im_majority,is_elastic(im_majority)
+           stop
+          endif
+
           if (vol_sten.gt.zero) then
            ! do nothing
           else
@@ -4245,6 +4253,14 @@ stop
            else if (is_rigid_CL(im_opp).eq.1) then
             ! do nothing
            else if (is_rigid_CL(im_opp).eq.0) then
+
+            if (is_elastic(im_opp).eq.0) then
+             !do nothing
+            else
+             print *,"expecting is_elastic(im_opp).eq.0 ", &
+              im_opp,is_elastic(im_opp)
+             stop
+            endif
 
              ! im_main < im_main_opp
             if (im_majority.lt.im_opp) then
@@ -21630,9 +21646,11 @@ stop
            print *,"sum_vfrac_elastic invalid: ",sum_vfrac_elastic
            stop
           endif
-          
-          if ((ls_hold(im_elastic_max).ge.zero).or. &
-              (sum_vfrac_elastic.ge.half)) then
+         
+          if (im_elastic_max.eq.0) then
+           check_elastic=0 
+          else if ((ls_hold(im_elastic_max).ge.zero).or. &
+                   (sum_vfrac_elastic.ge.half)) then
 
            ! number of cells in the solid/elastic region
            ! corrected with an extrapolated value from 
