@@ -50,7 +50,8 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
 #amr.n_cell    = 32 128
-amr.n_cell    = 64 128
+#amr.n_cell    = 64 128
+amr.n_cell    = 16 32
 #amr.max_level = 2
 amr.max_level = 0
 ns.projection_pressure_scale=1.0
@@ -68,8 +69,8 @@ amr.blocking_factor = 2 2 2 2 2       # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1  # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100 # non-intrusive LSA
-#amr.plot_int        = 1  # non-intrusive LSA
+#amr.plot_int        = 100 # non-intrusive LSA
+amr.plot_int        = 10  # non-intrusive LSA
 # 1=LSA_N_EXTRA
 # 2=LSA_NP1_EXTRA
 # 3=LSA_EVEC_EXTRA

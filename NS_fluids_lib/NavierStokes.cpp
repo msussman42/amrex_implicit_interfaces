@@ -28940,6 +28940,14 @@ NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
     &bfact,
     xlo,dx,
     &cur_time_slab);
+
+  if (1==0) {
+   int interior_only=1;
+   int local_id=0;
+   int ncomp=num_materials*(1+AMREX_SPACEDIM);
+   tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,local_id,0,ncomp,interior_only); 
+  }
+
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_BUILDELASTICFLUID_LS,"build_elastic_fluid_ls");
