@@ -59,7 +59,6 @@ ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
 #ns.MOFITERMAX_AFTER_PREDICT=0 #particles
 ns.mof_decision_tree_learning=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 #water air
 ns.mof_ordering=3 3 
 

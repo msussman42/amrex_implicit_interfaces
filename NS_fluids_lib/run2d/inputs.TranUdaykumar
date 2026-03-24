@@ -50,7 +50,6 @@ Lp.v = 0
 
 ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.mof_ordering=4 1 2 3 #BIOFILM
 ns.mof_ordering=4 1 2 

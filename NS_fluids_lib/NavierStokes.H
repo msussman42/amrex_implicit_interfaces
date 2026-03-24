@@ -386,9 +386,6 @@ public:
     static int incremental_gravity_flag;
 
     static Real nucleation_init_time; //def 0.0
-     // 0 - centroid furthest from uncaptured centroid
-     // 1 - use MOF error
-    static int mof_error_ordering;
 
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<int> store_refine_density_data; // refine density parameter

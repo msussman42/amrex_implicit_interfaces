@@ -38,7 +38,6 @@ ns.mof_decision_tree_learning=125000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=2
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
-ns.mof_error_ordering=0
 # water,air,ice,solid
 ns.mof_ordering=3 1 2 1
 

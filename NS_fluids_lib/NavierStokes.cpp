@@ -583,10 +583,6 @@ Vector<Real> NavierStokes::etaP; // def=0 (etaP0)
 // viscoelastic_model=7  Neo-Hookean   trac(A)<L^2 lambda(A)>eps/L^2
 Vector<Real> NavierStokes::polymer_factor; // def=0
 
- // 0 - centroid furthest from uncaptured centroid
- // 1 - smallest MOF error
-int  NavierStokes::mof_error_ordering=0;
-
 Vector<int> NavierStokes::mof_ordering; // def=0
 Vector<int> NavierStokes::mof_renormalize_ordering; // def=0
 
@@ -2389,13 +2385,6 @@ void fortran_parameters() {
         start_initialization << '\n';
  }
 
- int mof_error_ordering_local=NavierStokes::mof_error_ordering;
-
- pp.queryAdd("mof_error_ordering",mof_error_ordering_local);
- if ((mof_error_ordering_local!=0)&& //centroid furthest from uncapt centroid
-     (mof_error_ordering_local!=1))  //smallest MOF error
-  amrex::Error("mof_error_ordering_local invalid");
-
  Vector<int> mof_ordering_local;
  mof_ordering_local.resize(NavierStokes::num_materials);
  Vector<int> mof_renormalize_ordering_local;
@@ -2413,36 +2402,30 @@ void fortran_parameters() {
   mof_renormalize_ordering_local.dataPtr(), //intent(out)
   denconst_temp.dataPtr(),
   is_rigid_local.dataPtr(),
-  &mof_error_ordering_local,  //intent(in)
   NavierStokes::FSI_flag.dataPtr()); //intent(in)
 
  pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
  pp.queryAdd("mof_renormalize_ordering",
    mof_renormalize_ordering_local,NavierStokes::num_materials);
 
- int n_ndef=0;
- 
  for (int i=0;i<NavierStokes::num_materials;i++) {
 
-  if (mof_ordering_local[i]==0) n_ndef++;
-
-  if (mof_error_ordering_local==0) {//centroid furthest from uncapt centroid
-   if ((mof_ordering_local[i]<1)||
-       (mof_ordering_local[i]>NavierStokes::num_materials+1))
-    amrex::Error("mof_ordering_local invalid(error_ordering==0)");
-  } else if (mof_error_ordering_local==1) { // smallest MOF error
-   if ((mof_ordering_local[i]<0)||
-       (mof_ordering_local[i]>NavierStokes::num_materials+1))
-    amrex::Error("mof_ordering_local invalid(error_ordering==1");
+  if (is_rigid_local[i]==0) {
+   //do nothing
+  } else if (is_rigid_local[i]==1) {
+   if (mof_renormalize_ordering_local[i]==0) {
+    //do nothing
+   } else
+    amrex::Error("expect mof_renormalize_ordering_local==0 if is_rigid");
   } else
-   amrex::Error("mof_error_ordering_local invalid");
+   amrex::Error("is_rigid_local[i] invalid");
+
+
+  if ((mof_ordering_local[i]<1)||
+      (mof_ordering_local[i]>NavierStokes::num_materials+1))
+   amrex::Error("expecting 1<=mof_ordering_local<=nmat+1");
 
  } //for (int i=0;i<NavierStokes::num_materials;i++) 
-
- if (mof_error_ordering_local==1) { // smallest MOF error
-  if (n_ndef<2)
-   amrex::Error("n_ndef<2 but error_ordering==1");
- }
 
  int temp_POLYGON_LIST_MAX=1000;
 
@@ -5853,12 +5836,6 @@ NavierStokes::read_params ()
       amrex::Error("im invalid 4542");
     } // i=0..num_species_var-1
 
-    mof_error_ordering=0; 
-    pp.queryAdd("mof_error_ordering",mof_error_ordering);
-    if ((mof_error_ordering!=0)&& //centroid furthest from uncaptured centroid
-        (mof_error_ordering!=1))  //smallest MOF error
-     amrex::Error("mof_error_ordering invalid");
-
     mof_ordering.resize(num_materials);
     mof_renormalize_ordering.resize(num_materials);
 
@@ -5872,7 +5849,7 @@ NavierStokes::read_params ()
       if (material_extend_velocity[im]==0) {
         //do nothing
       } else
-       amrex::Error("expecting material_extend_velocity[im]==0");
+       amrex::Error("expecting material_extend_velocity[im]==0 if is_rigid");
 
      } else if (is_rigid_local[im]==0) {
 
@@ -5900,36 +5877,29 @@ NavierStokes::read_params ()
       mof_renormalize_ordering.dataPtr(), //intent(out)
       denconst.dataPtr(),
       is_rigid_local.dataPtr(),
-      &mof_error_ordering,    //intent(in)
       FSI_flag.dataPtr());    //intent(in)
 
     pp.queryAdd("mof_ordering",mof_ordering,num_materials);
     pp.queryAdd("mof_renormalize_ordering",
       mof_renormalize_ordering,num_materials);
 
-    int n_ndef=0;
-
     for (int i=0;i<num_materials;i++) {
 
-     if (mof_ordering[i]==0) n_ndef++;
-
-     if (mof_error_ordering==0) {//centroid furthest from uncapt centroid
-      if ((mof_ordering[i]<1)||
-          (mof_ordering[i]>num_materials+1))
-       amrex::Error("mof_ordering invalid(error_ordering==0)");
-     } else if (mof_error_ordering==1) { // smallest MOF error
-      if ((mof_ordering[i]<0)||
-          (mof_ordering[i]>num_materials+1))
-       amrex::Error("mof_ordering invalid(error_ordering==1");
+     if (is_rigid_local[i]==0) {
+      //do nothing
+     } else if (is_rigid_local[i]==1) {
+      if (mof_renormalize_ordering[i]==0) {
+       //do nothing
+      } else
+       amrex::Error("expect mof_renormalize_ordering==0 if is_rigid");
      } else
-      amrex::Error("mof_error_ordering invalid");
+      amrex::Error("is_rigid_local[i] invalid");
+
+     if ((mof_ordering[i]<1)||
+         (mof_ordering[i]>num_materials+1))
+      amrex::Error("expecting 1<=mof_ordering<=nmat+1");
 
     } //for (int i=0;i<num_materials;i++) 
-
-    if (mof_error_ordering==1) { // smallest MOF error
-     if (n_ndef<2)
-      amrex::Error("n_ndef<2 but error_ordering==1");
-    }
 
     for (int i=0;i<num_materials;i++) {
 
@@ -5989,9 +5959,6 @@ NavierStokes::read_params ()
      }  
 
      std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
-
-     std::cout << "mof_error_ordering " << 
-      mof_error_ordering << '\n';
 
      std::cout << "ngrow_make_distance= " << 
       ngrow_make_distance << '\n';

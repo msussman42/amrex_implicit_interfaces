@@ -53,7 +53,6 @@ amr.n_cell=32 32 64
 amr.max_level=1 
 ns.ngrow_distance=5
 
-ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
 
 

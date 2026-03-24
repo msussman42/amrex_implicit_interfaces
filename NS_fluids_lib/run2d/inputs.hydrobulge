@@ -68,7 +68,6 @@ Lp.v = 0
 
 ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 # liquid,jwl,aluminum side walls,gas
 ns.mof_ordering=2 3 1 4
 ns.MOFITERMAX=30
