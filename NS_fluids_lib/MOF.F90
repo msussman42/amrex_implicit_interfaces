@@ -8746,11 +8746,13 @@ contains
       integer, INTENT(in) :: order_algorithm_in(num_materials)
       integer, INTENT(in) :: renormalize_order_algorithm_in(num_materials)
       integer im
+      integer im_debug
       integer irank
 
 #include "mofdata.H"
 
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid set order algorithm"
        print *,"num_materials= ",num_materials
        stop
@@ -8773,7 +8775,15 @@ contains
         if (rank_algorithm(irank).eq.im) then
          !do nothing
         else
-         print *,"rank_algorithm invalid: ",rank_algorithm
+         print *,"im=",im
+         print *,"irank=",irank
+         print *,"rank_algorithm invalid: "
+         do im_debug=1,num_materials
+          print *,"im_debug,rank_algorithm ", &
+             im_debug,rank_algorithm(im_debug)
+          print *,"im_debug,renormalize_order_algorithm ", &
+             im_debug,renormalize_order_algorithm(im_debug)
+         enddo
          stop
         endif
        endif
@@ -16128,54 +16138,6 @@ contains
       return
       end subroutine nfact
 
-      subroutine push_order_stack(order_stack,order_stack_count, &
-       temp_order,n_orderings,n_ndef)
-      use probcommon_module
-      IMPLICIT NONE
-
-      integer, INTENT(inout) :: order_stack_count
-      integer, INTENT(in) :: n_orderings,n_ndef
-      integer, INTENT(in) :: temp_order(num_materials)
-      integer, INTENT(out) :: order_stack(n_orderings,n_ndef)
-      integer i
-     
-      if (order_stack_count.ge.n_orderings) then
-       print *,"order_stack_count too big - push"
-       stop
-      endif
-
-      order_stack_count=order_stack_count+1
-      do i=1,n_ndef
-       order_stack(order_stack_count,i)=temp_order(i)
-      enddo
-   
-      return
-      end subroutine push_order_stack
-
-
-      subroutine pop_order_stack(order_stack,order_stack_count, &
-       temp_order,n_orderings,n_ndef)
-      use probcommon_module
-      IMPLICIT NONE
-
-      integer, INTENT(inout) :: order_stack_count
-      integer, INTENT(in) :: n_orderings,n_ndef
-      integer, INTENT(out) :: temp_order(num_materials)
-      integer, INTENT(in) :: order_stack(n_orderings,n_ndef)
-      integer i
-     
-      if (order_stack_count.gt.n_orderings) then
-       print *,"order_stack_count too big - pop"
-       stop
-      endif
-      do i=1,n_ndef
-       temp_order(i)=order_stack(order_stack_count,i)
-      enddo
-      order_stack_count=order_stack_count-1
-   
-      return
-      end subroutine pop_order_stack
-
       subroutine multimaterial_MOF( &
         tessellate, &
         tid_in, &
@@ -16231,7 +16193,6 @@ contains
       real(amrex_real), INTENT (INOUT),DIMENSION(num_materials*ngeom_recon) :: &
               mofdata
       real(amrex_real), INTENT (IN), DIMENSION(num_materials) :: vof_super
-      real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: mofdata_in
       real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: &
               multi_centroidA
 
@@ -16263,10 +16224,6 @@ contains
       real(amrex_real) uncaptured_volume_cen
       real(amrex_real) uncaptured_centroid_cen(sdim)
 
-      real(amrex_real) xref_mat(sdim)
-      real(amrex_real) xact_mat(sdim)
-      real(amrex_real) xref_matT(sdim)
-      real(amrex_real) xact_matT(sdim)
       integer single_material
       integer single_material_elastic
       real(amrex_real) remaining_vfrac
@@ -16275,31 +16232,6 @@ contains
       integer order_algorithm_in(num_materials)
       integer num_materials_cell_fluids
       integer num_materials_cell_elastic
-      integer, dimension(:,:), allocatable :: order_array
-      integer, dimension(:,:), allocatable :: order_stack
-      real(amrex_real), dimension(:,:), allocatable :: mofdata_array
-      real(amrex_real), dimension(:,:,:), allocatable :: centroidA_array
-      real(amrex_real), dimension(:), allocatable :: moferror_array
-      integer order_count,order_stack_count
-      integer irank
-      integer iflex,jflex,kflex
-      integer iflex2
-      integer is_valid
-      ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
-      integer n_ndef
-      integer number_of_open_places
-      integer n_orderings
-      !0 if place open, 1 if place taken.
-      integer placeholder(num_materials)
-      !list of available places 1...number_of_open_places
-      !number_of_open_places >= n_ndef
-      integer placelist(num_materials)
-      !list of fluid materials that need an ordering
-      !flexlist(1..n_ndef)
-      integer flexlist(num_materials) 
-      integer temp_order(num_materials)
-      integer argmin_order
-      real(amrex_real) min_error,mof_err
       integer alloc_flag
       real(amrex_real) voftest(num_materials)
       integer i1,j1,k1,k1lo,k1hi
@@ -17353,8 +17285,6 @@ contains
       else if ((num_materials_cell_fluids.ge.3).and. &
                (num_materials_cell_fluids.le.num_materials)) then
 
-        !if n_ndef==1, then convert all order_algorithm_in==0 values.
-       n_ndef=0
        do imaterial=1,num_materials
         if (is_rigid_local(imaterial).eq.1) then
          ! do nothing
@@ -17363,7 +17293,8 @@ contains
         else if ((is_rigid_local(imaterial).eq.0).and. &
                  (is_elastic_local(imaterial).eq.0)) then
          if (order_algorithm_in(imaterial).eq.0) then
-          n_ndef=n_ndef+1
+          print *,"expecting 1<=order_algorithm_in<=nmat+1"
+          stop
          else if (order_algorithm_in(imaterial).eq.num_materials+1) then
           ! do nothing
          else if ((order_algorithm_in(imaterial).ge.1).and. &
@@ -17381,52 +17312,10 @@ contains
         endif
        enddo ! imaterial=1..num_materials
 
-       if (n_ndef.eq.1) then
-        do imaterial=1,num_materials
-         if (is_rigid_local(imaterial).eq.1) then
-          ! do nothing
-         else if (is_elastic_local(imaterial).eq.1) then
-          ! do nothing
-         else if ((is_rigid_local(imaterial).eq.0).and. &
-                  (is_elastic_local(imaterial).eq.0)) then
-          if (order_algorithm_in(imaterial).eq.0) then
-           order_algorithm_in(imaterial)=num_materials+1 
-          else if (order_algorithm_in(imaterial).eq.num_materials+1) then
-           ! do nothing
-          else if ((order_algorithm_in(imaterial).ge.1).and. &
-                   (order_algorithm_in(imaterial).le.num_materials)) then
-           ! do nothing
-          else
-           print *,"order_algorithm_in(imaterial) invalid: ", &
-            imaterial,order_algorithm_in(imaterial),num_materials
-           stop
-          endif
-         else
-          print *,"is_rigid_local invalid: ",is_rigid_local
-          print *,"or is_elastic_local invalid: ",is_elastic_local
-          stop
-         endif
-        enddo ! imaterial=1..num_materials
-       else if (n_ndef.eq.0) then
-        !do nothing
-       else if ((n_ndef.ge.2).and.(n_ndef.le.num_materials_cell_fluids)) then
-        !do nothing
-       else
-        print *,"n_ndef invalid: ",n_ndef
-        stop
-       endif 
       else
        print *,"num_materials_cell_fluids invalid: ",num_materials_cell_fluids
        stop
       endif
-
-      ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
-      n_ndef=0
-      do imaterial=1,num_materials
-       placeholder(imaterial)=0 !0 if place open, 1 if place taken
-       placelist(imaterial)=0  !list of available places (list size>=n_ndef)
-       flexlist(imaterial)=0 ! list of fluid materials that need an ordering
-      enddo !imaterial=1..num_materials
 
       do imaterial=1,num_materials
        if (is_rigid_local(imaterial).eq.1) then
@@ -17436,15 +17325,13 @@ contains
        else if ((is_rigid_local(imaterial).eq.0).and. &
                 (is_elastic_local(imaterial).eq.0)) then
         if (order_algorithm_in(imaterial).eq.0) then
-         n_ndef=n_ndef+1
-         !flexlist: list of fluid materials that need an ordering
-         flexlist(n_ndef)=imaterial
+         print *,"expecting 1<=order_algorithm_in<=nmat+1"
+         stop
         else if (order_algorithm_in(imaterial).eq.num_materials+1) then
          ! do nothing
         else if ((order_algorithm_in(imaterial).ge.1).and. &
                  (order_algorithm_in(imaterial).le.num_materials)) then
-          !0 if place open, 1 if place taken.
-         placeholder(order_algorithm_in(imaterial))=1
+         ! do nothing
         else
          print *,"order_algorithm_in(imaterial) invalid: ", &
            imaterial,order_algorithm_in(imaterial),num_materials
@@ -17456,104 +17343,6 @@ contains
         stop
        endif
       enddo ! imaterial=1..num_materials
-
-      if ((n_ndef.eq.0).or. &
-          ((n_ndef.ge.2).and.(n_ndef.le.num_materials))) then
-       !do nothing
-      else
-       print *,"n_ndef invalid: ",n_ndef
-       stop
-      endif
-
-      !n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
-      !placelist: list of available places (size of list >= n_ndef)
-      number_of_open_places=0
-      do imaterial=1,num_materials
-       !0 if place open, 1 if place taken.
-       if (placeholder(imaterial).eq.0) then ! the "imaterial" place is open.
-        number_of_open_places=number_of_open_places+1
-        placelist(number_of_open_places)=imaterial
-       endif
-      enddo  ! imaterial
-      if (number_of_open_places.lt.n_ndef) then
-       print *,"number_of_open_places invalid: ",number_of_open_places
-       print *,"n_ndef=",n_ndef
-       stop
-      endif
-
-      if (n_ndef.eq.0) then
-       ! do nothing
-      else if ((n_ndef.ge.1).and. &
-               (n_ndef.le.num_materials).and. &
-               (n_ndef.le.number_of_open_places)) then
-       call nfact(n_ndef,n_orderings) 
-        ! order_algorithm_in(flexlist(1..n_ndef))=
-        !  placelist(order_array(*,1..n_ndef))
-       allocate(order_array(n_orderings,n_ndef))
-       allocate(order_stack(n_orderings,n_ndef))
-       alloc_flag=alloc_flag+2
-       order_count=0
-       order_stack_count=0
-       do irank=1,n_ndef
-        temp_order(1)=irank
-        do jflex=2,n_ndef
-         temp_order(jflex)=0 
-        enddo
-        call push_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef)
-       enddo  ! irank=1..n_ndef
-       do while (order_stack_count.gt.0)
-        call pop_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef)
-        jflex=n_ndef
-        do while (temp_order(jflex).eq.0)
-         jflex=jflex-1
-         if (jflex.lt.1) then
-          print *,"jflex invalid"
-          stop
-         endif
-        enddo
-        if (jflex.eq.n_ndef) then
-         order_count=order_count+1
-         if (order_count.gt.n_orderings) then
-          print *,"order_count too big"
-          stop
-         endif
-         do iflex=1,n_ndef
-          order_array(order_count,iflex)=temp_order(iflex)
-         enddo
-        else if ((jflex.ge.1).and.(jflex.lt.n_ndef)) then
-         do irank=1,n_ndef
-          is_valid=1
-          do kflex=1,jflex
-           if (temp_order(kflex).eq.irank) then
-            is_valid=0
-           endif
-          enddo
-          if (is_valid.eq.1) then
-           temp_order(jflex+1)=irank
-           call push_order_stack(order_stack,order_stack_count, &
-            temp_order,n_orderings,n_ndef)
-          endif
-         enddo ! irank
-        else
-         print *,"j invalid"
-         stop
-        endif
-       enddo ! while order_stack_count>0
-    
-       deallocate(order_stack) 
-       alloc_flag=alloc_flag-1
-
-       if (order_count.ne.n_orderings) then
-        print *,"order_count invalid"
-        stop
-       endif
-
-      else
-       print *,"n_ndef invalid: ",n_ndef
-       stop
-      endif
 
       if ((single_material_elastic.ge.1).and. &
           (single_material_elastic.le.num_materials).and. &
@@ -17683,9 +17472,6 @@ contains
       else if ((single_material.eq.0).or. &
                (remaining_vfrac.ge.EPS_UNCAPTURED)) then
 
-          ! no need to pick an optimal ordering
-       if (n_ndef.eq.0) then
-
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero).and. &
@@ -17731,349 +17517,9 @@ contains
          imaterial_count=imaterial_count+1
         enddo
 
-         ! multiple orderings must be tested.
-       else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
-
-        do imaterial=1,num_materials
-         if (is_elastic(imaterial).eq.0) then
-          !do nothing
-         else
-          print *,"expecting is_elastic(imaterial).eq.0 if order"
-          print *,"by MOF error.  If elastic materials, then"
-          print *,"set all the ordering so that ties are resolved"
-          print *,"by the farthest centroid from the uncaptured centroid"
-          print *,"imaterial, is_elastic(imaterial) ",imaterial, &
-            is_elastic(imaterial)
-          stop
-         endif
-        enddo !imaterial=1,num_matarials
- 
-        allocate(mofdata_array(n_orderings,num_materials*ngeom_recon))
-        allocate(centroidA_array(n_orderings,num_materials,sdim))
-        allocate(moferror_array(n_orderings))
-        alloc_flag=alloc_flag+3
-
-        argmin_order=0
-        min_error=0.0
-
-        do order_count=1,n_orderings
-
-         do dir=1,num_materials*ngeom_recon
-          mofdata_in(dir)=mofdata(dir)
-         enddo
-
-         !flexlist: list of fluid materials that need an ordering
-         do iflex=1,n_ndef
-
-          imaterial=flexlist(iflex)
-          if (order_algorithm_in(imaterial).eq.0) then
-           ! do nothing
-          else
-           print *,"order_algorithm_in(imaterial) invalid"
-           stop
-          endif
-          if (iflex.gt.1) then
-           if (flexlist(iflex).gt.flexlist(iflex-1)) then
-            ! do nothing
-           else
-            print *,"flexlist(iflex) or flexlist(iflex-1) bad"
-            stop
-           endif
-          else if (iflex.lt.n_ndef) then
-           if (flexlist(iflex).lt.flexlist(iflex+1)) then
-            ! do nothing
-           else
-            print *,"flexlist(iflex) or flexlist(iflex+1) bad"
-            stop
-           endif
-          else if ((iflex.eq.1).and.(n_ndef.eq.1)) then
-           print *,"expecting n_ndef>1 (iflex,n_ndef): ",iflex,n_ndef
-           stop
-          else
-           print *,"iflex invalid: ",iflex,n_ndef
-           stop
-          endif
-
-          if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
-           print *,"imaterial invalid"
-           stop
-          endif
-
-          if ((is_rigid_local(imaterial).eq.0).and. &
-              (is_elastic_local(imaterial).eq.0).and. &
-              (order_algorithm_in(imaterial).eq.0)) then
-
-           irank=order_array(order_count,iflex)
-
-           if ((irank.gt.1).and.(irank.le.n_ndef)) then
-            if (placelist(irank).ge.placelist(irank-1)) then
-             ! do nothing
-            else
-             print *,"placelist(irank) or placelist(irank-1) bad"
-             stop
-            endif
-           else if ((irank.ge.1).and.(irank.lt.n_ndef)) then
-            if (placelist(irank+1).ge.placelist(irank)) then
-             ! do nothing
-            else
-             print *,"placelist(irank+1) or placelist(irank) bad"
-             stop
-            endif
-           else
-            print *,"irank invalid: ",irank
-            stop
-           endif
-
-           order_algorithm_in(imaterial)=placelist(irank)
-          else
-           print *,"is_rigid|elastic_local or order_algorithm_in invalid"
-           print *,"n_ndef,num_materials ",n_ndef,num_materials
-           print *,"n_orderings ",n_orderings
-           print *,"argmin_order ",argmin_order
-           print *,"min_error ",min_error
-           print *,"order_count ",order_count
-           print *,"iflex=",iflex
-           print *,"imaterial=",imaterial
-           print *,"flexlist(iflex) ",flexlist(iflex)
-           do iflex2=1,n_ndef
-            print *,"iflex2,flexlist(iflex2) ",iflex2,flexlist(iflex2)
-           enddo
-           print *,"is_rigid_local(imaterial) ",is_rigid_local(imaterial)
-           print *,"order_algorithm_in(imaterial) ", &
-             order_algorithm_in(imaterial) 
-           do imaterial2=1,num_materials
-            print *,"imat2,order_algorithm_in,is_rigid_local ", &
-              imaterial2, &
-              order_algorithm_in(imaterial2), &
-              is_rigid_local(imaterial2)
-           enddo
-           stop
-          endif
-
-         enddo ! iflex=1...n_ndef
-       
-         if (order_count.eq.1) then
-          !do nothing, already initialized uncaptured_volume|centroid 
-         else if ((order_count.gt.1).and. &
-                  (order_count.le.n_orderings)) then
-
-          if (continuous_mof.eq.STANDARD_MOF) then 
-
-           call Box_volumeFAST( &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_vof, &
-            uncaptured_centroid_vof, &
-            sdim)
-           call Box_volumeFAST( &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_cen, &
-            uncaptured_centroid_cen, &
-            sdim)
-
-          else if (continuous_mof.eq.MOF_TRI_TET) then
-
-           call Box_volumeTRI_TET( &
-            bfact,dx, &
-            xsten0,nhalf0, &
-            uncaptured_volume_vof, &
-            uncaptured_centroid_vof, &
-            sdim)
-
-           call Box_volumeTRI_TET( &
-            bfact,dx, &
-            xsten0,nhalf0, &
-            uncaptured_volume_cen, &
-            uncaptured_centroid_cen, &
-            sdim)
-
-          else if (continuous_mof.eq.CMOF_X) then 
-
-           call Box_volumeFAST( &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_vof, &
-            uncaptured_centroid_vof, &
-            sdim)
-           call Box_volume_super( &
-            cmofsten, &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_cen, &
-            uncaptured_centroid_cen, &
-            sdim)
-
-          else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
-
-           call Box_volume_super( &
-            cmofsten, &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_vof, &
-            uncaptured_centroid_vof, &
-            sdim)
-           call Box_volume_super( &
-            cmofsten, &
-            bfact,dx,xsten0,nhalf0, &
-            uncaptured_volume_cen, &
-            uncaptured_centroid_cen, &
-            sdim)
-
-          else
-           print *,"continuous_mof invalid: ",continuous_mof
-           stop
-          endif
-
-         else
-          print *,"order_count invalid: ",order_count
-          stop
-         endif
-
-         imaterial_count=1
-         do while ((imaterial_count.le.num_materials).and. &
-                   (uncaptured_volume_vof.gt.zero).and. &
-                   (uncaptured_volume_fraction_fluids.gt.zero))
-
-          if (tessellate.eq.TESSELLATE_FLUIDS) then
-           layer_flag=FLUIDS_LAYER
-          else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-           layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
-          else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-           layer_flag=FLUIDS_ELASTIC_LAYER
-          else
-           print *,"tessellate invalid: ",tessellate
-           stop
-          endif
-
-          call individual_MOF( &
-           layer_flag, &
-           grid_index, &
-           grid_level, &
-           tid_in, &
-           ls_mof, &
-           lsnormal, &
-           lsnormal_valid, &
-           pls_normal, &
-           pls_normal_valid, &
-           bfact,dx,xsten0,nhalf0, &
-           order_algorithm_in, &
-           xtetlist_vof, & !intent(out)
-           xtetlist_cen, & !intent(out)
-           nlist_alloc, & !intent(in)
-           nmax, &
-           mofdata_in, &
-           imaterial_count, &
-           uncaptured_volume_fraction_fluids, &
-           uncaptured_volume_vof, &
-           uncaptured_volume_cen, &
-           multi_centroidA, &
-           continuous_mof, &
-           cmofsten, &
-           sdim)
-          imaterial_count=imaterial_count+1
-         enddo ! while not all of uncaptured space filled
-
-         mof_err=zero
-         do imaterial = 1,num_materials
-          if (is_rigid_local(imaterial).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(imaterial).eq.0) then
-           vofcomp=(imaterial-1)*ngeom_recon+1
-           do dir=1,sdim
-            xref_mat(dir)=mofdata_in(vofcomp+dir)
-            xact_mat(dir)=multi_centroidA(imaterial,dir)
-           enddo
-           call RT_transform_offset(xref_mat,uncaptured_centroid_cen,xref_matT)
-           call RT_transform_offset(xact_mat,uncaptured_centroid_cen,xact_matT)
-           
-           do dir=1,sdim
-            centroidA_array(order_count,imaterial,dir)= &
-             multi_centroidA(imaterial,dir)
-            mof_err = mof_err + &
-             mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
-           enddo ! dir
-          else
-           print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
-           stop
-          endif
-         enddo ! imaterial=1,num_materials
-
-         do dir=1,num_materials*ngeom_recon
-          mofdata_array(order_count,dir)=mofdata_in(dir)
-         enddo
-         moferror_array(order_count)=mof_err
-         if (argmin_order.eq.0) then
-          argmin_order=order_count
-          min_error=mof_err
-         else if (mof_err.lt.min_error) then
-          min_error=mof_err
-          argmin_order=order_count
-         endif
-         
-         if (1.eq.0) then
-          print *,"n_ndef= ",n_ndef
-          print *,"order_count=",order_count
-          do imaterial=1,num_materials
-           print *,"imaterial,order_algorithm_in ",imaterial, &
-            order_algorithm_in(imaterial)
-          enddo
-          print *,"mof_err=",mof_err
-          print *,"argmin_order=",argmin_order
-          print *,"min_error=",min_error
-         endif 
-
-         do iflex=1,n_ndef
-          imaterial=flexlist(iflex)
-          order_algorithm_in(imaterial)=0
-         enddo
-
-        enddo ! do order_count=1,n_orderings
-
-        if ((argmin_order.lt.1).or.(argmin_order.gt.n_orderings)) then
-         print *,"argmin_order invalid"
-         stop
-        else
-         do dir=1,num_materials*ngeom_recon
-          mofdata(dir)=mofdata_array(argmin_order,dir)
-         enddo
-         do imaterial = 1,num_materials
-          if (is_rigid_local(imaterial).eq.1) then
-           ! do nothing
-          else if (is_elastic_local(imaterial).eq.1) then
-           ! do nothing
-          else if ((is_rigid_local(imaterial).eq.0).and. &
-                   (is_elastic_local(imaterial).eq.0)) then
-           do dir=1,sdim
-            multi_centroidA(imaterial,dir)= &
-             centroidA_array(argmin_order,imaterial,dir)
-           enddo
-          else
-           print *,"is_rigid_local invalid: ",is_rigid_local
-           print *,"or is_elastic_local invalid: ",is_elastic_local
-           stop
-          endif
-         enddo ! do imaterial = 1,num_materials
-        endif
-
-        deallocate(mofdata_array)
-        deallocate(centroidA_array)
-        deallocate(moferror_array)
-        alloc_flag=alloc_flag-3
-
-       else
-        print *,"n_ndef invalid"
-        stop
-       endif
-
       else
        print *,"single_material or remaining_vfrac invalid: ", &
         single_material,remaining_vfrac
-       stop
-      endif
-
-      if (n_ndef.eq.0) then
-       ! do nothing
-      else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
-       deallocate(order_array)
-       alloc_flag=alloc_flag-1
-      else
-       print *,"n_ndef invalid"
        stop
       endif
 
@@ -19653,7 +19099,7 @@ contains
             (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          ! do nothing
         else
-         print *,"tessellate_dest invalid"
+         print *,"tessellate_dest invalid: ",tessellate_dest
          stop
         endif
        else
@@ -20581,7 +20027,8 @@ contains
             call tets_tet_planes( &
              layer_flag, &
              bfact,dx,xsten0,nhalf0, &
-             xtet,mofdatalocal, &
+             xtet, &
+             mofdatalocal, &
              xtetlist, &
              nlist_alloc, &
              nlist, &
@@ -20599,7 +20046,7 @@ contains
 
            if (abs(volcut-uncaptured_volume_elastic).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi_get_volume_grid 2 "
+            print *,"volcut invalid multi_get_volume_grid 20048 "
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_elastic=",uncaptured_volume_elastic
             print *,"volcell= ",volcell
@@ -21036,7 +20483,8 @@ contains
             call tets_tet_planes( &
              layer_flag, &
              bfact,dx,xsten0,nhalf0, &
-             xtet,mofdatalocal, &
+             xtet, &
+             mofdatalocal, &
              xtetlist, &
              nlist_alloc, &
              nlist, &
@@ -21054,7 +20502,9 @@ contains
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
                EPS1*volcell) then
-            print *,"volcut invalid multi_get_volume_grid 2 "
+            print *,"volcut invalid multi_get_volume_grid 20503 "
+            print *,"tessellate_source ",tessellate_source
+            print *,"tessellate_dest ",tessellate_dest
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
             print *,"volcell= ",volcell
@@ -21073,7 +20523,16 @@ contains
             do im=1,num_materials
              vofcomp=(im-1)*ngeom_recon+1
              print *,"im,mofdatavalid(vofcomp) ",im,mofdatavalid(vofcomp)
+             print *,"im,mofdatavalid(vofcomp+sdim+1) ", &
+                     im,mofdatavalid(vofcomp+sdim+1)
             enddo 
+            do im=1,num_materials
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,mofdatalocal(vofcomp) ",im,mofdatalocal(vofcomp)
+             print *,"im,mofdatalocal(vofcomp+sdim+1) ", &
+                     im,mofdatalocal(vofcomp+sdim+1)
+            enddo 
+            print *,"material_used ",material_used
             print *,"is_rigid_local=",is_rigid_local 
             print *,"is_elastic_local=",is_elastic_local 
             stop
@@ -28417,7 +27876,9 @@ contains
             irank=irank+1
            else if (renormalize_order_algorithm_in(sub_im).eq. &
                     renormalize_order_algorithm_in(im)) then
-            print *,"renormalize_order_algorithm_in invalid"
+            print *,"renormalize_order_algorithm_in invalid", &
+                    renormalize_order_algorithm_in
+            print *,"sub_im,im ",sub_im,im
             stop
            else if (renormalize_order_algorithm_in(sub_im).gt. &
                     renormalize_order_algorithm_in(im)) then
@@ -28448,6 +27909,8 @@ contains
          print *,"im=",im
          print *,"renormalize_order_algorithm_in(im) ", &
            renormalize_order_algorithm_in(im)
+         print *,"renormalize_order_algorithm_in ", &
+           renormalize_order_algorithm_in
          stop
         endif
        else

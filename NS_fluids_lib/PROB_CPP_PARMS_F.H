@@ -41,7 +41,6 @@ namespace amrex{
        int* mof_renormalize_ordering_local,
        Real* denconst_local,
        int* is_rigid_local,
-       int* mof_error_ordering_local,
        int* FSI_flag_temp);
 
       // called from NavierStokes.cpp: void fortran_parameters()

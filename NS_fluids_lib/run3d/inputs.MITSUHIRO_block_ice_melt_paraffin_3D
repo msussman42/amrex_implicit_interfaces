@@ -102,7 +102,6 @@ ns.continuous_mof=1 # 0=MOF 1=CMOF
 # preferred: partial_cmof_stencil_at_walls=1 is more realistic at simulating
 # contact line motion.
 ns.partial_cmof_stencil_at_walls=1
-ns.mof_error_ordering=0
 # water,air,ice,substrate
 ns.mof_ordering=0 1 0 1 
 

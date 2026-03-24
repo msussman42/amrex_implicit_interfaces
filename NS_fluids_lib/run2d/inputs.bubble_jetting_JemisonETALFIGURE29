@@ -70,7 +70,6 @@ ns.num_species_var=0
 ns.num_divu_outer_sweeps=2
 
 ns.MOFITERMAX=30
-ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=3 4 1 2 #liquid, gas, substrate, soft substrate
 
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
