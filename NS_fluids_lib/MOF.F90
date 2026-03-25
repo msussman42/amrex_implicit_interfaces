@@ -5966,6 +5966,29 @@ end subroutine volume_sanity_check
       return
       end subroutine get_cut_geom3D
 
+      function is_proper_layer(im,layer_iter)
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      integer, intent(in) :: layer_iter
+
+      if (layer_iter.eq.RIGID_LAYER_INDEX) then
+       is_proper_layer=is_rigid(im)
+      else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
+       is_proper_layer=is_elastic(im)
+      else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+       if ((is_rigid(im).eq.0).and. &
+           (is_elastic(im).eq.0)) then
+        is_proper_layer=1
+       else 
+        is_proper_layer=0
+       endif
+      else
+       print *,"layer_flag invalid"
+       stop
+      endif
+
+      end function is_proper_layer
 
 ! normal points from phi<0 to phi>0   phi=n dot (x-x0plane) + intercept
 ! vof, ref centroid, order,slope,intercept  x num_materials
@@ -6034,6 +6057,7 @@ end subroutine volume_sanity_check
       real(amrex_real) xnode(4*(sdim-1),sdim)
       real(amrex_real) phinode(4*(sdim-1))
       integer inode
+      integer layer_iter
       real(amrex_real) nn(sdim)
       real(amrex_real) intercept
       integer is_rigid_local(num_materials)
@@ -6202,108 +6226,119 @@ end subroutine volume_sanity_check
 
       nlist_old=ntetbox
       nlist=ntetbox
-     
-      do iplane=1,num_materials
-       icrit=0
-       do im=1,num_materials
-        vofcomp=(im-1)*(2*sdim+3)+1
-        if (is_masked(im).eq.0) then
-         iorder=NINT(mofdata(vofcomp+sdim+1))
-         if (iorder.eq.iplane) then
-          icrit=im
-         endif
-        else if (is_masked(im).eq.1) then
-         ! do nothing
-        else
-         print *,"is_masked invalid: ",is_masked
-         stop
-        endif
-       enddo ! im=1..num_materials
-       if ((icrit.gt.0).and.(icrit.le.num_materials)) then
-        nlist=0
-        vofcomp=(icrit-1)*(2*sdim+3)+1
-         ! want intersection where phi_original<0 but routine
-         ! checks if phi_input>0.  So negate phi_original.
-        do dir=1,sdim
-         nn(dir)=-mofdata(vofcomp+sdim+1+dir)  
-        enddo
-        intercept=-mofdata(vofcomp+2*sdim+2)
- 
-        do n=1,nlist_old
+    
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          x1old(i_tet_node,j_dir)=xtetlist_old(i_tet_node,j_dir,n)
-         enddo
-         enddo
+       do iplane=1,num_materials
 
-           ! LEVELSET FOR CUTTING PLANE
-         do i_tet_node=1,sdim+1
-          phi1(i_tet_node)=intercept
-          do j_dir=1,sdim
-           phi1(i_tet_node)=phi1(i_tet_node)+ &
-             nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0_LS(0,j_dir))
-          enddo
-         enddo
-          ! tetrahedras representing intersection of region where phi1>0
-          ! (phi_original<0) and the tetrahedra x1old
-         if (sdim.eq.3) then
-          call list_tets(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
-         else if (sdim.eq.2) then
-          call list_tris(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+        icrit=0
+
+        do im=1,num_materials
+         vofcomp=(im-1)*(2*sdim+3)+1
+         if ((is_masked(im).eq.0).and. &
+             (is_proper_layer(im,layer_iter).eq.1)) then
+          iorder=NINT(mofdata(vofcomp+sdim+1))
+          if (iorder.eq.iplane) then
+           icrit=im
+          endif
+         else if ((is_masked(im).eq.1).or. &
+                  (is_proper_layer(im,layer_iter).eq.0)) then
+          ! do nothing
          else
-          print *,"sdim invalid"
+          print *,"is_masked invalid: ",is_masked
+          print *,"or is_proper_layer invalid: ", &
+               im,layer_iter,is_proper_layer(im,layer_iter)
           stop
          endif
+        enddo ! im=1..num_materials
 
-         do n2=1,nsub
+        if ((icrit.gt.0).and.(icrit.le.num_materials)) then
+         nlist=0
+         vofcomp=(icrit-1)*(2*sdim+3)+1
+          ! want intersection where phi_original<0 but routine
+          ! checks if phi_input>0.  So negate phi_original.
+         do dir=1,sdim
+          nn(dir)=-mofdata(vofcomp+sdim+1+dir)  
+         enddo
+         intercept=-mofdata(vofcomp+2*sdim+2)
+ 
+         do n=1,nlist_old
 
           do i_tet_node=1,sdim+1
           do j_dir=1,sdim
-           xcandidate(i_tet_node,j_dir)=xsublist(i_tet_node,j_dir,n2)
+           x1old(i_tet_node,j_dir)=xtetlist_old(i_tet_node,j_dir,n)
           enddo
           enddo
-          call tetrahedron_volume(xcandidate,voltest, &
-           centroidtest,sdim)
 
-          if (voltest.gt.zero) then
-           nlist=nlist+1
-           if (nlist.gt.nmax) then
-            print *,"nlist overflow in tets_box_planes"
-            print *,"nlist,nmax ",nlist,nmax
-            stop
-           endif
-           do i_tet_node=1,sdim+1
+            ! LEVELSET FOR CUTTING PLANE
+          do i_tet_node=1,sdim+1
+           phi1(i_tet_node)=intercept
            do j_dir=1,sdim
-            xtetlist(i_tet_node,j_dir,nlist)=xcandidate(i_tet_node,j_dir)
+            phi1(i_tet_node)=phi1(i_tet_node)+ &
+              nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0_LS(0,j_dir))
            enddo
-           enddo
+          enddo
+           ! tetrahedras representing intersection of region where phi1>0
+           ! (phi_original<0) and the tetrahedra x1old
+          if (sdim.eq.3) then
+           call list_tets(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+          else if (sdim.eq.2) then
+           call list_tris(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+          else
+           print *,"sdim invalid"
+           stop
           endif
 
-         enddo  ! n2
-        enddo  ! n
-        nlist_old=nlist
-        do n=1,nlist
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          xtetlist_old(i_tet_node,j_dir,n)=xtetlist(i_tet_node,j_dir,n)
+          do n2=1,nsub
+
+           do i_tet_node=1,sdim+1
+           do j_dir=1,sdim
+            xcandidate(i_tet_node,j_dir)=xsublist(i_tet_node,j_dir,n2)
+           enddo
+           enddo
+           call tetrahedron_volume(xcandidate,voltest, &
+            centroidtest,sdim)
+
+           if (voltest.gt.zero) then
+            nlist=nlist+1
+            if (nlist.gt.nmax) then
+             print *,"nlist overflow in tets_box_planes"
+             print *,"nlist,nmax ",nlist,nmax
+             stop
+            endif
+            do i_tet_node=1,sdim+1
+            do j_dir=1,sdim
+             xtetlist(i_tet_node,j_dir,nlist)=xcandidate(i_tet_node,j_dir)
+            enddo
+            enddo
+           endif
+
+          enddo  ! n2
+         enddo  ! n
+         nlist_old=nlist
+         do n=1,nlist
+          do i_tet_node=1,sdim+1
+          do j_dir=1,sdim
+           xtetlist_old(i_tet_node,j_dir,n)=xtetlist(i_tet_node,j_dir,n)
+          enddo
+          enddo
          enddo
+        else if (icrit.eq.0) then
+         nlist=nlist_old
+         do n=1,nlist
+          do i_tet_node=1,sdim+1
+          do j_dir=1,sdim
+           xtetlist(i_tet_node,j_dir,n)=xtetlist_old(i_tet_node,j_dir,n)
+          enddo
+          enddo
          enddo
-        enddo
-       else if (icrit.eq.0) then
-        nlist=nlist_old
-        do n=1,nlist
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          xtetlist(i_tet_node,j_dir,n)=xtetlist_old(i_tet_node,j_dir,n)
-         enddo
-         enddo
-        enddo
-       else
-        print *,"icrit invalid"
-        stop
-       endif 
-      enddo ! iplane=1,num_materials
+        else
+         print *,"icrit invalid"
+         stop
+        endif 
+       enddo ! iplane=1,num_materials
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       return
       end subroutine tets_box_planes
@@ -6519,6 +6554,7 @@ end subroutine volume_sanity_check
       real(amrex_real) centroidtest(sdim)
       real(amrex_real) xcandidate(sdim+1,sdim)
       real(amrex_real) x1old(sdim+1,sdim)
+      integer layer_iter
       real(amrex_real) nn(sdim)
       real(amrex_real) intercept
 
@@ -6601,108 +6637,120 @@ end subroutine volume_sanity_check
       enddo 
       enddo 
 
-      do iplane=1,num_materials
-       icrit=0
-       do im=1,num_materials
-        vofcomp=(im-1)*(2*sdim+3)+1
-        if (is_masked(im).eq.0) then
-         iorder=NINT(mofdata(vofcomp+sdim+1))
-         if (iorder.eq.iplane) then
-          icrit=im
-         endif
-        else if (is_masked(im).eq.1) then
-         ! do nothing
-        else
-         print *,"is_masked invalid: ",is_masked
-         stop
-        endif
-       enddo ! im=1..num_materials
-       if (icrit.gt.0) then
-        nlist=0
-        vofcomp=(icrit-1)*(2*sdim+3)+1
-         ! want intersection where phi_original<0 but routine
-         ! checks if phi_input>0.  So negate phi_original.
-        do dir=1,sdim
-         nn(dir)=-mofdata(vofcomp+sdim+1+dir)  
-        enddo
-        intercept=-mofdata(vofcomp+2*sdim+2)
- 
-        do n=1,nlist_old
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          x1old(i_tet_node,j_dir)=xtetlist_old(i_tet_node,j_dir,n)
-         enddo
-         enddo
+       do iplane=1,num_materials
 
-         do i_tet_node=1,sdim+1
-          phi1(i_tet_node)=intercept
-          do j_dir=1,sdim
-           phi1(i_tet_node)=phi1(i_tet_node)+ &
-             nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
-          enddo
-         enddo
-          ! triangles representing intersection of region where phi1>0
-          ! (phi_original<0) and the triangle x1old
-         if (sdim.eq.3) then
-          call list_tets(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
-         else if (sdim.eq.2) then
-          call list_tris(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+        icrit=0
+
+        do im=1,num_materials
+         vofcomp=(im-1)*(2*sdim+3)+1
+         if ((is_masked(im).eq.0).and. &
+             (is_proper_layer(im,layer_iter).eq.1)) then
+          iorder=NINT(mofdata(vofcomp+sdim+1))
+          if (iorder.eq.iplane) then
+           icrit=im
+          endif
+         else if ((is_masked(im).eq.1).or. &
+                  (is_proper_layer(im,layer_iter).eq.0)) then
+          ! do nothing
          else
-          print *,"sdim invalid"
+          print *,"is_masked invalid: ",is_masked
+          print *,"or is_proper_layer invalid: ", &
+               im,layer_iter,is_proper_layer(im,layer_iter)
           stop
          endif
+        enddo ! im=1..num_materials
 
+        if ((icrit.gt.0).and.(icrit.le.num_materials)) then
 
-         do n2=1,nsub
+         nlist=0
+         vofcomp=(icrit-1)*(2*sdim+3)+1
+         ! want intersection where phi_original<0 but routine
+         ! checks if phi_input>0.  So negate phi_original.
+         do dir=1,sdim
+          nn(dir)=-mofdata(vofcomp+sdim+1+dir)  
+         enddo
+         intercept=-mofdata(vofcomp+2*sdim+2)
+ 
+         do n=1,nlist_old
 
           do i_tet_node=1,sdim+1
           do j_dir=1,sdim
-           xcandidate(i_tet_node,j_dir)=xsublist(i_tet_node,j_dir,n2)
+           x1old(i_tet_node,j_dir)=xtetlist_old(i_tet_node,j_dir,n)
           enddo
           enddo
 
-          call tetrahedron_volume(xcandidate,voltest, &
-           centroidtest,sdim)
-
-          if (voltest.gt.zero) then
-           nlist=nlist+1
-           if (nlist.gt.nmax) then
-            print *,"nlist overflow in tets_tet_planes"
-            print *,"nlist,nmax ",nlist,nmax
-            stop
-           endif
-           do i_tet_node=1,sdim+1
+          do i_tet_node=1,sdim+1
+           phi1(i_tet_node)=intercept
            do j_dir=1,sdim
-            xtetlist(i_tet_node,j_dir,nlist)=xcandidate(i_tet_node,j_dir)
+            phi1(i_tet_node)=phi1(i_tet_node)+ &
+              nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
            enddo
-           enddo
+          enddo
+           ! triangles representing intersection of region where phi1>0
+           ! (phi_original<0) and the triangle x1old
+          if (sdim.eq.3) then
+           call list_tets(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+          else if (sdim.eq.2) then
+           call list_tris(phi1,x1old,xsublist,MAXTET,nsub,xarealist,narea,sdim)
+          else
+           print *,"sdim invalid"
+           stop
           endif
 
-         enddo  ! n2
-        enddo  ! n
-        nlist_old=nlist
-        do n=1,nlist
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          xtetlist_old(i_tet_node,j_dir,n)=xtetlist(i_tet_node,j_dir,n)
+
+          do n2=1,nsub
+
+           do i_tet_node=1,sdim+1
+           do j_dir=1,sdim
+            xcandidate(i_tet_node,j_dir)=xsublist(i_tet_node,j_dir,n2)
+           enddo
+           enddo
+
+           call tetrahedron_volume(xcandidate,voltest, &
+            centroidtest,sdim)
+
+           if (voltest.gt.zero) then
+            nlist=nlist+1
+            if (nlist.gt.nmax) then
+             print *,"nlist overflow in tets_tet_planes"
+             print *,"nlist,nmax ",nlist,nmax
+             stop
+            endif
+            do i_tet_node=1,sdim+1
+            do j_dir=1,sdim
+             xtetlist(i_tet_node,j_dir,nlist)=xcandidate(i_tet_node,j_dir)
+            enddo
+            enddo
+           endif
+
+          enddo  ! n2
+         enddo  ! n
+         nlist_old=nlist
+         do n=1,nlist
+          do i_tet_node=1,sdim+1
+          do j_dir=1,sdim
+           xtetlist_old(i_tet_node,j_dir,n)=xtetlist(i_tet_node,j_dir,n)
+          enddo
+          enddo
          enddo
+        else if (icrit.eq.0) then
+         nlist=nlist_old
+         do n=1,nlist
+          do i_tet_node=1,sdim+1
+          do j_dir=1,sdim
+           xtetlist(i_tet_node,j_dir,n)=xtetlist_old(i_tet_node,j_dir,n)
+          enddo
+          enddo
          enddo
-        enddo
-       else if (icrit.eq.0) then
-        nlist=nlist_old
-        do n=1,nlist
-         do i_tet_node=1,sdim+1
-         do j_dir=1,sdim
-          xtetlist(i_tet_node,j_dir,n)=xtetlist_old(i_tet_node,j_dir,n)
-         enddo
-         enddo
-        enddo
-       else
-        print *,"icrit invalid"
-        stop
-       endif 
-      enddo ! iplane
+        else
+         print *,"icrit invalid"
+         stop
+        endif 
+       enddo ! iplane=1,num_materials
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       return
       end subroutine tets_tet_planes
@@ -14303,6 +14351,7 @@ contains
       endif
 
          ! figure out the next material to fill the unoccupied region.
+         ! the order of the next material will be "ordermax+1"
       distmax=-one
       order_min=9999
       ordermax=0
@@ -16205,8 +16254,8 @@ contains
 
       real(amrex_real) centroid_absolute(sdim)
 
-      real(amrex_real) uncaptured_volume_fraction_elastic
-      real(amrex_real) uncaptured_volume_fraction_fluids
+      real(amrex_real) uncaptured_volume_fraction( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       real(amrex_real) uncaptured_volume_vof_rigid
       real(amrex_real) uncaptured_centroid_vof_rigid(sdim)
@@ -16224,14 +16273,11 @@ contains
       real(amrex_real) uncaptured_volume_cen
       real(amrex_real) uncaptured_centroid_cen(sdim)
 
-      integer single_material
-      integer single_material_elastic
-      real(amrex_real) remaining_vfrac
-      real(amrex_real) remaining_vfrac_elastic
+      integer single_material(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) remaining_vfrac(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) nrecon(sdim)
       integer order_algorithm_in(num_materials)
-      integer num_materials_cell_fluids
-      integer num_materials_cell_elastic
+      integer num_materials_cell(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer alloc_flag
       real(amrex_real) voftest(num_materials)
       integer i1,j1,k1,k1lo,k1hi
@@ -16270,6 +16316,8 @@ contains
       integer :: nEQN_standard
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       integer, parameter :: num_particles=0;
       real(amrex_real) :: particle_list(1,sdim+1)
@@ -16378,6 +16426,19 @@ contains
 
       enddo ! imaterial=1..num_materials
 
+      do imaterial=1,num_materials
+       is_proper_layer_local(imaterial,RIGID_LAYER_INDEX)= &
+               is_rigid_local(imaterial)
+       is_proper_layer_local(imaterial,ELASTIC_LAYER_INDEX)= &
+               is_elastic_local(imaterial)
+       if ((is_rigid_local(imaterial).eq.0).and. &
+           (is_elastic_local(imaterial).eq.0)) then
+        is_proper_layer_local(imaterial,FLUID_LAYER_INDEX)=1
+       else
+        is_proper_layer_local(imaterial,FLUID_LAYER_INDEX)=0
+       endif
+      enddo !imaterial=1,num_materials
+
       if (bfact.lt.1) then
        print *,"bfact invalid135 multimaterial_mof ",bfact
        stop
@@ -16450,8 +16511,6 @@ contains
        dxmaxLS_volume_constraint=dxmaxLS
       else if (continuous_mof.eq.CMOF_X) then 
        dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       dxmaxLS_volume_constraint=dxmaxLS
       else if (continuous_mof.eq.CMOF_F_AND_X) then 
        dxmaxLS_volume_constraint=three*dxmaxLS
       else
@@ -16509,7 +16568,6 @@ contains
                 (is_elastic_local(imaterial).eq.0)) then
 
         if ((continuous_mof.eq.STANDARD_MOF).or. &
-            (continuous_mof.eq.MOF_TRI_TET).or. & 
             (continuous_mof.eq.CMOF_F_AND_X)) then 
          if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
           !do nothing
@@ -16599,22 +16657,6 @@ contains
         uncaptured_centroid_cen, &
         sdim)
 
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-
-       call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         uncaptured_volume_vof, &
-         uncaptured_centroid_vof, &
-         sdim)
-
-       call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         uncaptured_volume_cen, &
-         uncaptured_centroid_cen, &
-         sdim)
-
       else if (continuous_mof.eq.CMOF_X) then
 
        call Box_volumeFAST( &
@@ -16652,7 +16694,6 @@ contains
       if (use_ls_data.eq.1) then
 
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
-           (continuous_mof.eq.MOF_TRI_TET).or. & 
            (continuous_mof.eq.CMOF_X).or. & 
            (continuous_mof.eq.CMOF_F_AND_X)) then 
         !do nothing
@@ -16661,8 +16702,6 @@ contains
         stop
        endif
 
-        ! i1=-1,1  j1=-1  corresponds to first 3 corners if MOF_TRI_TET
-        ! i1=-1    j1=0   corresponds to last corner if MOF_TRI_TET
        do k1=k1lo,k1hi
        do j1=-1,1
        do i1=-1,1
@@ -16686,7 +16725,6 @@ contains
                  (voftest(imaterial).le.one-VOFTOL)) then
 
          if ((continuous_mof.eq.STANDARD_MOF).or. & 
-             (continuous_mof.eq.MOF_TRI_TET).or. & 
              (continuous_mof.eq.CMOF_F_AND_X).or. & 
              (continuous_mof.eq.CMOF_X)) then 
 
@@ -16763,7 +16801,6 @@ contains
 
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
-       ! reconstruct the rigid materials.
 
       do imaterial=1,num_materials
 
@@ -16774,7 +16811,6 @@ contains
        mof_calls(tid_in+1,imaterial)=0
 
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
-           (continuous_mof.eq.MOF_TRI_TET).or. & 
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
            (continuous_mof.eq.CMOF_X)) then 
         mofdata(vofcomp+sdim+1)=zero  ! order=0
@@ -16802,25 +16838,139 @@ contains
 
       enddo !imaterial=1,num_materials
 
-      uncaptured_volume_fraction_elastic=zero
-      uncaptured_volume_fraction_fluids=zero
-      do imaterial=1,num_materials
-       vofcomp=(imaterial-1)*ngeom_recon+1
-       if (is_rigid_local(imaterial).eq.1) then
-        !do nothing
-       else if (is_elastic_local(imaterial).eq.1) then
-        uncaptured_volume_fraction_elastic= &
-          uncaptured_volume_fraction_elastic+mofdata(vofcomp)
-       else if ((is_rigid_local(imaterial).eq.0).and. &
-                (is_elastic_local(imaterial).eq.0)) then
-        uncaptured_volume_fraction_fluids= &
-          uncaptured_volume_fraction_fluids+mofdata(vofcomp)
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+       uncaptured_volume_fraction(layer_iter)=zero
+
+       do imaterial=1,num_materials
+        vofcomp=(imaterial-1)*ngeom_recon+1
+        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+         uncaptured_volume_fraction(layer_iter)=
+            uncaptured_volume_fraction(layer_iter)+mofdata(vofcomp)
+        endif
+       enddo
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       num_materials_cell(layer_iter)=0
+       single_material(layer_iter)=0
+       remaining_vfrac(layer_iter)=zero
+
+       do imaterial=1,num_materials
+
+        vofcomp=(imaterial-1)*ngeom_recon+1
+
+        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+
+         if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
+
+          if (single_material(layer_iter).eq.0) then
+           single_material(layer_iter)=imaterial
+          else if ((single_material(layer_iter).ge.1).and. &
+                   (single_material(layer_iter).le.num_materials)) then
+           vofcomp_single=(single_material(layer_iter)-1)*ngeom_recon+1
+           if (mofdata(vofcomp_single).lt. &
+               mofdata(vofcomp)) then
+            single_material(layer_iter)=imaterial
+           else if (mofdata(vofcomp_single).ge. &
+                    mofdata(vofcomp)) then
+            !do nothing
+           else
+            print *,"mofdata invalid: ",single_material(layer_iter), &
+             mofdata(vofcomp),mofdata(vofcomp_single)
+            stop
+           endif
+          else
+           print *,"single_material invalid: ", &
+              layer_iter,single_material(layer_iter)
+           stop
+          endif
+
+         else if (mofdata(vofcomp).le.one-EPS_UNCAPTURED) then
+          remaining_vfrac(layer_iter)=remaining_vfrac(layer_iter)+ &
+              mofdata(vofcomp)
+         else
+          print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
+          stop
+         endif
+
+        else if (is_proper_layer_local(imaterial,layer_iter).eq.0) then
+         !do nothing
+        else
+         print *,"is_proper_layer_local(imaterial,layer_iter) invalid"
+         stop
+        endif
+
+       enddo !imaterial=1,num_materials
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.eq.CMOF_F_AND_X).or. &
+          (continuous_mof.eq.CMOF_X)) then 
+
+       ! order_algorithm is declared in mofdata.H
+       order_algorithm_in(imaterial)=order_algorithm(imaterial)
+
+       if (is_elastic(imaterial).eq.1) then
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.num_materials)) then
+         ! do nothing
+        else
+         print *,"order_algorithm(imaterial) invalid (elastic): ",imaterial, &
+          order_algorithm(imaterial)
+         stop
+        endif
+       else if (is_rigid(imaterial).eq.1) then
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.1)) then
+         ! do nothing
+        else
+         print *,"order_algorithm(imaterial) invalid (rigid): ",imaterial, &
+          order_algorithm(imaterial)
+         stop
+        endif
        else
-        print *,"is_rigid_local invalid ",is_rigid_local
-        print *,"or is_elastic_local invalid ",is_elastic_local
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.num_materials+1)) then
+         ! do nothing
+        else
+         print *,"order_algorithm(imaterial) invalid (fluid): ",imaterial, &
+          order_algorithm(imaterial)
+         stop
+        endif
+       endif
+
+      else
+       print *,"continuous_mof invalid: ",continuous_mof
+       stop 
+      endif
+
+      do imaterial=1,num_materials
+
+       vofcomp=(imaterial-1)*ngeom_recon+1
+
+       if (mofdata(vofcomp).ge.one-VOFTOL) then
+        order_algorithm_in(imaterial)=num_materials+1
+       else if (mofdata(vofcomp).le.VOFTOL) then
+        order_algorithm_in(imaterial)=num_materials+1  
+       else if ((mofdata(vofcomp).gt.VOFTOL).and. &
+                (mofdata(vofcomp).lt.one-VOFTOL)) then
+        ! do nothing
+       else
+        print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
         stop
        endif
-      enddo !imaterial=1,num_materials
+
+      enddo ! imaterial=1,num_materials
+
+
+FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
+
+
+
+
 
        !This loop reconstructs the rigid materials.
       do imaterial=1,num_materials
@@ -16833,9 +16983,6 @@ contains
             (continuous_mof.eq.CMOF_X).or. & !CMOF X
             (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF F and X
          !do nothing
-        else if (continuous_mof.eq.MOF_TRI_TET) then !TRI-TET
-         print *,"cannot have is_rigid and MOF_TRI_TET: ",is_rigid_local
-         stop
         else
          print *,"continuous_mof invalid: ",continuous_mof
          stop
@@ -16905,7 +17052,7 @@ contains
           ! cell.
           ! find_cut_geom_slope called from: multimaterial_MOF
           ! This call is for the reconstruction of is_rigid=1 materials;
-          ! continuous_mof_rigid=STANDARD_MOF or MOF_TRI_TET
+          ! continuous_mof_rigid=STANDARD_MOF
           call find_cut_geom_slope( &
            tid_in, &
            uncaptured_volume_vof_rigid, &
@@ -17017,13 +17164,6 @@ contains
 
       enddo !imaterial=1,num_materials (loop to reconstruct is_rigid materials)
 
-      remaining_vfrac=zero
-      single_material=0
-      num_materials_cell_fluids=0
-
-      remaining_vfrac_elastic=zero
-      single_material_elastic=0
-      num_materials_cell_elastic=0
 
        ! loop to check if a fluid(local) or elastic(local) 
        ! material takes the remaining 
@@ -17032,97 +17172,9 @@ contains
 
        vofcomp=(imaterial-1)*ngeom_recon+1
 
-       if (is_rigid_local(imaterial).eq.1) then
 
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-         print *,"expecting is_rigid_local=0"
-         stop
-        else
-         print *,"tessellate invalid"
-         stop
-        endif
 
-       else if (is_elastic_local(imaterial).eq.1) then
 
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-         print *,"expecting is_elastic_local=0"
-         stop
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-         print *,"expecting is_elastic_local=0"
-         stop
-        else
-         print *,"tessellate invalid: ",tessellate
-         stop
-        endif
-
-        if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
-
-         if (single_material_elastic.eq.0) then
-          single_material_elastic=imaterial
-         else if ((single_material_elastic.ge.1).and. &
-                  (single_material_elastic.le.num_materials)) then
-          vofcomp_single=(single_material_elastic-1)*ngeom_recon+1
-          if (mofdata(vofcomp_single).lt. &
-              mofdata(vofcomp)) then
-           single_material_elastic=imaterial
-          else if (mofdata(vofcomp_single).ge. &
-                   mofdata(vofcomp)) then
-           !do nothing
-          else
-           print *,"mofdata invalid: ",single_material_elastic, &
-            mofdata(vofcomp),mofdata(vofcomp_single)
-           stop
-          endif
-         else
-          print *,"single_material_elastic invalid: ",single_material_elastic
-          stop
-         endif
-
-        else if (mofdata(vofcomp).le.one-EPS_UNCAPTURED) then
-         remaining_vfrac_elastic=remaining_vfrac_elastic+mofdata(vofcomp)
-        else
-         print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
-         stop
-        endif
-
-        if ((continuous_mof.eq.STANDARD_MOF).or. & 
-            (continuous_mof.eq.CMOF_F_AND_X).or. &
-            (continuous_mof.eq.CMOF_X)) then 
-
-          ! order_algorithm is declared in mofdata.H
-         order_algorithm_in(imaterial)=order_algorithm(imaterial)
-
-         if ((order_algorithm(imaterial).ge.1).and. &
-             (order_algorithm(imaterial).le.num_materials)) then
-          ! do nothing
-         else
-          print *,"order_algorithm(imaterial) invalid (elastic): ",imaterial, &
-           order_algorithm(imaterial)
-          stop
-         endif
-
-         if (mofdata(vofcomp).ge.one-VOFTOL) then
-          order_algorithm_in(imaterial)=num_materials+1
-         else if (mofdata(vofcomp).le.VOFTOL) then
-          order_algorithm_in(imaterial)=num_materials+1  
-         else if ((mofdata(vofcomp).gt.VOFTOL).and. &
-                  (mofdata(vofcomp).lt.one-VOFTOL)) then
-          ! do nothing
-         else
-          print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
-          stop
-         endif
-
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop 
-        endif
 
         if (mofdata(vofcomp).ge.VOFTOL) then
          num_materials_cell_elastic=num_materials_cell_elastic+1
@@ -17176,40 +17228,6 @@ contains
          stop
         endif
 
-        if ((continuous_mof.eq.STANDARD_MOF).or. & 
-            (continuous_mof.eq.MOF_TRI_TET).or. &
-            (continuous_mof.eq.CMOF_F_AND_X).or. &
-            (continuous_mof.eq.CMOF_X)) then 
-
-          ! order_algorithm is declared in mofdata.H
-         order_algorithm_in(imaterial)=order_algorithm(imaterial)
-
-         if ((order_algorithm(imaterial).ge.0).and. &
-             (order_algorithm(imaterial).le.num_materials+1)) then
-          ! do nothing
-         else
-          print *,"order_algorithm(imaterial) invalid: ",imaterial, &
-           order_algorithm(imaterial)
-          stop
-         endif
-
-         if (mofdata(vofcomp).ge.one-VOFTOL) then
-          order_algorithm_in(imaterial)=num_materials+1
-         else if (mofdata(vofcomp).le.VOFTOL) then
-          order_algorithm_in(imaterial)=num_materials+1  
-         else if ((mofdata(vofcomp).gt.VOFTOL).and. &
-                  (mofdata(vofcomp).lt.one-VOFTOL)) then
-          ! do nothing
-         else
-          print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
-          stop
-         endif
-
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop 
-        endif
-
         if (mofdata(vofcomp).ge.VOFTOL) then
          num_materials_cell_fluids=num_materials_cell_fluids+1
         else if (mofdata(vofcomp).lt.VOFTOL) then
@@ -17245,40 +17263,6 @@ contains
           stop
          endif
 
-        else if (is_elastic_local(imaterial).eq.1) then
-
-         if (order_algorithm_in(imaterial).eq.num_materials+1) then
-          ! do nothing
-         else if ((order_algorithm_in(imaterial).ge.1).and. &
-                  (order_algorithm_in(imaterial).le.num_materials)) then
-          ! do nothing
-         else
-          print *,"order_algorithm_in(imaterial) invalid(elastic): ", &
-           imaterial,order_algorithm_in(imaterial),num_materials
-         endif
-
-        else if ((is_rigid_local(imaterial).eq.0).and. &
-                 (is_elastic_local(imaterial).eq.0)) then
-
-         if (order_algorithm_in(imaterial).eq.0) then
-          order_algorithm_in(imaterial)=num_materials+1 
-         else if (order_algorithm_in(imaterial).eq.num_materials+1) then
-          ! do nothing
-         else if ((order_algorithm_in(imaterial).ge.1).and. &
-                  (order_algorithm_in(imaterial).le.num_materials)) then
-          ! do nothing
-         else
-          print *,"order_algorithm_in(imaterial) invalid: ", &
-           imaterial,order_algorithm_in(imaterial),num_materials
-         endif
-
-        else
-         print *,"is_rigid_local invalid: ", &
-           imaterial,is_rigid_local(imaterial)
-         print *,"or is_elastic_local invalid: ", &
-           imaterial,is_elastic_local(imaterial)
-         stop
-        endif
 
        enddo ! imaterial=1..num_materials
 
