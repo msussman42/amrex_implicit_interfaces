@@ -16277,8 +16277,6 @@ contains
       real(amrex_real) remaining_vfrac(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) nrecon(sdim)
       integer order_algorithm_in(num_materials)
-      integer num_materials_cell(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer alloc_flag
       real(amrex_real) voftest(num_materials)
       integer i1,j1,k1,k1lo,k1hi
       real(amrex_real) dxmaxLS
@@ -16307,7 +16305,6 @@ contains
       real(amrex_real) local_npredict(sdim)
       real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       real(amrex_real) mag(3)
-      integer, parameter :: continuous_mof_rigid=STANDARD_MOF
       integer nlist_vof,nlist_cen
 
       integer, PARAMETER :: nMAT_OPT_standard=1
@@ -16461,7 +16458,6 @@ contains
        print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
-      alloc_flag=0
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon invalid"
@@ -16853,7 +16849,6 @@ contains
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       num_materials_cell(layer_iter)=0
        single_material(layer_iter)=0
        remaining_vfrac(layer_iter)=zero
 
@@ -16931,7 +16926,8 @@ contains
           order_algorithm(imaterial)
          stop
         endif
-       else
+       else if ((is_elastic(imaterial).eq.0).and. &
+                (is_rigid(imaterial).eq.0)) then
         if ((order_algorithm(imaterial).ge.1).and. &
             (order_algorithm(imaterial).le.num_materials+1)) then
          ! do nothing
@@ -16940,6 +16936,12 @@ contains
           order_algorithm(imaterial)
          stop
         endif
+       else
+        print *,"is_rigid(imaterial) invalid ", &
+               imaterial,is_rigid(imaterial)
+        print *,"or is_elastic(imaterial) invalid ", &
+               imaterial,is_elastic(imaterial)
+        stop
        endif
 
       else
@@ -16966,11 +16968,113 @@ contains
       enddo ! imaterial=1,num_materials
 
 
-FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
+       at_least_one=0
+       do imaterial=1,num_materials
+        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+         at_least_one=1
+        endif
+       enddo
 
+       if (at_least_one.eq.1) then
 
+        if ((single_material(layer_iter).ge.1).and. &
+            (single_material(layer_iter).le.num_materials).and. &
+            (remaining_vfrac(layer_iter).le.EPS_UNCAPTURED)) then
 
+         vofcomp=(single_material(layer_iter)-1)*ngeom_recon+1
+         mofdata(vofcomp+sdim+1)=one  ! order=1
+         do dir=1,sdim
+          nrecon(dir)=zero  
+         enddo
+         nrecon(1)=one ! null slope=(1 0 0) 
+
+         !null_intercept=two*bfact*dxmaxLS_volume_constraint
+         mofdata(vofcomp+2*sdim+2)=null_intercept
+         do dir=1,sdim
+          mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
+          multi_centroidA(single_material_elastic,dir)=zero  ! cell is full
+         enddo 
+
+        else if ((single_material(layer_iter).eq.0).or. &
+                 (remaining_vfrac(layer_iter).ge.EPS_UNCAPTURED)) then
+
+         imaterial_count=1
+         do while ((imaterial_count.le.num_materials).and. &
+                   (uncaptured_volume_vof.gt.zero).and. &
+                   (uncaptured_volume_fraction(layer_iter).gt.zero))
+
+          if (layer_iter.eq.RIGID_LAYER_INDEX) then
+           layer_flag=RIGID_LAYER
+           continuous_mof_local=STANDARD_MOF
+          else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
+           layer_flag=ELASTIC_LAYER
+           continuous_mof_local=STANDARD_MOF
+          else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+           if (tessellate.eq.TESSELLATE_FLUIDS) then
+            layer_flag=FLUIDS_LAYER
+           else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+            layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
+           else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+            layer_flag=FLUIDS_ELASTIC_LAYER
+           else
+            print *,"tessellate invalid: ",tessellate
+            stop
+           endif
+
+          else
+           print *,"layer_iter invalid"
+           stop
+          endif
+
+          call individual_MOF( &
+           layer_flag, &
+           grid_index, &
+           grid_level, &
+           tid_in, &
+           ls_mof, &
+           lsnormal, &
+           lsnormal_valid, &
+           pls_normal, &
+           pls_normal_valid, &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           order_algorithm_in, &
+           xtetlist_vof, & !intent(out)
+           xtetlist_cen, & !intent(out)
+           nlist_alloc, & !intent(in)
+           nmax, &
+           mofdata, &
+           imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+           uncaptured_volume_fraction(layer_iter), &
+           uncaptured_volume_vof(layer_iter), &
+           uncaptured_volume_cen(layer_iter), &
+           multi_centroidA, &
+           continuous_mof_local, & 
+           cmofsten, &
+           sdim)
+
+          imaterial_count=imaterial_count+1
+         enddo !while imaterial_count<=num_materials and 
+              !      uncaptured_volume_vof(layer_iter)>0.0
+              !      uncaptured_volume_fraction(layer_iter)>0.0
+        else
+         print *,"single_material or remaining_vfrac invalid: ", &
+          single_material(layer_iter),remaining_vfrac(layer_iter)
+         stop
+        endif
+
+       else if (at_least_one.eq.0) then
+        !do nothing
+       else
+        print *,"at_least_one invalid ",at_least_one
+        stop
+       endif
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+FIX ME
 
        !This loop reconstructs the rigid materials.
       do imaterial=1,num_materials
@@ -17176,28 +17280,10 @@ FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
 
 
 
-        if (mofdata(vofcomp).ge.VOFTOL) then
-         num_materials_cell_elastic=num_materials_cell_elastic+1
-        else if (mofdata(vofcomp).lt.VOFTOL) then
-         ! do nothing
-        else
-         print *,"mofdata(vofcomp) is NaN ",mofdata(vofcomp)
-         stop
-        endif
 
        else if ((is_rigid_local(imaterial).eq.0).and. &
                 (is_elastic_local(imaterial).eq.0)) then
 
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-         !do nothing
-        else
-         print *,"tessellate invalid: ",tessellate
-         stop
-        endif
         if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
 
          if (single_material.eq.0) then
@@ -17228,15 +17314,6 @@ FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
          stop
         endif
 
-        if (mofdata(vofcomp).ge.VOFTOL) then
-         num_materials_cell_fluids=num_materials_cell_fluids+1
-        else if (mofdata(vofcomp).lt.VOFTOL) then
-         ! do nothing
-        else
-         print *,"mofdata(vofcomp) is NaN ",mofdata(vofcomp)
-         stop
-        endif
-
        else
         print *,"is_rigid_local invalid: ", &
           imaterial,is_rigid_local(imaterial)
@@ -17247,121 +17324,9 @@ FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
 
       enddo  ! imaterial=1..num_materials
 
-       ! no need to check all order permutations if the number of materials
-       ! is less than 3.
-      if (num_materials_cell_fluids.le.2) then
-
-       do imaterial=1,num_materials
-
-        if (is_rigid_local(imaterial).eq.1) then
-
-         if (order_algorithm_in(imaterial).eq.1) then
-          ! do nothing
-         else
-          print *,"expecting order_algorithm_in=1: ",imaterial, &
-            order_algorithm_in(imaterial)
-          stop
-         endif
 
 
-       enddo ! imaterial=1..num_materials
 
-      else if ((num_materials_cell_fluids.ge.3).and. &
-               (num_materials_cell_fluids.le.num_materials)) then
-
-       do imaterial=1,num_materials
-        if (is_rigid_local(imaterial).eq.1) then
-         ! do nothing
-        else if (is_elastic_local(imaterial).eq.1) then
-         ! do nothing
-        else if ((is_rigid_local(imaterial).eq.0).and. &
-                 (is_elastic_local(imaterial).eq.0)) then
-         if (order_algorithm_in(imaterial).eq.0) then
-          print *,"expecting 1<=order_algorithm_in<=nmat+1"
-          stop
-         else if (order_algorithm_in(imaterial).eq.num_materials+1) then
-          ! do nothing
-         else if ((order_algorithm_in(imaterial).ge.1).and. &
-                  (order_algorithm_in(imaterial).le.num_materials)) then
-          ! do nothing
-         else
-          print *,"order_algorithm_in(imaterial) invalid: ", &
-           imaterial,order_algorithm_in(imaterial),num_materials
-          stop
-         endif
-        else
-         print *,"is_rigid_local invalid: ",is_rigid_local
-         print *,"or is_elastic_local invalid: ",is_elastic_local
-         stop
-        endif
-       enddo ! imaterial=1..num_materials
-
-      else
-       print *,"num_materials_cell_fluids invalid: ",num_materials_cell_fluids
-       stop
-      endif
-
-      do imaterial=1,num_materials
-       if (is_rigid_local(imaterial).eq.1) then
-        ! do nothing
-       else if (is_elastic_local(imaterial).eq.1) then
-        ! do nothing
-       else if ((is_rigid_local(imaterial).eq.0).and. &
-                (is_elastic_local(imaterial).eq.0)) then
-        if (order_algorithm_in(imaterial).eq.0) then
-         print *,"expecting 1<=order_algorithm_in<=nmat+1"
-         stop
-        else if (order_algorithm_in(imaterial).eq.num_materials+1) then
-         ! do nothing
-        else if ((order_algorithm_in(imaterial).ge.1).and. &
-                 (order_algorithm_in(imaterial).le.num_materials)) then
-         ! do nothing
-        else
-         print *,"order_algorithm_in(imaterial) invalid: ", &
-           imaterial,order_algorithm_in(imaterial),num_materials
-         stop
-        endif
-       else
-        print *,"is_rigid_local invalid: ",is_rigid_local
-        print *,"or is_elastic_local invalid: ",is_elastic_local
-        stop
-       endif
-      enddo ! imaterial=1..num_materials
-
-      if ((single_material_elastic.ge.1).and. &
-          (single_material_elastic.le.num_materials).and. &
-          (remaining_vfrac_elastic.le.EPS_UNCAPTURED)) then
-
-       if (is_rigid_local(single_material_elastic).eq.0) then
-        !do nothing
-       else
-        print *,"is_rigid_local(single_material_elastic) invalid: ", &
-          single_material_elastic,is_rigid_local(single_material_elastic)
-        stop
-       endif
-
-       if (is_elastic_local(single_material_elastic).eq.1) then
-        !do nothing
-       else
-        print *,"is_elastic_local(single_material_elastic) invalid: ", &
-          single_material_elastic,is_elastic_local(single_material_elastic)
-        stop
-       endif
-
-       vofcomp=(single_material_elastic-1)*ngeom_recon+1
-       mofdata(vofcomp+sdim+1)=one  ! order=1
-       do dir=1,sdim
-        nrecon(dir)=zero  
-       enddo
-       nrecon(1)=one ! null slope=(1 0 0) 
-        ! phi = n dot (x-x0) + int
-        ! int=-min (n dot (x-x0)) where x is a point in the cell.  
-        ! x0 is cell center (xcell)
-       mofdata(vofcomp+2*sdim+2)=null_intercept
-       do dir=1,sdim
-        mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-        multi_centroidA(single_material_elastic,dir)=zero  ! cell is full
-       enddo 
 
       else if ((single_material_elastic.eq.0).or. &
                (remaining_vfrac_elastic.ge.EPS_UNCAPTURED)) then
@@ -17504,11 +17469,6 @@ FIX ME HERE REPLACE RIGID CODE WITH ELASTIC CODE GENERALIZED FOR IS_RIGID
       else
        print *,"single_material or remaining_vfrac invalid: ", &
         single_material,remaining_vfrac
-       stop
-      endif
-
-      if (alloc_flag.ne.0) then
-       print *,"alloc_flag invalid in MOF.F90"
        stop
       endif
 
