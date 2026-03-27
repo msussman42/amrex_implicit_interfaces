@@ -16305,7 +16305,9 @@ contains
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      integer at_least_one
+      integer at_least_one(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer order_sanity(num_materials)
+      integer test_order
 
       integer, parameter :: num_particles=0;
       real(amrex_real) :: particle_list(1,sdim+1)
@@ -17004,14 +17006,15 @@ contains
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       at_least_one=0
+       at_least_one(layer_iter)=0
        do imaterial=1,num_materials
         if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
-         at_least_one=1
+         at_least_one(layer_iter)=at_least_one(layer_iter)+1
         endif
        enddo
 
-       if (at_least_one.eq.1) then
+       if ((at_least_one(layer_iter).ge.1).and. &
+           (at_least_one(layer_iter).le.num_materials)) then
 
         if ((single_material(layer_iter).ge.1).and. &
             (single_material(layer_iter).le.num_materials).and. &
@@ -17099,7 +17102,7 @@ contains
          stop
         endif
 
-       else if (at_least_one.eq.0) then
+       else if (at_least_one(layer_iter).eq.0) then
         !do nothing
        else
         print *,"at_least_one invalid ",at_least_one
@@ -17108,6 +17111,48 @@ contains
 
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+       do imaterial=1,num_materials
+        order_sanity(imaterial)=0
+       enddo
+       do imaterial=1,num_materials
+        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+         vofcomp=(imaterial-1)*ngeom_recon+1
+         if ((mofdata(vofcomp).ge.EPS2).and. &
+             (mofdata(vofcomp).le.one-EPS2)) then
+          test_order=NINT(mofdata(vofcomp+sdim+1))
+          if ((test_order.ge.1).and. &
+              (test_order.le.at_least_one(layer_iter))) then
+           if (order_sanity(test_order).eq.0) then
+            order_sanity(test_order)=imaterial
+           else
+            print *,"expecting order_sanity(test_order).eq.0"
+            stop
+           endif
+          else
+           print *,"expecting test_order in proper range: ",test_order
+           stop
+          endif
+         else if ((mofdata(vofcomp).ge.-EPS1).and. &
+                  (mofdata(vofcomp).le.EPS2)) then
+          !do nothing
+         else if ((mofdata(vofcomp).ge.one-EPS2).and. &
+                  (mofdata(vofcomp).le.one+EPS1)) then
+          !do nothing
+         else
+          print *,"mofdata(vofcomp) invalid ",mofdata(vofcomp)
+          stop
+         endif
+        else if (is_proper_layer_local(imaterial,layer_iter).eq.0) then
+         !do nothing
+        else
+         print *,"is_proper_layer_local(imaterial,layer_iter) invalid"
+         stop
+        endif
+       enddo !imaterial=1,num_materials
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
