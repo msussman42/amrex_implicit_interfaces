@@ -5966,7 +5966,9 @@ end subroutine volume_sanity_check
       return
       end subroutine get_cut_geom3D
 
-      function is_proper_layer(im,layer_iter)
+      integer function is_proper_layer(im,layer_iter)
+      use probcommon_module
+      use global_utility_module
       IMPLICIT NONE
 
       integer, intent(in) :: im
@@ -16223,6 +16225,7 @@ contains
       integer, INTENT (IN) :: nlist_alloc
       integer, INTENT (IN) :: nmax
       integer, INTENT (IN) :: continuous_mof
+      integer :: continuous_mof_local
       integer, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT (IN) :: grid_index(sdim)
       integer, INTENT (IN) :: grid_level
@@ -16245,7 +16248,6 @@ contains
       real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: &
               multi_centroidA
 
-      integer imaterial2
       integer imaterial
       integer vofcomp
       integer vofcomp_single
@@ -16257,24 +16259,24 @@ contains
       real(amrex_real) uncaptured_volume_fraction( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      real(amrex_real) uncaptured_volume_vof_rigid
-      real(amrex_real) uncaptured_centroid_vof_rigid(sdim)
-
       integer layer_flag
+      integer layer_iter
 
-      real(amrex_real) uncaptured_volume_vof_elastic
-      real(amrex_real) uncaptured_centroid_vof_elastic(sdim)
-      real(amrex_real) uncaptured_volume_cen_elastic
-      real(amrex_real) uncaptured_centroid_cen_elastic(sdim)
+      real(amrex_real) &
+          uncaptured_volume_vof(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) &
+          uncaptured_volume_cen(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      real(amrex_real) uncaptured_volume_vof
-      real(amrex_real) uncaptured_centroid_vof(sdim)
+      real(amrex_real) &
+          uncaptured_centroid_vof(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
+      real(amrex_real) &
+          uncaptured_centroid_cen(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
 
-      real(amrex_real) uncaptured_volume_cen
-      real(amrex_real) uncaptured_centroid_cen(sdim)
+      real(amrex_real) uncaptured_centroid_local(sdim)
 
       integer single_material(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) remaining_vfrac(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+
       real(amrex_real) nrecon(sdim)
       integer order_algorithm_in(num_materials)
       real(amrex_real) voftest(num_materials)
@@ -16292,20 +16294,7 @@ contains
 
       real(amrex_real), dimension(:), allocatable :: ls_intercept
 
-      integer fastflag
-      real(amrex_real) centroidA(sdim)
-      real(amrex_real) centroid_free(sdim)
-      real(amrex_real) centroid_ref(sdim)
-      real(amrex_real) refcentroid(sdim)
-      real(amrex_real) refvfrac(1)
-      real(amrex_real) single_volume
-      real(amrex_real) nslope(sdim)
-      real(amrex_real) intercept(1)
-      integer ipredict
-      real(amrex_real) local_npredict(sdim)
-      real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       real(amrex_real) mag(3)
-      integer nlist_vof,nlist_cen
 
       integer, PARAMETER :: nMAT_OPT_standard=1
       integer, PARAMETER :: use_initial_guess=0
@@ -16315,6 +16304,8 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+
+      integer at_least_one
 
       integer, parameter :: num_particles=0;
       real(amrex_real) :: particle_list(1,sdim+1)
@@ -16623,64 +16614,106 @@ contains
         sdim)
 
       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof_rigid, &
-        uncaptured_centroid_vof_rigid, &
+        bfact,dx, &
+        xsten0,nhalf0, &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
 
-      call Box_volumeFAST( &
-       bfact,dx,xsten0,nhalf0, &
-       uncaptured_volume_vof_elastic, &
-       uncaptured_centroid_vof_elastic, &
-       sdim)
+      uncaptured_volume_cen(RIGID_LAYER_INDEX)= &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX)
 
-      call Box_volumeFAST( &
-       bfact,dx,xsten0,nhalf0, &
-       uncaptured_volume_cen_elastic, &
-       uncaptured_centroid_cen_elastic, &
-       sdim)
+      uncaptured_volume_vof(ELASTIC_LAYER_INDEX)= &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX)
+
+      uncaptured_volume_cen(ELASTIC_LAYER_INDEX)= &
+        uncaptured_volume_cen(RIGID_LAYER_INDEX)
+
+      do dir=1,sdim
+       uncaptured_centroid_vof(RIGID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       uncaptured_centroid_vof(ELASTIC_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       uncaptured_centroid_cen(RIGID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       uncaptured_centroid_cen(ELASTIC_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+      enddo
 
       if (continuous_mof.eq.STANDARD_MOF) then 
 
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof, &
-        uncaptured_centroid_vof, &
+        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
+
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen, &
-        uncaptured_centroid_cen, &
+        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
 
       else if (continuous_mof.eq.CMOF_X) then
 
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof, &
-        uncaptured_centroid_vof, &
+        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
+
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen, &
-        uncaptured_centroid_cen, &
+        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
 
       else if (continuous_mof.eq.CMOF_F_AND_X) then 
 
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof, &
-        uncaptured_centroid_vof, &
+        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
+
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen, &
-        uncaptured_centroid_cen, &
+        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
         sdim)
+
+       do dir=1,sdim
+        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       enddo
 
       else
        print *,"continuous_mof invalid: ",continuous_mof
@@ -16746,7 +16779,8 @@ contains
           endif
           vofcomp=(imaterial-1)*ngeom_recon+1
           do dir=1,sdim
-           centroid_absolute(dir)=uncaptured_centroid_cen(dir)+ &
+           centroid_absolute(dir)= &
+               uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)+ &
                mofdata(vofcomp+dir)
           enddo
 
@@ -16841,7 +16875,7 @@ contains
        do imaterial=1,num_materials
         vofcomp=(imaterial-1)*ngeom_recon+1
         if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
-         uncaptured_volume_fraction(layer_iter)=
+         uncaptured_volume_fraction(layer_iter)= &
             uncaptured_volume_fraction(layer_iter)+mofdata(vofcomp)
         endif
        enddo
@@ -16994,7 +17028,7 @@ contains
          mofdata(vofcomp+2*sdim+2)=null_intercept
          do dir=1,sdim
           mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-          multi_centroidA(single_material_elastic,dir)=zero  ! cell is full
+          multi_centroidA(single_material(layer_iter),dir)=zero  ! cell is full
          enddo 
 
         else if ((single_material(layer_iter).eq.0).or. &
@@ -17002,7 +17036,7 @@ contains
 
          imaterial_count=1
          do while ((imaterial_count.le.num_materials).and. &
-                   (uncaptured_volume_vof.gt.zero).and. &
+                   (uncaptured_volume_vof(layer_iter).gt.zero).and. &
                    (uncaptured_volume_fraction(layer_iter).gt.zero))
 
           if (layer_iter.eq.RIGID_LAYER_INDEX) then
@@ -17074,427 +17108,6 @@ contains
 
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-FIX ME
-
-       !This loop reconstructs the rigid materials.
-      do imaterial=1,num_materials
-
-       vofcomp=(imaterial-1)*ngeom_recon+1
-
-       if (is_rigid_local(imaterial).eq.1) then
-
-        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-            (continuous_mof.eq.CMOF_X).or. & !CMOF X
-            (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF F and X
-         !do nothing
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop
-        endif
-
-        order_algorithm_in(imaterial)=1
-
-         ! centroid is in absolute coordinate system 
-        if (continuous_mof_rigid.eq.STANDARD_MOF) then
-         call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof_rigid, &
-          uncaptured_centroid_vof_rigid, &
-          sdim)
-         fastflag=1
-         nlist_vof=0
-         nlist_cen=0
-        else
-         print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
-         stop
-        endif
-
-        refvfrac(1)=mofdata(vofcomp)
-
-        if (abs(refvfrac(1)-vof_super(imaterial)).le.EPS12) then
-         !do nothing
-        else
-         print *,"vof_super mismatch with refvfrac(1)"
-         stop
-        endif
-
-        if ((refvfrac(1).le.VOFTOL).and. &
-            (refvfrac(1).ge.zero)) then
-         ! do nothing
-        else if ((refvfrac(1).ge.one-VOFTOL).and. &
-                 (refvfrac(1).le.one)) then
-         ! do nothing
-        else if ((refvfrac(1).ge.VOFTOL).and. &
-                 (refvfrac(1).le.one-VOFTOL)) then
-         do dir=1,sdim
-          centroid_free(dir)=uncaptured_centroid_vof_rigid(dir)
-          centroid_ref(dir)= &
-             mofdata(vofcomp+dir)+uncaptured_centroid_vof_rigid(dir)
-         enddo
-
-         single_volume=refvfrac(1)*uncaptured_volume_vof_rigid
-
-          ! centroid_ref-centroid_free
-          ! normal points from light to dark
-         call find_predict_slope( &
-           npredict, &
-           mag, &
-           uncaptured_volume_vof_rigid, &
-           uncaptured_volume_vof_rigid, &
-           centroid_free, &
-           single_volume, &
-           centroid_ref, &
-           bfact,dx, &
-           xsten0,nhalf0,sdim)
-
-         if (mag(1).gt.zero) then
-
-          do dir=1,sdim
-           refcentroid(dir)=mofdata(vofcomp+dir)
-          enddo
-
-          ! centroidA and refcentroid relative to cell centroid of the super
-          ! cell.
-          ! find_cut_geom_slope called from: multimaterial_MOF
-          ! This call is for the reconstruction of is_rigid=1 materials;
-          ! continuous_mof_rigid=STANDARD_MOF
-          call find_cut_geom_slope( &
-           tid_in, &
-           uncaptured_volume_vof_rigid, &
-           mofdata, &
-           grid_index, &
-           grid_level, &
-           ls_mof, &
-           lsnormal, &
-           lsnormal_valid, &
-           pls_normal, &
-           pls_normal_valid, &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           refcentroid, &
-           refvfrac, &
-           npredict, &
-           continuous_mof_rigid, & !STANDARD_MOF 
-           cmofsten, &
-           nslope, &
-           intercept, &
-           xtetlist_vof, & !intent(in)
-           nlist_vof, & !intent(in)
-           xtetlist_cen, & !intent(in)
-           nlist_cen, & !intent(in)
-           nlist_alloc, & !intent(in)
-           centroidA, &
-           nmax, &
-           imaterial, & !INTENT(in)
-           fastflag, &
-           sdim, &
-           nMAT_OPT_standard, & !nMAT_OPT_standard=1
-           nDOF_standard, & !nDOF_standard=sdim-1
-           nEQN_standard)   !nEQN_standard=sdim
-
-          mofdata(vofcomp+sdim+1)=one ! order=1
-          mofdata(vofcomp+2*sdim+2)=intercept(1)
-          do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=nslope(dir)
-           multi_centroidA(imaterial,dir)=centroidA(dir)
-          enddo 
-
-         else if (mag(1).eq.zero) then
-
-          do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-           do dir=1,sdim
-            npredict(ipredict,dir)=zero
-           enddo
-           npredict(ipredict,1)=one
-          enddo
-          do dir=1,sdim
-           local_npredict(dir)=npredict(1,dir)
-          enddo
-
-          do dir=1,sdim
-           centroidA(dir)=zero
-          enddo
-          intercept(1)=mofdata(vofcomp)-half
-
-          mofdata(vofcomp+sdim+1)=one ! order=1
-          mofdata(vofcomp+2*sdim+2)=intercept(1)
-
-          refvfrac(1)=mofdata(vofcomp)
-
-          if (continuous_mof_rigid.eq.STANDARD_MOF) then
-
-           call single_find_intercept( &
-            tid_in, &
-            nMAT_OPT_standard, & !nMAT_OPT_standard=1
-            nDOF_standard, & !nDOF_standard=sdim-1
-            nEQN_standard, &  !nEQN_standard=sdim
-            bfact,dx, &
-            xsten0,nhalf0, &
-            local_npredict, &
-            intercept(1), &
-            refvfrac(1), &
-            centroidA, & ! centroid in absolute coordinate system
-            sdim)
-
-          else
-           print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
-           stop
-          endif
-
-          mofdata(vofcomp+2*sdim+2)=intercept(1)
-          do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=local_npredict(dir)
-           multi_centroidA(imaterial,dir)= &
-              centroidA(dir)-uncaptured_centroid_vof_rigid(dir)
-          enddo 
-
-         else
-          print *,"mag invalid MOF.F90 14595: ",mag(1)
-          stop
-         endif
-
-        else
-         print *,"mofdata(vofcomp) invalid 1 mofdata(vofcomp)=", &
-          mofdata(vofcomp)
-         print *,"imaterial,vofcomp=",imaterial,vofcomp
-         stop
-        endif
-  
-       else if (is_rigid_local(imaterial).eq.0) then
-        !do nothing
-       else
-        print *,"is_rigid_local invalid: ",is_rigid_local
-        stop
-       endif
-
-      enddo !imaterial=1,num_materials (loop to reconstruct is_rigid materials)
-
-
-       ! loop to check if a fluid(local) or elastic(local) 
-       ! material takes the remaining 
-       ! space.
-      do imaterial=1,num_materials
-
-       vofcomp=(imaterial-1)*ngeom_recon+1
-
-
-
-
-
-
-       else if ((is_rigid_local(imaterial).eq.0).and. &
-                (is_elastic_local(imaterial).eq.0)) then
-
-        if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
-
-         if (single_material.eq.0) then
-          single_material=imaterial
-         else if ((single_material.ge.1).and. &
-                  (single_material.le.num_materials)) then
-          vofcomp_single=(single_material-1)*ngeom_recon+1
-          if (mofdata(vofcomp_single).lt. &
-              mofdata(vofcomp)) then
-           single_material=imaterial
-          else if (mofdata(vofcomp_single).ge. &
-                   mofdata(vofcomp)) then
-           !do nothing
-          else
-           print *,"mofdata invalid: ",single_material, &
-            mofdata(vofcomp),mofdata(vofcomp_single)
-           stop
-          endif
-         else
-          print *,"single_material invalid: ",single_material
-          stop
-         endif
-
-        else if (mofdata(vofcomp).le.one-EPS_UNCAPTURED) then
-         remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
-        else
-         print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
-         stop
-        endif
-
-       else
-        print *,"is_rigid_local invalid: ", &
-          imaterial,is_rigid_local(imaterial)
-        print *,"or is_elastic_local invalid: ", &
-          imaterial,is_elastic_local(imaterial)
-        stop
-       endif
-
-      enddo  ! imaterial=1..num_materials
-
-
-
-
-
-      else if ((single_material_elastic.eq.0).or. &
-               (remaining_vfrac_elastic.ge.EPS_UNCAPTURED)) then
-
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
-
-        imaterial_count=1
-        do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero).and. &
-                  (uncaptured_volume_fraction_elastic.gt.zero))
-         layer_flag=ELASTIC_LAYER
-         call individual_MOF( &
-          layer_flag, &
-          grid_index, &
-          grid_level, &
-          tid_in, &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          pls_normal, &
-          pls_normal_valid, &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          order_algorithm_in, &
-          xtetlist_vof, & !intent(out)
-          xtetlist_cen, & !intent(out)
-          nlist_alloc, & !intent(in)
-          nmax, &
-          mofdata, &
-          imaterial_count, & !imaterial_count-1=#mat already reconstructed.
-          uncaptured_volume_fraction_elastic, &
-          uncaptured_volume_vof_elastic, &
-          uncaptured_volume_cen_elastic, &
-          multi_centroidA, &
-          continuous_mof_rigid, & !STANDARD_MOF
-          cmofsten, &
-          sdim)
-         imaterial_count=imaterial_count+1
-        enddo !while imaterial_count<=num_materials and 
-              !      uncaptured_volume_vof>0.0
-              !      uncaptured_volume_fraction_elastic>0.0
-
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        !do nothing
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        !do nothing
-       else
-        print *,"tessellate invalid: ",tessellate
-        stop
-       endif
-
-      else
-       print *,"single_material_elastic or remaining_vfrac_elastic invalid: ", &
-        single_material_elastic,remaining_vfrac_elastic
-       stop
-      endif
-
-      if ((single_material.gt.0).and. &
-          (remaining_vfrac.le.EPS_UNCAPTURED)) then
-
-       if (is_rigid_local(single_material).eq.0) then
-        !do nothing
-       else
-        print *,"is_rigid_local(single_material) invalid: ", &
-          single_material,is_rigid_local(single_material)
-        stop
-       endif
-
-       if (is_elastic_local(single_material).eq.0) then
-        !do nothing
-       else
-        print *,"is_elastic_local(single_material) invalid: ", &
-          single_material,is_elastic_local(single_material)
-        stop
-       endif
-
-       vofcomp=(single_material-1)*ngeom_recon+1
-       mofdata(vofcomp+sdim+1)=one  ! order=1
-       do dir=1,sdim
-        nrecon(dir)=zero  
-       enddo
-       nrecon(1)=one ! null slope=(1 0 0) 
-        ! phi = n dot (x-x0) + int
-        ! int=-min (n dot (x-x0)) where x is a point in the cell.  
-        ! x0 is cell center (xcell)
-       mofdata(vofcomp+2*sdim+2)=null_intercept
-       do dir=1,sdim
-        mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-        multi_centroidA(single_material,dir)=zero  ! cell is full
-       enddo 
-
-      else if ((single_material.eq.0).or. &
-               (remaining_vfrac.ge.EPS_UNCAPTURED)) then
-
-        imaterial_count=1
-        do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero).and. &
-                  (uncaptured_volume_fraction_fluids.gt.zero))
-
-         if (tessellate.eq.TESSELLATE_FLUIDS) then
-          layer_flag=FLUIDS_LAYER
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-          layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-          layer_flag=FLUIDS_ELASTIC_LAYER
-         else
-          print *,"tessellate invalid: ",tessellate
-          stop
-         endif
-
-         call individual_MOF( &
-          layer_flag, &
-          grid_index, &
-          grid_level, &
-          tid_in, &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          pls_normal, &
-          pls_normal_valid, &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          order_algorithm_in, &
-          xtetlist_vof, & !intent(out)
-          xtetlist_cen, & !intent(out)
-          nlist_alloc, & !intent(in)
-          nmax, &
-          mofdata, &
-          imaterial_count, & !imaterial_count-1=#mat already reconstructed.
-          uncaptured_volume_fraction_fluids, &
-          uncaptured_volume_vof, &
-          uncaptured_volume_cen, &
-          multi_centroidA, &
-          continuous_mof, &
-          cmofsten, &
-          sdim)
-         imaterial_count=imaterial_count+1
-        enddo
-
-      else
-       print *,"single_material or remaining_vfrac invalid: ", &
-        single_material,remaining_vfrac
-       stop
-      endif
-
-      do imaterial=1,num_materials
-       vofcomp=(imaterial-1)*ngeom_recon+1
-
-       if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.EPS3) then
-        print *,"volume fraction changed"
-        print *,"put breakpoint here to see the caller"
-        print *,"imaterial,vofbefore,vofafter ",imaterial, &
-          voftest(imaterial),mofdata(vofcomp)
-        do imaterial2=1,num_materials
-         vofcomp=(imaterial2-1)*ngeom_recon+1
-         print *,"imaterial2,vofbefore,vofafter ",imaterial2, &
-          voftest(imaterial2),mofdata(vofcomp)
-        enddo
-        stop
-       else if (abs(voftest(imaterial)-mofdata(vofcomp)).lt.EPS3) then
-        ! do nothing
-       else
-        print *,"voftest or mofdata is NaN: ", &
-          imaterial,voftest(imaterial),mofdata(vofcomp)
-        stop
-       endif
-
-      enddo  !imaterial=1,num_materials
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
