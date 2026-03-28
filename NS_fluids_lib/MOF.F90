@@ -19532,6 +19532,9 @@ FIX ME
            if (is_elastic_local(im).eq.1) then
 FIX ME IF TESSELLATE_ALL for example, then mofdatalocal=material_used for
 rigids too!
+A "mask" should be created using the layer_flag defined below (the layer_flag
+should be init up here)
+......
             if (tessellate_dest.eq.TESSELLATE_ALL) then
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials)) then
