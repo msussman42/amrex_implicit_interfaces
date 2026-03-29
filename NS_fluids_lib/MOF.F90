@@ -5986,7 +5986,7 @@ end subroutine volume_sanity_check
         is_proper_layer=0
        endif
       else
-       print *,"layer_flag invalid"
+       print *,"layer_iter invalid ",layer_iter
        stop
       endif
 
@@ -6074,6 +6074,8 @@ end subroutine volume_sanity_check
         is_masked(im)=0
        else if (layer_flag.eq.NULL_LAYER) then
         is_masked(im)=1
+       else if (layer_flag.eq.FLUIDS_RIGID_LAYER) then
+        is_masked(im)=is_elastic_local(im)
        else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
         is_masked(im)=is_rigid_local(im)
        else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
@@ -6572,6 +6574,8 @@ end subroutine volume_sanity_check
         is_masked(im)=0
        else if (layer_flag.eq.NULL_LAYER) then
         is_masked(im)=1
+       else if (layer_flag.eq.FLUIDS_RIGID_LAYER) then
+        is_masked(im)=is_elastic_local(im)
        else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
         is_masked(im)=is_rigid_local(im)
        else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
@@ -18904,15 +18908,15 @@ contains
        stop
       endif
 
-      if ((vfrac_sum(ELASTIC_LAYER).le.one+EPS1).and. &
-          (vfrac_sum(ELASTIC_LAYER).ge.zero)) then
+      if ((vfrac_sum(ELASTIC_LAYER_INDEX).le.one+EPS1).and. &
+          (vfrac_sum(ELASTIC_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum invalid: ",vfrac_sum
        stop
       endif
-      if ((vfrac_sum(RIGID_LAYER).le.one+EPS1).and. &
-          (vfrac_sum(RIGID_LAYER).ge.zero)) then
+      if ((vfrac_sum(RIGID_LAYER_INDEX).le.one+EPS1).and. &
+          (vfrac_sum(RIGID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum invalid: ",vfrac_sum
@@ -18924,25 +18928,33 @@ contains
        ! if majority=solid => all solid.
       if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then 
 
-       if (vfrac_sum(RIGID_LAYER).ge.half) then
+       if ((tessellate_source.eq.TESSELLATE_FLUIDS).or. &
+           (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+        !do nothing
+       else
+        print *,"tessellate_source invalid ",tessellate_source
+        stop
+       endif
+
+       if (vfrac_sum(RIGID_LAYER_INDEX).ge.half) then
 
         return_raster_info=1
 
         if ((im_raster_solid.ge.1).and. &
             (im_raster_solid.le.num_materials)) then
          vofcomp=(im_raster_solid-1)*ngeom_recon+1
-         multi_volume(im_raster_solid)=uncaptured_volume(RIGID_LAYER)
+         multi_volume(im_raster_solid)=uncaptured_volume(RIGID_LAYER_INDEX)
          do dir=1,sdim
-          multi_cen(dir,im_raster_solid)=uncaptured_centroid(RIGID_LAYER,dir)
+          multi_cen(dir,im_raster_solid)=uncaptured_centroid(RIGID_LAYER_INDEX,dir)
          enddo
         else
          print *,"im_raster_solid invalid: ",im_raster_solid
          stop
         endif
 
-       else if (vfrac_sum(RIGID_LAYER).le.half) then
+       else if (vfrac_sum(RIGID_LAYER_INDEX).le.half) then
 
-        vfrac_sum(RIGID_LAYER)=zero
+        vfrac_sum(RIGID_LAYER_INDEX)=zero
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          if (is_rigid_local(im).eq.0) then
@@ -19011,7 +19023,7 @@ contains
            !do nothing
           else if (tessellate_dest.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)* &
-             abs(one-vfrac_sum(RIGID_LAYER))
+             abs(one-vfrac_sum(RIGID_LAYER_INDEX))
           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
            !do nothing
           else
@@ -19028,19 +19040,19 @@ contains
           else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
                    (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
            multi_volume(im)=multi_volume(im)* &
-             abs(one-vfrac_sum(ELASTIC_LAYER))
+             abs(one-vfrac_sum(ELASTIC_LAYER_INDEX))
           else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
                    (tessellate_dest.eq.TESSELLATE_ALL) then
            multi_volume(im)=multi_volume(im)* &
-              abs(one-vfrac_sum(RIGID_LAYER))* &
-              abs(one-vfrac_sum(ELASTIC_LAYER))
+              abs(one-vfrac_sum(RIGID_LAYER_INDEX))* &
+              abs(one-vfrac_sum(ELASTIC_LAYER_INDEX))
           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
            !do nothing
           else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
                    (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
            multi_volume(im)=multi_volume(im)* &
-              abs(one-vfrac_sum(ELASTIC_LAYER))
+              abs(one-vfrac_sum(ELASTIC_LAYER_INDEX))
           else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID).and. &
                    (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID)) then 
            !do nothing
@@ -19076,8 +19088,132 @@ contains
          enddo
 
          if ((at_least_one(layer_iter).ge.1).and. &
-             (at_least_one(layer_iter).le.num_materials)) then
+             (at_least_one(layer_iter).le.num_materials).and. &
+             (vfrac_sum(layer_iter).gt.zero)) then
 
+          if (layer_iter.eq.RIGID_LAYER_INDEX) then
+
+           if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+            if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+                (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
+                (tessellate_dest.eq.TESSELLATE_ALL)) then
+             layer_flag=RIGID_LAYER
+            else
+             print *,"tessellate_dest invalid ",tessellate_dest
+             print *,"tessellate_source ",tessellate_source
+             stop
+            endif
+           else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+            if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
+             layer_flag=RIGID_LAYER
+            else
+             print *,"tessellate_dest invalid ",tessellate_dest
+             print *,"tessellate_source ",tessellate_source
+             stop
+            endif
+           else
+            print *,"tessellate_source invalid ",tessellate_source
+            print *,"tessellate_dest ",tessellate_dest
+            stop
+           endif
+
+          else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
+         
+           if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+            if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+                (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
+                (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+             layer_flag=ELASTIC_LAYER
+            else if (tessellate_dest.eq.TESSELLATE_ALL) then
+             layer_flag=ELASTIC_RIGID_LAYER
+            else
+             print *,"tessellate_dest invalid ",tessellate_dest
+             print *,"tessellate_source ",tessellate_source
+             stop
+            endif
+           else
+            print *,"tessellate_source invalid ",tessellate_source
+            print *,"tessellate_dest ",tessellate_dest
+            stop
+           endif
+
+          else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+
+           if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+            if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
+             layer_flag=FLUIDS_LAYER
+            else if ((tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
+                     (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+             if (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero) then
+              layer_flag=FLUIDS_ELASTIC_LAYER
+             else if (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero) then
+              layer_flag=FLUIDS_LAYER
+             else
+              print *,"vfrac_sum(ELASTIC_LAYER_INDEX) invalid"
+              stop
+             endif
+            else if (tessellate_dest.eq.TESSELLATE_ALL) then
+             if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero)) then
+              layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
+             else if ((vfrac_sum(RIGID_LAYER_INDEX).eq.zero).and. &
+                      (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero)) then
+              layer_flag=FLUIDS_ELASTIC_LAYER
+             else if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).and. &
+                      (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
+              layer_flag=FLUIDS_RIGID_LAYER
+             else if ((vfrac_sum(RIGID_LAYER_INDEX).eq.zero).and. &
+                      (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
+              layer_flag=FLUIDS_LAYER
+             else
+              print *,"vfrac_sum invalid ",vfrac_sum
+              stop
+             endif
+
+
+          do imaterial=1,num_materials
+
+           if (layer_flag.eq.FLUIDS_ELASTIC_RIGID_LAYER) then
+            is_masked(imaterial)=0
+           else if (layer_flag.eq.NULL_LAYER) then
+            is_masked(imaterial)=1
+           else if (layer_flag.eq.FLUIDS_RIGID_LAYER) then
+            is_masked(im)=is_elastic_local(im)
+           else if (layer_flag.eq.FLUIDS_ELASTIC_LAYER) then
+            is_masked(imaterial)=is_rigid(imaterial)
+           else if (layer_flag.eq.ELASTIC_RIGID_LAYER) then
+            if ((is_rigid(imaterial).eq.1).or. &
+                (is_elastic(imaterial).eq.1)) then
+             is_masked(imaterial)=0
+            else if ((is_rigid(imaterial).eq.0).and. &
+                     (is_elastic(imaterial).eq.0)) then
+             is_masked(imaterial)=1
+            else
+             print *,"is_rigid or is_elastic invalid"
+             stop
+            endif
+           else if (layer_flag.eq.RIGID_LAYER) then
+            is_masked(imaterial)=1-is_rigid(imaterial)
+           else if (layer_flag.eq.ELASTIC_LAYER) then
+            is_masked(imaterial)=1-is_elastic(imaterial)
+           else if (layer_flag.eq.FLUIDS_LAYER) then
+            if ((is_rigid(imaterial).eq.1).or. &
+                (is_elastic(imaterial).eq.1)) then
+             is_masked(imaterial)=1
+            else if ((is_rigid(imaterial).eq.0).and. &
+                     (is_elastic(imaterial).eq.0)) then
+             is_masked(imaterial)=0
+            else
+             print *,"is_rigid or is_elastic invalid"
+             stop
+            endif
+           else
+            print *,"layer_flag invalid multi_get_volume_grid ",layer_flag
+            stop
+           endif
+
+          enddo !imaterial=1,num_materials
+ 
           loop_counter=0
           do while ((loop_counter.lt. &
                      local_num_materials(layer_iter)).and. &
