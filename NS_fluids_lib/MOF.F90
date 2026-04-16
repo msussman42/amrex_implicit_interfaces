@@ -19150,7 +19150,7 @@ contains
          endif
 
          do dir=1,sdim
-          multi_cen(dir,im)=uncaptured_centroid(FLUID_LAYER,dir)
+          multi_cen(dir,im)=uncaptured_centroid(FLUID_LAYER_INDEX,dir)
          enddo
         enddo ! im=1..num_materials
 
@@ -19342,6 +19342,51 @@ contains
 
           enddo !im=1,num_materials
 
+          if (layer_iter.eq.RIGID_LAYER_INDEX) then
+           ! do nothing
+          else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
+
+           if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+               (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+            ! do nothing; uncaptured_volume_elastic remains to represent
+            ! the original uncaptured space.
+           else if (tessellate_dest.eq.TESSELLATE_ALL) then
+            ! modify the uncaptured regions to recognize the presence
+            ! of the is_rigid==1 materials.
+            uncaptured_volume(ELASTIC_LAYER_INDEX)= &
+                    uncaptured_volume(RIGID_LAYER_INDEX)
+            uncaptured_volume_fraction(ELASTIC_LAYER_INDEX)= &
+                    uncaptured_volume_fraction(RIGID_LAYER_INDEX)
+            uncaptured_volume(FLUID_LAYER_INDEX)= &
+                    uncaptured_volume(RIGID_LAYER_INDEX)
+            uncaptured_volume_fraction(FLUID_LAYER_INDEX)= &
+                    uncaptured_volume_fraction(RIGID_LAYER_INDEX)
+            do dir=1,sdim
+             uncaptured_centroid(ELASTIC_LAYER_INDEX,dir)= &
+                     uncaptured_centroid(RIGID_LAYER_INDEX,dir)
+             uncaptured_centroid(FLUID_LAYER_INDEX,dir)= &
+                     uncaptured_centroid(RIGID_LAYER_INDEX,dir)
+            enddo
+           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
+            ! do nothing (is_rigid_local(im)=0 for all materials)
+           else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then 
+            ! do nothing; uncaptured_volume_elastic remains to represent
+            ! the original uncaptured space.
+           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+            ! do nothing (is_rigid_local(im)=1 materials all zapped out)
+           else
+            print *,"tessellate_dest bad(multi_get_volume_grid) ", &
+             tessellate_dest
+            stop
+           endif
+          else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+
+                FIX ME
+          else
+           print *,"layer_flag invalid(multi_get_volume_grid): ",layer_flag
+           stop
+          endif
+
            !uncaptured_volume(layer_iter) initialized to the box volume
            !for all "layer_iter"
            ! 
@@ -19359,15 +19404,15 @@ contains
            remaining_vfrac=zero
            single_material=0
 
-FIX ME
-         do im_test=1,num_materials
-          vofcomp=(im_test-1)*ngeom_recon+1
+           do im_test=1,num_materials
+            vofcomp=(im_test-1)*ngeom_recon+1
 
-           !uncaptured_volume_fraction_solid initialized to 1.0
-          if ((material_used(im_test).eq.0).and. &
-              (is_rigid_local(im_test).eq.1)) then
-           if (mofdatasave(vofcomp).gt. &
-               (one-EPS_SINGLE)*uncaptured_volume_fraction_solid) then
+            if ((material_used(im_test).eq.0).and. &
+                (is_masked(im_test).eq.0)) then
+             if (mofdatasave(vofcomp).gt. &
+                 (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
+
+FIX ME
             if (single_material.eq.0) then
              !do nothing
             else
@@ -19673,54 +19718,8 @@ FIX ME
         ! ABOVE: solid materials
         ! BELOW: elastic materials
 
-        if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
-            (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
-         ! do nothing; uncaptured_volume_elastic remains to represent
-         ! the original uncaptured space.
-        else if (tessellate_dest.eq.TESSELLATE_ALL) then
-         ! modify the uncaptured regions to recognize the presence
-         ! of the is_rigid==1 materials.
-         uncaptured_volume_elastic=uncaptured_volume_solid
-         uncaptured_volume_fraction_elastic=uncaptured_volume_fraction_solid
-         uncaptured_volume_fluid=uncaptured_volume_solid
-         uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_solid
-         do dir=1,sdim
-          uncaptured_centroid_elastic(dir)=uncaptured_centroid_solid(dir)
-          uncaptured_centroid_fluid(dir)=uncaptured_centroid_solid(dir)
-         enddo
-        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
-         ! do nothing (is_rigid_local(im)=0 for all materials)
-        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then 
-         ! do nothing; uncaptured_volume_elastic remains to represent
-         ! the original uncaptured space.
-        else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
-         ! do nothing (is_rigid_local(im)=1 materials all zapped out)
-        else
-         print *,"tessellate_dest bad(multi_get_volume_grid) ", &
-             tessellate_dest
-         stop
-        endif
 
-         !uncaptured_volume_fraction_elastic=1.0 initially
-        loop_counter=0
-        do while ((loop_counter.lt.num_materials_elastic).and. &
-                  (num_processed_elastic.lt.num_materials_elastic).and. &
-                  (uncaptured_volume_fraction_elastic.gt. &
-                   one-vfrac_elastic_sum).and. &
-                  (uncaptured_volume_elastic.gt.zero)) 
-
-         remaining_vfrac=zero
-         single_material=0
-
-         do im_test=1,num_materials
-          vofcomp=(im_test-1)*ngeom_recon+1
-
-           !uncaptured_volume_fraction_elastic=1.0 initially
-          if ((material_used(im_test).eq.0).and. &
-              (is_elastic_local(im_test).eq.1)) then
-           if (mofdatasave(vofcomp).gt. &
-               (one-EPS_SINGLE)*uncaptured_volume_fraction_elastic) then
-
+FIX ME GUIDE
             if (single_material.eq.0) then
              single_material=im_test
             else if ((single_material.ge.1).and. &
