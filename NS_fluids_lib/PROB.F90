@@ -19183,6 +19183,7 @@ end subroutine RatePhaseChange
 ! -----------------
 
 
+       !ASHWANI PAL SLAC
       subroutine get_vel_phasechange_NUCLEATE( &
                       nucleate_in,nucleate_out)
       use global_utility_module
@@ -19323,6 +19324,11 @@ end subroutine RatePhaseChange
            (local_freezing_model.eq.6)) then !TSAT variable evap/condensation
 
         if (is_in_probtype_list().eq.1) then
+          !git log --all --name-only --pretty=format: | grep "petsc"
+          !git log --all -G"PetscNullSpace" --source --oneline
+          !git log --all -S"PetscNullSpace" --oneline
+          !git log --all -S"SUB_nucleation" 
+          !ASHWANI PAL SLAC
          call SUB_nucleation( &
               nucleate_in, & !in
               xsten, & !in

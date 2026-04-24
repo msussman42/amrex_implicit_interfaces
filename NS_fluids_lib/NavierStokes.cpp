@@ -15233,6 +15233,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      // lsnewfab and burnvelfab are updated.
      // lsfab is not updated.
      // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
+     // nucleation_flag==0
     fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
@@ -15322,7 +15323,14 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      //fort_ratemasschange calls
      // get_vel_phasechange_NUCLEATE(create_in,create_inout)
      // get_vel_phasechange_NUCLEATE calls
-     // SUB_nucleation(nuceate_in,xsten,nhalf,make_seed)
+     // SUB_nucleation(nuceate_in, !in
+     //                xsten, !in
+     //                nhalf, !in
+     //                subscale_spec_id, !out
+     //                subscale_vfrac, !out
+     //                make_seed) !inout
+     // nucleation_flag==1
+     // ASHWANI PAL SLAC
     fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
