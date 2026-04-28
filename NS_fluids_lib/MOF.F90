@@ -18944,6 +18944,7 @@ contains
         print *,"layer_iter= ",layer_iter
         stop
        endif
+       !tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
        if ((vfrac_sum_local(layer_iter).ge.zero).and. &
            (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
         !do nothing
@@ -19458,7 +19459,8 @@ contains
             vofcomp=(im_test-1)*ngeom_recon+1
 
             if ((material_used(im_test).eq.0).and. &
-                (is_masked(im_test).eq.0)) then!cut this material from avail if used
+                (is_masked(im_test).eq.0)) then
+             !cut this material from avail if used
 
              if (mofdatasave(vofcomp).gt. &
                  (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
@@ -19507,7 +19509,7 @@ contains
             vofcomp=(im-1)*ngeom_recon+1
             mofdatalocal(vofcomp+sdim+1)=zero ! order=0
              
-            if ((is_masked(im).eq.0).or. & !cut this material from avail if used.
+            if ((is_masked(im).eq.0).or. &!cut this material from avail if used
                 (is_masked(im).eq.1)) then !do not cut this
              if ((material_used(im).ge.1).and. &
                  (material_used(im).le.num_materials)) then
@@ -19739,7 +19741,7 @@ contains
               else
                uncaptured_centroid(layer_iter,dir)= &
                 (uncaptured_volume_save*uncaptured_centroid(layer_iter,dir)- &
-                voltemp*centemp(dir))/uncaptured_volume(layer_iter)
+                 voltemp*centemp(dir))/uncaptured_volume(layer_iter)
               endif
              enddo ! dir=1..sdim
   
@@ -22612,7 +22614,7 @@ contains
       return
       end subroutine multi_get_volume_grid_simple
 
-
+FIX ME
 
 
         ! multi_cen is "absolute" (not relative to cell centroid)
