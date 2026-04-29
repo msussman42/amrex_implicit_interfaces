@@ -18616,6 +18616,206 @@ contains
       return
       end subroutine project_slopes_to_face
 
+      subroutine init_local_material_vars( &
+         is_rigid_local, &
+         is_elastic_local, &
+         tessellate_source, &
+         tessellate_dest, &
+         is_proper_layer_local)
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tessellate_source
+      integer, INTENT(in) :: tessellate_dest
+      integer, intent(out) :: is_rigid_local(num_materials)
+      integer, intent(out) :: is_elastic_local(num_materials)
+      integer, intent(out) :: is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer :: im
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+       if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
+        is_rigid_local(im)=0
+        is_elastic_local(im)=0
+        if (tessellate_source.eq.tessellate_dest) then
+         !do nothing
+        else
+         print *,"expecting tessellate_source==tessellate_dest"
+         stop
+        endif
+       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+        is_elastic_local(im)=0
+        if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
+            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+         !do nothing
+        else
+         print *,"tessellate_source or tessellate_dest invalid"
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
+         stop
+        endif
+       else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+        if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+            (tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+            (tessellate_dest.eq.TESSELLATE_ALL_RASTER).or. &
+            (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+         ! do nothing
+        else
+         print *,"tessellate_dest invalid: ",tessellate_dest
+         stop
+        endif
+       else
+        print *,"tessellate_source invalid10: ",tessellate_source
+        stop
+       endif
+      enddo ! im=1..num_materials
+
+      do im=1,num_materials
+       is_proper_layer_local(im,RIGID_LAYER_INDEX)= &
+               is_rigid_local(im)
+       is_proper_layer_local(im,ELASTIC_LAYER_INDEX)= &
+               is_elastic_local(im)
+       if ((is_rigid_local(im).eq.0).and. &
+           (is_elastic_local(im).eq.0)) then
+        is_proper_layer_local(im,FLUID_LAYER_INDEX)=1
+       else if ((is_rigid_local(im).eq.1).or. &
+                (is_elastic_local(im).eq.1)) then
+        is_proper_layer_local(im,FLUID_LAYER_INDEX)=0
+       else
+        print *,"is_rigid_local or is_elastic_local invalid: ", &
+          is_rigid_local,is_elastic_local
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      end subroutine init_local_material_vars
+
+      subroutine tiny_fraction_case( &
+        mofdatasave, &
+        uncaptured_volume_START, &
+        uncaptured_centroid, &
+        multi_volume, &
+        multi_cen, &
+        is_rigid_local, &
+        is_elastic_local, &
+        tessellate_source, &
+        tessellate_dest, &
+        vfrac_sum_local, &
+        sdim)
+
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: mofdatasave(num_materials*(2*sdim+3))
+      real(amrex_real), intent(in) :: uncaptured_volume_START
+      real(amrex_real), intent(in) :: &
+          uncaptured_centroid(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
+      real(amrex_real), INTENT(inout) :: multi_volume(num_materials)
+      real(amrex_real), INTENT(inout) :: multi_cen(sdim,num_materials)
+      integer, intent(in) :: is_rigid_local(num_materials)
+      integer, intent(in) :: is_elastic_local(num_materials)
+      integer, INTENT(in) :: tessellate_source
+      integer, INTENT(in) :: tessellate_dest
+      real(amrex_real), intent(in) :: vfrac_sum_local( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer, INTENT(in) :: sdim
+      integer im,vofcomp,dir
+
+      do im=1,num_materials
+       vofcomp=(im-1)*ngeom_recon+1
+
+       multi_volume(im)=uncaptured_volume_START*mofdatasave(vofcomp)
+
+       if (is_rigid_local(im).eq.1) then
+        !do nothing
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.1)) then
+
+        if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+
+         if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
+          !do nothing
+         else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
+          !do nothing
+         else if (tessellate_dest.eq.TESSELLATE_ALL) then
+          multi_volume(im)=multi_volume(im)* &
+            abs(one-vfrac_sum_local(RIGID_LAYER_INDEX))
+         else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+          !do nothing
+         else
+          print *,"tessellate_dest invalid: ",tessellate_dest
+          stop
+         endif
+
+        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
+
+         if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
+          !do nothing
+         else
+          print *,"tessellate_dest invalid: ",tessellate_dest
+          stop
+         endif
+
+        else
+         print *,"tessellate_source invalid ",tessellate_source
+         stop
+        endif
+
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.0)) then
+
+        if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
+            (tessellate_dest.eq.TESSELLATE_FLUIDS)) then
+         !do nothing
+        else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
+                 (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+         multi_volume(im)=multi_volume(im)* &
+           abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
+        else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
+                 (tessellate_dest.eq.TESSELLATE_ALL)) then
+         multi_volume(im)=multi_volume(im)* &
+            abs(one-vfrac_sum_local(RIGID_LAYER_INDEX))* &
+            abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
+        else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                 (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+         !do nothing
+        else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
+                 (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+         multi_volume(im)=multi_volume(im)* &
+            abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
+        else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID).and. &
+                 (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID)) then 
+         !do nothing
+        else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                 (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC)) then 
+         !do nothing
+        else
+         print *,"tessellate_source invalid: ",tessellate_source
+         print *,"or tessellate_dest invalid: ",tessellate_dest
+         stop
+        endif
+                
+       else
+        print *,"is_rigid_local invalid: ",is_rigid_local
+        print *,"or is_elastic_local invalid: ",is_elastic_local
+        stop
+       endif
+
+       do dir=1,sdim
+        multi_cen(dir,im)=uncaptured_centroid(FLUID_LAYER_INDEX,dir)
+       enddo
+      enddo ! im=1..num_materials
+
+
+      end subroutine tiny_fraction_case
 
       subroutine multi_get_volume_grid( &
        caller_id, &
@@ -18742,57 +18942,12 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
-        if (tessellate_source.eq.tessellate_dest) then
-         !do nothing
-        else
-         print *,"expecting tessellate_source==tessellate_dest"
-         stop
-        endif
-       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-        if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
-            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
-         !do nothing
-        else
-         print *,"tessellate_source or tessellate_dest invalid"
-         print *,"tessellate_source=",tessellate_source
-         print *,"tessellate_dest=",tessellate_dest
-         stop
-        endif
-       else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-        if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
-            (tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
-            (tessellate_dest.eq.TESSELLATE_ALL_RASTER).or. &
-            (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
-         ! do nothing
-        else
-         print *,"tessellate_dest invalid: ",tessellate_dest
-         stop
-        endif
-       else
-        print *,"tessellate_source invalid10: ",tessellate_source
-        stop
-       endif
-      enddo ! im=1..num_materials
-
-      do im=1,num_materials
-       is_proper_layer_local(im,RIGID_LAYER_INDEX)= &
-               is_rigid_local(im)
-       is_proper_layer_local(im,ELASTIC_LAYER_INDEX)= &
-               is_elastic_local(im)
-       if ((is_rigid_local(im).eq.0).and. &
-           (is_elastic_local(im).eq.0)) then
-        is_proper_layer_local(im,FLUID_LAYER_INDEX)=1
-       else
-        is_proper_layer_local(im,FLUID_LAYER_INDEX)=0
-       endif
-      enddo !im=1,num_materials
+      call init_local_material_vars( &
+         is_rigid_local, &
+         is_elastic_local, &
+         tessellate_source, &
+         tessellate_dest, &
+         is_proper_layer_local)
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3: ",ngeom_recon
@@ -18844,7 +18999,7 @@ contains
         xsten0,nhalf0, &
         continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
-        tessellate_source, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
+        tessellate_source, &!TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
         mofdata, &
         mofdatavalid,sdim)
 
@@ -19111,90 +19266,18 @@ contains
         ! very small.
        if (uncaptured_volume_START.le.EPS_12_6*volcell) then
 
-        do im=1,num_materials
-         vofcomp=(im-1)*ngeom_recon+1
-
-         multi_volume(im)=uncaptured_volume_START*mofdatasave(vofcomp)
-
-         if (is_rigid_local(im).eq.1) then
-          !do nothing
-         else if ((is_rigid_local(im).eq.0).and. &
-                  (is_elastic_local(im).eq.1)) then
-
-          if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-
-           if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
-            !do nothing
-           else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
-            !do nothing
-           else if (tessellate_dest.eq.TESSELLATE_ALL) then
-            multi_volume(im)=multi_volume(im)* &
-              abs(one-vfrac_sum_local(RIGID_LAYER_INDEX))
-           else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
-            !do nothing
-           else
-            print *,"tessellate_dest invalid: ",tessellate_dest
-            stop
-           endif
-
-          else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
-
-           if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
-            !do nothing
-           else
-            print *,"tessellate_dest invalid: ",tessellate_dest
-            stop
-           endif
-
-          else
-           print *,"tessellate_source invalid ",tessellate_source
-           stop
-          endif
-
-         else if ((is_rigid_local(im).eq.0).and. &
-                  (is_elastic_local(im).eq.0)) then
-
-          if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-              (tessellate_dest.eq.TESSELLATE_FLUIDS)) then
-           !do nothing
-          else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-                   (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
-           multi_volume(im)=multi_volume(im)* &
-             abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
-          else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-                   (tessellate_dest.eq.TESSELLATE_ALL)) then
-           multi_volume(im)=multi_volume(im)* &
-              abs(one-vfrac_sum_local(RIGID_LAYER_INDEX))* &
-              abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
-          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
-                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
-           !do nothing
-          else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-                   (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
-           multi_volume(im)=multi_volume(im)* &
-              abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
-          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID).and. &
-                   (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID)) then 
-           !do nothing
-          else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
-                   (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC)) then 
-           !do nothing
-          else
-           print *,"tessellate_source invalid: ",tessellate_source
-           print *,"or tessellate_dest invalid: ",tessellate_dest
-           stop
-          endif
-                  
-         else
-          print *,"is_rigid_local invalid: ",is_rigid_local
-          print *,"or is_elastic_local invalid: ",is_elastic_local
-          stop
-         endif
-
-         do dir=1,sdim
-          multi_cen(dir,im)=uncaptured_centroid(FLUID_LAYER_INDEX,dir)
-         enddo
-        enddo ! im=1..num_materials
+        call tiny_fraction_case( &
+          mofdatasave, &
+          uncaptured_volume_START, &
+          uncaptured_centroid, &
+          multi_volume, &
+          multi_cen, &
+          is_rigid_local, &
+          is_elastic_local, &
+          tessellate_source, &
+          tessellate_dest, &
+          vfrac_sum_local, &
+          sdim)
 
        else if (uncaptured_volume_START.ge.EPS_12_6*volcell) then
 
@@ -19973,35 +20056,25 @@ contains
        stop
       endif 
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-        if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
-            (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
-         ! do nothing
-        else
-         print *,"tessellate_dest invalid: ",tessellate_dest
-         stop
-        endif
+      if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+       if ((tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+           (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+        ! do nothing
        else
-        print *,"tessellate_source invalid10: ",tessellate_source
+        print *,"tessellate_dest invalid: ",tessellate_dest
         stop
        endif
-      enddo ! im=1..num_materials
+      else
+       print *,"tessellate_source invalid10: ",tessellate_source
+       stop
+      endif
 
-      do im=1,num_materials
-       is_proper_layer_local(im,RIGID_LAYER_INDEX)= &
-               is_rigid_local(im)
-       is_proper_layer_local(im,ELASTIC_LAYER_INDEX)= &
-               is_elastic_local(im)
-       if ((is_rigid_local(im).eq.0).and. &
-           (is_elastic_local(im).eq.0)) then
-        is_proper_layer_local(im,FLUID_LAYER_INDEX)=1
-       else
-        is_proper_layer_local(im,FLUID_LAYER_INDEX)=0
-       endif
-      enddo !im=1,num_materials
+      call init_local_material_vars( &
+         is_rigid_local, &
+         is_elastic_local, &
+         tessellate_source, &
+         tessellate_dest, &
+         is_proper_layer_local)
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3: ",ngeom_recon
@@ -20235,62 +20308,31 @@ contains
        ! very small.
       if (uncaptured_volume_START.le.EPS_12_6*volcell) then
 
-       do im=1,num_materials
-        vofcomp=(im-1)*ngeom_recon+1
+       call tiny_fraction_case( &
+          mofdatasave, &
+          uncaptured_volume_START, &
+          uncaptured_centroid, &
+          multi_volume, &
+          multi_cen, &
+          is_rigid_local, &
+          is_elastic_local, &
+          tessellate_source, &
+          tessellate_dest, &
+          vfrac_sum_local, &
+          sdim)
 
-        multi_volume(im)=uncaptured_volume_START*mofdatasave(vofcomp)
-        multi_volume_map(im)=uncaptured_volume_map_START*mofdatasave(vofcomp)
-
-        if (is_rigid_local(im).eq.1) then
-         !do nothing
-        else if ((is_rigid_local(im).eq.0).and. &
-                 (is_elastic_local(im).eq.1)) then
-
-         if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-
-          if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
-           !do nothing
-          else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
-           !do nothing
-          else
-           print *,"tessellate_dest invalid: ",tessellate_dest
-           stop
-          endif
-
-         else
-          print *,"tessellate_source invalid ",tessellate_source
-          stop
-         endif
-
-        else if ((is_rigid_local(im).eq.0).and. &
-                 (is_elastic_local(im).eq.0)) then
-
-         if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-             (tessellate_dest.eq.TESSELLATE_FLUIDS)) then
-          !do nothing
-         else if ((tessellate_source.eq.TESSELLATE_FLUIDS).and. &
-                  (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
-          multi_volume(im)=multi_volume(im)* &
-            abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
-          multi_volume_map(im)=multi_volume_map(im)* &
-            abs(one-vfrac_sum_local(ELASTIC_LAYER_INDEX))
-         else
-          print *,"tessellate_source invalid: ",tessellate_source
-          print *,"or tessellate_dest invalid: ",tessellate_dest
-          stop
-         endif
-                 
-        else
-         print *,"is_rigid_local invalid: ",is_rigid_local
-         print *,"or is_elastic_local invalid: ",is_elastic_local
-         stop
-        endif
-
-        do dir=1,sdim
-         multi_cen(dir,im)=uncaptured_centroid(FLUID_LAYER_INDEX,dir)
-         multi_cen_map(dir,im)=uncaptured_centroid_map(FLUID_LAYER_INDEX,dir)
-        enddo
-       enddo ! im=1..num_materials
+       call tiny_fraction_case( &
+          mofdatasave, &
+          uncaptured_volume_map_START, &
+          uncaptured_centroid_map, &
+          multi_volume_map, &
+          multi_cen_map, &
+          is_rigid_local, &
+          is_elastic_local, &
+          tessellate_source, &
+          tessellate_dest, &
+          vfrac_sum_local, &
+          sdim)
 
       else if (uncaptured_volume_START.ge.EPS_12_6*volcell) then
 
