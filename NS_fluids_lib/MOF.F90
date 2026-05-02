@@ -5194,38 +5194,6 @@ end subroutine volume_sanity_check
       return
       end subroutine list_segment
 
-! OUTLINE OF YANG's routine:
-! 1. initialize uncaptured_volume_fraction=1.0
-! 2. for iplane=1..num_materials and uncaptured_volume_fraction>0
-! 3.  found=false
-! 4.  for im=1..num_materials, and found=false
-! 5.   if (volumefraction(im)>=uncapture_volume_fraction-eps) then
-! 6.    initialize uninitialized ids with "im"
-! 7.    found=true 
-! 8.    uncaptured_volume_fraction=0.0
-! 9.   else if (order(im)=iplane) then
-! 10.   cut list of tets with plane and init ids.
-!         ("list_tets" cuts a tet with a plane and produces more tets)
-!         (list_tets is called twice with + or - phi.)
-!         (call "areaXYZ" to find areas of faces)
-! 11.   uncaptured_volume_fraction=uncaptured_volume_fraction-
-! 12.     volumefraction(im)
-! 13.   found=true     
-! 14.  else
-! 15.   do nothing
-! 16.  endif
-! 17. enddo !im
-! 18.enddo ! iplane
-! FINITE VOLUME COEFFICIENTS:
-! face_area(1..sdim,1..2,1..num_materials+ncombine)
-! face_area_internal(1..ncombine)
-! e.g. if num_materials=3 (11,22,33) then ncombine=12,13,23 (3)
-! e.g. if num_materials=4 then ncombine=12,13,14,23,24,34  (6)
-
-! find tetrahedra that make up the intersection of a plane with
-! a tetrahedron
-! plane is specified by values of "phi" on the nodes of the tet.
-! "x" are the coordinates of the tet.
       subroutine list_tets(phi,x,xtetlist,nlist_alloc, &
                       nlist,xarealist,narea,sdim)
       IMPLICIT NONE 
@@ -13823,7 +13791,7 @@ contains
         nmax, &
         mofdata, &
         imaterial_count, & !imaterial_count-1=#mat already reconstructed
-        uncaptured_volume_fraction, &
+        vfrac_sum_local, &
         uncaptured_volume_vof, &
         uncaptured_volume_cen, &
         multi_centroidA, &
@@ -13854,7 +13822,7 @@ contains
       integer i_stencil_node
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: order_algorithm_in(num_materials)
-      real(amrex_real), INTENT(inout) :: uncaptured_volume_fraction
+      real(amrex_real), INTENT(inout) :: vfrac_sum_local
       real(amrex_real), INTENT(inout) :: uncaptured_volume_vof 
       real(amrex_real), INTENT(inout) :: uncaptured_volume_cen
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
@@ -13932,12 +13900,12 @@ contains
        print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
-      if ((uncaptured_volume_fraction.gt.zero).and. &
-          (uncaptured_volume_fraction.le.one+VOFTOL)) then
+      if ((vfrac_sum_local.gt.zero).and. &
+          (vfrac_sum_local.le.one+VOFTOL)) then
        ! do nothing
       else
-       print *,"uncaptured_volume_fraction invalid: ", &
-         uncaptured_volume_fraction
+       print *,"vfrac_sum_local invalid: ", &
+         vfrac_sum_local
        stop
       endif
 
@@ -14269,7 +14237,7 @@ contains
         print *,"cencell_vof ",cencell_vof
         print *,"volcut_vof ",volcut_vof
         print *,"cencut_vof ",cencut_vof
-        print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
+        print *,"vfrac_sum_local ",vfrac_sum_local
         print *,"uncaptured_volume_vof ",uncaptured_volume_vof
         print *,"uncaptured_volume_cen ",uncaptured_volume_cen
         do im=1,num_materials
@@ -14361,7 +14329,7 @@ contains
 
       if (single_material_takes_all.eq.1) then
         uncaptured_volume_vof=zero
-        uncaptured_volume_fraction=zero
+        vfrac_sum_local=zero
       else if (single_material_takes_all.eq.0) then
         ! do nothing
       else 
@@ -14374,7 +14342,7 @@ contains
           ! if uncaptured_volume_vof=0, then there is no need to find the
           ! slope since "single_material_takes_all=1". 
       if ((uncaptured_volume_vof.gt.zero).and. &
-          (uncaptured_volume_fraction.gt.zero)) then
+          (vfrac_sum_local.gt.zero)) then
 
          ! find unprocessed material whose moment is furthest from cencut. 
 
@@ -14457,7 +14425,7 @@ contains
         enddo ! im=1..num_materials
 
       else if ((uncaptured_volume_vof.eq.zero).or. &
-               (uncaptured_volume_fraction.eq.zero)) then
+               (vfrac_sum_local.eq.zero)) then
 
         if (distmax.lt.zero) then
          ! do nothing
@@ -14468,8 +14436,7 @@ contains
 
       else
         print *,"uncaptured_volume_vof invalid: ",uncaptured_volume_vof
-        print *,"or uncaptured_volume_fraction invalid: ", &
-          uncaptured_volume_fraction
+        print *,"or vfrac_sum_local invalid: ",vfrac_sum_local
         stop
       endif 
 
@@ -14571,9 +14538,9 @@ contains
          if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
           uncaptured_volume_vof=zero
          endif
-         uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
-         if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
-          uncaptured_volume_fraction=zero
+         vfrac_sum_local=vfrac_sum_local-refvfrac(1)
+         if (vfrac_sum_local.le.EPS_UNCAPTURED) then
+          vfrac_sum_local=zero
          endif
 
          ! above MOF reconstruct, below default slopes.
@@ -14618,7 +14585,7 @@ contains
           print *,"sdim,num_materials,critical_material ", &
                   sdim,num_materials,critical_material
           print *,"ngeom_recon= ",ngeom_recon
-          print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
+          print *,"vfrac_sum_local ",vfrac_sum_local
           print *,"uncaptured_volume_vof ",uncaptured_volume_vof
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
@@ -14767,9 +14734,9 @@ contains
           if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
            uncaptured_volume_vof=zero
           endif
-          uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
-          if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
-           uncaptured_volume_fraction=zero
+          vfrac_sum_local=vfrac_sum_local-refvfrac(1)
+          if (vfrac_sum_local.le.EPS_UNCAPTURED) then
+           vfrac_sum_local=zero
           endif
   
           if (single_material_takes_all.eq.1) then
@@ -16190,7 +16157,7 @@ contains
 
       real(amrex_real) centroid_absolute(sdim)
 
-      real(amrex_real) uncaptured_volume_fraction( &
+      real(amrex_real) vfrac_sum_local( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       integer layer_flag
@@ -16331,6 +16298,7 @@ contains
          !do nothing
         else
          print *,"expecting continuous_mof=STANDARD_MOF"
+         print *,"tessellate,continuous_mof: ",tessellate,continuous_mof
          stop
         endif
         if (use_ls_data.eq.0) then
@@ -16344,6 +16312,7 @@ contains
          !do nothing
         else
          print *,"expecting continuous_mof=STANDARD_MOF"
+         print *,"tessellate,continuous_mof: ",tessellate,continuous_mof
          stop
         endif
         if (use_ls_data.eq.0) then
@@ -16479,21 +16448,23 @@ contains
         stop
        endif
 
-       if ((is_rigid_local(imaterial).eq.1).or. &
-           (is_elastic_local(imaterial).eq.1)) then
+       if ((is_rigid(imaterial).eq.1).or. &
+           (is_elastic(imaterial).eq.1)) then
 
         if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
          !do nothing
         else
          print *,"vof_super mismatch with voftest"
          print *,"imaterial=",imaterial
+         print *,"is_rigid(imaterial)=",is_rigid(imaterial)
+         print *,"is_elastic(imaterial)=",is_elastic(imaterial)
          print *,"voftest=",voftest(imaterial)
          print *,"vof_super=",vof_super(imaterial)
          stop
         endif
 
-       else if ((is_rigid_local(imaterial).eq.0).and. &
-                (is_elastic_local(imaterial).eq.0)) then
+       else if ((is_rigid(imaterial).eq.0).and. &
+                (is_elastic(imaterial).eq.0)) then
 
         if ((continuous_mof.eq.STANDARD_MOF).or. &
             (continuous_mof.eq.CMOF_F_AND_X)) then 
@@ -16502,6 +16473,8 @@ contains
          else
           print *,"vof_super mismatch with voftest(2)"
           print *,"imaterial=",imaterial
+          print *,"is_rigid(imaterial)=",is_rigid(imaterial)
+          print *,"is_elastic(imaterial)=",is_elastic(imaterial)
           print *,"voftest=",voftest(imaterial)
           print *,"vof_super=",vof_super(imaterial)
           print *,"continuous_mof=",continuous_mof
@@ -16523,9 +16496,9 @@ contains
         endif
 
        else
-        print *,"is_rigid_local(imaterial) invalid ",is_rigid_local(imaterial)
-        print *,"or is_elastic_local(imaterial) invalid ", &
-           is_elastic_local(imaterial)
+        print *,"is_rigid(imaterial) invalid ",is_rigid(imaterial)
+        print *,"or is_elastic(imaterial) invalid ", &
+           is_elastic(imaterial)
         stop
        endif
 
@@ -16811,22 +16784,21 @@ contains
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       uncaptured_volume_fraction(layer_iter)=zero
+       vfrac_sum_local(layer_iter)=zero
 
        do imaterial=1,num_materials
         vofcomp=(imaterial-1)*ngeom_recon+1
         if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
-         uncaptured_volume_fraction(layer_iter)= &
-            uncaptured_volume_fraction(layer_iter)+mofdata(vofcomp)
+         vfrac_sum_local(layer_iter)= &
+            vfrac_sum_local(layer_iter)+mofdata(vofcomp)
         endif
        enddo
-       if ((uncaptured_volume_fraction(layer_iter).ge.zero).and. &
-           (uncaptured_volume_fraction(layer_iter).le.one+VOFTOL)) then
+       if ((vfrac_sum_local(layer_iter).ge.zero).and. &
+           (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
         !do nothing
        else
         print *,"layer_iter=",layer_iter
-        print *,"uncaptured_volume_fraction invalid: ", &
-          uncaptured_volume_fraction
+        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
         stop
        endif
 
@@ -16988,28 +16960,24 @@ contains
          imaterial_count=1
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof(layer_iter).gt.zero).and. &
-                   (uncaptured_volume_fraction(layer_iter).gt.zero))
+                   (vfrac_sum_local(layer_iter).gt.zero))
+
+          call init_layer_flag( &
+            vfrac_sum_local, &
+            vfrac_sum_local, &
+            layer_flag, & !intent(out)
+            layer_iter, & !intent(in)
+            tessellate, &
+            tessellate)
 
           if (layer_iter.eq.RIGID_LAYER_INDEX) then
-           layer_flag=RIGID_LAYER
            continuous_mof_local=STANDARD_MOF
           else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
-           layer_flag=ELASTIC_LAYER
            continuous_mof_local=STANDARD_MOF
           else if (layer_iter.eq.FLUID_LAYER_INDEX) then
-           if (tessellate.eq.TESSELLATE_FLUIDS) then
-            layer_flag=FLUIDS_LAYER
-           else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-            layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
-           else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-            layer_flag=FLUIDS_ELASTIC_LAYER
-           else
-            print *,"tessellate invalid: ",tessellate
-            stop
-           endif
-
+           ! do nothing
           else
-           print *,"layer_iter invalid"
+           print *,"layer_iter invalid: ",layer_iter
            stop
           endif
 
@@ -17032,7 +17000,7 @@ contains
            nmax, &
            mofdata, &
            imaterial_count, & !imaterial_count-1=#mat already reconstructed.
-           uncaptured_volume_fraction(layer_iter), &
+           vfrac_sum_local(layer_iter), &
            uncaptured_volume_vof(layer_iter), &
            uncaptured_volume_cen(layer_iter), &
            multi_centroidA, &
@@ -17043,7 +17011,7 @@ contains
           imaterial_count=imaterial_count+1
          enddo !while imaterial_count<=num_materials and 
               !      uncaptured_volume_vof(layer_iter)>0.0
-              !      uncaptured_volume_fraction(layer_iter)>0.0
+              !      vfrac_sum_local(layer_iter)>0.0
         else
          print *,"single_material or remaining_vfrac invalid: ", &
           single_material(layer_iter),remaining_vfrac(layer_iter)
@@ -18712,8 +18680,8 @@ contains
       subroutine init_layer_flag( &
          vfrac_sum, &
          vfrac_sum_local, &
-         layer_flag, &
-         layer_iter, &
+         layer_flag, & !intent(out)
+         layer_iter, & !intent(in)
          tessellate_source, &
          tessellate_dest)
       use probcommon_module
@@ -18972,6 +18940,97 @@ contains
       return 
       end subroutine advance_uncaptured_vars
 
+      subroutine sanity_check_multi_get_volume( &
+       uncaptured_volume, &
+       volcell, &
+       EPS_SANITY, &
+       EPS_SINGLE, &
+       caller_id, &
+       mofdata, &
+       uncaptured_volume_fraction, &
+       vfrac_sum_local, &
+       xsten0, &
+       nhalf0, &
+       xsten_grid, &
+       nhalf_grid, &
+       is_rigid_local, &
+       is_elastic_local, &
+       sdim)
+
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), intent(in) :: &
+          uncaptured_volume(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real), intent(in) :: &
+         uncaptured_volume_fraction( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real), intent(in) :: &
+         vfrac_sum_local( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real), intent(in) :: volcell
+      real(amrex_real), intent(in) :: EPS_SANITY,EPS_SINGLE
+      integer, intent(in) :: caller_id
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      integer, INTENT(in) :: nhalf0,nhalf_grid,sdim
+      integer, intent(in) :: is_rigid_local(num_materials)
+      integer, intent(in) :: is_elastic_local(num_materials)
+      integer :: layer_iter,im,vofcomp
+ 
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+  
+       if ((vfrac_sum_local(layer_iter).ge.one-VOFTOL).or. &
+           (layer_iter.eq.FLUID_LAYER_INDEX)) then
+ 
+        if (uncaptured_volume(layer_iter).le.four*EPS_SANITY*volcell) then
+         !do nothing
+        else
+         print *,"not all volume accounted for multi_get_volume_grid"
+         print *,"caller_id=",caller_id
+         print *,"sdim=",sdim
+         print *,"layer_iter=",layer_iter
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
+         enddo
+         print *,"mofdata=",mofdata
+         print *,"EPS_SINGLE=",EPS_SINGLE
+         print *,"uncaptured_volume ",uncaptured_volume
+         print *,"uncaptured_volume_fraction ", &
+           uncaptured_volume_fraction
+         print *,"vfrac_sum_local ",vfrac_sum_local
+         print *,"volcell ",volcell
+         print *,"fraction of uncapt volume ", &
+           uncaptured_volume(layer_iter)/volcell
+         print *,"tolerance: ",four*EPS_SANITY
+         print *,"xsten0= ",xsten0
+         print *,"nhalf0= ",nhalf0
+         print *,"xsten_grid= ",xsten_grid
+         print *,"nhalf_grid= ",nhalf_grid
+         print *,"is_rigid_local=",is_rigid_local
+         print *,"is_elastic_local=",is_elastic_local
+         stop
+        endif
+       else if ((vfrac_sum_local(layer_iter).le.one-VOFTOL).and. &
+                (vfrac_sum_local(layer_iter).ge.zero).and. &
+                (layer_iter.ne.FLUID_LAYER_INDEX)) then
+        !do nothing
+       else
+        print *,"parameter bust: ",vfrac_sum_local
+        print *,"layer_iter ",layer_iter
+        stop
+       endif
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+      return
+
+      end subroutine sanity_check_multi_get_volume
 
       subroutine multi_get_volume_grid_simple( &
        tid_in, &
@@ -18995,6 +19054,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, PARAMETER :: caller_id_local=999
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -19759,11 +19819,11 @@ contains
 
            loop_counter=loop_counter+1
           enddo  ! while 
-                 ! loop_counter<num_materials(layer_iter) and
-                 ! num_processed(layer_iter)<num_materials(layer_iter) and
-                 ! uncaptured_volume_fraction(layer_iter)>
-                 !  1-vfrac_sum(layer_iter) and
-                 ! uncaptured_volume(layer_iter)>0 
+           ! loop_counter<local_num_materials(layer_iter) and
+           ! num_processed(layer_iter)<local_num_materials(layer_iter) and
+           ! uncaptured_volume_fraction(layer_iter)>
+           !  1-vfrac_sum_local(layer_iter) and
+           ! uncaptured_volume(layer_iter)>0 
 
          else if ((at_least_one(layer_iter).eq.0).or. &
                   (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -19776,31 +19836,22 @@ contains
          
         enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-        if (uncaptured_volume(FLUID_LAYER_INDEX).le.four*EPS2*volcell) then
-         !do nothing
-        else
-         print *,"not all volume accounted for multi_get_volume_grid_simple"
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_recon+1
-          print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
-         enddo
-         print *,"mofdata=",mofdata
-         print *,"EPS_SINGLE=",EPS_SINGLE
-         print *,"uncaptured_volume ",uncaptured_volume
-         print *,"uncaptured_volume_fraction ", &
-           uncaptured_volume_fraction
-         print *,"volcell ",volcell
-         print *,"fraction of uncapt volume ", &
-           uncaptured_volume(FLUID_LAYER_INDEX)/volcell
-         print *,"tolerance: ",four*EPS2
-         print *,"xsten0= ",xsten0
-         print *,"nhalf0= ",nhalf0
-         print *,"xsten_grid= ",xsten_grid
-         print *,"nhalf_grid= ",nhalf_grid
-         print *,"is_rigid_local=",is_rigid_local
-         print *,"is_elastic_local=",is_elastic_local
-         stop
-        endif
+        call sanity_check_multi_get_volume( &
+         uncaptured_volume, &
+         volcell, &
+         EPS2, &
+         EPS_SINGLE, &
+         caller_id_local, &
+         mofdata, &
+         uncaptured_volume_fraction, &
+         vfrac_sum_local, &
+         xsten0, &
+         nhalf0, &
+         xsten_grid, &
+         nhalf_grid, &
+         is_rigid_local, &
+         is_elastic_local, &
+         sdim)
 
        else
         print *,"uncaptured_volume_START invalid ",uncaptured_volume_START
@@ -20297,8 +20348,8 @@ contains
           call init_layer_flag( &
             vfrac_sum, &
             vfrac_sum_local, &
-            layer_flag, &
-            layer_iter, &
+            layer_flag, & !intent(out)
+            layer_iter, & !intent(in)
             tessellate_source, &
             tessellate_dest)
             
@@ -20651,11 +20702,11 @@ contains
 
            loop_counter=loop_counter+1
           enddo  ! while 
-                 ! loop_counter<num_materials(layer_iter) and
-                 ! num_processed(layer_iter)<num_materials(layer_iter) and
-                 ! uncaptured_volume_fraction(layer_iter)>
-                 !  1-vfrac_sum(layer_iter) and
-                 ! uncaptured_volume(layer_iter)>0 
+             ! loop_counter<local_num_materials(layer_iter) and
+             ! num_processed(layer_iter)<local_num_materials(layer_iter) and
+             ! uncaptured_volume_fraction(layer_iter)>
+             !  1-vfrac_sum_local(layer_iter) and
+             ! uncaptured_volume(layer_iter)>0 
 
          else if ((at_least_one(layer_iter).eq.0).or. &
                   (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -20668,32 +20719,22 @@ contains
          
         enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-        if (uncaptured_volume(FLUID_LAYER_INDEX).le.four*EPS2*volcell) then
-         !do nothing
-        else
-         print *,"not all volume accounted for multi_get_volume_grid"
-         print *,"caller_id=",caller_id
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_recon+1
-          print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
-         enddo
-         print *,"mofdata=",mofdata
-         print *,"EPS_SINGLE=",EPS_SINGLE
-         print *,"uncaptured_volume ",uncaptured_volume
-         print *,"uncaptured_volume_fraction ", &
-           uncaptured_volume_fraction
-         print *,"volcell ",volcell
-         print *,"fraction of uncapt volume ", &
-           uncaptured_volume(FLUID_LAYER_INDEX)/volcell
-         print *,"tolerance: ",four*EPS2
-         print *,"xsten0= ",xsten0
-         print *,"nhalf0= ",nhalf0
-         print *,"xsten_grid= ",xsten_grid
-         print *,"nhalf_grid= ",nhalf_grid
-         print *,"is_rigid_local=",is_rigid_local
-         print *,"is_elastic_local=",is_elastic_local
-         stop
-        endif
+        call sanity_check_multi_get_volume( &
+         uncaptured_volume, &
+         volcell, &
+         EPS2, &
+         EPS_SINGLE, &
+         caller_id, &
+         mofdata, &
+         uncaptured_volume_fraction, &
+         vfrac_sum_local, &
+         xsten0, &
+         nhalf0, &
+         xsten_grid, &
+         nhalf_grid, &
+         is_rigid_local, &
+         is_elastic_local, &
+         sdim)
 
        else
         print *,"uncaptured_volume_START invalid ",uncaptured_volume_START
@@ -20733,6 +20774,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, PARAMETER :: caller_id_local=999
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -21124,8 +21166,8 @@ contains
          call init_layer_flag( &
            vfrac_sum, &
            vfrac_sum_local, &
-           layer_flag, &
-           layer_iter, &
+           layer_flag, & !intent(out)
+           layer_iter, & !intent(in)
            tessellate_source, &
            tessellate_dest)
 
@@ -21488,10 +21530,10 @@ contains
 
           loop_counter=loop_counter+1
          enddo  ! while 
-                ! loop_counter<num_materials(layer_iter) and
-                ! num_processed(layer_iter)<num_materials(layer_iter) and
+                ! loop_counter<local_num_materials(layer_iter) and
+                ! num_processed(layer_iter)<local_num_materials(layer_iter) and
                 ! uncaptured_volume_fraction(layer_iter)>
-                !  1-vfrac_sum(layer_iter) and
+                !  1-vfrac_sum_local(layer_iter) and
                 ! uncaptured_volume(layer_iter)>0 
 
         else if ((at_least_one(layer_iter).eq.0).or. &
@@ -21505,30 +21547,22 @@ contains
         
        enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       if (uncaptured_volume(FLUID_LAYER_INDEX).le.four*EPS2*volcell) then
-        !do nothing
-       else
-        print *,"not all volume accounted for multi_get_volume_grid"
-        do im=1,num_materials
-         vofcomp=(im-1)*ngeom_recon+1
-         print *,"im,vofcomp,mofdata ",im,vofcomp,mofdata(vofcomp)
-        enddo
-        print *,"mofdata=",mofdata
-        print *,"uncaptured_volume ",uncaptured_volume
-        print *,"uncaptured_volume_fraction ", &
-          uncaptured_volume_fraction
-        print *,"volcell ",volcell
-        print *,"fraction of uncapt volume ", &
-          uncaptured_volume(FLUID_LAYER_INDEX)/volcell
-        print *,"tolerance: ",four*EPS2
-        print *,"xsten0= ",xsten0
-        print *,"nhalf0= ",nhalf0
-        print *,"xsten_grid= ",xsten_grid
-        print *,"nhalf_grid= ",nhalf_grid
-        print *,"is_rigid_local=",is_rigid_local
-        print *,"is_elastic_local=",is_elastic_local
-        stop
-       endif
+       call sanity_check_multi_get_volume( &
+         uncaptured_volume, &
+         volcell, &
+         EPS2, &
+         EPS2, &
+         caller_id_local, &
+         mofdata, &
+         uncaptured_volume_fraction, &
+         vfrac_sum_local, &
+         xsten0, &
+         nhalf0, &
+         xsten_grid, &
+         nhalf_grid, &
+         is_rigid_local, &
+         is_elastic_local, &
+         sdim)
 
       else
        print *,"uncaptured_volume_START invalid ",uncaptured_volume_START
