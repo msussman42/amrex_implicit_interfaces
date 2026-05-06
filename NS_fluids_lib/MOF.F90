@@ -16330,7 +16330,7 @@ contains
 
       enddo ! imaterial=1..num_materials
 
-      call init_local_material_vars( &
+      call init_local_material_vars( & !subroutine multimaterial_MOF
        is_rigid_local, &
        is_elastic_local, &
        tessellate, &
@@ -18505,6 +18505,8 @@ contains
          !do nothing
         else
          print *,"expecting tessellate_source==tessellate_dest"
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
          stop
         endif
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
@@ -18878,12 +18880,8 @@ contains
         ! of the is_rigid==1 materials.
         uncaptured_volume(layer_iter)= &
             uncaptured_volume(layer_iter+1)
-        uncaptured_volume_fraction(layer_iter)= &
-            uncaptured_volume_fraction(layer_iter+1)
         uncaptured_volume(layer_iter-1)= &
             uncaptured_volume(layer_iter+1)
-        uncaptured_volume_fraction(layer_iter-1)= &
-            uncaptured_volume_fraction(layer_iter+1)
         do dir=1,sdim
          uncaptured_centroid(layer_iter,dir)= &
              uncaptured_centroid(layer_iter+1,dir)
@@ -18892,11 +18890,37 @@ contains
         enddo
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
         ! do nothing (is_rigid_local(im)=0 for all materials)
+        if (uncaptured_volume(layer_iter).eq. &
+            uncaptured_volume(layer_iter+1)) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         stop
+        endif
+        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         stop
+        endif
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then 
         ! do nothing; uncaptured_volume_elastic remains to represent
         ! the original uncaptured space.
        else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
         ! do nothing (is_rigid_local(im)=1 materials all zapped out)
+        if (uncaptured_volume(layer_iter).eq. &
+            uncaptured_volume(layer_iter+1)) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         stop
+        endif
+        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         stop
+        endif
        else
         print *,"tessellate_dest bad(multi_get_volume_grid) ", &
          tessellate_dest
@@ -18914,8 +18938,6 @@ contains
 
         uncaptured_volume(layer_iter)= &
               uncaptured_volume(layer_iter+1)
-        uncaptured_volume_fraction(layer_iter)= &
-              uncaptured_volume_fraction(layer_iter+1)
         do dir=1,sdim
          uncaptured_centroid(layer_iter,dir)= &
             uncaptured_centroid(layer_iter+1,dir)
@@ -18923,9 +18945,35 @@ contains
 
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
         ! do nothing (is_rigid_local(im)=0 for all materials)
+        if (uncaptured_volume(layer_iter).eq. &
+            uncaptured_volume(layer_iter+1)) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         stop
+        endif
+        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         stop
+        endif
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then 
         ! do nothing; uncaptured_volume_fluid remains to represent
         ! the original uncaptured space.
+        if (uncaptured_volume(layer_iter).eq. &
+            uncaptured_volume(layer_iter+1)) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         stop
+        endif
+        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+         !do nothing
+        else
+         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         stop
+        endif
        else
         print *,"tessellate_dest bad(multi_get_volume_grid) ", &
          tessellate_dest
@@ -19149,7 +19197,41 @@ contains
        stop
       endif
 
-      call init_local_material_vars( &
+      if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
+       if (tessellate_source.eq.tessellate_dest) then
+        !do nothing
+       else
+        print *,"expecting tessellate_source==tessellate_dest"
+        print *,"tessellate_source=",tessellate_source
+        print *,"tessellate_dest=",tessellate_dest
+        stop
+       endif
+      else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+       if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
+           (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+        !do nothing
+       else
+        print *,"tessellate_source or tessellate_dest invalid"
+        print *,"tessellate_source=",tessellate_source
+        print *,"tessellate_dest=",tessellate_dest
+        stop
+       endif
+      else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+       if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+           (tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+           (tessellate_dest.eq.TESSELLATE_ALL_RASTER).or. &
+           (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+        ! do nothing
+       else
+        print *,"tessellate_dest invalid: ",tessellate_dest
+        stop
+       endif
+      else
+       print *,"tessellate_source invalid10: ",tessellate_source
+       stop
+      endif
+
+      call init_local_material_vars( & !subroutine multi_get_volume_grid_simple
          is_rigid_local, &
          is_elastic_local, &
          tessellate_source, &
@@ -19500,7 +19582,7 @@ contains
             layer_flag, &
             is_masked)
 
-          call advance_uncaptured_vars( &
+          call advance_uncaptured_vars( & !multi_get_volume_grid_simple
             tessellate_source, &
             tessellate_dest, &
             layer_iter, &
@@ -19795,9 +19877,9 @@ contains
               uncaptured_volume_fraction(layer_iter)- &
               mofdatalocal(vofcomp)
              if (uncaptured_volume_fraction(layer_iter).lt. &
-                 one-vfrac_sum(layer_iter)+EPS_SINGLE) then
+                 one-vfrac_sum_local(layer_iter)+EPS_SINGLE) then
               uncaptured_volume_fraction(layer_iter)= &
-                one-vfrac_sum(layer_iter)
+                one-vfrac_sum_local(layer_iter)
              endif
 
              num_processed(layer_iter)=num_processed(layer_iter)+1
@@ -19836,7 +19918,7 @@ contains
          
         enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-        call sanity_check_multi_get_volume( &
+        call sanity_check_multi_get_volume( & !multi_get_volume_grid_simple
          uncaptured_volume, &
          volcell, &
          EPS2, &
@@ -19993,7 +20075,41 @@ contains
        stop
       endif
 
-      call init_local_material_vars( &
+      if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
+       if (tessellate_source.eq.tessellate_dest) then
+        !do nothing
+       else
+        print *,"expecting tessellate_source==tessellate_dest"
+        print *,"tessellate_source=",tessellate_source
+        print *,"tessellate_dest=",tessellate_dest
+        stop
+       endif
+      else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+       if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
+           (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+        !do nothing
+       else
+        print *,"tessellate_source or tessellate_dest invalid"
+        print *,"tessellate_source=",tessellate_source
+        print *,"tessellate_dest=",tessellate_dest
+        stop
+       endif
+      else if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+       if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+           (tessellate_dest.eq.TESSELLATE_FLUIDS).or. &
+           (tessellate_dest.eq.TESSELLATE_ALL_RASTER).or. &
+           (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
+        ! do nothing
+       else
+        print *,"tessellate_dest invalid: ",tessellate_dest
+        stop
+       endif
+      else
+       print *,"tessellate_source invalid10: ",tessellate_source
+       stop
+      endif
+
+      call init_local_material_vars( & !subroutine multi_get_volume_grid
          is_rigid_local, &
          is_elastic_local, &
          tessellate_source, &
@@ -20357,7 +20473,7 @@ contains
             layer_flag, &
             is_masked)
 
-          call advance_uncaptured_vars( &
+          call advance_uncaptured_vars( & !multi_get_volume_grid
             tessellate_source, &
             tessellate_dest, &
             layer_iter, &
@@ -20678,9 +20794,9 @@ contains
               uncaptured_volume_fraction(layer_iter)- &
               mofdatalocal(vofcomp)
              if (uncaptured_volume_fraction(layer_iter).lt. &
-                 one-vfrac_sum(layer_iter)+EPS_SINGLE) then
+                 one-vfrac_sum_local(layer_iter)+EPS_SINGLE) then
               uncaptured_volume_fraction(layer_iter)= &
-                one-vfrac_sum(layer_iter)
+                one-vfrac_sum_local(layer_iter)
              endif
 
              num_processed(layer_iter)=num_processed(layer_iter)+1
@@ -20883,7 +20999,7 @@ contains
        stop
       endif
 
-      call init_local_material_vars( &
+      call init_local_material_vars( &!subroutine multi_get_volume_grid_and_map
          is_rigid_local, &
          is_elastic_local, &
          tessellate_source, &
@@ -21175,7 +21291,7 @@ contains
            layer_flag, &
            is_masked)
 
-         call advance_uncaptured_vars( &
+         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
            tessellate_source, &
            tessellate_dest, &
            layer_iter, &
@@ -21183,7 +21299,7 @@ contains
            uncaptured_centroid, &
            uncaptured_volume_fraction, &
            sdim)
-         call advance_uncaptured_vars( &
+         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
            tessellate_source, &
            tessellate_dest, &
            layer_iter, &
@@ -21506,9 +21622,9 @@ contains
              uncaptured_volume_fraction(layer_iter)- &
              mofdatalocal(vofcomp)
             if (uncaptured_volume_fraction(layer_iter).lt. &
-                one-vfrac_sum(layer_iter)+EPS_UNCAPTURED) then
+                one-vfrac_sum_local(layer_iter)+EPS_UNCAPTURED) then
              uncaptured_volume_fraction(layer_iter)= &
-               one-vfrac_sum(layer_iter)
+               one-vfrac_sum_local(layer_iter)
             endif
 
             num_processed(layer_iter)=num_processed(layer_iter)+1
@@ -21547,7 +21663,7 @@ contains
         
        enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       call sanity_check_multi_get_volume( &
+       call sanity_check_multi_get_volume( & !multi_get_volume_grid_and_map
          uncaptured_volume, &
          volcell, &
          EPS2, &
