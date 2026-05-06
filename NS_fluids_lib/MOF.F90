@@ -18862,7 +18862,7 @@ contains
           uncaptured_volume(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real), intent(inout) :: &
           uncaptured_centroid(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
-      real(amrex_real), intent(inout) :: &
+      real(amrex_real), intent(in) :: &
           uncaptured_volume_fraction( &
              RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer dir
@@ -18987,6 +18987,97 @@ contains
 
       return 
       end subroutine advance_uncaptured_vars
+
+
+      subroutine check_for_single_material( &
+         single_material, &
+         remaining_vfrac, &
+         material_used, &
+         is_masked, &
+         mofdatasave, &
+         EPS_LOCAL, &
+         uncaptured_volume_fraction, &
+         layer_iter, &
+         tessellate_source, &
+         tessellate_dest, &
+         sdim)
+
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, intent(out) :: single_material
+      real(amrex_real), intent(out) :: remaining_vfrac
+      real(amrex_real), intent(in) :: EPS_LOCAL
+      integer, intent(in) :: material_used(num_materials)
+      integer, intent(in) :: is_masked(num_materials)
+      integer, intent(in) :: sdim
+      integer, intent(in) :: tessellate_source
+      integer, intent(in) :: tessellate_dest
+      integer, intent(in) :: layer_iter
+      real(amrex_real), intent(in) ::  mofdatasave(num_materials*(2*sdim+3))
+      real(amrex_real), intent(in) :: &
+          uncaptured_volume_fraction(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+
+
+      remaining_vfrac=zero
+      single_material=0
+
+      do im_test=1,num_materials
+       vofcomp=(im_test-1)*ngeom_recon+1
+
+       if ((material_used(im_test).eq.0).and. &
+           (is_masked(im_test).eq.0)) then
+        !cut this material from avail if used
+
+FIX ME
+        if (mofdatasave(vofcomp).gt. &
+            (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
+
+         if (single_material.eq.0) then
+          single_material=im_test
+         else if ((single_material.ge.1).and. &
+                  (single_material.le.num_materials)) then
+          vofcomp_single=(single_material-1)*ngeom_recon+1
+          if (mofdatasave(vofcomp_single).lt. &
+              mofdatasave(vofcomp)) then
+           single_material=im_test
+          else if (mofdatasave(vofcomp_single).ge. &
+                   mofdatasave(vofcomp)) then
+           !do nothing
+          else
+           print *,"mofdatasave bad (multi_get_volume_grid_simple) ", &
+             mofdatasave
+           stop
+          endif
+         else
+          print *,"single_material bad(multi_get_volume_grid_simple)", &
+           single_material
+          stop
+         endif
+
+        else
+         remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
+        endif
+
+       else if (((material_used(im_test).ge.1).and. &
+                 (material_used(im_test).le.num_materials)).or. &
+                (is_masked(im_test).eq.1)) then
+        ! do nothing
+       else
+        print *,"material used bust: ",material_used
+        print *,"im_test: ",im_test
+        print *,"is_masked ",is_masked
+        stop
+       endif
+      enddo  ! im_test=1..num_materials
+
+      return 
+      end subroutine check_for_single_material
+
+
 
       subroutine sanity_check_multi_get_volume( &
        uncaptured_volume, &
@@ -19605,56 +19696,18 @@ contains
                      one-vfrac_sum_local(layer_iter)).and. &
                     (uncaptured_volume(layer_iter).gt.zero)) 
 
-           remaining_vfrac=zero
-           single_material=0
-
-           do im_test=1,num_materials
-            vofcomp=(im_test-1)*ngeom_recon+1
-
-            if ((material_used(im_test).eq.0).and. &
-                (is_masked(im_test).eq.0)) then
-             !cut this material from avail if used
-
-             if (mofdatasave(vofcomp).gt. &
-                 (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
-
-              if (single_material.eq.0) then
-               single_material=im_test
-              else if ((single_material.ge.1).and. &
-                       (single_material.le.num_materials)) then
-               vofcomp_single=(single_material-1)*ngeom_recon+1
-               if (mofdatasave(vofcomp_single).lt. &
-                   mofdatasave(vofcomp)) then
-                single_material=im_test
-               else if (mofdatasave(vofcomp_single).ge. &
-                        mofdatasave(vofcomp)) then
-                !do nothing
-               else
-                print *,"mofdatasave bad (multi_get_volume_grid_simple) ", &
-                  mofdatasave
-                stop
-               endif
-              else
-               print *,"single_material bad(multi_get_volume_grid_simple)", &
-                single_material
-               stop
-              endif
-
-             else
-              remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-             endif
-
-            else if (((material_used(im_test).ge.1).and. &
-                      (material_used(im_test).le.num_materials)).or. &
-                     (is_masked(im_test).eq.1)) then
-             ! do nothing
-            else
-             print *,"material used bust: ",material_used
-             print *,"im_test: ",im_test
-             print *,"is_masked ",is_masked
-             stop
-            endif
-           enddo  ! im_test=1..num_materials
+           call check_for_single_material( & !multi_get_volume_grid_simple
+            single_material, &
+            remaining_vfrac, &
+            material_used, &
+            is_masked, &
+            mofdatasave, &
+            EPS_SINGLE, &
+            uncaptured_volume_fraction, &
+            layer_iter, &
+            tessellate_source, &
+            tessellate_dest, &
+            sdim)
 
            num_processed_total=0
 
@@ -20496,56 +20549,18 @@ contains
                      one-vfrac_sum_local(layer_iter)).and. &
                     (uncaptured_volume(layer_iter).gt.zero)) 
 
-           remaining_vfrac=zero
-           single_material=0
-
-           do im_test=1,num_materials
-            vofcomp=(im_test-1)*ngeom_recon+1
-
-            if ((material_used(im_test).eq.0).and. &
-                (is_masked(im_test).eq.0)) then
-             !cut this material from avail if used
-
-             if (mofdatasave(vofcomp).gt. &
-                 (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
-
-              if (single_material.eq.0) then
-               single_material=im_test
-              else if ((single_material.ge.1).and. &
-                       (single_material.le.num_materials)) then
-               vofcomp_single=(single_material-1)*ngeom_recon+1
-               if (mofdatasave(vofcomp_single).lt. &
-                   mofdatasave(vofcomp)) then
-                single_material=im_test
-               else if (mofdatasave(vofcomp_single).ge. &
-                        mofdatasave(vofcomp)) then
-                !do nothing
-               else
-                print *,"mofdatasave invalid (multi_get_volume_grid) ", &
-                  mofdatasave
-                stop
-               endif
-              else
-               print *,"single_material invalid(multi_get_volume_grid)", &
-                single_material
-               stop
-              endif
-
-             else
-              remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-             endif
-
-            else if (((material_used(im_test).ge.1).and. &
-                      (material_used(im_test).le.num_materials)).or. &
-                     (is_masked(im_test).eq.1)) then
-             ! do nothing
-            else
-             print *,"material used bust: ",material_used
-             print *,"im_test: ",im_test
-             print *,"is_masked ",is_masked
-             stop
-            endif
-           enddo  ! im_test=1..num_materials
+           call check_for_single_material( & !multi_get_volume_grid
+            single_material, &
+            remaining_vfrac, &
+            material_used, &
+            is_masked, &
+            mofdatasave, &
+            EPS_SINGLE, &
+            uncaptured_volume_fraction, &
+            layer_iter, &
+            tessellate_source, &
+            tessellate_dest, &
+            sdim)
 
            num_processed_total=0
 
@@ -21322,57 +21337,18 @@ contains
                     one-vfrac_sum_local(layer_iter)).and. &
                    (uncaptured_volume(layer_iter).gt.zero)) 
 
-          remaining_vfrac=zero
-          single_material=0
-
-          do im_test=1,num_materials
-           vofcomp=(im_test-1)*ngeom_recon+1
-
-           if ((material_used(im_test).eq.0).and. &
-               (is_masked(im_test).eq.0)) then
-            !cut this material from avail if used
-
-            if (mofdatasave(vofcomp).gt. &
-                (one-EPS_UNCAPTURED)* &
-                uncaptured_volume_fraction(layer_iter)) then
-
-             if (single_material.eq.0) then
-              single_material=im_test
-             else if ((single_material.ge.1).and. &
-                      (single_material.le.num_materials)) then
-              vofcomp_single=(single_material-1)*ngeom_recon+1
-              if (mofdatasave(vofcomp_single).lt. &
-                  mofdatasave(vofcomp)) then
-               single_material=im_test
-              else if (mofdatasave(vofcomp_single).ge. &
-                       mofdatasave(vofcomp)) then
-               !do nothing
-              else
-               print *,"mofdatasave bad (multi_get_volume_grid_and_map) ", &
-                 mofdatasave
-               stop
-              endif
-             else
-              print *,"single_material bad(multi_get_volume_grid_and_map)", &
-               single_material
-              stop
-             endif
-
-            else
-             remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
-            endif
-
-           else if (((material_used(im_test).ge.1).and. &
-                     (material_used(im_test).le.num_materials)).or. &
-                    (is_masked(im_test).eq.1)) then
-            ! do nothing
-           else
-            print *,"material used bust: ",material_used
-            print *,"im_test: ",im_test
-            print *,"is_masked ",is_masked
-            stop
-           endif
-          enddo  ! im_test=1..num_materials
+           call check_for_single_material( & !multi_get_volume_grid_and_map
+            single_material, &
+            remaining_vfrac, &
+            material_used, &
+            is_masked, &
+            mofdatasave, &
+            EPS_UNCAPTURED, &
+            uncaptured_volume_fraction, &
+            layer_iter, &
+            tessellate_source, &
+            tessellate_dest, &
+            sdim)
 
           num_processed_total=0
 
