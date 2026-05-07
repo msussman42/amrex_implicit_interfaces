@@ -18755,6 +18755,14 @@ contains
          layer_flag=FLUIDS_LAYER
         else if ((tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
                  (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+         if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq. &
+             vfrac_sum(ELASTIC_LAYER_INDEX)) then
+          !do nothing
+         else 
+          print *,"expecting vfrac_sum=vfrac_sum_local: ", &
+            vfrac_sum,vfrac_sum_local
+          stop
+         endif
          if (vfrac_sum_local(ELASTIC_LAYER_INDEX).gt.zero) then
           layer_flag=FLUIDS_ELASTIC_LAYER
          else if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero) then
@@ -18765,6 +18773,22 @@ contains
          endif
         else if (tessellate_dest.eq.TESSELLATE_ALL) then
 
+         if (vfrac_sum_local(RIGID_LAYER_INDEX).eq. &
+             vfrac_sum(RIGID_LAYER_INDEX)) then
+          !do nothing
+         else 
+          print *,"expecting vfrac_sum=vfrac_sum_local: ", &
+            vfrac_sum,vfrac_sum_local
+          stop
+         endif
+         if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq. &
+             vfrac_sum(ELASTIC_LAYER_INDEX)) then
+          !do nothing
+         else 
+          print *,"expecting vfrac_sum=vfrac_sum_local: ", &
+            vfrac_sum,vfrac_sum_local
+          stop
+         endif
          if ((vfrac_sum_local(RIGID_LAYER_INDEX).gt.zero).and. &
              (vfrac_sum_local(ELASTIC_LAYER_INDEX).gt.zero)) then
           layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
@@ -18789,6 +18813,18 @@ contains
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
 
         if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
+         if (vfrac_sum_local(RIGID_LAYER_INDEX).eq.zero) then
+          !do nothing
+         else
+          print *,"expecting vfrac_sum_local=0 ",vfrac_sum_local
+          stop
+         endif
+         if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero) then
+          !do nothing
+         else
+          print *,"expecting vfrac_sum_local=0 ",vfrac_sum_local
+          stop
+         endif
          if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).and. &
              (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero)) then
           layer_flag=FLUIDS_ELASTIC_RIGID_LAYER
@@ -18811,6 +18847,13 @@ contains
         endif
 
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
+
+        if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero) then
+         !do nothing
+        else
+         print *,"expecting vfrac_sum_local=0 ",vfrac_sum_local
+         stop
+        endif
 
         if ((tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC).or. &
             (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
@@ -19024,6 +19067,7 @@ contains
       real(amrex_real), intent(inout) :: mofdatalocal(num_materials*(2*sdim+3))
       real(amrex_real), intent(in) :: &
           uncaptured_volume_fraction(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer im_test,vofcomp,vofcomp_single
 
 
       remaining_vfrac=zero
@@ -19038,7 +19082,7 @@ contains
         !cut this material from avail if used
 
         if (mofdatasave(vofcomp).gt. &
-            (one-EPS_SINGLE)*uncaptured_volume_fraction(layer_iter)) then
+            (one-EPS_LOCAL)*uncaptured_volume_fraction(layer_iter)) then
 
          if (single_material.eq.0) then
           single_material=im_test
@@ -19239,7 +19283,6 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
       integer dir
       integer vofcomp
-      integer vofcomp_single
       integer im
       integer layer_iter
 
@@ -19273,7 +19316,6 @@ contains
 
       integer im_raster_solid
       integer return_raster_info
-      integer im_test
       integer fastflag
       integer layer_flag
 
@@ -20056,7 +20098,6 @@ contains
       real(amrex_real), INTENT(out) :: multi_area(num_materials)
       integer dir
       integer vofcomp
-      integer vofcomp_single
       integer im
       integer layer_iter
 
@@ -20091,7 +20132,6 @@ contains
 
       integer im_raster_solid
       integer return_raster_info
-      integer im_test
       integer fastflag
       integer layer_flag
 
@@ -20911,7 +20951,6 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen_map(sdim,num_materials)
       integer dir
       integer vofcomp
-      integer vofcomp_single
       integer im
       integer layer_iter
 
@@ -20951,7 +20990,6 @@ contains
 
       integer material_used(num_materials)
 
-      integer im_test
       integer fastflag
       integer layer_flag
 
@@ -21869,7 +21907,6 @@ contains
       real(amrex_real) :: mofdataproject_plus(num_materials*ngeom_recon)
       real(amrex_real) :: mofdataproject_minus(num_materials*ngeom_recon)
 
-      integer layer_flag
       integer im,im_opp,im_test
       integer side
       integer dir_local
@@ -21909,6 +21946,7 @@ contains
       real(amrex_real) areatemp
       real(amrex_real) centemp(sdim)
 
+      integer num_processed_total
       integer num_processed( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer material_used(num_materials)
@@ -21921,10 +21959,11 @@ contains
       integer critical_material 
       integer fastflag
       integer vofcomp
-      integer vofcomp_single
       integer testflag
       integer testflag_save
       real(amrex_real) remaining_vfrac
+      integer at_least_one( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_local( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum( &
@@ -21936,6 +21975,16 @@ contains
 
       real(amrex_real) nrecon(sdim)
       real(amrex_real) intercept
+
+      integer layer_iter,layer_flag
+      integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+      integer is_masked(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer local_num_materials( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+
       integer, parameter :: caller_id=2
       integer, parameter :: continuous_mof=STANDARD_MOF
 
@@ -21964,13 +22013,13 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid135: ",bfact
+       print *,"bfact invalid multi_get_area_pairs: ",bfact
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
        ! do nothing
       else
-       print *,"sdim invalid multi_get_pairs: ",sdim
+       print *,"sdim invalid multi_get_area_pairs: ",sdim
        stop
       endif
       if ((num_materials.ge.1).and. &
@@ -22126,6 +22175,7 @@ contains
        sdim, &
        shapeflag)
 
+       !  xmid-dxthin < x < xmid+dxthin
       call Box_volumeFAST(bfact,dx, &
          xsten_thin,nhalf_thin, &
          uncaptured_volume_START, &
@@ -22133,6 +22183,7 @@ contains
 
        ! can use "subroutine gridarea" instead (declared in GLOBALUTIL.F90).
       uncaptured_area=uncaptured_volume_START/(2.0*dxthin)
+
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else if ((levelrz.eq.COORDSYS_RZ).or. &
@@ -22145,7 +22196,9 @@ contains
                  (xsten0_plus(0,dir_plus).gt.zero)) then
          ! do nothing
         else
-         print *,"xsten0minus or xsten0plus invalid"
+         print *,"xsten0_minus or xsten0_plus invalid"
+         print *,"xsten0_minus ",xsten0_minus
+         print *,"xsten0_plus ",xsten0_plus
          stop
         endif
        else if ((dir_plus.eq.2).or.(dir_plus.eq.sdim)) then
@@ -22183,10 +22236,10 @@ contains
 
        do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
         uncaptured_volume(layer_iter)=uncaptured_volume_START
-        do dir=1,sdim
-         uncaptured_centroid(layer_iter,dir)= &
-            uncaptured_centroid_START(dir)
-        enddo !dir=1,sdim
+        do dir_local=1,sdim
+         uncaptured_centroid(layer_iter,dir_local)= &
+            uncaptured_centroid_START(dir_local)
+        enddo !dir_local=1,sdim
         if (uncaptured_volume(layer_iter).ge.zero) then
          !do nothing
         else
@@ -22350,9 +22403,9 @@ contains
           endif
 
           call check_for_single_material( & !multi_get_area_pairs
-            single_material, &
-            remaining_vfrac, &
-            num_processed_total, &
+            single_material, & !intent(out)
+            remaining_vfrac, & !intent(out)
+            num_processed_total, & !intent(out)
             material_used, &
             is_masked, &
             mofdataproject_minus, &
@@ -22360,8 +22413,8 @@ contains
             EPS_FULL_WEAK, &
             uncaptured_volume_fraction, &
             layer_iter, &
-            tessellate_source, &
-            tessellate_dest, &
+            IGNORE_ISRIGID_tessellate, &
+            IGNORE_ISRIGID_tessellate, &
             sdim)
 
 
@@ -22429,13 +22482,16 @@ contains
             if ((material_used(critical_material).ge.1).and. &
                 (material_used(critical_material).le.num_materials)) then
 
+              !intersection of plus-side data with the 
+              !minus side uncaptured space.
              call multi_get_volume_tetlist( &
               tid_in, &
               EPS_FULL_WEAK, & !tolerance for "single material" criterion
               bfact,dx, &
               xsten0_plus,nhalf0, &
               mofdataproject_plus, &
-              xtetlist_minus,nlist_alloc_minus, &
+              xtetlist_minus, &
+              nlist_alloc_minus, &
               nlist, &
               multi_volume_plus_thin_shrink, &
               multi_cen_plus_thin_shrink, &
@@ -22496,7 +22552,7 @@ contains
                print *,"critical_material=",critical_material
                print *,"im_opp=",im_opp
                print *,"loop_counter=",loop_counter
-               print *,"num_processed_fluid=",num_processed_fluid
+               print *,"num_processed=",num_processed
                print *,"num_materials=",num_materials
                print *,"uncaptured_volume_fraction=",uncaptured_volume_fraction
                print *,"uncaptured_volume=",uncaptured_volume
@@ -22517,7 +22573,7 @@ contains
              enddo ! im_opp=1..num_materials
 
             else 
-             print *,"material_used(critical_material) invalid:", &
+             print *,"expecting 1<=material_used(critical_material)<=nmat ", &
                material_used(critical_material)
              stop
             endif
@@ -22556,7 +22612,7 @@ contains
            if (critical_material.eq.0) then
             ! do nothing
            else
-            print *,"critical_material invalid 19703: ",critical_material
+            print *,"expecting critical_material=0 22618: ",critical_material
             stop
            endif
 
@@ -22585,10 +22641,17 @@ contains
            enddo ! im_opp=1..num_materials
 
            uncaptured_volume(layer_iter)=zero
-           uncaptured_volume_fraction_fluid(layer_iter)=zero
+           uncaptured_volume_fraction(layer_iter)=zero
 
            num_processed(layer_iter)=num_processed(layer_iter)+1
            num_processed_total=num_processed_total+1
+
+           if (num_processed(layer_iter).eq.num_processed_total) then
+            !do nothing
+           else
+            print *,"expect num_processed(layer_iter).eq.num_processed_total"
+            stop
+           endif
 
            material_used(single_material)=num_processed_total
 
@@ -22694,6 +22757,13 @@ contains
             num_processed(layer_iter)=num_processed(layer_iter)+1
             num_processed_total=num_processed_total+1
             material_used(critical_material)=num_processed_total
+
+            if (num_processed(layer_iter).eq.num_processed_total) then
+             !do nothing
+            else
+             print *,"expect num_processed(layer_iter).eq.num_processed_total"
+             stop
+            endif
 
            else if (critical_material.eq.0) then
             ! do nothing
