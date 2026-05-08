@@ -17675,6 +17675,8 @@ contains
       integer num_materials_elastic
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) xtet(sdim+1,sdim)
@@ -17728,21 +17730,12 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing; fluids tessellate, rigid|elastic embedded.
-       else
-        print *,"tessellate invalid8 make_vfrac_sum_ok_base: ",tessellate
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine make_vfrac_sum_ok_base
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
@@ -18187,6 +18180,8 @@ contains
       real(amrex_real) voffluid,vofsolid,vofelastic,vof_test
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       if (continuous_mof.eq.STANDARD_MOF) then
        if (nhalf.ge.1) then
@@ -18233,21 +18228,12 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else
-        print *,"tessellate invalid make_vfrac_sum_ok_copy: ",tessellate
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine make_vfrac_sum_ok_copy
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if ((num_materials.ge.1).and.(num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
@@ -22385,6 +22371,17 @@ contains
         print *,"vfrac_sum_local invalid: ",vfrac_sum_local
         stop
        endif
+       if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero).and. &
+           (vfrac_sum_local(RIGID_LAYER_INDEX).eq.zero)) then
+        !do nothing
+       else
+        print *,"in: multi_get_area_pairs"
+        print *,"expecting vfrac_sum_local(ELASTIC_LAYER_INDEX)=0 ", &
+         vfrac_sum_local
+        print *,"or expecting vfrac_sum_local(RIGID_LAYER_INDEX)=0 ", &
+         vfrac_sum_local
+        stop
+       endif
 
        if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL).and. &
            (vfrac_sum_local(FLUID_LAYER_INDEX).ge.zero)) then
@@ -23084,19 +23081,15 @@ contains
       integer im,im_primary,im_rest
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-        !do nothing
-       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else
-        print *,"tessellate_source invalid ",tessellate_source
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine LS_tessellate
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate_source, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+       tessellate_source, &
+       is_proper_layer_local)
 
       call get_primary_material(dx,LS,im_primary)
 
@@ -23500,20 +23493,15 @@ contains
       real(amrex_real) slopetest(sdim)
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else
-        print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISELASTIC", &
-         tessellate
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine compare_distance
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -24224,21 +24212,17 @@ contains
        real(amrex_real) mag
        integer im,vofcomp,irank,testflag,dir
        integer is_rigid_local(num_materials)
-      integer is_elastic_local(num_materials)
+       integer is_elastic_local(num_materials)
+       integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
        integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
-       do im=1,num_materials
-        is_rigid_local(im)=is_rigid(im)
-        is_elastic_local(im)=is_elastic(im)
-        if (tessellate.eq.TESSELLATE_FLUIDS) then
-         !do nothing
-        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-         is_elastic_local(im)=0
-        else
-         print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISRIGID"
-         stop
-        endif
-       enddo ! im=1..num_materials
+       call init_local_material_vars( & !subroutine get_primary_slope
+         is_rigid_local, &
+         is_elastic_local, &
+         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+         tessellate, &
+         is_proper_layer_local)
 
        if (bfact.lt.1) then
         print *,"bfact invalid135"
@@ -24435,27 +24419,22 @@ contains
       real(amrex_real) xgrid_minus2(sdim)
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
-        !do nothing
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else
-        print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISRIGID"
-        stop
-       endif
-
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine multi_get_distance
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
           (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
        !do nothing
       else
-       print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISRIGID"
+       print *,"expecting tessellate=TESSELLATE_FLUIDS|IGNORE_ISELASTIC"
        stop
       endif
 
@@ -25021,26 +25000,19 @@ contains
       integer vfrac_checked(num_materials)
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer, parameter :: continuous_mof=STANDARD_MOF
 
 
 #include "mofdata.H"
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else
-        print *,"tessellate invalid multi_get_volumePOINT: ",tessellate
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine multi_get_volumePOINT
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if (ngeom_recon.ne.(2*sdim+3)) then
        print *,"ngeom_recon invalid"
@@ -25258,6 +25230,8 @@ contains
       real(amrex_real) max_solid_vfrac,max_fluid_vfrac,max_elastic_vfrac
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       if ((tol.gt.zero).and.(tol.lt.one)) then
        !do nothing
@@ -25295,22 +25269,12 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate_source.eq.TESSELLATE_FLUIDS) then
-        ! do nothing; fluids tessellate, rigid|elastic embedded.
-       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
-        is_rigid_local(im)=0
-        is_elastic_local(im)=0
-       else
-        print *,"tessellate_source invalid check_full_cell_vfrac: ", &
-         tessellate_source
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine check_full_cell_vfrac
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate_source, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
+       tessellate_dest, &
+       is_proper_layer_local)
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
@@ -25645,19 +25609,15 @@ contains
       integer im,changed,nsweeps,swap,do_swap
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
+      integer is_proper_layer_local(num_materials, &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      do im=1,num_materials
-       is_rigid_local(im)=is_rigid(im)
-       is_elastic_local(im)=is_elastic(im)
-       if (tessellate.eq.TESSELLATE_FLUIDS) then
-        ! do nothing
-       else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        is_elastic_local(im)=0
-       else
-        print *,"tessellate invalid sort_volume_fraction ",tessellate
-        stop
-       endif
-      enddo ! im=1..num_materials
+      call init_local_material_vars( & !subroutine sort_volume_fraction
+       is_rigid_local, &
+       is_elastic_local, &
+       tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC
+       tessellate, &
+       is_proper_layer_local)
 
       if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid sort_volume_fraction"
