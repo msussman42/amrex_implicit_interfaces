@@ -16386,7 +16386,7 @@ contains
       endif
 
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon invalid"
+       print *,"ngeom_recon invalid multimaterial_MOF ",ngeom_recon
        stop
       endif
 
@@ -16552,6 +16552,8 @@ contains
         mofdata, &
         sdim)
 
+       !continuous_mof_local=STANDARD_MOF for elastic, rigid, IGNORE_ISRIGID, 
+       !IGNORE_ISELASTIC
       call Box_volumeFAST( &
         bfact,dx, &
         xsten0,nhalf0, &
@@ -16782,6 +16784,18 @@ contains
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
            (continuous_mof.eq.CMOF_X)) then 
+
+        if (mofdata(vofcomp).le.zero) then
+         mofdata(vofcomp)=zero
+         do dir=1,sdim
+          mofdata(vofcomp+dir)=zero  ! centroid=0
+         enddo
+        else if (mofdata(vofcomp).le.1.1) then
+         !do nothing
+        else
+         print *,"mofdata(vofcomp) invalid ",mofdata
+         stop
+        endif         
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -16944,7 +16958,8 @@ contains
        enddo
 
        if ((at_least_one(layer_iter).ge.1).and. &
-           (at_least_one(layer_iter).le.num_materials)) then
+           (at_least_one(layer_iter).le.num_materials).and. &
+           (vfrac_sum_local(layer_iter).gt.zero)) then
 
         call init_layer_flag( &
          vfrac_sum, &
@@ -17058,10 +17073,12 @@ FIX ME material_used has to be initialized
          stop
         endif
 
-       else if (at_least_one(layer_iter).eq.0) then
+       else if ((at_least_one(layer_iter).eq.0).or. &
+                (vfrac_sum_local(layer_iter).eq.zero)) then
         !do nothing
        else
-        print *,"at_least_one invalid ",at_least_one
+        print *,"at_least_one or vfrac_sum_local invalid ", &
+           at_least_one,vfrac_sum_local
         stop
        endif
 
@@ -20322,7 +20339,7 @@ FIX ME material_used has to be initialized
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid multi_get_volume_grid ",bfact
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
