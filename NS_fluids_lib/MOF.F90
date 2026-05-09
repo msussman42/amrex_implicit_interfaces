@@ -6026,8 +6026,6 @@ end subroutine volume_sanity_check
       real(amrex_real) phi1(sdim+1),dummyphi(sdim+1)
       real(amrex_real) voltest
       real(amrex_real) centroidtest(sdim)
-      real(amrex_real) voltet
-      real(amrex_real) centet(sdim)
       real(amrex_real) xcandidate(sdim+1,sdim)
       real(amrex_real) xx(sdim+1,sdim)
       real(amrex_real) x1old(sdim+1,sdim)
@@ -6117,41 +6115,6 @@ end subroutine volume_sanity_check
         enddo 
         enddo 
        enddo !id=1,ntetbox
-
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-
-       if (nhalf0.lt.2) then
-        print *,"nhalf0 invalid tets box planes"
-        print *,"nhalf0=",nhalf0
-        print *,"continuous_mof=",continuous_mof
-        stop
-       endif
-
-       call Box_volumeTRI_TET( &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        voltet, &
-        centet, &
-        sdim)
-
-       do i_tet_node=-nhalf0,nhalf0
-       do j_dir=1,sdim
-        xsten0_LS(i_tet_node,j_dir)=i_tet_node*half*dx(j_dir)+centet(j_dir)
-       enddo
-       enddo
-
-       id=1
-
-       do i_tet_node=1,sdim+1
-       do j_dir=1,sdim
-        xx(i_tet_node,j_dir)=xsten0(-nhalf0+i_tet_node-1,j_dir)
-
-        xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
-        xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
-       enddo 
-       enddo 
-              
-       ntetbox=1
 
       else
        print *,"continuous_mof invalid: ",continuous_mof
@@ -7353,48 +7316,6 @@ end subroutine volume_sanity_check
 
       return
       end subroutine Box_volumeFAST
-
-
-       ! centroid is in absolute coordinate system 
-      subroutine Box_volumeTRI_TET( &
-        bfact,dx, &
-        xsten,nhalf, &
-        volume,centroid,sdim)
-      use probcommon_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: sdim,bfact,nhalf
-      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(out) :: volume
-      real(amrex_real), INTENT(out) :: centroid(sdim)
-      real(amrex_real) :: x(sdim+1,sdim)
-      integer i
-      integer dir
-    
-      if ((sdim.ne.2).and.(sdim.ne.3)) then
-       print *,"sdim invalid Box_volumeTRI_TET: ",sdim
-       stop
-      endif 
-      if (nhalf.lt.2) then
-       print *,"nhalf invalid Box_volumeTRI_TET: ",nhalf
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid127 Box_volumeTRI_TET: ",bfact
-       stop
-      endif
-
-      do i=1,sdim+1
-       do dir=1,sdim
-        x(i,dir)=xsten(-nhalf+i-1,dir)
-       enddo
-      enddo
-
-      call tetrahedron_volume(x,volume,centroid,sdim)
-
-      return
-      end subroutine Box_volumeTRI_TET
 
 
        ! centroid is in absolute coordinate system 
@@ -8844,8 +8765,6 @@ contains
       integer n
       real(amrex_real), INTENT(out) :: minphi,maxphi
       real(amrex_real) intercept,dist
-      real(amrex_real) volcell
-      real(amrex_real) cencell(sdim)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi phi bounds 3d"
@@ -8866,13 +8785,6 @@ contains
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
           (continuous_mof.eq.CMOF_X)) then 
        ! do nothing
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       call Box_volumeTRI_TET( &
-        bfact,dx, &
-        xsten,nhalf, &
-        volcell, &
-        cencell, &
-        sdim)
       else if (continuous_mof.eq.CMOF_F_AND_X) then 
        ! do nothing
       else
@@ -8883,12 +8795,9 @@ contains
        ! xsten_local used for LS dist.
       do i_stencil_node=-nhalf,nhalf
       do dir=1,sdim
-       if (continuous_mof.eq.MOF_TRI_TET) then
-        xsten_local(i_stencil_node,dir)=cencell(dir)+ &
-          half*i_stencil_node*dx(dir)
-       else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-                (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-                (continuous_mof.eq.CMOF_X)) then  !CMOF X
+       if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+           (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+           (continuous_mof.eq.CMOF_X)) then  !CMOF X
         xsten_local(i_stencil_node,dir)=xsten(i_stencil_node,dir)
        else
         print *,"continuous_mof invalid: ",continuous_mof
@@ -9393,7 +9302,6 @@ contains
        stop
       endif
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.MOF_TRI_TET).or. & 
           (continuous_mof.eq.CMOF_F_AND_X).or. &
           (continuous_mof.eq.CMOF_X)) then 
        ! do nothing
@@ -9410,13 +9318,6 @@ contains
           (continuous_mof.eq.CMOF_X)) then !CMOF just X
        call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
-         volcell, &
-         cencell, &
-         sdim)
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten0,nhalf0, &
          volcell, &
          cencell, &
          sdim)
@@ -9444,11 +9345,9 @@ contains
          ! xsten_local used for LS dist.
        do i=-nhalf0,nhalf0
        do dir=1,sdim
-        if (continuous_mof.eq.MOF_TRI_TET) then
-         xsten_local(i,dir)=cencell(dir)+half*i*dx(dir)
-        else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-                 (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-                 (continuous_mof.eq.CMOF_X)) then  !CMOF X
+        if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+            (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+            (continuous_mof.eq.CMOF_X)) then  !CMOF X
          xsten_local(i,dir)=xsten0(i,dir)
         else
          print *,"continuous_mof invalid: ",continuous_mof
@@ -9670,7 +9569,6 @@ contains
       endif
 
       if ((continuous_mof.eq.STANDARD_MOF).or. &  
-          (continuous_mof.eq.MOF_TRI_TET).or. & 
           (continuous_mof.eq.CMOF_F_AND_X).or. & 
           (continuous_mof.eq.CMOF_X)) then  
        ! do nothing
@@ -9706,13 +9604,6 @@ contains
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
           (continuous_mof.eq.CMOF_X)) then 
        call Box_volumeFAST( &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        volcell, &
-        cencell, &
-        sdim)
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       call Box_volumeTRI_TET( &
         bfact,dx, &
         xsten0,nhalf0, &
         volcell, &
@@ -10855,11 +10746,6 @@ contains
       real(NOTUS_REAL) local_centroid_NOTUS(3)
       real(NOTUS_REAL) local_gradient_NOTUS(2)
       real(NOTUS_REAL) local_refvfrac_NOTUS
-      real(NOTUS_REAL) p0(3)
-      real(NOTUS_REAL) p1(3)
-      real(NOTUS_REAL) p2(3)
-      real(NOTUS_REAL) p3(3)
-      real(NOTUS_REAL) objective_NOTUS
       real(NOTUS_REAL) NOTUS_PI
 
       integer :: NOTUS_worked
@@ -10946,7 +10832,6 @@ contains
       endif
 
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.MOF_TRI_TET).or. &
           (continuous_mof.eq.CMOF_F_AND_X).or. &
           (continuous_mof.eq.CMOF_X)) then 
        ! do nothing
@@ -10998,19 +10883,6 @@ contains
          sdim)
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-        call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         volcell_vof, &
-         cencell_vof, &
-         sdim)
-        call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten0,nhalf0, &
          volcell_cen, &
          cencell_cen, &
          sdim)
@@ -11093,11 +10965,9 @@ contains
         do isten=-nhalf0,nhalf0
         do dir=1,sdim
 
-         if (continuous_mof.eq.MOF_TRI_TET) then
-          xsten_local(isten,dir)=cencell_vof(dir)+half*isten*dx(dir)
-         else if ((continuous_mof.eq.CMOF_F_AND_X).or. & 
-                  (continuous_mof.eq.STANDARD_MOF).or. &
-                  (continuous_mof.eq.CMOF_X)) then 
+         if ((continuous_mof.eq.CMOF_F_AND_X).or. & 
+             (continuous_mof.eq.STANDARD_MOF).or. &
+             (continuous_mof.eq.CMOF_X)) then 
           xsten_local(isten,dir)=xsten0(isten,dir)
          else
           print *,"continuous_mof invalid: ",continuous_mof
@@ -11109,22 +10979,6 @@ contains
         if (continuous_mof.eq.STANDARD_MOF) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
-          ! calling from "mult_rotatefunc"
-         call multi_cell_intersection( &
-          bfact,dx, &
-          xsten_local,nhalf0, &
-          nslope, &
-          intercept(1), &
-          volume_cut, & !intent(out)
-          testcen, & !intent(out)
-          facearea, & !intent(out)
-          xtetlist_vof, & !intent(in)
-          nlist_alloc, &
-          nlist_vof, &
-          nmax, &
-          sdim)
-        else if (continuous_mof.eq.MOF_TRI_TET) then 
-
           ! calling from "mult_rotatefunc"
          call multi_cell_intersection( &
           bfact,dx, &
@@ -11296,8 +11150,6 @@ contains
        endif
 
        if (continuous_mof.eq.STANDARD_MOF) then 
-        ! do nothing
-       else if (continuous_mof.eq.MOF_TRI_TET) then 
         ! do nothing
        else
         print *,"continuous_mof invalid if use_MilcentLemoine==1: ", &
@@ -11529,52 +11381,6 @@ contains
 
         else
          print *,"NOTUS_worked invalid"
-         stop
-        endif
-
-       else if (continuous_mof.eq.MOF_TRI_TET) then 
-
-        if (sdim.eq.3) then
-
-         if ((nlist_vof.eq.1).and.(nlist_cen.eq.1)) then
-          ! do nothing
-         else
-          print *,"expecting nlist_vof=nlist_cen=1"
-          stop
-         endif
-
-         local_volume_NOTUS=local_refvfrac_NOTUS*volcell_vof
-
-         do dir=1,sdim
-          local_ref_centroid_NOTUS(dir)= &
-               local_ref_centroid_NOTUS(dir)+cencell_vof(dir)
-          p0(dir)=xtetlist_vof(1,dir,1)
-          p1(dir)=xtetlist_vof(2,dir,1)
-          p2(dir)=xtetlist_vof(3,dir,1)
-          p3(dir)=xtetlist_vof(4,dir,1)
-         enddo
-
-         call mof3d_tetra_compute_analytic_gradient( &
-          p0,p1,p2,p3, &
-          local_angles_NOTUS, & !dimension(2)
-          local_ref_centroid_NOTUS, &
-          local_ref_centroid_NOTUS, &
-          local_volume_NOTUS, &  !Not a volume FRACTION
-          objective_NOTUS, &
-          local_gradient_NOTUS, & !dimension(2)
-          local_centroid_NOTUS)
-
-         do dir=1,sdim
-          local_centroid_NOTUS(dir)= &
-               local_centroid_NOTUS(dir)-cencell_vof(dir)
-         enddo
-
-         do dir=1,sdim
-          testcen(dir)=local_centroid_NOTUS(dir)
-         enddo
-
-        else
-         print *,"expecting sdim.eq.3"
          stop
         endif
 
@@ -12283,11 +12089,6 @@ contains
         print *,"expecting nhalf0>=3: ",nhalf0
         stop
        endif
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       if (nhalf0.lt.2) then
-        print *,"expecting nhalf0>=2: ",nhalf0
-        stop
-       endif
       else
        print *,"continuous_mof invalid: ",continuous_mof
        stop
@@ -12331,47 +12132,6 @@ contains
         print *,"fastflag ",fastflag
         print *,"levelrz ",levelrz
         stop
-       endif
-
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-
-       if ((fastflag.eq.0).and. &
-           (nlist_vof.eq.nlist_cen)) then
-        !do nothing
-       else
-        print *,"parameters invalid"
-        print *,"continuous_mof ",continuous_mof
-        print *,"fastflag ",fastflag
-        print *,"levelrz ",levelrz
-        print *,"nlist_vof ",nlist_vof
-        print *,"nlist_cen ",nlist_cen
-        stop
-       endif
-        
-       if ((levelrz.eq.COORDSYS_CARTESIAN).and. &
-           (sdim.eq.3).and. &
-           (nlist_vof.eq.1)) then !just one tetrahedra=uncaptured space.
-
-        use_MilcentLemoine=1 ! "1" option available here.
-
-       else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-                (levelrz.eq.COORDSYS_RZ).or. &
-                (nlist_vof.gt.1).or. &
-                (sdim.eq.2)) then
-
-        use_MilcentLemoine=0 ! "0" only allowed here.
-        
-       else
- 
-        print *,"parameters corrupt"
-        print *,"continuous_mof=",continuous_mof
-        print *,"levelrz=",levelrz
-        print *,"nlist_vof=",nlist_vof 
-        print *,"nlist_cen=",nlist_cen
-        print *,"sdim=",sdim
-        print *,"fastflag=",fastflag
-        stop
-
        endif
 
       else if ((continuous_mof.eq.CMOF_X).or. &
@@ -12530,7 +12290,6 @@ contains
 
         ! these are the valid choices for continuous_mof
        if ((continuous_mof.eq.STANDARD_MOF).or. &  
-           (continuous_mof.eq.MOF_TRI_TET).or. & 
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
            (continuous_mof.eq.CMOF_X)) then  
 
@@ -12647,9 +12406,7 @@ contains
           print *,"grid_index_ML ",grid_index_ML
          endif
 
-         if (continuous_mof.eq.MOF_TRI_TET) then
-          !do nothing
-         else if (decision_tree_max_level.eq.-1) then
+         if (decision_tree_max_level.eq.-1) then
           !do nothing
          else if (decision_tree_max_level.ge.0) then
 
@@ -12757,9 +12514,7 @@ contains
           stop
          endif
 
-         if (continuous_mof.eq.MOF_TRI_TET) then
-          !do nothing
-         else if (training_max_level.eq.-1) then
+         if (training_max_level.eq.-1) then
           ! do nothing
          else if (training_max_level.ge.0) then
 
@@ -13790,9 +13545,12 @@ contains
         nlist_alloc, & !intent(in)
         nmax, &
         mofdata, &
-        imaterial_count, & !imaterial_count-1=#mat already reconstructed
+        loop_counter, &
         uncaptured_volume_fraction, &
         vfrac_sum_local, &
+        num_processed_total, &
+        num_processed, &
+        material_used, &
         uncaptured_volume_vof, &
         uncaptured_volume_cen, &
         multi_centroidA, &
@@ -13833,7 +13591,10 @@ contains
       integer im
       integer vofcomp
       integer vofcomp_single
-      integer, INTENT(in) :: imaterial_count
+      integer, INTENT(inout) :: num_processed_total
+      integer, INTENT(inout) :: num_processed
+      integer, INTENT(inout) :: material_used(num_materials)
+      integer, INTENT(in) :: loop_counter
       real(amrex_real) distmax
       integer ordermax
       integer order_min
@@ -13902,12 +13663,14 @@ contains
        print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
-      if ((uncaptured_volume_fraction.ge.zero).and. &
+      if ((uncaptured_volume_fraction.ge.one-vfrac_sum_local).and. &
           (uncaptured_volume_fraction.le.one+VOFTOL)) then
        ! do nothing
       else
        print *,"uncaptured_volume_fraction invalid: ", &
          uncaptured_volume_fraction
+       print *,"vfrac_sum_local= ", &
+         vfrac_sum_local
        stop
       endif
       if ((vfrac_sum_local.ge.zero).and. &
@@ -13938,9 +13701,9 @@ contains
        print *,"num_materials invalid individual mof"
        stop
       endif
-      if ((imaterial_count.lt.1).or. &
-          (imaterial_count.gt.num_materials)) then
-       print *,"imaterial_count invalid"
+      if ((loop_counter.lt.0).or. &
+          (loop_counter.ge.num_materials)) then
+       print *,"loop_counter invalid ",loop_counter
        stop
       endif
       if (nmax.lt.10) then
@@ -13948,7 +13711,6 @@ contains
        stop
       endif
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.MOF_TRI_TET).or. &
           (continuous_mof.eq.CMOF_F_AND_X).or. &
           (continuous_mof.eq.CMOF_X)) then 
        ! do nothing
@@ -13986,26 +13748,6 @@ contains
         cencell_cen, &
         sdim)
 
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-
-       call Box_volumeTRI_TET( &
-        bfact,dx,xsten0,nhalf0, &
-        volcell_vof, &
-        cencell_vof, &
-        sdim)
-       call Box_volumeTRI_TET( &
-        bfact,dx,xsten0,nhalf0, &
-        volcell_cen, &
-        cencell_cen, &
-        sdim)
-
-       do i_stencil_node=-nhalf0,nhalf0
-       do dir=1,sdim
-        xsten_local(i_stencil_node,dir)=cencell_vof(dir)+ &
-          half*i_stencil_node*dx(dir)
-       enddo !dir
-       enddo !i_stencil_node
-
       else if (continuous_mof.eq.CMOF_X) then
 
        call Box_volumeFAST( &
@@ -14037,53 +13779,41 @@ contains
          cencell_cen, &
          sdim)
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid ",continuous_mof
        stop
       endif
 
-       ! imaterial_count-1=number of materials already reconstructed.
-
       if (continuous_mof.eq.CMOF_F_AND_X) then 
 
-       if ((imaterial_count.ge.1).and. &
-           (imaterial_count.le.num_materials)) then
+       if ((num_processed.ge.0).and. &
+           (num_processed.lt.num_materials)) then
         fastflag=0
        else 
-        print *,"imaterial_count invalid"
-        stop
-       endif
-
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-
-       if ((imaterial_count.ge.1).and. &
-           (imaterial_count.le.num_materials)) then
-        fastflag=0
-       else 
-        print *,"imaterial_count invalid"
+        print *,"num_processed invalid ",num_processed
         stop
        endif
 
       else if (continuous_mof.eq.STANDARD_MOF) then 
 
-       if ((imaterial_count.gt.1).and. &
-           (imaterial_count.le.num_materials)) then
+       if ((num_processed.ge.1).and. &
+           (num_processed.lt.num_materials)) then
         fastflag=0
-       else if (imaterial_count.eq.1) then
+       else if (num_processed.eq.0) then
         fastflag=1
        else 
-        print *,"imaterial_count invalid: ",imaterial_count
+        print *,"num_processed invalid: ",num_processed
         stop
        endif
 
       else if (continuous_mof.eq.CMOF_X) then 
 
-       if ((imaterial_count.gt.1).and. &
-           (imaterial_count.le.num_materials)) then
+       if ((num_processed.ge.1).and. &
+           (num_processed.lt.num_materials)) then
         fastflag=0
-       else if (imaterial_count.eq.1) then
+       else if (num_processed.eq.0) then
         fastflag=1
        else 
-        print *,"imaterial_count invalid: ",imaterial_count
+        print *,"num_processed invalid: ",num_processed
         stop
        endif
 
@@ -14098,8 +13828,7 @@ contains
 
          ! get triangulation of uncaptured space in the cell
          ! in: individual_MOF
-       if ((continuous_mof.eq.STANDARD_MOF).or. &
-           (continuous_mof.eq.MOF_TRI_TET)) then 
+       if (continuous_mof.eq.STANDARD_MOF) then
         use_super_cell=0
         call tets_box_planes_super( &
          layer_flag, &
@@ -14213,7 +13942,7 @@ contains
         cencut_cen(dir)=cencell_cen(dir)  
        enddo
       else
-       print *,"fastflag invalid individual MOF"
+       print *,"fastflag invalid individual MOF ",fastflag
        stop
       endif      
 
@@ -14226,7 +13955,7 @@ contains
         print *,"(2) break MOF.F90:13110"
         print *,"volcut_vof invalid individual mof"
         print *,"continuous_mof ",continuous_mof
-        print *,"imaterial_count ",imaterial_count
+        print *,"num_processed ",num_processed
         print *,"order_algorithm_in ",order_algorithm_in
         print *,"bfact ",bfact
         print *,"dx ",dx
@@ -14540,6 +14269,10 @@ contains
            nDOF_standard, & !sdim-1
            nEQN_standard)   !sdim
 
+         material_used(critical_material)=ordermax+1
+         num_processed=num_processed+1
+         num_processed_total=num_processed_total+1
+
          mofdata(vofcomp+sdim+1)=ordermax+1
          mofdata(vofcomp+2*sdim+2)=intercept(1)
          do dir=1,sdim
@@ -14551,8 +14284,9 @@ contains
           uncaptured_volume_vof=zero
          endif
          uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
-         if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
-          uncaptured_volume_fraction=zero
+         if (uncaptured_volume_fraction.le. &
+             one-vfrac_sum_local+EPS_UNCAPTURED) then
+          uncaptured_volume_fraction=one-vfrac_sum_local
          endif
 
          ! above MOF reconstruct, below default slopes.
@@ -14659,7 +14393,9 @@ contains
             enddo
            enddo
            intercept=-mofdata(vofcomp_before+2*sdim+2)
+
          else if (mat_before.eq.0) then
+
            do dir=1,sdim
             centroid_free(dir)=cencell_cen(dir)
             centroid_ref(dir)=cencut_cen(dir)
@@ -14704,6 +14440,10 @@ contains
              (mat_before.ge.1).and. &
              (mat_before.le.num_materials)) then
 
+          material_used(critical_material)=ordermax+1
+          num_processed=num_processed+1
+          num_processed_total=num_processed_total+1
+
           mofdata(vofcomp+sdim+1)=ordermax+1
 
           mofdata(vofcomp+2*sdim+2)=intercept(1)
@@ -14747,8 +14487,9 @@ contains
            uncaptured_volume_vof=zero
           endif
           uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
-          if (uncaptured_volume_fraction.le.EPS_UNCAPTURED) then
-           uncaptured_volume_fraction=zero
+          if (uncaptured_volume_fraction.le. &
+              one-vfrac_sum_local+EPS_UNCAPTURED) then
+           uncaptured_volume_fraction=one-vfrac_sum_local
           endif
   
           if (single_material_takes_all.eq.1) then
@@ -14763,6 +14504,10 @@ contains
             single_material_takes_all
            stop
           endif
+
+          material_used(critical_material)=ordermax+1
+          num_processed=num_processed+1
+          num_processed_total=num_processed_total+1
   
           mofdata(vofcomp+sdim+1)=ordermax+1
           mofdata(vofcomp+2*sdim+2)=intercept(1)
@@ -15507,7 +15252,6 @@ contains
       integer, INTENT(in) :: sdim
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: centroid_absolute(sdim)
-      real(amrex_real) :: xtet(sdim+1,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: dxmaxLS_volume_constraint
       real(amrex_real) xpoint(sdim)
@@ -15521,14 +15265,10 @@ contains
       real(amrex_real) aa(sdim+1,sdim+1)
       real(amrex_real) xx(sdim+1)
       real(amrex_real) bb(sdim+1)
-      real(amrex_real) :: mapmat(sdim,sdim)
-      real(amrex_real) :: mapmat_inv(sdim,sdim)
-      real(amrex_real) :: mapmat_scratch(sdim,sdim)
       integer matstatus
       integer ii,jj,kk
       integer i,j,k
       integer i1,j1,k1
-      integer itet
       integer klo,khi
       integer dir
 
@@ -15538,8 +15278,6 @@ contains
       integer, INTENT(in) :: num_particles
       real(amrex_real), INTENT(in) :: particle_list(num_particles,sdim+1)
       real(amrex_real) :: w_particles(num_particles)
-
-      real(amrex_real) :: ls_mof_tet(sdim+1)
 
       real(amrex_real), INTENT(out)    :: lsnormal(num_materials,sdim)
       integer, INTENT(out) :: lsnormal_valid(num_materials)
@@ -15957,119 +15695,6 @@ contains
         stop
        endif
 
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-
-       LS_cen=zero
-
-       do itet=1,sdim+1
-        i1=itet-2
-        j1=-1
-        k1=-1
-        if ((itet.ge.1).and.(itet.le.3)) then
-         !do nothing
-        else if ((itet.eq.4).and.(sdim.eq.3)) then
-         i1=-1
-         j1=0
-        else
-         print *,"itet invalid"
-         stop
-        endif
-        if (itet.eq.i1+2+(j1+1)*3) then
-         !do nothing
-        else
-         print *,"i1 or j1 invalid"
-         stop
-        endif
-
-        ls_mof_tet(itet)=ls_mof(D_DECL(i1,j1,k1),im)
-
-        if (abs(ls_mof_tet(itet)).gt.three*dxmaxLS_volume_constraint) then
-         lsnormal_valid(im)=0
-        else if (abs(ls_mof_tet(itet)).le.three*dxmaxLS_volume_constraint) then
-         !do nothing
-        else
-         print *,"ls_mof_tet invalid: ",itet,ls_mof_tet(itet)
-         stop
-        endif
-
-        LS_cen=LS_cen+ls_mof_tet(itet)
-        do dir=1,sdim
-         xtet(itet,dir)=xsten0(itet-nhalf0-1,dir)
-        enddo
-       enddo !itet=1,sdim+1
-       LS_cen=LS_cen/(sdim+1)
-       if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
-        lsnormal_valid(im)=0
-       else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
-        !do nothing
-       else
-        print *,"LS_cen invalid: ",LS_cen
-        stop
-       endif
-
-       if (lsnormal_valid(im).eq.1) then
-
-        ! xphys = A xcomp + x0
-        ! xcomp=Ainv(xphys-x0)
-        ! A=x1-x0 y1-y0 z1-z0
-        !   x2-x0 y2-y0 z2-z0
-        !   x3-x0 y3-y0 z3-z0
-        do i=1,sdim
-        do j=1,sdim
-         mapmat(i,j)=xtet(i+1,j)-xtet(1,j)
-         mapmat_inv(i,j)=mapmat(i,j)
-         mapmat_scratch(i,j)=mapmat(i,j)
-        enddo
-        enddo
-
-        call matrix_inverse(mapmat_scratch,mapmat_inv,matstatus,sdim)
-        if (matstatus.eq.1) then
-         distsimple=zero
-         do dir=1,sdim
-          nsimple(dir)=ls_mof_tet(dir+1)-ls_mof_tet(1)
-          distsimple=distsimple+nsimple(dir)**2
-         enddo
-         distsimple=sqrt(distsimple)
-         if (distsimple.gt.zero) then
-          !f=f(y(x))   x=Ay+x0  y=AINV(x-x0)  dfdx=dfdy dydx
-          !df_dxi=df_yj dyj_dxi  dyj_dxi=AINV_ji
-          dist=zero
-          do dir=1,sdim
-           nn(dir)=zero
-           do j=1,sdim
-            nn(dir)=nn(dir)+nsimple(j)*mapmat_inv(j,dir)
-           enddo
-           dist=dist+nn(dir)**2
-          enddo !dir=1,sdim
-          dist=sqrt(dist)
-          if (dist.gt.zero) then
-           do dir=1,sdim
-            nn(dir)=nn(dir)/dist
-            lsnormal(im,dir)=nn(dir)
-           enddo
-           ls_intercept(im)=LS_cen
-          else
-           print *,"dist invalid: ",dist
-           stop
-          endif
-         else if (distsimple.eq.zero) then
-          lsnormal_valid(im)=0
-         else
-          print *,"distsimple invalid: ",distsimple
-          stop
-         endif
-        else
-         print *,"matstatus invalid find_cut_geom_slope_CLSVOF: ",matstatus
-         stop
-        endif
-
-       else if (lsnormal_valid(im).eq.0) then
-        ! do nothing
-       else
-        print *,"lsnormal_valid(im) invalid"
-        stop
-       endif
-       
       else
        print *,"continuous_mof bad(find_cut_geom_slope_CLSVOF) ",continuous_mof
        stop
@@ -16163,9 +15788,8 @@ contains
       integer imaterial
       integer im_opp
       integer vofcomp
-      integer vofcomp_single
       integer dir
-      integer imaterial_count
+      integer loop_counter
 
       real(amrex_real) centroid_absolute(sdim)
 
@@ -16226,6 +15850,7 @@ contains
       integer, PARAMETER :: use_initial_guess=0
       integer :: nDOF_standard
       integer :: nEQN_standard
+      integer is_masked(num_materials)
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
@@ -16980,7 +16605,7 @@ contains
                    local_num_materials(layer_iter)).and. &
                   (uncaptured_volume_vof(layer_iter).gt.zero).and. &
                   (uncaptured_volume_fraction(layer_iter).gt. &
-                   one-vfrac_sum_local(layer_iter)).and. &
+                   one-vfrac_sum_local(layer_iter)))
 
          call check_for_single_material( & !multimaterial_MOF
            single_material, &
@@ -17002,9 +16627,13 @@ contains
              (uncaptured_volume_fraction(layer_iter).eq.one).and. &
              (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
+          uncaptured_volume_vof(layer_iter)=zero
           uncaptured_volume_fraction(layer_iter)=zero
 
+          num_processed(layer_iter)=num_processed(layer_iter)+1
+          num_processed_total=num_processed_total+1
           material_used(single_material)=1
+
           vofcomp=(single_material-1)*ngeom_recon+1
           mofdata(vofcomp+sdim+1)=one  ! order=1
           do dir=1,sdim
@@ -17016,7 +16645,7 @@ contains
           mofdata(vofcomp+2*sdim+2)=null_intercept
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-           multi_centroidA(single_material(layer_iter),dir)=zero  ! cell is full
+           multi_centroidA(single_material,dir)=zero  ! cell is full
           enddo 
 
          else if ((single_material.eq.0).or. &
@@ -17052,9 +16681,12 @@ contains
            nlist_alloc, & !intent(in)
            nmax, &
            mofdata, &
-           imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+           loop_counter, & 
            uncaptured_volume_fraction(layer_iter), &
            vfrac_sum_local(layer_iter), &
+           num_processed_total, &
+           num_processed(layer_iter), &
+           material_used, &
            uncaptured_volume_vof(layer_iter), &
            uncaptured_volume_cen(layer_iter), &
            multi_centroidA, &
@@ -17062,16 +16694,21 @@ contains
            cmofsten, &
            sdim)
 
-FIX ME material_used has to be initialized
-          imaterial_count=imaterial_count+1
-         enddo !while imaterial_count<=num_materials and 
-              !      uncaptured_volume_vof(layer_iter)>0.0
-              !      vfrac_sum_local(layer_iter)>0.0
-        else
-         print *,"single_material or remaining_vfrac invalid: ", &
-          single_material(layer_iter),remaining_vfrac(layer_iter)
-         stop
-        endif
+         else
+          print *,"single_material invalid ",single_material
+          print *,"or remaining_vfrac invalid: ",remaining_vfrac
+          print *,"or uncaptured_volume_fraction invalid: ", &
+           uncaptured_volume_fraction
+          stop
+         endif
+
+         loop_counter=loop_counter+1
+        enddo !while 
+             ! loop_counter<local_num_materials(layer_iter) and
+             ! num_processed(layer_iter)<local_num_materials(layer_iter) and
+             ! uncaptured_volume_fraction(layer_iter)>
+             !  1-vfrac_sum_local(layer_iter) and
+             ! uncaptured_volume_vof(layer_iter)>0 
 
        else if ((at_least_one(layer_iter).eq.0).or. &
                 (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -17196,9 +16833,6 @@ FIX ME material_used has to be initialized
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) angle(sdim-1)
       real(amrex_real) xpoint(sdim)
-      real(amrex_real) xpoint2(sdim)
-      real(amrex_real) xpoint3(sdim)
-      real(amrex_real) xpoint4(sdim)
       integer nrecon
       integer, parameter :: nsamples=10000 !10000 
       integer im,ntry,iangle,vofcomp
@@ -17209,7 +16843,6 @@ FIX ME material_used has to be initialized
       real(amrex_real) nslope(sdim)
       real(amrex_real) nslope2(sdim)
       real(amrex_real) intercept,intercept2
-      integer shapeflag
       real(amrex_real) volcut,volcut2,areacut,areacut2
       real(amrex_real) cencut(sdim)
       real(amrex_real) cencut2(sdim)
@@ -17239,15 +16872,13 @@ FIX ME material_used has to be initialized
       real(amrex_real) xsten0_LS(-nhalf0:nhalf0,sdim) 
       real(amrex_real) xsten0_hex(-nhalf0:nhalf0,sdim) 
       real(amrex_real) xsten0_recon(-nhalf0:nhalf0,sdim) 
-      real(amrex_real) xsten_tet(-nhalf0:nhalf0,sdim) 
-      real(amrex_real) volcell_tet
-      real(amrex_real) cencell_tet(sdim)
       real(amrex_real) volcell_recon
       real(amrex_real) cencell_recon(sdim)
       real(amrex_real) LS_local
       real(amrex_real) x_stencil(sdim)
 
       integer, parameter :: tessellate=TESSELLATE_FLUIDS
+      integer, parameter :: shapeflag=0
 
 #include "mofdata.H"
 
@@ -17331,23 +16962,8 @@ FIX ME material_used has to be initialized
       do inode=1,sdim+1
       do dir=1,sdim
        xtet_domain(inode,dir)=xtet_domain(inode,dir)-half
-       xsten_tet(-nhalf0+inode-1,dir)=xtet_domain(inode,dir)
       enddo
       enddo
-
-      call Box_volumeTRI_TET( &
-       bfact,dx, &
-       xsten_tet,nhalf0, &
-       volcell_tet, &
-       cencell_tet, &
-       sdim)
-
-      if (volcell_tet.ge.zero) then
-       !do nothing
-      else
-       print *,"volcell_tet invalid: ",volcell_tet
-       stop
-      endif
 
       do dir=1,sdim
       do isten=-nhalf0,nhalf0
@@ -17369,320 +16985,236 @@ FIX ME material_used has to be initialized
        stop
       endif
 
-      do shapeflag=0,1 
+      continuous_mof=STANDARD_MOF
 
-       if (shapeflag.eq.0) then
+      volcell_recon=volcell_hex
 
-        continuous_mof=STANDARD_MOF
+      ! do test for [-1/2,1/2]^sdim cube
+      do dir=1,sdim
+       cencell_recon(dir)=cencell_hex(dir)
+       do isten=-nhalf0,nhalf0
+        xsten0_LS(isten,dir)=xsten0_hex(isten,dir)
+        xsten0_recon(isten,dir)=xsten0_LS(isten,dir)
+       enddo
+      enddo ! dir
 
-        volcell_recon=volcell_hex
+      do im=1,num_materials
+       total_calls(im)=zero
+       total_iterations(im)=zero
+       total_errors(im)=zero
+       max_iterations(im)=0
+      enddo
 
-        ! do test for [-1/2,1/2]^sdim cube
-        do dir=1,sdim
-         cencell_recon(dir)=cencell_hex(dir)
-         do isten=-nhalf0,nhalf0
-          xsten0_LS(isten,dir)=xsten0_hex(isten,dir)
-          xsten0_recon(isten,dir)=xsten0_LS(isten,dir)
-         enddo
-        enddo ! dir
+      seed=86456
+#if (USERAND==1)
+      call srand(seed)
+#else
+      print *,"set userand (caps) = 1"
+      stop
+#endif
 
-       else if (shapeflag.eq.1) then
+      max_mof_error=zero
 
-        continuous_mof=MOF_TRI_TET
+      do ntry=1,nsamples
 
-        volcell_recon=volcell_tet
-
-        ! tetrahedra "origin node" mapped to (-1/2,-1/2,-1/2)
-        do dir=1,sdim
-         cencell_recon(dir)=cencell_tet(dir)
-         do isten=-nhalf0,nhalf0
-          xsten0_LS(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
-          xsten0_recon(isten,dir)=xsten0_LS(isten,dir)
-          if (isten+nhalf0+1.le.sdim+1) then
-           xsten0_recon(isten,dir)=xsten_tet(isten,dir)
-          endif
-         enddo
-        enddo ! dir
-
-       else
-        print *,"shapeflag invalid: ",shapeflag
+       ! 0<=rand()<=1
+       do iangle=1,nDOF_standard
+#if (USERAND==1)
+        angle(iangle)=rand()
+#else
+        print *,"set userand (caps) = 1"
         stop
+#endif
+        angle(iangle)=angle(iangle)*two*Pi 
+       enddo ! iangle
+
+       call angle_to_slope(angle,nslope,sdim)
+
+        ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
+        ! intercept=n dot (xcell-xpoint)
+
+       do dir=1,sdim
+        nslope2(dir)=-nslope(dir)
+
+        ! 0<=rand()<=1
+#if (USERAND==1)
+        xpoint(dir)=rand()
+#else
+        print *,"set userand (caps) = 1"
+        stop
+#endif
+       enddo !dir=1..sdim
+
+       ! 0<=rand()<=1
+
+       do dir=1,sdim
+        ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
+        xpoint(dir)=(xpoint(dir)-half)*shrink_factor
+       enddo
+
+       ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
+       ! intercept=n dot (xcell-xpoint)
+
+       intercept=zero
+       do dir=1,sdim
+        intercept=intercept+nslope(dir)*(xsten0_LS(0,dir)-xpoint(dir))
+       enddo  ! dir
+       intercept2=-intercept
+
+       call fast_cut_cell_intersection( &
+         bfact,dx, &
+         xsten0_LS,nhalf0, &
+         nslope,intercept, &
+         volcut,cencut, &
+         areacut, &
+         xsten0_LS,nhalf0, &
+         xtet_domain,shapeflag, &
+         sdim)
+       call fast_cut_cell_intersection( &
+        bfact,dx, &
+        xsten0_LS,nhalf0, &
+        nslope2,intercept2, &
+        volcut2,cencut2, &
+        areacut2, &
+        xsten0_LS,nhalf0, &
+        xtet_domain,shapeflag, &
+        sdim)
+
+       do dir2=1,nrecon
+        mofdata(dir2)=zero !pls_normal zapped out.
+       enddo
+       do im=1,num_materials
+        vof_super(im)=zero
+       enddo
+
+       im=1
+       vofcomp=(im-1)*(2*sdim+3)+1
+       mofdata(vofcomp)=volcut/volcell_recon
+       vof_super(im)=mofdata(vofcomp)
+
+       do dir=1,sdim
+        mofdata(vofcomp+dir)=cencut(dir)-cencell_recon(dir)
+       enddo
+
+       im=2
+       vofcomp=(im-1)*(2*sdim+3)+1
+       mofdata(vofcomp)=volcut2/volcell_recon
+       vof_super(im)=mofdata(vofcomp)
+
+       do dir=1,sdim
+        mofdata(vofcomp+dir)=cencut2(dir)-cencell_recon(dir)
+       enddo
+
+       do dir=1,sdim
+        grid_index(dir)=0
+       enddo
+
+       do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
+        dir=1
+        x_stencil(dir)=xsten0_recon(i1,dir)
+        dir=2
+        x_stencil(dir)=xsten0_recon(j1,dir)
+        if (sdim.eq.2) then
+         ! do nothing
+        else if (sdim.eq.3) then
+         dir=sdim
+         x_stencil(dir)=xsten0_recon(k1,dir)
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+
+        LS_local=intercept
+        do dir=1,sdim
+         LS_local=LS_local+nslope(dir)*(x_stencil(dir)-xsten0_LS(0,dir))
+        enddo
+
+        im=1
+        LS_stencil(D_DECL(i1,j1,k1),im)=LS_local
+        im=2
+        LS_stencil(D_DECL(i1,j1,k1),im)=-LS_local
+       enddo
+       enddo
+       enddo
+
+       call multimaterial_MOF( &
+        tessellate , &  !TESSELLATE_FLUIDS
+        tid_diagnostic, &
+        bfact,dx, &
+        xsten0_recon,nhalf0, &
+        mof_verbose, &
+        use_ls_data, &
+        LS_stencil, &
+        xtetlist, &
+        xtetlist, &
+        nmax, &
+        nmax, &
+        mofdata, & !intent(inout)
+        vof_super, &
+        multi_centroidA, &
+        continuous_mof, & 
+        cmofsten, &
+        grid_index, &
+        grid_level, &
+        sdim)
+
+       moferror=zero
+       do im=1,num_materials
+        vofcomp=(im-1)*(2*sdim+3)+1
+
+        do dir=1,sdim
+         xref_mat(dir)=mofdata(vofcomp+dir)
+         xact_mat(dir)=multi_centroidA(im,dir)
+        enddo
+        call RT_transform_offset(xref_mat,cencell_recon,xref_matT)
+        call RT_transform_offset(xact_mat,cencell_recon,xact_matT)
+
+        do dir=1,sdim
+         moferror=moferror+ &
+          mofdata(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
+        enddo
+       enddo  ! im
+       moferror=sqrt(moferror)/dx(1)
+
+       if (moferror.gt.max_mof_error) then
+        max_mof_error=moferror
        endif
 
+        ! diagnostic_MOF
        do im=1,num_materials
-         total_calls(im)=zero
-         total_iterations(im)=zero
-         total_errors(im)=zero
-         max_iterations(im)=0
+        total_calls(im)=total_calls(im)+mof_calls(1,im)
+        total_iterations(im)= &
+            total_iterations(im)+mof_iterations(1,im)
+        total_errors(im)= &
+            total_errors(im)+mof_errors(1,im)
+        if (mof_iterations(1,im).gt.max_iterations(im)) then
+         max_iterations(im)=mof_iterations(1,im)
+        endif
        enddo
 
-       seed=86456
-#if (USERAND==1)
-       call srand(seed)
-#else
-       print *,"set userand (caps) = 1"
-       stop
-#endif
+      enddo ! ntry
 
-       max_mof_error=zero
+      print *,"sdim= ",sdim
+      print *,"MOFITERMAX= ",MOFITERMAX
+      print *,"MOFITERMAX_AFTER_PREDICT= ", &
+          MOFITERMAX_AFTER_PREDICT
+      print *,"nsamples= ",nsamples
+      print *,"shrink_factor=",shrink_factor
+      do im=1,num_materials
+       print *,"im= ",im
+       print *,"total calls= ",total_calls(im)
+       if (total_calls(im).gt.zero) then
+        avgiter=total_iterations(im)/total_calls(im)
+        avgerror=total_errors(im)/total_calls(im)
+        print *,"avgiter= ",avgiter
+        print *,"avgerror= ",avgerror
+       endif
+       print *,"max iterations= ",max_iterations(im)
+      enddo
+      print *,"max_mof_error=",max_mof_error
 
-       do ntry=1,nsamples
-
-          ! 0<=rand()<=1
-         do iangle=1,nDOF_standard
-#if (USERAND==1)
-          angle(iangle)=rand()
-#else
-          print *,"set userand (caps) = 1"
-          stop
-#endif
-          angle(iangle)=angle(iangle)*two*Pi 
-         enddo ! iangle
-
-         call angle_to_slope(angle,nslope,sdim)
-
-          ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
-          ! intercept=n dot (xcell-xpoint)
-
-         do dir=1,sdim
-          nslope2(dir)=-nslope(dir)
-
-          ! 0<=rand()<=1
-#if (USERAND==1)
-          xpoint(dir)=rand()
-#else
-          print *,"set userand (caps) = 1"
-          stop
-#endif
-         enddo !dir=1..sdim
-
-          ! 0<=rand()<=1
-         if (shapeflag.eq.1) then !tetrahedron
-
-           ! point in [-1,1]^3
-          do dir=1,sdim
-           xpoint(dir)=two*(xpoint(dir)-half)*shrink_factor
-          enddo
-          do dir=1,sdim
-           xpoint2(dir)=xpoint(dir)
-          enddo
-          xpoint2(1)=(one+xpoint(1))*(one-xpoint(sdim))/two-one
-          do dir=1,sdim
-           xpoint3(dir)=xpoint2(dir)
-          enddo
-          xpoint3(1)=(one+xpoint2(1))*(one-xpoint2(2))/two-one
-          do dir=1,sdim
-           xpoint4(dir)=xpoint3(dir)
-          enddo
-          xpoint4(2)=(one+xpoint3(2))*(one-xpoint3(sdim))/two-one
-
-          do dir=1,sdim
-           if (sdim.eq.2) then
-            xpoint(dir)=half*xpoint2(dir)
-           else if (sdim.eq.3) then
-            xpoint(dir)=half*xpoint4(dir)
-           else
-            print *,"sdim invalid"
-            stop
-           endif
-          enddo
-
-         else if (shapeflag.eq.0) then !regular hexahedron
-
-          do dir=1,sdim
-           ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
-           xpoint(dir)=(xpoint(dir)-half)*shrink_factor
-          enddo
-
-         else
-          print *,"shapeflag invalid: ",shapeflag
-          stop
-         endif
-
-          ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
-          ! intercept=n dot (xcell-xpoint)
-
-         intercept=zero
-         do dir=1,sdim
-          intercept=intercept+nslope(dir)*(xsten0_LS(0,dir)-xpoint(dir))
-         enddo  ! dir
-         intercept2=-intercept
-
-         call fast_cut_cell_intersection( &
-           bfact,dx, &
-           xsten0_LS,nhalf0, &
-           nslope,intercept, &
-           volcut,cencut, &
-           areacut, &
-           xsten0_LS,nhalf0, &
-           xtet_domain,shapeflag, &
-           sdim)
-         call fast_cut_cell_intersection( &
-           bfact,dx, &
-           xsten0_LS,nhalf0, &
-           nslope2,intercept2, &
-           volcut2,cencut2, &
-           areacut2, &
-           xsten0_LS,nhalf0, &
-           xtet_domain,shapeflag, &
-           sdim)
-
-         do dir2=1,nrecon
-          mofdata(dir2)=zero !pls_normal zapped out.
-         enddo
-         do im=1,num_materials
-          vof_super(im)=zero
-         enddo
-
-         im=1
-         vofcomp=(im-1)*(2*sdim+3)+1
-         mofdata(vofcomp)=volcut/volcell_recon
-         vof_super(im)=mofdata(vofcomp)
-
-         do dir=1,sdim
-          mofdata(vofcomp+dir)=cencut(dir)-cencell_recon(dir)
-         enddo
-
-         im=2
-         vofcomp=(im-1)*(2*sdim+3)+1
-         mofdata(vofcomp)=volcut2/volcell_recon
-         vof_super(im)=mofdata(vofcomp)
-
-         do dir=1,sdim
-          mofdata(vofcomp+dir)=cencut2(dir)-cencell_recon(dir)
-         enddo
-
-         do dir=1,sdim
-          grid_index(dir)=0
-         enddo
-
-         do k1=k1lo,k1hi
-         do j1=-1,1
-         do i1=-1,1
-          dir=1
-          x_stencil(dir)=xsten0_recon(i1,dir)
-          dir=2
-          x_stencil(dir)=xsten0_recon(j1,dir)
-          if (sdim.eq.2) then
-           ! do nothing
-          else if (sdim.eq.3) then
-           dir=sdim
-           x_stencil(dir)=xsten0_recon(k1,dir)
-          else
-           print *,"sdim invalid"
-           stop
-          endif
-
-          if (shapeflag.eq.0) then !regular hexahedron
-           !do nothing
-          else if (shapeflag.eq.1) then !tetrahedron
-           inode=i1+2+(j1+1)*3
-           if ((inode.ge.1).and.(inode.le.sdim+1)) then
-            do dir=1,sdim
-             x_stencil(dir)=xtet_domain(inode,dir)
-            enddo
-           else if ((inode.gt.sdim+1).and.(inode.le.9)) then
-            ! do nothing
-           else
-            print *,"inode invalid"
-            stop
-           endif
-          else
-           print *,"shapeflag invalid"
-           stop
-          endif
-
-          LS_local=intercept
-          do dir=1,sdim
-           LS_local=LS_local+nslope(dir)*(x_stencil(dir)-xsten0_LS(0,dir))
-          enddo
-
-          im=1
-          LS_stencil(D_DECL(i1,j1,k1),im)=LS_local
-          im=2
-          LS_stencil(D_DECL(i1,j1,k1),im)=-LS_local
-         enddo
-         enddo
-         enddo
-
-         call multimaterial_MOF( &
-          tessellate , &  !TESSELLATE_FLUIDS
-          tid_diagnostic, &
-          bfact,dx, &
-          xsten0_recon,nhalf0, &
-          mof_verbose, &
-          use_ls_data, &
-          LS_stencil, &
-          xtetlist, &
-          xtetlist, &
-          nmax, &
-          nmax, &
-          mofdata, & !intent(inout)
-          vof_super, &
-          multi_centroidA, &
-          continuous_mof, & 
-          cmofsten, &
-          grid_index, &
-          grid_level, &
-          sdim)
-
-         moferror=zero
-         do im=1,num_materials
-          vofcomp=(im-1)*(2*sdim+3)+1
-
-          do dir=1,sdim
-           xref_mat(dir)=mofdata(vofcomp+dir)
-           xact_mat(dir)=multi_centroidA(im,dir)
-          enddo
-          call RT_transform_offset(xref_mat,cencell_recon,xref_matT)
-          call RT_transform_offset(xact_mat,cencell_recon,xact_matT)
-
-          do dir=1,sdim
-           moferror=moferror+ &
-            mofdata(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
-          enddo
-         enddo  ! im
-         moferror=sqrt(moferror)/dx(1)
-
-         if (moferror.gt.max_mof_error) then
-          max_mof_error=moferror
-         endif
-
-          ! diagnostic_MOF
-         do im=1,num_materials
-          total_calls(im)=total_calls(im)+mof_calls(1,im)
-          total_iterations(im)= &
-              total_iterations(im)+mof_iterations(1,im)
-          total_errors(im)= &
-              total_errors(im)+mof_errors(1,im)
-          if (mof_iterations(1,im).gt.max_iterations(im)) then
-           max_iterations(im)=mof_iterations(1,im)
-          endif
-         enddo
-
-       enddo ! ntry
-
-       print *,"sdim= ",sdim
-       print *,"shapeflag= ",shapeflag
-       print *,"MOFITERMAX= ",MOFITERMAX
-       print *,"MOFITERMAX_AFTER_PREDICT= ", &
-           MOFITERMAX_AFTER_PREDICT
-       print *,"nsamples= ",nsamples
-       print *,"shrink_factor=",shrink_factor
-       do im=1,num_materials
-         print *,"im= ",im
-         print *,"total calls= ",total_calls(im)
-         if (total_calls(im).gt.zero) then
-          avgiter=total_iterations(im)/total_calls(im)
-          avgerror=total_errors(im)/total_calls(im)
-          print *,"avgiter= ",avgiter
-          print *,"avgerror= ",avgerror
-         endif
-         print *,"max iterations= ",max_iterations(im)
-       enddo
-       print *,"max_mof_error=",max_mof_error
-
-      enddo ! shapeflag
 
       deallocate(LS_stencil)
 
@@ -17724,7 +17256,6 @@ FIX ME material_used has to be initialized
       real(amrex_real) test_vof
 
       integer im
-      integer i
       integer dir
       integer vofcomp
       real(amrex_real) voffluid,vofsolid,vofelastic
@@ -17736,7 +17267,6 @@ FIX ME material_used has to be initialized
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
-      real(amrex_real) xtet(sdim+1,sdim)
       real(amrex_real) xtarget(sdim)
       real(amrex_real) boxlo,boxhi
 
@@ -17760,14 +17290,6 @@ FIX ME material_used has to be initialized
        endif
       else if (continuous_mof.eq.CMOF_F_AND_X) then
        if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_base"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-       if (nhalf.ge.2) then
         ! do nothing
        else
         print *,"nhalf invalid in make_vfrac_sum_ok_base"
@@ -17817,13 +17339,6 @@ FIX ME material_used has to be initialized
 
       if (continuous_mof.eq.STANDARD_MOF) then !MOF
        call Box_volumeFAST( &
-         bfact,dx, &
-         xsten,nhalf, &
-         volcell, &
-         cencell, &
-         sdim)
-      else if (continuous_mof.eq.MOF_TRI_TET) then 
-       call Box_volumeTRI_TET( &
          bfact,dx, &
          xsten,nhalf, &
          volcell, &
@@ -18174,19 +17689,6 @@ FIX ME material_used has to be initialized
           endif
          enddo !dir=1..sdim
 
-        else if (continuous_mof.eq.MOF_TRI_TET) then 
-
-         do i=1,sdim+1
-         do dir=1,sdim
-          xtet(i,dir)=xsten(-nhalf+i-1,dir)
-         enddo
-         enddo
-          !project_to_tet is declared in GLOBALUTIL.F90
-         call project_to_tet(sdim,xtarget,xtet)
-         do dir=1,sdim
-          mofdata(vofcomp+dir)=xtarget(dir)-cencell(dir)
-         enddo
-
         else
          print *,"continuous_mof invalid(make_vfrac_sum_ok_base):", &
              continuous_mof
@@ -18258,14 +17760,6 @@ FIX ME material_used has to be initialized
        endif
       else if (continuous_mof.eq.CMOF_F_AND_X) then
        if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.MOF_TRI_TET) then
-       if (nhalf.ge.2) then
         ! do nothing
        else
         print *,"nhalf invalid in make_vfrac_sum_ok_copy"
@@ -18762,8 +18256,14 @@ FIX ME material_used has to be initialized
         else
          print *,"tessellate_dest invalid ",tessellate_dest
          print *,"tessellate_source ",tessellate_source
+         print *,"layer_iter ",layer_iter
          stop
         endif
+       else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
+        print *,"tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID invalid"
+        print *,"tessellate_source ",tessellate_source
+        print *,"layer_iter ",layer_iter
+        stop
        else
         print *,"tessellate_source invalid ",tessellate_source
         print *,"tessellate_dest ",tessellate_dest
@@ -18787,6 +18287,7 @@ FIX ME material_used has to be initialized
        else
         print *,"tessellate_source invalid ",tessellate_source
         print *,"tessellate_dest ",tessellate_dest
+        print *,"layer_iter ",layer_iter
         stop
        endif
 
@@ -18925,6 +18426,70 @@ FIX ME material_used has to be initialized
 
       return
       end subroutine init_layer_flag
+
+      subroutine derive_critical_material( &
+        mofdatalocal, &
+        mofdatasave, &
+        material_used, &
+        is_masked, &
+        critical_material, &
+        sdim)
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+      IMPLICIT NONE
+ 
+      integer, intent(in) :: sdim
+      integer, intent(out) :: critical_material
+      real(amrex_real), intent(in) :: mofdatasave(num_materials*(2*sdim+3))
+      real(amrex_real), intent(in) :: mofdatalocal(num_materials*(2*sdim+3))
+      integer, intent(in) :: material_used(num_materials)
+      integer, intent(in) :: is_masked(num_materials)
+      integer im,vofcomp,testflag,testflag_save
+
+      critical_material=0
+      do im=1,num_materials
+       vofcomp=(im-1)*ngeom_recon+1
+
+       if (is_masked(im).eq.0) then
+        testflag=NINT(mofdatalocal(vofcomp+sdim+1)) !"progress"
+        testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) !original
+        if ((testflag_save.ge.1).and. & !old_flag=processed
+            (testflag_save.le.num_materials)) then
+   
+         if ((testflag.eq.0).and. &
+             (material_used(im).eq.0)) then
+
+          critical_material=im
+
+         else if ((testflag.ge.1).and. &
+                  (testflag.le.num_materials).and. &
+                  (material_used(im).ge.1).and. &
+                  (material_used(im).le.num_materials)) then
+          !do nothing
+         else
+          print *,"testflag invalid ",testflag
+          print *,"or material_used invalid: ",material_used
+          stop
+         endif
+ 
+        else if (testflag_save.eq.0) then ! old flag=unprocessed
+         ! do nothing
+        else
+         print *,"testflag_save invalid? ",testflag_save
+         stop         
+        endif 
+       else if (is_masked(im).eq.1) then
+        ! do nothing
+       else
+        print *,"is_masked invalid (derive_critical_material) ", &
+          im,is_masked(im)
+        stop
+       endif
+      enddo ! im=1..num_materials
+
+      return
+      end subroutine derive_critical_material
 
       subroutine advance_uncaptured_vars( &
          tessellate_source, &
@@ -19416,7 +18981,7 @@ FIX ME material_used has to be initialized
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) volcut,cencut(sdim)
-      integer testflag,testflag_save,nlist
+      integer nlist
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer critical_material
       real(amrex_real) nrecon(sdim)
@@ -19892,7 +19457,8 @@ FIX ME material_used has to be initialized
             tessellate_dest, &
             sdim)
 
-           if ((single_material.gt.0).and. &
+           if ((single_material.ge.1).and. &
+               (single_material.le.num_materials).and. &
                (remaining_vfrac.le.EPS_SINGLE)) then
 
             vofcomp=(single_material-1)*ngeom_recon+1
@@ -19977,47 +19543,14 @@ FIX ME material_used has to be initialized
              stop
             endif
 
-            critical_material=0
-            do im=1,num_materials
-             vofcomp=(im-1)*ngeom_recon+1
+            call derive_critical_material( &
+             mofdatalocal, &
+             mofdatasave, &
+             material_used, &
+             is_masked, &
+             critical_material, &
+             sdim)
 
-             if (is_masked(im).eq.0) then
-              testflag=NINT(mofdatalocal(vofcomp+sdim+1)) !"progress"
-              testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) !original
-              if ((testflag_save.ge.1).and. & !old_flag=processed
-                  (testflag_save.le.num_materials)) then
-    
-               if ((testflag.eq.0).and. &
-                   (material_used(im).eq.0)) then
-
-                critical_material=im
-
-               else if ((testflag.ge.1).and. &
-                        (testflag.le.num_materials).and. &
-                        (material_used(im).ge.1).and. &
-                        (material_used(im).le.num_materials)) then
-                !do nothing
-               else
-                print *,"testflag invalid ",testflag
-                print *,"or material_used invalid: ",material_used
-                stop
-               endif
- 
-              else if (testflag_save.eq.0) then ! old flag=unprocessed
-               ! do nothing
-              else
-               print *,"testflag_save invalid? ",testflag_save
-               stop         
-              endif 
-             else if (is_masked(im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_masked invalid (multi_get_volume_grid_simple) ", &
-                im,is_masked(im)
-              stop
-             endif
-            enddo ! im=1..num_materials
-          
             if ((critical_material.ge.1).and. &
                 (critical_material.le.num_materials)) then        
              vofcomp=(critical_material-1)*ngeom_recon+1
@@ -20231,7 +19764,7 @@ FIX ME material_used has to be initialized
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) volcut,cencut(sdim)
-      integer testflag,testflag_save,nlist
+      integer nlist
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer critical_material
       real(amrex_real) nrecon(sdim)
@@ -20721,7 +20254,8 @@ FIX ME material_used has to be initialized
             tessellate_dest, &
             sdim)
 
-           if ((single_material.gt.0).and. &
+           if ((single_material.ge.1).and. &
+               (single_material.le.num_materials).and. &
                (remaining_vfrac.le.EPS_SINGLE)) then
 
             vofcomp=(single_material-1)*ngeom_recon+1
@@ -20828,47 +20362,13 @@ FIX ME material_used has to be initialized
              stop
             endif
 
-            critical_material=0
-
-            do im=1,num_materials
-             vofcomp=(im-1)*ngeom_recon+1
-
-             if (is_masked(im).eq.0) then
-              testflag=NINT(mofdatalocal(vofcomp+sdim+1)) !"progress"
-              testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) !original
-              if ((testflag_save.ge.1).and. & !old_flag=processed
-                  (testflag_save.le.num_materials)) then
-    
-               if ((testflag.eq.0).and. &
-                   (material_used(im).eq.0)) then
-
-                critical_material=im
-
-               else if ((testflag.ge.1).and. &
-                        (testflag.le.num_materials).and. &
-                        (material_used(im).ge.1).and. &
-                        (material_used(im).le.num_materials)) then
-                !do nothing
-               else
-                print *,"testflag invalid ",testflag
-                print *,"or material_used invalid: ",material_used
-                stop
-               endif
- 
-              else if (testflag_save.eq.0) then ! old flag=unprocessed
-               ! do nothing
-              else
-               print *,"testflag_save invalid? ",testflag_save
-               stop         
-              endif 
-             else if (is_masked(im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_masked invalid (multi_get_volume_grid) ", &
-                im,is_masked(im)
-              stop
-             endif
-            enddo ! im=1..num_materials
+            call derive_critical_material( &
+             mofdatalocal, &
+             mofdatasave, &
+             material_used, &
+             is_masked, &
+             critical_material, &
+             sdim)
           
             if ((critical_material.ge.1).and. &
                 (critical_material.le.num_materials)) then        
@@ -21090,7 +20590,7 @@ FIX ME material_used has to be initialized
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       real(amrex_real) volcut,cencut(sdim)
-      integer testflag,testflag_save,nlist
+      integer nlist
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
       integer critical_material
       real(amrex_real) nrecon(sdim)
@@ -21486,7 +20986,8 @@ FIX ME material_used has to be initialized
             tessellate_dest, &
             sdim)
 
-          if ((single_material.gt.0).and. &
+          if ((single_material.ge.1).and. &
+              (single_material.le.num_materials).and. &
               (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
            vofcomp=(single_material-1)*ngeom_recon+1
@@ -21574,47 +21075,14 @@ FIX ME material_used has to be initialized
             stop
            endif
 
-           critical_material=0
-           do im=1,num_materials
-            vofcomp=(im-1)*ngeom_recon+1
+           call derive_critical_material( &
+             mofdatalocal, &
+             mofdatasave, &
+             material_used, &
+             is_masked, &
+             critical_material, &
+             sdim)
 
-            if (is_masked(im).eq.0) then
-             testflag=NINT(mofdatalocal(vofcomp+sdim+1)) !"progress"
-             testflag_save=NINT(mofdatasave(vofcomp+sdim+1)) !original
-             if ((testflag_save.ge.1).and. & !old_flag=processed
-                 (testflag_save.le.num_materials)) then
-   
-              if ((testflag.eq.0).and. &
-                  (material_used(im).eq.0)) then
-
-               critical_material=im
-
-              else if ((testflag.ge.1).and. &
-                       (testflag.le.num_materials).and. &
-                       (material_used(im).ge.1).and. &
-                       (material_used(im).le.num_materials)) then
-               !do nothing
-              else
-               print *,"testflag invalid ",testflag
-               print *,"or material_used invalid: ",material_used
-               stop
-              endif
- 
-             else if (testflag_save.eq.0) then ! old flag=unprocessed
-              ! do nothing
-             else
-              print *,"testflag_save invalid? ",testflag_save
-              stop         
-             endif 
-            else if (is_masked(im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_masked invalid (multi_get_volume_grid_and_map) ", &
-               im,is_masked(im)
-             stop
-            endif
-           enddo ! im=1..num_materials
-         
            if ((critical_material.ge.1).and. &
                (critical_material.le.num_materials)) then        
             vofcomp=(critical_material-1)*ngeom_recon+1
@@ -22073,8 +21541,6 @@ FIX ME material_used has to be initialized
       integer critical_material 
       integer fastflag
       integer vofcomp
-      integer testflag
-      integer testflag_save
       real(amrex_real) remaining_vfrac
       integer at_least_one( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -22749,7 +22215,8 @@ FIX ME material_used has to be initialized
           !determine the next ("minus") material to be subtracted.
           critical_material=0
 
-          if ((single_material.gt.0).and. &
+          if ((single_material.ge.1).and. &
+              (single_material.le.num_materials).and. &
               (remaining_vfrac.le.EPS_FULL_WEAK)) then
 
            !we leave critical_material==0 since the "pair" variables
@@ -22783,47 +22250,13 @@ FIX ME material_used has to be initialized
           else if ((single_material.eq.0).or. &
                    (remaining_vfrac.ge.EPS_FULL_WEAK)) then
 
-           do im=1,num_materials
-            vofcomp=(im-1)*ngeom_recon+1
-
-            if (is_masked(im).eq.0) then
-             !"orders" for mofdataproject_minus are initialized to zero.
-             !Then, one by one, the "orders" of mofdataproject_minus
-             !are replaced with "material_used." (see above)
-             testflag=NINT(mofdataproject_minus(vofcomp+sdim+1))
-             testflag_save=NINT(mofdatavalid_minus(vofcomp+sdim+1))
-             if ((testflag_save.ge.1).and. &
-                 (testflag_save.le.num_materials)) then
-
-              if ((testflag.eq.0).and. &
-                  (material_used(im).eq.0)) then
-               critical_material=im
-              else if ((testflag.ge.1).and. &
-                       (testflag.le.num_materials).and. &
-                       (material_used(im).ge.1).and. &
-                       (material_used(im).le.num_materials)) then
-               !do nothing
-              else
-               print *,"testflag invalid ",testflag
-               print *,"or material_used invalid: ",material_used
-               stop
-              endif
-
-             else if (testflag_save.eq.0) then ! old flag=unprocessed
-              ! do nothing
-             else
-              print *,"testflag_save invalid? ",testflag_save
-              stop         
-             endif 
-            else if (is_masked(im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_masked invalid (multi_get_volume_grid) ", &
-               im,is_masked(im)
-             stop
-            endif
-
-           enddo ! im=1..num_materials
+           call  derive_critical_material( &
+             mofdataproject_minus, &
+             mofdatavalid_minus, &
+             material_used, &
+             is_masked, &
+             critical_material, &
+             sdim)
 
            !"critical_material" is the next material to be subtracted
            !from the "minus" side.
