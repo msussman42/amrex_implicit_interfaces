@@ -22250,7 +22250,7 @@ contains
           else if ((single_material.eq.0).or. &
                    (remaining_vfrac.ge.EPS_FULL_WEAK)) then
 
-           call  derive_critical_material( &
+           call derive_critical_material( &
              mofdataproject_minus, &
              mofdatavalid_minus, &
              material_used, &
