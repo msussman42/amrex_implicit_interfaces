@@ -16729,6 +16729,14 @@ contains
           test_order=NINT(mofdata(vofcomp+sdim+1))
           if ((test_order.ge.1).and. &
               (test_order.le.at_least_one(layer_iter))) then
+           if (material_used(imaterial).eq.test_order) then
+            !do nothing
+           else
+            print *,"material_used invalid ",material_used
+            print *,"imaterial= ",imaterial
+            print *,"test_order= ",test_order
+            stop
+           endif
            if (order_sanity(test_order).eq.0) then
             order_sanity(test_order)=imaterial
            else
@@ -18441,6 +18449,7 @@ contains
       integer, intent(in) :: material_used(num_materials)
       integer, intent(in) :: is_masked(num_materials)
       integer im,vofcomp,testflag,testflag_save
+      integer vofcomp_compare,testflag_compare
 
       critical_material=0
       do im=1,num_materials
@@ -18455,7 +18464,70 @@ contains
          if ((testflag.eq.0).and. &
              (material_used(im).eq.0)) then
 
-          critical_material=im
+          if (critical_material.eq.0) then
+           critical_material=im
+          else if ((critical_material.ge.1).and. &
+                   (critical_material.le.num_materials)) then
+           vofcomp_compare=(critical_material-1)*ngeom_recon+1
+           testflag_compare=NINT(mofdatasave(vofcomp_compare+sdim+1))
+           if ((testflag_compare.ge.1).and. &
+               (testflag_compare.le.num_materials)) then
+            if (is_rigid(critical_material).eq.1) then
+             if (is_rigid(im).eq.1) then
+              if (testflag_save.lt.testflag_compare) then
+               critical_material=im
+              endif
+             else if (is_rigid(im).eq.0) then
+              !do nothing
+             else
+              print *,"is_rigid(im) invalid ",im,is_rigid(im)
+              stop
+             endif
+            else if (is_elastic(critical_material).eq.1) then
+             if (is_rigid(im).eq.1) then
+              critical_material=im
+             else if (is_elastic(im).eq.1) then
+              if (testflag_save.lt.testflag_compare) then
+               critical_material=im
+              endif
+             else if ((is_elastic(im).eq.0).and. &
+                      (is_rigid(im).eq.0)) then
+              !do nothing
+             else
+              print *,"is_elastic(im) invalid ",im,is_elastic(im)
+              print *,"or is_rigid(im) invalid ",im,is_rigid(im)
+              stop
+             endif
+            else if ((is_rigid(critical_material).eq.0).and. &
+                     (is_elastic(critical_material).eq.0)) then
+             if ((is_rigid(im).eq.1).or. &
+                 (is_elastic(im).eq.1)) then
+              critical_material=im
+             else if ((is_rigid(im).eq.0).and. &
+                      (is_elastic(im).eq.0)) then
+              if (testflag_save.lt.testflag_compare) then
+               critical_material=im
+              endif
+             else
+              print *,"is_elastic(im) invalid ",im,is_elastic(im)
+              print *,"or is_rigid(im) invalid ",im,is_rigid(im)
+              stop
+             endif
+            else
+             print *,"is_elastic(critical_material) invalid ", &
+               critical_material,is_elastic(critical_material)
+             print *,"or is_rigid(critical_material) invalid ", &
+               critical_material,is_rigid(critical_material)
+             stop
+            endif
+           else
+            print *,"testflag_compare invalid ",testflag_compare
+            stop
+           endif
+          else
+           print *,"critical_material invalid ",critical_material
+           stop
+          endif
 
          else if ((testflag.ge.1).and. &
                   (testflag.le.num_materials).and. &
@@ -19585,11 +19657,11 @@ contains
              ! the compliment of materials already processed.
 
             else 
-             print *,"fastflag invalid multi get volume grid: ",fastflag
+             print *,"fastflag bad multi_get_volume_grid_simple: ",fastflag
              stop
             endif
 
-            call derive_critical_material( &
+            call derive_critical_material( & !multi_get_volume_grid_simple
              mofdatalocal, &
              mofdatasave, &
              material_used, &
@@ -20403,7 +20475,7 @@ contains
              stop
             endif
 
-            call derive_critical_material( &
+            call derive_critical_material( & !multi_get_volume_grid
              mofdatalocal, &
              mofdatasave, &
              material_used, &
@@ -22281,7 +22353,7 @@ contains
           else if ((single_material.eq.0).or. &
                    (remaining_vfrac.ge.EPS_FULL_WEAK)) then
 
-           call derive_critical_material( &
+           call derive_critical_material( & !multi_get_area_pairs
              mofdataproject_minus, &
              mofdatavalid_minus, &
              material_used, &
