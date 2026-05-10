@@ -16599,13 +16599,13 @@ contains
           is_masked)
 
         loop_counter=0
-        do while ((loop_counter.lt. &
-                   local_num_materials(layer_iter)).and. &
-                  (num_processed(layer_iter).lt. &
-                   local_num_materials(layer_iter)).and. &
-                  (uncaptured_volume_vof(layer_iter).gt.zero).and. &
-                  (uncaptured_volume_fraction(layer_iter).gt. &
-                   one-vfrac_sum_local(layer_iter)))
+        do while (continue_material_processing( &
+              loop_counter, &
+              local_num_materials(layer_iter), &
+              num_processed(layer_iter), &
+              uncaptured_volume_fraction(layer_iter), &
+              vfrac_sum_local(layer_iter), &
+              uncaptured_volume_vof(layer_iter)).eq.1) 
 
          call check_for_single_material( & !multimaterial_MOF
            single_material, &
@@ -16703,12 +16703,7 @@ contains
          endif
 
          loop_counter=loop_counter+1
-        enddo !while 
-             ! loop_counter<local_num_materials(layer_iter) and
-             ! num_processed(layer_iter)<local_num_materials(layer_iter) and
-             ! uncaptured_volume_fraction(layer_iter)>
-             !  1-vfrac_sum_local(layer_iter) and
-             ! uncaptured_volume_vof(layer_iter)>0 
+        enddo !while continue_material_processing==1
 
        else if ((at_least_one(layer_iter).eq.0).or. &
                 (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -18710,6 +18705,57 @@ contains
       return 
       end subroutine advance_uncaptured_vars
 
+      integer function continue_material_processing( &
+           loop_counter, &
+           local_num_materials, &
+           num_processed, &
+           uncaptured_volume_fraction, &
+           vfrac_sum_local, &
+           uncaptured_volume)
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, intent(in) :: loop_counter
+      integer, intent(in) :: local_num_materials
+      integer, intent(in) :: num_processed
+      real(amrex_real), intent(in) :: uncaptured_volume_fraction
+      real(amrex_real), intent(in) :: vfrac_sum_local
+      real(amrex_real), intent(in) :: uncaptured_volume
+
+      if ((loop_counter.ge.0).and. &
+          (loop_counter.lt. &
+           local_num_materials).and. &
+          (num_processed.ge.0).and. &
+          (num_processed.lt. &
+           local_num_materials).and. &
+          (uncaptured_volume_fraction.le.one).and. &
+          ((one-VOFTOL)* &
+           uncaptured_volume_fraction.gt. &
+           one-vfrac_sum_local).and. &
+          (uncaptured_volume.gt.zero)) then
+       continue_material_processing=1
+      else if ((loop_counter.eq.local_num_materials).or. &
+               (num_processed.eq.local_num_materials).or. &
+               ((one-VOFTOL)* &
+                uncaptured_volume_fraction.le. &
+                one-vfrac_sum_local).or. &
+               (uncaptured_volume.eq.zero)) then
+       continue_material_processing=0
+      else
+       print *,"continue_material_processing parameters invalid"
+       print *,"loop_counter ",loop_counter
+       print *,"local_num_materials ",local_num_materials
+       print *,"num_processed ",num_processed
+       print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
+       print *,"vfrac_sum_local ",vfrac_sum_local
+       print *,"uncaptured_volume ",uncaptured_volume
+       stop
+      endif
+
+      end function continue_material_processing
 
       subroutine check_for_single_material( &
          single_material, &
@@ -19434,13 +19480,13 @@ contains
            !uncaptured_volume_fraction(layer_iter) initialized to 1.0
            !for all "layer_iter"
           loop_counter=0
-          do while ((loop_counter.lt. &
-                     local_num_materials(layer_iter)).and. &
-                    (num_processed(layer_iter).lt. &
-                     local_num_materials(layer_iter)).and. &
-                    (uncaptured_volume_fraction(layer_iter).gt. &
-                     one-vfrac_sum_local(layer_iter)).and. &
-                    (uncaptured_volume(layer_iter).gt.zero)) 
+          do while (continue_material_processing( &
+                loop_counter, &
+                local_num_materials(layer_iter), &
+                num_processed(layer_iter), &
+                uncaptured_volume_fraction(layer_iter), &
+                vfrac_sum_local(layer_iter), &
+                uncaptured_volume(layer_iter)).eq.1) 
 
            call check_for_single_material( & !multi_get_volume_grid_simple
             single_material, &
@@ -19644,12 +19690,7 @@ contains
            endif
 
            loop_counter=loop_counter+1
-          enddo  ! while 
-           ! loop_counter<local_num_materials(layer_iter) and
-           ! num_processed(layer_iter)<local_num_materials(layer_iter) and
-           ! uncaptured_volume_fraction(layer_iter)>
-           !  1-vfrac_sum_local(layer_iter) and
-           ! uncaptured_volume(layer_iter)>0 
+          enddo !while continue_material_processing==1
 
          else if ((at_least_one(layer_iter).eq.0).or. &
                   (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -20231,13 +20272,13 @@ contains
            !uncaptured_volume_fraction(layer_iter) initialized to 1.0
            !for all "layer_iter"
           loop_counter=0
-          do while ((loop_counter.lt. &
-                     local_num_materials(layer_iter)).and. &
-                    (num_processed(layer_iter).lt. &
-                     local_num_materials(layer_iter)).and. &
-                    (uncaptured_volume_fraction(layer_iter).gt. &
-                     one-vfrac_sum_local(layer_iter)).and. &
-                    (uncaptured_volume(layer_iter).gt.zero)) 
+          do while (continue_material_processing( &
+                loop_counter, &
+                local_num_materials(layer_iter), &
+                num_processed(layer_iter), &
+                uncaptured_volume_fraction(layer_iter), &
+                vfrac_sum_local(layer_iter), &
+                uncaptured_volume(layer_iter)).eq.1) 
 
            call check_for_single_material( & !multi_get_volume_grid
             single_material, &
@@ -20467,12 +20508,7 @@ contains
            endif
 
            loop_counter=loop_counter+1
-          enddo  ! while 
-             ! loop_counter<local_num_materials(layer_iter) and
-             ! num_processed(layer_iter)<local_num_materials(layer_iter) and
-             ! uncaptured_volume_fraction(layer_iter)>
-             !  1-vfrac_sum_local(layer_iter) and
-             ! uncaptured_volume(layer_iter)>0 
+          enddo !while continue_material_processing==1
 
          else if ((at_least_one(layer_iter).eq.0).or. &
                   (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -20963,13 +20999,13 @@ contains
           !uncaptured_volume_fraction(layer_iter) initialized to 1.0
           !for all "layer_iter"
          loop_counter=0
-         do while ((loop_counter.lt. &
-                    local_num_materials(layer_iter)).and. &
-                   (num_processed(layer_iter).lt. &
-                    local_num_materials(layer_iter)).and. &
-                   (uncaptured_volume_fraction(layer_iter).gt. &
-                    one-vfrac_sum_local(layer_iter)).and. &
-                   (uncaptured_volume(layer_iter).gt.zero)) 
+         do while (continue_material_processing( &
+               loop_counter, &
+               local_num_materials(layer_iter), &
+               num_processed(layer_iter), &
+               uncaptured_volume_fraction(layer_iter), &
+               vfrac_sum_local(layer_iter), &
+               uncaptured_volume(layer_iter)).eq.1) 
 
           call check_for_single_material( & !multi_get_volume_grid_and_map
             single_material, &
@@ -21200,12 +21236,7 @@ contains
           endif
 
           loop_counter=loop_counter+1
-         enddo  ! while 
-                ! loop_counter<local_num_materials(layer_iter) and
-                ! num_processed(layer_iter)<local_num_materials(layer_iter) and
-                ! uncaptured_volume_fraction(layer_iter)>
-                !  1-vfrac_sum_local(layer_iter) and
-                ! uncaptured_volume(layer_iter)>0 
+         enddo !while continue_material_processing==1
 
         else if ((at_least_one(layer_iter).eq.0).or. &
                  (vfrac_sum_local(layer_iter).eq.zero)) then
@@ -21978,13 +22009,13 @@ contains
 
          loop_counter=0
 
-         do while ((loop_counter.lt. &
-                    local_num_materials(layer_iter)).and. &
-                   (num_processed(layer_iter).lt. &
-                    local_num_materials(layer_iter)).and. &
-                   (uncaptured_volume_fraction(layer_iter).gt. &
-                    one-vfrac_sum_local(layer_iter)).and. &
-                   (uncaptured_volume(layer_iter).gt.zero)) 
+         do while (continue_material_processing( &
+               loop_counter, &
+               local_num_materials(layer_iter), &
+               num_processed(layer_iter), &
+               uncaptured_volume_fraction(layer_iter), &
+               vfrac_sum_local(layer_iter), &
+               uncaptured_volume(layer_iter)).eq.1) 
 
           if (layer_iter.eq.FLUID_LAYER_INDEX) then
            !do nothing
@@ -22338,12 +22369,7 @@ contains
           endif
 
           loop_counter=loop_counter+1
-         enddo  ! while 
-             ! loop_counter<local_num_materials(layer_iter) and
-             ! num_processed(layer_iter)<local_num_materials(layer_iter) and
-             ! uncaptured_volume_fraction(layer_iter)>
-             !  1-vfrac_sum_local(layer_iter) and
-             ! uncaptured_volume(layer_iter)>0 
+         enddo !while continue_material_processing==1
 
          if ((critical_material.ge.1).and. &
              (critical_material.le.num_materials)) then        
