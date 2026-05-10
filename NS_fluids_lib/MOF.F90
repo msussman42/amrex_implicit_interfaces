@@ -18604,14 +18604,14 @@ contains
         ! modify the uncaptured regions to recognize the presence
         ! of the is_rigid==1 materials.
         uncaptured_volume(layer_iter)= &
-            uncaptured_volume(layer_iter+1)
-        uncaptured_volume(layer_iter-1)= &
-            uncaptured_volume(layer_iter+1)
+            uncaptured_volume(RIGID_LAYER_INDEX)
+        uncaptured_volume(FLUID_LAYER_INDEX)= &
+            uncaptured_volume(RIGID_LAYER_INDEX)
         do dir=1,sdim
          uncaptured_centroid(layer_iter,dir)= &
-             uncaptured_centroid(layer_iter+1,dir)
-         uncaptured_centroid(layer_iter-1,dir)= &
-             uncaptured_centroid(layer_iter+1,dir)
+             uncaptured_centroid(RIGID_LAYER_INDEX,dir)
+         uncaptured_centroid(FLUID_LAYER_INDEX,dir)= &
+             uncaptured_centroid(RIGID_LAYER_INDEX,dir)
         enddo
         if (tessellate_source.eq.TESSELLATE_FLUIDS) then
          !do nothing
@@ -18623,16 +18623,16 @@ contains
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
         ! do nothing (is_rigid_local(im)=0 for all materials)
         if (uncaptured_volume(layer_iter).eq. &
-            uncaptured_volume(layer_iter+1)) then
+            uncaptured_volume(RIGID_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         print *,"expecting uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
          stop
         endif
-        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+        if (uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         print *,"expecting uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -18655,16 +18655,16 @@ contains
        else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
         ! do nothing (is_rigid_local(im)=1 materials all zapped out)
         if (uncaptured_volume(layer_iter).eq. &
-            uncaptured_volume(layer_iter+1)) then
+            uncaptured_volume(RIGID_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         print *,"expecting uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
          stop
         endif
-        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+        if (uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         print *,"expecting uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one"
          stop
         endif
         if ((tessellate_source.eq.TESSELLATE_FLUIDS).or. &
@@ -18701,10 +18701,10 @@ contains
                 (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC)) then
 
         uncaptured_volume(layer_iter)= &
-              uncaptured_volume(layer_iter+1)
+              uncaptured_volume(ELASTIC_LAYER_INDEX)
         do dir=1,sdim
          uncaptured_centroid(layer_iter,dir)= &
-            uncaptured_centroid(layer_iter+1,dir)
+            uncaptured_centroid(ELASTIC_LAYER_INDEX,dir)
         enddo
         if ((tessellate_source.eq.TESSELLATE_FLUIDS).or. &
             (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC)) then
@@ -18720,16 +18720,16 @@ contains
        else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
         ! do nothing (is_rigid_local(im)=0 for all materials)
         if (uncaptured_volume(layer_iter).eq. &
-            uncaptured_volume(layer_iter+1)) then
+            uncaptured_volume(ELASTIC_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         print *,"expecting uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
          stop
         endif
-        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+        if (uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         print *,"expecting uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -18744,16 +18744,16 @@ contains
         ! do nothing; uncaptured_volume_fluid remains to represent
         ! the original uncaptured space.
         if (uncaptured_volume(layer_iter).eq. &
-            uncaptured_volume(layer_iter+1)) then
+            uncaptured_volume(ELASTIC_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(layer_iter+1)"
+         print *,"expecting uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
          stop
         endif
-        if (uncaptured_volume_fraction(layer_iter+1).eq.one) then
+        if (uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(layer_iter+1).eq.one"
+         print *,"expecting uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
