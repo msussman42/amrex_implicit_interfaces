@@ -3060,9 +3060,9 @@ NavierStokes::read_params ()
     if (continuous_mof==2) {
      amrex::Error("continuous_mof==2 is an anachronism, set to 1");
     } else if (continuous_mof==STANDARD_MOF) {
-     //do nothing
+     update_centroid_after_recon=0;
     } else if (continuous_mof==CMOF_X) {
-     //do nothing
+     update_centroid_after_recon=1;
     } else
      amrex::Error("continuous_mof invalid");
 
@@ -3074,6 +3074,7 @@ NavierStokes::read_params ()
 #endif
 
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
+
     if (update_centroid_after_recon==0) {
      //do nothing
     } else if (update_centroid_after_recon==1) {
@@ -3082,8 +3083,10 @@ NavierStokes::read_params ()
 #ifdef AMREX_PARTICLES
       amrex::Error("expecting update_centroid_after_recon=0 if particles");
 #endif
-     } else
+     } else if (continuous_mof==STANDARD_MOF) {
       amrex::Error("expecting update_centroid_after_recon=0");
+     } else
+      amrex::Error("continuous_mof invalid");
 
     } else
      amrex::Error("expecting update_centroid_after_recon=0 or 1");
