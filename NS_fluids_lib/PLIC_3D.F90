@@ -140,9 +140,11 @@ stop
 
       integer im
       real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_extended(num_materials*ngeom_recon)
       real(amrex_real) mofdata_super(num_materials*ngeom_recon)
       real(amrex_real) mofdata_super_vfrac(num_materials*ngeom_recon)
       real(amrex_real) vof_super(num_materials)
+      real(amrex_real) vof_extended(num_materials)
       real(amrex_real) mofsten(num_materials*ngeom_recon)
       real(amrex_real) multi_centroidA(num_materials,SDIM)
 
@@ -166,8 +168,12 @@ stop
      
       integer klosten,khisten
       integer, parameter :: nhalf=3
+      integer, parameter :: nhalf_extend=7
 
+      integer ihalf
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_extended(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_temp(-nhalf_extend:nhalf_extend,SDIM)
       real(amrex_real) xstencil_point(SDIM)
 
       real(amrex_real) xstenbox(-1:1,SDIM)
@@ -237,7 +243,7 @@ stop
       debugslope=0
 
       if (bfact.lt.1) then
-       print *,"bfact invalid170"
+       print *,"bfact invalid fort_sloperecon ",bfact
        stop
       endif
 
@@ -422,7 +428,7 @@ stop
            if (imask.eq.0) then
             ! do nothing
            else
-            print *,"expecting imask=0"
+            print *,"expecting imask=0 ",imask
             stop
            endif
           else if (vofbc(dir,side).eq.FOEXTRAP) then
@@ -430,7 +436,7 @@ stop
            if (imask.eq.0) then
             ! do nothing
            else
-            print *,"expecting imask=0"
+            print *,"expecting imask=0 ",imask
             stop
            endif
           else if (vofbc(dir,side).eq.EXT_DIR) then
@@ -462,7 +468,7 @@ stop
           if (imask.eq.1) then
            ! do nothing
           else
-           print *,"expecting imask=1"
+           print *,"expecting imask=1 ",imask
            stop
           endif
          else
@@ -485,6 +491,32 @@ stop
         stop
        endif
 
+       call gridsten_level(xsten_temp,i,j,k,level,nhalf_extend)
+       do dir=1,SDIM
+        do ihalf=1,nhalf
+         xsten_extended(ihalf,dir)=xsten_temp(2*ihalf+1,dir)
+         xsten_extended(-ihalf,dir)=xsten_temp(-(2*ihalf+1),dir)
+        enddo
+        xsten_extended(0,dir)=xsten_temp(0,dir)
+        if (dir.eq.1) then
+         if (i.eq.0) then
+          if (xsten_temp(-2,dir).lt.zero) then
+           if ((levelrz.eq.COORDSYS_RZ).or. &
+               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+            xsten_extended(-3,dir)=xsten_temp(-5,dir)
+            xsten_extended(-2,dir)=xsten_temp(-3,dir)
+            xsten_extended(-1,dir)=zero
+            xsten_extended(0,dir)=half*xsten_temp(3,dir)
+           else if (levelrz.eq.COORDSYS_CARTESIAN) then
+            !do nothing
+           else
+            print *,"levelrz invalid fort_sloperecon"
+            stop
+           endif
+          endif !xsten_temp(-2,dir)<0?
+         endif !i=0?
+        endif !dir=1?
+       enddo !dir=1,sdim
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir=1,SDIM
         xstencil_point(dir)=xsten(0,dir)
@@ -518,11 +550,11 @@ stop
         else if ((mofdata(vofcomprecon).lt.-0.1d0).or. &
                  (mofdata(vofcomprecon).gt.1.1d0)) then
          print *,"mofdata(vofcomprecon) out of range"
-         print *,"mofdata(vofcomprecon)=",mofdata(vofcomprecon)
+         print *,"mofdata=",mofdata
          stop
         else
          print *,"mofdata(vofcomprecon) is NaN"
-         print *,"mofdata(vofcomprecon)=",mofdata(vofcomprecon)
+         print *,"mofdata=",mofdata
          stop
         endif
 
@@ -680,8 +712,10 @@ stop
 
         do im=1,num_materials*ngeom_recon
          mofdata_super(im)=mofdata(im)
+         mofdata_extended(im)=mofdata(im)
         enddo
 
+         !center cell
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
@@ -731,11 +765,18 @@ stop
 
          do im=1,num_materials
 
+          vofcomprecon=(im-1)*ngeom_recon+1
+
+          do dir=0,SDIM
+           mofdata_extended(vofcomprecon+dir)=zero
+          enddo
+
+          vof_extended(im)=zero
+
           if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
            ! do nothing
           else if ((is_rigid(im).eq.0).and. &
                    (is_elastic(im).eq.0)) then
-           vofcomprecon=(im-1)*ngeom_recon+1
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=zero
            enddo
@@ -864,12 +905,25 @@ stop
            stop
           endif
 
-          if (mod_cmofsten.eq.0) then
-
-           volume_super=volume_super+volsten
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+           volmat=volsten*vfrac_local(im)
            do dir=1,SDIM
-            cen_super(dir)=cen_super(dir)+volsten*censten(dir)
-           enddo
+            mofdata_extended(vofcomprecon+dir)= &
+                mofdata_extended(vofcomprecon+dir)+ &
+                volmat*(censten(dir)+mofsten(vofcomprecon+dir))
+           enddo ! dir
+           mofdata_extended(vofcomprecon)= &
+             mofdata_extended(vofcomprecon)+volmat
+           vof_extended(im)=vof_extended(im)+volmat
+          enddo ! im=1..num_materials
+
+          volume_super=volume_super+volsten
+          do dir=1,SDIM
+           cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+          enddo
+
+          if (mod_cmofsten.eq.0) then
 
            do im=1,num_materials
 
@@ -926,6 +980,26 @@ stop
 
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
+
+          if (vof_extended(im).gt.zero) then
+           do dir=1,SDIM
+            mofdata_extended(vofcomprecon+dir)= &
+              mofdata_extended(vofcomprecon+dir)/ &
+              vof_extended(im)- &
+              cen_super(dir)
+           enddo
+           vof_extended(im)=vof_extended(im)/volume_super
+           mofdata_extended(vofcomprecon)= &
+              mofdata_extended(vofcomprecon)/volume_super
+          else if (vof_extended(im).eq.zero) then
+           do dir=0,SDIM
+            mofdata_extended(vofcomprecon+dir)=zero
+           enddo
+           vof_extended(im)=zero
+          else
+           print *,"vof_extended invalid ",vof_extended
+           stop
+          endif
 
            ! always standard MOF centroid for the rigid materials.
           if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
