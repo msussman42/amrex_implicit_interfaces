@@ -6257,7 +6257,6 @@ end subroutine volume_sanity_check
        nlist, &
        nmax, &
        use_super_cell, &
-       cmofsten, &
        sdim)
       use probcommon_module
       IMPLICIT NONE
@@ -6269,7 +6268,6 @@ end subroutine volume_sanity_check
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: use_super_cell
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer isten
       integer, PARAMETER :: nhalf2=1
       integer, INTENT(out) :: nlist
@@ -6356,8 +6354,6 @@ end subroutine volume_sanity_check
        do j1=-1,1
        do i1=-1,1
 
-        if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-
          do isten=-1,1
           xsten2(isten,1)=xsten0(isten+2*i1,1)
           xsten2(isten,2)=xsten0(isten+2*j1,2)
@@ -6399,12 +6395,6 @@ end subroutine volume_sanity_check
           enddo
          enddo  ! nn
           
-        else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-         ! do nothing
-        else
-         print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-         stop
-        endif
        enddo
        enddo
        enddo ! i1,j1,k1
@@ -7524,14 +7514,12 @@ end subroutine volume_sanity_check
 
 
       subroutine Box_volume_super( &
-       cmofsten, &
        bfact,dx,xsten0,nhalf0, &
        volume,centroid,sdim)
       use probcommon_module
       IMPLICIT NONE
 
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact,nhalf0
       integer, PARAMETER :: nhalf2=1
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
@@ -7572,8 +7560,6 @@ end subroutine volume_sanity_check
       do j1=-1,1
       do i1=-1,1
  
-       if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-
         do isten=-1,1
          xsten2(isten,1)=xsten0(isten+2*i1,1)
          xsten2(isten,2)=xsten0(isten+2*j1,2)
@@ -7588,12 +7574,6 @@ end subroutine volume_sanity_check
         do dir=1,sdim
          centroid(dir)=centroid(dir)+censten(dir)*volsten
         enddo
-       else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-        ! do nothing
-       else
-        print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-        stop
-       endif
 
       enddo
       enddo
@@ -9253,7 +9233,6 @@ contains
         ff,slope, &
         intercept, & !intent(in)
         continuous_mof, &
-        cmofsten, &
         arean, &
         vtarget, &
         xtetlist, & !intent(in)
@@ -9270,7 +9249,6 @@ contains
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: nlist,nmax,fastflag
       real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
@@ -9323,7 +9301,6 @@ contains
          sdim)
       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        call Box_volume_super( &
-        cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         volcell, &
         cencell, &
@@ -9473,7 +9450,6 @@ contains
        slope, &
        intercept, &
        continuous_mof, &
-       cmofsten, &
        xtetlist, & !intent(in)
        nlist_alloc, & !intent(in)
        nlist, & !intent(in)
@@ -9495,7 +9471,6 @@ contains
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in):: nlist
       integer, INTENT(in):: nlist_alloc
@@ -9611,7 +9586,6 @@ contains
         sdim)
       else if (continuous_mof.eq.CMOF_F_AND_X) then 
        call Box_volume_super( &
-        cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         volcell, &
         cencell, &
@@ -9785,7 +9759,6 @@ contains
         fc_default,slope, &
         intercept_default, & !intent(in)
         continuous_mof, &
-        cmofsten, &
         arean_default,vtarget, &
         xtetlist, & !intent(in)
         nlist_alloc, &
@@ -9822,7 +9795,6 @@ contains
           fc,slope, &
           intercept, & !intent(in)
           continuous_mof, &
-          cmofsten, &
           arean, &
           vtarget, &
           xtetlist, & !intent(in)
@@ -9898,7 +9870,6 @@ contains
               fa,slope, &
               aa, & !intent(in)
               continuous_mof, &
-              cmofsten, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, &
@@ -9911,7 +9882,6 @@ contains
               fb,slope, &
               bb, & !intent(in)
               continuous_mof, &
-              cmofsten, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, &
@@ -9941,7 +9911,6 @@ contains
               fc,slope, &
               intercept, & !intent(in)
               continuous_mof, &
-              cmofsten, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, & 
@@ -10009,7 +9978,6 @@ contains
             fc,slope, &
             intercept, & !intent(in)
             continuous_mof, &
-            cmofsten, &
             arean,vtarget, &
             xtetlist, & !intent(in)
             nlist_alloc, &
@@ -10665,7 +10633,6 @@ contains
         refcentroid, & !relative to supercell centroid
         refvfrac, &
         continuous_mof, &
-        cmofsten, &
         angle, & !intent(in)
         ff, & !intent(out)
         intercept, & !intent(inout)
@@ -10694,7 +10661,6 @@ contains
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: use_MilcentLemoine
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0
@@ -10893,20 +10859,17 @@ contains
          cencell_vof, &
          sdim)
         call Box_volume_super( &
-         cmofsten, &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen, &
          cencell_cen, &
          sdim)
       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
         call Box_volume_super( &
-         cmofsten, &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
          cencell_vof, &
          sdim)
         call Box_volume_super( &
-         cmofsten, &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen, &
          cencell_cen, &
@@ -10949,7 +10912,6 @@ contains
         nslope, &  ! intent(in)
         intercept(1), & ! intent(inout)
         continuous_mof, &
-        cmofsten, &
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
@@ -11074,8 +11036,6 @@ contains
          do j1=-1,1
          do i1=-1,1
 
-          if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-
            do isten=-1,1
             xsten2(isten,1)=xsten0(isten+2*i1,1)
             xsten2(isten,2)=xsten0(isten+2*j1,2)
@@ -11097,13 +11057,6 @@ contains
            do dir=1,sdim
             testcen(dir)=testcen(dir)+volsten*censten(dir)
            enddo
-
-          else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-           ! do nothing
-          else
-           print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-           stop
-          endif
 
          enddo
          enddo
@@ -11329,7 +11282,6 @@ contains
           nslope, &  ! intent(in)
           intercept(1), & ! intent(inout)
           continuous_mof, &
-          cmofsten, &
           xtetlist_vof, & !intent(in)
           nlist_alloc, &
           nlist_vof, &
@@ -11641,7 +11593,6 @@ contains
         xsten0,nhalf0, &
         refvfrac, & !intent(in)
         continuous_mof, & 
-        cmofsten, &
         xtetlist_vof, & !intent(in)
         xtetlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
@@ -11664,7 +11615,6 @@ contains
       integer :: nEQN_standard
 
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
@@ -11791,7 +11741,6 @@ contains
        refcentroid, & !relative to supercell centroid(CMOF)
        refvfrac, &
        continuous_mof, & ! = 0 or 1
-       cmofsten, &
        angle_init_local, & ! INTENT(in)
        f_placeholder, & ! INTENT(out); ||xref-xact||
         !INTENT(out)
@@ -11854,7 +11803,6 @@ contains
         refvfrac, &
         npredict, &
         continuous_mof, &
-        cmofsten, &
         nslope,intercept, &
         xtetlist_vof, & !intent(in)
         nlist_vof, &  !intent(in)
@@ -11891,7 +11839,6 @@ contains
       integer, INTENT(in) :: grid_index(sdim)
       integer, INTENT(in) :: grid_level
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nlist_vof
@@ -11989,7 +11936,6 @@ contains
       real(amrex_real) magLS
 
       integer ksten_low,ksten_high
-      integer i1,j1,k1
       integer mof_stencil_ok
       integer grid_index_ML(sdim)
       integer iML,jML,kML,cmofML
@@ -12429,21 +12375,6 @@ contains
              stop
             endif
 
-            do k1=ksten_low,ksten_high
-            do j1=-1,1
-            do i1=-1,1
-             if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-              ! do nothing
-             else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-              mof_stencil_ok=0
-             else
-              print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-              stop
-             endif
-            enddo
-            enddo
-            enddo ! i1,j1,k1
-
            else
             print *,"continuous_mof invalid: ",continuous_mof
             stop
@@ -12536,21 +12467,6 @@ contains
              print *,"sdim invalid"
              stop
             endif
-
-            do k1=ksten_low,ksten_high
-            do j1=-1,1
-            do i1=-1,1
-             if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-              ! do nothing
-             else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-              mof_stencil_ok=0
-             else
-              print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-              stop
-             endif
-            enddo
-            enddo
-            enddo ! i1,j1,k1
 
            else
             print *,"continuous_mof invalid: ",continuous_mof
@@ -12673,7 +12589,6 @@ contains
         refcentroid, &
         refvfrac, &
         continuous_mof, &
-        cmofsten, &
         angle_init, &
         finit, &
         intercept_init, &
@@ -12839,7 +12754,6 @@ contains
          refcentroid, &
          refvfrac, &
          continuous_mof, &
-         cmofsten, &
          angle_plus, & !intent(in)
          fp, & !intent(out)
          local_int, & !intent(inout)
@@ -12883,7 +12797,6 @@ contains
          nmax, &
          refcentroid,refvfrac, &
          continuous_mof, &
-         cmofsten, &
          angle_minus, & !intent(in)
          fm, & !intent(out)
          local_int, & !intent(inout)
@@ -13049,7 +12962,6 @@ contains
          refcentroid, &
          refvfrac, &
          continuous_mof, &
-         cmofsten, &
          angle_gauss_newton, & !intent(in)
          f_gauss_newton, & !intent(out)
          int_gauss_newton, & !intent(inout)
@@ -13099,7 +13011,6 @@ contains
          refcentroid, &
          refvfrac, &
          continuous_mof, &
-         cmofsten, &
          angle_steepest, & !intent(in)
          f_steepest, & !intent(out)
          int_steepest, &  !intent(inout)
@@ -13322,7 +13233,6 @@ contains
         nslope, &
         intercept(1), &
         continuous_mof, &
-        cmofsten, &
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
@@ -13555,7 +13465,6 @@ contains
         uncaptured_volume_cen, &
         multi_centroidA, &
         continuous_mof, &
-        cmofsten, &
         sdim)
 
       use probcommon_module
@@ -13576,7 +13485,6 @@ contains
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       real(amrex_real), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer dir
       integer i_stencil_node
       integer, INTENT(in) :: nmax
@@ -13756,7 +13664,6 @@ contains
         cencell_vof, &
         sdim)
        call Box_volume_super( &
-         cmofsten, &
          bfact,dx, &
          xsten0,nhalf0, &
          volcell_cen, &
@@ -13765,14 +13672,12 @@ contains
 
       else if (continuous_mof.eq.CMOF_F_AND_X) then
        call Box_volume_super( &
-         cmofsten, &
          bfact,dx, &
          xsten0,nhalf0, &
          volcell_vof, &
          cencell_vof, &
          sdim)
        call Box_volume_super( &
-         cmofsten, &
          bfact,dx, &
          xsten0,nhalf0, &
          volcell_cen, &
@@ -13842,7 +13747,6 @@ contains
          nlist_vof, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
         use_super_cell=0
         call tets_box_planes_super( &
@@ -13857,7 +13761,6 @@ contains
          nlist_cen, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
        else if (continuous_mof.eq.CMOF_X) then !CMOF X
         use_super_cell=0
@@ -13873,7 +13776,6 @@ contains
          nlist_vof, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
@@ -13888,7 +13790,6 @@ contains
          nlist_cen, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
        else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
         use_super_cell=1
@@ -13905,7 +13806,6 @@ contains
          nlist_vof, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
@@ -13920,7 +13820,6 @@ contains
          nlist_cen, &
          nmax, &
          use_super_cell, &
-         cmofsten, &
          sdim)
        else
         print *,"continuous_mof invalid: ",continuous_mof
@@ -14252,7 +14151,6 @@ contains
            refvfrac, &
            npredict, &
            continuous_mof, &
-           cmofsten, &
            nslope, &
            intercept, &
            xtetlist_vof, & !intent(in)
@@ -14474,7 +14372,6 @@ contains
            local_npredict, &
            intercept(1), &
            continuous_mof, &
-           cmofsten, &
            xtetlist_vof, & !intent(in)
            nlist_alloc, &  !intent(in)
            nlist_vof, &    !intent(in)
@@ -15742,7 +15639,6 @@ contains
         vof_super, &
         multi_centroidA, &
         continuous_mof, &
-        cmofsten, & !intent(in)
         grid_index, &
         grid_level, &
         sdim)
@@ -15763,7 +15659,6 @@ contains
       integer, INTENT (IN) :: nmax
       integer, INTENT (IN) :: continuous_mof
       integer :: continuous_mof_local
-      integer, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT (IN) :: grid_index(sdim)
       integer, INTENT (IN) :: grid_level
 
@@ -16168,7 +16063,6 @@ contains
        ! sum of F_fluid=1
        ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
-        cmofsten, &
         xsten0, &
         nhalf0, &
         continuous_mof, & 
@@ -16244,7 +16138,6 @@ contains
        enddo
 
        call Box_volume_super( &
-        cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         uncaptured_volume_cen(FLUID_LAYER_INDEX), &
         uncaptured_centroid_local, &
@@ -16258,7 +16151,6 @@ contains
       else if (continuous_mof.eq.CMOF_F_AND_X) then 
 
        call Box_volume_super( &
-        cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         uncaptured_volume_vof(FLUID_LAYER_INDEX), &
         uncaptured_centroid_local, &
@@ -16270,7 +16162,6 @@ contains
        enddo
 
        call Box_volume_super( &
-        cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         uncaptured_volume_cen(FLUID_LAYER_INDEX), &
         uncaptured_centroid_local, &
@@ -16691,7 +16582,6 @@ contains
            uncaptured_volume_cen(layer_iter), &
            multi_centroidA, &
            continuous_mof_local, & 
-           cmofsten, &
            sdim)
 
          else
@@ -16833,7 +16723,6 @@ contains
 
       real(amrex_real) multi_centroidA(num_materials,sdim)
       integer :: continuous_mof
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) angle(sdim-1)
       real(amrex_real) xpoint(sdim)
       integer nrecon
@@ -17158,7 +17047,6 @@ contains
         vof_super, &
         multi_centroidA, &
         continuous_mof, & 
-        cmofsten, &
         grid_index, &
         grid_level, &
         sdim)
@@ -17227,7 +17115,6 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_base( &
-        cmofsten, & !intent(in) continuous_mof.eq.CMOF_X or CMOF_F_AND_X
         xsten, &
         nhalf, &
         continuous_mof, & 
@@ -17243,7 +17130,6 @@ contains
 
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nhalf
       integer, INTENT(in) :: continuous_mof
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
@@ -17352,7 +17238,6 @@ contains
         ! sum_i',j' V_i+i',j+j'
         ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
        call Box_volume_super( &
-         cmofsten, &
          bfact,dx, &
          xsten,nhalf, &
          volcell, &
@@ -17712,7 +17597,6 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten,nhalf, &
         continuous_mof, &
         bfact,dx, &
@@ -17727,7 +17611,6 @@ contains
 
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nhalf
       integer, INTENT(in) :: continuous_mof
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
@@ -17862,7 +17745,6 @@ contains
       endif
 
       call make_vfrac_sum_ok_base( &
-       cmofsten, &
        xsten, &
        nhalf, &
        continuous_mof, &
@@ -19061,7 +18943,6 @@ contains
       integer, PARAMETER :: caller_id_local=999
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: tessellate_source
@@ -19237,7 +19118,6 @@ contains
        ! sum Ffluid = 1
        ! multi_get_volume_grid_simple
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0,nhalf0, &
         continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
@@ -19836,7 +19716,6 @@ contains
       integer, INTENT(in) :: caller_id
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: tessellate_source
@@ -20017,7 +19896,6 @@ contains
        ! sum Ffluid = 1
        ! multi_get_volume_grid
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0,nhalf0, &
         continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
@@ -20651,7 +20529,6 @@ contains
       integer, PARAMETER :: caller_id_local=999
       integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: tessellate_source
@@ -20820,7 +20697,6 @@ contains
        ! sum Ffluid = 1
        ! multi_get_volume_grid
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0,nhalf0, &
         continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
@@ -21574,7 +21450,6 @@ contains
       integer, INTENT(in) :: nlist_alloc_minus
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0
       integer, INTENT(in) :: dir_plus
@@ -21773,7 +21648,6 @@ contains
 
        !multi_get_area_pairs
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0_plus,nhalf0, &
         continuous_mof, &
         bfact,dx, &
@@ -21783,7 +21657,6 @@ contains
         sdim)
        !multi_get_area_pairs
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0_minus,nhalf0, &
         continuous_mof, &
         bfact,dx, &
@@ -22800,7 +22673,6 @@ contains
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: tessellate_source
@@ -22890,7 +22762,6 @@ contains
        ! sum Frigid <=1
        ! sum Ffluid = 1
       call make_vfrac_sum_ok_base( &
-       cmofsten, &
        xsten0, &
        nhalf0, &
        continuous_mof, & !STANDARD_MOF
@@ -23000,7 +22871,6 @@ contains
         vof_super, &
         multi_centroidA, &
         continuous_mof, & !STANDARD_MOF
-        cmofsten, & !intent(in)
         grid_index, &
         grid_level, &
         sdim)
@@ -23804,7 +23674,6 @@ contains
 
        integer, INTENT(in) :: tessellate
        integer, INTENT(in) :: sdim
-       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
        integer, INTENT(out) :: imslope
        integer, INTENT(in) :: bfact,nhalf0
        real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
@@ -23870,7 +23739,6 @@ contains
         ! sum F_fluid=1  
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
-         cmofsten, &
          xsten0,nhalf0, &
          continuous_mof, &
          bfact,dx, &
@@ -23994,7 +23862,6 @@ contains
       integer, INTENT(in) :: nhalf_recon
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer dir,side,l
       integer, INTENT(in) :: center_stencil
       integer, INTENT(in) :: donateflag(num_materials+1)
@@ -24106,7 +23973,6 @@ contains
        ! sum F_fluid = 1
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten_recon,nhalf_recon, &
         continuous_mof, &
         bfact,dx, &
@@ -24609,7 +24475,6 @@ contains
       IMPLICIT NONE
 
       integer, INTENT(in) :: sdim
-      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, INTENT(in) :: tessellate
       integer, INTENT(in) :: bfact,nhalf0
       real(amrex_real), INTENT(in) :: mofdata(num_materials*ngeom_recon)
@@ -24663,7 +24528,6 @@ contains
 
        ! sum voffluid=1 , sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
-        cmofsten, &
         xsten0,nhalf0, &
         continuous_mof, &
         bfact,dx, &

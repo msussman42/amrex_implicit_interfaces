@@ -3818,7 +3818,6 @@ stop
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer local_tessellate
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, parameter :: caller_id=6
 
       facefab_ptr=>facefab
@@ -3919,7 +3918,6 @@ stop
         enddo
 
         call make_vfrac_sum_ok_copy( &
-         cmofsten, &
          xsten,nhalf, &
          continuous_mof, &
          bfact,dx, &

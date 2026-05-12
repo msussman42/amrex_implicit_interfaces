@@ -13969,8 +13969,6 @@ END SUBROUTINE SIMP
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       integer nmax
 
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid: ",tid_in
        stop
@@ -14131,7 +14129,6 @@ END SUBROUTINE SIMP
 
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
-                 cmofsten, &
                  xstenfine,nhalf, &
                  continuous_mof, &
                  bfact_f,dxf, &
@@ -14159,7 +14156,6 @@ END SUBROUTINE SIMP
                 vof_super, &
                 multi_centroidA, &
                 continuous_mof, & !=STANDARD_MOF
-                cmofsten, &
                 grid_index, &
                 grid_level, &
                 SDIM)

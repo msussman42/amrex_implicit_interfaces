@@ -2586,7 +2586,6 @@ stop
       integer is_processed(num_interfaces)
       integer material_processed(num_materials)
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, parameter :: caller_id=4
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
  
@@ -2731,7 +2730,6 @@ stop
 
          ! sum F_fluid=1  sum F_solid<=1
          call make_vfrac_sum_ok_copy( &
-           cmofsten, &
            xsten,nhalf, &
            continuous_mof, &
            bfact,dx, &
@@ -20696,7 +20694,6 @@ stop
       integer im_fluid_critical
       integer im_local
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer :: grid_index(SDIM)
       integer, parameter :: grid_level=-1
@@ -22145,7 +22142,6 @@ stop
           ! sum of F_fluid=1
           ! sum of F_rigid<=1
          call make_vfrac_sum_ok_base( &
-           cmofsten, &
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
@@ -22165,7 +22161,6 @@ stop
          endif
 
          call make_vfrac_sum_ok_base( &
-           cmofsten, &
            xsten,nhalf, &
            continuous_mof_parm, &
            bfact,dx, &
@@ -22256,7 +22251,6 @@ stop
       integer mask_test
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       if (bfact.lt.1) then
        print *,"bfact invalid fort_purgeflotsam ",bfact
@@ -22322,7 +22316,6 @@ stop
          ! F>1-VOFTOL => F=1.0
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
           continuous_mof, &
           bfact,dx, &

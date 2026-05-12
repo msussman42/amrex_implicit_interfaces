@@ -19231,7 +19231,6 @@ end subroutine RatePhaseChange
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer :: grid_index(SDIM)
       integer, parameter :: grid_level=-1
@@ -19470,7 +19469,6 @@ end subroutine RatePhaseChange
         enddo  ! im_local=1..num_materials
 
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
           continuous_mof, &
           nucleate_in%bfact, &
@@ -19501,7 +19499,6 @@ end subroutine RatePhaseChange
          vof_super, &
          multi_centroidA, &
          continuous_mof, & ! =STANDARD_MOF
-         cmofsten, &
          grid_index, &
          grid_level, &
          SDIM)
@@ -24324,7 +24321,6 @@ end subroutine initialize2d
        integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
        integer, parameter :: continuous_mof=STANDARD_MOF
-       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
        real(amrex_real) theta_initdata
        real(amrex_real) concentration_initdata
        real(amrex_real) concen1_initdata,concen2_initdata
@@ -25619,7 +25615,6 @@ end subroutine initialize2d
         ! sum F_fluid=1  sum F_solid <= 1
         ! centroids are projected to the cell in question.
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
           continuous_mof, &
           bfact,dx, &
@@ -25870,7 +25865,6 @@ end subroutine initialize2d
       real(amrex_real) mofdata(ngeom_recon*num_materials)
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
       integer, PARAMETER :: tessellate_source=TESSELLATE_FLUIDS
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
 
       if (bfact.lt.1) then
@@ -26033,7 +26027,6 @@ end subroutine initialize2d
         enddo !im=1,num_materials
 
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
           continuous_mof_parm, &
           bfact,dx, &
@@ -29214,7 +29207,6 @@ end subroutine initialize2d
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
       integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer :: grid_index(SDIM)
       integer, parameter :: grid_level=-1
@@ -29439,7 +29431,6 @@ end subroutine initialize2d
          enddo  ! im=1,num_materials
 
          call make_vfrac_sum_ok_base( &
-           cmofsten, &
            xsten,nhalf, &
            continuous_mof, &
            bfact,dx, &
@@ -29467,7 +29458,6 @@ end subroutine initialize2d
           vof_super, &
           multi_centroidA, &
           continuous_mof, & !=STANDARD_MOF
-          cmofsten, &
           grid_index, &
           grid_level, &
           SDIM)
