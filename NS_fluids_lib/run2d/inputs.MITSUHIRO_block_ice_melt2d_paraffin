@@ -95,12 +95,8 @@ ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
-# partial_cmof_stencil_at_walls=0 => use 3x3 stencil for cmof reconstruction
-# partial_cmof_stencil_at_walls=1 => use truncated stencil in which cells
 # which are "substrate cells" are ignored.
-# preferred: partial_cmof_stencil_at_walls=1 is more realistic at simulating
 # contact line motion.
-ns.partial_cmof_stencil_at_walls=1
 # water,air,ice,substrate
 ns.mof_ordering=3 1 2 1 
 

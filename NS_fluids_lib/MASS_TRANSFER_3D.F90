@@ -3973,7 +3973,6 @@ stop
       real(amrex_real) massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
       integer, parameter :: continuous_mof_parm=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer :: grid_index(SDIM)
       integer, parameter :: grid_level=-1
@@ -5548,7 +5547,6 @@ stop
              vof_super, &
              multi_centroidA, &
              continuous_mof_parm, & !=STANDARD_MOF
-             cmofsten, &
              grid_index, &
              grid_level, &
              SDIM)
@@ -6492,7 +6490,6 @@ stop
              ! sum of F_fluid=1
              ! sum of F_rigid<=1
              call make_vfrac_sum_ok_base( &
-               cmofsten, &
                u_xsten_updatecell,nhalf, &
                continuous_mof_parm, &
                bfact,dx, &

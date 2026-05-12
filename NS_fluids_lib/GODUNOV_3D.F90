@@ -17332,7 +17332,6 @@ stop
       integer, PARAMETER :: nhalf=3
       integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
       integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: mof_renormalize_ordering(num_materials)
@@ -17698,7 +17697,6 @@ stop
        endif
 
        call make_vfrac_sum_ok_base( &
-         cmofsten, &
          xsten,nhalf, &
          continuous_mof_parm, &
          bfact,dx, &

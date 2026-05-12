@@ -207,7 +207,6 @@ int  NavierStokes::mof_machine_learning=0;
 
 Vector<Real> NavierStokes::centroid_noise_factor; 
 
-int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
 
@@ -3118,9 +3117,6 @@ NavierStokes::read_params ()
     }
     pp.queryAdd("centroid_noise_factor",centroid_noise_factor,num_materials);
 
-    pp.queryAdd("partial_cmof_stencil_at_walls",
-		partial_cmof_stencil_at_walls);
-
     pp.queryAdd("init_shrink",init_shrink);
     if ((init_shrink>0.0)&&(init_shrink<=1.0)) {
      //do nothing
@@ -3375,8 +3371,6 @@ NavierStokes::read_params ()
      std::cout << "mof_machine_learning " << mof_machine_learning << '\n';
      std::cout << "mof_decision_tree_learning " << 
 	     mof_decision_tree_learning << '\n';
-     std::cout << "partial_cmof_stencil_at_walls " << 
-	    partial_cmof_stencil_at_walls << '\n';
      for (int i=0;i<num_materials;i++) {
       std::cout << "i= " << i << " centroid_noise_factor[i]=" <<
        centroid_noise_factor[i] << '\n';

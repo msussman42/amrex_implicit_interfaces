@@ -182,7 +182,6 @@ stop
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
       integer, PARAMETER :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -299,7 +298,6 @@ stop
 
          ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
           continuous_mof, &
           bfact_coarse,dxc, &
@@ -326,7 +324,6 @@ stop
           vof_super, &
           multi_centroidA, &
           continuous_mof, & ! continuous_mof=STANDARD_MOF
-          cmofsten, &
           grid_index, &
           grid_level, & !grid_level=-1
           SDIM)
@@ -870,7 +867,6 @@ stop
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
       integer, PARAMETER :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
@@ -1125,7 +1121,6 @@ stop
 
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
-         cmofsten, &
          xstenfine,nhalf, &
          continuous_mof, &
          bfact_fine,dxf, &
@@ -1152,7 +1147,6 @@ stop
          vof_super, &
          multi_centroidA, &
          continuous_mof, & ! continuous_mof=STANDARD_MOF
-         cmofsten, &
          grid_index, &
          grid_level, & !grid_level=-1
          SDIM)
