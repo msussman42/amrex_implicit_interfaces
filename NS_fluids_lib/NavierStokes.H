@@ -358,7 +358,6 @@ public:
     static Real inflow_pressure;
     static Real outflow_pressure;
     static Real period_time;
-    static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
 
     static Real visc_coef_boundary_layer_factor; //def=1.0
