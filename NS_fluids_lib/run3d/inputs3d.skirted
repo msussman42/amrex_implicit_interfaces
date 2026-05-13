@@ -32,7 +32,6 @@ ns.MOFITERMAX=30
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=0
-ns.MOF_TURN_OFF_LS=0
 ns.num_materials=2
 ns.num_species_var=0
 

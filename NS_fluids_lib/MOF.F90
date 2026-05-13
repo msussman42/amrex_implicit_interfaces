@@ -5975,18 +5975,17 @@ end subroutine volume_sanity_check
 ! then intersects this region with the plane (LS<0 side)
 ! of already initialized materials.
 !
-! tets_box_planes is called from tets_box_planes_super,
-!  multi_get_volume_grid(continuous_mof==STANDARD_MOF),
-!  multi_get_volume_grid_simple(continuous_mof==STANDARD_MOF),
-!  multi_get_volume_grid_and_map(continuous_mof==STANDARD_MOF),
-!  multi_get_area_pairs(continuous_mof==STANDARD_MOF)
-! tets_box_planes_super is called from individual_MOF
+! tets_box_planes is called from 
+!  individual_MOF,
+!  multi_get_volume_grid,
+!  multi_get_volume_grid_simple,
+!  multi_get_volume_grid_and_map,
+!  multi_get_area_pairs
       subroutine tets_box_planes( &
        layer_flag, &
-       continuous_mof, &
        bfact,dx, &
        xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
-       xsten_box,nhalf_box, &!hex domain;might be different from xsten0 if CMOF
+       xsten_box,nhalf_box, &
        mofdata, &
        xtetlist, &
        nlist_alloc, &
@@ -6001,8 +6000,9 @@ end subroutine volume_sanity_check
 
       integer, INTENT(in) :: layer_flag
       integer, INTENT(in) :: nlist_alloc
-      integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: sdim,bfact,nhalf0,nhalf_box
+      integer, INTENT(in) :: sdim,bfact
+      integer, INTENT(in) :: nhalf0
+      integer, INTENT(in) :: nhalf_box
       integer symmetry_flag,ntetbox
       integer, INTENT(out) :: nlist
       integer, INTENT(in) :: nmax
@@ -6016,8 +6016,8 @@ end subroutine volume_sanity_check
       integer dir
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real) :: xsten0_LS(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
+      real(amrex_real) :: xsten0_LS(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       real(amrex_real) xtetlist_old(4,3,nlist_alloc)
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
@@ -6046,9 +6046,12 @@ end subroutine volume_sanity_check
        stop
       endif
 
-      if ((nhalf0.lt.1).or. &
-          (nhalf_box.lt.1)) then
-       print *,"nhalf invalid tets box planes"
+      if (nhalf0.lt.1) then
+       print *,"nhalf0 invalid tets box planes"
+       stop
+      endif
+      if (nhalf_box.lt.1) then
+       print *,"nhalf_box invalid tets box planes"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -6071,55 +6074,46 @@ end subroutine volume_sanity_check
       enddo
       enddo
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. &
-          (continuous_mof.eq.CMOF_X).or. &
-          (continuous_mof.eq.CMOF_F_AND_X)) then
+      symmetry_flag=0
+      call get_ntetbox(ntetbox,symmetry_flag,sdim)
 
-       symmetry_flag=0
-       call get_ntetbox(ntetbox,symmetry_flag,sdim)
+      inode=1
 
-       inode=1
-
-       if (sdim.eq.3) then
-        do k_grid_node=-1,1,2
-        do j_grid_node=-1,1,2
-        do i_grid_node=-1,1,2 
-         xnode(inode,1)=xsten_box(i_grid_node,1)
-         xnode(inode,2)=xsten_box(j_grid_node,2)
-         xnode(inode,sdim)=xsten_box(k_grid_node,sdim)
-         phinode(inode)=one
-         inode=inode+1
-        enddo
-        enddo
-        enddo
-       else if (sdim.eq.2) then
-        do j_grid_node=-1,1,2
-        do i_grid_node=-1,1,2 
-         xnode(inode,1)=xsten_box(i_grid_node,1)
-         xnode(inode,2)=xsten_box(j_grid_node,2)
-         phinode(inode)=one
-         inode=inode+1
-        enddo
-        enddo
-       else
-        print *,"sdim invalid"
-        stop
-       endif
-
-       do id=1,ntetbox
-        call extract_tet(xnode,phinode,xx,dummyphi,id,symmetry_flag,sdim)
-        do i_tet_node=1,sdim+1
-        do j_dir=1,sdim
-         xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
-         xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
-        enddo 
-        enddo 
-       enddo !id=1,ntetbox
-
+      if (sdim.eq.3) then
+       do k_grid_node=-1,1,2
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
+        xnode(inode,1)=xsten_box(i_grid_node,1)
+        xnode(inode,2)=xsten_box(j_grid_node,2)
+        xnode(inode,sdim)=xsten_box(k_grid_node,sdim)
+        phinode(inode)=one
+        inode=inode+1
+       enddo
+       enddo
+       enddo
+      else if (sdim.eq.2) then
+       do j_grid_node=-1,1,2
+       do i_grid_node=-1,1,2 
+        xnode(inode,1)=xsten_box(i_grid_node,1)
+        xnode(inode,2)=xsten_box(j_grid_node,2)
+        phinode(inode)=one
+        inode=inode+1
+       enddo
+       enddo
       else
-       print *,"continuous_mof invalid: ",continuous_mof
+       print *,"sdim invalid"
        stop
       endif
+
+      do id=1,ntetbox
+       call extract_tet(xnode,phinode,xx,dummyphi,id,symmetry_flag,sdim)
+       do i_tet_node=1,sdim+1
+       do j_dir=1,sdim
+        xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
+        xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
+       enddo 
+       enddo 
+      enddo !id=1,ntetbox
 
       nlist_old=ntetbox
       nlist=ntetbox
@@ -6244,168 +6238,6 @@ end subroutine volume_sanity_check
 
       return
       end subroutine tets_box_planes
-
-      subroutine tets_box_planes_super( &
-       layer_flag, &
-       continuous_mof, &
-       tid_in, &
-       bfact,dx, &
-       xsten0,nhalf0, &
-       mofdata, &
-       xtetlist, &
-       nlist_alloc, &
-       nlist, &
-       nmax, &
-       use_super_cell, &
-       sdim)
-      use probcommon_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: layer_flag
-      integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: nlist_alloc
-      integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: tid_in
-      integer, INTENT(in) :: bfact,nhalf0
-      integer, INTENT(in) :: use_super_cell
-      integer isten
-      integer, PARAMETER :: nhalf2=1
-      integer, INTENT(out) :: nlist
-      integer, INTENT(in) :: nmax
-      integer nlist_local,i1,j1,k1,itri
-      integer nn
-      integer dir
-      real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real) xsten2(-1:1,sdim)
-      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      integer ksten_low,ksten_high
-
-      if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
-       ! do nothing
-      else
-       print *,"nlist_alloc invalid"
-       stop
-      endif
-
-      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
-       print *,"tid_in invalid (tets_box_planes_super) ",tid_in
-       stop
-      endif
-
-      if ((sdim.ne.2).and.(sdim.ne.3)) then
-       print *,"sdim invalid tets_box_planes_super"
-       stop
-      endif
-      if ((num_materials.lt.1).or. &
-          (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid tets box planes super"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid122"
-       stop
-      endif
-      if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid123"
-       stop
-      endif
-
-      if (nmax.eq.geom_nmax) then
-       ! do nothing
-      else
-       print *,"tets_box_planes_super: nmax<>geom_nmax"
-       print *,"nmax= ",nmax
-       print *,"geom_nmax= ",geom_nmax
-       stop
-      endif
-
-       ! in: tets_box_planes_super
-      if (use_super_cell.eq.0) then
-       call tets_box_planes( &
-        layer_flag, &
-        continuous_mof, &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        xsten0,nhalf0, &
-        mofdata, &
-        xtetlist, &
-        nlist_alloc, &
-        nlist, &
-        nmax, &
-        sdim)
-      else if (use_super_cell.eq.1) then
-
-       if (sdim.eq.3) then
-        ksten_low=-1
-        ksten_high=1
-       else if (sdim.eq.2) then
-        ksten_low=0
-        ksten_high=0
-       else
-        print *,"sdim invalid"
-        stop
-       endif
-
-       nlist=0
-
-       do k1=ksten_low,ksten_high
-       do j1=-1,1
-       do i1=-1,1
-
-         do isten=-1,1
-          xsten2(isten,1)=xsten0(isten+2*i1,1)
-          xsten2(isten,2)=xsten0(isten+2*j1,2)
-          if (sdim.eq.3) then
-           xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-          endif
-         enddo ! isten=-1..1
-
-         ! in: tets_box_planes_super
-         call tets_box_planes( &
-          layer_flag, &
-          continuous_mof, &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          xsten2,nhalf2, &
-          mofdata, &
-          geom_xtetlist_local(1,1,1,tid_in+1), &
-          geom_nmax, &
-          nlist_local, &
-          nmax, &
-          sdim)
-         if (nlist_local+nlist.gt.nmax) then
-          print *,"too many tetrahedrons in tets_box_planes_super"
-          print *,"bfact=",bfact
-          print *,"tid_in=",tid_in
-          print *,"nlist_local=",nlist_local
-          print *,"nlist=",nlist
-          print *,"nmax=",nmax
-          print *,"num_materials=",num_materials
-          print *,"sdim=",sdim
-          stop
-         endif
-         do nn=1,nlist_local
-          nlist=nlist+1
-          do itri=1,sdim+1
-          do dir=1,sdim
-           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid_in+1)
-          enddo
-          enddo
-         enddo  ! nn
-          
-       enddo
-       enddo
-       enddo ! i1,j1,k1
-
-      else
-       print *,"use_super_cell invalid"
-       stop
-      endif
-
-      return
-      end subroutine tets_box_planes_super
 
       subroutine init_mask_flag( &
         layer_flag, &
@@ -8616,7 +8448,6 @@ use amrex_fort_module, only : amrex_real
        ! 1=>output errors when fastflag=0 or 1
        ! 2=>output errors when fastflag=0 
       integer :: MOF_DEBUG_RECON=0
-      integer :: MOF_TURN_OFF_LS
 
 contains
 
@@ -8714,7 +8545,6 @@ contains
 ! intercept=-maxphi  => refvfrac=0
 ! intercept=-minphi  => refvfrac=1
       subroutine multi_phi_bounds( &
-        continuous_mof, &
         bfact,dx, &
         xsten,nhalf, &
         slope, &
@@ -8730,7 +8560,6 @@ contains
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nlist,nmax,sdim,bfact,nhalf
       real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
@@ -8762,27 +8591,10 @@ contains
       endif
 
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_X)) then 
-       ! do nothing
-      else if (continuous_mof.eq.CMOF_F_AND_X) then 
-       ! do nothing
-      else
-       print *,"continuous_mof invalid(multi_phi_bounds): ",continuous_mof
-       stop
-      endif
-
        ! xsten_local used for LS dist.
       do i_stencil_node=-nhalf,nhalf
       do dir=1,sdim
-       if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-           (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-           (continuous_mof.eq.CMOF_X)) then  !CMOF X
-        xsten_local(i_stencil_node,dir)=xsten(i_stencil_node,dir)
-       else
-        print *,"continuous_mof invalid: ",continuous_mof
-        stop
-       endif
+       xsten_local(i_stencil_node,dir)=xsten(i_stencil_node,dir)
       enddo !dir
       enddo !i_stencil_node
 
@@ -9232,7 +9044,6 @@ contains
         xsten0,nhalf0, &
         ff,slope, &
         intercept, & !intent(in)
-        continuous_mof, &
         arean, &
         vtarget, &
         xtetlist, & !intent(in)
@@ -9248,7 +9059,6 @@ contains
 
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nlist_alloc
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: nlist,nmax,fastflag
       real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
@@ -9279,36 +9089,16 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_F_AND_X).or. &
-          (continuous_mof.eq.CMOF_X)) then 
-       ! do nothing
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
-       stop
-      endif
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
        stop
       endif
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-          (continuous_mof.eq.CMOF_X)) then !CMOF just X
-       call Box_volumeFAST( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell, &
-         cencell, &
-         sdim)
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
-       call Box_volume_super( &
+      call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
-      else
-       print *,"continuous_mof invalid"
-       stop
-      endif
 
       if (volcell.gt.zero) then
        ! do nothing
@@ -9322,14 +9112,7 @@ contains
          ! xsten_local used for LS dist.
        do i=-nhalf0,nhalf0
        do dir=1,sdim
-        if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-            (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-            (continuous_mof.eq.CMOF_X)) then  !CMOF X
          xsten_local(i,dir)=xsten0(i,dir)
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop
-        endif
        enddo
        enddo
 
@@ -9350,8 +9133,6 @@ contains
 
       else if (fastflag.eq.1) then
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-           (continuous_mof.eq.CMOF_X)) then !CMOF just X.
         call fast_cut_cell_intersection( &
          bfact,dx,xsten0,nhalf0, &
          slope,intercept, &
@@ -9360,11 +9141,6 @@ contains
          xsten0,nhalf0, &
          xtet,shapeflag, &
          sdim) 
-       else
-        print *,"continuous_mof invalid: ",continuous_mof
-        print *,"fastflag=",fastflag
-        stop
-       endif
 
       else
        print *,"fastflag invalid multi_ff"
@@ -9449,7 +9225,6 @@ contains
        xsten0,nhalf0, &
        slope, &
        intercept, &
-       continuous_mof, &
        xtetlist, & !intent(in)
        nlist_alloc, & !intent(in)
        nlist, & !intent(in)
@@ -9470,7 +9245,6 @@ contains
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in):: nlist
       integer, INTENT(in):: nlist_alloc
@@ -9543,15 +9317,6 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. &  
-          (continuous_mof.eq.CMOF_F_AND_X).or. & 
-          (continuous_mof.eq.CMOF_X)) then  
-       ! do nothing
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
-       stop
-      endif
-
       if (bfact.lt.1) then
        print *,"bfact invalid 9514 ",bfact
        stop
@@ -9576,24 +9341,12 @@ contains
 ! if fastflag=0, 
 !  search the vertices of all triangles that make up the "cut" domain.
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_X)) then 
-       call Box_volumeFAST( &
+      call Box_volumeFAST( &
         bfact,dx, &
         xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
-      else if (continuous_mof.eq.CMOF_F_AND_X) then 
-       call Box_volume_super( &
-        bfact,dx,xsten0,nhalf0, &
-        volcell, &
-        cencell, &
-        sdim)
-      else
-       print *,"continuous_mof invalid(multi_find_intercept): ",continuous_mof
-       stop
-      endif
 
        ! at each node x_i one solves:
        !  n dot (x_i-x0) + b_i = 0
@@ -9622,7 +9375,6 @@ contains
          cencut,sdim)
 
        call multi_phi_bounds( &
-         continuous_mof, &
          bfact,dx, &
          xsten0,nhalf0, &
          slope, &
@@ -9643,60 +9395,52 @@ contains
        maxphi=-1.0D+10
        null_intercept=zero
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-           (continuous_mof.eq.CMOF_X)) then 
+       do k=klo_stencil,khi_stencil,2
+       do j=-1,1,2
+       do i=-1,1,2
 
-        do k=klo_stencil,khi_stencil,2
-        do j=-1,1,2
-        do i=-1,1,2
-         dir=1
-         xtarget(dir)=xsten0(i,dir)
-         dir=2
-         xtarget(dir)=xsten0(j,dir)
+        dir=1
+        xtarget(dir)=xsten0(i,dir)
+        dir=2
+        xtarget(dir)=xsten0(j,dir)
 
-         if (sdim.eq.3) then
-          dir=sdim
-          xtarget(dir)=xsten0(k,dir)
-         endif
-
-         call distfunc(bfact,dx, &
-          xsten0,nhalf0, &
-          null_intercept,slope, &
-          xtarget,dist,sdim)
-
-         if (dist.lt.minphi) then
-          minphi=dist
-         endif
-         if (dist.gt.maxphi) then
-          maxphi=dist
-         endif
-         
-        enddo
-        enddo
-        enddo  ! i,j,k
-
-        if (((minphi.eq.zero).and. &
-             (maxphi.eq.zero)).or. &
-            (minphi.ge.maxphi)) then
-         print *,"cannot have zero slope"
-         print *,"fastflag=",fastflag
-         print *,"continuous_mof=",continuous_mof
-         print *,"minphi=",minphi
-         print *,"maxphi=",maxphi
-         print *,"slopexyz=",slope(1),slope(2),slope(sdim)
-         print *,"xsten(0) xyz=",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
-         stop
-        else if (((minphi.ne.zero).or. &
-                  (maxphi.ne.zero)).and. &
-                 (minphi.lt.maxphi)) then
-         ! do nothing
-        else
-         print *,"minphi or maxphi is NaN"
-         stop
+        if (sdim.eq.3) then
+         dir=sdim
+         xtarget(dir)=xsten0(k,dir)
         endif
 
+        call distfunc(bfact,dx, &
+         xsten0,nhalf0, &
+         null_intercept,slope, &
+         xtarget,dist,sdim)
+
+        if (dist.lt.minphi) then
+         minphi=dist
+        endif
+        if (dist.gt.maxphi) then
+         maxphi=dist
+        endif
+        
+       enddo
+       enddo
+       enddo  ! i,j,k
+
+       if (((minphi.eq.zero).and. &
+            (maxphi.eq.zero)).or. &
+           (minphi.ge.maxphi)) then
+        print *,"cannot have zero slope"
+        print *,"fastflag=",fastflag
+        print *,"minphi=",minphi
+        print *,"maxphi=",maxphi
+        print *,"slopexyz=",slope(1),slope(2),slope(sdim)
+        print *,"xsten(0) xyz=",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+        stop
+       else if (((minphi.ne.zero).or. &
+                 (maxphi.ne.zero)).and. &
+                (minphi.lt.maxphi)) then
+        ! do nothing
        else
-        print *,"continuous_mof invalid: ",continuous_mof
+        print *,"minphi or maxphi is NaN"
         stop
        endif
 
@@ -9758,7 +9502,6 @@ contains
         xsten0,nhalf0, &
         fc_default,slope, &
         intercept_default, & !intent(in)
-        continuous_mof, &
         arean_default,vtarget, &
         xtetlist, & !intent(in)
         nlist_alloc, &
@@ -9794,7 +9537,6 @@ contains
           xsten0,nhalf0, &
           fc,slope, &
           intercept, & !intent(in)
-          continuous_mof, &
           arean, &
           vtarget, &
           xtetlist, & !intent(in)
@@ -9869,7 +9611,6 @@ contains
               xsten0,nhalf0, &
               fa,slope, &
               aa, & !intent(in)
-              continuous_mof, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, &
@@ -9881,7 +9622,6 @@ contains
               bfact,dx,xsten0,nhalf0, &
               fb,slope, &
               bb, & !intent(in)
-              continuous_mof, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, &
@@ -9910,7 +9650,6 @@ contains
               xsten0,nhalf0, &
               fc,slope, &
               intercept, & !intent(in)
-              continuous_mof, &
               arean,vtarget, &
               xtetlist, & !intent(in)
               nlist_alloc, & 
@@ -9977,7 +9716,6 @@ contains
             xsten0,nhalf0, &
             fc,slope, &
             intercept, & !intent(in)
-            continuous_mof, &
             arean,vtarget, &
             xtetlist, & !intent(in)
             nlist_alloc, &
@@ -10004,7 +9742,6 @@ contains
           print *,"multi_find_intercept: "
           print *,"arean should not be negative"
           print *,"fastflag=",fastflag
-          print *,"continuous_mof=",continuous_mof
           print *,"use_initial_guess=",use_initial_guess
           print *,"niter,vfrac,arean,volcut,fc ",niter,vfrac,arean, &
            volcut,fc
@@ -10626,13 +10363,10 @@ contains
         xsten0,nhalf0, &
         xtetlist_vof, & !intent(in)
         nlist_vof, & !intent(in)
-        xtetlist_cen, & !intent(in)
-        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         nmax, &
         refcentroid, & !relative to supercell centroid
         refvfrac, &
-        continuous_mof, &
         angle, & !intent(in)
         ff, & !intent(out)
         intercept, & !intent(inout)
@@ -10660,17 +10394,13 @@ contains
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: use_MilcentLemoine
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0
       integer,INTENT(in):: nlist_vof
-      integer,INTENT(in):: nlist_cen
 
       integer, INTENT(in) :: nmax,fastflag
       real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
-
-      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
 
       real(amrex_real), INTENT(in) :: refcentroid(nEQN)
       real(amrex_real) refcentroidT(nEQN)
@@ -10695,9 +10425,7 @@ contains
 
       integer i1,j1,k1
       real(amrex_real) volcell_vof
-      real(amrex_real) volcell_cen
       real(amrex_real) cencell_vof(sdim)
-      real(amrex_real) cencell_cen(sdim)
       real(amrex_real) xtet(sdim+1,sdim)
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
       integer ksten_low,ksten_high
@@ -10716,8 +10444,6 @@ contains
 
       integer :: NOTUS_worked
 
-      integer, PARAMETER :: use_super_cell=1
-
       NOTUS_PI=4.0d0*atan(1.0d0)
 
       if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
@@ -10734,39 +10460,34 @@ contains
        stop
       endif
 
-      if ((nlist_vof.ge.0).and.(nlist_vof.le.nlist_alloc).and. &
-          (nlist_cen.ge.0).and.(nlist_cen.le.nlist_alloc)) then
+      if ((nlist_vof.ge.0).and.(nlist_vof.le.nlist_alloc)) then
        ! do nothing
       else
-       print *,"nlist_vof or nlist_cen invalid"
+       print *,"nlist_vof invalid"
        print *,"nlist_vof: ",nlist_vof
-       print *,"nlist_cen: ",nlist_cen
        print *,"nlist_alloc: ",nlist_alloc
        print *,"nmax: ",nmax
        stop
       endif
       if (fastflag.eq.1) then
-       if ((nlist_vof.eq.0).and. &
-           (nlist_cen.eq.0)) then
+       if (nlist_vof.eq.0) then
         !do nothing
        else
         print *,"(breakpoint) break point and gdb: "
         print *,"(1) compile with the -g option"
         print *,"(2) break MOF.F90:10852"
-        print *,"expecting nlist_vof=nlist_cen=0"
+        print *,"expecting nlist_vof=0"
         print *,"nlist_vof: ",nlist_vof
-        print *,"nlist_cen: ",nlist_cen
         print *,"nlist_alloc: ",nlist_alloc
         print *,"nmax: ",nmax
         print *,"fastflag: ",fastflag
         stop
        endif
       else if (fastflag.eq.0) then
-       if ((nlist_vof.ge.1).and.(nlist_vof.le.nlist_alloc).and. &
-           (nlist_cen.ge.1).and.(nlist_cen.le.nlist_alloc)) then
+       if ((nlist_vof.ge.1).and.(nlist_vof.le.nlist_alloc)) then
         !do nothing
        else
-        print *,"expecting nlist_vof, nlist_cen >= 1"
+        print *,"expecting nlist_vof >= 1"
         stop
        endif
       else
@@ -10794,15 +10515,6 @@ contains
 
       else
        print *,"nMAT_OPT invalid: ",nMAT_OPT
-       stop
-      endif
-
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_F_AND_X).or. &
-          (continuous_mof.eq.CMOF_X)) then 
-       ! do nothing
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -10841,43 +10553,11 @@ contains
 
        ! if RZ, cencell can be negative
 
-      if (continuous_mof.eq.STANDARD_MOF) then 
-        call Box_volumeFAST( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_vof, &
-         cencell_vof, &
-         sdim)
-        call Box_volumeFAST( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-      else if (continuous_mof.eq.CMOF_X) then !CMOF X
-        call Box_volumeFAST( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_vof, &
-         cencell_vof, &
-         sdim)
-        call Box_volume_super( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
-        call Box_volume_super( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_vof, &
-         cencell_vof, &
-         sdim)
-        call Box_volume_super( &
-         bfact,dx,xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-      else
-        print *,"continuous_mof invalid: ",continuous_mof
-        stop
-      endif
+      call Box_volumeFAST( &
+       bfact,dx,xsten0,nhalf0, &
+       volcell_vof, &
+       cencell_vof, &
+       sdim)
 
       call angle_to_slope( &
         angle, &
@@ -10900,8 +10580,7 @@ contains
         ! inside of multi_rotatefunc
         ! testcen in absolute coordinate system
         ! (testcen is the centroid of the intersection of
-        !  the material region with the center cell (super cell if 
-        !  continuous_mof==-1))
+        !  the material region with the center cell 
        call multi_find_intercept( &
         tid_in, &
         nMAT_OPT, & ! 1 
@@ -10911,7 +10590,6 @@ contains
         xsten0,nhalf0, &
         nslope, &  ! intent(in)
         intercept(1), & ! intent(inout)
-        continuous_mof, &
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
@@ -10926,23 +10604,14 @@ contains
           ! xsten_local used for LS dist.
         do isten=-nhalf0,nhalf0
         do dir=1,sdim
-
-         if ((continuous_mof.eq.CMOF_F_AND_X).or. & 
-             (continuous_mof.eq.STANDARD_MOF).or. &
-             (continuous_mof.eq.CMOF_X)) then 
-          xsten_local(isten,dir)=xsten0(isten,dir)
-         else
-          print *,"continuous_mof invalid: ",continuous_mof
-          stop
-         endif
+         xsten_local(isten,dir)=xsten0(isten,dir)
         enddo
         enddo
 
-        if (continuous_mof.eq.STANDARD_MOF) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
           ! calling from "mult_rotatefunc"
-         call multi_cell_intersection( &
+        call multi_cell_intersection( &
           bfact,dx, &
           xsten_local,nhalf0, &
           nslope, &
@@ -10956,54 +10625,11 @@ contains
           nmax, &
           sdim)
 
-        else if (continuous_mof.eq.CMOF_X) then 
-          ! (testcen is the centroid of the intersection of
-          !  the material region with the super cell)
-          ! This step is needed since xtetlist_cen!=xtetlist_vof
-          ! calling from "mult_rotatefunc"
-         call multi_cell_intersection( &
-          bfact,dx, &
-          xsten_local,nhalf0, &
-          nslope, &
-          intercept(1), &
-          volume_cut, & !intent(out)
-          testcen, & !intent(out)
-          facearea, & !intent(out)
-          xtetlist_cen, & !intent(in)
-          nlist_alloc, &
-          nlist_cen, &
-          nmax, &
-          sdim)
-        else if (continuous_mof.eq.CMOF_F_AND_X) then 
-          ! (testcen is the centroid of the intersection of
-          !  the material region with the super cell)
-          ! This step is redundant since for continuous_mof==-1, 
-          ! xtetlist_cen=xtetlist_vof
-          ! calling from "mult_rotatefunc"
-         call multi_cell_intersection( &
-          bfact,dx, &
-          xsten_local,nhalf0, &
-          nslope, &
-          intercept(1), &
-          volume_cut, & !intent(out)
-          testcen, &    !intent(out)
-          facearea, &   !intent(out)
-          xtetlist_cen, & !intent(in)
-          nlist_alloc, &
-          nlist_cen, &
-          nmax, &
-          sdim)
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop
-        endif
-
        else if (fastflag.eq.1) then
 
-        if (continuous_mof.eq.STANDARD_MOF) then !MOF
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
-         call fast_cut_cell_intersection( &
+        call fast_cut_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
           nslope, &
           intercept(1), &
@@ -11012,72 +10638,6 @@ contains
           xsten0,nhalf0, &
           xtet,shapeflag, &
           sdim) 
-        else if (continuous_mof.eq.CMOF_X) then !CMOF X
-          ! (testcen is the centroid of the intersection of
-          !  the material region with the super cell)
-         volume_cut=zero
-         facearea=zero
-         do dir=1,sdim
-          testcen(dir)=zero
-         enddo 
-
-         if (sdim.eq.3) then
-          ksten_low=-1
-          ksten_high=1
-         else if (sdim.eq.2) then
-          ksten_low=0
-          ksten_high=0
-         else
-          print *,"sdim invalid"
-          stop
-         endif
-
-         do k1=ksten_low,ksten_high
-         do j1=-1,1
-         do i1=-1,1
-
-           do isten=-1,1
-            xsten2(isten,1)=xsten0(isten+2*i1,1)
-            xsten2(isten,2)=xsten0(isten+2*j1,2)
-            if (sdim.eq.3) then
-             xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-            endif
-           enddo ! isten
-           call fast_cut_cell_intersection( &
-            bfact,dx,xsten0,nhalf0, &
-            nslope, &
-            intercept(1), &
-            volsten,censten, &
-            areasten, &
-            xsten2,nhalf2, &
-            xtet,shapeflag, &
-            sdim) 
-           volume_cut=volume_cut+volsten
-           facearea=facearea+areasten
-           do dir=1,sdim
-            testcen(dir)=testcen(dir)+volsten*censten(dir)
-           enddo
-
-         enddo
-         enddo
-         enddo  ! i1,j1,k1
-
-         do dir=1,sdim
-          if (volume_cut.gt.zero) then
-           testcen(dir)=testcen(dir)/volume_cut
-          else if (volume_cut.eq.zero) then
-           testcen(dir)=zero
-          else
-           print *,"volume_cut invalid: ",volume_cut
-           stop
-          endif
-         enddo ! dir=1..sdim
-
-        else
-         print *,"continuous_mof invalid: ",continuous_mof
-         print *,"fastflag: ",fastflag
-         stop
-        endif
 
        else
         print *,"fastflag invalid multi rotatefunc: ",fastflag
@@ -11085,13 +10645,13 @@ contains
        endif
 
        do dir=1,sdim
-        testcen(dir)=testcen(dir)-cencell_cen(dir)
+        testcen(dir)=testcen(dir)-cencell_vof(dir)
        enddo
 
         !refcentroid and testcen are both "local"
         !refcentroidT and testcenT are both "global"
-       call RT_transform_offset(refcentroid,cencell_cen,refcentroidT)
-       call RT_transform_offset(testcen,cencell_cen,testcenT)
+       call RT_transform_offset(refcentroid,cencell_vof,refcentroidT)
+       call RT_transform_offset(testcen,cencell_vof,testcenT)
 
       else if (use_MilcentLemoine.eq.1) then
 
@@ -11099,14 +10659,6 @@ contains
         !do nothing
        else
         print *,"expecting fastflag=1 if use_MilcentLemoine==1"
-        stop
-       endif
-
-       if (continuous_mof.eq.STANDARD_MOF) then 
-        ! do nothing
-       else
-        print *,"continuous_mof invalid if use_MilcentLemoine==1: ", &
-                continuous_mof
         stop
        endif
 
@@ -11125,219 +10677,205 @@ contains
         local_ref_centroid_NOTUS(dir)=refcentroid(dir)
        enddo
 
-       if (continuous_mof.eq.STANDARD_MOF) then 
+       if ((refvfrac(1).ge.0.5d0).and. &
+           (refvfrac(1).lt.1.0d0)) then
+        local_refvfrac_NOTUS=1.0d0-local_refvfrac_NOTUS
+
+        if (local_refvfrac_NOTUS.gt.0.0d0) then
+         do dir=1,sdim
+          local_ref_centroid_NOTUS(dir)= &
+            -refvfrac(1)*refcentroid(dir)/local_refvfrac_NOTUS
+          local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
+         enddo
+        else if (local_refvfrac_NOTUS.eq.0.0d0) then
+         do dir=1,sdim
+          local_ref_centroid_NOTUS(dir)=0.0d0
+          local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
+         enddo
+        else
+         print *,"local_refvfrac_NOTUS corrupt: ",local_refvfrac_NOTUS
+         stop
+        endif
+
+        call slope_to_angle_NOTUS(local_nslope_NOTUS, &
+                local_angles_NOTUS,sdim)
+
+       else if ((refvfrac(1).gt.0.0d0).and. &
+                (refvfrac(1).le.0.5d0)) then
+        ! do nothing
+       else
+        print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
+        print *,"refvfrac(1) Invalid: ",refvfrac(1)
+        stop
+       endif
+
+       local_volume_NOTUS=local_refvfrac_NOTUS*volcell_vof
+
+       do dir=1,sdim
+        local_cell_size_NOTUS(dir)=xsten0(1,dir)-xsten0(-1,dir)
+        if (local_cell_size_NOTUS(dir).gt.0.0d0) then
+         if ((local_refvfrac_NOTUS.gt.0.0d0).and. &
+             (local_refvfrac_NOTUS.le.0.5d0)) then
+          local_ref_centroid_NOTUS(dir)= &
+               local_ref_centroid_NOTUS(dir)+ &
+               0.5d0*local_cell_size_NOTUS(dir)
+         else
+          print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
+          stop
+         endif
+        else
+         print *,"local_cell_size_NOTUS(dir) invalid: ", &
+                 dir,local_cell_size_NOTUS(dir)
+         stop
+        endif 
+       enddo ! dir=1..sdim
+
+       if (sdim.eq.3) then
+        ! do nothing
+       else if (sdim.eq.2) then
+        local_angles_NOTUS(2)=0.5d0*NOTUS_PI
+        local_nslope_NOTUS(3)=0.0d0
+        local_cell_size_NOTUS(3)=0.0d0
+        local_ref_centroid_NOTUS(3)=0.5d0
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+
+       if (sdim.eq.3) then
+        call mof3d_compute_analytic_gradient( &
+         local_angles_NOTUS, & !intent(in)
+         local_ref_centroid_NOTUS, & !intent(in) relative to LL corner.
+         local_volume_NOTUS, & !intent(in)
+         local_cell_size_NOTUS, & !intent(in)
+         local_centroid_NOTUS, & !intent(out)
+         local_gradient_NOTUS) !intent(out) relative to LL corner
+       else if (sdim.eq.2) then
+        call mof2d_compute_analytic_gradient( &
+         local_angles_NOTUS, & !intent(in)
+         local_volume_NOTUS, &
+         local_cell_size_NOTUS, &
+         local_centroid_NOTUS)  !intent(out) relative to LL corner
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+
+       NOTUS_worked=1
+
+       do dir=1,sdim
+        local_centroid_NOTUS(dir)= &
+                local_centroid_NOTUS(dir)- &
+                0.5d0*local_cell_size_NOTUS(dir)
+        testcen(dir)=local_centroid_NOTUS(dir) !relative of cell centroid !
+        if (testcen(dir)**2.ge.zero) then
+         !do nothing
+        else
+         print *,"WARNING"
+         print *,"testcen(dir) corrupt (multi_rotatefunc): ",dir,testcen(dir)
+         print *,"local_centroid_NOTUS(dir): ",dir, &
+                 local_centroid_NOTUS(dir)
+         print *,"volcell_vof: ",volcell_vof
+         print *,"local_volume_NOTUS: ",local_volume_NOTUS
+         print *,"refvfrac=",refvfrac
+         print *,"local_refvfrac_NOTUS=",local_refvfrac_NOTUS
+         print *,"refcentroid(dir)=",dir,refcentroid(dir)
+         print *,"local_ref_centroid_NOTUS(dir)=", &
+                 dir,local_ref_centroid_NOTUS(dir)
+         print *,"uncaptured_volume_vof=",uncaptured_volume_vof
+         print *,"dx(dir)=",dir,dx(dir)
+         print *,"bfact=",bfact
+         print *,"local_angles_NOTUS: ", &
+           local_angles_NOTUS(1),local_angles_NOTUS(2)
+         print *,"local_volume_NOTUS: ",local_volume_NOTUS
+         do dir_local=1,sdim
+          print *,"dir_local,local_ref_centroid_NOTUS ", &
+            dir_local,local_ref_centroid_NOTUS(dir_local)
+          print *,"dir_local,local_cell_size_NOTUS ", &
+            dir_local,local_cell_size_NOTUS(dir_local)
+         enddo !dir_local=1,sdim
+         print *,"local_gradient_NOTUS: ",local_gradient_NOTUS
+!        stop
+         NOTUS_worked=0
+        endif
+       enddo !dir=1,sdim
+
+       if (NOTUS_worked.eq.1) then
 
         if ((refvfrac(1).ge.0.5d0).and. &
             (refvfrac(1).lt.1.0d0)) then
-         local_refvfrac_NOTUS=1.0d0-local_refvfrac_NOTUS
-
-         if (local_refvfrac_NOTUS.gt.0.0d0) then
-          do dir=1,sdim
-           local_ref_centroid_NOTUS(dir)= &
-             -refvfrac(1)*refcentroid(dir)/local_refvfrac_NOTUS
-           local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
-          enddo
-         else if (local_refvfrac_NOTUS.eq.0.0d0) then
-          do dir=1,sdim
-           local_ref_centroid_NOTUS(dir)=0.0d0
-           local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
-          enddo
-         else
-          print *,"local_refvfrac_NOTUS corrupt: ",local_refvfrac_NOTUS
-          stop
-         endif
-
-         call slope_to_angle_NOTUS(local_nslope_NOTUS, &
-                 local_angles_NOTUS,sdim)
-
+         do dir=1,sdim
+          testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
+         enddo
         else if ((refvfrac(1).gt.0.0d0).and. &
                  (refvfrac(1).le.0.5d0)) then
          ! do nothing
         else
-         print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
-         print *,"refvfrac(1) Invalid: ",refvfrac(1)
+         print *,"refvfrac(1) invalid: ",refvfrac(1)
          stop
         endif
 
-        local_volume_NOTUS=local_refvfrac_NOTUS*volcell_vof
+       else if (NOTUS_worked.eq.0) then
 
-        do dir=1,sdim
-         local_cell_size_NOTUS(dir)=xsten0(1,dir)-xsten0(-1,dir)
-         if (local_cell_size_NOTUS(dir).gt.0.0d0) then
-          if ((local_refvfrac_NOTUS.gt.0.0d0).and. &
-              (local_refvfrac_NOTUS.le.0.5d0)) then
-           local_ref_centroid_NOTUS(dir)= &
-                local_ref_centroid_NOTUS(dir)+ &
-                0.5d0*local_cell_size_NOTUS(dir)
-          else
-           print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
-           stop
-          endif
-         else
-          print *,"local_cell_size_NOTUS(dir) invalid: ", &
-                  dir,local_cell_size_NOTUS(dir)
-          stop
-         endif 
-        enddo ! dir=1..sdim
+        ! inside of multi_rotatefunc
+        ! testcen in absolute coordinate system
+        ! (testcen is the centroid of the intersection of
+        !  the material region with the center cell 
+        call multi_find_intercept( &
+         tid_in, &
+         nMAT_OPT, & ! 1 
+         nDOF, & ! sdim-1
+         nEQN, & ! sdim 
+         bfact,dx, &
+         xsten0,nhalf0, &
+         nslope, &  ! intent(in)
+         intercept(1), & ! intent(inout)
+         xtetlist_vof, & !intent(in)
+         nlist_alloc, &
+         nlist_vof, &
+         nmax, &
+         refvfrac(1), &
+         use_initial_guess, &
+         testcen, & !intent(out)
+         fastflag,sdim)
 
-        if (sdim.eq.3) then
-         ! do nothing
-        else if (sdim.eq.2) then
-         local_angles_NOTUS(2)=0.5d0*NOTUS_PI
-         local_nslope_NOTUS(3)=0.0d0
-         local_cell_size_NOTUS(3)=0.0d0
-         local_ref_centroid_NOTUS(3)=0.5d0
-        else
-         print *,"sdim invalid"
+        ! testcen in absolute coordinate system
+        if (fastflag.eq.0) then
+         print *,"expecting fastflag=1"
          stop
-        endif
+        else if (fastflag.eq.1) then
 
-        if (sdim.eq.3) then
-         call mof3d_compute_analytic_gradient( &
-          local_angles_NOTUS, & !intent(in)
-          local_ref_centroid_NOTUS, & !intent(in) relative to LL corner.
-          local_volume_NOTUS, & !intent(in)
-          local_cell_size_NOTUS, & !intent(in)
-          local_centroid_NOTUS, & !intent(out)
-          local_gradient_NOTUS) !intent(out) relative to LL corner
-        else if (sdim.eq.2) then
-         call mof2d_compute_analytic_gradient( &
-          local_angles_NOTUS, & !intent(in)
-          local_volume_NOTUS, &
-          local_cell_size_NOTUS, &
-          local_centroid_NOTUS)  !intent(out) relative to LL corner
-        else
-         print *,"sdim invalid"
-         stop
-        endif
-
-        NOTUS_worked=1
-
-        do dir=1,sdim
-         local_centroid_NOTUS(dir)= &
-                 local_centroid_NOTUS(dir)- &
-                 0.5d0*local_cell_size_NOTUS(dir)
-         testcen(dir)=local_centroid_NOTUS(dir) !relative of cell centroid !
-         if (testcen(dir)**2.ge.zero) then
-          !do nothing
-         else
-          print *,"WARNING"
-          print *,"testcen(dir) corrupt (multi_rotatefunc): ",dir,testcen(dir)
-          print *,"local_centroid_NOTUS(dir): ",dir, &
-                  local_centroid_NOTUS(dir)
-          print *,"volcell_vof: ",volcell_vof
-          print *,"local_volume_NOTUS: ",local_volume_NOTUS
-          print *,"refvfrac=",refvfrac
-          print *,"local_refvfrac_NOTUS=",local_refvfrac_NOTUS
-          print *,"refcentroid(dir)=",dir,refcentroid(dir)
-          print *,"local_ref_centroid_NOTUS(dir)=", &
-                  dir,local_ref_centroid_NOTUS(dir)
-          print *,"uncaptured_volume_vof=",uncaptured_volume_vof
-          print *,"dx(dir)=",dir,dx(dir)
-          print *,"bfact=",bfact
-          print *,"local_angles_NOTUS: ", &
-            local_angles_NOTUS(1),local_angles_NOTUS(2)
-          print *,"local_volume_NOTUS: ",local_volume_NOTUS
-          do dir_local=1,sdim
-           print *,"dir_local,local_ref_centroid_NOTUS ", &
-             dir_local,local_ref_centroid_NOTUS(dir_local)
-           print *,"dir_local,local_cell_size_NOTUS ", &
-             dir_local,local_cell_size_NOTUS(dir_local)
-          enddo !dir_local=1,sdim
-          print *,"local_gradient_NOTUS: ",local_gradient_NOTUS
-!         stop
-          NOTUS_worked=0
-         endif
-        enddo !dir=1,sdim
-
-        if (NOTUS_worked.eq.1) then
-
-         if ((refvfrac(1).ge.0.5d0).and. &
-             (refvfrac(1).lt.1.0d0)) then
-          do dir=1,sdim
-           testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
-          enddo
-         else if ((refvfrac(1).gt.0.0d0).and. &
-                  (refvfrac(1).le.0.5d0)) then
-          ! do nothing
-         else
-          print *,"refvfrac(1) invalid: ",refvfrac(1)
-          stop
-         endif
-
-        else if (NOTUS_worked.eq.0) then
-
-         ! inside of multi_rotatefunc
-         ! testcen in absolute coordinate system
          ! (testcen is the centroid of the intersection of
-         !  the material region with the center cell (super cell if 
-         !  continuous_mof==-1))
-         call multi_find_intercept( &
-          tid_in, &
-          nMAT_OPT, & ! 1 
-          nDOF, & ! sdim-1
-          nEQN, & ! sdim 
-          bfact,dx, &
-          xsten0,nhalf0, &
-          nslope, &  ! intent(in)
-          intercept(1), & ! intent(inout)
-          continuous_mof, &
-          xtetlist_vof, & !intent(in)
-          nlist_alloc, &
-          nlist_vof, &
-          nmax, &
-          refvfrac(1), &
-          use_initial_guess, &
-          testcen, & !intent(out)
-          fastflag,sdim)
-
-         ! testcen in absolute coordinate system
-         if (fastflag.eq.0) then
-          print *,"expecting fastflag=1"
-          stop
-         else if (fastflag.eq.1) then
-
-          if (continuous_mof.eq.STANDARD_MOF) then !MOF
-           ! (testcen is the centroid of the intersection of
-           !  the material region with the center cell)
-           call fast_cut_cell_intersection( &
-            bfact,dx,xsten0,nhalf0, &
-            nslope, &
-            intercept(1), &
-            volume_cut,testcen, &
-            facearea, &
-            xsten0,nhalf0, &
-            xtet,shapeflag, &
-            sdim) 
-          else
-           print *,"expecting continuous_mof==STANDARD_MOF"
-           stop
-          endif
-
-         else
-          print *,"fastflag invalid multi rotatefunc: ",fastflag
-          stop
-         endif
-
-          ! testcen relative to cell centroid
-         do dir=1,sdim
-          testcen(dir)=testcen(dir)-cencell_cen(dir)
-         enddo
-
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          ! do nothing
-         else 
-          print *,"expecting levelrz.eq.COORDSYS_CARTESIAN: ",levelrz
-          stop
-         endif
+         !  the material region with the center cell)
+         call fast_cut_cell_intersection( &
+           bfact,dx,xsten0,nhalf0, &
+           nslope, &
+           intercept(1), &
+           volume_cut,testcen, &
+           facearea, &
+           xsten0,nhalf0, &
+           xtet,shapeflag, &
+           sdim) 
 
         else
-         print *,"NOTUS_worked invalid"
+         print *,"fastflag invalid multi rotatefunc: ",fastflag
+         stop
+        endif
+
+         ! testcen relative to cell centroid
+        do dir=1,sdim
+         testcen(dir)=testcen(dir)-cencell_vof(dir)
+        enddo
+
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else 
+         print *,"expecting levelrz.eq.COORDSYS_CARTESIAN: ",levelrz
          stop
         endif
 
        else
-        print *,"continuous_mof invalid: ",continuous_mof
+        print *,"NOTUS_worked invalid"
         stop
        endif
 
@@ -11368,7 +10906,6 @@ contains
         ! do nothing
        else
         print *,"ff(dir) bust"
-        print *,"continuous_mof=",continuous_mof
         print *,"use_MilcentLemoine=",use_MilcentLemoine
         print *,"dir,ff(dir) ",dir,ff(dir)
         do dir_local=1,nEQN
@@ -11576,210 +11113,6 @@ contains
       return
       end subroutine slope_to_angle
 
-       ! Zhouteng Ye algorithm for machine learning.
-       ! angle_init_from_angle_recon_and_F is called from:
-       !  fort_MOF_training (PLIC_3D.F90)
-       !  fort_MOF_DT_training (PLIC_3D.F90)
-       ! fastflag=1
-       ! use_initial_guess=0
-       ! intercept_init=0.0d0
-       ! calls multi_rotatefunc
-       ! 1. find x(refvfrac,angle_recon,F)
-       ! 2. n_init=(x - xcell)
-       ! 3. call slope_to_angle(n_init,angle_init,sdim)
-      subroutine angle_init_from_angle_recon_and_F( &
-        tid_in, &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        refvfrac, & !intent(in)
-        continuous_mof, & 
-        xtetlist_vof, & !intent(in)
-        xtetlist_cen, & !intent(in)
-        nlist_alloc, & !intent(in)
-        angle_init, & ! INTENT(out)
-        refcen, &  !INTENT(out)
-        angle_recon, & ! INTENT(in)
-        nmax, &
-        sdim)
-      use probcommon_module
-      use geometry_intersect_module
-      use global_utility_module
-      IMPLICIT NONE
-
-#include "mofdata.H"
-
-      integer, INTENT(in) :: tid_in
-      integer, INTENT(in) :: sdim
-      integer, PARAMETER :: nMAT_OPT_standard=1
-      integer :: nDOF_standard
-      integer :: nEQN_standard
-
-      integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: bfact,nhalf0
-      integer, INTENT(in) :: nlist_alloc
-      integer, INTENT(in) :: nmax
-      real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
-      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
-      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT_standard)
-      real(amrex_real), INTENT(in) :: angle_recon(sdim-1)
-      real(amrex_real), INTENT(out) :: refcen(sdim)
-      real(amrex_real), INTENT(out) :: angle_init(sdim-1)
-
-      integer, parameter :: nlist_vof=0
-      integer, parameter :: nlist_cen=0
-      integer, PARAMETER :: fastflag=1
-      integer, PARAMETER :: use_initial_guess=0
-
-      real(amrex_real) intercept_init(nMAT_OPT_standard)
-      integer :: use_MilcentLemoine
-      real(amrex_real) refcentroid(sdim)
-      integer dir
-      real(amrex_real) :: angle_init_local(sdim-1)
-      real(amrex_real) :: f_placeholder(sdim)
-      real(amrex_real) :: intercept_placeholder(nMAT_OPT_standard)
-      real(amrex_real) :: cen_derive_placeholder(sdim)
-      real(amrex_real) :: cen_free_placeholder(sdim)
-      real(amrex_real) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
-      real(amrex_real) :: local_npredict(sdim)
-      real(amrex_real) :: mag(3) 
-      integer, PARAMETER :: im_primary_mat=0
-      integer, PARAMETER :: im_secondary_mat=0
-      integer, PARAMETER :: im_tertiary_mat=0
-
-      real(amrex_real), PARAMETER :: uncaptured_volume_vof_placeholder=one
-
-      real(amrex_real) :: mofdata(num_materials*ngeom_recon)
-
-      if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
-       print *,"tid_in invalid(angle_init_from_angle_recon_and_F) ",tid_in
-       stop
-      endif 
-
-      nDOF_standard=sdim-1
-      nEQN_standard=sdim
-
-      intercept_init=zero
-      do dir=1,sdim
-       refcentroid(dir)=zero
-      enddo
-
-      if (continuous_mof.eq.STANDARD_MOF) then 
-
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
-        use_MilcentLemoine=1 ! "1" option available here.
-       else if ((levelrz.eq.COORDSYS_RZ).or. &
-                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-        use_MilcentLemoine=0 ! "0" only allowed here.
-       else
-        print *,"levelrz invalid"
-        stop
-       endif
-
-      else if (continuous_mof.eq.CMOF_X) then !CMOF X
-
-       use_MilcentLemoine=0 ! "0" only allowed here.
-
-      else
-       print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
-       print *,"continuous_mof=",continuous_mof
-       stop
-      endif
-
-      if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid135"
-       stop
-      endif
-      if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
-       ! do nothing
-      else
-       print *,"nlist_alloc invalid"
-       stop
-      endif
-      if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid angle_init_from_angle_recon_and_F"
-       stop
-      endif 
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid angle_init_from_angle_recon_and_F"
-       stop
-      endif
-
-      do dir=1,nDOF_standard
-       angle_init_local(dir)=angle_recon(dir)
-      enddo
-
-      if ((refvfrac(1).ge.zero).and. &
-          (refvfrac(1).le.one)) then
-       !do nothing
-      else
-       print *,"expecting 0<=refvfrac<=1: ",refvfrac(1)
-       stop
-      endif
-
-        ! find the actual centroid given the angle.
-        ! calling from:
-        !   angle_init_from_angle_recon_and_F
-      call multi_rotatefunc( &
-       tid_in, &
-       uncaptured_volume_vof_placeholder, & !intent(in)
-       mofdata, &
-       nMAT_OPT_standard, & ! 1
-       nDOF_standard, & ! sdim-1 
-       nEQN_standard, & ! sdim
-       use_MilcentLemoine, &
-       bfact,dx,xsten0,nhalf0, &
-       xtetlist_vof,nlist_vof, & !intent(in)
-       xtetlist_cen,nlist_cen, & !intent(in)
-       nlist_alloc, & !intent(in)
-       nmax, &
-       refcentroid, & !relative to supercell centroid(CMOF)
-       refvfrac, &
-       continuous_mof, & ! = 0 or 1
-       angle_init_local, & ! INTENT(in)
-       f_placeholder, & ! INTENT(out); ||xref-xact||
-        !INTENT(out)
-       intercept_placeholder, &
-        !relative to supermesh centroid (CMOF case); INTENT(out)
-       cen_derive_placeholder, & 
-       use_initial_guess, & ! = 0
-       fastflag, & ! = 1
-       sdim)
-
-      do dir=1,nEQN_standard
-       cen_free_placeholder(dir)=zero
-      enddo
-
-      ! cen_derive_placeholder-cen_free_placeholder
-      ! normal points from light to dark
-      call find_predict_slope( &
-        npredict, & !intent(out)
-        mag, & !intent(out)
-        uncaptured_volume_vof_placeholder, &  !=1.0
-        uncaptured_volume_vof_placeholder, &  !=1.0
-        cen_free_placeholder, & !centroid of uncaptured region
-        refvfrac(1), & ! 0<=refvfrac(1)<=1
-        cen_derive_placeholder, &!relative to supermesh centroid(CMOF case)
-        bfact,dx, &
-        xsten0,nhalf0,sdim)
-
-      do dir=1,sdim
-       local_npredict(dir)=npredict(1,dir)
-      enddo
-
-      ! -pi < angle < pi
-      call slope_to_angle(local_npredict,angle_init,sdim)
-      do dir=1,nEQN_standard
-       refcen(dir)=cen_derive_placeholder(dir)
-      enddo
-
-      return
-      end subroutine angle_init_from_angle_recon_and_F
 
         ! refcentroid and centroidA relative to cell centroid of the
         ! super cell.
@@ -11790,24 +11123,19 @@ contains
         tid_in, &
         uncaptured_volume_vof, &
         mofdata, &
-        grid_index, &
-        grid_level, &
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
-        pls_normal, &
-        pls_normal_valid, &
+        override_normal, &
+        override_normal_valid, &
         bfact,dx, &
         xsten0,nhalf0, &
         refcentroid, & ! relative to cell centroid of the super cell.
         refvfrac, &
         npredict, &
-        continuous_mof, &
         nslope,intercept, &
         xtetlist_vof, & !intent(in)
         nlist_vof, &  !intent(in)
-        xtetlist_cen, & !intent(in)
-        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         centroidA, &
         nmax, &
@@ -11836,18 +11164,13 @@ contains
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
       integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: grid_index(sdim)
-      integer, INTENT(in) :: grid_level
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: bfact,nhalf0
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: nlist_vof
-      integer, INTENT(in) :: nlist_cen
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: critical_material
       integer, INTENT(in) :: fastflag
       real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
-      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: refcentroid(nEQN)
@@ -11936,10 +11259,6 @@ contains
       real(amrex_real) magLS
 
       integer ksten_low,ksten_high
-      integer mof_stencil_ok
-      integer grid_index_ML(sdim)
-      integer iML,jML,kML,cmofML
-      real(amrex_real) angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
       real(amrex_real) angle_init_range(nDOF)
       real(amrex_real) angle_output(nDOF)
 
@@ -11949,10 +11268,10 @@ contains
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
 
-      real(amrex_real), INTENT(in) :: pls_normal(num_materials,sdim)
-      integer, INTENT(in) :: pls_normal_valid(num_materials)
+      real(amrex_real), INTENT(in) :: override_normal(num_materials,sdim)
+      integer, INTENT(in) :: override_normal_valid(num_materials)
 
-      integer use_only_pls_data
+      integer use_only_override_data
 
       integer training_nguess
       integer local_MOFITERMAX
@@ -11982,13 +11301,11 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((nlist_vof.le.nlist_alloc).and. &
-          (nlist_cen.le.nlist_alloc)) then
+      if (nlist_vof.le.nlist_alloc) then
        !do nothing
       else
-       print *,"nlist_vof or nlist_cen corrupt"
+       print *,"nlist_vof corrupt"
        print *,"nlist_vof=",nlist_vof
-       print *,"nlist_cen=",nlist_cen
        print *,"nlist_alloc=",nlist_alloc
        stop
       endif
@@ -12020,23 +11337,8 @@ contains
        print *,"critical_material invalid 11653: ",critical_material
        stop
       endif
-      if (continuous_mof.eq.STANDARD_MOF) then 
-       if (nhalf0.lt.1) then
-        print *,"expecting nhalf0>=1: ",nhalf0
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_X) then 
-       if (nhalf0.lt.3) then
-        print *,"expecting nhalf0>=3: ",nhalf0
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_F_AND_X) then 
-       if (nhalf0.lt.3) then
-        print *,"expecting nhalf0>=3: ",nhalf0
-        stop
-       endif
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
+      if (nhalf0.lt.1) then
+       print *,"expecting nhalf0>=1: ",nhalf0
        stop
       endif
 
@@ -12063,37 +11365,17 @@ contains
        stop
       endif
 
-      if (continuous_mof.eq.STANDARD_MOF) then
-
-       if ((fastflag.eq.1).and. &
-           (levelrz.eq.COORDSYS_CARTESIAN)) then
-        use_MilcentLemoine=1 ! "1" option available here.
-       else if ((fastflag.eq.0).or. &
-                (levelrz.eq.COORDSYS_RZ).or. &
-                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-        use_MilcentLemoine=0 ! "0" only allowed here.
-       else
-        print *,"parameters invalid"
-        print *,"continuous_mof ",continuous_mof
-        print *,"fastflag ",fastflag
-        print *,"levelrz ",levelrz
-        stop
-       endif
-
-      else if ((continuous_mof.eq.CMOF_X).or. &
-               (continuous_mof.eq.CMOF_F_AND_X)) then
-
+      if ((fastflag.eq.1).and. &
+          (levelrz.eq.COORDSYS_CARTESIAN)) then
+       use_MilcentLemoine=1 ! "1" option available here.
+      else if ((fastflag.eq.0).or. &
+               (levelrz.eq.COORDSYS_RZ).or. &
+               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        use_MilcentLemoine=0 ! "0" only allowed here.
-
       else
-       print *,"continuous_mof invalid"
-       print *,"continuous_mof=",continuous_mof
-       print *,"levelrz=",levelrz
-       print *,"nlist_vof=",nlist_vof 
-       print *,"nlist_cen=",nlist_cen
-       print *,"nlist_alloc=",nlist_alloc
-       print *,"sdim=",sdim
-       print *,"fastflag=",fastflag
+       print *,"parameters invalid"
+       print *,"fastflag ",fastflag
+       print *,"levelrz ",levelrz
        stop
       endif
 
@@ -12113,439 +11395,154 @@ contains
 
       training_nguess=0
       nguess=0
-      use_only_pls_data=0
+      use_only_override_data=0
 
       if (nMAT_OPT.eq.1) then !expecting nMAT_OPT==1
 
-       if (MOF_TURN_OFF_LS.eq.0) then
+       if (override_normal_valid(critical_material).eq.1) then
 
-        if (pls_normal_valid(critical_material).eq.1) then
+        if (MOFITERMAX_AFTER_PREDICT.eq.0) then
+         ! do nothing
+        else
+         print *,"expecting MOFITERMAX_AFTER_PREDICT==0: ", &
+            MOFITERMAX_AFTER_PREDICT
+         stop
+        endif
 
-         if (MOFITERMAX_AFTER_PREDICT.eq.0) then
-          ! do nothing
-         else
-          print *,"expecting MOFITERMAX_AFTER_PREDICT==0: ", &
-             MOFITERMAX_AFTER_PREDICT
-          stop
-         endif
+        magLS=zero
+        do dir=1,sdim
+         nLS(dir)=override_normal(critical_material,dir)
+         magLS=magLS+nLS(dir)**2
+        enddo
+        magLS=sqrt(magLS)
+         ! -pi < angle < pi
+        if ((magLS.ge.one-EPS2).and. &
+            (magLS.le.one+EPS2)) then
+         call slope_to_angle(nLS,angle_init,sdim)
+        else
+         print *,"magLS invalid (pls): ",magLS
+         do dir=1,sdim
+          print *,"dir,nLS (override) ",dir,nLS(dir)
+         enddo
+         stop
+        endif
 
+        nguess=nguess+1 
+        training_nguess=nguess
+
+        do dir=1,sdim-1
+         angle_array(dir,nguess)=angle_init(dir)
+        enddo
+
+       else if (override_normal_valid(critical_material).eq.0) then
+        ! do nothing
+       else
+        print *,"override_normal_valid incorrect: ",override_normal_valid
+        print *,"critical_material ",critical_material
+        stop
+       endif
+
+       if (override_normal_valid(critical_material).eq.1) then
+        !do nothing
+       else if (override_normal_valid(critical_material).eq.0) then
+
+        if (lsnormal_valid(critical_material).eq.1) then
          magLS=zero
          do dir=1,sdim
-          nLS(dir)=pls_normal(critical_material,dir)
+          nLS(dir)=lsnormal(critical_material,dir)
           magLS=magLS+nLS(dir)**2
          enddo
          magLS=sqrt(magLS)
           ! -pi < angle < pi
-         if ((magLS.ge.one-EPS2).and. &
-             (magLS.le.one+EPS2)) then
+         if (magLS.gt.zero) then
           call slope_to_angle(nLS,angle_init,sdim)
          else
-          print *,"magLS invalid (pls): ",magLS
+          print *,"magLS invalid: ",magLS
           do dir=1,sdim
-           print *,"dir,nLS (pls) ",dir,nLS(dir)
+           print *,"dir,nLS ",dir,nLS(dir)
           enddo
           stop
          endif
-
          nguess=nguess+1 
-         training_nguess=nguess
-
-         if (continuous_mof.eq.STANDARD_MOF) then 
-          !do nothing
-         else if (continuous_mof.eq.CMOF_X) then 
-          !do nothing
-         else if (continuous_mof.eq.CMOF_F_AND_X) then 
-          !do nothing
-         else
-          print *,"continuous_mof invalid: ",continuous_mof
-          stop
-         endif
-
          do dir=1,sdim-1
           angle_array(dir,nguess)=angle_init(dir)
          enddo
-
-        else if (pls_normal_valid(critical_material).eq.0) then
+        else if (lsnormal_valid(critical_material).eq.0) then
          ! do nothing
         else
-         print *,"PLS_NORMAL_valid invalid2a"
+         print *,"LSNORMAL_valid invalid1"
          print *,"critical_material,flag ",critical_material, &
-          pls_normal_valid(critical_material) 
-         stop
-        endif
-
-        if (pls_normal_valid(critical_material).eq.1) then
-         !do nothing
-        else if (pls_normal_valid(critical_material).eq.0) then
-
-         if (lsnormal_valid(critical_material).eq.1) then
-          magLS=zero
-          do dir=1,sdim
-           nLS(dir)=lsnormal(critical_material,dir)
-           magLS=magLS+nLS(dir)**2
-          enddo
-          magLS=sqrt(magLS)
-           ! -pi < angle < pi
-          if (magLS.gt.zero) then
-           call slope_to_angle(nLS,angle_init,sdim)
-          else
-           print *,"magLS invalid: ",magLS
-           do dir=1,sdim
-            print *,"dir,nLS ",dir,nLS(dir)
-           enddo
-           stop
-          endif
-          nguess=nguess+1 
-          do dir=1,sdim-1
-           angle_array(dir,nguess)=angle_init(dir)
-          enddo
-         else if (lsnormal_valid(critical_material).eq.0) then
-          ! do nothing
-         else
-          print *,"LSNORMAL_valid invalid1"
-          print *,"critical_material,flag ",critical_material, &
-           lsnormal_valid(critical_material) 
-          stop
-         endif
-
-        else
-         print *,"PLS_NORMAL_valid invalid2b"
-         print *,"critical_material,flag ",critical_material, &
-          pls_normal_valid(critical_material) 
-         stop
-        endif
-
-       else if (MOF_TURN_OFF_LS.eq.1) then
-
-        if (pls_normal_valid(critical_material).eq.1) then
-         print *,"cannot have both MOF_TURN_OFF_LS==1 and pls_normal_valid==1"
-         stop
-        else if (pls_normal_valid(critical_material).eq.0) then
-         ! do nothing
-        else
-         print *,"PLS_NORMAL_valid invalid2c"
-         print *,"critical_material,flag ",critical_material, &
-          pls_normal_valid(critical_material) 
+          lsnormal_valid(critical_material) 
          stop
         endif
 
        else
-        print *,"MOF_TURN_OFF_LS invalid: ",MOF_TURN_OFF_LS
+        print *,"override_normal_valid incorrect ", &
+          override_normal_valid
+        print *,"critical_material ",critical_material, &
         stop
        endif
 
-        ! these are the valid choices for continuous_mof
-       if ((continuous_mof.eq.STANDARD_MOF).or. &  
-           (continuous_mof.eq.CMOF_F_AND_X).or. & 
-           (continuous_mof.eq.CMOF_X)) then  
+       if (override_normal_valid(critical_material).eq.1) then
+        use_only_override_data=1
+       else if (override_normal_valid(critical_material).eq.0) then
+        use_only_override_data=0
+       else
+        print *,"override_normal_valid incorrect: ",override_normal_valid
+        stop
+       endif
 
-        if (pls_normal_valid(critical_material).eq.1) then
-         if (continuous_mof.eq.STANDARD_MOF) then
-          use_only_pls_data=1
-         else if (continuous_mof.eq.CMOF_F_AND_X) then
-          use_only_pls_data=1
-         else if (continuous_mof.eq.CMOF_X) then
-          use_only_pls_data=1
-         else
-          print *,"continuous_mof invalid:",continuous_mof
-          stop
-         endif
-        else if (pls_normal_valid(critical_material).eq.0) then
-         use_only_pls_data=0
-        else 
-         print *,"pls_normal_valid(critical_material) invalid"
+       if (use_only_override_data.eq.1) then
+        !do nothing
+       else if (use_only_override_data.eq.0) then
+
+        do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
+
+         do dir=1,sdim
+          local_npredict(dir)=npredict(ipredict,dir)
+         enddo
+         ! -pi < angle < pi
+         call slope_to_angle(local_npredict,angle_init,sdim)
+         nguess=nguess+1
+         do dir=1,nDOF
+          angle_array(dir,nguess)=angle_init(dir)
+         enddo
+
+        enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
+
+        if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
+         ! do nothing
+        else
+         print *,"no room for initial guess"
+         print *,"MOFITERMAX ",MOFITERMAX
+         print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
+         print *,"num_materials ",num_materials
          stop
         endif
 
-        if (use_only_pls_data.eq.1) then
-         !do nothing
-        else if (use_only_pls_data.eq.0) then
-
-         do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-          do dir=1,sdim
-           local_npredict(dir)=npredict(ipredict,dir)
-          enddo
-           ! -pi < angle < pi
-          call slope_to_angle(local_npredict,angle_init,sdim)
-          nguess=nguess+1
-          do dir=1,nDOF
-           angle_array(dir,nguess)=angle_init(dir)
-          enddo
-
-         enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-         if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
+        if (sdim.eq.2) then
+         if (nDOF.eq.1) then
           ! do nothing
          else
-          print *,"no room for initial guess"
-          print *,"MOFITERMAX ",MOFITERMAX
-          print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
-          print *,"num_materials ",num_materials
+          print *,"nDOF invalid"
           stop
          endif
-
-         if (sdim.eq.2) then
-          if (nDOF.eq.1) then
-           ! do nothing
-          else
-           print *,"nDOF invalid"
-           stop
-          endif
-         else if (sdim.eq.3) then
-          if (nDOF.eq.2) then
-           ! do nothing
-          else
-           print *,"nDOF invalid"
-           stop
-          endif
-         else
-          print *,"sdim invalid" 
-          stop
-         endif
-
-         do dir=1,sdim
-          grid_index_ML(dir)=grid_index(dir)/bfact
-          grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
-         enddo
-
-         dir=1
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
+        else if (sdim.eq.3) then
+         if (nDOF.eq.2) then
           ! do nothing
-         else if (levelrz.eq.COORDSYS_RZ) then
-          grid_index_ML(dir)=grid_index(dir)
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          grid_index_ML(dir)=grid_index(dir)
          else
-          print *,"levelrz invalid"
+          print *,"nDOF invalid"
           stop
          endif
-
-         dir=2
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          ! do nothing
-         else if (levelrz.eq.COORDSYS_RZ) then
-          ! do nothing
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          grid_index_ML(dir)=grid_index(dir)
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-
-         iML=grid_index_ML(1)
-         jML=grid_index_ML(2)
-         if (sdim.eq.2) then
-          kML=0
-         else if (sdim.eq.3) then
-          kML=grid_index_ML(sdim)
-         else
-          print *,"sdim invalid"
-          stop
-         endif
-
-         if (1.eq.0) then
-          print *,"fort_finest_level ",fort_finest_level
-          print *,"fort_max_level ",fort_max_level
-          print *,"grid_level ",grid_level
-          print *,"decision_tree_max_level ",decision_tree_max_level
-          print *,"grid_index_ML ",grid_index_ML
-         endif
-
-         if (decision_tree_max_level.eq.-1) then
-          !do nothing
-         else if (decision_tree_max_level.ge.0) then
-
-          if (grid_level.eq.decision_tree_max_level) then
-           mof_stencil_ok=1
-           if (continuous_mof.eq.STANDARD_MOF) then 
-            ! do nothing
-           else if (continuous_mof.eq.CMOF_F_AND_X) then
-            mof_stencil_ok=0
-           else if (continuous_mof.eq.CMOF_X) then
-
-            if (sdim.eq.3) then
-             ksten_low=-1
-             ksten_high=1
-            else if (sdim.eq.2) then
-             ksten_low=0
-             ksten_high=0
-            else
-             print *,"sdim invalid"
-             stop
-            endif
-
-           else
-            print *,"continuous_mof invalid: ",continuous_mof
-            stop
-           endif
-
-           if (mof_stencil_ok.eq.1) then
-
-            if (fastflag.eq.1) then
-             nguess=nguess+1
-
-             call put_angle_in_range(angle_init,angle_init_range,sdim)
-
-             do dir=1,nDOF
-              angle_init_ML(dir)=angle_init_range(dir)
-             enddo
-             angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
-
-             if (continuous_mof.eq.STANDARD_MOF) then !MOF
-              cmofML=0
-             else if (continuous_mof.eq.CMOF_X) then !CMOF X
-              cmofML=1
-             else
-              print *,"continuous_mof invalid:",continuous_mof
-              stop
-             endif
-
-             call decision_tree_predict(angle_init_ML,angle_output, &
-               MOF_TRAINING_NDIM_DECISIONS, &
-               MOF_TRAINING_NDIM_CLASSIFY, &
-               decision_tree_array(D_DECL(iML,jML,kML),cmofML))
-
-             training_nguess=nguess
-
-             do dir=1,nDOF
-              angle_array(dir,nguess)=angle_output(dir)
-             enddo
-
-             if (1.eq.0) then
-              print *,"DT:grid_idx,grid_idx_ML ",grid_index,grid_index_ML
-              print *,"DT:angle_init,angle_output,nguess ", &
-                angle_init,angle_output,nguess
-              print *,"refvfrac(1) ",refvfrac(1)
-             endif
-
-            else if (fastflag.eq.0) then
-             ! do nothing
-            else
-             print *,"fastflag invalid: ",fastflag
-             stop
-            endif
-
-           else if (mof_stencil_ok.eq.0) then
-            ! do nothing
-           else
-            print *,"mof_stencil_ok invalid: ",mof_stencil_ok
-            stop
-           endif
-
-          else if (grid_level.eq.-1) then
-           ! do nothing
-          else
-           print *,"grid_level (decision tree check) invalid: ",grid_level
-           stop
-          endif
-
-         else
-          print *,"decision_tree_max_level invalid: ",decision_tree_max_level
-          stop
-         endif
-
-         if (training_max_level.eq.-1) then
-          ! do nothing
-         else if (training_max_level.ge.0) then
-
-          if (grid_level.eq.training_max_level) then
-           mof_stencil_ok=1
-           if (continuous_mof.eq.STANDARD_MOF) then 
-            ! do nothing
-           else if (continuous_mof.eq.CMOF_F_AND_X) then
-            mof_stencil_ok=0
-           else if (continuous_mof.eq.CMOF_X) then
-
-            if (sdim.eq.3) then
-             ksten_low=-1
-             ksten_high=1
-            else if (sdim.eq.2) then
-             ksten_low=0
-             ksten_high=0
-            else
-             print *,"sdim invalid"
-             stop
-            endif
-
-           else
-            print *,"continuous_mof invalid: ",continuous_mof
-            stop
-           endif
-
-           if (mof_stencil_ok.eq.1) then
-
-            if (fastflag.eq.1) then
-             nguess=nguess+1
-
-             call put_angle_in_range(angle_init,angle_init_range,sdim)
-
-             do dir=1,nDOF
-              angle_init_ML(dir)=angle_init_range(dir)
-             enddo
-             angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
-
-             if (continuous_mof.eq.STANDARD_MOF) then 
-              cmofML=0
-             else if (continuous_mof.eq.CMOF_X) then 
-              cmofML=1
-             else
-              print *,"continuous_mof invalid"
-              stop
-             endif
-
-              ! choices: NN, DT, RF
-             angle_output= &
-               training_array(D_DECL(iML,jML,kML),cmofML)%DT_ZHOUTENG_LOCAL% &
-               predict(angle_init_ML)
-
-             training_nguess=nguess
-
-             do dir=1,nDOF
-              angle_array(dir,nguess)=angle_output(dir)
-             enddo
-
-             if (1.eq.0) then
-              print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
-                grid_index,grid_index_ML,angle_init,angle_output,nguess
-              print *,"refvfrac(1) ",refvfrac(1)
-             endif
-
-            else if (fastflag.eq.0) then
-             ! do nothing
-            else
-             print *,"fastflag invalid"
-             stop
-            endif
-
-           else if (mof_stencil_ok.eq.0) then
-            ! do nothing
-           else
-            print *,"mof_stencil_ok invalid"
-            stop
-           endif
-
-          else if (grid_level.eq.-1) then
-           ! do nothing
-          else
-           print *,"grid_level (training_max_level) invalid: ",grid_level
-           stop
-          endif
-
-         else
-          print *,"training_max_level invalid: ",training_max_level
-          stop
-         endif
-
         else
-         print *,"use_only_pls_data invalid: ",use_only_pls_data
-         print *,"critical_material,flag ",critical_material, &
-          pls_normal_valid(critical_material) 
+         print *,"sdim invalid" 
          stop
         endif
 
        else
-        print *,"continuous_mof invalid: ",continuous_mof
+        print *,"use_only_override_data invalid ",use_only_override_data
+        print *,"override_normal_valid ",override_normal_valid
+        print *,"critical_material ",critical_material
         stop
        endif
 
@@ -12582,13 +11579,10 @@ contains
         xsten0,nhalf0, &
         xtetlist_vof, & !intent(in)
         nlist_vof, & !intent(in)
-        xtetlist_cen, & !intent(in)
-        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         nmax, &
         refcentroid, &
         refvfrac, &
-        continuous_mof, &
         angle_init, &
         finit, &
         intercept_init, &
@@ -12629,11 +11623,6 @@ contains
        else if (err.lt.err_array(iicrit)) then
         iicrit=iter
        endif
-       if (1.eq.0) then
-        if (training_nguess.ge.1) then
-         print *,"(training_nguess) iter,err,angle_guess ",iter,err,angle_init
-        endif
-       endif
       enddo ! iter=1..nguess
 
       if ((iicrit.lt.1).or.(iicrit.gt.nguess)) then
@@ -12662,32 +11651,12 @@ contains
 
       iter=0
 
-      if (use_only_pls_data.eq.1) then
-#ifdef AMREX_PARTICLES
+      if (use_only_override_data.eq.1) then
        local_MOFITERMAX=0
-#else
-       print *,"expecting AMREX_PARTICLES==TRUE"
-       stop
-#endif
-      else if (use_only_pls_data.eq.0) then
-
-       if (training_nguess.ge.1) then
-
-#ifdef AMREX_PARTICLES
-        print *,"expecting no training if AMREX_PARTICLES==TRUE"
-        stop
-#endif
-
-        local_MOFITERMAX=MOFITERMAX_AFTER_PREDICT
-
-       else if (training_nguess.eq.0) then
-        ! do nothing
-       else
-        print *,"training_nguess invalid: ",training_nguess
-        stop
-       endif
+      else if (use_only_override_data.eq.0) then
+       !do nothing
       else
-       print *,"use_only_pls_data invalid: ",use_only_pls_data
+       print *,"use_only_override_data invalid: ",use_only_override_data
        stop
       endif
 
@@ -12747,13 +11716,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
-         xtetlist_cen, & !intent(in)
-         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid, &
          refvfrac, &
-         continuous_mof, &
          angle_plus, & !intent(in)
          fp, & !intent(out)
          local_int, & !intent(inout)
@@ -12791,12 +11757,9 @@ contains
          bfact,dx,xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
-         xtetlist_cen, & !intent(in)
-         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid,refvfrac, &
-         continuous_mof, &
          angle_minus, & !intent(in)
          fm, & !intent(out)
          local_int, & !intent(inout)
@@ -12955,13 +11918,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
-         xtetlist_cen, & !intent(in)
-         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid, &
          refvfrac, &
-         continuous_mof, &
          angle_gauss_newton, & !intent(in)
          f_gauss_newton, & !intent(out)
          int_gauss_newton, & !intent(inout)
@@ -13004,13 +11964,10 @@ contains
          bfact,dx,xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
-         xtetlist_cen, & !intent(in)
-         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid, &
          refvfrac, &
-         continuous_mof, &
          angle_steepest, & !intent(in)
          f_steepest, & !intent(out)
          int_steepest, &  !intent(inout)
@@ -13232,7 +12189,6 @@ contains
         xsten0,nhalf0, &
         nslope, &
         intercept(1), &
-        continuous_mof, &
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
@@ -13439,19 +12395,16 @@ contains
 
       subroutine individual_MOF( &
         layer_flag, &
-        grid_index, &
-        grid_level, &
         tid_in, &
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
-        pls_normal, &
-        pls_normal_valid, &
+        override_normal, &
+        override_normal_valid, &
         bfact,dx, &
         xsten0,nhalf0, &
         order_algorithm_in, &
         xtetlist_vof, & !intent(out)
-        xtetlist_cen, & !intent(out)
         nlist_alloc, & !intent(in)
         nmax, &
         mofdata, &
@@ -13462,9 +12415,7 @@ contains
         num_processed, &
         material_used, &
         uncaptured_volume_vof, &
-        uncaptured_volume_cen, &
         multi_centroidA, &
-        continuous_mof, &
         sdim)
 
       use probcommon_module
@@ -13477,14 +12428,11 @@ contains
       integer, INTENT(IN) :: nlist_alloc 
       integer, INTENT(IN) :: tid_in
       integer, INTENT(in) :: sdim 
-      integer, INTENT (IN) :: grid_index(sdim)
-      integer, INTENT (IN) :: grid_level
       integer, INTENT (IN) :: nhalf0
       integer, INTENT (IN) :: bfact
       real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       real(amrex_real), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
-      integer, INTENT(in) :: continuous_mof
       integer dir
       integer i_stencil_node
       integer, INTENT(in) :: nmax
@@ -13492,7 +12440,6 @@ contains
       real(amrex_real), INTENT(inout) :: uncaptured_volume_fraction
       real(amrex_real), INTENT(in) :: vfrac_sum_local
       real(amrex_real), INTENT(inout) :: uncaptured_volume_vof 
-      real(amrex_real), INTENT(inout) :: uncaptured_volume_cen
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
       real(amrex_real) centroidA(num_materials*sdim)
       real(amrex_real), INTENT(out) :: multi_centroidA(num_materials,sdim)
@@ -13508,16 +12455,11 @@ contains
       integer order_min
       integer critical_material
       real(amrex_real) volcut_vof,volcell_vof
-      real(amrex_real) volcut_cen,volcell_cen
       real(amrex_real) mag(3)
       real(amrex_real) cencut_vof(sdim)
       real(amrex_real) cencell_vof(sdim)
-      real(amrex_real) cencut_cen(sdim)
-      real(amrex_real) cencell_cen(sdim)
       real(amrex_real), INTENT(out) :: xtetlist_vof(4,3,nlist_alloc)
-      real(amrex_real), INTENT(out) :: xtetlist_cen(4,3,nlist_alloc)
       integer nlist_vof
-      integer nlist_cen
       integer single_material_takes_all
       integer single_material_im
       integer test_order
@@ -13534,7 +12476,7 @@ contains
       real(amrex_real) nslope(num_materials*sdim)
       real(amrex_real) intercept(num_materials)
       integer mat_before,vofcomp_before
-      integer fastflag,use_super_cell
+      integer fastflag
       real(amrex_real) vofmain(num_materials)
 
       real(amrex_real), INTENT(in) :: &
@@ -13543,8 +12485,8 @@ contains
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
 
-      real(amrex_real), INTENT(in) :: pls_normal(num_materials,sdim)
-      integer, INTENT(in) :: pls_normal_valid(num_materials)
+      real(amrex_real), INTENT(in) :: override_normal(num_materials,sdim)
+      integer, INTENT(in) :: override_normal_valid(num_materials)
 
       integer, PARAMETER :: nMAT_OPT_standard=1
       integer :: nDOF_standard
@@ -13558,7 +12500,6 @@ contains
 
       fastflag=1
       nlist_vof=0
-      nlist_cen=0
 
       call init_mask_flag(layer_flag,is_masked)
 
@@ -13618,14 +12559,6 @@ contains
        print *,"nmax too small"
        stop
       endif
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_F_AND_X).or. &
-          (continuous_mof.eq.CMOF_X)) then 
-       ! do nothing
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
-       stop
-      endif
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -13641,89 +12574,21 @@ contains
       enddo !i_stencil_node
 
 
-       ! cencell_vof,cencell_cen is in absolute coordinate system
+       ! cencell_vof is in absolute coordinate system
 
-      if (continuous_mof.eq.STANDARD_MOF) then 
-
-       call Box_volumeFAST( &
+      call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_vof, &
         cencell_vof, &
         sdim)
-       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        volcell_cen, &
-        cencell_cen, &
-        sdim)
 
-      else if (continuous_mof.eq.CMOF_X) then
-
-       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        volcell_vof, &
-        cencell_vof, &
-        sdim)
-       call Box_volume_super( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-
-      else if (continuous_mof.eq.CMOF_F_AND_X) then
-       call Box_volume_super( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         volcell_vof, &
-         cencell_vof, &
-         sdim)
-       call Box_volume_super( &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         volcell_cen, &
-         cencell_cen, &
-         sdim)
-      else
-       print *,"continuous_mof invalid ",continuous_mof
-       stop
-      endif
-
-      if (continuous_mof.eq.CMOF_F_AND_X) then 
-
-       if ((num_processed.ge.0).and. &
-           (num_processed.lt.num_materials)) then
-        fastflag=0
-       else 
-        print *,"num_processed invalid ",num_processed
-        stop
-       endif
-
-      else if (continuous_mof.eq.STANDARD_MOF) then 
-
-       if ((num_processed.ge.1).and. &
-           (num_processed.lt.num_materials)) then
-        fastflag=0
-       else if (num_processed.eq.0) then
-        fastflag=1
-       else 
-        print *,"num_processed invalid: ",num_processed
-        stop
-       endif
-
-      else if (continuous_mof.eq.CMOF_X) then 
-
-       if ((num_processed.ge.1).and. &
-           (num_processed.lt.num_materials)) then
-        fastflag=0
-       else if (num_processed.eq.0) then
-        fastflag=1
-       else 
-        print *,"num_processed invalid: ",num_processed
-        stop
-       endif
-
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
+      if ((num_processed.ge.1).and. &
+          (num_processed.lt.num_materials)) then
+       fastflag=0
+      else if (num_processed.eq.0) then
+       fastflag=1
+      else 
+       print *,"num_processed invalid: ",num_processed
        stop
       endif
 
@@ -13733,112 +12598,26 @@ contains
 
          ! get triangulation of uncaptured space in the cell
          ! in: individual_MOF
-       if (continuous_mof.eq.STANDARD_MOF) then
-        use_super_cell=0
-        call tets_box_planes_super( &
+       call tets_box_planes( &
          layer_flag, &
-         continuous_mof, &
-         tid_in, &
          bfact,dx, &
+         xsten0,nhalf0, &
          xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
          nlist_alloc, &
          nlist_vof, &
          nmax, &
-         use_super_cell, &
          sdim)
-        use_super_cell=0
-        call tets_box_planes_super( &
-         layer_flag, &
-         continuous_mof, &
-         tid_in, &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         mofdata, &
-         xtetlist_cen, &
-         nlist_alloc, &
-         nlist_cen, &
-         nmax, &
-         use_super_cell, &
-         sdim)
-       else if (continuous_mof.eq.CMOF_X) then !CMOF X
-        use_super_cell=0
-        call tets_box_planes_super( &
-         layer_flag, &
-         continuous_mof, &
-         tid_in, &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         mofdata, &
-         xtetlist_vof, &
-         nlist_alloc, &
-         nlist_vof, &
-         nmax, &
-         use_super_cell, &
-         sdim)
-        use_super_cell=1
-        call tets_box_planes_super( &
-         layer_flag, &
-         continuous_mof, &
-         tid_in, &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         mofdata, &
-         xtetlist_cen, &
-         nlist_alloc, &
-         nlist_cen, &
-         nmax, &
-         use_super_cell, &
-         sdim)
-       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
-        use_super_cell=1
-
-        call tets_box_planes_super( &
-         layer_flag, &
-         continuous_mof, &
-         tid_in, &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         mofdata, &
-         xtetlist_vof, &
-         nlist_alloc, &
-         nlist_vof, &
-         nmax, &
-         use_super_cell, &
-         sdim)
-        use_super_cell=1
-        call tets_box_planes_super( &
-         layer_flag, &
-         continuous_mof, &
-         tid_in, &
-         bfact,dx, &
-         xsten0,nhalf0, &
-         mofdata, &
-         xtetlist_cen, &
-         nlist_alloc, &
-         nlist_cen, &
-         nmax, &
-         use_super_cell, &
-         sdim)
-       else
-        print *,"continuous_mof invalid: ",continuous_mof
-        stop
-       endif
 
        call get_cut_geom3D(xtetlist_vof, &
          nlist_alloc,nlist_vof,nmax, &
          volcut_vof,cencut_vof,sdim)
-       call get_cut_geom3D(xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax, &
-         volcut_cen,cencut_cen,sdim)
 
       else if (fastflag.eq.1) then
        volcut_vof=volcell_vof
-       volcut_cen=volcell_cen
        do dir=1,sdim
         cencut_vof(dir)=cencell_vof(dir)  
-        cencut_cen(dir)=cencell_cen(dir)  
        enddo
       else
        print *,"fastflag invalid individual MOF ",fastflag
@@ -13853,7 +12632,6 @@ contains
         print *,"(1) compile with the -g option"
         print *,"(2) break MOF.F90:13110"
         print *,"volcut_vof invalid individual mof"
-        print *,"continuous_mof ",continuous_mof
         print *,"num_processed ",num_processed
         print *,"order_algorithm_in ",order_algorithm_in
         print *,"bfact ",bfact
@@ -13870,7 +12648,6 @@ contains
         print *,"fastflag ",fastflag
         print *,"nlist_alloc ",nlist_alloc
         print *,"nlist_vof ",nlist_vof
-        print *,"nlist_cen ",nlist_cen
         print *,"volcell_vof ",volcell_vof
         print *,"cencell_vof ",cencell_vof
         print *,"volcut_vof ",volcut_vof
@@ -13878,7 +12655,6 @@ contains
         print *,"uncaptured_volume_fraction ",uncaptured_volume_fraction
         print *,"vfrac_sum_local ",vfrac_sum_local
         print *,"uncaptured_volume_vof ",uncaptured_volume_vof
-        print *,"uncaptured_volume_cen ",uncaptured_volume_cen
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          print *,"im,vof,centroid ",im,mofdata(vofcomp),mofdata(vofcomp+1), &
@@ -14003,7 +12779,7 @@ contains
 
            do dir=1,sdim
             centroid_free(dir)=cencut_cen(dir)
-            centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
+            centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_vof(dir)
            enddo
 
            ! centroid_ref-centroid_free
@@ -14101,7 +12877,7 @@ contains
 
          do dir=1,sdim
           centroid_free(dir)=cencut_cen(dir)
-          centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
+          centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_vof(dir)
          enddo
 
          single_volume=mofdata(vofcomp)*volcell_vof
@@ -14138,25 +12914,20 @@ contains
            tid_in, &
            uncaptured_volume_vof, &
            mofdata, &
-           grid_index, &
-           grid_level, &
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
-           pls_normal, &
-           pls_normal_valid, &
+           override_normal, &
+           override_normal_valid, &
            bfact,dx, &
            xsten0,nhalf0, &
            refcentroid, &
            refvfrac, &
            npredict, &
-           continuous_mof, &
            nslope, &
            intercept, &
            xtetlist_vof, & !intent(in)
            nlist_vof, & !intent(in)
-           xtetlist_cen, & !intent(in)
-           nlist_cen, & !intent(in)
            nlist_alloc, & !intent(in)
            centroidA, &
            nmax, &
@@ -14295,8 +13066,8 @@ contains
          else if (mat_before.eq.0) then
 
            do dir=1,sdim
-            centroid_free(dir)=cencell_cen(dir)
-            centroid_ref(dir)=cencut_cen(dir)
+            centroid_free(dir)=cencell_vof(dir)
+            centroid_ref(dir)=cencut_vof(dir)
            enddo
 
            ! centroid_ref-centroid_free
@@ -14350,7 +13121,7 @@ contains
             ! cencut_cen is the uncaptured centroid in absolute frame 
            centroidA(dir)=cencut_cen(dir)
            multi_centroidA(critical_material,dir)= &
-            centroidA(dir)-cencell_cen(dir)
+            centroidA(dir)-cencell_vof(dir)
           enddo 
 
          else if ((single_material_takes_all.eq.0).or. &
@@ -14371,7 +13142,6 @@ contains
            xsten0,nhalf0, &
            local_npredict, &
            intercept(1), &
-           continuous_mof, &
            xtetlist_vof, & !intent(in)
            nlist_alloc, &  !intent(in)
            nlist_vof, &    !intent(in)
@@ -14412,7 +13182,7 @@ contains
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
            multi_centroidA(critical_material,dir)= &
-            centroidA(dir)-cencell_cen(dir)
+            centroidA(dir)-cencell_vof(dir)
           enddo 
          else
           print *,"single_material_takes_all or mat_before invalid"
@@ -15122,10 +13892,7 @@ contains
 ! dxmaxLS_volume_constraint=dx if STANDARD_MOF, CMOF_X
 ! dxmaxLS_volume_constraint=3 dx if CMOF_F_AND_X
       subroutine find_cut_geom_slope_CLSVOF( &
-        continuous_mof, &
         ls_mof, &
-        particle_list, &
-        num_particles, &
         lsnormal, &
         lsnormal_valid, &
         ls_intercept, &
@@ -15142,7 +13909,6 @@ contains
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: nhalf0
       integer, INTENT(in) :: im
@@ -15171,10 +13937,6 @@ contains
 
       real(amrex_real), INTENT(in) :: &
             ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
-
-      integer, INTENT(in) :: num_particles
-      real(amrex_real), INTENT(in) :: particle_list(num_particles,sdim+1)
-      real(amrex_real) :: w_particles(num_particles)
 
       real(amrex_real), INTENT(out)    :: lsnormal(num_materials,sdim)
       integer, INTENT(out) :: lsnormal_valid(num_materials)
@@ -15234,110 +13996,98 @@ contains
 
       lsnormal_valid(im)=1
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. &
-          (continuous_mof.eq.CMOF_X).or. &
-          (continuous_mof.ge.CMOF_F_AND_X)) then
+      LS_cen=ls_mof(D_DECL(0,0,0),im)
 
-       LS_cen=ls_mof(D_DECL(0,0,0),im)
+       ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
+      if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
+       lsnormal_valid(im)=0
+      else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
+       !do nothing
+      else
+       print *,"LS_cen invalid: ",LS_cen
+       stop
+      endif
+
+      if (lsnormal_valid(im).eq.1) then
+
+       do dir=1,sdim
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(sdim.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid CLSVOF slope: ",dir
+         stop
+        endif
+        dxplus=xsten0(2,dir)-xsten0(0,dir)
+        dxminus=xsten0(0,dir)-xsten0(-2,dir)
+
+        if (centroid_absolute(dir).ge.xsten0(-3,dir)-EPS2*dxminus) then
+         !do nothing
+        else
+         print *,"centroid_absolute invalid"
+         print *,"dir,centroid,xlo ", &
+           dir,centroid_absolute(dir),xsten0(-3,dir)
+         stop
+        endif
+        if (centroid_absolute(dir).le.xsten0(3,dir)+EPS2*dxplus) then
+         !do nothing
+        else
+         print *,"centroid_absolute invalid"
+         print *,"dir,centroid,xhi ", &
+           dir,centroid_absolute(dir),xsten0(3,dir)
+         stop
+        endif
+
+        LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
+        LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
         ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
-       if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
-        lsnormal_valid(im)=0
-       else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
-        !do nothing
-       else
-        print *,"LS_cen invalid: ",LS_cen
-        stop
-       endif
-
-       if (lsnormal_valid(im).eq.1) then
-
-        do dir=1,sdim
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.1) then
-          ii=1
-         else if (dir.eq.2) then
-          jj=1
-         else if ((dir.eq.3).and.(sdim.eq.3)) then
-          kk=1
-         else
-          print *,"dir invalid CLSVOF slope: ",dir
-          stop
-         endif
-         dxplus=xsten0(2,dir)-xsten0(0,dir)
-         dxminus=xsten0(0,dir)-xsten0(-2,dir)
-
-         if (centroid_absolute(dir).ge.xsten0(-3,dir)-EPS2*dxminus) then
-          !do nothing
-         else
-          print *,"centroid_absolute invalid"
-          print *,"dir,centroid,xlo ", &
-            dir,centroid_absolute(dir),xsten0(-3,dir)
-          stop
-         endif
-         if (centroid_absolute(dir).le.xsten0(3,dir)+EPS2*dxplus) then
-          !do nothing
-         else
-          print *,"centroid_absolute invalid"
-          print *,"dir,centroid,xhi ", &
-            dir,centroid_absolute(dir),xsten0(3,dir)
-          stop
-         endif
-
-         LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
-         LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
-
-         ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
-         if ((abs(LS_plus).le.three*dxmaxLS_volume_constraint).and. &
-             (abs(LS_minus).le.three*dxmaxLS_volume_constraint)) then
-          !do nothing
-         else if ((abs(LS_plus).ge.three*dxmaxLS_volume_constraint).or. &
-                  (abs(LS_minus).ge.three*dxmaxLS_volume_constraint)) then
-          lsnormal_valid(im)=0
-         else
-          print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
-          stop
-         endif
+        if ((abs(LS_plus).le.three*dxmaxLS_volume_constraint).and. &
+            (abs(LS_minus).le.three*dxmaxLS_volume_constraint)) then
+         !do nothing
+        else if ((abs(LS_plus).ge.three*dxmaxLS_volume_constraint).or. &
+                 (abs(LS_minus).ge.three*dxmaxLS_volume_constraint)) then
+         lsnormal_valid(im)=0
+        else
+         print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
+         stop
+        endif
   
-         if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
+        if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
 
-          slope_plus=(LS_plus-LS_cen)/dxplus
-          slope_minus=(LS_cen-LS_minus)/dxminus
+         slope_plus=(LS_plus-LS_cen)/dxplus
+         slope_minus=(LS_cen-LS_minus)/dxminus
 
-          if ((LS_plus*LS_cen.le.zero).and. &
-              (LS_minus*LS_cen.gt.zero)) then
-           nsimple(dir)=slope_plus
-          else if ((LS_plus*LS_cen.gt.zero).and. &
-                   (LS_minus*LS_cen.le.zero)) then
-           nsimple(dir)=slope_minus
-          else if ((LS_plus*LS_cen.le.zero).and. &
-                   (LS_minus*LS_cen.le.zero)) then
-           if ((LS_plus.eq.zero).and.(LS_cen.eq.zero)) then
-            nsimple(dir)=zero
-           else if ((LS_minus.eq.zero).and.(LS_cen.eq.zero)) then
-            nsimple(dir)=zero
-           else if ((abs(LS_plus).gt.zero).or. &
-                    (abs(LS_minus).gt.zero).or. &
-                    (abs(LS_cen).gt.zero)) then
-            theta_plus=abs(LS_plus/(LS_plus-LS_cen)-half)
-            theta_minus=abs(LS_minus/(LS_minus-LS_cen)-half)
-            if ((theta_plus.le.half).and.(theta_minus.le.half)) then
-             if (theta_plus.le.theta_minus) then
-              nsimple(dir)=slope_plus
-             else if (theta_minus.le.theta_plus) then
-              nsimple(dir)=slope_minus
-             else
-              print *,"theta_plus or theta_minus invalid1"
-              print *,"LS_plus,LS_minus,LS_cen ", &
-               LS_plus,LS_minus,LS_cen
-              print *,"theta_plus,theta_minus ", &
-               theta_plus,theta_minus
-              stop
-             endif
+         if ((LS_plus*LS_cen.le.zero).and. &
+             (LS_minus*LS_cen.gt.zero)) then
+          nsimple(dir)=slope_plus
+         else if ((LS_plus*LS_cen.gt.zero).and. &
+                  (LS_minus*LS_cen.le.zero)) then
+          nsimple(dir)=slope_minus
+         else if ((LS_plus*LS_cen.le.zero).and. &
+                  (LS_minus*LS_cen.le.zero)) then
+          if ((LS_plus.eq.zero).and.(LS_cen.eq.zero)) then
+           nsimple(dir)=zero
+          else if ((LS_minus.eq.zero).and.(LS_cen.eq.zero)) then
+           nsimple(dir)=zero
+          else if ((abs(LS_plus).gt.zero).or. &
+                   (abs(LS_minus).gt.zero).or. &
+                   (abs(LS_cen).gt.zero)) then
+           theta_plus=abs(LS_plus/(LS_plus-LS_cen)-half)
+           theta_minus=abs(LS_minus/(LS_minus-LS_cen)-half)
+           if ((theta_plus.le.half).and.(theta_minus.le.half)) then
+            if (theta_plus.le.theta_minus) then
+             nsimple(dir)=slope_plus
+            else if (theta_minus.le.theta_plus) then
+             nsimple(dir)=slope_minus
             else
-             print *,"theta_plus or theta_minus invalid2"
+             print *,"theta_plus or theta_minus invalid1"
              print *,"LS_plus,LS_minus,LS_cen ", &
               LS_plus,LS_minus,LS_cen
              print *,"theta_plus,theta_minus ", &
@@ -15345,18 +14095,11 @@ contains
              stop
             endif
            else
-            print *,"LS_plus, LS_minus, or LS_cen invalid: ", &
-               LS_plus,LS_minus,LS_cen
-            stop
-           endif
-          else if ((LS_plus*LS_cen.gt.zero).and. &
-                   (LS_minus*LS_cen.gt.zero)) then
-           if (abs(LS_plus).le.abs(LS_minus)) then
-            nsimple(dir)=slope_plus
-           else if (abs(LS_plus).ge.abs(LS_minus)) then
-            nsimple(dir)=slope_minus
-           else
-            print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
+            print *,"theta_plus or theta_minus invalid2"
+            print *,"LS_plus,LS_minus,LS_cen ", &
+             LS_plus,LS_minus,LS_cen
+            print *,"theta_plus,theta_minus ", &
+             theta_plus,theta_minus
             stop
            endif
           else
@@ -15364,239 +14107,194 @@ contains
               LS_plus,LS_minus,LS_cen
            stop
           endif
-
+         else if ((LS_plus*LS_cen.gt.zero).and. &
+                  (LS_minus*LS_cen.gt.zero)) then
+          if (abs(LS_plus).le.abs(LS_minus)) then
+           nsimple(dir)=slope_plus
+          else if (abs(LS_plus).ge.abs(LS_minus)) then
+           nsimple(dir)=slope_minus
+          else
+           print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
+           stop
+          endif
          else
-          print *,"dxplus or dxminus invalid: ",dxminus,dxplus
+          print *,"LS_plus, LS_minus, or LS_cen invalid: ", &
+             LS_plus,LS_minus,LS_cen
           stop
          endif
 
-        enddo ! dir=1..sdim
+        else
+         print *,"dxplus or dxminus invalid: ",dxminus,dxplus
+         stop
+        endif
+
+       enddo ! dir=1..sdim
+
+       if (lsnormal_valid(im).eq.1) then
+
+        distsimple=zero
+        do dir=1,sdim
+         distsimple=distsimple+nsimple(dir)**2
+        enddo
+        distsimple=sqrt(distsimple)
+        if (distsimple.gt.zero) then
+         do dir=1,sdim
+          nsimple(dir)=nsimple(dir)/distsimple
+         enddo
+         ls_intercept(im)=LS_cen/distsimple
+        else if (distsimple.eq.zero) then
+         lsnormal_valid(im)=0
+        else
+         print *,"distsimple invalid"
+         stop
+        endif
 
         if (lsnormal_valid(im).eq.1) then
 
-         distsimple=zero
-         do dir=1,sdim
-          distsimple=distsimple+nsimple(dir)**2
-         enddo
-         distsimple=sqrt(distsimple)
-         if (distsimple.gt.zero) then
+         if (always_use_default.eq.1) then
+
           do dir=1,sdim
-           nsimple(dir)=nsimple(dir)/distsimple
+           lsnormal(im,dir)=nsimple(dir)
           enddo
-          ls_intercept(im)=LS_cen/distsimple
-         else if (distsimple.eq.zero) then
-          lsnormal_valid(im)=0
-         else
-          print *,"distsimple invalid"
-          stop
-         endif
 
-         if (lsnormal_valid(im).eq.1) then
+         else if (always_use_default.eq.0) then
 
-          if ((always_use_default.eq.1).and.(num_particles.eq.0)) then
+          do k=klo,khi
+          do j=-1,1
+          do i=-1,1
 
-           do dir=1,sdim
-            lsnormal(im,dir)=nsimple(dir)
+           LSWT=abs(ls_mof(D_DECL(i,j,k),im))
+           if (LSWT.le.three*dxmaxLS_volume_constraint) then
+            !do nothing
+           else if (LSWT.gt.three*dxmaxLS_volume_constraint) then
+            lsnormal_valid(im)=0
+           else
+            print *,"LSWT invalid: ",LSWT
+            stop
+           endif
+
+           LSWT_grid=(xsten0(2*i,1)-xsten0(0,1))**2
+           LSWT_grid=LSWT_grid+(xsten0(2*j,2)-xsten0(0,2))**2
+           if (sdim.eq.3) then
+            LSWT_grid=LSWT_grid+(xsten0(2*k,sdim)-xsten0(0,sdim))**2
+           endif
+           LSWT_grid=sqrt(LSWT_grid)
+
+           w(D_DECL(i,j,k))=hsprime(LSWT_grid,cutoff)*hsprime(LSWT,cutoff)
+          enddo
+          enddo
+          enddo ! i,j,k
+
+          if (lsnormal_valid(im).eq.1) then
+
+           do i=1,sdim+1
+            do j=1,sdim+1
+             aa(i,j)=zero
+            enddo
+            bb(i)=zero
            enddo
 
-          else if ((always_use_default.eq.0).or.(num_particles.gt.0)) then
-
-           do k=klo,khi
-           do j=-1,1
-           do i=-1,1
-
-            LSWT=abs(ls_mof(D_DECL(i,j,k),im))
-            if (LSWT.le.three*dxmaxLS_volume_constraint) then
-             !do nothing
-            else if (LSWT.gt.three*dxmaxLS_volume_constraint) then
-             lsnormal_valid(im)=0
-            else
-             print *,"LSWT invalid: ",LSWT
-             stop
-            endif
-
-            LSWT_grid=(xsten0(2*i,1)-xsten0(0,1))**2
-            LSWT_grid=LSWT_grid+(xsten0(2*j,2)-xsten0(0,2))**2
+           do k1=klo,khi
+           do j1=-1,1
+           do i1=-1,1
+            xpoint(1)=xsten0(2*i1,1)-xsten0(0,1)
+            xpoint(2)=xsten0(2*j1,2)-xsten0(0,2)
             if (sdim.eq.3) then
-             LSWT_grid=LSWT_grid+(xsten0(2*k,sdim)-xsten0(0,sdim))**2
+             xpoint(sdim)=xsten0(2*k1,sdim)-xsten0(0,sdim)
             endif
-            LSWT_grid=sqrt(LSWT_grid)
-
-            w(D_DECL(i,j,k))=hsprime(LSWT_grid,cutoff)*hsprime(LSWT,cutoff)
-           enddo
-           enddo
-           enddo ! i,j,k
-
-           do i=1,num_particles
-            LSWT_grid=zero
-            do j=1,sdim
-             LSWT_grid=LSWT_grid+(particle_list(i,j)-xsten0(0,j))**2
-            enddo
-            LSWT_grid=sqrt(LSWT_grid)
-
-            LSWT=abs(particle_list(i,sdim+1))
-
-            w_particles(i)=hsprime(LSWT_grid,cutoff)*hsprime(LSWT,cutoff)
-
-           enddo !i=1,num_particles
-
-           if (lsnormal_valid(im).eq.1) then
-
+     
             do i=1,sdim+1
-             do j=1,sdim+1
-              aa(i,j)=zero
-             enddo
-             bb(i)=zero
-            enddo
-
-            do k1=klo,khi
-            do j1=-1,1
-            do i1=-1,1
-             xpoint(1)=xsten0(2*i1,1)-xsten0(0,1)
-             xpoint(2)=xsten0(2*j1,2)-xsten0(0,2)
-             if (sdim.eq.3) then
-              xpoint(sdim)=xsten0(2*k1,sdim)-xsten0(0,sdim)
-             endif
-     
-             do i=1,sdim+1
-              if (i.eq.sdim+1) then
-               m1=one
-              else
-               m1=xpoint(i)
-              endif
-
-              do j=1,sdim+1
-               if (j.eq.sdim+1) then
-                m2=one
-               else
-                m2=xpoint(j)
-               endif
-               aa(i,j)=aa(i,j)+w(D_DECL(i1,j1,k1))*m1*m2
-              enddo ! j=1,sdim+1 
-              bb(i)=bb(i)+ &
-               w(D_DECL(i1,j1,k1))*m1*ls_mof(D_DECL(i1,j1,k1),im)
-             enddo ! i=1,sdim+1
-            enddo
-            enddo
-            enddo ! i1,j1,k1
-
-            do i1=1,num_particles
-             do i=1,sdim
-              xpoint(i)=particle_list(i1,i)-xsten0(0,i)
-             enddo
-     
-             do i=1,sdim+1
-              if (i.eq.sdim+1) then
-               m1=one
-              else
-               m1=xpoint(i)
-              endif
-
-              do j=1,sdim+1
-               if (j.eq.sdim+1) then
-                m2=one
-               else
-                m2=xpoint(j)
-               endif
-               aa(i,j)=aa(i,j)+w_particles(i1)*m1*m2
-              enddo ! j=1,sdim+1 
-              bb(i)=bb(i)+ &
-               w_particles(i1)*m1*particle_list(i1,sdim+1)
-             enddo ! i=1,sdim+1
-            enddo ! i1=1,num_particles
-
-            call matrix_solve(aa,xx,bb,matstatus,sdim+1)
-            if (matstatus.eq.1) then
-             dist=zero
-             do dir=1,sdim
-              nn(dir)=xx(dir)
-              dist=dist+nn(dir)**2
-             enddo
-             dist=sqrt(dist)
-             if (dist.gt.zero) then
-              do dir=1,sdim
-               nn(dir)=nn(dir)/dist
-              enddo
-              ls_intercept(im)=xx(sdim+1)/dist 
-             else if (dist.eq.zero) then
-              do dir=1,sdim
-               nn(dir)=nsimple(dir)
-              enddo
-
-              if (num_particles.eq.0) then
-               ! do nothing
-              else if (num_particles.gt.0) then
-               lsnormal_valid(im)=0
-              else
-               print *,"num_particles invalid: ",num_particles
-               stop
-              endif
-
+             if (i.eq.sdim+1) then
+              m1=one
              else
-              print *,"dist invalid: ",dist
-              stop
+              m1=xpoint(i)
              endif
 
-            else if (matstatus.eq.0) then
+             do j=1,sdim+1
+              if (j.eq.sdim+1) then
+               m2=one
+              else
+               m2=xpoint(j)
+              endif
+              aa(i,j)=aa(i,j)+w(D_DECL(i1,j1,k1))*m1*m2
+             enddo ! j=1,sdim+1 
+             bb(i)=bb(i)+ &
+              w(D_DECL(i1,j1,k1))*m1*ls_mof(D_DECL(i1,j1,k1),im)
+            enddo ! i=1,sdim+1
+           enddo
+           enddo
+           enddo ! i1,j1,k1
+
+           call matrix_solve(aa,xx,bb,matstatus,sdim+1)
+           if (matstatus.eq.1) then
+            dist=zero
+            do dir=1,sdim
+             nn(dir)=xx(dir)
+             dist=dist+nn(dir)**2
+            enddo
+            dist=sqrt(dist)
+            if (dist.gt.zero) then
+
+             do dir=1,sdim
+              nn(dir)=nn(dir)/dist
+             enddo
+             ls_intercept(im)=xx(sdim+1)/dist 
+
+            else if (dist.eq.zero) then
+
              do dir=1,sdim
               nn(dir)=nsimple(dir)
              enddo
 
-             if (num_particles.eq.0) then
-              ! do nothing
-             else if (num_particles.gt.0) then
-              lsnormal_valid(im)=0
-             else
-              print *,"num_particles invalid"
-              stop
-             endif
-
             else
-             print *,"matstatus invalid"
+             print *,"dist invalid: ",dist
              stop
             endif
-            do dir=1,sdim
-             lsnormal(im,dir)=nn(dir)
-            enddo
 
-           else if (lsnormal_valid(im).eq.0) then
-            ! do nothing
+           else if (matstatus.eq.0) then
+            do dir=1,sdim
+             nn(dir)=nsimple(dir)
+            enddo
            else
-            print *,"lsnormal_valid(im) invalid"
+            print *,"matstatus invalid ",matstatus
             stop
            endif
+           do dir=1,sdim
+            lsnormal(im,dir)=nn(dir)
+           enddo
 
-          else 
-           print *,"always_use_default invalid? ",always_use_default
-           print *,"num_particles invalid? ",num_particles
+          else if (lsnormal_valid(im).eq.0) then
+           ! do nothing
+          else
+           print *,"lsnormal_valid(im) invalid"
            stop
           endif
 
-         else if (lsnormal_valid(im).eq.0) then
-          ! do nothing
-         else
-          print *,"lsnormal_valid(im) invalid 15498: ",im,lsnormal_valid(im)
+         else 
+          print *,"always_use_default invalid ",always_use_default
           stop
          endif
 
         else if (lsnormal_valid(im).eq.0) then
          ! do nothing
         else
-         print *,"lsnormal_valid(im) invalid 15505: ",im,lsnormal_valid(im)
+         print *,"lsnormal_valid(im) invalid 15498: ",im,lsnormal_valid(im)
          stop
         endif
+
        else if (lsnormal_valid(im).eq.0) then
         ! do nothing
        else
-        print *,"lsnormal_valid(im) invalid 15511: ",im,lsnormal_valid(im)
+        print *,"lsnormal_valid(im) invalid 15505: ",im,lsnormal_valid(im)
         stop
        endif
-
+      else if (lsnormal_valid(im).eq.0) then
+       ! do nothing
       else
-       print *,"continuous_mof bad(find_cut_geom_slope_CLSVOF) ",continuous_mof
+       print *,"lsnormal_valid(im) invalid 15511: ",im,lsnormal_valid(im)
        stop
       endif
-       
+
       return
       end subroutine find_cut_geom_slope_CLSVOF
 
@@ -15632,15 +14330,11 @@ contains
         use_ls_data, &
         LS_stencil, &
         xtetlist_vof, &
-        xtetlist_cen, &
         nlist_alloc, &
         nmax, &
         mofdata, & !intent(inout)
         vof_super, &
         multi_centroidA, &
-        continuous_mof, &
-        grid_index, &
-        grid_level, &
         sdim)
 
       use probcommon_module
@@ -15657,10 +14351,6 @@ contains
       integer, INTENT (IN) :: sdim
       integer, INTENT (IN) :: nlist_alloc
       integer, INTENT (IN) :: nmax
-      integer, INTENT (IN) :: continuous_mof
-      integer :: continuous_mof_local
-      integer, INTENT (IN) :: grid_index(sdim)
-      integer, INTENT (IN) :: grid_level
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
@@ -15671,8 +14361,6 @@ contains
 
       real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: &
               xtetlist_vof
-      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: &
-              xtetlist_cen
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       real(amrex_real), INTENT (INOUT),DIMENSION(num_materials*ngeom_recon) :: &
               mofdata
@@ -15709,13 +14397,9 @@ contains
 
       real(amrex_real) &
           uncaptured_volume_vof(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      real(amrex_real) &
-          uncaptured_volume_cen(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       real(amrex_real) &
           uncaptured_centroid_vof(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
-      real(amrex_real) &
-          uncaptured_centroid_cen(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
 
       real(amrex_real) uncaptured_centroid_local(sdim)
 
@@ -15731,8 +14415,8 @@ contains
       real(amrex_real) null_intercept
       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
 
-      real(amrex_real), dimension(:,:), allocatable :: pls_normal
-      integer, dimension(:), allocatable :: pls_normal_valid
+      real(amrex_real), dimension(:,:), allocatable :: override_normal
+      integer, dimension(:), allocatable :: override_normal_valid
 
       real(amrex_real), dimension(:,:), allocatable :: lsnormal
       integer, dimension(:), allocatable :: lsnormal_valid
@@ -15754,9 +14438,6 @@ contains
       integer at_least_one(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer order_sanity(num_materials)
       integer test_order
-
-      integer, parameter :: num_particles=0;
-      real(amrex_real) :: particle_list(1,sdim+1)
 
 !      logical :: get_dyn=.false.
       integer :: get_dyn
@@ -15839,13 +14520,6 @@ contains
        endif
 
        if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-        if (continuous_mof.eq.STANDARD_MOF) then
-         !do nothing
-        else
-         print *,"expecting continuous_mof=STANDARD_MOF"
-         print *,"tessellate,continuous_mof: ",tessellate,continuous_mof
-         stop
-        endif
         if (use_ls_data.eq.0) then
          !do nothing
         else
@@ -15853,13 +14527,6 @@ contains
          stop
         endif
        else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-        if (continuous_mof.eq.STANDARD_MOF) then
-         !do nothing
-        else
-         print *,"expecting continuous_mof=STANDARD_MOF"
-         print *,"tessellate,continuous_mof: ",tessellate,continuous_mof
-         stop
-        endif
         if (use_ls_data.eq.0) then
          !do nothing
         else
@@ -15884,19 +14551,6 @@ contains
 
       if (bfact.lt.1) then
        print *,"bfact invalid135 multimaterial_mof ",bfact
-       stop
-      endif
-
-      if (grid_level.eq.-1) then
-       ! do nothing
-      else if ((grid_level.eq.training_max_level).or. &
-               (grid_level.eq.decision_tree_max_level)) then
-       ! do nothing
-      else
-       print *,"grid_level invalid"
-       print *,"grid_level=",grid_level
-       print *,"training_max_level=",training_max_level
-       print *,"decision_tree_max_level=",decision_tree_max_level
        stop
       endif
 
@@ -15949,16 +14603,7 @@ contains
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      if (continuous_mof.eq.STANDARD_MOF) then
-       dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.CMOF_X) then 
-       dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.CMOF_F_AND_X) then 
-       dxmaxLS_volume_constraint=three*dxmaxLS
-      else
-       print *,"continuous_mof invalid(14594): ",continuous_mof
-       stop
-      endif
+      dxmaxLS_volume_constraint=dxmaxLS
       null_intercept=two*bfact*dxmaxLS_volume_constraint
 
       if (sdim.eq.2) then
@@ -16011,32 +14656,15 @@ contains
        else if ((is_rigid(imaterial).eq.0).and. &
                 (is_elastic(imaterial).eq.0)) then
 
-        if ((continuous_mof.eq.STANDARD_MOF).or. &
-            (continuous_mof.eq.CMOF_F_AND_X)) then 
-         if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
-          !do nothing
-         else
-          print *,"vof_super mismatch with voftest(2)"
-          print *,"imaterial=",imaterial
-          print *,"is_rigid(imaterial)=",is_rigid(imaterial)
-          print *,"is_elastic(imaterial)=",is_elastic(imaterial)
-          print *,"voftest=",voftest(imaterial)
-          print *,"vof_super=",vof_super(imaterial)
-          print *,"continuous_mof=",continuous_mof
-          stop
-         endif
-        else if (continuous_mof.eq.CMOF_X) then 
-         if (voftest(imaterial).gt.zero) then
-          if (vof_super(imaterial).gt.zero) then
-           ! do nothing
-          else
-           print *,"vof_super_mismatch voftest(2): ", &
-               imaterial,vof_super(imaterial)
-           stop
-          endif
-         endif
+        if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
+         !do nothing
         else
-         print *,"continuous_mof invalid(16031): ",continuous_mof
+         print *,"vof_super mismatch with voftest(2)"
+         print *,"imaterial=",imaterial
+         print *,"is_rigid(imaterial)=",is_rigid(imaterial)
+         print *,"is_elastic(imaterial)=",is_elastic(imaterial)
+         print *,"voftest=",voftest(imaterial)
+         print *,"vof_super=",vof_super(imaterial)
          stop
         endif
 
@@ -16051,8 +14679,8 @@ contains
 
       allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials))
 
-      allocate(pls_normal(num_materials,sdim))
-      allocate(pls_normal_valid(num_materials))
+      allocate(override_normal(num_materials,sdim))
+      allocate(override_normal_valid(num_materials))
 
       allocate(lsnormal(num_materials,sdim))
       allocate(lsnormal_valid(num_materials))
@@ -16065,14 +14693,11 @@ contains
       call make_vfrac_sum_ok_base( &
         xsten0, &
         nhalf0, &
-        continuous_mof, & 
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
         mofdata, &
         sdim)
 
-       !continuous_mof_local=STANDARD_MOF for elastic, rigid, IGNORE_ISRIGID, 
-       !IGNORE_ISELASTIC
       call Box_volumeFAST( &
         bfact,dx, &
         xsten0,nhalf0, &
@@ -16080,113 +14705,28 @@ contains
         uncaptured_centroid_local, &
         sdim)
 
-      uncaptured_volume_cen(RIGID_LAYER_INDEX)= &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX)
-
       uncaptured_volume_vof(ELASTIC_LAYER_INDEX)= &
         uncaptured_volume_vof(RIGID_LAYER_INDEX)
-
-      uncaptured_volume_cen(ELASTIC_LAYER_INDEX)= &
-        uncaptured_volume_cen(RIGID_LAYER_INDEX)
 
       do dir=1,sdim
        uncaptured_centroid_vof(RIGID_LAYER_INDEX,dir)= &
             uncaptured_centroid_local(dir)
        uncaptured_centroid_vof(ELASTIC_LAYER_INDEX,dir)= &
             uncaptured_centroid_local(dir)
-       uncaptured_centroid_cen(RIGID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       uncaptured_centroid_cen(ELASTIC_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
       enddo !dir=1,sdim
 
-      if (continuous_mof.eq.STANDARD_MOF) then 
+      call Box_volumeFAST( &
+       bfact,dx,xsten0,nhalf0, &
+       uncaptured_volume_vof(FLUID_LAYER_INDEX), &
+       uncaptured_centroid_local, &
+       sdim)
 
-       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-      else if (continuous_mof.eq.CMOF_X) then
-
-       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-       call Box_volume_super( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-      else if (continuous_mof.eq.CMOF_F_AND_X) then 
-
-       call Box_volume_super( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_vof(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-       call Box_volume_super( &
-        bfact,dx,xsten0,nhalf0, &
-        uncaptured_volume_cen(FLUID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-       do dir=1,sdim
-        uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       enddo
-
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
-       stop
-      endif
+      do dir=1,sdim
+       uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
+           uncaptured_centroid_local(dir)
+      enddo
 
       if (use_ls_data.eq.1) then
-
-       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-           (continuous_mof.eq.CMOF_X).or. & 
-           (continuous_mof.eq.CMOF_F_AND_X)) then 
-        !do nothing
-       else
-        print *,"continuous_mof invalid(16055): ",continuous_mof
-        stop
-       endif
 
        do k1=k1lo,k1hi
        do j1=-1,1
@@ -16205,53 +14745,42 @@ contains
             (voftest(imaterial).ge.one-VOFTOL)) then
 
          lsnormal_valid(imaterial)=0
-         pls_normal_valid(imaterial)=0
+         override_normal_valid(imaterial)=0
 
         else if ((voftest(imaterial).ge.VOFTOL).and. &
                  (voftest(imaterial).le.one-VOFTOL)) then
 
-         if ((continuous_mof.eq.STANDARD_MOF).or. & 
-             (continuous_mof.eq.CMOF_F_AND_X).or. & 
-             (continuous_mof.eq.CMOF_X)) then 
-
-          mag(1)=zero
-          !refvfrac,refcen,order,slope,intercept
+         mag(1)=zero
+         !refvfrac,refcen,order,slope,intercept
+         do dir=1,sdim
+          override_normal(imaterial,dir)= &
+               mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
+          mag(1)=mag(1)+override_normal(imaterial,dir)**2
+         enddo
+         mag(1)=sqrt(mag(1))
+         if (mag(1).eq.zero) then
+          override_normal_valid(imaterial)=0
+         else if ((mag(1).ge.one-EPS2).and. &
+                  (mag(1).le.one+EPS2)) then
           do dir=1,sdim
-           pls_normal(imaterial,dir)= &
-                mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
-           mag(1)=mag(1)+pls_normal(imaterial,dir)**2
+           override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
           enddo
-          mag(1)=sqrt(mag(1))
-          if (mag(1).eq.zero) then
-           pls_normal_valid(imaterial)=0
-          else if ((mag(1).ge.one-EPS2).and. &
-                   (mag(1).le.one+EPS2)) then
-           do dir=1,sdim
-            pls_normal(imaterial,dir)=pls_normal(imaterial,dir)/mag(1)
-           enddo
-           pls_normal_valid(imaterial)=1
-          else
-           print *,"mag(1) invalid: ",mag(1)
-           stop
-          endif
-          vofcomp=(imaterial-1)*ngeom_recon+1
-          do dir=1,sdim
-           centroid_absolute(dir)= &
-               uncaptured_centroid_cen(FLUID_LAYER_INDEX,dir)+ &
-               mofdata(vofcomp+dir)
-          enddo
+          override_normal_valid(imaterial)=1
+         else
+          print *,"mag(1) invalid: ",mag(1)
+          stop
+         endif
+         vofcomp=(imaterial-1)*ngeom_recon+1
+         do dir=1,sdim
+          centroid_absolute(dir)= &
+             uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)+ &
+             mofdata(vofcomp+dir)
+         enddo
 
-          ! in multimaterial_MOF
-          ! find n=grad phi/|grad phi| corresponding to "imaterial"
-          ! if num_particles==0, then lsnormal_valid=1 if either the
-          ! "simple slope" or the least squares slope are valid.
-          ! if num_particles>0, then lsnormal_valid=1 if the least 
-          ! squares slope is valid.
-          call find_cut_geom_slope_CLSVOF( &
-           continuous_mof, & !intent(in)
+         ! in multimaterial_MOF
+         ! find n=grad phi/|grad phi| corresponding to "imaterial"
+         call find_cut_geom_slope_CLSVOF( &
            ls_mof, & !intent(in)
-           particle_list, & !intent(in)
-           num_particles, & !intent(in) (=0)
            lsnormal, & !intent(out)
            lsnormal_valid, & !intent(out)
            ls_intercept, & !intent(out)
@@ -16262,11 +14791,6 @@ contains
            dxmaxLS_volume_constraint, & !intent(in)
            sdim) !intent(in)
  
-         else
-          print *,"continuous_mof invalid: ",continuous_mof
-          stop 
-         endif
-
         else
          print *,"voftest(imaterial) invalid: ",imaterial,voftest(imaterial)
          stop
@@ -16278,7 +14802,7 @@ contains
 
        do imaterial=1,num_materials
         lsnormal_valid(imaterial)=0
-        pls_normal_valid(imaterial)=0
+        override_normal_valid(imaterial)=0
        enddo
 
       else
@@ -16297,38 +14821,29 @@ contains
        mof_errors(tid_in+1,imaterial)=0.0d0
        mof_calls(tid_in+1,imaterial)=0
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. & 
-           (continuous_mof.eq.CMOF_F_AND_X).or. & 
-           (continuous_mof.eq.CMOF_X)) then 
-
-        if (mofdata(vofcomp).le.zero) then
-         mofdata(vofcomp)=zero
-         do dir=1,sdim
-          mofdata(vofcomp+dir)=zero  ! centroid=0
-         enddo
-        else if (mofdata(vofcomp).le.1.1) then
-         !do nothing
-        else
-         print *,"mofdata(vofcomp) invalid ",mofdata
-         stop
-        endif         
-        mofdata(vofcomp+sdim+1)=zero  ! order=0
+       if (mofdata(vofcomp).le.zero) then
+        mofdata(vofcomp)=zero
         do dir=1,sdim
-         mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
+         mofdata(vofcomp+dir)=zero  ! centroid=0
         enddo
-        mofdata(vofcomp+2*sdim+2)=zero  ! intercept=0
-
-        if (vofcomp+2*sdim+2.eq.imaterial*ngeom_recon) then
-         ! do nothing
-        else
-         print *,"ngeom_recon,vofcomp, or imaterial invalid: ", &
-            ngeom_recon,vofcomp,imaterial
-         stop
-        endif
-
+       else if (mofdata(vofcomp).le.1.1) then
+        !do nothing
        else
-        print *,"continuous_mof invalid: ",continuous_mof
-        stop 
+        print *,"mofdata(vofcomp) invalid ",mofdata
+        stop
+       endif         
+       mofdata(vofcomp+sdim+1)=zero  ! order=0
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
+       enddo
+       mofdata(vofcomp+2*sdim+2)=zero  ! intercept=0
+
+       if (vofcomp+2*sdim+2.eq.imaterial*ngeom_recon) then
+        ! do nothing
+       else
+        print *,"ngeom_recon,vofcomp, or imaterial invalid: ", &
+           ngeom_recon,vofcomp,imaterial
+        stop
        endif
 
        do dir=1,sdim
@@ -16392,59 +14907,50 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & 
-          (continuous_mof.eq.CMOF_F_AND_X).or. &
-          (continuous_mof.eq.CMOF_X)) then 
+      do imaterial=1,num_materials
 
-       do imaterial=1,num_materials
+       material_used(imaterial)=0
 
-        material_used(imaterial)=0
+       ! order_algorithm is declared in mofdata.H
+       order_algorithm_in(imaterial)=order_algorithm(imaterial)
 
-        ! order_algorithm is declared in mofdata.H
-        order_algorithm_in(imaterial)=order_algorithm(imaterial)
-
-        if (is_elastic(imaterial).eq.1) then
-         if ((order_algorithm(imaterial).ge.1).and. &
-             (order_algorithm(imaterial).le.num_materials)) then
-          ! do nothing
-         else
-          print *,"order_algorithm(imaterial) invalid (elastic): ",imaterial, &
-           order_algorithm(imaterial)
-          stop
-         endif
-        else if (is_rigid(imaterial).eq.1) then
-         if ((order_algorithm(imaterial).ge.1).and. &
-             (order_algorithm(imaterial).le.1)) then
-          ! do nothing
-         else
-          print *,"order_algorithm(imaterial) invalid (rigid): ",imaterial, &
-           order_algorithm(imaterial)
-          stop
-         endif
-        else if ((is_elastic(imaterial).eq.0).and. &
-                 (is_rigid(imaterial).eq.0)) then
-         if ((order_algorithm(imaterial).ge.1).and. &
-             (order_algorithm(imaterial).le.num_materials+1)) then
-          ! do nothing
-         else
-          print *,"order_algorithm(imaterial) invalid (fluid): ",imaterial, &
-           order_algorithm(imaterial)
-          stop
-         endif
+       if (is_elastic(imaterial).eq.1) then
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.num_materials)) then
+         ! do nothing
         else
-         print *,"is_rigid(imaterial) invalid ", &
-                imaterial,is_rigid(imaterial)
-         print *,"or is_elastic(imaterial) invalid ", &
-                imaterial,is_elastic(imaterial)
+         print *,"order_algorithm(imaterial) invalid (elastic): ",imaterial, &
+          order_algorithm(imaterial)
          stop
         endif
+       else if (is_rigid(imaterial).eq.1) then
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.1)) then
+         ! do nothing
+        else
+         print *,"order_algorithm(imaterial) invalid (rigid): ",imaterial, &
+          order_algorithm(imaterial)
+         stop
+        endif
+       else if ((is_elastic(imaterial).eq.0).and. &
+                (is_rigid(imaterial).eq.0)) then
+        if ((order_algorithm(imaterial).ge.1).and. &
+            (order_algorithm(imaterial).le.num_materials+1)) then
+         ! do nothing
+        else
+         print *,"order_algorithm(imaterial) invalid (fluid): ",imaterial, &
+          order_algorithm(imaterial)
+         stop
+        endif
+       else
+        print *,"is_rigid(imaterial) invalid ", &
+               imaterial,is_rigid(imaterial)
+        print *,"or is_elastic(imaterial) invalid ", &
+               imaterial,is_elastic(imaterial)
+        stop
+       endif
 
-       enddo !imaterial=1,num_materials
-
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
-       stop 
-      endif
+      enddo !imaterial=1,num_materials
 
       do imaterial=1,num_materials
 
@@ -16543,32 +15049,18 @@ contains
                   (remaining_vfrac.ge.EPS_UNCAPTURED).or. &
                   (uncaptured_volume_fraction(layer_iter).lt.one)) then
 
-          if (layer_iter.eq.RIGID_LAYER_INDEX) then
-           continuous_mof_local=STANDARD_MOF
-          else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
-           continuous_mof_local=STANDARD_MOF
-          else if (layer_iter.eq.FLUID_LAYER_INDEX) then
-           continuous_mof_local=continuous_mof
-          else
-           print *,"layer_iter invalid: ",layer_iter
-           stop
-          endif
-
           call individual_MOF( &
            layer_flag, &
-           grid_index, &
-           grid_level, &
            tid_in, &
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
-           pls_normal, &
-           pls_normal_valid, &
+           override_normal, &
+           override_normal_valid, &
            bfact,dx, &
            xsten0,nhalf0, &
            order_algorithm_in, &
            xtetlist_vof, & !intent(out)
-           xtetlist_cen, & !intent(out)
            nlist_alloc, & !intent(in)
            nmax, &
            mofdata, &
@@ -16579,9 +15071,7 @@ contains
            num_processed(layer_iter), &
            material_used, &
            uncaptured_volume_vof(layer_iter), &
-           uncaptured_volume_cen(layer_iter), &
            multi_centroidA, &
-           continuous_mof_local, & 
            sdim)
 
          else
@@ -16663,7 +15153,6 @@ contains
        print *,"levelrz = ",levelrz
        print *,"num_materials = ",num_materials
        print *,"sdim = ",sdim
-       print *,"continuous_mof = ",continuous_mof
        print *,"ngeom_recon = ",ngeom_recon
        do imaterial=1,num_materials*ngeom_recon
         print *,"i,mofdata ",imaterial,mofdata(imaterial)
@@ -16682,14 +15171,13 @@ contains
       else
        print *,"mof_verbose invalid in multimaterial_MOF 2"
        print *,"mof_verbose= ",mof_verbose
-       print *,"continuous_mof=",continuous_mof
        stop
       endif
 
       deallocate(ls_mof)
 
-      deallocate(pls_normal)
-      deallocate(pls_normal_valid)
+      deallocate(override_normal)
+      deallocate(override_normal_valid)
 
       deallocate(lsnormal)
       deallocate(lsnormal_valid)
@@ -16722,7 +15210,6 @@ contains
       real(amrex_real) vof_super(num_materials)
 
       real(amrex_real) multi_centroidA(num_materials,sdim)
-      integer :: continuous_mof
       real(amrex_real) angle(sdim-1)
       real(amrex_real) xpoint(sdim)
       integer nrecon
@@ -16754,8 +15241,6 @@ contains
       integer, parameter :: mof_verbose=0
       integer, parameter :: use_ls_data=0
       integer isten
-      integer grid_index(sdim)
-      integer, parameter :: grid_level=-1
       integer, parameter :: bfact=1
       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
       integer i1,j1,k1,k1lo,k1hi
@@ -16877,8 +15362,6 @@ contains
        stop
       endif
 
-      continuous_mof=STANDARD_MOF
-
       volcell_recon=volcell_hex
 
       ! do test for [-1/2,1/2]^sdim cube
@@ -16973,7 +15456,7 @@ contains
         sdim)
 
        do dir2=1,nrecon
-        mofdata(dir2)=zero !pls_normal zapped out.
+        mofdata(dir2)=zero !override_normal zapped out.
        enddo
        do im=1,num_materials
         vof_super(im)=zero
@@ -16995,10 +15478,6 @@ contains
 
        do dir=1,sdim
         mofdata(vofcomp+dir)=cencut2(dir)-cencell_recon(dir)
-       enddo
-
-       do dir=1,sdim
-        grid_index(dir)=0
        enddo
 
        do k1=k1lo,k1hi
@@ -17046,9 +15525,6 @@ contains
         mofdata, & !intent(inout)
         vof_super, &
         multi_centroidA, &
-        continuous_mof, & 
-        grid_index, &
-        grid_level, &
         sdim)
 
        moferror=zero
@@ -17117,7 +15593,6 @@ contains
       subroutine make_vfrac_sum_ok_base( &
         xsten, &
         nhalf, &
-        continuous_mof, & 
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
         mofdata, &
@@ -17131,7 +15606,6 @@ contains
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nhalf
-      integer, INTENT(in) :: continuous_mof
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       integer, INTENT(in) :: tessellate
@@ -17161,33 +15635,11 @@ contains
 
 #include "mofdata.H"
 
-      if (continuous_mof.eq.STANDARD_MOF) then
-       if (nhalf.ge.1) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_base"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_X) then
-       if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_base"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_F_AND_X) then
-       if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_base"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
+      if (nhalf.ge.1) then
+       ! do nothing
       else
-       print *,"continuous_mof invalid make_vfrac_sum_ok_base: ", &
-          continuous_mof
+       print *,"nhalf invalid in make_vfrac_sum_ok_base"
+       print *,"nhalf ",nhalf
        stop
       endif
 
@@ -17226,28 +15678,12 @@ contains
       vofsolid=zero
       vofelastic=zero
 
-      if (continuous_mof.eq.STANDARD_MOF) then !MOF
-       call Box_volumeFAST( &
-         bfact,dx, &
-         xsten,nhalf, &
-         volcell, &
-         cencell, &
-         sdim)
-      else if ((continuous_mof.eq.CMOF_X).or. &
-               (continuous_mof.eq.CMOF_F_AND_X)) then ! CMOF
-        ! sum_i',j' V_i+i',j+j'
-        ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
-       call Box_volume_super( &
-         bfact,dx, &
-         xsten,nhalf, &
-         volcell, &
-         cencell, &
-         sdim)
-      else
-       print *,"continuous_mof invalid make_vfrac_sum_ok_base(16110): ", &
-          continuous_mof
-       stop
-      endif
+      call Box_volumeFAST( &
+        bfact,dx, &
+        xsten,nhalf, &
+        volcell, &
+        cencell, &
+        sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -17269,7 +15705,6 @@ contains
         ! do nothing
        else
         print *,"make_vfrac_sum_ok_base"
-        print *,"continuous_mof=",continuous_mof
         print *,"dx=",dx
         print *,"xsten= ",xsten
         print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
@@ -17317,7 +15752,6 @@ contains
        print *,"xsten= ",xsten
        print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
        print *,"nhalf= ",nhalf
-       print *,"continuous_mof=",continuous_mof
        print *,"bfact=",bfact
        print *,"dx=",dx
        print *,"tessellate=",tessellate
@@ -17541,47 +15975,28 @@ contains
          xtarget(dir)=mofdata(vofcomp+dir)+cencell(dir)
         enddo
 
-        if ((continuous_mof.eq.STANDARD_MOF).or. &
-            (continuous_mof.eq.CMOF_X).or. &
-            (continuous_mof.eq.CMOF_F_AND_X)) then
+        do dir=1,sdim
+         boxlo=xsten(-1,dir)
+         boxhi=xsten(1,dir)
+         if (boxhi.gt.boxlo) then
+          ! do nothing
+         else
+          print *,"boxhi>boxlo condition failed: ",boxlo,boxhi
+          stop
+         endif
 
-         do dir=1,sdim
-          if (continuous_mof.eq.STANDARD_MOF) then
-           boxlo=xsten(-1,dir)
-           boxhi=xsten(1,dir)
-          else if ((continuous_mof.eq.CMOF_X).or. &
-                   (continuous_mof.eq.CMOF_F_AND_X)) then
-           boxlo=xsten(-3,dir)
-           boxhi=xsten(3,dir)
-          else
-           print *,"continuous_mof invalid"
-           stop
-          endif
-          if (boxhi.gt.boxlo) then
-           ! do nothing
-          else
-           print *,"boxhi>boxlo condition failed: ",boxlo,boxhi
-           stop
-          endif
-
-          if (xtarget(dir).le.boxlo) then
-           mofdata(vofcomp+dir)=boxlo-cencell(dir)+EPS_13_5*dx(dir)
-          else if (xtarget(dir).ge.boxhi) then
-           mofdata(vofcomp+dir)=boxhi-cencell(dir)-EPS_13_5*dx(dir)
-          else if ((xtarget(dir).gt.boxlo).and. &
-                   (xtarget(dir).lt.boxhi)) then
-           ! do nothing
-          else
-           print *,"xtarget(dir) invalid: ",xtarget(dir)
-           stop
-          endif
-         enddo !dir=1..sdim
-
-        else
-         print *,"continuous_mof invalid(make_vfrac_sum_ok_base):", &
-             continuous_mof
-         stop
-        endif
+         if (xtarget(dir).le.boxlo) then
+          mofdata(vofcomp+dir)=boxlo-cencell(dir)+EPS_13_5*dx(dir)
+         else if (xtarget(dir).ge.boxhi) then
+          mofdata(vofcomp+dir)=boxhi-cencell(dir)-EPS_13_5*dx(dir)
+         else if ((xtarget(dir).gt.boxlo).and. &
+                  (xtarget(dir).lt.boxhi)) then
+          ! do nothing
+         else
+          print *,"xtarget(dir) invalid: ",xtarget(dir)
+          stop
+         endif
+        enddo !dir=1..sdim
 
        else
         print *,"mofdata(vofcomp) invalid"
@@ -17598,7 +16013,6 @@ contains
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_copy( &
         xsten,nhalf, &
-        continuous_mof, &
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
         mofdata,mofdatavalid, &
@@ -17612,7 +16026,6 @@ contains
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: nhalf
-      integer, INTENT(in) :: continuous_mof
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
 
@@ -17628,33 +16041,11 @@ contains
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
-      if (continuous_mof.eq.STANDARD_MOF) then
-       if (nhalf.ge.1) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_X) then
-       if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
-      else if (continuous_mof.eq.CMOF_F_AND_X) then
-       if (nhalf.ge.3) then
-        ! do nothing
-       else
-        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
-        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
-        stop
-       endif
+      if (nhalf.ge.1) then
+       ! do nothing
       else
-       print *,"continuous_mof invalid make_vfrac_sum_ok_copy: ", &
-          continuous_mof
+       print *,"nhalf invalid in make_vfrac_sum_ok_copy"
+       print *,"nhalf ",nhalf
        stop
       endif
 
@@ -17734,7 +16125,6 @@ contains
        print *,"vofsolid= ",vofsolid
        print *,"vofelastic= ",vofelastic
        print *,"tessellate=",tessellate
-       print *,"continuous_mof=",continuous_mof
        print *,"dx=",dx
        print *,"xsten=",xsten
        print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
@@ -17747,7 +16137,6 @@ contains
       call make_vfrac_sum_ok_base( &
        xsten, &
        nhalf, &
-       continuous_mof, &
        bfact,dx, &
        tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
        mofdatavalid, &
@@ -19017,7 +17406,6 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer, parameter :: continuous_mof=STANDARD_MOF
       real(amrex_real) vfrac_raster_solid
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
@@ -19119,7 +17507,6 @@ contains
        ! multi_get_volume_grid_simple
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0, &
-        continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
         tessellate_source, &!TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
         mofdata, &
@@ -19492,7 +17879,6 @@ contains
              ! in: multi_volume_grid
              call tets_box_planes( &
                layer_flag, &
-               continuous_mof, &
                bfact,dx, &
                xsten0,nhalf0, &
                xsten_grid,nhalf_grid, &
@@ -19794,7 +18180,6 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer, parameter :: continuous_mof=STANDARD_MOF
       real(amrex_real) vfrac_raster_solid
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
@@ -19897,7 +18282,6 @@ contains
        ! multi_get_volume_grid
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0, &
-        continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
         tessellate_source, &!TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
         mofdata, &
@@ -20283,7 +18667,6 @@ contains
               ! in: multi_volume_grid
               call tets_box_planes( &
                layer_flag, &
-               continuous_mof, &
                bfact,dx, &
                xsten0,nhalf0, &
                xsten_grid,nhalf_grid, &
@@ -20612,7 +18995,6 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer, parameter :: continuous_mof=STANDARD_MOF
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (multi_get_volume_grid_and_map) ",tid_in
@@ -20698,7 +19080,6 @@ contains
        ! multi_get_volume_grid
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0, &
-        continuous_mof, &  !STANDARD_MOF
         bfact,dx, &
         tessellate_source, & !TESSELLATE_FLUIDS
         mofdata, &
@@ -21011,7 +19392,6 @@ contains
             ! in: multi_volume_grid
             call tets_box_planes( &
               layer_flag, &
-              continuous_mof, &
               bfact,dx, &
               xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
@@ -21544,7 +19924,6 @@ contains
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       integer, parameter :: caller_id=2
-      integer, parameter :: continuous_mof=STANDARD_MOF
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (multi_get_area_pairs) ",tid_in
@@ -21649,7 +20028,6 @@ contains
        !multi_get_area_pairs
       call make_vfrac_sum_ok_copy( &
         xsten0_plus,nhalf0, &
-        continuous_mof, &
         bfact,dx, &
         tessellate_source, &  ! =TESSELLATE_FLUIDS
         mofdata_plus, &
@@ -21658,7 +20036,6 @@ contains
        !multi_get_area_pairs
       call make_vfrac_sum_ok_copy( &
         xsten0_minus,nhalf0, &
-        continuous_mof, &
         bfact,dx, &
         tessellate_source, & ! =TESSELLATE_FLUIDS
         mofdata_minus, &
@@ -22006,7 +20383,6 @@ contains
 
            call tets_box_planes( &
             layer_flag, &
-            continuous_mof, &
             bfact,dx, &
             xsten0_minus,nhalf0, &
             xsten_thin,nhalf_thin, &
@@ -22705,10 +21081,7 @@ contains
       integer dir
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_centroidA(num_materials,sdim)
-      integer :: grid_index(sdim)
-      integer, parameter :: grid_level=-1
 
-      integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: caller_id=3
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
@@ -22764,7 +21137,6 @@ contains
       call make_vfrac_sum_ok_base( &
        xsten0, &
        nhalf0, &
-       continuous_mof, & !STANDARD_MOF
        bfact,dx, &
        tessellate_source, & !=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
        mofdata, &
@@ -22870,9 +21242,6 @@ contains
         mofdata_convert, & !intent(inout)
         vof_super, &
         multi_centroidA, &
-        continuous_mof, & !STANDARD_MOF
-        grid_index, &
-        grid_level, &
         sdim)
 
       do im=1,num_materials*ngeom_recon
@@ -23692,7 +22061,6 @@ contains
        integer is_elastic_local(num_materials)
        integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-       integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
           (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
@@ -23740,7 +22108,6 @@ contains
         ! sum F_solid<=1 
        call make_vfrac_sum_ok_copy( &
          xsten0,nhalf0, &
-         continuous_mof, &
          bfact,dx, &
          tessellate, & ! =TESSELLATE_FLUIDS|IGNORE_ISELASTIC
          mofdata,mofdatavalid,sdim)
@@ -23906,7 +22273,6 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
       if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
           (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
@@ -23974,7 +22340,6 @@ contains
        ! sum F_solid <= 1
       call make_vfrac_sum_ok_copy( &
         xsten_recon,nhalf_recon, &
-        continuous_mof, &
         bfact,dx, &
         tessellate, &  ! =TESSELLATE_FLUIDS|IGNORE_ISELASTIC
         mofdata,mofdatavalid,sdim)
@@ -24495,7 +22860,6 @@ contains
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer, parameter :: continuous_mof=STANDARD_MOF
 
 
 #include "mofdata.H"
@@ -24529,7 +22893,6 @@ contains
        ! sum voffluid=1 , sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
         xsten0,nhalf0, &
-        continuous_mof, &
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
         mofdata,mofdatavalid,sdim)
@@ -25199,7 +23562,6 @@ contains
        MOFITERMAX_in, &
        MOFITERMAX_AFTER_PREDICT_in, &
        MOF_DEBUG_RECON_in, &
-       MOF_TURN_OFF_LS_in, &
        nthreads, &
        nmax_in) &
       bind(c,name='fort_initmof')
@@ -25218,7 +23580,6 @@ contains
       integer, INTENT(in) :: MOFITERMAX_in
       integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
       integer, INTENT(in) :: MOF_DEBUG_RECON_in
-      integer, INTENT(in) :: MOF_TURN_OFF_LS_in
       integer sdim,nmax_test
       integer im,sub_im
       integer default_flag
@@ -25237,7 +23598,6 @@ contains
 
       MOF_DEBUG_RECON_COUNT=0
       MOF_DEBUG_RECON=MOF_DEBUG_RECON_in
-      MOF_TURN_OFF_LS=MOF_TURN_OFF_LS_in
 
       call set_MOFITERMAX(MOFITERMAX_in, &
                           MOFITERMAX_AFTER_PREDICT_in)

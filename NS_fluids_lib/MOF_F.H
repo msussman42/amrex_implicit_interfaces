@@ -17,7 +17,6 @@ namespace amrex{
      int* MOFITERMAX,
      int* MOFITERMAX_AFTER_PREDICT,
      int* MOF_DEBUG_RECON_in,
-     int* MOF_TURN_OFF_LS_in,
      int* nthreads,
      int* nmax_in);
   }

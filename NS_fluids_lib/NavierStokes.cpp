@@ -114,7 +114,6 @@ int  NavierStokes::fab_verbose  = 0;
 int  NavierStokes::output_drop_distribution = 0;
 int  NavierStokes::extend_pressure_into_solid = 0;
 Real NavierStokes::cfl = 0.5;
-int  NavierStokes::MOF_TURN_OFF_LS=0;
 int  NavierStokes::MOF_DEBUG_RECON=0;
 int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
 int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
@@ -1482,10 +1481,6 @@ void fortran_parameters() {
   std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
   amrex::Error("mof iter max after predict invalid in navierstokes");
  }
- int MOF_TURN_OFF_LS=NavierStokes::MOF_TURN_OFF_LS;
- pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
- if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
-  amrex::Error("mof turn off ls invalid in navierstokes");
 
  int MOF_DEBUG_RECON=NavierStokes::MOF_DEBUG_RECON; 
  pp.queryAdd("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
@@ -2437,7 +2432,6 @@ void fortran_parameters() {
    &MOFITERMAX,
    &MOFITERMAX_AFTER_PREDICT,
    &MOF_DEBUG_RECON,
-   &MOF_TURN_OFF_LS,
    &thread_class::nthreads,
    &temp_POLYGON_LIST_MAX);
 
@@ -3932,11 +3926,6 @@ NavierStokes::read_params ()
        MOFITERMAX_AFTER_PREDICT << '\n';
      amrex::Error("mof iter max after predict invalid in navierstokes");
     }
-
-    MOF_TURN_OFF_LS=0;  
-    pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
-    if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
-     amrex::Error("mof turn off ls invalid in navierstokes");
 
     MOF_DEBUG_RECON=0; 
     pp.queryAdd("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
@@ -6420,7 +6409,6 @@ NavierStokes::read_params ()
      std::cout << "MOFITERMAX_AFTER_PREDICT= " << 
 	     MOFITERMAX_AFTER_PREDICT << '\n';
      std::cout << "MOF_DEBUG_RECON= " << MOF_DEBUG_RECON << '\n';
-     std::cout << "MOF_TURN_OFF_LS= " << MOF_TURN_OFF_LS << '\n';
 
      std::cout << "post_init_pressure_solve " << 
        post_init_pressure_solve << '\n';
