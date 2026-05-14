@@ -827,8 +827,6 @@ protected:
     void build_masksemALL();
     void build_masksem(int mask_sweep);
 
-    void MOF_training();
-
      // update_flag=RECON_UPDATE_NULL
      // update_flag=RECON_UPDATE_STATE_ERR
      // update_flag=RECON_UPDATE_STATE_CENTROID
@@ -1035,25 +1033,9 @@ protected:
     void prescribe_solid_geometryALL(Real time,
       int renormalize_only,
       int local_truncate,
-      const std::string& caller_string,
-      int update_particles);
+      const std::string& caller_string);
 
     void prescribe_solid_geometry(Real time,int renormalize_only);
-#ifdef AMREX_PARTICLES
-    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-    void init_particle_containerALL(int append_flag,
-      const std::string& caller_string,
-      int local_redistribute_main);
-    void init_particle_container(int append_flag,
-      const std::string& caller_string,
-      Long& num_particles_sanity_check,
-      Long& misplaced_particles);
-    void move_particles(
-      int splitting_dir,
-      My_ParticleContainer& localPC,
-      const std::string& caller_string);
-#endif
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1390,11 +1372,9 @@ void apply_pressure_grad(
 		    int ngrow_dest);
 
     void makeStateDistALL(
-        int update_particles,
         int local_redistribute_main);
 
     void sub_makeStateDistALL(
-        int update_particles,
         int local_redistribute_main,
         int tessellate_source);
 
@@ -1636,15 +1616,6 @@ protected:
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
-#ifdef AMREX_PARTICLES
-
-    using My_NBR_ParticleContainer =
-      NeighborParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-    My_NBR_ParticleContainer* NBR_Particle_Container;
-
-#endif
-
      // value_color = sum_{i in omega_color} 1
     static Vector<Real> ones_sum_global;
      // for each given color, singular_patch_flag=
@@ -1672,14 +1643,8 @@ protected:
     static Real cfl;         // desired maximum cfl
 
     static int  MOFITERMAX;
-    static int  MOFITERMAX_AFTER_PREDICT;
 
     static Vector<int> force_blob_symmetry;
-
-    static int particle_feedback;  //particle_feedback=1 is the default. 
-    static int particle_nsubdivide_dx; 
-    static int particle_nsubdivide;
-    static int particle_ngrow_slopes;
 
     static int  enable_spectral;
 
@@ -1687,8 +1652,6 @@ protected:
      // continuous_mof = CMOF_X => CMOF ("continuous MOF ")
     static int  continuous_mof; // default is CMOF_X
     static int  update_centroid_after_recon; //default is 1
-    static int  mof_decision_tree_learning; // default is 10000
-    static int  mof_machine_learning; // default is 0
     static Vector<Real> centroid_noise_factor; //default is 0.0
 
     static Real change_max;    // maximum change in dt over a timestep

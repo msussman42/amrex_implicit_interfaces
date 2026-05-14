@@ -333,9 +333,6 @@ stop
       integer dir
       integer im
 
-      integer, parameter :: num_particles=0
-      real(amrex_real) :: particle_list(1,SDIM+1)
-
       real(amrex_real) ls_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real) lsnormal(num_materials,SDIM)
       integer lsnormal_valid(num_materials)
@@ -347,7 +344,6 @@ stop
       integer dcomp
       real(amrex_real) local_LS(num_materials)
       integer im_primary,im_secondary,triple_point_flag
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
       nhalf=3 
 
@@ -482,10 +478,7 @@ stop
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
-             continuous_mof, & !STANDARD_MOF
              ls_stencil, & ! (-1,1)^3,num_materials
-             particle_list, &
-             num_particles, &
              lsnormal, &  ! (num_materials,SDIM)
              lsnormal_valid, &  ! num_materials
              ls_intercept, & ! num_materials
@@ -3817,7 +3810,6 @@ stop
       integer mask1,mask2
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer local_tessellate
-      integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: caller_id=6
 
       facefab_ptr=>facefab
@@ -3919,7 +3911,6 @@ stop
 
         call make_vfrac_sum_ok_copy( &
          xsten,nhalf, &
-         continuous_mof, &
          bfact,dx, &
          tessellate_source, &  !TESSELLATE_FLUIDS
          mofdata, &

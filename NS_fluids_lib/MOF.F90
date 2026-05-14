@@ -8451,30 +8451,19 @@ use amrex_fort_module, only : amrex_real
 
 contains
 
-      subroutine set_MOFITERMAX(MOFITERMAX_in,MOFITERMAX_AFTER_PREDICT_in)
+      subroutine set_MOFITERMAX(MOFITERMAX_in)
       IMPLICIT NONE
 
       integer, INTENT(in) :: MOFITERMAX_in
-      integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
 
 #include "mofdata.H"
 
       MOFITERMAX=MOFITERMAX_in
-      MOFITERMAX_AFTER_PREDICT=MOFITERMAX_AFTER_PREDICT_in
       if ((MOFITERMAX.lt.0).or. &
           (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX invalid in set mofitermax"
        print *,"MOFITERMAX ",MOFITERMAX
        print *,"MOFITERMAX_LIMIT ",MOFITERMAX_LIMIT
-       stop
-      endif
-      if ((MOFITERMAX_AFTER_PREDICT.lt.0).or. &
-          (MOFITERMAX_AFTER_PREDICT.gt.MOFITERMAX_LIMIT).or. &
-          (MOFITERMAX_AFTER_PREDICT.gt.MOFITERMAX)) then
-       print *,"MOFITERMAX_AFTER_PREDICT invalid in set mofitermax"
-       print *,"MOFITERMAX_AFTER_PREDICT : ",MOFITERMAX_AFTER_PREDICT
-       print *,"MOFITERMAX : ",MOFITERMAX
-       print *,"MOFITERMAX_LIMIT : ",MOFITERMAX_LIMIT
        stop
       endif
 
@@ -10413,7 +10402,6 @@ contains
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real) xsten_local(-nhalf0:nhalf0,sdim)
-      real(amrex_real) xsten2(-1:1,sdim)
       integer isten
       integer, PARAMETER :: nhalf2=1
       real(amrex_real), INTENT(out) :: ff(nEQN) 
@@ -10423,15 +10411,11 @@ contains
       real(amrex_real) :: nslope(nEQN)
       real(amrex_real), INTENT(inout) :: intercept(nMAT_OPT)
 
-      integer i1,j1,k1
       real(amrex_real) volcell_vof
       real(amrex_real) cencell_vof(sdim)
       real(amrex_real) xtet(sdim+1,sdim)
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
       integer ksten_low,ksten_high
-      real(amrex_real) volsten
-      real(amrex_real) areasten
-      real(amrex_real) censten(sdim)
       real(NOTUS_REAL) local_angles_NOTUS(2)
       real(NOTUS_REAL) local_volume_NOTUS
       real(NOTUS_REAL) local_cell_size_NOTUS(3)
@@ -11258,10 +11242,6 @@ contains
       real(amrex_real) nLS(sdim)
       real(amrex_real) magLS
 
-      integer ksten_low,ksten_high
-      real(amrex_real) angle_init_range(nDOF)
-      real(amrex_real) angle_output(nDOF)
-
       real(amrex_real), INTENT(in) ::  &
          ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
@@ -11273,7 +11253,6 @@ contains
 
       integer use_only_override_data
 
-      integer training_nguess
       integer local_MOFITERMAX
 
       integer :: use_MilcentLemoine
@@ -11393,21 +11372,12 @@ contains
       tol=dx(1)*EPS_10_5
       local_tol=dx(1)*tol*EPS2
 
-      training_nguess=0
       nguess=0
       use_only_override_data=0
 
       if (nMAT_OPT.eq.1) then !expecting nMAT_OPT==1
 
        if (override_normal_valid(critical_material).eq.1) then
-
-        if (MOFITERMAX_AFTER_PREDICT.eq.0) then
-         ! do nothing
-        else
-         print *,"expecting MOFITERMAX_AFTER_PREDICT==0: ", &
-            MOFITERMAX_AFTER_PREDICT
-         stop
-        endif
 
         magLS=zero
         do dir=1,sdim
@@ -11428,7 +11398,6 @@ contains
         endif
 
         nguess=nguess+1 
-        training_nguess=nguess
 
         do dir=1,sdim-1
          angle_array(dir,nguess)=angle_init(dir)
@@ -11479,7 +11448,7 @@ contains
        else
         print *,"override_normal_valid incorrect ", &
           override_normal_valid
-        print *,"critical_material ",critical_material, &
+        print *,"critical_material ",critical_material
         stop
        endif
 
@@ -12778,7 +12747,7 @@ contains
                (one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
 
            do dir=1,sdim
-            centroid_free(dir)=cencut_cen(dir)
+            centroid_free(dir)=cencut_vof(dir)
             centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_vof(dir)
            enddo
 
@@ -12876,7 +12845,7 @@ contains
          vofcomp=(critical_material-1)*ngeom_recon+1
 
          do dir=1,sdim
-          centroid_free(dir)=cencut_cen(dir)
+          centroid_free(dir)=cencut_vof(dir)
           centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_vof(dir)
          enddo
 
@@ -13118,8 +13087,8 @@ contains
           mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
-            ! cencut_cen is the uncaptured centroid in absolute frame 
-           centroidA(dir)=cencut_cen(dir)
+            ! cencut_vof is the uncaptured centroid in absolute frame 
+           centroidA(dir)=cencut_vof(dir)
            multi_centroidA(critical_material,dir)= &
             centroidA(dir)-cencell_vof(dir)
           enddo 
@@ -13162,7 +13131,7 @@ contains
           if (single_material_takes_all.eq.1) then
             ! centroidA is the uncaptured centroid (absolute frame)
            do dir=1,sdim
-            centroidA(dir)=cencut_cen(dir)
+            centroidA(dir)=cencut_vof(dir)
            enddo
           else if (single_material_takes_all.eq.0) then
            ! do nothing
@@ -15165,7 +15134,6 @@ contains
         print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
        enddo
        print *,"MOFITERMAX ",MOFITERMAX
-       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
       else if (mof_verbose.eq.0) then
        ! do nothing
       else
@@ -15519,7 +15487,6 @@ contains
         use_ls_data, &
         LS_stencil, &
         xtetlist, &
-        xtetlist, &
         nmax, &
         nmax, &
         mofdata, & !intent(inout)
@@ -15565,8 +15532,6 @@ contains
 
       print *,"sdim= ",sdim
       print *,"MOFITERMAX= ",MOFITERMAX
-      print *,"MOFITERMAX_AFTER_PREDICT= ", &
-          MOFITERMAX_AFTER_PREDICT
       print *,"nsamples= ",nsamples
       print *,"shrink_factor=",shrink_factor
       do im=1,num_materials
@@ -21236,7 +21201,6 @@ contains
         use_ls_data, &
         LS_stencil, &
         xtetlist, &
-        xtetlist, &
         nlist_alloc, &
         nmax, &
         mofdata_convert, & !intent(inout)
@@ -23560,7 +23524,6 @@ contains
        denconst_local, &
        is_rigid_local, &
        MOFITERMAX_in, &
-       MOFITERMAX_AFTER_PREDICT_in, &
        MOF_DEBUG_RECON_in, &
        nthreads, &
        nmax_in) &
@@ -23578,7 +23541,6 @@ contains
       real(amrex_real), INTENT(in) :: denconst_local(num_materials)
       integer, INTENT(in) :: is_rigid_local(num_materials)
       integer, INTENT(in) :: MOFITERMAX_in
-      integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
       integer, INTENT(in) :: MOF_DEBUG_RECON_in
       integer sdim,nmax_test
       integer im,sub_im
@@ -23599,8 +23561,7 @@ contains
       MOF_DEBUG_RECON_COUNT=0
       MOF_DEBUG_RECON=MOF_DEBUG_RECON_in
 
-      call set_MOFITERMAX(MOFITERMAX_in, &
-                          MOFITERMAX_AFTER_PREDICT_in)
+      call set_MOFITERMAX(MOFITERMAX_in)
 
       if (nthreads.lt.1) then
        print *,"nthreads invalid"

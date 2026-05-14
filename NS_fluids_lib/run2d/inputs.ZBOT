@@ -119,8 +119,6 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 amr.n_cell          = 16 64
 amr.max_level       = 0
 
-ns.particle_nsubdivide=4
-
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
 #amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
@@ -401,15 +399,12 @@ ns.xblob3 = 2.0 # Watts=J/s
 # ----------------------------------------------------------
 ns.continuous_mof = 1 # 0=MOF 1=CMOF
 ns.vof_height_function = 1
-ns.mof_decision_tree_learning=100
-ns.mof_machine_learning=0
 
 #-1=Weymouth Yue,  
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag        = -1
 
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=15
 
 
 # ----------------------------------------------------------
