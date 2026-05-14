@@ -144,7 +144,6 @@ stop
       real(amrex_real) err,errsave
       integer local_mask
 
-      real(amrex_real) orderflag
       integer total_calls(num_materials)
       integer total_iterations(num_materials)
       real(amrex_real) total_errors(num_materials)
@@ -418,9 +417,9 @@ stop
 
          !vof,cenref,order,slope,intercept
         do dir=1,SDIM
-         mofdata(vofcomprecon+SDIM+1+dir)= &
-             slopes(D_DECL(i,j,k),vofcomprecon+SDIM+1+dir)
+         mofdata(vofcomprecon+SDIM+1+dir)=zero
         enddo
+        mofdata(vofcomprecon+SDIM+1)=zero !order
 
         if ((mofdata(vofcomprecon).ge.-0.1d0).and. &
             (mofdata(vofcomprecon).le.1.1d0)) then
@@ -435,9 +434,6 @@ stop
          print *,"mofdata=",mofdata
          stop
         endif
-
-        orderflag=zero
-        mofdata(vofcomprecon+SDIM+1)=orderflag
 
          !initialize the intercept to be zero
         mofdata(vofcomprecon+ngeom_recon-1)=zero
@@ -666,12 +662,10 @@ stop
 
            !vof,cenref,order,slope,intercept
            do dir=1,SDIM
-            mofsten(vofcomprecon+SDIM+1+dir)= &
-             slopes(D_DECL(i+i1,j+j1,k+k1),vofcomprecon+SDIM+1+dir)
+            mofsten(vofcomprecon+SDIM+1+dir)=zero
            enddo
 
-           orderflag=zero
-           mofsten(vofcomprecon+SDIM+1)=orderflag
+           mofsten(vofcomprecon+SDIM+1)=zero !order
 
            !initialize the intercept to be zero
            mofsten(vofcomprecon+ngeom_recon-1)=zero
@@ -877,27 +871,14 @@ stop
            vofcomprecon=(im-1)*ngeom_recon+1
            vfrac_local(im)=mofdata_super(vofcomprecon)
 
-           if ((vfrac_local(im).ge.0.01D0).and. &
-               (vfrac_local(im).le.0.99D0).and. &
-               (multi_volume(im).ge.0.01D0).and. &
-               (multi_volume(im).le.0.99D0)) then
-
-            do dir=1,SDIM
-             cmof_centroid=multi_cen(dir,im)-cen_super(dir)
-             mofdata_super(vofcomprecon+dir)=cmof_centroid
-            enddo
-           else if (abs(vfrac_local(im)).le.0.01D0) then
-            ! do nothing
-           else if (abs(one-vfrac_local(im)).le.0.01D0) then
-            ! do nothing
-           else if (abs(multi_volume(im)).le.0.01D0) then
-            ! do nothing
-           else if (abs(one-multi_volume(im)).le.0.01D0) then
-            ! do nothing
-           else
-            print *,"vfrac_local or multi_volume invalid"
-            stop
-           endif
+           do dir=1,SDIM
+            cmof_centroid=multi_cen(dir,im)-cen_super(dir)
+            ! mofdata_super(vofcomprecon+dir)=cmof_centroid
+            mofdata_super(vofcomprecon+SDIM+1+dir)= &
+             mofdata_extended(vofcomprecon+SDIM+1+dir)
+           enddo
+           mofdata_super(vofcomprecon+SDIM+1)= &
+             mofdata_extended(vofcomprecon+SDIM+1)
 
           else if ((is_rigid(im).eq.1).or. &
                    (is_elastic(im).eq.1)) then
@@ -907,16 +888,6 @@ stop
            print *,"or is_elastic invalid ",im,is_elastic(im)
            stop
           endif
-         enddo ! im=1,num_materials
-
-           ! replace the slopes with the particle container derived slopes.
-         do im=1,num_materials
-          vofcomprecon=(im-1)*ngeom_recon+1
-          !vof,cenref,order,slope,intercept
-          do dir=1,SDIM
-           mofdata_super(vofcomprecon+SDIM+1+dir)= &
-             slopes(D_DECL(i,j,k),vofcomprecon+SDIM+1+dir)
-          enddo
          enddo ! im=1,num_materials
 
          call multimaterial_MOF( &
