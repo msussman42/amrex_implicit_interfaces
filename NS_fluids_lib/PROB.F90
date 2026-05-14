@@ -19230,10 +19230,6 @@ end subroutine RatePhaseChange
       integer nmax
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
-      integer, parameter :: continuous_mof=STANDARD_MOF
-
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
 
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer ibasesrc,ibasedst
@@ -19309,12 +19305,6 @@ end subroutine RatePhaseChange
        make_seed=0
        subscale_spec_id=0
        subscale_vfrac=zero
-
-       grid_index(1)=i
-       grid_index(2)=j
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=k
-       endif
 
        call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
 
@@ -19470,7 +19460,6 @@ end subroutine RatePhaseChange
 
         call make_vfrac_sum_ok_base( &
           xsten,nhalf, &
-          continuous_mof, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
           tessellate_source, &  ! =TESSELLATE_FLUIDS
@@ -19492,15 +19481,11 @@ end subroutine RatePhaseChange
          use_ls_data, & ! =0
          LS_stencil, &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
-         geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
          mofdata, & !intent(inout)
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! =STANDARD_MOF
-         grid_index, &
-         grid_level, &
          SDIM)
 
          ! tessellate_dest==TESSELLATE_ALL_RASTER: 
@@ -24250,9 +24235,6 @@ end subroutine initialize2d
        integer n,im
        integer dir
 
-       integer, parameter :: num_particles=0
-       real(amrex_real) :: particle_list(1,SDIM+1)
-
        real(amrex_real) vfracsum_test
 
        real(amrex_real) fluiddata(num_materials,2*SDIM+2)
@@ -24320,7 +24302,6 @@ end subroutine initialize2d
        integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
        integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
-       integer, parameter :: continuous_mof=STANDARD_MOF
        real(amrex_real) theta_initdata
        real(amrex_real) concentration_initdata
        real(amrex_real) concen1_initdata,concen2_initdata
@@ -25616,7 +25597,6 @@ end subroutine initialize2d
         ! centroids are projected to the cell in question.
         call make_vfrac_sum_ok_base( &
           xsten,nhalf, &
-          continuous_mof, &
           bfact,dx, &
           tessellate_source, & ! =TESSELLATE_FLUIDS
           mofdata,SDIM)
@@ -25685,10 +25665,7 @@ end subroutine initialize2d
          enddo
 
          call find_cut_geom_slope_CLSVOF( &
-          continuous_mof, & !STANDARD_MOF
           LS_stencil, &
-          particle_list, &
-          num_particles, &
           lsnormal, &
           lsnormal_valid, &
           ls_intercept, &
@@ -25863,7 +25840,6 @@ end subroutine initialize2d
       real(amrex_real) centroid_local(SDIM)
       real(amrex_real) cencell(SDIM)
       real(amrex_real) mofdata(ngeom_recon*num_materials)
-      integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
       integer, PARAMETER :: tessellate_source=TESSELLATE_FLUIDS
 
 
@@ -26028,7 +26004,6 @@ end subroutine initialize2d
 
         call make_vfrac_sum_ok_base( &
           xsten,nhalf, &
-          continuous_mof_parm, &
           bfact,dx, &
           tessellate_source, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
@@ -29206,10 +29181,6 @@ end subroutine initialize2d
       integer ibasedst
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
-      integer, parameter :: continuous_mof=STANDARD_MOF
-
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
 
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
       real(amrex_real) multi_centroidA(num_materials,SDIM)
@@ -29347,12 +29318,6 @@ end subroutine initialize2d
         do j=borderlo(2),borderhi(2)
         do i=borderlo(1),borderhi(1)
 
-         grid_index(1)=i
-         grid_index(2)=j
-         if (SDIM.eq.3) then
-          grid_index(SDIM)=k
-         endif
-
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
          IWALL(1)=i
@@ -29432,7 +29397,6 @@ end subroutine initialize2d
 
          call make_vfrac_sum_ok_base( &
            xsten,nhalf, &
-           continuous_mof, &
            bfact,dx, &
            tessellate_source, &  ! =TESSELLATE_FLUIDS
            mofdata, &
@@ -29451,15 +29415,11 @@ end subroutine initialize2d
           use_ls_data, & !=0
           LS_stencil, & 
           geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata, & !intent(inout)
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & !=STANDARD_MOF
-          grid_index, &
-          grid_level, &
           SDIM)
 
          do dir3=1,num_materials*ngeom_recon

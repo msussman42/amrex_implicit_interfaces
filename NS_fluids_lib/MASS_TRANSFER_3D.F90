@@ -3972,11 +3972,6 @@ stop
       real(amrex_real) temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      integer, parameter :: continuous_mof_parm=STANDARD_MOF
-
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -4200,12 +4195,6 @@ stop
       do i=growlo(1),growhi(1)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
-
-       grid_index(1)=i
-       grid_index(2)=j
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=k
-       endif
 
        if (local_mask.eq.1) then
 
@@ -5540,15 +5529,11 @@ stop
              use_ls_data, & !=0
              LS_stencil, &
              geom_xtetlist(1,1,1,tid+1), &
-             geom_xtetlist_old(1,1,1,tid+1), &
              nmax, &
              nmax, &
              mofdata_new, & !intent(inout)
              vof_super, &
              multi_centroidA, &
-             continuous_mof_parm, & !=STANDARD_MOF
-             grid_index, &
-             grid_level, &
              SDIM)
 
              ! xPOINT_supermesh is needed in order to determine
@@ -6491,7 +6476,6 @@ stop
              ! sum of F_rigid<=1
              call make_vfrac_sum_ok_base( &
                u_xsten_updatecell,nhalf, &
-               continuous_mof_parm, &
                bfact,dx, &
                tessellate_source, & !TESSELLATE_FLUIDS
                mofdata,SDIM)

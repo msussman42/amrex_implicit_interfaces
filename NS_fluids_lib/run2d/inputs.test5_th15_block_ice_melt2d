@@ -71,8 +71,6 @@ ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate
 ns.num_species_var=1
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=0
-ns.mof_decision_tree_learning=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
 # water,air,ice,substrate

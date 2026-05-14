@@ -126,15 +126,8 @@ stop
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       
       integer :: i,j,k
-      integer :: iside,jside,kside
-      integer :: dir,side
-      integer :: dir_local
-      integer :: imask
+      integer :: dir
       integer :: igridlo(3),igridhi(3)
-
-      integer :: grid_index(SDIM)
-      integer :: grid_side(SDIM)
-      integer :: grid_level
 
       integer im
       real(amrex_real) mofdata(num_materials*ngeom_recon)
@@ -198,7 +191,6 @@ stop
       real(amrex_real) vfrac_solid_sum_center
       real(amrex_real) vfrac_elastic_sum_center
       real(amrex_real) vfrac_local(num_materials)
-      integer :: interior_flag,outside_fab
 
       real(amrex_real) :: xtet(SDIM+1,SDIM)
       real(amrex_real) :: cmof_centroid
@@ -219,7 +211,6 @@ stop
 
 #include "mofdata.H"
 
-      grid_level=-1
 
       maskcov_ptr=>maskcov
       masknbr_ptr=>masknbr
@@ -282,16 +273,6 @@ stop
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
        stop
       endif
-#ifdef AMREX_PARTICLES
-      if (continuous_mof.eq.CMOF_X) then !CMOF
-       ! do nothing
-      else
-       print *,"continuous_mof invalid (fort_sloperecon, particles): ", &
-         continuous_mof
-       stop
-      endif
-#endif
-
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
        stop
@@ -367,110 +348,6 @@ stop
         print *,"local_maskcov invalid: ",local_maskcov
         stop
        endif
-
-       grid_index(1)=i
-       grid_index(2)=j
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=k
-       endif
-
-       interior_flag=1
-
-       do dir=1,SDIM
-        do side=1,2
-
-         do dir_local=1,SDIM
-          grid_side(dir_local)=grid_index(dir_local)
-         enddo
-
-         outside_fab=0
-      
-         if (side.eq.1) then
-          grid_side(dir)=grid_side(dir)-1
-          if (grid_side(dir).lt.fablo(dir)) then
-           outside_fab=1
-          else if (grid_side(dir).lt.fabhi(dir)) then
-           !do nothing
-          else
-           print *,"grid_side(dir) (lo) invalid: ",dir,grid_side(dir)
-           stop
-          endif
-         else if (side.eq.2) then
-          grid_side(dir)=grid_side(dir)+1
-          if (grid_side(dir).gt.fabhi(dir)) then
-           outside_fab=1
-          else if (grid_side(dir).gt.fablo(dir)) then
-           !do nothing
-          else
-           print *,"grid_side(dir) (hi) invalid: ",dir,grid_side(dir)
-           stop
-          endif
-         else
-          print *,"side invalid: ",side
-          stop
-         endif
-
-         iside=grid_side(1)
-         jside=grid_side(2)
-         kside=grid_side(SDIM)
-         imask=NINT(masknbr(D_DECL(iside,jside,kside),1))
-
-         if (outside_fab.eq.1) then
-
-          if (vofbc(dir,side).eq.REFLECT_EVEN) then
-           interior_flag=0
-           if (imask.eq.0) then
-            ! do nothing
-           else
-            print *,"expecting imask=0 ",imask
-            stop
-           endif
-          else if (vofbc(dir,side).eq.FOEXTRAP) then
-           interior_flag=0
-           if (imask.eq.0) then
-            ! do nothing
-           else
-            print *,"expecting imask=0 ",imask
-            stop
-           endif
-          else if (vofbc(dir,side).eq.EXT_DIR) then
-           interior_flag=0
-           if (imask.eq.0) then
-            ! do nothing
-           else
-            print *,"expecting imask=0:",imask
-            stop
-           endif
-          else if (vofbc(dir,side).eq.INT_DIR) then
-
-           if (imask.eq.1) then !fine-fine or periodic
-            ! do nothing
-           else if (imask.eq.0) then !coarse-fine
-            interior_flag=0
-           else
-            print *,"imask invalid: ",imask
-            stop
-           endif
-
-          else
-           print *,"vofbc invalid; dir,side,vofbc: ", &
-            dir,side,vofbc(dir,side)
-           stop
-          endif
-
-         else if (outside_fab.eq.0) then
-          if (imask.eq.1) then
-           ! do nothing
-          else
-           print *,"expecting imask=1 ",imask
-           stop
-          endif
-         else
-          print *,"outside_fab invalid: ",outside_fab
-          stop
-         endif
-        enddo !side=1,2
-       enddo !dir=1,SDIM
 
        if ((update_flag.eq.RECON_UPDATE_NULL).or. &
            (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
@@ -572,7 +449,6 @@ stop
        call make_vfrac_sum_ok_base( &
          xsten, &
          nhalf, &
-         continuous_mof_standard, &
          bfact,dx, &
          tessellate, & ! =TESSELLATE_FLUIDS
          mofdata, &  ! INTENT(inout)
@@ -722,9 +598,6 @@ stop
         if ((level.lt.finest_level).or. &
             (fluid_obscured.eq.1)) then
 
-         ! always use MOF on the coarser levels or if decision tree data
-         ! is not available or if the fluids in a cell are ``mostly''
-         ! obscured by "is_rigid" or "is_elastic" materials.
          continuous_mof_parm=STANDARD_MOF
 
         else if ((level.ge.finest_level).and. &
@@ -744,10 +617,9 @@ stop
          endif
 
         else
-         print *,"level or decision_tree_max_level or fluid_obscured invalid"
+         print *,"level or fluid_obscured invalid"
          print *,"level=",level
          print *,"max_level=",max_level
-         print *,"decision_tree_max_level=",decision_tree_max_level
          print *,"fluid_obscured=",fluid_obscured
          stop
         endif
@@ -811,7 +683,6 @@ stop
           call make_vfrac_sum_ok_base( &
             xstenbox, &
             nhalfbox_sten, & ! =1
-            continuous_mof_standard, & ! =STANDARD_MOF
             bfact,dx, &
             tessellate, & ! =TESSELLATE_FLUIDS
             mofsten, &
@@ -885,47 +756,6 @@ stop
 
         mof_verbose=0
 
-        grid_level=-1
-
-         ! note: for the machine learning algorithm, 3 slopes are tested for
-         ! minimizing the centroid error together with volume constraint:
-         ! a) the machine learning guess
-         ! b) the slope derived from the centroid guess.(not via minimization)
-         !    (  (x_ref-x_cell)/||x_ref-x_cell|| )
-         ! c) level set derived guess
-         ! if 3 or more fluid materials, machine learning not used.
-        if (interior_flag.eq.1) then
-
-         if ((level.eq.training_max_level).or. &
-             (level.eq.decision_tree_max_level))  then
-          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-              (levelrz.eq.COORDSYS_RZ)) then
-           grid_level=level
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           grid_level=level
-          else
-           print *,"levelrz invalid: ",levelrz
-           stop
-          endif
-         else if ((level.ge.0).and. &
-                  (level.le.finest_level)) then
-          ! do nothing
-         else
-          print *,"level invalid: ",level
-          print *,"finest_level: ",finest_level
-          print *,"max_level: ",max_level
-          print *,"training_max_level: ",training_max_level
-          print *,"decision_tree_max_level: ",decision_tree_max_level
-          stop
-         endif
-
-        else if (interior_flag.eq.0) then
-         ! do nothing
-        else
-         print *,"interior_flag invalid: ",interior_flag
-         stop
-        endif
-
         if (continuous_mof_parm.eq.STANDARD_MOF) then
 
          call multimaterial_MOF( &
@@ -938,15 +768,11 @@ stop
           use_ls_data, & ! use_ls_data=1
           LS_stencil, &
           geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist_old(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata_super, & !intent(inout)
           vof_super, &
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
-          continuous_mof_parm, &
-          grid_index, &
-          grid_level, &
           SDIM)
 
          ! mof_calls, mof_iterations, mof_errors are init. in 
@@ -972,15 +798,11 @@ stop
            use_ls_data, & ! use_ls_data=1
            LS_stencil, &
            geom_xtetlist(1,1,1,tid_in+1), &
-           geom_xtetlist_old(1,1,1,tid_in+1), &
            nmax, &
            nmax, &
            mofdata_extended, & !intent(inout)
            vof_extended, & !intent(in)
            multi_centroidA, & ! (num_materials,sdim) relative to supercell
-           continuous_mof_standard, &
-           grid_index, &
-           grid_level, &
            SDIM)
 
          ! mof_calls, mof_iterations, mof_errors are init. in 
@@ -1107,15 +929,11 @@ stop
            use_ls_data, & ! use_ls_data=1
            LS_stencil, &
            geom_xtetlist(1,1,1,tid_in+1), &
-           geom_xtetlist_old(1,1,1,tid_in+1), &
            nmax, &
            nmax, &
            mofdata_super, & !intent(inout)
            vof_super, &
            multi_centroidA, & ! (num_materials,sdim) relative to supercell
-           continuous_mof_standard, &
-           grid_index, &
-           grid_level, &
            SDIM)
 
          ! mof_calls, mof_iterations, mof_errors are init. in 

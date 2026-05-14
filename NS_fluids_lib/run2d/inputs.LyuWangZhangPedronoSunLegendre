@@ -45,8 +45,6 @@ ns.MOFITERMAX=30
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 # water,air,ice,solid

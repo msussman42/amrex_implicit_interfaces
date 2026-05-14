@@ -13928,9 +13928,6 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in) :: dxf(SDIM)
       integer domlo(SDIM)
 
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
       integer, parameter :: nhalf=3
       integer, parameter :: nhalfgrid=1
 
@@ -13962,7 +13959,6 @@ END SUBROUTINE SIMP
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
-      integer, parameter :: continuous_mof=STANDARD_MOF
       integer, parameter :: mof_verbose=0
       integer, parameter :: use_ls_data=0
       integer fine_covered
@@ -14005,12 +14001,6 @@ END SUBROUTINE SIMP
       do kc=growlo(3),growhi(3)
       do jc=growlo(2),growhi(2)
       do ic=growlo(1),growhi(1)
-
-       grid_index(1)=ic
-       grid_index(2)=jc
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=kc
-       endif
 
         ! coarse centroids and volume fractions are initialized
         ! to zero.
@@ -14130,7 +14120,6 @@ END SUBROUTINE SIMP
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
                  xstenfine,nhalf, &
-                 continuous_mof, &
                  bfact_f,dxf, &
                  tessellate_source, & !TESSELLATE_FLUIDS
                  mofdatafine, &
@@ -14149,15 +14138,11 @@ END SUBROUTINE SIMP
                 use_ls_data, & ! =0
                 LS_stencil, &
                 geom_xtetlist(1,1,1,tid_in+1), &
-                geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &
                 mofdatafine, & !intent(inout)
                 vof_super, &
                 multi_centroidA, &
-                continuous_mof, & !=STANDARD_MOF
-                grid_index, &
-                grid_level, &
                 SDIM)
 
                 ! EPS2
@@ -15362,324 +15347,5 @@ END SUBROUTINE SIMP
       end subroutine fort_metrics
 
       end module navierstokesf90_module
-
-
-      module OUTPUT_PC_module
-
-       use iso_c_binding
-       use amrex_fort_module, only : amrex_real,amrex_particle_real
-
-       implicit none
-
-       type, bind(C) :: particle_t
-         real(amrex_particle_real) :: pos(SDIM)
-         real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
-         integer(c_int) :: id
-         integer(c_int) :: cpu
-         integer(c_int) :: extra_int(N_EXTRA_INT)
-       end type particle_t
-
-      contains
-
-      subroutine fort_particle_grid( &
-        tid, &
-        xlo,dx, &
-        particles, & ! a list of particles in the elastic structure
-        Np, & !  Np = number of particles, pass by value
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        level, &
-        gridno) &
-      bind(c,name='fort_particle_grid')
-
-      use probf90_module
-      use navierstokesf90_module
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: tid
-      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: level,gridno
-      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
-      integer, value, INTENT(in) :: Np ! pass by value
-      type(particle_t), INTENT(in) :: particles(Np)
-
-      character*28 cennamestr28
-      character*3 levstr
-      character*5 gridstr
-      character*36 cenfilename36
-
-      real(amrex_real) xref(SDIM)
-      real(amrex_real) xrefT(SDIM)
-      integer ipart_counter
-      integer i,dir
-      real(amrex_real) int_to_real_var
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid151"
-       stop
-      endif
-
-      write(cennamestr28,'(A14,A14)') &
-          './temptecplot/','tempPARCON_pos'
-
-      write(levstr,'(I3)') level
-      write(gridstr,'(I5)') gridno
-
-      do i=1,3
-       if (levstr(i:i).eq.' ') then
-        levstr(i:i)='0'
-       endif
-      enddo
-      do i=1,5
-       if (gridstr(i:i).eq.' ') then
-        gridstr(i:i)='0'
-       endif
-      enddo
-      write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
-      print *,"cenfilename36 ",cenfilename36
-
-      if (N_EXTRA_REAL.eq.2) then
-       ! do nothing
-      else
-       print *,"N_EXTRA_REAL unexpected value: ",N_EXTRA_REAL
-       stop
-      endif
-      if (N_EXTRA_INT.eq.2) then
-       ! do nothing
-      else
-       print *,"N_EXTRA_INT unexpected value: ",N_EXTRA_INT
-       stop
-      endif
-
-      open(unit=12,file=cenfilename36)
-      write(12,*) Np
-
-      do ipart_counter=1,Np
-       do dir=1,SDIM
-        xref(dir)=particles(ipart_counter)%pos(dir)
-        xrefT(dir)=xref(dir)
-       enddo
-       if (visual_RT_transform.eq.1) then
-        call RT_transform(xref,xrefT)
-       endif
-       do dir=1,SDIM
-        write(12,'(E25.16)',ADVANCE="NO") xrefT(dir)
-       enddo
-
-       do dir=1,N_EXTRA_REAL
-        write(12,'(E25.16)',ADVANCE="NO") &
-          particles(ipart_counter)%extra_state(dir)
-       enddo ! dir=1..N_EXTRA_REAL
-
-       do dir=1,N_EXTRA_INT
-        int_to_real_var=particles(ipart_counter)%extra_int(dir)
-        if (dir.lt.N_EXTRA_INT) then
-         write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
-        else if (dir.eq.N_EXTRA_INT) then
-         write(12,'(E25.16)') int_to_real_var
-        else
-         print *,"dir invalid (dir=1,N_EXTRA_INT): ",dir
-         stop
-        endif
-       enddo ! dir=1..N_EXTRA_INT
-
-      enddo ! ipart_counter=1,Np
-
-      close(12)
-
-      return
-      end subroutine fort_particle_grid
-
-      subroutine fort_combine_particles( &
-       grids_per_level,finest_level,nsteps, &
-       arrdim,time,plotint) &
-      bind(c,name='fort_combine_particles')
-
-      use global_utility_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      real(amrex_real), INTENT(in) :: time
-      integer, INTENT(in) :: plotint
-      integer :: strandid
-      integer, INTENT(in) :: arrdim,finest_level,nsteps
-      integer, INTENT(in) :: grids_per_level(arrdim)
-
-      character*28 cennamestr28
-      character*10 newcennamestr10
-
-      character*3 levstr
-      character*5 gridstr
-
-      character*36 cenfilename36
-
-      character(len=plotfile_digits) :: stepstr
-
-      character(len=plotfile_digits+14) :: newcenfilename22
-
-      integer i
-      integer ilev,igrid,ipass
-      real(amrex_real) xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-      integer nparticles,Part_nparticles
-      integer alloc_flag
-      integer istruct
-
-      alloc_flag=0
-
-      write(cennamestr28,'(A14,A14)') &
-          './temptecplot/','tempPARCON_pos'
-      
-      write(newcennamestr10,'(A10)') 'PARCON_pos'
-
-      nparticles=0
-
-      if (arrdim.ne.finest_level+1) then
-       print *,"arrdim invalid"
-       stop
-      endif
-
-      do ipass=0,1
-
-       if (ipass.eq.1) then
-
-        alloc_flag=alloc_flag+1
-
-        write(stepstr,15329) nsteps
-15329   format(I plotfile_digits )
-
-        do i=1,plotfile_digits
-         if (stepstr(i:i).eq.' ') then
-          stepstr(i:i)='0'
-         endif
-        enddo
-
-        if (plotint.le.0) then
-         strandid=8
-        else
-         strandid=8
-!        strandid=(nsteps/plotint)+1
-        endif
-
-        write(newcenfilename22,15346) newcennamestr10,stepstr,'.tec'
-15346   format(A10,A plotfile_digits ,A4)
-
-
-        print *,"newcenfilename22 ",newcenfilename22
-        open(unit=12,file=newcenfilename22)
-
-        if (N_EXTRA_REAL.eq.2) then
-         ! do nothing
-        else
-         print *,"N_EXTRA_REAL invalid: ",N_EXTRA_REAL
-         stop
-        endif
-        if (N_EXTRA_INT.eq.2) then
-         ! do nothing
-        else
-         print *,"N_EXTRA_INT invalid: ",N_EXTRA_INT
-         stop
-        endif
-
-        if (SDIM.eq.3) then
-         write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A65)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","Z","LS1","LS2","material id1","material_id2"'
-        else if (SDIM.eq.2) then
-         write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A61)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","LS1","LS2","material id1","material_id2"'
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        write(12,*) ','
-
-        if (plotint.le.0) then
-         strandid=9
-        else
-         strandid=9
-!        strandid=(nsteps/plotint)+1
-        endif
-
-        write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
-         'ZONE F="POINT", I= ', nparticles,  &
-         ', J=1, K=1, SOLUTIONTIME= ',round_time(time), &
-         ' STRANDID=',strandid-1
-
-       endif  !ipass=1
-
-       do ilev=0,finest_level
-       do igrid=0,grids_per_level(ilev+1)-1
-         write(levstr,'(I3)') ilev
-         write(gridstr,'(I5)') igrid
-
-         do i=1,3
-          if (levstr(i:i).eq.' ') then
-           levstr(i:i)='0'
-          endif
-         enddo
-         do i=1,5
-          if (gridstr(i:i).eq.' ') then
-           gridstr(i:i)='0'
-          endif
-         enddo
-
-         write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
-         print *,"cenfilename36 ",cenfilename36
-         open(unit=5,file=cenfilename36)
-
-         read(5,*) Part_nparticles
-
-         if (ipass.eq.0) then
-          nparticles=nparticles+Part_nparticles
-         else if (ipass.eq.1) then
-
-          do i=1,Part_nparticles
-           read(5,*) &
-             (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-           write(12,*) &
-             (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-          enddo
-
-         else
-          print *,"ipass invalid"
-          stop
-         endif
-         close(5)
-       enddo ! igrid
-       enddo ! ilev
-
-       if (ipass.eq.1) then
-        close(12)
-       endif
-
-      enddo ! ipass=0..1
-
-      alloc_flag=alloc_flag-1
-
-      if (alloc_flag.gt.0) then
-       print *,"alloc_flag bust"
-       stop
-      endif
-
-      return
-      end subroutine fort_combine_particles
-
-      end module OUTPUT_PC_module
 
 

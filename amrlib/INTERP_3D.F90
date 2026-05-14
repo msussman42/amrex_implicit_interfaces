@@ -161,8 +161,6 @@ stop
       integer :: grid_index(SDIM)
       integer :: data_needed
 
-      integer, parameter :: grid_level=-1
-
       integer i,j,k
       integer ifine,jfine,kfine
       integer ic,jc,kc
@@ -181,7 +179,6 @@ stop
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -299,7 +296,6 @@ stop
          ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &
           xsten,nhalf, &
-          continuous_mof, &
           bfact_coarse,dxc, &
           tessellate, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
@@ -317,15 +313,11 @@ stop
           use_ls_data, & ! use_ls_data=0
           LS_stencil, &
           geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
           mofdata, & !intent(inout)
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & ! continuous_mof=STANDARD_MOF
-          grid_index, &
-          grid_level, & !grid_level=-1
           SDIM)
 
         do dir=1,num_materials*ngeom_recon
@@ -841,9 +833,6 @@ stop
       integer ic,jc,kc
       real(amrex_real) testwt
 
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
       integer dir
       integer nmax,im,vofcomp_old,vofcomp_new
       real(amrex_real) mofdata(num_materials*ngeom_recon)
@@ -866,7 +855,6 @@ stop
 
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
@@ -1113,16 +1101,9 @@ stop
 !        domlo,bfact_fine,dxf,nhalf)
        call gridsten_level(xstenfine,ifine,jfine,kfine,levelf,nhalf)
 
-       grid_index(1)=ifine
-       grid_index(2)=jfine
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=kfine
-       endif
-
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
          xstenfine,nhalf, &
-         continuous_mof, &
          bfact_fine,dxf, &
          tessellate, & !=TESSELLATE_FLUIDS
          mofdata,SDIM)
@@ -1140,15 +1121,11 @@ stop
          use_ls_data, &
          LS_stencil, &
          geom_xtetlist(1,1,1,tid_in+1), &
-         geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
          mofdata, & !intent(inout)
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! continuous_mof=STANDARD_MOF
-         grid_index, &
-         grid_level, & !grid_level=-1
          SDIM)
 
        do dir=1,num_materials*ngeom_recon

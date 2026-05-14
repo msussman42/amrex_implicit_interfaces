@@ -733,75 +733,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
 
-#ifdef AMREX_PARTICLES
-
- if (parent->LSA_nsteps_power_method==0) {
-  //do nothing
- } else
-  amrex::Error("cannot do both particles and LSA");
-
- if (material_extend_velocity_flag==0) {
-  //do nothing
- } else
-  amrex::Error("expecting material_extend_velocity_flag==0 if particles");
-
- if (im_extension==-1) {
-  //do nothing
- } else
-  amrex::Error("cannot do free slip algorithm with particles");
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_redistribute_main=0; 
-  bool local_copy=true; //do not redistribute inside of copyParticles
-  bool remove_negative=true;
-
-    // level=0
-    // particles at t^{n} 
-  My_ParticleContainer& prevPC=newDataPC(project_slab_step);
-
-  prevPC.Redistribute(lev_min,lev_max,
-   nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-    // level=0
-  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
-  
-   // if num_divu_outer_sweeps>1 (e.g. for compressible flow) or spectral
-   // element method, then
-   // for sweeps after the initial sweep, we want to clear the particle
-   // data from the previous sweep.  This old t^{n+1} particle data used an
-   // old advective velocity, and we want to replace with t^{n+1} particle
-   // data using the new advective velocity.  For reference regarding
-   // num_divu_outer_sweeps, see
-   // Jemison, Sussman, Arienti.
-  if (num_particles_look_ahead>0) {
-   localPC.clearParticles();
-  } else if (num_particles_look_ahead==0) {
-   //do nothing
-  } else
-   amrex::Error("num_particles_look_ahead invalid");
-
-  localPC.Redistribute();  //Sussman superstition
-  localPC.copyParticles(prevPC,local_copy); //initialize t^{n+1} data w/t^{n}
-
-    //prior to advection
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
-    local_redistribute_main);
-
-  localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,
-    remove_negative);
-
- } else
-  amrex::Error("slab_step invalid");
-
-#endif
-
  interface_touch_flag=1; //nonlinear_advection
 
  //output:SLOPE_RECON_MF
@@ -851,39 +782,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
    interface_touch_flag=1; //nonlinear_advection
 
-#ifdef AMREX_PARTICLES
-
-   if (im_extension!=-1)
-    amrex::Error("expecting im_extension==-1 if particles");
-
-   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_redistribute_main=0; //local_redistribute=0 just in case periodic
-    bool remove_negative=true;
-
-      //level==0
-    My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-      //move_particles() declared in NavierStokes2.cpp
-     ns_level.move_particles(
-       normdir_here,
-       localPC,
-       local_caller_string);
-    }
-
-    localPC.Redistribute(lev_min,lev_max,
-      nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-   } else
-    amrex::Error("slab_step invalid");
-
-#endif
-
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
      // in: nonlinear_advection
@@ -891,9 +789,8 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
      // projects volume fractions so that sum F_m_fluid=1.
     renormalize_only=1;
     int local_truncate=0;
-    int update_particles=0;
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-      local_truncate,local_caller_string,update_particles);
+      local_truncate,local_caller_string);
 
      // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,
@@ -1073,9 +970,8 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
  renormalize_only=0;
  int local_truncate=1;
- int update_particles=1;
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-   local_truncate,local_caller_string,update_particles);
+   local_truncate,local_caller_string);
 
  interface_touch_flag=1; //nonlinear_advection
 
@@ -1781,9 +1677,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     // projects volume fractions so that sum F_m_fluid=1.
    int renormalize_only=0;
    int local_truncate=0;
-   int update_particles=0;
    prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
-      local_truncate,local_caller_string,update_particles);
+      local_truncate,local_caller_string);
 
    if (verbose>0) {
     std::fflush(NULL);
@@ -1793,21 +1688,6 @@ Real NavierStokes::advance(Real time,Real dt) {
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
    }
-
-#ifdef AMREX_PARTICLES
-
-   int lev_min=0;
-   int lev_max=-1;
-   int nGrow_Redistribute=0;
-   int local_redistribute_main=0;
-   bool remove_negative=true;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
-   old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_redistribute_main,remove_negative);
-
-#endif
 
    //copy bfact_time_order component to the
    //components: 0..bfact_time_order-1
@@ -2039,9 +1919,6 @@ void NavierStokes::init_splitting_force_SDC() {
  
  bool use_tiling=ns_tiling;
 
- if (use_tiling) {
-  amrex::Error("clearParticles() will not work if tiling");
- }
  int finest_level=parent->finestLevel();
 
  if (divu_outer_sweeps==0) {
@@ -2836,47 +2713,6 @@ void NavierStokes::phase_change_code_segment(
   // in: phase_change_code_segment
  delete_array(DEN_RECON_MF);
 
-
-#ifdef AMREX_PARTICLES
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_redistribute_main=0; //local_redistribute=0 due to periodic wrap
-  bool remove_negative=true;
-
-  localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int splitting_dir=-1;
-    //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(
-     splitting_dir,
-     localPC,
-     local_caller_string);
-  }
-
-  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
-
-  if (num_particles_look_ahead>0) {
-   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,remove_negative);
-  } else if (num_particles_look_ahead==0) {
-   //do nothing
-  } else
-   amrex::Error("num_particles_look_ahead invalid");
-
- } else
-  amrex::Error("slab_step invalid");
-
-#endif
-
  delete_array(BURNING_VELOCITY_MF);
  delete_array(nodevel_MF);
 
@@ -2896,13 +2732,12 @@ void NavierStokes::phase_change_code_segment(
   // 2. extend level set functions into the solid.
  int renormalize_only=0;
  int local_truncate=0;
- int update_particles=1;
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-  local_truncate,local_caller_string,update_particles);
+  local_truncate,local_caller_string);
 
  int local_redistribute_main=0;
 
- makeStateDistALL(update_particles,local_redistribute_main);
+ makeStateDistALL(local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2935,10 +2770,9 @@ void NavierStokes::no_mass_transfer_code_segment(
    RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
- int update_particles=1;
  int local_redistribute_main=0;
 
- makeStateDistALL(update_particles,local_redistribute_main);
+ makeStateDistALL(local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -3056,11 +2890,10 @@ void NavierStokes::nucleation_code_segment(
    cur_time_slab,
    RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
 
- int update_particles=1;
  int local_redistribute_main=0;
 
   //in: nucleation_code_segment
- makeStateDistALL(update_particles,local_redistribute_main);
+ makeStateDistALL(local_redistribute_main);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
@@ -4297,9 +4130,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 2. extend level set functions into the solid.
        renormalize_only=0;
        int local_truncate=0;
-       int update_particles=0;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate,local_caller_string,update_particles);
+        local_truncate,local_caller_string);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);

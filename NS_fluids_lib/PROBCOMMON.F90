@@ -258,58 +258,6 @@ implicit none
 ! Johnson_Cook_C added August 21, 2025
 ! adapt_whole_material added October 9, 2025
 
-      integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
-      integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
-
-      Type training_model_type
-        Type(Neural_Network) :: NN_ZHOUTENG_LOCAL
-        Type(Decision_Tree) :: DT_ZHOUTENG_LOCAL
-        Type(Random_Forest) :: RF_ZHOUTENG_LOCAL
-      end Type training_model_type
-
-      Type(training_model_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
-        training_array
-      integer :: training_max_level=-1
-      integer :: training_lo(SDIM)
-      integer :: training_hi(SDIM)
-
-      !https://www.stat.cmu.edu/~cshalizi/350-2006/lecture-10.pdf
-      !S=sum_{c \in leaves(T)} n_{c} V_{c}
-      !V_{c}=(1/n_{c})sum_{i \in C} (y_{i}-m_{c})^{2}
-      Type branch_type
-       integer :: ndata
-       integer :: parent_id
-       integer :: parent_level
-       integer :: current_id
-       integer :: current_level
-       integer :: splittingrule
-       integer :: median_index
-       real(amrex_real) :: median_value
-       real(amrex_real), pointer :: data_decisions(:,:) !datanum, data_idx
-       real(amrex_real), pointer :: data_classify(:,:) !datanum, data_idx
-       integer :: child1_id
-       integer :: child_level
-       integer :: child2_id
-      end Type branch_type
-
-      Type level_branch_type
-        integer :: nbranches
-        Type(branch_type), pointer :: branch_list(:)
-      end Type level_branch_type
-
-      Type tree_type
-       integer :: max_number_tree_levels
-       integer :: number_tree_levels
-       integer, pointer :: nbranches_level(:) 
-       Type(level_branch_type), pointer :: branch_list_level(:)
-      end Type tree_type
-
-      Type(tree_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
-          decision_tree_array
-      integer :: decision_tree_max_level=-1
-      integer :: decision_tree_lo(3)
-      integer :: decision_tree_hi(3)
-
       integer, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
       integer, PARAMETER :: MAX_NUM_INTERFACES=55

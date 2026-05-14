@@ -71,9 +71,6 @@ ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
 # liquid,jwl,aluminum side walls,gas
 ns.mof_ordering=2 3 1 4
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
-#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
-ns.mof_decision_tree_learning=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # force AMR tagging within these specified boxes.

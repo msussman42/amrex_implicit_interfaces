@@ -691,25 +691,6 @@ extern "C" {
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,int* bfact);
 
-    void fort_particle_grid(
-       int* tid,
-       const Real* xlo,const Real* dx,
-       const void* particles,
-       int Np, 
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       int* level,
-       const int* gridno);
-
-    void fort_combine_particles(
-     int* grids_per_level,
-     int* finest_level,
-     int* nsteps,
-     int* arrdim,
-     Real* time,
-     int* plotint);
-
 }
 }/* namespace amrex */
     
