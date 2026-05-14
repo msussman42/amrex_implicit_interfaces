@@ -115,7 +115,7 @@ namespace amrex{
       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
       const Real* dx,const Real* xlo);
 
-     void fort_vfracerror(
+     void fort_error_estimate_helper(
       int* tid_current,
       int* error_set_count,
       int* tag, 

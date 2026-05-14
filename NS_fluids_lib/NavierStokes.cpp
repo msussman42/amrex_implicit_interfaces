@@ -20080,7 +20080,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // declared in PROB.F90
-  fort_vfracerror(
+  fort_error_estimate_helper(
     &tid_current,
     &error_set_count[tid_current],
     tptr, 
