@@ -9820,7 +9820,7 @@ void NavierStokes::level_getshear(
 //   ns_level.init_pressure_error_indicator();
 //  avgDownError_ALL();
 // during regridding, the following routine checks the error:
-//  NavierStokes::errorEst  (calls fort_vfracerror)
+//  NavierStokes::errorEst  (calls fort_error_estimate_helper)
 void NavierStokes::init_pressure_error_indicator() {
 
  std::string local_caller_string="init_pressure_error_indicator";

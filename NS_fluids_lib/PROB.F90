@@ -6007,8 +6007,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine dumbbelldist
 
-       ! override_tagflag is called from fort_vfracerror (PROB.F90) if 
+       ! override_tagflag is called from 
+       ! fort_error_estimate_helper (PROB.F90) if 
        ! level<max_level_for_use.
+       ! fort_error_estimate_helper is called from NavieStokes::errorEst
       subroutine override_tagflag( &
         i,j,k, &
         level,max_level, &
@@ -22169,7 +22171,7 @@ end subroutine initialize2d
        ! before this routine:
        ! calc_error_indicator
        ! EOS_error_ind
-      subroutine fort_vfracerror(  &
+      subroutine fort_error_estimate_helper(  &
        tid_current, &
        error_set_count, &
        tag, &
@@ -22197,7 +22199,7 @@ end subroutine initialize2d
        ncoarseblocks, &
        xcoarseblocks,ycoarseblocks,zcoarseblocks, &
        rxcoarseblocks,rycoarseblocks,rzcoarseblocks) &
-      bind(c,name='fort_vfracerror')
+      bind(c,name='fort_error_estimate_helper')
 
       use global_utility_module
       use geometry_intersect_module
@@ -22258,12 +22260,12 @@ end subroutine initialize2d
       integer coarseblocks_available
 
       if (bfact.lt.1) then
-       print *,"bfact invalid200"
+       print *,"bfact invalid fort_error_estimate_helper ",bfact
        stop
       endif
 
       if (level.lt.0) then
-       print *,"level invalid vfrac error: ",level
+       print *,"level invalid fort_error_estimate_helper: ",level
        stop
       endif
       if (max_level.le.level) then
@@ -22292,6 +22294,10 @@ end subroutine initialize2d
       snew_ptr=>snew
 
       call checkbound_int_array1(tilelo,tilehi,tag_ptr,0,-1)
+       !in NavierStokes.cpp "errorEst"
+       ! MultiFab* snew_mf=getState(1,0,STATE_NCOMP,nudge_time);
+       ! MultiFab* lsnew_mf = getStateDist(1,nudge_time,local_caller_string);
+       ! 
       call checkbound_array1(fablo,fabhi,errfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
@@ -22330,6 +22336,7 @@ end subroutine initialize2d
        if (level.lt.max_level_for_use) then
 
          ! updates "tagflag" and/or "rflag"
+         ! subroutine override_tagflag is in PROB.F90 too.
         call override_tagflag( &
          i,j,k, &
          level,max_level, &
@@ -22377,7 +22384,7 @@ end subroutine initialize2d
         else if (rflag.eq.zero) then
          ! do nothing
         else
-         print *,"rflag invalid in fort_vfracerror: ",rflag
+         print *,"rflag invalid in fort_error_estimate_helper: ",rflag
          print *,"probtype=",probtype
          print *,"axis_dir=",axis_dir
          stop
@@ -22441,7 +22448,7 @@ end subroutine initialize2d
        else if (level.ge.max_level_for_use) then
         ! do nothing
        else
-        print *,"level invalid"
+        print *,"level invalid ",level
         stop
        endif
 
@@ -22455,7 +22462,7 @@ end subroutine initialize2d
       enddo
 
       return
-      end subroutine fort_vfracerror
+      end subroutine fort_error_estimate_helper
 
       subroutine fort_group_extrapfill ( &
       tid_in, &

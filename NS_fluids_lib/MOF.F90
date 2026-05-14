@@ -7345,88 +7345,6 @@ end subroutine volume_sanity_check
       end subroutine Box_volumeFAST_and_map
 
 
-      subroutine Box_volume_super( &
-       bfact,dx,xsten0,nhalf0, &
-       volume,centroid,sdim)
-      use probcommon_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: sdim
-      integer, INTENT(in) :: bfact,nhalf0
-      integer, PARAMETER :: nhalf2=1
-      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real) xsten2(-1:1,sdim)
-      real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(out) :: volume
-      real(amrex_real), INTENT(out) :: centroid(sdim)
-      integer ksten_low,ksten_high,i1,j1,k1,dir,isten
-      real(amrex_real) volsten
-      real(amrex_real) censten(sdim)
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid129"
-       stop
-      endif
-      if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
-       stop
-      endif
-
-      volume=zero
-      do dir=1,sdim
-       centroid(dir)=zero
-      enddo
-
-      if (sdim.eq.3) then
-        ksten_low=-1
-        ksten_high=1
-      else if (sdim.eq.2) then
-        ksten_low=0
-        ksten_high=0
-      else
-        print *,"sdim invalid"
-        stop
-      endif
-
-      do k1=ksten_low,ksten_high
-      do j1=-1,1
-      do i1=-1,1
- 
-        do isten=-1,1
-         xsten2(isten,1)=xsten0(isten+2*i1,1)
-         xsten2(isten,2)=xsten0(isten+2*j1,2)
-         if (sdim.eq.3) then
-          xsten2(isten,sdim)=xsten0(isten+2*k1,sdim)
-         endif
-        enddo ! isten
-
-        call Box_volumeFAST(bfact,dx,xsten2,nhalf2,volsten,censten,sdim)
-
-        volume=volume+volsten
-        do dir=1,sdim
-         centroid(dir)=centroid(dir)+censten(dir)*volsten
-        enddo
-
-      enddo
-      enddo
-      enddo  ! i1,j1,k1
-
-      if (volume.gt.zero) then
-       ! do nothing
-      else
-       print *,"volume invalid: ",volume
-       stop
-      endif
-      do dir=1,sdim
-       centroid(dir)=centroid(dir)/volume
-      enddo
-
-      return
-      end subroutine Box_volume_super
-
-
- 
- 
 ! f(x,y,z)=a+b(x-x0)+c(y-y0)+d(z-z0)
 !   3  4  
 !   1  2
@@ -10339,7 +10257,7 @@ contains
         ! "Find the actual centroid given the angle" 
         ! xcell is center of cell, not the cell centroid
         ! refcentroid is passed into this routine.
-        ! refcentroid is relative to cell centroid of the super cell.
+        ! refcentroid is relative to cell centroid of the cell.
       subroutine multi_rotatefunc( &
         tid_in, &
         uncaptured_volume_vof, & !intent(in)
@@ -10354,7 +10272,7 @@ contains
         nlist_vof, & !intent(in)
         nlist_alloc, & !intent(in)
         nmax, &
-        refcentroid, & !relative to supercell centroid
+        refcentroid, & !relative to cell centroid
         refvfrac, &
         angle, & !intent(in)
         ff, & !intent(out)
@@ -11099,7 +11017,7 @@ contains
 
 
         ! refcentroid and centroidA relative to cell centroid of the
-        ! super cell.
+        ! cell.
         ! xsten0(0,dir) is center of cell, not the cell centroid
         ! output: intercept,centroidA,nslope
         ! called from: individual_MOF and multimaterial_MOF
@@ -11114,7 +11032,7 @@ contains
         override_normal_valid, &
         bfact,dx, &
         xsten0,nhalf0, &
-        refcentroid, & ! relative to cell centroid of the super cell.
+        refcentroid, & ! relative to cell centroid of the cell.
         refvfrac, &
         npredict, &
         nslope,intercept, &
@@ -11390,7 +11308,7 @@ contains
             (magLS.le.one+EPS2)) then
          call slope_to_angle(nLS,angle_init,sdim)
         else
-         print *,"magLS invalid (pls): ",magLS
+         print *,"magLS invalid (override): ",magLS
          do dir=1,sdim
           print *,"dir,nLS (override) ",dir,nLS(dir)
          enddo
@@ -12876,8 +12794,7 @@ contains
          enddo
          refvfrac(1)=mofdata(vofcomp)
 
-           ! centroidA and refcentroid relative to cell centroid of the super
-           ! cell.
+           ! centroidA and refcentroid relative to cell centroid of the cell.
            ! find_cut_geom_slope called from: individual_MOF
          call find_cut_geom_slope( &
            tid_in, &
@@ -13147,7 +13064,7 @@ contains
   
           mofdata(vofcomp+sdim+1)=ordermax+1
           mofdata(vofcomp+2*sdim+2)=intercept(1)
-           ! cencell is the supercell centroid
+           ! cencell is the cell centroid
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
            multi_centroidA(critical_material,dir)= &
@@ -14937,6 +14854,25 @@ contains
 
        vofcomp=(imaterial-1)*ngeom_recon+1
 
+       if (override_normal_valid(imaterial).eq.1) then
+        if (override_order(imaterial).eq.0) then
+         !do nothing
+        else if ((override_order(imaterial).ge.1).and. &
+                 (override_order(imaterial).le.num_materials+1)) then
+         order_algorithm_in(imaterial)=override_order(imaterial)
+        else
+         print *,"override_order invalid: ",override_order
+         print *,"imaterial=",imaterial
+         stop
+        endif
+       else if (override_normal_valid(imaterial).eq.0) then
+        !do nothing
+       else
+        print *,"override_normal_valid invalid ",override_normal_valid
+        print *,"imaterial=",imaterial
+        stop
+       endif 
+        
        if (mofdata(vofcomp).ge.one-VOFTOL) then
         order_algorithm_in(imaterial)=num_materials+1
        else if (mofdata(vofcomp).le.VOFTOL) then
