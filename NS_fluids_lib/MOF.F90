@@ -14386,6 +14386,7 @@ contains
 
       real(amrex_real), dimension(:,:), allocatable :: override_normal
       integer, dimension(:), allocatable :: override_normal_valid
+      integer, dimension(:), allocatable :: override_order
 
       real(amrex_real), dimension(:,:), allocatable :: lsnormal
       integer, dimension(:), allocatable :: lsnormal_valid
@@ -14650,6 +14651,7 @@ contains
 
       allocate(override_normal(num_materials,sdim))
       allocate(override_normal_valid(num_materials))
+      allocate(override_order(num_materials))
 
       allocate(lsnormal(num_materials,sdim))
       allocate(lsnormal_valid(num_materials))
@@ -14715,6 +14717,7 @@ contains
 
          lsnormal_valid(imaterial)=0
          override_normal_valid(imaterial)=0
+         override_order(imaterial)=0
 
         else if ((voftest(imaterial).ge.VOFTOL).and. &
                  (voftest(imaterial).le.one-VOFTOL)) then
@@ -14729,12 +14732,21 @@ contains
          mag(1)=sqrt(mag(1))
          if (mag(1).eq.zero) then
           override_normal_valid(imaterial)=0
+          override_order(imaterial)=0
          else if ((mag(1).ge.one-EPS2).and. &
                   (mag(1).le.one+EPS2)) then
           do dir=1,sdim
            override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
           enddo
-          override_normal_valid(imaterial)=1
+          if ((is_rigid(imaterial).eq.0).and. &
+              (is_elastic(imaterial).eq.0)) then
+           override_normal_valid(imaterial)=1
+           override_order(imaterial)= &
+             NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
+          else
+           print *,"expecting is_rigid=is_elastic=0 if override"
+           stop
+          endif
          else
           print *,"mag(1) invalid: ",mag(1)
           stop
@@ -15146,6 +15158,7 @@ contains
 
       deallocate(override_normal)
       deallocate(override_normal_valid)
+      deallocate(override_order)
 
       deallocate(lsnormal)
       deallocate(lsnormal_valid)
@@ -15424,7 +15437,7 @@ contains
         sdim)
 
        do dir2=1,nrecon
-        mofdata(dir2)=zero !override_normal zapped out.
+        mofdata(dir2)=zero !override_normal and override_order zapped out.
        enddo
        do im=1,num_materials
         vof_super(im)=zero
@@ -21168,6 +21181,7 @@ contains
        stop
       endif
 
+       ! zap out override slope and order.
       do im=1,num_materials*ngeom_recon
        mofdata_convert(im)=zero
       enddo
