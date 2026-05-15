@@ -33,12 +33,13 @@ extern "C"
         int* nsteps,
         Real* time,
         int* update_flag,
-	int* number_centroid_per_core,
-	Real* delta_centroid_per_core,
         int* total_calls,
         int* total_iterations,
         Real* total_errors,
-        int* continuous_mof);
+        int* ngrow_slope_recon, 
+        int* ngrow_recon, 
+        int* continuous_mof,
+        int* continuous_mof_radius);
 
 }
 }/* namespace amrex */

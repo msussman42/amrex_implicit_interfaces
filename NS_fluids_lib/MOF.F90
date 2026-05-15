@@ -14655,15 +14655,9 @@ contains
           do dir=1,sdim
            override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
           enddo
-          if ((is_rigid(imaterial).eq.0).and. &
-              (is_elastic(imaterial).eq.0)) then
-           override_normal_valid(imaterial)=1
-           override_order(imaterial)= &
+          override_normal_valid(imaterial)=1
+          override_order(imaterial)= &
              NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
-          else
-           print *,"expecting is_rigid=is_elastic=0 if override"
-           stop
-          endif
          else
           print *,"mag(1) invalid: ",mag(1)
           stop
