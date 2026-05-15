@@ -18792,6 +18792,8 @@ contains
       return
       end subroutine multi_get_volume_grid
 
+        !tessellate_dest=TESSELLATE_FLUIDS for advecting fluids
+        !tessellate_dest=TESSELLATE_FLUIDS_ELASTIC for advecting elastics
       subroutine multi_get_volume_grid_and_map( &
        tessellate_source, & !TESSELLATE_FLUIDS
        tessellate_dest, & !TESSELLATE_FLUIDS|FLUIDS_ELASTIC

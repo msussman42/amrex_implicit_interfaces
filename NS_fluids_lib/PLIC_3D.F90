@@ -371,17 +371,18 @@ stop
        local_continuous_mof_radius=continuous_mof_radius
 
        call gridsten_level(xsten_temp,i,j,k,level,nhalf_extend)
+
        do dir=1,SDIM
         xsten_extended(1,dir)=xsten_temp(nhalf_extend,dir)
         xsten_extended(-1,dir)=xsten_temp(-nhalf_extend,dir)
         xsten_extended(0,dir)=xsten_temp(0,dir)
 
         if (dir.eq.1) then
-         if (xsten_extended(-1,dir).lt.-dx(1)*EPS1) then
+         if (xsten_extended(-1,dir).le.-dx(1)*EPS2) then
           if ((levelrz.eq.COORDSYS_RZ).or. &
               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
            ihalf=-nhalf_extend
-           do while ((xsten_temp(ihalf,dir).lt.-dx(1)*EPS1).and. &
+           do while ((xsten_temp(ihalf,dir).le.-dx(1)*EPS2).and. &
                      (ihalf.lt.0))
             ihalf=ihalf+1
            enddo
@@ -415,7 +416,12 @@ stop
            print *,"levelrz invalid fort_sloperecon ",levelrz
            stop
           endif
-         endif !xsten_extended(-1,dir)<-dx(1)*eps1 ??
+         else if (xsten_extended(-1,dir).ge.-dx(1)*EPS2) then
+          ! do nothing
+         else
+          print *,"xsten_extended invalid ",xsten_extended
+          stop
+         endif 
         else if ((dir.eq.2).or.(dir.eq.SDIM)) then
          !do nothing
         else
