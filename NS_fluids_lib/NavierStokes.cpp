@@ -117,41 +117,12 @@ int  NavierStokes::MOF_DEBUG_RECON=0;
 int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
 
 /*
- continuous_mof=STANDARD_MOF
-
-  regular MOF  minimize E=||x_ij^ref-x_ij^derived||
-  subject to the constraint that F_ij^ref=F_ij^derived
-
-   x_ij^ref=reference centroid in cell ij
-   x_ij^derived=derived centroid in cell ij for a given slope and
-     intercept.
-   F_ij^ref=reference volume fraction in cell ij
-   F_ij^derived=derived volume fraction in cell ij for a given slope and
-     intercept.   
-
+continuous_mof=STANDARD_MOF
 continuous_mof=CMOF_X
-
-  CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
-  subject to the constraint that F_ij^ref=F_ij^derived
-
-   xS_ij^ref=reference centroid in cell stencil i'=i-1,..,i+1,
-     j'=j-1,..,j+1
-
-   xS_ij^derived=derived centroid in cell stencil for a given slope and
-     intercept. 
-   F_ij^ref=reference volume fraction in cell
-   F_ij^derived=derived volume fraction in cell for a given
-     slope and intercept.
-
-
-
-NOTE: rigid materials are not counted as materials in a cell.  Rigid 
-materials are immersed into the fluid(s). 
-
 */
 
-int  NavierStokes::continuous_mof=STANDARD_MOF;
-
+int  NavierStokes::continuous_mof=CMOF_X;
+int  NavierStokes::continuous_mof_radius=1;
 int  NavierStokes::update_centroid_after_recon=1;
 
 
@@ -3010,25 +2981,23 @@ NavierStokes::read_params ()
     if (continuous_mof==2) {
      amrex::Error("continuous_mof==2 is an anachronism, set to 1");
     } else if (continuous_mof==STANDARD_MOF) {
-     update_centroid_after_recon=0;
+     //do nothing
     } else if (continuous_mof==CMOF_X) {
-     update_centroid_after_recon=1;
+     //do nothing
     } else
      amrex::Error("continuous_mof invalid");
 
+    pp.queryAdd("continuous_mof_radius",continuous_mof_radius);
+    if (continuous_mof_radius>=1) {
+     //do nothing
+    } else
+     amrex::Error("continuous_mof_radius invalid");
+
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
 
-    if (update_centroid_after_recon==0) {
+    if ((update_centroid_after_recon==0)||
+        (update_centroid_after_recon==1)) {
      //do nothing
-    } else if (update_centroid_after_recon==1) {
-
-     if (continuous_mof==CMOF_X) {
-      //do nothing
-     } else if (continuous_mof==STANDARD_MOF) {
-      amrex::Error("expecting update_centroid_after_recon=0");
-     } else
-      amrex::Error("continuous_mof invalid");
-
     } else
      amrex::Error("expecting update_centroid_after_recon=0 or 1");
 
@@ -3286,7 +3255,10 @@ NavierStokes::read_params ()
 
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
+
      std::cout << "continuous_mof " << continuous_mof << '\n';
+     std::cout << "continuous_mof_radius " << continuous_mof_radius << '\n';
+
      std::cout << "update_centroid_after_recon " << 
 	    update_centroid_after_recon << '\n';
      for (int i=0;i<num_materials;i++) {

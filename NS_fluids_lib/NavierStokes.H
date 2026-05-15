@@ -833,9 +833,7 @@ protected:
      // update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID
     void VOF_Recon(
       Real time,int update_flag,
-      int init_vof_prev_time,
-      Real& delta_centroid_level,
-      int& number_centroid_level); //output: SLOPE_RECON_MF
+      int init_vof_prev_time);
     void VOF_Recon_ALL(
       const std::string& caller_string,
       Real time,int update_flag,
@@ -1648,10 +1646,9 @@ protected:
 
     static int  enable_spectral;
 
-     // continuous_mof = STANDARD_MOF => regular MOF
-     // continuous_mof = CMOF_X => CMOF ("continuous MOF ")
-    static int  continuous_mof; // default is CMOF_X
-    static int  update_centroid_after_recon; //default is 1
+    static int  continuous_mof; //default is 1
+    static int  continuous_mof_radius; //default is 1
+    static int  update_centroid_after_recon;  //default is 1
     static Vector<Real> centroid_noise_factor; //default is 0.0
 
     static Real change_max;    // maximum change in dt over a timestep

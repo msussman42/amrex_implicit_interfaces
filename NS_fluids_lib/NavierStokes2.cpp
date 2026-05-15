@@ -8981,19 +8981,34 @@ void NavierStokes::VOF_Recon_ALL(
   BLProfiler bprof(local_caller_string);
 #endif
 
-  int number_centroid=0;
-  Real delta_centroid=0.0;
+  int ngrow_slope_recon=1;
 
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.delete_localMF_if_exist(SLOPE_RECON_MF,1);
-   int ngrow=1;
     // sets values to 0.0
-   ns_level.new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1);  
+   ns_level.new_localMF(
+     SLOPE_RECON_MF,
+     num_materials*ngeom_recon,
+     ngrow_slope_recon,
+     -1);  
 
    ns_level.delete_localMF_if_exist(VOF_RECON_MF,1);
 
-   ns_level.getState_localMF(VOF_RECON_MF,2,STATECOMP_MOF,
+   int ngrow_recon=ngrow_slope_recon;
+   if (continuous_mof==STANDARD_MOF) {
+    //do nothing
+   } else if (continuous_mof==CMOF_X) {
+    ngrow_recon+=continuous_mof_radius;
+   } else
+     amrex::Error("continuous_mof invalid");
+
+   ngrow_recon=max(ngrow_recon,2);
+
+   ns_level.getState_localMF(
+     VOF_RECON_MF,
+     ngrow_recon,
+     STATECOMP_MOF,
      num_materials*ngeom_raw,time);
 
    if (ngeom_raw==AMREX_SPACEDIM+1) {
@@ -9009,10 +9024,12 @@ void NavierStokes::VOF_Recon_ALL(
     //SLOPE_RECON_MF: num_materials x (vof,cenref,order,slope,intercept)
     //VOF_RECON_MF  : num_materials x (vof,cenref)
    for (int im=0;im<num_materials;im++) {
+
     int ibase_raw=im*ngeom_raw;
     int ibase_recon=im*ngeom_recon;
     ns_level.Copy_localMF(SLOPE_RECON_MF,VOF_RECON_MF,
-      ibase_raw,ibase_recon,ngeom_raw,1);
+      ibase_raw,ibase_recon,ngeom_raw,ngrow_slope_recon);
+
     if (init_vof_prev_time==1) {
      int ngrow_save=ns_level.localMF[VOF_PREV_TIME_MF]->nGrow();
      if (ngrow_save!=2)
@@ -9030,25 +9047,11 @@ void NavierStokes::VOF_Recon_ALL(
   // can have proper BC.
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   int number_centroid_level=0;
-   Real delta_centroid_level=0.0;
    ns_level.VOF_Recon(
     time,
     local_update_flag,
-    init_vof_prev_time,
-    delta_centroid_level,
-    number_centroid_level);
-   delta_centroid+=delta_centroid_level;
-   number_centroid+=number_centroid_level;
+    init_vof_prev_time);
   } // for (int ilev=level;ilev<=finest_level;ilev++) 
-
-  Real single_centroid_diff=0.0;
-  if (number_centroid==0) {
-   //do nothing
-  } else if (number_centroid>0) {
-   single_centroid_diff=delta_centroid/number_centroid;
-  } else
-   amrex::Error("number_centroid invalid");
 
   if (local_update_flag==RECON_UPDATE_NULL) {
 
@@ -9084,8 +9087,7 @@ void NavierStokes::VOF_Recon_ALL(
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "continuous_mof= " << continuous_mof << '\n';
-    std::cout << "number_centroid= " << number_centroid << '\n';
-    std::cout << "single_centroid_diff= " << single_centroid_diff << '\n';
+    std::cout << "continuous_mof_radius= " << continuous_mof_radius << '\n';
    } //IOProc?
   } else if (verbose==0) {
    //do nothing
@@ -9148,9 +9150,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
 // 2. reconstruct interior cells only.
 // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
 void NavierStokes::VOF_Recon(Real time,
-  int update_flag,int init_vof_prev_time,
-  Real& delta_centroid_level,
-  int& number_centroid_level) {
+  int update_flag,int init_vof_prev_time) {
 
  std::string local_caller_string="VOF_Recon";
  bool use_tiling=ns_tiling;
@@ -9161,6 +9161,23 @@ void NavierStokes::VOF_Recon(Real time,
 
  if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
+
+ if (ngrow_distance==ngrow_make_distance+1) {
+  //do nothing
+ } else
+  amrex::Error("expecting ngrow_distance==ngrow_make_distance+1");
+
+ int ngrow_slope_recon=1;
+ int ngrow_recon=ngrow_slope_recon;
+
+ if (continuous_mof==STANDARD_MOF) {
+  //do nothing
+ } else if (continuous_mof==CMOF_X) {
+  ngrow_recon+=continuous_mof_radius;
+ } else
+   amrex::Error("continuous_mof invalid");
+
+ ngrow_recon=max(ngrow_recon,2);
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -9183,15 +9200,6 @@ void NavierStokes::VOF_Recon(Real time,
   amrex::Error("cannot interp slope data in time");
  if ((time<prev_time_slab-teps)||(time>cur_time_slab+teps))
   amrex::Error("cannot extrapolate slope data in time");
-
- Vector< Real > delta_centroid_per_core;
- Vector< int > number_centroid_per_core;
- delta_centroid_per_core.resize(thread_class::nthreads);
- number_centroid_per_core.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  delta_centroid_per_core[tid]=0.0;
-  number_centroid_per_core[tid]=0;
- }
 
  Vector< Vector<int> > total_calls;
  Vector< Vector<int> > total_iterations;
@@ -9218,21 +9226,21 @@ void NavierStokes::VOF_Recon(Real time,
  if (lsdata->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("lsdata invalid ncomp");
 
- debug_ngrow(SLOPE_RECON_MF,0,local_caller_string);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_slope_recon,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("invalid ncomp for SLOPE_RECON_MF");
 
- debug_ngrow(VOF_RECON_MF,0,local_caller_string);
+ debug_ngrow(VOF_RECON_MF,ngrow_recon,local_caller_string);
  if (localMF[VOF_RECON_MF]->nComp()!=num_materials*ngeom_raw)
   amrex::Error("invalid ncomp for VOF_RECON_MF");
 
  resize_mask_nbr(1);
- debug_ngrow(MASK_NBR_MF,1,local_caller_string);
+ debug_ngrow(MASK_NBR_MF,ngrow_slope_recon,local_caller_string);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+ debug_ngrow(MASKCOEF_MF,ngrow_slope_recon,local_caller_string);
 
  const Real* dx = geom.CellSize();
 
@@ -9302,19 +9310,18 @@ void NavierStokes::VOF_Recon(Real time,
     &nsteps,
     &time,
     &update_flag,
-    &number_centroid_per_core[tid_current],
-    &delta_centroid_per_core[tid_current],
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
     total_errors[tid_current].dataPtr(),
-    &continuous_mof);  //fort_sloperecon
+    &ngrow_slope_recon,
+    &ngrow_recon,
+    &continuous_mof,
+    &continuous_mof_radius);  //fort_sloperecon
  }  // mfi
 } // omp
  ns_reconcile_d_num(LOOP_SLOPE_RECON,"VOF_Recon");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
-  number_centroid_per_core[0]+=number_centroid_per_core[tid];
-  delta_centroid_per_core[0]+=delta_centroid_per_core[tid];
   for (int im=0;im<num_materials;im++) {
    total_calls[0][im]+=total_calls[tid][im];
    total_iterations[0][im]+=total_iterations[tid][im];
@@ -9322,11 +9329,6 @@ void NavierStokes::VOF_Recon(Real time,
   }
  } // tid
 
- ParallelDescriptor::ReduceIntSum(number_centroid_per_core[0]);
- ParallelDescriptor::ReduceRealSum(delta_centroid_per_core[0]);
-
- number_centroid_level=number_centroid_per_core[0];
- delta_centroid_level=delta_centroid_per_core[0];
 
  for (int im=0;im<num_materials;im++) {
    ParallelDescriptor::ReduceIntSum(total_calls[0][im]);
@@ -9352,9 +9354,13 @@ void NavierStokes::VOF_Recon(Real time,
  }
 
   //scomp=0
- int ngrow=1;
- PCINTERP_fill_borders(SLOPE_RECON_MF,ngrow,0,num_materials*ngeom_recon,
-   State_Type,scompBC_map);
+ PCINTERP_fill_borders(
+   SLOPE_RECON_MF,
+   ngrow_slope_recon,
+   0,
+   num_materials*ngeom_recon,
+   State_Type,
+   scompBC_map);
 
  double end_recon = ParallelDescriptor::second();
  double cputime=end_recon-start_recon;
