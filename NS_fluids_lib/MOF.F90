@@ -12373,7 +12373,7 @@ contains
        stop
       endif
       if ((uncaptured_volume_fraction.ge.one-vfrac_sum_local).and. &
-          (uncaptured_volume_fraction.le.one+VOFTOL)) then
+          (uncaptured_volume_fraction.le.one+VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"uncaptured_volume_fraction invalid: ", &
@@ -12383,7 +12383,7 @@ contains
        stop
       endif
       if ((vfrac_sum_local.ge.zero).and. &
-          (vfrac_sum_local.le.one+VOFTOL)) then
+          (vfrac_sum_local.le.one+VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ", &
@@ -13423,9 +13423,9 @@ contains
           endif
 
           if ((vof_crit.ge.-EPS1).and. &
-              (vof_crit.le.VOFTOL)) then
+              (vof_crit.le.VOFTOL_MATERIAL)) then
            vof_crit=zero
-          else if ((vof_crit.ge.one-VOFTOL).and. &
+          else if ((vof_crit.ge.one-VOFTOL_MATERIAL).and. &
                    (vof_crit.le.one+EPS1)) then
            vof_crit=one
           else if ((vof_crit.gt.zero).and. &
@@ -14602,15 +14602,15 @@ contains
 
        do imaterial=1,num_materials
 
-        if ((voftest(imaterial).le.VOFTOL).or. &
-            (voftest(imaterial).ge.one-VOFTOL)) then
+        if ((voftest(imaterial).le.VOFTOL_MATERIAL).or. &
+            (voftest(imaterial).ge.one-VOFTOL_MATERIAL)) then
 
          lsnormal_valid(imaterial)=0
          override_normal_valid(imaterial)=0
          override_order(imaterial)=0
 
-        else if ((voftest(imaterial).ge.VOFTOL).and. &
-                 (voftest(imaterial).le.one-VOFTOL)) then
+        else if ((voftest(imaterial).ge.VOFTOL_MATERIAL).and. &
+                 (voftest(imaterial).le.one-VOFTOL_MATERIAL)) then
 
          mag(1)=zero
          !refvfrac,refcen,order,slope,intercept
@@ -14741,7 +14741,7 @@ contains
        enddo !imaterial=1,num_materials
 
        if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-           (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum_local(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"layer_iter=",layer_iter
@@ -14749,7 +14749,7 @@ contains
         stop
        endif
        if ((vfrac_sum(layer_iter).ge.zero).and. &
-           (vfrac_sum(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"layer_iter=",layer_iter
@@ -14840,12 +14840,12 @@ contains
         stop
        endif 
         
-       if (mofdata(vofcomp).ge.one-VOFTOL) then
+       if (mofdata(vofcomp).ge.one-VOFTOL_MATERIAL) then
         order_algorithm_in(imaterial)=num_materials+1
-       else if (mofdata(vofcomp).le.VOFTOL) then
+       else if (mofdata(vofcomp).le.VOFTOL_MATERIAL) then
         order_algorithm_in(imaterial)=num_materials+1  
-       else if ((mofdata(vofcomp).gt.VOFTOL).and. &
-                (mofdata(vofcomp).lt.one-VOFTOL)) then
+       else if ((mofdata(vofcomp).gt.VOFTOL_MATERIAL).and. &
+                (mofdata(vofcomp).lt.one-VOFTOL_MATERIAL)) then
         ! do nothing
        else
         print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
@@ -15502,9 +15502,6 @@ contains
       integer im
       integer dir
       integer vofcomp
-      real(amrex_real) voffluid,vofsolid,vofelastic
-      integer num_materials_fluids
-      integer num_materials_elastic
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
@@ -15513,10 +15510,14 @@ contains
       real(amrex_real) cencell(sdim)
       real(amrex_real) xtarget(sdim)
       real(amrex_real) boxlo,boxhi
+      integer layer_iter
+      real(amrex_real) vfrac_sum(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) vfrac_sum_truncate(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer num_materials_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
 #include "mofdata.H"
 
-FIX ME
       if (nhalf.ge.1) then
        ! do nothing
       else
@@ -15605,12 +15606,15 @@ FIX ME
        if (layer_iter.eq.RIGID_LAYER_INDEX) then
 
         if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
-            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
+            (vfrac_sum(layer_iter).le.VOFTOL_MATERIAL_LAYER)) then
          vfrac_sum(layer_iter)=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
            mofdata(vofcomp)=zero
+           do dir=1,sdim
+            mofdata(vofcomp+dir)=zero
+           enddo
           endif
          enddo
         else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
@@ -15633,6 +15637,9 @@ FIX ME
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
            mofdata(vofcomp)=zero
+           do dir=1,sdim
+            mofdata(vofcomp+dir)=zero
+           enddo
           endif
          enddo
         else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
@@ -15667,6 +15674,9 @@ FIX ME
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
            mofdata(vofcomp)=zero
+           do dir=1,sdim
+            mofdata(vofcomp+dir)=zero
+           enddo
           endif
          enddo
         else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
@@ -15898,6 +15908,7 @@ FIX ME
 
         if (is_elastic_local(im).eq.0) then
 
+          !uncapt=1 initially
          if (uncapt.gt.zero) then
           if ((im.ge.1).and.(im.le.num_materials)) then
            if (is_rigid_local(im).eq.0) then
@@ -15929,6 +15940,7 @@ FIX ME
 
         else if (is_elastic_local(im).eq.1) then
        
+          !uncapt_elastic=1 initially
          if (uncapt_elastic.gt.zero) then
           if ((im.ge.1).and.(im.le.num_materials)) then
            if (is_rigid_local(im).eq.0) then
@@ -16073,7 +16085,8 @@ FIX ME
       integer im
       integer dir
       integer vofcomp
-      real(amrex_real) voffluid,vofsolid,vofelastic,vof_test
+      real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) vof_test
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &
@@ -16116,52 +16129,43 @@ FIX ME
        stop
       endif
 
-      voffluid=zero
-      vofsolid=zero
-      vofelastic=zero
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       vfrac_sum_local(layer_iter)=zero
 
-      do im=1,num_materials
-       vofcomp=(im-1)*ngeom_recon+1
-       vof_test=mofdata(vofcomp)
-       if ((vof_test.ge.-EPS1).and. &
-           (vof_test.le.VOFTOL)) then
-        vof_test=zero
-       else if ((vof_test.le.one+EPS1).and. &
-                (vof_test.ge.one-VOFTOL)) then
-        vof_test=one
-       else if ((vof_test.gt.zero).and. &
-                (vof_test.lt.one)) then
-        ! do nothing
-       else
-        print *,"vof_test invalid: ",vof_test
-        stop
-       endif
-       if ((is_rigid_local(im).eq.0).and. &
-           (is_elastic_local(im).eq.0)) then
-        voffluid=voffluid+vof_test
-       else if (is_rigid_local(im).eq.1) then
-        vofsolid=vofsolid+vof_test
-       else if (is_elastic_local(im).eq.1) then
-        vofelastic=vofelastic+vof_test
-       else
-        print *,"is_rigid_local invalid MOF.F90 ",is_rigid_local
-        print *,"or is_elastic_local invalid MOF.F90 ",is_elastic_local
-        stop
-       endif
-       do dir=1,ngeom_recon
-        mofdatavalid(dir+vofcomp-1)=mofdata(dir+vofcomp-1)
-       enddo
-      enddo ! im=1..num_materials
-      if (voffluid.gt.zero) then
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        vof_test=mofdata(vofcomp)
+        if ((vof_test.ge.-EPS1).and. &
+            (vof_test.le.VOFTOL_MATERIAL)) then
+         vof_test=zero
+        else if ((vof_test.le.one+EPS1).and. &
+                 (vof_test.ge.one-VOFTOL_MATERIAL)) then
+         vof_test=one
+        else if ((vof_test.gt.zero).and. &
+                 (vof_test.lt.one)) then
+         ! do nothing
+        else
+         print *,"vof_test invalid: ",vof_test
+         stop
+        endif
+        if (is_proper_layer_local(im,layer_iter).eq.1) then
+         vfrac_sum_local(layer_iter)= &
+            vfrac_sum_local(layer_iter)+mofdata(vofcomp)
+        endif
+        do dir=1,ngeom_recon
+         mofdatavalid(dir+vofcomp-1)=mofdata(dir+vofcomp-1)
+        enddo
+       enddo ! im=1..num_materials
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+      if (vfrac_sum_local(FLUID_LAYER_INDEX).gt.zero) then
        !do nothing
       else
        print *,"vacuum bust in make_vfrac_sum_ok_copy"
        print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
-       print *,"voffluid= ",voffluid
-       print *,"vofsolid= ",vofsolid
-       print *,"vofelastic= ",vofelastic
+       print *,"vfrac_sum_local ",vfrac_sum_local
        print *,"tessellate=",tessellate
        print *,"dx=",dx
        print *,"xsten=",xsten
@@ -17113,14 +17117,14 @@ FIX ME
           (num_processed.lt. &
            local_num_materials).and. &
           (uncaptured_volume_fraction.le.one).and. &
-          ((one-VOFTOL)* &
+          ((one-VOFTOL_MATERIAL)* &
            uncaptured_volume_fraction.gt. &
            one-vfrac_sum_local).and. &
           (uncaptured_volume.gt.zero)) then
        continue_material_processing=1
       else if ((loop_counter.eq.local_num_materials).or. &
                (num_processed.eq.local_num_materials).or. &
-               ((one-VOFTOL)* &
+               ((one-VOFTOL_MATERIAL)* &
                 uncaptured_volume_fraction.le. &
                 one-vfrac_sum_local).or. &
                (uncaptured_volume.eq.zero)) then
@@ -17297,7 +17301,7 @@ FIX ME
  
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
   
-       if ((vfrac_sum_local(layer_iter).ge.one-VOFTOL).or. &
+       if ((vfrac_sum_local(layer_iter).ge.one-VOFTOL_MATERIAL).or. &
            (layer_iter.eq.FLUID_LAYER_INDEX)) then
  
         if (uncaptured_volume(layer_iter).le.four*EPS_SANITY*volcell) then
@@ -17329,7 +17333,7 @@ FIX ME
          print *,"is_elastic_local=",is_elastic_local
          stop
         endif
-       else if ((vfrac_sum_local(layer_iter).le.one-VOFTOL).and. &
+       else if ((vfrac_sum_local(layer_iter).le.one-VOFTOL_MATERIAL).and. &
                 (vfrac_sum_local(layer_iter).ge.zero).and. &
                 (layer_iter.ne.FLUID_LAYER_INDEX)) then
         !do nothing
@@ -17648,7 +17652,7 @@ FIX ME
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
        if ((vfrac_sum(layer_iter).ge.zero).and. &
-           (vfrac_sum(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum invalid: ",vfrac_sum
@@ -17657,7 +17661,7 @@ FIX ME
        endif
        !tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
        if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-           (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum_local(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum_local invalid: ",vfrac_sum
@@ -17680,21 +17684,21 @@ FIX ME
        stop
       endif
 
-      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(FLUID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(ELASTIC_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
@@ -17937,7 +17941,7 @@ FIX ME
               print *,"volcut= ",volcut
               print *,"uncaptured_volume=",uncaptured_volume
               print *,"volcell= ",volcell
-              print *,"VOFTOL= ",VOFTOL
+              print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
               print *,"EPS_11_4= ",EPS_11_4
               print *,"EPS_12_6= ",EPS_12_6
               print *,"EPS_8_4= ",EPS_8_4
@@ -18436,7 +18440,7 @@ FIX ME
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
        if ((vfrac_sum(layer_iter).ge.zero).and. &
-           (vfrac_sum(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum invalid: ",vfrac_sum
@@ -18445,7 +18449,7 @@ FIX ME
        endif
        !tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
        if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-           (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum_local(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum_local invalid: ",vfrac_sum
@@ -18468,21 +18472,21 @@ FIX ME
        stop
       endif
 
-      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(FLUID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(ELASTIC_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
@@ -18746,7 +18750,7 @@ FIX ME
               print *,"volcut= ",volcut
               print *,"uncaptured_volume=",uncaptured_volume
               print *,"volcell= ",volcell
-              print *,"VOFTOL= ",VOFTOL
+              print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
               print *,"EPS_11_4= ",EPS_11_4
               print *,"EPS_12_6= ",EPS_12_6
               print *,"EPS_8_4= ",EPS_8_4
@@ -19220,7 +19224,7 @@ FIX ME
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
        if ((vfrac_sum(layer_iter).ge.zero).and. &
-           (vfrac_sum(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum invalid: ",vfrac_sum
@@ -19229,7 +19233,7 @@ FIX ME
        endif
        !tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
        if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-           (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
+           (vfrac_sum_local(layer_iter).le.one+VOFTOL_MATERIAL)) then
         !do nothing
        else
         print *,"vfrac_sum_local invalid: ",vfrac_sum
@@ -19252,21 +19256,21 @@ FIX ME
        stop
       endif
 
-      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(FLUID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(ELASTIC_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
        print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
-      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL).and. &
+      if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
           (vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero)) then
        ! do nothing
       else
@@ -19452,7 +19456,7 @@ FIX ME
              print *,"volcut= ",volcut
              print *,"uncaptured_volume=",uncaptured_volume
              print *,"volcell= ",volcell
-             print *,"VOFTOL= ",VOFTOL
+             print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
              print *,"EPS_11_4= ",EPS_11_4
              print *,"EPS_12_6= ",EPS_12_6
              print *,"EPS_8_4= ",EPS_8_4
@@ -20256,7 +20260,7 @@ FIX ME
 
        do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
         if ((vfrac_sum(layer_iter).ge.zero).and. &
-            (vfrac_sum(layer_iter).le.one+VOFTOL)) then
+            (vfrac_sum(layer_iter).le.one+VOFTOL_MATERIAL)) then
          !do nothing
         else
          print *,"vfrac_sum invalid: ",vfrac_sum
@@ -20265,7 +20269,7 @@ FIX ME
         endif
         !IGNORE_ISRIGID_tessellate
         if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-            (vfrac_sum_local(layer_iter).le.one+VOFTOL)) then
+            (vfrac_sum_local(layer_iter).le.one+VOFTOL_MATERIAL)) then
          !do nothing
         else
          print *,"vfrac_sum_local invalid: ",vfrac_sum
@@ -20299,21 +20303,21 @@ FIX ME
         stop
        endif
 
-       if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL).and. &
+       if ((vfrac_sum_local(FLUID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
            (vfrac_sum_local(FLUID_LAYER_INDEX).ge.zero)) then
         ! do nothing
        else
         print *,"vfrac_sum_local invalid: ",vfrac_sum_local
         stop
        endif
-       if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL).and. &
+       if ((vfrac_sum_local(ELASTIC_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
            (vfrac_sum_local(ELASTIC_LAYER_INDEX).ge.zero)) then
         ! do nothing
        else
         print *,"vfrac_sum_local invalid: ",vfrac_sum_local
         stop
        endif
-       if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL).and. &
+       if ((vfrac_sum_local(RIGID_LAYER_INDEX).le.one+VOFTOL_MATERIAL).and. &
            (vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero)) then
         ! do nothing
        else
@@ -20449,7 +20453,7 @@ FIX ME
               abs(volcut-uncaptured_volume(layer_iter))/ &
               uncaptured_volume_START
             endif
-            print *,"VOFTOL= ",VOFTOL
+            print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
             print *,"xsten0_minus ", &
