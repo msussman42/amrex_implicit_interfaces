@@ -1536,18 +1536,18 @@ integer :: dir
   mag=mag+(nodej(dir)-nodejp1(dir))**2
  enddo
  mag=sqrt(mag)
- if (mag.le.ncore*VOFTOL*coord_scale) then
+ if (mag.le.ncore*VOFTOL_MATERIAL*coord_scale) then
   compare_flag=0
- else if (mag.ge.ncore*VOFTOL*coord_scale) then
+ else if (mag.ge.ncore*VOFTOL_MATERIAL*coord_scale) then
   compare_flag=0
   dir=1
   do while ((compare_flag.eq.0).and.(dir.le.ncore))
 
-   if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+   if (nodej(dir).gt.nodejp1(dir)+VOFTOL_MATERIAL*coord_scale) then
     compare_flag=1
-   else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+   else if (nodej(dir).lt.nodejp1(dir)-VOFTOL_MATERIAL*coord_scale) then
     compare_flag=-1
-   else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+   else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL_MATERIAL*coord_scale) then
     ! do nothing
    else
     print *,"nodej or nodejp1 are NaN"
@@ -1697,14 +1697,14 @@ real(amrex_real) :: AINV(3,3)
      overlap_end=min(one,max(x1test_map(1),x2test_map(1)))
      overlap_size=max(zero,overlap_end-overlap_start)
 
-     if ((mag_offline.le.VOFTOL).and. &
+     if ((mag_offline.le.VOFTOL_MATERIAL).and. &
          (mag_offline.ge.zero).and. &
-         (overlap_size.ge.VOFTOL).and. &
-         (overlap_size.le.one+VOFTOL)) then
-      if (overlap_size.ge.one-VOFTOL) then
+         (overlap_size.ge.VOFTOL_MATERIAL).and. &
+         (overlap_size.le.one+VOFTOL_MATERIAL)) then
+      if (overlap_size.ge.one-VOFTOL_MATERIAL) then
        compare_flag=0
-      else if ((overlap_size.le.one-VOFTOL).and. &
-               (overlap_size.ge.VOFTOL)) then
+      else if ((overlap_size.le.one-VOFTOL_MATERIAL).and. &
+               (overlap_size.ge.VOFTOL_MATERIAL)) then
 
        if (compare_flag.eq.1) then
         ! do nothing
@@ -1737,8 +1737,8 @@ real(amrex_real) :: AINV(3,3)
        print *,"overlap_size invalid"
        stop
       endif
-     else if ((mag_offline.ge.VOFTOL).or. &
-              (overlap_size.le.VOFTOL)) then
+     else if ((mag_offline.ge.VOFTOL_MATERIAL).or. &
+              (overlap_size.le.VOFTOL_MATERIAL)) then
 
       if (compare_flag.eq.1) then
        ! do nothing
@@ -1749,11 +1749,11 @@ real(amrex_real) :: AINV(3,3)
        stop
       endif
 
-      if (mag_offline.ge.VOFTOL) then
+      if (mag_offline.ge.VOFTOL_MATERIAL) then
        ! do nothing
-      else if ((mag_offline.le.VOFTOL).and.(mag_offline.ge.zero)) then 
+      else if ((mag_offline.le.VOFTOL_MATERIAL).and.(mag_offline.ge.zero)) then 
        if ((overlap_size.ge.zero).and. &
-           (overlap_size.le.VOFTOL)) then
+           (overlap_size.le.VOFTOL_MATERIAL)) then
         ! do nothing
        else
         print *,"overlap_size invalid1:",overlap_size
@@ -3259,9 +3259,9 @@ integer, allocatable :: DoublyWettedNode(:)
      stop
     endif
     if ((FSI_mesh_type%center_BB(dir).ge. &
-         FSI_mesh_type%exterior_BB(dir,1)-VOFTOL*mag).and. &
+         FSI_mesh_type%exterior_BB(dir,1)-VOFTOL_MATERIAL*mag).and. &
         (FSI_mesh_type%center_BB(dir).le. &
-         FSI_mesh_type%exterior_BB(dir,2)+VOFTOL*mag)) then
+         FSI_mesh_type%exterior_BB(dir,2)+VOFTOL_MATERIAL*mag)) then
      ! do nothing
     else
      print *,"center_BB invalid(post_process_nodes_elements):dir,center_BB: ",&
@@ -13696,10 +13696,10 @@ IMPLICIT NONE
           ! =1 positive
           ! =2 negative
           ! =3 inconclusive
-          if (abs(unsigned_mindist).le.VOFTOL*dx3D(1)) then
+          if (abs(unsigned_mindist).le.VOFTOL_MATERIAL*dx3D(1)) then
            unsigned_mindist=zero
            sign_conflict_local=one
-          else if (abs(unsigned_mindist).ge.VOFTOL*dx3D(1)) then
+          else if (abs(unsigned_mindist).ge.VOFTOL_MATERIAL*dx3D(1)) then
            if (abs(unsigned_mindist).le.0.01d0*dx3D(1))  then
             if (hitsign.ge.zero) then
              sign_conflict_local=one
@@ -14051,7 +14051,7 @@ IMPLICIT NONE
        stop
       endif
 
-     else if ((test_scale.ge.zero).and.(test_scale.le.one-VOFTOL)) then
+     else if ((test_scale.ge.zero).and.(test_scale.le.one-VOFTOL_MATERIAL)) then
       ! do nothing
      else
       print *,"test_scale invalid: ",test_scale
@@ -14415,7 +14415,7 @@ IMPLICIT NONE
 
            test_scale=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
 
-           if (abs(test_scale-one).le.VOFTOL) then
+           if (abs(test_scale-one).le.VOFTOL_MATERIAL) then
 
             eul_over_lag_scale=zero
             t_top=zero
@@ -14494,7 +14494,7 @@ IMPLICIT NONE
             endif
 
            else if ((test_scale.ge.zero).and. &
-                    (test_scale.le.one-VOFTOL)) then
+                    (test_scale.le.one-VOFTOL_MATERIAL)) then
             ! do nothing
            else
             print *,"test_scale invalid"
@@ -14672,7 +14672,7 @@ IMPLICIT NONE
 
             mask_node=NINT(old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_EXTRAP_FLAG+1))
 
-            weight=VOFTOL*dx3D(1)
+            weight=VOFTOL_MATERIAL*dx3D(1)
             do dir=1,3
              xc(dir)=xdata3D(i+ii,j+jj,k+kk,dir)
              weight=weight+(xc(dir)-xcen(dir))**2
@@ -16805,7 +16805,7 @@ IMPLICIT NONE
            ((xmap3D(dir).eq.0).and. &
             (FSI_mesh_type%flag_2D_to_3D.eq.0))) then
 
-   if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
+   if (xnot(dir).ge.xlo(dir)-(VOFTOL_MATERIAL+probe_size)*dxBB(dir)) then
     ! do nothing
    else
     print *,"node should be within grid interior find_grid_bounding_box_node"
@@ -16813,7 +16813,7 @@ IMPLICIT NONE
             probe_size,dxBB(dir)
     stop
    endif
-   if (xnot(dir).le.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
+   if (xnot(dir).le.xhi(dir)+(VOFTOL_MATERIAL+probe_size)*dxBB(dir)) then
     ! do nothing
    else
     print *,"node should be within grid interior find_grid_bounding_box_node"
@@ -16821,9 +16821,9 @@ IMPLICIT NONE
             probe_size,dxBB(dir)
     stop
    endif
-   if (xnot(dir).le.xlo(dir)+(VOFTOL-probe_size)*dxBB(dir)) then
+   if (xnot(dir).le.xlo(dir)+(VOFTOL_MATERIAL-probe_size)*dxBB(dir)) then
     gridloBB(dir)=FSI_lo(dir)-i_probe_size
-   else if (xnot(dir).ge.xhi(dir)-(VOFTOL-probe_size)*dxBB(dir)) then
+   else if (xnot(dir).ge.xhi(dir)-(VOFTOL_MATERIAL-probe_size)*dxBB(dir)) then
     gridloBB(dir)=FSI_hi(dir)+i_probe_size
    else if ((xnot(dir).ge.xlo(dir)-probe_size*dxBB(dir)).and. &
             (xnot(dir).le.xhi(dir)+probe_size*dxBB(dir))) then

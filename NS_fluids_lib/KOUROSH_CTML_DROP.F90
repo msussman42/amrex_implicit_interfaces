@@ -1137,7 +1137,7 @@ if ((num_materials.ge.3).and. &
          vfrac_seed, &
          facearea_seed, &
          centroid_seed, &
-         VOFTOL, &
+         VOFTOL_MATERIAL, &
          SDIM)
        call CISBOX( &
          assimilate_in%xsten, &

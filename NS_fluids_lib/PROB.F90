@@ -3613,13 +3613,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         vfrac=vfrac/volbox
        endif
 
-       if (vfrac.le.VOFTOL) then
+       if (vfrac.le.VOFTOL_MATERIAL) then
         vfrac=zero
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
         enddo
        endif
-       if (vfrac.ge.one-VOFTOL) then
+       if (vfrac.ge.one-VOFTOL_MATERIAL) then
         vfrac=one
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
@@ -3754,19 +3754,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         vfrac=vfrac/volbox
         do dir=1,SDIM
          cenbox(dir)=cenbox(dir)/volbox
-         if (vfrac.ge.VOFTOL) then
+         if (vfrac.ge.VOFTOL_MATERIAL) then
           cen(dir)=cen(dir)/(vfrac*volbox)
          endif
         enddo ! dir
        endif
 
-       if (vfrac.le.VOFTOL) then
+       if (vfrac.le.VOFTOL_MATERIAL) then
         vfrac=zero
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
         enddo
        endif
-       if (vfrac.ge.one-VOFTOL) then
+       if (vfrac.ge.one-VOFTOL_MATERIAL) then
         vfrac=one
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
@@ -4381,7 +4381,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (tension(i12).gt.zero) then
 
        err=1.0D+20
-       do while ((err.gt.VOFTOL).and.(iter.lt.maxiter))
+       do while ((err.gt.VOFTOL_MATERIAL).and.(iter.lt.maxiter))
         t3=two*Pi-t1-t2
         t1old=t1
         t2old=t2
@@ -4969,11 +4969,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
       enddo ! im=1..num_materials
 
-      if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
+      if ((vfrac_rigid_sum.ge.one-VOFTOL_MATERIAL).and. &
           (vfrac_rigid_sum.le.one+EPS1)) then
        vfrac_rigid_sum=one
       else if ((vfrac_rigid_sum.ge.-EPS1).and. &
-               (vfrac_rigid_sum.le.VOFTOL)) then
+               (vfrac_rigid_sum.le.VOFTOL_MATERIAL)) then
        vfrac_rigid_sum=zero
       else if ((vfrac_rigid_sum.gt.zero).and. &
                (vfrac_rigid_sum.lt.one)) then
@@ -4989,14 +4989,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if ((is_rigid(im_primary).eq.0).or. &   ! fluid primary
           ((is_rigid(im_primary).eq.1).and. & ! solid primary, but fluids
-           (vfrac_rigid_sum.le.one-VOFTOL))) then  ! in the cell.
+           (vfrac_rigid_sum.le.one-VOFTOL_MATERIAL))) then  ! in the cell.
 
        do im=1,num_materials 
-        if ((voflist(im).ge.VOFTOL).and. &
+        if ((voflist(im).ge.VOFTOL_MATERIAL).and. &
             (voflist(im).le.one+EPS1)) then
          material_present_flag(im)=1
         else if ((voflist(im).ge.-EPS1).and. &
-                 (voflist(im).le.VOFTOL)) then
+                 (voflist(im).le.VOFTOL_MATERIAL)) then
          ! do nothing
         else
          print *,"voflist invalid: ",voflist(im)
@@ -5042,7 +5042,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo ! i1,j1,k1
 
       else if ((is_rigid(im_primary).eq.1).and. &
-               (vfrac_rigid_sum.gt.one-VOFTOL)) then
+               (vfrac_rigid_sum.gt.one-VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"is_rigid or vfrac_rigid_sum invalid"
@@ -5464,11 +5464,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
 
-        if (vfrac.lt.VOFTOL) then
+        if (vfrac.lt.VOFTOL_MATERIAL) then
          minusflag(2)=1
-        else if (vfrac.gt.one-VOFTOL) then
+        else if (vfrac.gt.one-VOFTOL_MATERIAL) then
          plusflag(2)=1
-        else if ((vfrac.ge.VOFTOL).and.(vfrac.le.one-VOFTOL)) then
+        else if ((vfrac.ge.VOFTOL_MATERIAL).and.(vfrac.le.one-VOFTOL_MATERIAL)) then
          minusflag(2)=1
          plusflag(2)=1
         else
@@ -6437,8 +6437,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if ( ((xsten(0,SDIM).gt.probhiz+VOFTOL*dx(SDIM)).or. &
-            (xsten(0,SDIM).lt.probloz-VOFTOL*dx(SDIM))).and. &
+      if ( ((xsten(0,SDIM).gt.probhiz+VOFTOL_MATERIAL*dx(SDIM)).or. &
+            (xsten(0,SDIM).lt.probloz-VOFTOL_MATERIAL*dx(SDIM))).and. &
            (SDIM.eq.3)) then
 
        do im=1,num_materials
@@ -6480,7 +6480,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo
        enddo
 
-       EBVOFTOL=VOFTOL
+       EBVOFTOL=VOFTOL_MATERIAL
        call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
         centroid,EBVOFTOL,SDIM)
@@ -7739,7 +7739,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo
       enddo
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,EBVOFTOL,SDIM)
@@ -7822,7 +7822,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo ! i1,j1,k1
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
         ! in: MOF.F90
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
@@ -7832,12 +7832,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (vfrac(im).lt.zero) then
         print *,"vfrac invalid in get_initial_vfrac 1"
         stop
-       else if (vfrac(im).le.VOFTOL) then
+       else if (vfrac(im).le.VOFTOL_MATERIAL) then
          ! if the interface is linear and LS_center>=0, then
          !  F>=1/2.  If LS_center>=0, and F<1/2 => nonlinear
          !  interface.
         LS_center=lsgrid(D_DECL(2,2,2),im)
-        if (LS_center.ge.-VOFTOL*dx(1)) then
+        if (LS_center.ge.-VOFTOL_MATERIAL*dx(1)) then
          vfrac(im)=VOFTOL_SLOPES
         endif
        else if ((vfrac(im).gt.zero).and. &
@@ -7958,7 +7958,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.539) then ! supnozz - jetbend_vel
 
         call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
-        if (vfrac(1).gt.VOFTOL) then !initial velocity in the gap
+        if (vfrac(1).gt.VOFTOL_MATERIAL) then !initial velocity in the gap
          angle=1.07961377
          vel(1)=advbot*cos(angle)
          vel(2)=advbot*sin(angle)
@@ -9734,7 +9734,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,EBVOFTOL,SDIM)
@@ -16461,7 +16461,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       if ((dir.eq.1).and.(side.eq.1)) then
-       if (xwall+dx(dir)*VOFTOL.ge.x) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.x) then
         ! do nothing
        else
         print *,"xwall,x invalid"
@@ -16469,7 +16469,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.1).and.(side.eq.2)) then
-       if (xwall-dx(dir)*VOFTOL.le.x) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.x) then
         ! do nothing
        else
         print *,"xwall,x invalid"
@@ -16477,7 +16477,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.1)) then
-       if (xwall+dx(dir)*VOFTOL.ge.y) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.y) then
         ! do nothing
        else
         print *,"xwall,y invalid"
@@ -16485,7 +16485,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.2)) then
-       if (xwall-dx(dir)*VOFTOL.le.y) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.y) then
         ! do nothing
        else
         print *,"xwall,y invalid"
@@ -16493,7 +16493,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
-       if (xwall+dx(dir)*VOFTOL.ge.z) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.z) then
         ! do nothing
        else
         print *,"xwall,z invalid"
@@ -16501,7 +16501,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
-       if (xwall-dx(dir)*VOFTOL.le.z) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.z) then
         ! do nothing
        else
         print *,"xwall,z invalid"
@@ -20116,7 +20116,7 @@ end subroutine RatePhaseChange
         endif
 
         verb_hydrate=0
-        if (((VOFsrc.ge.VOFTOL).and.(VOFdst.ge.VOFTOL)).or. &
+        if (((VOFsrc.ge.VOFTOL_MATERIAL).and.(VOFdst.ge.VOFTOL_MATERIAL)).or. &
             (for_estdt.eq.0)) then
          call HYDRATE_FORMATION_RATE(time,Cmethane_in_hydrate, &
           C_w0,Tsrc_probe,PHYDWATER,vel,Tsat,K_f,verb_hydrate)
@@ -20130,7 +20130,7 @@ end subroutine RatePhaseChange
           stop
          endif
 
-        else if (((VOFsrc.le.VOFTOL).or.(VOFdst.le.VOFTOL)).and. &
+        else if (((VOFsrc.le.VOFTOL_MATERIAL).or.(VOFdst.le.VOFTOL_MATERIAL)).and. &
                  (for_estdt.eq.1)) then
          vel=zero
         else
@@ -20457,13 +20457,13 @@ end subroutine RatePhaseChange
         if (local_buffer(ibuf).eq.zero) then
          ! do nothing
         else if ((local_buffer(ibuf).gt.zero).and. &
-                 (local_buffer(ibuf).le.problen(dirbc)*(one+VOFTOL))) then
+                 (local_buffer(ibuf).le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
       
          if (presbc_array(dirbc,side).eq.EXT_DIR) then
           if (side.eq.1) then
            dist=(x(dirbc)-problo(dirbc))
-           if (dist.lt.-VOFTOL*problen(dirbc)) then
-            print *,"dist.lt.-VOFTOL*problen"
+           if (dist.lt.-VOFTOL_MATERIAL*problen(dirbc)) then
+            print *,"dist.lt.-VOFTOL_MATERIAL*problen"
             stop
            else if (dist.le.local_buffer(ibuf)) then
             if (dir+1.eq.dirbc) then
@@ -20482,7 +20482,7 @@ end subroutine RatePhaseChange
              stop
             endif
            else if ((dist.ge.local_buffer(ibuf)).and. &
-                    (dist.le.problen(dirbc)*(one+VOFTOL))) then
+                    (dist.le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
             ! do nothing
            else
             print *,"dist invalid"
@@ -20492,8 +20492,8 @@ end subroutine RatePhaseChange
           else if (side.eq.2) then
 
            dist=(probhi(dirbc)-x(dirbc))
-           if (dist.lt.-VOFTOL*problen(dirbc)) then
-            print *,"dist.lt.-VOFTOL*problen"
+           if (dist.lt.-VOFTOL_MATERIAL*problen(dirbc)) then
+            print *,"dist.lt.-VOFTOL_MATERIAL*problen"
             stop
            else if (dist.le.local_buffer(ibuf)) then
             if (dir+1.eq.dirbc) then
@@ -20512,7 +20512,7 @@ end subroutine RatePhaseChange
              stop
             endif
            else if ((dist.ge.local_buffer(ibuf)).and. &
-                    (dist.le.problen(dirbc)*(one+VOFTOL))) then
+                    (dist.le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
             ! do nothing
            else
             print *,"dist invalid"
@@ -24765,14 +24765,14 @@ end subroutine initialize2d
              pz_sanity=-one+a1*(probhi_array(SDIM)-problo_array(SDIM))+ &
                 D2*(probhi_array(SDIM)-problo_array(SDIM))* &
                    (probhi_array(SDIM)-zcrit)
-             if (abs(pz_sanity-one).le.VOFTOL) then
+             if (abs(pz_sanity-one).le.VOFTOL_MATERIAL) then
               ! do nothing
              else
               print *,"pz_sanity invalid"
               stop
              endif
              pz_sanity=-one+a1*(zcrit-problo_array(SDIM))
-             if (abs(pz_sanity).le.VOFTOL) then
+             if (abs(pz_sanity).le.VOFTOL_MATERIAL) then
               ! do nothing
              else
               print *,"pz_sanity invalid"
@@ -25986,7 +25986,7 @@ end subroutine initialize2d
            vfrac_local, &
            facearea_local, &
            centroid_local, &
-           VOFTOL, &
+           VOFTOL_MATERIAL, &
            SDIM)
          call CISBOX( &
            xsten, &

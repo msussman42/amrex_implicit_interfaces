@@ -811,7 +811,7 @@ if ((num_materials.eq.3).and. &
      vfrac_override, &
      facearea_temp, &
      centroid_override, &
-     VOFTOL, &
+     VOFTOL_MATERIAL, &
      SDIM)
     call CISBOX( &
      assimilate_in%xsten, &
@@ -838,7 +838,7 @@ if ((num_materials.eq.3).and. &
    do im=1,num_materials
     vfrac_sum=vfrac_sum+VFRAC_flexible(im)
    enddo
-   if (vfrac_sum.gt.VOFTOL) then
+   if (vfrac_sum.gt.VOFTOL_MATERIAL) then
     do im=1,num_materials
      vfrac_comp=(im-1)*ngeom_raw+1
      assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &

@@ -636,9 +636,9 @@ stop
           vofcomp=(im-1)*ngeom_recon+1
           localF=recon(D_DECL(i,j,k),vofcomp)
           if ((localF.ge.-EPS1).and. &
-              (localF.le.VOFTOL)) then
+              (localF.le.VOFTOL_MATERIAL)) then
            localF=zero
-          else if ((localF.ge.one-VOFTOL).and. &
+          else if ((localF.ge.one-VOFTOL_MATERIAL).and. &
                    (localF.le.one+EPS1)) then
            localF=one
           else if ((localF.gt.zero).and.(localF.lt.one)) then

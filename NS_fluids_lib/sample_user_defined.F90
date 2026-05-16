@@ -304,7 +304,7 @@ contains
  if ((num_materials.eq.4).and.(probtype.eq.311)) then
   userdef_im=4
   userdef_temperature=fort_tempconst(userdef_im)
-  if ((VFRAC(userdef_im).gt.VOFTOL).and. &
+  if ((VFRAC(userdef_im).gt.VOFTOL_MATERIAL).and. &
       (VFRAC(userdef_im).le.one+EPS1)) then
    if (temp(im).lt.userdef_temperature) then
     heat_source=(userdef_temperature-temp(im))* &
@@ -316,7 +316,7 @@ contains
     stop
    endif 
   else if ((VFRAC(userdef_im).ge.-EPS1).and. &
-           (VFRAC(userdef_im).le.VOFTOL)) then
+           (VFRAC(userdef_im).le.VOFTOL_MATERIAL)) then
    heat_source=zero
   else
    print *,"VFRAC invalid: ",VFRAC(userdef_im)

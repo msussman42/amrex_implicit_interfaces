@@ -1538,7 +1538,7 @@ contains
        x_np1=u_abs
        iter_diff=one
        iter=0
-       do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
+       do while ((iter_diff.gt.VOFTOL_MATERIAL).and.(iter.lt.iter_max))
         f = wallfunc(x_n,u_abs,y,K,B,rho_w,mu_w)
         fprime = wallfuncderiv(x_n,u_abs,y,K,B,rho_w,mu_w)
    
@@ -1567,7 +1567,7 @@ contains
          print *, "iter_diff = ",iter_diff
          stop
         endif
-       enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
+       enddo ! while (iter_diff>VOFTOL_MATERIAL .and. iter<iter_max)
     
        u_tau = x_np1
        tau_w = rho_w*(u_tau**2)
@@ -3258,7 +3258,7 @@ end subroutine dynamic_contact_angle
              stop
             endif
            else if (dir.eq.data_dir+1) then
-            if (abs(nCL_raster(dir)).le.VOFTOL) then
+            if (abs(nCL_raster(dir)).le.VOFTOL_MATERIAL) then
              ! do nothing
             else
              print *,"nCL_raster(dir) invalid"
@@ -4818,7 +4818,7 @@ real(amrex_real) :: sanity_tol
            (tx(2).le.one+tol).and. &
            (tx(1)+tx(2).le.one+tol)) then
 
-   sanity_tol=VOFTOL*max(1.0d0,1.0d0/det)
+   sanity_tol=VOFTOL_MATERIAL*max(1.0d0,1.0d0/det)
 
    if (abs(tx(3)).le.sanity_tol) then
     ! do nothing
@@ -4828,7 +4828,7 @@ real(amrex_real) :: sanity_tol
     print *,"tx(2)= ",tx(2)
     print *,"tx(3)= ",tx(3)
     print *,"tol= ",tol
-    print *,"VOFTOL= ",VOFTOL
+    print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
     print *,"det= ",det
     print *,"sanity_tol= ",sanity_tol
     stop
@@ -4880,7 +4880,7 @@ real(amrex_real) :: sanity_tol
      print *,"tx(i)= ",tx(i)
      print *,"tx_project(i)= ",tx_project(i)
      print *,"tol= ",tol
-     print *,"VOFTOL= ",VOFTOL
+     print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
      print *,"det= ",det
      print *,"sanity_tol= ",sanity_tol
      stop
@@ -8363,7 +8363,7 @@ end subroutine print_visual_descriptor
        print *,"vol1,vol2 invalid"
        stop
       else
-       if (vol/vol1.le.VOFTOL) then
+       if (vol/vol1.le.VOFTOL_MATERIAL) then
         vol=zero
        endif
       endif
@@ -8890,8 +8890,8 @@ end subroutine print_visual_descriptor
         inboxflag=1
         do dir=1,SDIM 
          dx=xsten(1,dir)-xsten(-1,dir)
-         if ((xx(dir).lt.xsten(-1,dir)-VOFTOL*dx).or. &
-             (xx(dir).gt.xsten(1,dir)+VOFTOL*dx)) then
+         if ((xx(dir).lt.xsten(-1,dir)-VOFTOL_MATERIAL*dx).or. &
+             (xx(dir).gt.xsten(1,dir)+VOFTOL_MATERIAL*dx)) then
           inboxflag=0
          endif
         enddo
@@ -9199,13 +9199,13 @@ end subroutine print_visual_descriptor
       voftotal=zero
 
       do imaterial=1,num_materials
-       if (vfrac(imaterial).le.VOFTOL) then
+       if (vfrac(imaterial).le.VOFTOL_MATERIAL) then
         vfrac(imaterial)=zero
         do dir=1,SDIM
          cen(dir,imaterial)=zero
         enddo
        endif
-       if (vfrac(imaterial).ge.one-VOFTOL) then
+       if (vfrac(imaterial).ge.one-VOFTOL_MATERIAL) then
         vfrac(imaterial)=one
         do dir=1,SDIM
          cen(dir,imaterial)=zero
@@ -10195,9 +10195,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xc(1)-xc(-1)) ! average down
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        ! do nothing
@@ -10327,9 +10327,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xchi-xclo) ! average down
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        !do nothing
@@ -10471,9 +10471,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xf(1)-xf(-1)) ! interpolate
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        if ((bfact_c.eq.1).and.(bfact_f.eq.1)) then
@@ -10612,9 +10612,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xfhi-xflo) ! interpolate
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        if ((bfact_c.eq.1).and.(bfact_f.eq.1)) then
@@ -10788,9 +10788,9 @@ end subroutine print_visual_descriptor
         else
          wt=(inthi-intlo)/(xf(1)-xf(-1))  ! interpolate
         endif
-        if (abs(wt).le.VOFTOL) then
+        if (abs(wt).le.VOFTOL_MATERIAL) then
          wt=zero
-        else if (abs(wt-one).le.VOFTOL) then
+        else if (abs(wt-one).le.VOFTOL_MATERIAL) then
          wt=one
         else if ((wt.gt.zero).and.(wt.lt.one)) then
          if ((abs(intlo-xf(-1)).lt.EPS_8_4*dxf(1)).or. &
@@ -11238,9 +11238,9 @@ end subroutine print_visual_descriptor
         else
          wt=(inthi-intlo)/(xc(1)-xc(-1))  ! average down
         endif
-        if (abs(wt).le.VOFTOL) then
+        if (abs(wt).le.VOFTOL_MATERIAL) then
          wt=zero
-        else if (abs(wt-one).le.VOFTOL) then
+        else if (abs(wt-one).le.VOFTOL_MATERIAL) then
          wt=one
         else if ((wt.gt.zero).and.(wt.lt.one)) then
          ! do nothing
@@ -16742,7 +16742,7 @@ end subroutine print_visual_descriptor
         VOF_extend=one-VOF(im_opp)
        else if (VOF(im_opp).gt.VOF(im)) then
         VOF_extend=VOF(im)
-       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
+       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL_MATERIAL)  then
         VOF_extend=half
        else
         print *,"VOF bust"
@@ -16858,7 +16858,7 @@ end subroutine print_visual_descriptor
       mag_I=sqrt(mag_I)
       mag_ntilde=sqrt(mag_ntilde)
 
-      if ((abs(mag_I-one).le.VOFTOL).and. &
+      if ((abs(mag_I-one).le.VOFTOL_MATERIAL).and. &
           (mag_ntilde.gt.zero)) then
 
        if ((dircrit_I.ge.1).and.(dircrit_I.le.3).and. &
@@ -16890,7 +16890,7 @@ end subroutine print_visual_descriptor
           mag_test=mag_test+(x2_I(dir)-x2_I_test(dir))**2
          enddo
          mag_test=sqrt(mag_test)
-         if (mag_test.le.VOFTOL*mag_ntilde) then
+         if (mag_test.le.VOFTOL_MATERIAL*mag_ntilde) then
           ! do nothing
          else
           print *,"mag_test too big: x2_I"
@@ -16910,8 +16910,8 @@ end subroutine print_visual_descriptor
 
           ! the magnitude of the cross product of two orthogonal unit
           ! vectors should be one.
-         if ((abs(mag2_I-one).le.VOFTOL).and. &
-             (abs(mag2_tilde-one).le.VOFTOL)) then
+         if ((abs(mag2_I-one).le.VOFTOL_MATERIAL).and. &
+             (abs(mag2_tilde-one).le.VOFTOL_MATERIAL)) then
 
           mag_test=zero
           do dir=1,3
@@ -16921,7 +16921,7 @@ end subroutine print_visual_descriptor
            mag_test=mag_test+(x3_I(dir)-x3_I_test(dir))**2
           enddo
           mag_test=sqrt(mag_test)
-          if (mag_test.le.VOFTOL*mag_ntilde) then
+          if (mag_test.le.VOFTOL_MATERIAL*mag_ntilde) then
            ! do nothing
           else
            print *,"mag_test too big: x3_I"
@@ -19634,7 +19634,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(out) :: coeff
 
       if ((wt_plus.ge.zero).and.(wt_minus.ge.zero).and. &
-          (abs(wt_plus+wt_minus-one).le.VOFTOL)) then
+          (abs(wt_plus+wt_minus-one).le.VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"wt_plus+wt_minus should be 1"
@@ -25390,9 +25390,9 @@ end subroutine print_visual_descriptor
       endif
       pressure=(gamma_constant-one)*rho*internal_energy- &
        gamma_constant*PP
-      if (pressure.lt.VOFTOL) then
-       pressure=VOFTOL
-      else if (pressure.ge.VOFTOL) then
+      if (pressure.lt.VOFTOL_MATERIAL) then
+       pressure=VOFTOL_MATERIAL
+      else if (pressure.ge.VOFTOL_MATERIAL) then
        !do nothing
       else
        print *,"pressure invalid: ",pressure
@@ -25465,9 +25465,9 @@ end subroutine print_visual_descriptor
 
       pressure=(gamma_constant-one)*rho*internal_energy- &
        gamma_constant*PP
-      if (pressure.lt.VOFTOL) then
-       pressure=VOFTOL
-      else if (pressure.ge.VOFTOL) then
+      if (pressure.lt.VOFTOL_MATERIAL) then
+       pressure=VOFTOL_MATERIAL
+      else if (pressure.ge.VOFTOL_MATERIAL) then
        ! do nothing
       else
        print *,"pressure invalid: ",pressure
@@ -25596,9 +25596,9 @@ end subroutine print_visual_descriptor
       endif
 
       temperature=(internal_energy-PP/rho)/cv
-      if (temperature.lt.VOFTOL) then
-       temperature=VOFTOL
-      else if (temperature.ge.VOFTOL) then
+      if (temperature.lt.VOFTOL_MATERIAL) then
+       temperature=VOFTOL_MATERIAL
+      else if (temperature.ge.VOFTOL_MATERIAL) then
        !do nothing
       else
        print *,"temperature invalid: ",temperature

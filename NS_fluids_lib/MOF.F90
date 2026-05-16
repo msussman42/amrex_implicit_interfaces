@@ -15606,7 +15606,7 @@ contains
        if (layer_iter.eq.RIGID_LAYER_INDEX) then
 
         if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
-            (vfrac_sum(layer_iter).le.VOFTOL_MATERIAL_LAYER)) then
+            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
          vfrac_sum(layer_iter)=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
@@ -15617,8 +15617,8 @@ contains
            enddo
           endif
          enddo
-        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-              (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
+        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+                 (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
          vfrac_sum(layer_iter)=one 
         else if ((vfrac_sum(layer_iter).ge.VOFTOL_LAYER).and. &
                  (vfrac_sum(layer_iter).le.one-VOFTOL_LAYER)) then
@@ -15642,8 +15642,8 @@ contains
            enddo
           endif
          enddo
-        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-              (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
+        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+                 (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
          if (vfrac_sum(RIGID_LAYER_INDEX).eq.zero) then
           vfrac_sum(layer_iter)=one 
          else if (tessellate.eq.TESSELLATE_FLUIDS) then
@@ -15679,8 +15679,8 @@ contains
            enddo
           endif
          enddo
-        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-              (vfrac_sum(layer_iter).ge.VOFTOL_LAYER)) then
+        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+                 (vfrac_sum(layer_iter).ge.VOFTOL_LAYER)) then
 
          if ((vfrac_sum(RIGID_LAYER_INDEX).eq.zero).and. &
              (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
@@ -16087,6 +16087,7 @@ contains
       integer vofcomp
       real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vof_test
+      integer layer_iter
       integer is_rigid_local(num_materials)
       integer is_elastic_local(num_materials)
       integer is_proper_layer_local(num_materials, &

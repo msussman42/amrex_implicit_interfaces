@@ -1413,7 +1413,7 @@ END SUBROUTINE SIMP
           print *,"vfrac invalid: ",im,vfrac(im)
           stop
          endif
-         if (vfrac(im).lt.VOFTOL) then
+         if (vfrac(im).lt.VOFTOL_MATERIAL) then
           vfrac(im)=zero
          endif
          if (is_rigid(im).eq.1) then
@@ -2700,7 +2700,7 @@ END SUBROUTINE SIMP
 
             ! used for LS interpolation (bilinear interp)
            wt_denom=abs(xsten(0,dir)-xstenND(0,dir))
-           if (wt_denom.le.VOFTOL*dx(dir)) then
+           if (wt_denom.le.VOFTOL_MATERIAL*dx(dir)) then
             print *,"wt_denom invalid"
             stop
            endif
@@ -3628,16 +3628,16 @@ END SUBROUTINE SIMP
 
          do dir=1,SDIM
           if (slice_dir+1.ne.dir) then
-           if ((xslice(dir).lt.xfablo(dir)-VOFTOL*dx(dir)).or. &
-               (xslice(dir).gt.xfabhi(dir)+VOFTOL*dx(dir))) then
+           if ((xslice(dir).lt.xfablo(dir)-VOFTOL_MATERIAL*dx(dir)).or. &
+               (xslice(dir).gt.xfabhi(dir)+VOFTOL_MATERIAL*dx(dir))) then
             inbox=0
            else
                ! iproblo=0
             do i=lo(dir)-1,hi(dir)
              call gridsten1D(xsten1D,problo,i,iproblo,bfact,dx,dir,nhalf)
              xposnd(dir)=xsten1D(0)
-             if ((xslice(dir).ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                 (xslice(dir).le.xsten1D(2)+VOFTOL*dx(dir))) then
+             if ((xslice(dir).ge.xsten1D(0)-VOFTOL_MATERIAL*dx(dir)).and. &
+                 (xslice(dir).le.xsten1D(2)+VOFTOL_MATERIAL*dx(dir))) then
               igridlo(dir)=i
               igridhi(dir)=i+1
              endif
@@ -3669,8 +3669,8 @@ END SUBROUTINE SIMP
             print *,"x1D= ",x1D
            endif
 
-           if ((x1D.ge.xfablo(dir)-VOFTOL*dx(dir)).and. &
-               (x1D.le.xfabhi(dir)+VOFTOL*dx(dir))) then
+           if ((x1D.ge.xfablo(dir)-VOFTOL_MATERIAL*dx(dir)).and. &
+               (x1D.le.xfabhi(dir)+VOFTOL_MATERIAL*dx(dir))) then
             inbox=0
 
              ! find bounding interval in the dir=slice_dir+1 direction.
@@ -3678,8 +3678,8 @@ END SUBROUTINE SIMP
               ! iproblo=0
              call gridsten1D(xsten1D,problo,j,iproblo,bfact,dx,dir,nhalf)
              xposnd(dir)=xsten1D(0)
-             if ((x1D.ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                 (x1D.le.xsten1D(2)+VOFTOL*dx(dir))) then
+             if ((x1D.ge.xsten1D(0)-VOFTOL_MATERIAL*dx(dir)).and. &
+                 (x1D.le.xsten1D(2)+VOFTOL_MATERIAL*dx(dir))) then
               igridlo(dir)=j
               igridhi(dir)=j+1
               inbox=1
@@ -3791,13 +3791,13 @@ END SUBROUTINE SIMP
                           problo(dir))/visual_dx(dir))
          icritlo(dir)=icrit(dir)-1
          xcrit(dir)=icritlo(dir)*visual_dx(dir)+problo(dir)
-         do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL) 
+         do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL_MATERIAL) 
           icritlo(dir)=icritlo(dir)-1
           xcrit(dir)=xcrit(dir)-visual_dx(dir)
          enddo
          icrithi(dir)=icrit(dir)+1
          xcrit(dir)=icrithi(dir)*visual_dx(dir)+problo(dir)
-         do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL) 
+         do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL_MATERIAL) 
           icrithi(dir)=icrithi(dir)+1
           xcrit(dir)=xcrit(dir)+visual_dx(dir)
          enddo
@@ -3815,8 +3815,8 @@ END SUBROUTINE SIMP
          endif
          inbox=1
          do dir=1,SDIM
-          if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL).or. &
-              (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL)) then
+          if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL_MATERIAL).or. &
+              (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL_MATERIAL)) then
            inbox=0
           endif
          enddo
@@ -7779,7 +7779,7 @@ END SUBROUTINE SIMP
           ! LScentroid is in an absolute coordinate system.
          call getvolume(bfact,dx,xsten,nhalf, &
           ldata,LSvolume,LSfacearea, &
-          LScentroid,VOFTOL,SDIM)
+          LScentroid,VOFTOL_MATERIAL,SDIM)
 
          do dir=1,SDIM
           cen_material(dir)=mofdata_tess(vofcomp+dir)+cengrid(dir)
@@ -7962,7 +7962,7 @@ END SUBROUTINE SIMP
 
          if (local_vort_error.gt.zero) then
           if (local_vort_error.gt. &
-              resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL) then
+              resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX VORT ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7981,7 +7981,7 @@ END SUBROUTINE SIMP
 
          if (local_temperature_error.gt.zero) then
           if (local_temperature_error.gt. &
-              resultALL(IQ_TEMP_ERROR_SUM_COMP+1)-VOFTOL) then
+              resultALL(IQ_TEMP_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX TEMP ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7999,7 +7999,7 @@ END SUBROUTINE SIMP
          endif
 
          if (local_vel_error.gt.zero) then
-          if (local_vel_error.gt.resultALL(IQ_VEL_ERROR_SUM_COMP+1)-VOFTOL) then
+          if (local_vel_error.gt.resultALL(IQ_VEL_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX VEL ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -8024,13 +8024,13 @@ END SUBROUTINE SIMP
         endif
 
         idest=IQ_LEFT_PRESSURE_SUM_COMP+1
-        if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
+        if (xsten(-1,1).le.problox+VOFTOL_MATERIAL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
         idest=IQ_LEFT_PRESSURE_SUM_COMP+2
-        if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
+        if (xsten(1,1).ge.probhix-VOFTOL_MATERIAL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
@@ -8129,9 +8129,9 @@ END SUBROUTINE SIMP
              in_slice=1
              do dir3=1,SDIM
               if (dir3.ne.dir) then
-               if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL*dx(dir3)) then
+               if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL_MATERIAL*dx(dir3)) then
                 in_slice=0
-               else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL*dx(dir3)) then    
+               else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL_MATERIAL*dx(dir3)) then    
                 in_slice=0
                endif
               endif ! dir3<>dir ?
@@ -8842,9 +8842,9 @@ END SUBROUTINE SIMP
            vfrac=mofdata(vofcomp)
 
            if ((vfrac.ge.zero).and.(vfrac.le.one)) then
-            if (vfrac.le.one-VOFTOL) then
+            if (vfrac.le.one-VOFTOL_MATERIAL) then
              vfrac_raster=zero
-            else if (vfrac.ge.one-VOFTOL) then
+            else if (vfrac.ge.one-VOFTOL_MATERIAL) then
              vfrac_raster=one
             else
              print *,"vfrac bust"
@@ -9081,9 +9081,9 @@ END SUBROUTINE SIMP
                  print *,"disallowed: volume flux<>0 for compressible material"
                  stop
                 else if (imattype.eq.0) then
-                 if (abs(fort_denconst(im)-density_flux).le.VOFTOL) then
+                 if (abs(fort_denconst(im)-density_flux).le.VOFTOL_MATERIAL) then
                   ! do nothing
-                 else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL) then
+                 else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL_MATERIAL) then
                   update_density_flag=1
                   if (constant_density_all_time(im).eq.0) then
                    ! do nothing
@@ -9318,11 +9318,11 @@ END SUBROUTINE SIMP
             vfrac_L=mofdata_L(vofcomp)
             if ((vfrac.ge.zero).and.(vfrac.le.one).and. &
                 (vfrac_L.ge.zero).and.(vfrac_L.le.one)) then
-             if ((vfrac.le.one-VOFTOL).and. &
-                 (vfrac_L.le.one-VOFTOL)) then
+             if ((vfrac.le.one-VOFTOL_MATERIAL).and. &
+                 (vfrac_L.le.one-VOFTOL_MATERIAL)) then
               vfrac_raster=zero
-             else if ((vfrac.ge.one-VOFTOL).or. &
-                      (vfrac_L.ge.one-VOFTOL)) then
+             else if ((vfrac.ge.one-VOFTOL_MATERIAL).or. &
+                      (vfrac_L.ge.one-VOFTOL_MATERIAL)) then
               vfrac_raster=one
              else
               print *,"vfrac bust"
@@ -12507,7 +12507,7 @@ END SUBROUTINE SIMP
          enddo ! n=1..visual_ncomp
 
          do dir=1,SDIM
-          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL_MATERIAL*visual_dx(dir)) then
            print *,"local_data(dir) invalid"
            stop
           endif
@@ -12638,7 +12638,7 @@ END SUBROUTINE SIMP
          local_data(n)=fabout(D_DECL(i,j,k),n)
         enddo
         do dir=1,SDIM
-         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL_MATERIAL*visual_dx(dir)) then
           print *,"local_data(dir) invalid"
           stop
          endif
@@ -14078,18 +14078,18 @@ END SUBROUTINE SIMP
                xstengrid(1,dir)=min(xstencoarse(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
 
-               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL*dxf(dir)) then
+               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
-               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL*dxf(dir)) then
+               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
 
                if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
                 if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
+                     VOFTOL_MATERIAL*dxf(dir)).or. &
                     (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                     VOFTOL_MATERIAL*dxf(dir))) then
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -14241,12 +14241,12 @@ END SUBROUTINE SIMP
          print *,"temp_vfrac invalid: ",temp_vfrac
          stop
         endif
-        if (temp_vfrac.le.VOFTOL) then
+        if (temp_vfrac.le.VOFTOL_MATERIAL) then
          temp_vfrac=zero
          do dir=1,SDIM
           temp_cen(dir)=zero
          enddo
-        else if (temp_vfrac.ge.one-VOFTOL) then
+        else if (temp_vfrac.ge.one-VOFTOL_MATERIAL) then
          temp_vfrac=one
          do dir=1,SDIM
           temp_cen(dir)=zero
@@ -14718,7 +14718,7 @@ END SUBROUTINE SIMP
           local_vort=vort(D_DECL(i,j,k))
 
             ! error(p*scale)
-            ! errnew=max(errnew,VOFTOL)
+            ! errnew=max(errnew,VOFTOL_MATERIAL)
           call EOS_error_ind( &
            pressure_error_flag, &
            xsten,nhalf,bfact, &

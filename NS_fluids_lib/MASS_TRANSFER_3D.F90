@@ -507,18 +507,18 @@ stop
          own_flag=1
         else if (cc_flag.eq.0) then ! centroid->center
          if ((VF.ge.-EPS1).and. &
-             (VF.le.VOFTOL)) then
+             (VF.le.VOFTOL_MATERIAL)) then
           own_flag=0
-         else if ((VF.ge.VOFTOL).and.(VF.le.one+EPS1)) then
+         else if ((VF.ge.VOFTOL_MATERIAL).and.(VF.le.one+EPS1)) then
           own_flag=1
          else
           print *,"VF invalid"
           stop
          endif
         else if (cc_flag.eq.1) then ! center->centroid
-         if ((LS.le.zero).or.(abs(VF).le.VOFTOL)) then
+         if ((LS.le.zero).or.(abs(VF).le.VOFTOL_MATERIAL)) then
           own_flag=0
-         else if ((LS.ge.zero).and.(VF.ge.VOFTOL)) then
+         else if ((LS.ge.zero).and.(VF.ge.VOFTOL_MATERIAL)) then
           own_flag=1
          else
           print *,"LS or VF invalid"
@@ -1469,7 +1469,7 @@ stop
         print *,"TSAT_times_weight invalid: ",TSAT_times_weight
         print *,"TSAT_weight ",TSAT_weight
         print *,"project_option=",project_option
-        print *,"VOFTOL=",VOFTOL
+        print *,"VOFTOL_MATERIAL=",VOFTOL_MATERIAL
         print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
         print *,"level,finest_level,dx ",level,finest_level, &
@@ -1482,7 +1482,7 @@ stop
        endif
       else 
        print *,"TSAT_weight invalid"
-       print *,"VOFTOL=",VOFTOL
+       print *,"VOFTOL_MATERIAL=",VOFTOL_MATERIAL
        print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
        print *,"level,finest_level,dx ",level,finest_level, &
@@ -3466,9 +3466,9 @@ stop
          endif
 
          if ((local_VOF(im).ge.-EPS1).and. &
-             (local_VOF(im).le.VOFTOL)) then
+             (local_VOF(im).le.VOFTOL_MATERIAL)) then
           local_VOF(im)=zero
-         else if ((local_VOF(im).ge.one-VOFTOL).and. &
+         else if ((local_VOF(im).ge.one-VOFTOL_MATERIAL).and. &
                   (local_VOF(im).le.one+EPS1)) then
           local_VOF(im)=one
          else if ((local_VOF(im).ge.zero).and. &
@@ -4085,7 +4085,7 @@ stop
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       if (dt.lt.one) then
        EBVOFTOL=EBVOFTOL*dt
       endif
@@ -4918,7 +4918,7 @@ stop
              new_centroid(im_dest,dir)= &
                recon_alt(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
             else if ((newvfrac(im_dest).eq.zero).and. &
-                     (abs(oldvfrac(im_source)).le.VOFTOL)) then
+                     (abs(oldvfrac(im_source)).le.VOFTOL_MATERIAL)) then
              new_centroid(im_dest,dir)=cengrid(dir)
             else
              print *,"newvfrac(im_dest) or oldvfrac(im_source) invalid"
@@ -5090,14 +5090,14 @@ stop
             endif
            enddo ! im_local=1..num_materials
 
-           if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
+           if ((fixed_vfrac_sum.ge.one-VOFTOL_MATERIAL).and. &
                (fixed_vfrac_sum.le.one+EPS1)) then
             avail_vfrac=zero
            else if ((fixed_vfrac_sum.ge.-EPS1).and. &
                     (fixed_vfrac_sum.le.zero)) then
             avail_vfrac=one
            else if ((fixed_vfrac_sum.gt.zero).and. &
-                    (fixed_vfrac_sum.le.one-VOFTOL)) then
+                    (fixed_vfrac_sum.le.one-VOFTOL_MATERIAL)) then
             avail_vfrac=one-fixed_vfrac_sum
            else
             print *,"fixed_vfrac_sum invalid:",fixed_vfrac_sum
@@ -5112,7 +5112,7 @@ stop
            endif
 
            if ((avail_vfrac.eq.zero).or. &
-               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
+               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL_MATERIAL)) then
             dF=zero
             newvfrac(im_dest)=oldvfrac(im_dest)
             newvfrac(im_source)=oldvfrac(im_source)
@@ -5251,15 +5251,15 @@ stop
                LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
               endif
              else if (dF.gt.zero) then
-              if (fixed_vfrac_sum.gt.VOFTOL) then
+              if (fixed_vfrac_sum.gt.VOFTOL_MATERIAL) then
                do udir=1,SDIM 
-                if (newvfrac(im_distrust).gt.VOFTOL) then
+                if (newvfrac(im_distrust).gt.VOFTOL_MATERIAL) then
                  new_centroid(im_distrust,udir)= &
                   (cengrid(udir)- &
                    (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
                     fixed_centroid_sum(udir)))/newvfrac(im_distrust)
                 else if ((newvfrac(im_distrust).ge.-EPS1).and. &
-                         (newvfrac(im_distrust).le.VOFTOL)) then
+                         (newvfrac(im_distrust).le.VOFTOL_MATERIAL)) then
                  new_centroid(im_distrust,udir)=cengrid(udir)
                 else
                  print *,"newvfrac(im_distrust) invalid"
@@ -5267,7 +5267,7 @@ stop
                 endif
                enddo ! udir=1..sdim
               else if ((fixed_vfrac_sum.ge.-EPS1).and. &
-                       (fixed_vfrac_sum.le.VOFTOL)) then
+                       (fixed_vfrac_sum.le.VOFTOL_MATERIAL)) then
                ! do nothing
               else
                print *,"fixed_vfrac_sum invalid: ",fixed_vfrac_sum
@@ -5752,11 +5752,11 @@ stop
                enddo
                enddo ! i1,j1,k1
 
-               if ((oldvfrac(im_probe).le.VOFTOL).and. &
+               if ((oldvfrac(im_probe).le.VOFTOL_MATERIAL).and. &
                    (oldvfrac(im_probe).ge.-EPS1)) then
                 temp_mix_new(iprobe)=Tgamma_default
                 mass_frac_new(iprobe)=Ygamma_default
-               else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
+               else if ((oldvfrac(im_probe).ge.VOFTOL_MATERIAL).and. &
                         (oldvfrac(im_probe).le.one+EPS1)) then
 
                 DATA_FLOOR=zero
@@ -6273,11 +6273,11 @@ stop
                   ! if order_probe(1) or (2) == 0 => no slope found
                   ! in the reconstruction of im_source or im_dest
                   ! materials.
-               if (newvfrac(im_dest).ge.one-VOFTOL) then
+               if (newvfrac(im_dest).ge.one-VOFTOL_MATERIAL) then
                 SWEPTFACTOR=one
                 !(1) order in slope recon of im_source
                 !(2) order in slope recon of im_dest
-               else if (oldvfrac(im_source).ge.one-VOFTOL) then
+               else if (oldvfrac(im_source).ge.one-VOFTOL_MATERIAL) then
                 SWEPTFACTOR=EPS1
                else if ((order_probe(1).eq.0).and. &
                         (order_probe(2).eq.0)) then 

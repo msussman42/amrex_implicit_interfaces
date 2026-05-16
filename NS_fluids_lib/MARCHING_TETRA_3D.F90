@@ -647,7 +647,7 @@ stop
          endif
         enddo ! im=1..num_materials
 
-        if ((vfrac_sum_solid.gt.VOFTOL).and. &
+        if ((vfrac_sum_solid.gt.VOFTOL_MATERIAL).and. &
             (vfrac_sum_solid.le.one+EPS1)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
@@ -665,7 +665,7 @@ stop
           SDIM)
 
         else if ((vfrac_sum_solid.ge.-EPS1).and. &
-                 (vfrac_sum_solid.le.VOFTOL)) then
+                 (vfrac_sum_solid.le.VOFTOL_MATERIAL)) then
          ! do nothing
         else
          print *,"vfrac_sum_solid invalid:",vfrac_sum_solid
@@ -855,15 +855,15 @@ stop
            
            vfrac_side=reconlocal(D_DECL(iside,jside,kside),vofcomp)
 
-           if ((vfrac.ge.one-VOFTOL).and. &
-               (vfrac_side.le.VOFTOL)) then
-            lnode(ii,jj,kk)=-VOFTOL
-           else if ((vfrac.le.VOFTOL).and. &
-                    (vfrac_side.ge.one-VOFTOL)) then
-            lnode(ii,jj,kk)=VOFTOL
-           else if (vfrac.ge.one-VOFTOL) then
+           if ((vfrac.ge.one-VOFTOL_MATERIAL).and. &
+               (vfrac_side.le.VOFTOL_MATERIAL)) then
+            lnode(ii,jj,kk)=-VOFTOL_MATERIAL
+           else if ((vfrac.le.VOFTOL_MATERIAL).and. &
+                    (vfrac_side.ge.one-VOFTOL_MATERIAL)) then
+            lnode(ii,jj,kk)=VOFTOL_MATERIAL
+           else if (vfrac.ge.one-VOFTOL_MATERIAL) then
             lnode(ii,jj,kk)=one
-           else if (vfrac.le.VOFTOL) then
+           else if (vfrac.le.VOFTOL_MATERIAL) then
             lnode(ii,jj,kk)=-one
            else
              ! declared in GLOBALUTIL.F90
