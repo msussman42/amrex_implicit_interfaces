@@ -576,7 +576,7 @@ stop
        num_fluid_materials_in_cell=0
        do im=1,num_materials
         if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
-         if (voflist_center(im).gt.VOFTOL) then
+         if (voflist_center(im).gt.VOFTOL_MATERIAL) then
           num_fluid_materials_in_cell=num_fluid_materials_in_cell+1
          endif
         else if ((is_rigid(im).eq.1).or. &

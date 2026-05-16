@@ -317,10 +317,10 @@ stop
            two*(visc(D_DECL(i,j,k),im)+fort_viscconst_eddy_bulk(im))/density)
 
          if (im_primary.eq.im) then
-          if (VFRAC(im).ge.one-VOFTOL) then
+          if (VFRAC(im).ge.one-VOFTOL_MATERIAL) then
            visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
           else if ((VFRAC(im).ge.-EPS1).and. &
-                   (VFRAC(im).le.one-VOFTOL)) then
+                   (VFRAC(im).le.one-VOFTOL_MATERIAL)) then
            ! do nothing
           else
            print *,"VFRAC invalid"

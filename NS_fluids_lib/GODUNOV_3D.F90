@@ -169,8 +169,8 @@ stop
           constant_density_all_time
         stop
        endif
-      else if ((voldepart.le.VOFTOL*voltotal_depart).or. &
-               (voltarget.le.VOFTOL*voltotal_depart)) then
+      else if ((voldepart.le.VOFTOL_MATERIAL*voltotal_depart).or. &
+               (voltarget.le.VOFTOL_MATERIAL*voltotal_depart)) then
        density=fort_denconst(im)
       else if ((fort_material_type(im).ge.0).and. &
                (fort_material_type(im).le.MAX_NUM_EOS)) then
@@ -524,12 +524,12 @@ stop
       xdepartsize=xsten_depart(1,normdir+1)-xsten_depart(-1,normdir+1)
       xtargetsize=xsten_target(1,normdir+1)-xsten_target(-1,normdir+1)
 
-      if ((xdepartsize.lt.VOFTOL*dx(normdir+1)).or. &
+      if ((xdepartsize.lt.VOFTOL_MATERIAL*dx(normdir+1)).or. &
           (xdepartsize.gt.two*bfact*dx(normdir+1)).or. &
-          (xtargetsize.lt.VOFTOL*dx(normdir+1)).or. &
+          (xtargetsize.lt.VOFTOL_MATERIAL*dx(normdir+1)).or. &
           (xtargetsize.gt.two*bfact*dx(normdir+1)).or. &
-          (xdepartsize.le.VOFTOL*xtargetsize).or. &
-          (xtargetsize.le.VOFTOL*xdepartsize)) then
+          (xdepartsize.le.VOFTOL_MATERIAL*xtargetsize).or. &
+          (xtargetsize.le.VOFTOL_MATERIAL*xdepartsize)) then
        print *,"WARNING xtarget or xdepart invalid size"
        print *,"xdepartsize ",xdepartsize
        print *,"xtargetsize ",xtargetsize
@@ -551,7 +551,7 @@ stop
       endif
       volint=xhiint-xloint
 
-      if (volint.gt.VOFTOL*dx(normdir+1)) then
+      if (volint.gt.VOFTOL_MATERIAL*dx(normdir+1)) then
        coeff(1)=xtargetsize/xdepartsize
        coeff(2)=xsten_target(-1,normdir+1)- &
          coeff(1)*xsten_depart(-1,normdir+1)
@@ -575,7 +575,7 @@ stop
        endif
 
       else if ((volint.ge.zero).and. &
-               (volint.le.VOFTOL*dx(normdir+1))) then
+               (volint.le.VOFTOL_MATERIAL*dx(normdir+1))) then
        volint=zero
       else if (volint.lt.zero) then
        volint=zero
@@ -4145,9 +4145,9 @@ stop
          local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
          if ((local_vfrac.ge.-EPS1).and. &
-             (local_vfrac.le.VOFTOL)) then
+             (local_vfrac.le.VOFTOL_MATERIAL)) then
           momden(D_DECL(i,j,k),im_parm)=rho_base
-         else if ((local_vfrac.ge.VOFTOL).and. &
+         else if ((local_vfrac.ge.VOFTOL_MATERIAL).and. &
                   (local_vfrac.le.one+EPS1)) then
 
            ! den,T
@@ -8573,7 +8573,7 @@ stop
           call getvolume( &
            bfact,dx,xsten,nhalf, &
            ldata,volume_frac,facearea, &
-           centroid,VOFTOL,SDIM)
+           centroid,VOFTOL_MATERIAL,SDIM)
           call CISBOX(xsten,nhalf, &
            xlo,dx,i,j,k, &
            bfact,level, &
@@ -8583,19 +8583,19 @@ stop
           if (volume_frac.lt.zero) then
            print *,"volume_frac.lt.zero"
            stop
-          else if (volume_frac.le.VOFTOL) then
-           if (LS_center.ge.-VOFTOL*dx(1)) then
+          else if (volume_frac.le.VOFTOL_MATERIAL) then
+           if (LS_center.ge.-VOFTOL_MATERIAL*dx(1)) then
             volume_frac=VOFTOL_SLOPES
            endif
           else if (volume_frac.gt.one) then
            print *,"volume_frac.gt.one"
            stop
-          else if (volume_frac.ge.one-VOFTOL) then
-           if (LS_center.le.VOFTOL*dx(1)) then
+          else if (volume_frac.ge.one-VOFTOL_MATERIAL) then
+           if (LS_center.le.VOFTOL_MATERIAL*dx(1)) then
             volume_frac=one-VOFTOL_SLOPES
            endif
-          else if ((volume_frac.ge.VOFTOL).and. &
-                   (volume_frac.le.one-VOFTOL)) then
+          else if ((volume_frac.ge.VOFTOL_MATERIAL).and. &
+                   (volume_frac.le.one-VOFTOL_MATERIAL)) then
            ! do nothing
           else
            print *,"volume_frac invalid: ",volume_frac
@@ -15467,7 +15467,7 @@ stop
          stop
         endif
 
-        if (newvfrac(im).le.VOFTOL) then
+        if (newvfrac(im).le.VOFTOL_MATERIAL) then
          newvfrac_weymouth(im)=newvfrac(im)
          newvfrac_cor(im)=newvfrac(im)
         endif
@@ -15478,7 +15478,7 @@ stop
          volcell_accept,cencell_accept,SDIM)
   
         do dir2=1,SDIM
-         if (newvfrac(im).gt.VOFTOL) then
+         if (newvfrac(im).gt.VOFTOL_MATERIAL) then
           newcen(dir2,im)= &
            veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
            volmat_target(im)- &
@@ -15688,14 +15688,14 @@ stop
         no_material_flag=0
 
         if ( (volmat_depart(im).le. &
-              VOFTOL*voltotal_depart).or. &
+              VOFTOL_MATERIAL*voltotal_depart).or. &
              (volmat_depart_cor(im).le. &
-              VOFTOL*voltotal_depart).or. &
-             (newvfrac_cor(im).le.VOFTOL).or. &
+              VOFTOL_MATERIAL*voltotal_depart).or. &
+             (newvfrac_cor(im).le.VOFTOL_MATERIAL).or. &
              (volmat_target(im).le. &
-              VOFTOL*voltotal_depart).or. &
+              VOFTOL_MATERIAL*voltotal_depart).or. &
              (volmat_target_cor(im).le. &
-              VOFTOL*voltotal_depart) ) then
+              VOFTOL_MATERIAL*voltotal_depart) ) then
 
          no_material_flag=1
 
@@ -17191,7 +17191,7 @@ stop
          stop
         endif
 
-        if (newvfrac(im).le.VOFTOL) then
+        if (newvfrac(im).le.VOFTOL_MATERIAL) then
          newvfrac_weymouth(im)=newvfrac(im)
          newvfrac_cor(im)=newvfrac(im)
         endif
@@ -17202,7 +17202,7 @@ stop
          volcell_accept,cencell_accept,SDIM)
   
         do dir2=1,SDIM
-         if (newvfrac(im).gt.VOFTOL) then
+         if (newvfrac(im).gt.VOFTOL_MATERIAL) then
           newcen(dir2,im)= &
            veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
            volmat_target(im)- &
@@ -17721,7 +17721,7 @@ stop
 
       ! combine_flag==0 (FVM -> GFM)
       ! combine_flag==1 (GFM -> FVM)
-      ! combine_flag==2 (combine if vfrac<VOFTOL)
+      ! combine_flag==2 (combine if vfrac<VOFTOL_MATERIAL)
       ! project_option==SOLVETYPE_VISC (cell centered velocity)
       ! project_option==SOLVETYPE_PRES (MAC velocity - COMBINEVELFACE is called)
       subroutine fort_combinevel( &
@@ -18496,7 +18496,7 @@ stop
 
         if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
-         if (combine_flag.eq.2) then !combine if vfrac<VOFTOL
+         if (combine_flag.eq.2) then !combine if vfrac<VOFTOL_MATERIAL
 
           if (nsolve.ne.STATE_NCOMP_VEL) then
            print *,"nsolve invalid: ",nsolve
@@ -18666,10 +18666,10 @@ stop
 
            new_temperature(im_crit)=newcell(D_DECL(i,j,k),im_crit)
 
-           if (abs(cell_temperature(1)).le.VOFTOL) then
+           if (abs(cell_temperature(1)).le.VOFTOL_MATERIAL) then
 
             if (abs(cell_temperature(1)- &
-                    cell_temperature(im_crit)).le.VOFTOL) then
+                    cell_temperature(im_crit)).le.VOFTOL_MATERIAL) then
              !do nothing
             else
              print *,"cell_temperature invalid:", &
@@ -18680,7 +18680,7 @@ stop
             endif
 
             if (abs(cell_temperature(1)- &
-                    new_temperature(im_crit)).le.VOFTOL) then
+                    new_temperature(im_crit)).le.VOFTOL_MATERIAL) then
              !do nothing
             else
              print *,"new_temperature invalid:", &
@@ -18689,10 +18689,10 @@ stop
                new_temperature(im_crit)
              stop
             endif
-           else if (abs(cell_temperature(1)).ge.VOFTOL) then
+           else if (abs(cell_temperature(1)).ge.VOFTOL_MATERIAL) then
             if (abs(cell_temperature(1)- &
                     new_temperature(im_crit)).le. &
-                VOFTOL*abs(cell_temperature(1))) then
+                VOFTOL_MATERIAL*abs(cell_temperature(1))) then
              !do nothing
             else
              print *,"new_temperature invalid:", &
@@ -18760,14 +18760,14 @@ stop
 
          do im=1,num_materials
 
-          if ((cell_vfrac(im).le.one-VOFTOL).and. &
+          if ((cell_vfrac(im).le.one-VOFTOL_MATERIAL).and. &
               (cell_vfrac(im).ge.-EPS1)) then
 
            vofcomp=(im-1)*ngeom_recon+1
           
            if (((im_primary.eq.im).and. &
                (combine_flag.eq.0)).or. &  ! FVM -> GFM
-              ((cell_vfrac(im).ge.VOFTOL).and. &
+              ((cell_vfrac(im).ge.VOFTOL_MATERIAL).and. &
                (combine_flag.eq.1))) then  ! GFM -> FVM
 
             if (combine_idx.eq.-1) then
@@ -18919,8 +18919,8 @@ stop
                    if ((im_secondary.eq.im).or. &
                        (im_secondary.eq.im_opp)) then
 
-                    if ((cell_vfrac(im).ge.VOFTOL).and. &
-                        (cell_vfrac(im_opp).ge.VOFTOL)) then
+                    if ((cell_vfrac(im).ge.VOFTOL_MATERIAL).and. &
+                        (cell_vfrac(im_opp).ge.VOFTOL_MATERIAL)) then
 
                      Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
                      if (ireverse.eq.0) then
@@ -19059,8 +19059,8 @@ stop
                       stop
                      endif
 
-                    else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
-                             (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
+                    else if ((abs(cell_vfrac(im)).le.VOFTOL_MATERIAL).or. &
+                             (abs(cell_vfrac(im_opp)).le.VOFTOL_MATERIAL)) then
                      ! do nothing
                     else if ((abs(cell_vfrac(im)).le.EPS1).or. &
                              (abs(cell_vfrac(im_opp)).le.EPS1)) then
@@ -19266,16 +19266,16 @@ stop
               stop
              endif
 
-             if (VF_sten(D_DECL(0,0,0)).gt.VOFTOL) then
+             if (VF_sten(D_DECL(0,0,0)).gt.VOFTOL_MATERIAL) then
               ! do nothing
              else
-              print *,"expecting VF_sten(0,0,0)>VOFTOL"
+              print *,"expecting VF_sten(0,0,0)>VOFTOL_MATERIAL"
               stop
              endif
-             if (cell_vfrac(im).gt.VOFTOL) then
+             if (cell_vfrac(im).gt.VOFTOL_MATERIAL) then
               ! do nothing
              else
-              print *,"expecting cell_vfrac(im)>VOFTOL"
+              print *,"expecting cell_vfrac(im)>VOFTOL_MATERIAL"
               stop
              endif
 
@@ -19329,7 +19329,7 @@ stop
            else if ((combine_flag.eq.1).or. & ! GFM->FVM
                     (combine_flag.eq.2)) then ! combine if F==0
 
-            if (abs(cell_vfrac(im)).le.VOFTOL) then
+            if (abs(cell_vfrac(im)).le.VOFTOL_MATERIAL) then
 
              if (nsolve.ne.1) then
               print *,"nsolve invalid: ",nsolve
@@ -19359,9 +19359,9 @@ stop
               stop
              endif
  
-            else if ((cell_vfrac(im).ge.VOFTOL).and. &
+            else if ((cell_vfrac(im).ge.VOFTOL_MATERIAL).and. &
                      (cell_vfrac(im).le.one+EPS1).and. &
-                     (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
+                     (combine_flag.eq.2)) then !combine if vfrac<VOFTOL_MATERIAL
              ! do nothing
             else
              print *,"cell_vfrac or combine_flag bust"
@@ -19376,7 +19376,7 @@ stop
             stop
            endif
    
-          else if (cell_vfrac(im).ge.one-VOFTOL) then
+          else if (cell_vfrac(im).ge.one-VOFTOL_MATERIAL) then
  
            if (im_primary.eq.im) then
             !do nothing
@@ -19389,17 +19389,17 @@ stop
 
             T_out(1)=cellfab(D_DECL(i,j,k),scomp(im)+1)
 
-            if (abs(state_mass_average).le.VOFTOL) then
-             if (abs(state_mass_average-T_out(1)).le.VOFTOL) then
+            if (abs(state_mass_average).le.VOFTOL_MATERIAL) then
+             if (abs(state_mass_average-T_out(1)).le.VOFTOL_MATERIAL) then
               !do nothing
              else
               print *,"T_out(1),state_mass_average invalid:", &
                 T_out(1),state_mass_average
               stop
              endif
-            else if (abs(state_mass_average).ge.VOFTOL) then
+            else if (abs(state_mass_average).ge.VOFTOL_MATERIAL) then
              if (abs(state_mass_average-T_out(1)).le. &
-                 VOFTOL*abs(state_mass_average)) then
+                 VOFTOL_MATERIAL*abs(state_mass_average)) then
               !do nothing
              else
               print *,"T_out(1),state_mass_average invalid:", &
@@ -23749,14 +23749,14 @@ stop
               vfractest(im),vfracmax
             stop
            endif
-           if (vfractest(im).gt.VOFTOL) then
+           if (vfractest(im).gt.VOFTOL_MATERIAL) then
             imcrit=im
             tag(im)=1
-           else if (vfractest(im).le.VOFTOL) then
+           else if (vfractest(im).le.VOFTOL_MATERIAL) then
             ! do nothing
            else
-            print *,"vfractest(im) is NaN vfractest,VOFTOL=", &
-              vfractest(im),VOFTOL
+            print *,"vfractest(im) is NaN vfractest,VOFTOL_MATERIAL=", &
+              vfractest(im),VOFTOL_MATERIAL
             stop
            endif
 
@@ -23802,7 +23802,7 @@ stop
             im_max=im
             vfracmax=vfrac_fluid
            endif  
-           if (vfrac_fluid.gt.VOFTOL) then
+           if (vfrac_fluid.gt.VOFTOL_MATERIAL) then
             imcrit=im
             tag(im)=1
            endif
@@ -23835,7 +23835,7 @@ stop
          stop
         endif
 
-        if (vfracmax.gt.VOFTOL) then
+        if (vfracmax.gt.VOFTOL_MATERIAL) then
          ! do nothing
         else
          print *,"vfracmax invalid:",vfracmax

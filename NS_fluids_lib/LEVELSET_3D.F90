@@ -874,7 +874,7 @@ stop
       call getvolume( &
        bfact,dx,xsten,nhalf_height, &
        LS1_save,volpos,facearea, &
-       cenpos,VOFTOL,SDIM)
+       cenpos,VOFTOL_MATERIAL,SDIM)
 
       if (facearea.ge.zero) then
        delta_mgoni=facearea/vol_sten
@@ -4383,11 +4383,11 @@ stop
                   signcrossing=-sidestar
                   dxcrossing=dxside
                  else if (donate_flag.eq.1) then
-                  if (dxside.lt.(one-VOFTOL)*dxcrossing) then
+                  if (dxside.lt.(one-VOFTOL_MATERIAL)*dxcrossing) then
                    dircrossing=dirstar
                    signcrossing=-sidestar
                    dxcrossing=dxside
-                  else if ((dxside.le.(one+VOFTOL)*dxcrossing).and. &
+                  else if ((dxside.le.(one+VOFTOL_MATERIAL)*dxcrossing).and. &
                            (abs(nrm_center(dirstar)).gt. &
                             abs(nrm_center(dircrossing)))) then 
                    dircrossing=dirstar
@@ -6214,8 +6214,8 @@ stop
             print *,"constant_density_all_time(im) invalid"
             stop
            endif
-           if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
-            if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
+           if (den_mat.ge.(one-VOFTOL_MATERIAL)*fort_density_floor(im)) then
+            if (den_mat.le.(one+VOFTOL_MATERIAL)*fort_density_ceiling(im)) then
              mass=mass+den_mat*vfrac
             else
              print *,"den_mat overflow"
@@ -6788,8 +6788,8 @@ stop
               print *,"constant_density_all_time(im) invalid"
               stop
              endif
-             if (den_mat.ge.(one-VOFTOL)*fort_density_floor(im)) then
-              if (den_mat.le.(one+VOFTOL)*fort_density_ceiling(im)) then
+             if (den_mat.ge.(one-VOFTOL_MATERIAL)*fort_density_floor(im)) then
+              if (den_mat.le.(one+VOFTOL_MATERIAL)*fort_density_ceiling(im)) then
                ! blob_cell_count  (ic-3)
                ! blob_cellvol_count (ic-2)
                ! blob_mass (ic-1)
@@ -8264,17 +8264,17 @@ stop
         vofcomp=(im_primary-1)*ngeom_recon+1
         vfrac=mofdata(vofcomp)
   
-        if (vfrac.ge.VOFTOL) then
+        if (vfrac.ge.VOFTOL_MATERIAL) then
          if (is_rigid(im_primary).eq.0) then
 
            ! anelastic approximation only appropriate for "incompressible"
            ! model.
           if (fort_material_type(im_primary).eq.0) then
           
-           if ((vfrac.ge.VOFTOL).and. &
-               (vfrac.le.one-VOFTOL)) then
+           if ((vfrac.ge.VOFTOL_MATERIAL).and. &
+               (vfrac.le.one-VOFTOL_MATERIAL)) then
             ! do nothing
-           else if ((vfrac.ge.one-VOFTOL).and. &
+           else if ((vfrac.ge.one-VOFTOL_MATERIAL).and. &
                     (vfrac.le.one+EPS1)) then
 
             if (im_primary.eq.base_type) then
@@ -20970,9 +20970,9 @@ stop
 
           local_VOF(im)=state_mof(D_DECL(i,j,k),vofcompraw)
           if ((local_VOF(im).ge.-EPS1).and. &
-              (local_VOF(im).le.VOFTOL)) then
+              (local_VOF(im).le.VOFTOL_MATERIAL)) then
            local_VOF(im)=zero
-          else if ((local_VOF(im).ge.one-VOFTOL).and. &
+          else if ((local_VOF(im).ge.one-VOFTOL_MATERIAL).and. &
                    (local_VOF(im).le.one+EPS1)) then
            local_VOF(im)=one
           else if ((local_VOF(im).gt.zero).and. &
@@ -21106,7 +21106,7 @@ stop
            endif
           else if (is_rigid(im).eq.0) then
 
-           if ((F_stencil.gt.VOFTOL).and. &
+           if ((F_stencil.gt.VOFTOL_MATERIAL).and. &
                (F_stencil.le.one+EPS1)) then
             ! do nothing
            else if (abs(F_stencil).le.EPS1) then
@@ -21124,9 +21124,9 @@ stop
              F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
              if ((F_stencil.ge.-EPS1).and. &
-                 (F_stencil.le.VOFTOL)) then
+                 (F_stencil.le.VOFTOL_MATERIAL)) then
               F_stencil=zero
-             else if ((F_stencil.ge.one-VOFTOL).and. &
+             else if ((F_stencil.ge.one-VOFTOL_MATERIAL).and. &
                       (F_stencil.le.one+EPS1)) then
               F_stencil=one
              else if ((F_stencil.gt.zero).and. &
@@ -21175,7 +21175,7 @@ stop
             enddo
             enddo
 
-            if (F_stencil_sum.gt.VOFTOL) then
+            if (F_stencil_sum.gt.VOFTOL_MATERIAL) then
 
              statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
              dennew(D_DECL(i,j,k),statecomp)=density_stencil_sum/F_stencil_sum
@@ -21200,7 +21200,7 @@ stop
              endif
 
             else if ((F_stencil_sum.ge.zero).and. &
-                     (F_stencil_sum.le.VOFTOL)) then
+                     (F_stencil_sum.le.VOFTOL_MATERIAL)) then
              ! do nothing
             else
              print *,"F_stencil_sum invalid:",F_stencil_sum
@@ -21375,12 +21375,12 @@ stop
              stop
             endif
 
-            if (vfrac_solid_new(im).le.VOFTOL) then
+            if (vfrac_solid_new(im).le.VOFTOL_MATERIAL) then
              vfrac_solid_new(im)=zero
-            else if (vfrac_solid_new(im).ge.one-VOFTOL) then
+            else if (vfrac_solid_new(im).ge.one-VOFTOL_MATERIAL) then
              vfrac_solid_new(im)=one
-            else if ((vfrac_solid_new(im).ge.VOFTOL).and. &
-                     (vfrac_solid_new(im).le.one-VOFTOL)) then
+            else if ((vfrac_solid_new(im).ge.VOFTOL_MATERIAL).and. &
+                     (vfrac_solid_new(im).le.one-VOFTOL_MATERIAL)) then
              ! do nothing
             else
              print *,"vfrac_solid_new bust: ",vfrac_solid_new(im)
@@ -21395,7 +21395,7 @@ stop
              ls_hold(num_materials+SDIM*(im-1)+dir)=nslope_solid(dir)
             enddo
 
-            if ((vfrac_solid_new(im).le.VOFTOL).and. &
+            if ((vfrac_solid_new(im).le.VOFTOL_MATERIAL).and. &
                 (LS_solid_new(im).ge.zero)) then
              print *,"cannot have F<eps and LS>0"
              print *,"i,j,k,im ",i,j,k,im
@@ -21403,7 +21403,7 @@ stop
              print *,"LS_solid_new(im)=",LS_solid_new(im)
              stop
             endif
-            if ((vfrac_solid_new(im).ge.one-VOFTOL).and. &
+            if ((vfrac_solid_new(im).ge.one-VOFTOL_MATERIAL).and. &
                 (LS_solid_new(im).le.zero)) then
              print *,"cannot have F>1-eps and LS<0"
              print *,"i,j,k,im ",i,j,k,im
@@ -21665,12 +21665,12 @@ stop
             nslope_solid(dir)= &
                LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
            enddo
-           if (vfrac_solid_new(im_hard_material).le.VOFTOL) then
+           if (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL) then
             vfrac_solid_new(im_hard_material)=zero
-           else if (vfrac_solid_new(im_hard_material).ge.one-VOFTOL) then
+           else if (vfrac_solid_new(im_hard_material).ge.one-VOFTOL_MATERIAL) then
             vfrac_solid_new(im_hard_material)=one
-           else if ((vfrac_solid_new(im_hard_material).ge.VOFTOL).and. &
-                    (vfrac_solid_new(im_hard_material).le.one-VOFTOL)) then
+           else if ((vfrac_solid_new(im_hard_material).ge.VOFTOL_MATERIAL).and. &
+                    (vfrac_solid_new(im_hard_material).le.one-VOFTOL_MATERIAL)) then
             ! do nothing
            else
             print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
@@ -22093,7 +22093,7 @@ stop
             else if (center_stencil_im_only.eq.0) then
              call getvolume(bfact,dx,xsten,nhalf, &
               LS_temp,mofnew(vofcomp),LSfacearea, &
-              LScentroid,VOFTOL,SDIM)
+              LScentroid,VOFTOL_MATERIAL,SDIM)
 
              do dir=1,SDIM
               mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)
@@ -22109,7 +22109,7 @@ stop
             if (mofnew(vofcomp).lt.zero) then
              print *,"mofnew(vofcomp) invalid: ",vofcomp,mofnew(vofcomp)
              stop
-            else if (mofnew(vofcomp).le.VOFTOL) then
+            else if (mofnew(vofcomp).le.VOFTOL_MATERIAL) then
              if (ls_hold(im).ge.zero) then
               mofnew(vofcomp)=VOFTOL_SLOPES
              endif
@@ -22306,8 +22306,8 @@ stop
          enddo
         enddo ! im=1..num_materials
 
-         ! F<VOFTOL => F=0.0
-         ! F>1-VOFTOL => F=1.0
+         ! F<VOFTOL_MATERIAL => F=0.0
+         ! F>1-VOFTOL_MATERIAL => F=1.0
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
           xsten,nhalf, &

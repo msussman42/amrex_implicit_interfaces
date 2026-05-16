@@ -119,15 +119,15 @@ contains
    enddo
    xcrit=xcrit/three
    if (dircrit.eq.1) then
-    if (abs(xcrit-5.0).le.VOFTOL) then
+    if (abs(xcrit-5.0).le.VOFTOL_MATERIAL) then
      ncrit=one
-    else if (abs(xcrit+5.0).le.VOFTOL) then
+    else if (abs(xcrit+5.0).le.VOFTOL_MATERIAL) then
      ncrit=-one
-    else if (abs(xcrit-4.0).le.VOFTOL) then
+    else if (abs(xcrit-4.0).le.VOFTOL_MATERIAL) then
      ncrit=-one
-    else if (abs(xcrit+4.0).le.VOFTOL) then
+    else if (abs(xcrit+4.0).le.VOFTOL_MATERIAL) then
      ncrit=one
-    else if (abs(xcrit-2.06D0).le.VOFTOL) then
+    else if (abs(xcrit-2.06D0).le.VOFTOL_MATERIAL) then
      ncrit=one
     else
      print *,"xcrit invalid(1) xcrit=",xcrit
@@ -142,11 +142,11 @@ contains
      stop
     endif
    else if (dircrit.eq.2) then
-    if (abs(xcrit-0.0).le.VOFTOL) then
+    if (abs(xcrit-0.0).le.VOFTOL_MATERIAL) then
      ncrit=one
-    else if (abs(xcrit+16.0).le.VOFTOL) then
+    else if (abs(xcrit+16.0).le.VOFTOL_MATERIAL) then
      ncrit=-one
-    else if (abs(xcrit+8.0).le.VOFTOL) then
+    else if (abs(xcrit+8.0).le.VOFTOL_MATERIAL) then
      ncrit=one
     else
      print *,"xcrit invalid(2) xcrit=",xcrit
@@ -161,13 +161,13 @@ contains
      stop
     endif
    else if (dircrit.eq.3) then
-    if (abs(xcrit-2.0).le.VOFTOL) then
+    if (abs(xcrit-2.0).le.VOFTOL_MATERIAL) then
      ncrit=one
-    else if (abs(xcrit+2.0).le.VOFTOL) then
+    else if (abs(xcrit+2.0).le.VOFTOL_MATERIAL) then
      ncrit=-one
-    else if (abs(xcrit+0.97D0).le.VOFTOL) then
+    else if (abs(xcrit+0.97D0).le.VOFTOL_MATERIAL) then
      ncrit=one
-    else if (abs(xcrit-0.97D0).le.VOFTOL) then
+    else if (abs(xcrit-0.97D0).le.VOFTOL_MATERIAL) then
      ncrit=-one
     else
      print *,"xcrit invalid(3) xcrit=",xcrit
