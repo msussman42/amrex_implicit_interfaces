@@ -431,10 +431,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -705,10 +707,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -968,10 +972,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -1315,10 +1321,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif

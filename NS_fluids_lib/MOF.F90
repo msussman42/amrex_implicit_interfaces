@@ -11293,148 +11293,121 @@ contains
       nguess=0
       use_only_override_data=0
 
-      if (nMAT_OPT.eq.1) then !expecting nMAT_OPT==1
+      if (nMAT_OPT.eq.1) then 
+       !do nothing
+      else
+       print *,"expecting nMAT_OPT.eq.1 ",nMAT_OPT
+       stop
+      endif
 
-       if (override_normal_valid(critical_material).eq.1) then
+      if (override_normal_valid(critical_material).eq.1) then
 
+       use_only_override_data=1
+
+       magLS=zero
+       do dir=1,sdim
+        nLS(dir)=override_normal(critical_material,dir)
+        magLS=magLS+nLS(dir)**2
+       enddo
+       magLS=sqrt(magLS)
+        ! -pi < angle < pi
+       if ((magLS.ge.one-EPS2).and. &
+           (magLS.le.one+EPS2)) then
+        call slope_to_angle(nLS,angle_init,sdim)
+       else
+        print *,"magLS invalid (override): ",magLS
+        do dir=1,sdim
+         print *,"dir,nLS (override) ",dir,nLS(dir)
+        enddo
+        stop
+       endif
+
+       nguess=nguess+1 
+
+       do dir=1,sdim-1
+        angle_array(dir,nguess)=angle_init(dir)
+       enddo
+
+      else if (override_normal_valid(critical_material).eq.0) then
+
+       use_only_override_data=0
+
+       if (lsnormal_valid(critical_material).eq.1) then
         magLS=zero
         do dir=1,sdim
-         nLS(dir)=override_normal(critical_material,dir)
+         nLS(dir)=lsnormal(critical_material,dir)
          magLS=magLS+nLS(dir)**2
         enddo
         magLS=sqrt(magLS)
          ! -pi < angle < pi
-        if ((magLS.ge.one-EPS2).and. &
-            (magLS.le.one+EPS2)) then
+        if (magLS.gt.zero) then
          call slope_to_angle(nLS,angle_init,sdim)
         else
-         print *,"magLS invalid (override): ",magLS
+         print *,"magLS invalid: ",magLS
          do dir=1,sdim
-          print *,"dir,nLS (override) ",dir,nLS(dir)
+          print *,"dir,nLS ",dir,nLS(dir)
          enddo
          stop
         endif
-
         nguess=nguess+1 
-
         do dir=1,sdim-1
          angle_array(dir,nguess)=angle_init(dir)
         enddo
-
-       else if (override_normal_valid(critical_material).eq.0) then
+       else if (lsnormal_valid(critical_material).eq.0) then
         ! do nothing
        else
-        print *,"override_normal_valid incorrect: ",override_normal_valid
-        print *,"critical_material ",critical_material
+        print *,"LSNORMAL_valid invalid1"
+        print *,"critical_material,flag ",critical_material, &
+         lsnormal_valid(critical_material) 
         stop
        endif
 
-       if (override_normal_valid(critical_material).eq.1) then
-        !do nothing
-       else if (override_normal_valid(critical_material).eq.0) then
+       do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
-        if (lsnormal_valid(critical_material).eq.1) then
-         magLS=zero
-         do dir=1,sdim
-          nLS(dir)=lsnormal(critical_material,dir)
-          magLS=magLS+nLS(dir)**2
-         enddo
-         magLS=sqrt(magLS)
-          ! -pi < angle < pi
-         if (magLS.gt.zero) then
-          call slope_to_angle(nLS,angle_init,sdim)
-         else
-          print *,"magLS invalid: ",magLS
-          do dir=1,sdim
-           print *,"dir,nLS ",dir,nLS(dir)
-          enddo
-          stop
-         endif
-         nguess=nguess+1 
-         do dir=1,sdim-1
-          angle_array(dir,nguess)=angle_init(dir)
-         enddo
-        else if (lsnormal_valid(critical_material).eq.0) then
+        do dir=1,sdim
+         local_npredict(dir)=npredict(ipredict,dir)
+        enddo
+        ! -pi < angle < pi
+        call slope_to_angle(local_npredict,angle_init,sdim)
+        nguess=nguess+1
+        do dir=1,nDOF
+         angle_array(dir,nguess)=angle_init(dir)
+        enddo
+
+       enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
+
+       if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
+        ! do nothing
+       else
+        print *,"no room for initial guess"
+        print *,"MOFITERMAX ",MOFITERMAX
+        print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
+        print *,"num_materials ",num_materials
+        stop
+       endif
+
+       if (sdim.eq.2) then
+        if (nDOF.eq.1) then
          ! do nothing
         else
-         print *,"LSNORMAL_valid invalid1"
-         print *,"critical_material,flag ",critical_material, &
-          lsnormal_valid(critical_material) 
+         print *,"nDOF invalid"
          stop
         endif
-
-       else
-        print *,"override_normal_valid incorrect ", &
-          override_normal_valid
-        print *,"critical_material ",critical_material
-        stop
-       endif
-
-       if (override_normal_valid(critical_material).eq.1) then
-        use_only_override_data=1
-       else if (override_normal_valid(critical_material).eq.0) then
-        use_only_override_data=0
-       else
-        print *,"override_normal_valid incorrect: ",override_normal_valid
-        stop
-       endif
-
-       if (use_only_override_data.eq.1) then
-        !do nothing
-       else if (use_only_override_data.eq.0) then
-
-        do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-         do dir=1,sdim
-          local_npredict(dir)=npredict(ipredict,dir)
-         enddo
-         ! -pi < angle < pi
-         call slope_to_angle(local_npredict,angle_init,sdim)
-         nguess=nguess+1
-         do dir=1,nDOF
-          angle_array(dir,nguess)=angle_init(dir)
-         enddo
-
-        enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-        if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
+       else if (sdim.eq.3) then
+        if (nDOF.eq.2) then
          ! do nothing
         else
-         print *,"no room for initial guess"
-         print *,"MOFITERMAX ",MOFITERMAX
-         print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
-         print *,"num_materials ",num_materials
+         print *,"nDOF invalid"
          stop
         endif
-
-        if (sdim.eq.2) then
-         if (nDOF.eq.1) then
-          ! do nothing
-         else
-          print *,"nDOF invalid"
-          stop
-         endif
-        else if (sdim.eq.3) then
-         if (nDOF.eq.2) then
-          ! do nothing
-         else
-          print *,"nDOF invalid"
-          stop
-         endif
-        else
-         print *,"sdim invalid" 
-         stop
-        endif
-
        else
-        print *,"use_only_override_data invalid ",use_only_override_data
-        print *,"override_normal_valid ",override_normal_valid
-        print *,"critical_material ",critical_material
+        print *,"sdim invalid" 
         stop
        endif
 
       else
-       print *,"expecting nMAT_OPT==1: ",nMAT_OPT
+       print *,"override_normal_valid incorrect: ",override_normal_valid
+       print *,"critical_material ",critical_material
        stop
       endif
 
@@ -15543,6 +15516,7 @@ contains
 
 #include "mofdata.H"
 
+FIX ME
       if (nhalf.ge.1) then
        ! do nothing
       else
@@ -15579,13 +15553,6 @@ contains
        stop
       endif
 
-      num_materials_fluids=0
-      num_materials_elastic=0
-
-      voffluid=zero
-      vofsolid=zero
-      vofelastic=zero
-
       call Box_volumeFAST( &
         bfact,dx, &
         xsten,nhalf, &
@@ -15593,17 +15560,160 @@ contains
         cencell, &
         sdim)
 
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       vfrac_sum(layer_iter)=zero
+
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if (is_proper_layer(im,layer_iter).eq.1) then
+
+         if ((mofdata(vofcomp).ge.-EPS1).and. &
+             (mofdata(vofcomp).le.zero)) then
+          mofdata(vofcomp)=zero
+          do dir=1,sdim
+           mofdata(vofcomp+dir)=zero
+          enddo
+         else if ((mofdata(vofcomp).le.one+EPS1).and. &
+                  (mofdata(vofcomp).ge.one)) then
+          mofdata(vofcomp)=one
+          do dir=1,sdim
+           mofdata(vofcomp+dir)=zero
+          enddo
+         else if ((mofdata(vofcomp).gt.zero).and. &
+                (mofdata(vofcomp).lt.one)) then
+          ! do nothing
+         else
+          print *,"make_vfrac_sum_ok_base"
+          print *,"dx=",dx
+          print *,"xsten= ",xsten
+          print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+          print *,"tessellate=",tessellate
+          print *,"mofdata(vofcomp) invalid 2"
+          print *,"mofdata(vofcomp)=",mofdata(vofcomp)
+          print *,"im,num_materials,ngeom_recon,sdim ", &
+                  im,num_materials,ngeom_recon,sdim
+          print *,"mofdata= ",mofdata
+          print *,"put breakpoint here to see the caller"
+          stop
+         endif
+
+         vfrac_sum(layer_iter)= &
+            vfrac_sum(layer_iter)+mofdata(vofcomp)
+        endif
+       enddo !im=1,num_materials
+
+       if (layer_iter.eq.RIGID_LAYER_INDEX) then
+
+        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
+         vfrac_sum(layer_iter)=zero
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,layer_iter).eq.1) then
+           mofdata(vofcomp)=zero
+          endif
+         enddo
+        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+              (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
+         vfrac_sum(layer_iter)=one 
+        else if ((vfrac_sum(layer_iter).ge.VOFTOL_LAYER).and. &
+                 (vfrac_sum(layer_iter).le.one-VOFTOL_LAYER)) then
+         !do nothing
+        else
+         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         stop
+        endif
+
+       else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
+
+        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
+         vfrac_sum(layer_iter)=zero
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,layer_iter).eq.1) then
+           mofdata(vofcomp)=zero
+          endif
+         enddo
+        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+              (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
+         if (vfrac_sum(RIGID_LAYER_INDEX).eq.zero) then
+          vfrac_sum(layer_iter)=one 
+         else if (tessellate.eq.TESSELLATE_FLUIDS) then
+          vfrac_sum(layer_iter)=one 
+         else if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).or. &
+                  (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+                  (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+          !do nothing
+         else
+          print *,"tessellate invalid ",tessellate
+          print *,"or vfrac_sum invalid ",vfrac_sum
+          stop
+         endif
+        else if ((vfrac_sum(layer_iter).ge.VOFTOL_LAYER).and. &
+                 (vfrac_sum(layer_iter).le.one-VOFTOL_LAYER)) then
+         !do nothing
+        else
+         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         stop
+        endif
+
+       else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+
+        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
+         vfrac_sum(layer_iter)=zero
+         do im=1,num_materials
+          vofcomp=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,layer_iter).eq.1) then
+           mofdata(vofcomp)=zero
+          endif
+         enddo
+        else ((vfrac_sum(layer_iter).le.one+EPS1).and. &
+              (vfrac_sum(layer_iter).ge.VOFTOL_LAYER)) then
+
+         if ((vfrac_sum(RIGID_LAYER_INDEX).eq.zero).and. &
+             (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
+          vfrac_sum(layer_iter)=one 
+         else if (tessellate.eq.TESSELLATE_FLUIDS) then
+          vfrac_sum(layer_iter)=one 
+         else if ((tessellate.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
+                  (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
+          vfrac_sum(layer_iter)=one 
+         else if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).or. &
+                  (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero).or. &
+                  (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+                  (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+          !do nothing
+         else
+          print *,"tessellate invalid ",tessellate
+          print *,"or vfrac_sum invalid ",vfrac_sum
+          stop
+         endif
+
+        else
+         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         stop
+        endif
+
+       else
+        print *,"layer_iter invalid"
+        stop
+       endif
+
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
 
-       if ((mofdata(vofcomp).ge.-EPS1).and. &
-           (mofdata(vofcomp).le.VOFTOL)) then
+       if ((mofdata(vofcomp).ge.zero).and. &
+           (mofdata(vofcomp).le.VOFTOL_MATERIAL)) then
         mofdata(vofcomp)=zero
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero
         enddo
-       else if ((mofdata(vofcomp).le.one+EPS1).and. &
-                (mofdata(vofcomp).ge.one-VOFTOL)) then
+       else if ((mofdata(vofcomp).le.one).and. &
+                (mofdata(vofcomp).ge.one-VOFTOL_MATERIAL)) then
         mofdata(vofcomp)=one
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero
@@ -15625,38 +15735,57 @@ contains
         print *,"put breakpoint here to see the caller"
         stop
        endif
+      enddo ! im=1,num_materials
 
-       if ((is_rigid_local(im).eq.0).and. &
-           (is_elastic_local(im).eq.0)) then
-        voffluid=voffluid+mofdata(vofcomp)
-        num_materials_fluids=num_materials_fluids+1
-       else if (is_rigid_local(im).eq.1) then
-        vofsolid=vofsolid+mofdata(vofcomp)
-       else if (is_elastic_local(im).eq.1) then
-        vofelastic=vofelastic+mofdata(vofcomp)
-        num_materials_elastic=num_materials_elastic+1
-       else
-        print *,"is_rigid_local invalid MOF.F90 ",is_rigid_local
-        print *,"or is_elastic_local invalid MOF.F90 ",is_elastic_local
-        stop
-       endif
-      enddo ! im=1..num_materials
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       vfrac_sum_truncate(layer_iter)=zero
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if (is_proper_layer(im,layer_iter).eq.1) then
+         vfrac_sum_truncate(layer_iter)= &
+            vfrac_sum_truncate(layer_iter)+mofdata(vofcomp)
+        endif
+       enddo !im=1,num_materials
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if (vfrac_sum_truncate(layer_iter).gt.zero) then
+         mofdata(vofcomp)=mofdata(vofcomp)*vfrac_sum(layer_iter)/ &
+               vfrac_sum_truncate(layer_iter)
+        else if (vfrac_sum_truncate(layer_iter).eq.zero) then
+         !do nothing
+        else
+         print *,"vfrac_sum_truncate invalid ",vfrac_sum_truncate
+         stop
+        endif
+       enddo !im=1,num_materials
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       vfrac_sum_local(layer_iter)=zero
+       num_materials_local(layer_iter)=0
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if (is_proper_layer_local(im,layer_iter).eq.1) then
+         num_materials_local(layer_iter)=num_materials_local(layer_iter)+1
+         vfrac_sum_local(layer_iter)= &
+            vfrac_sum_local(layer_iter)+mofdata(vofcomp)
+        endif
+       enddo !im=1,num_materials
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
        ! for all of the cases,
        !  TESSELLATE_IGNORE_ISRIGID
        !  TESSELLATE_IGNORE_ISELASTIC
        !  TESSELLATE_FLUIDS
        ! the "fluids" should tessellate the domain.
-      if (voffluid.gt.zero) then
+      if (vfrac_sum_local(FLUID_LAYER_INDEX).gt.zero) then
        ! do nothing
-      else if (voffluid.le.zero) then
+      else if (vfrac_sum_local(FLUID_LAYER_INDEX).le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
        print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
-       print *,"voffluid= ",voffluid
-       print *,"vofsolid= ",vofsolid
-       print *,"vofelastic= ",vofelastic
+       print *,"vfrac_sum_local= ",vfrac_sum_local
        print *,"xsten= ",xsten
        print *,"xpoint=",xsten(0,1),xsten(0,2),xsten(0,SDIM)
        print *,"nhalf= ",nhalf
@@ -15668,20 +15797,20 @@ contains
        print *,"is_elastic_local=",is_elastic_local
        stop
       else
-       print *,"voffluid is NaN: ",voffluid
+       print *,"vfrac_sum_local invalid: ",vfrac_sum_local
        stop
       endif
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.1) then
-        if (vofsolid.gt.one) then
-         mofdata(vofcomp)=mofdata(vofcomp)/vofsolid
-        else if ((vofsolid.ge.zero).and. &
-                 (vofsolid.le.one)) then
+        if (vfrac_sum_local(RIGID_LAYER_INDEX).gt.one) then
+         mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(RIGID_LAYER_INDEX)
+        else if ((vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero).and. &
+                 (vfrac_sum_local(RIGID_LAYER_INDEX).le.one)) then
          ! do nothing
         else
-         print *,"vofsolid invalid: ",vofsolid
+         print *,"vfrac_sum_local invalid: ",vfrac_sum_local
          stop
         endif
        else if (is_rigid_local(im).eq.0) then
@@ -15704,7 +15833,7 @@ contains
          stop
         else if ((is_rigid_local(im).eq.0).and. &
                  (is_elastic_local(im).eq.0)) then
-         mofdata(vofcomp)=mofdata(vofcomp)/voffluid
+         mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(FLUID_LAYER_INDEX)
         else
          print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
          print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
@@ -15716,14 +15845,15 @@ contains
       else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
                (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
 
-       if ((nonzero_ranks.eq.num_materials_fluids+num_materials_elastic).and. &
-           (num_materials_fluids+num_materials_elastic.ge.1)) then
+       if ((nonzero_ranks.eq. &
+            num_materials_local(FLUID_LAYER_INDEX)+ &
+            num_materials_local(ELASTIC_LAYER_INDEX)).and. &
+           (num_materials_local(FLUID_LAYER_INDEX)+ &
+            num_materials_local(ELASTIC_LAYER_INDEX).ge.1)) then
         !do nothing
        else
-        print *,"nonzero_ranks<>num_materials_fluids+num_materials_elastic"
-        print *,"nonzero_ranks ",nonzero_ranks
-        print *,"num_materials_fluids ",num_materials_fluids
-        print *,"num_materials_elastic ",num_materials_elastic
+        print *,"nonzero_ranks invalid ",nonzero_ranks
+        print *,"num_materials_local ",num_materials_local
         stop
        endif
 
