@@ -24267,7 +24267,6 @@ end subroutine initialize2d
        real(amrex_real) x,y,z,rr
        real(amrex_real) volcell
        real(amrex_real) cencell(SDIM)
-       real(amrex_real) centroid_absolute(SDIM)
        
        real(amrex_real) debug_vfrac_sum
        real(amrex_real) vel(SDIM)
@@ -25665,12 +25664,6 @@ end subroutine initialize2d
 
         do imls=1,num_materials 
 
-         vofcomp_recon=(imls-1)*ngeom_recon+1
-         do dir=1,SDIM
-          centroid_absolute(dir)=cencell(dir)+ &
-             mofdata(vofcomp_recon+dir)
-         enddo
-
          call find_cut_geom_slope_CLSVOF( &
           LS_stencil, &
           lsnormal, &
@@ -25678,7 +25671,6 @@ end subroutine initialize2d
           ls_intercept, &
           bfact,dx, &
           xsten,nhalf, &
-          centroid_absolute, &
           imls, &
           dxmaxLS, &
           SDIM)
@@ -25693,6 +25685,7 @@ end subroutine initialize2d
           print *,"lsnormal_valid invalid"
           stop
          endif
+
         enddo !imls=1..num_materials 
 
         do im=1,num_materials
