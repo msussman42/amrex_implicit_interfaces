@@ -12273,6 +12273,8 @@ contains
         vfrac_sum_local, &
         num_processed_total, &
         num_processed, &
+        num_override, &
+        override_local, &
         material_used, &
         uncaptured_volume_vof, &
         multi_centroidA, &
@@ -12310,6 +12312,8 @@ contains
       integer, INTENT(inout) :: num_processed
       integer, INTENT(inout) :: material_used(num_materials)
       integer, INTENT(in) :: loop_counter
+      integer, INTENT(in) :: num_override
+      integer, INTENT(in) :: override_local(num_materials)
       real(amrex_real) distmax
       integer ordermax
       integer order_min
@@ -12551,10 +12555,13 @@ contains
 
       if (ordermax.ge.num_materials) then
         print *,"all the materials already initialized"
+        print *,"ordermax= ",ordermax
+        print *,"num_materials= ",num_materials
         stop
       endif
       if (ordermax.lt.0) then
         print *,"ordermax invalid: ",ordermax
+        print *,"num_materials= ",num_materials
         stop
       endif
 
@@ -12662,6 +12669,12 @@ contains
              print *,"order_algorithm_in invalid: ", &
                im,order_algorithm_in(im)
              stop
+            else if ((num_override.gt.0).and. &
+                     (num_processed.lt.num_override).and. &
+                     (override_local(num_processed+1).eq.im)) then
+             distmax=1.0e+10
+             order_min=1
+             critical_material=im
             else if (order_algorithm_in(im).lt.order_min) then
              distmax=mag(1)
              order_min=order_algorithm_in(im)
@@ -14204,6 +14217,8 @@ contains
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       real(amrex_real), INTENT (INOUT),DIMENSION(num_materials*ngeom_recon) :: &
               mofdata
+      real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: &
+              mofdata_init
       real(amrex_real), INTENT (IN), DIMENSION(num_materials) :: vof_super
       real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: &
               multi_centroidA
@@ -14224,6 +14239,11 @@ contains
 
       integer local_num_materials( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer override_local(num_materials)
+      integer override_current( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,num_materials)
+      integer num_override( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,num_materials)
 
       integer material_used(num_materials)
       integer num_processed_total
@@ -14239,6 +14259,7 @@ contains
       real(amrex_real) &
           uncaptured_centroid_vof(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,sdim)
 
+      real(amrex_real) uncaptured_volume_local
       real(amrex_real) uncaptured_centroid_local(sdim)
 
       integer single_material
@@ -14586,23 +14607,16 @@ contains
       call Box_volumeFAST( &
         bfact,dx, &
         xsten0,nhalf0, &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX), &
+        uncaptured_volume_local, &
         uncaptured_centroid_local, &
         sdim)
 
-      uncaptured_volume_vof(ELASTIC_LAYER_INDEX)= &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX)
-      uncaptured_volume_vof(FLUID_LAYER_INDEX)= &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX)
-
-      do dir=1,sdim
-       uncaptured_centroid_vof(RIGID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       uncaptured_centroid_vof(ELASTIC_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
-           uncaptured_centroid_local(dir)
-      enddo !dir=1,sdim
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       uncaptured_volume_vof(layer_iter)=uncaptured_volume_local
+       do dir=1,sdim
+        uncaptured_centroid_vof(layer_iter,dir)=uncaptured_centroid_local(dir)
+       enddo !dir=1,sdim
+      enddo
 
       do imaterial=1,num_materials
        lsnormal_valid(imaterial)=0
@@ -14841,33 +14855,66 @@ contains
 
       enddo ! imaterial=1,num_materials
 
-      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+      do imaterial=1,num_materials*ngeom_recon
+       mofdata_init(imaterial)=mofdata(imaterial)
+      enddo
 
-       at_least_one(layer_iter)=0
+      num_outer_sweeps=1
+      outer_sweeps=0
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       num_override(layer_iter)=0
        do imaterial=1,num_materials
-        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
-         at_least_one(layer_iter)=at_least_one(layer_iter)+1
-        endif
+        override_current(layer_iter,imaterial)=0
+       enddo
+      enddo
+
+      do while (outer_sweeps.lt.num_outer_sweeps)
+
+       do imaterial=1,num_materials*ngeom_recon
+        mofdata(imaterial)=mofdata_init(imaterial)
        enddo
 
-       if ((at_least_one(layer_iter).ge.1).and. &
-           (at_least_one(layer_iter).le.num_materials).and. &
-           (vfrac_sum_local(layer_iter).gt.zero)) then
+       do imaterial=1,num_materials
+        material_used(imaterial)=0
+       enddo
+       num_processed_total=0
+       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+        num_processed(layer_iter)=0
+        uncaptured_volume_fraction(layer_iter)=one
+        uncaptured_volume_vof(layer_iter)=uncaptured_volume_local
+        do dir=1,sdim
+         uncaptured_centroid_vof(layer_iter,dir)=uncaptured_centroid_local(dir)
+        enddo !dir=1,sdim
+       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-        call init_layer_flag( &
-         vfrac_sum, &
-         vfrac_sum_local, &
-         layer_flag, & !intent(out)
-         layer_iter, & !intent(in)
-         tessellate, &
-         tessellate)
 
-        call init_mask_flag( &
+       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+        at_least_one(layer_iter)=0
+        do imaterial=1,num_materials
+         if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+          at_least_one(layer_iter)=at_least_one(layer_iter)+1
+         endif
+        enddo
+
+        if ((at_least_one(layer_iter).ge.1).and. &
+            (at_least_one(layer_iter).le.num_materials).and. &
+            (vfrac_sum_local(layer_iter).gt.zero)) then
+
+         call init_layer_flag( &
+          vfrac_sum, &
+          vfrac_sum_local, &
+          layer_flag, & !intent(out)
+          layer_iter, & !intent(in)
+          tessellate, &
+          tessellate)
+
+         call init_mask_flag( &
           layer_flag, &
           is_masked)
 
-        loop_counter=0
-        do while (continue_material_processing( &
+         loop_counter=0
+         do while (continue_material_processing( &
               loop_counter, &
               local_num_materials(layer_iter), &
               num_processed(layer_iter), &
@@ -14875,7 +14922,7 @@ contains
               vfrac_sum_local(layer_iter), &
               uncaptured_volume_vof(layer_iter)).eq.1) 
 
-         call check_for_single_material( & !multimaterial_MOF
+          call check_for_single_material( & !multimaterial_MOF
            single_material, &
            remaining_vfrac, &
            num_processed_total, &
@@ -14890,133 +14937,172 @@ contains
            tessellate, &
            sdim)
 
-         if ((single_material.ge.1).and. &
-             (single_material.le.num_materials).and. &
-             (uncaptured_volume_fraction(layer_iter).eq.one).and. &
-             (remaining_vfrac.le.EPS_UNCAPTURED)) then
+          if ((single_material.ge.1).and. &
+              (single_material.le.num_materials).and. &
+              (uncaptured_volume_fraction(layer_iter).eq.one).and. &
+              (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
-          uncaptured_volume_vof(layer_iter)=zero
-          uncaptured_volume_fraction(layer_iter)=zero
+           uncaptured_volume_vof(layer_iter)=zero
+           uncaptured_volume_fraction(layer_iter)=zero
 
-          num_processed(layer_iter)=num_processed(layer_iter)+1
-          num_processed_total=num_processed_total+1
-          material_used(single_material)=1
+           num_processed(layer_iter)=num_processed(layer_iter)+1
+           num_processed_total=num_processed_total+1
+           material_used(single_material)=1
 
-          vofcomp=(single_material-1)*ngeom_recon+1
-          mofdata(vofcomp+sdim+1)=one  ! order=1
-          do dir=1,sdim
-           nrecon(dir)=zero  
-          enddo
-          nrecon(1)=one ! null slope=(1 0 0) 
+           vofcomp=(single_material-1)*ngeom_recon+1
+           mofdata(vofcomp+sdim+1)=one  ! order=1
+           do dir=1,sdim
+            nrecon(dir)=zero  
+           enddo
+           nrecon(1)=one ! null slope=(1 0 0) 
 
-          !null_intercept=two*bfact*dxmaxLS_volume_constraint
-          mofdata(vofcomp+2*sdim+2)=null_intercept
-          do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-           multi_centroidA(single_material,dir)=zero  ! cell is full
-          enddo 
+           !null_intercept=two*bfact*dxmaxLS_volume_constraint
+           mofdata(vofcomp+2*sdim+2)=null_intercept
+           do dir=1,sdim
+            mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
+            multi_centroidA(single_material,dir)=zero  ! cell is full
+           enddo 
 
-         else if ((single_material.eq.0).or. &
-                  (remaining_vfrac.ge.EPS_UNCAPTURED).or. &
-                  (uncaptured_volume_fraction(layer_iter).lt.one)) then
+          else if ((single_material.eq.0).or. &
+                   (remaining_vfrac.ge.EPS_UNCAPTURED).or. &
+                   (uncaptured_volume_fraction(layer_iter).lt.one)) then
 
-          call individual_MOF( &
-           layer_flag, &
-           tid_in, &
-           ls_mof, &
-           lsnormal, &
-           lsnormal_valid, &
-           override_normal, &
-           override_normal_valid, &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           order_algorithm_in, &
-           xtetlist_vof, & !intent(out)
-           nlist_alloc, & !intent(in)
-           nmax, &
-           mofdata, &
-           loop_counter, & 
-           uncaptured_volume_fraction(layer_iter), &
-           vfrac_sum_local(layer_iter), &
-           num_processed_total, &
-           num_processed(layer_iter), &
-           material_used, &
-           uncaptured_volume_vof(layer_iter), &
-           multi_centroidA, &
-           sdim)
+           do imaterial=1,num_materials
+            override_local(imaterial)=override_current(layer_iter,imaterial)
+           enddo
 
-         else
-          print *,"single_material invalid ",single_material
-          print *,"or remaining_vfrac invalid: ",remaining_vfrac
-          print *,"or uncaptured_volume_fraction invalid: ", &
-           uncaptured_volume_fraction
-          stop
-         endif
+           call individual_MOF( &
+            layer_flag, &
+            tid_in, &
+            ls_mof, &
+            lsnormal, &
+            lsnormal_valid, &
+            override_normal, &
+            override_normal_valid, &
+            bfact,dx, &
+            xsten0,nhalf0, &
+            order_algorithm_in, &
+            xtetlist_vof, & !intent(out)
+            nlist_alloc, & !intent(in)
+            nmax, &
+            mofdata, &
+            loop_counter, & 
+            uncaptured_volume_fraction(layer_iter), &
+            vfrac_sum_local(layer_iter), &
+            num_processed_total, &
+            num_processed(layer_iter), &
+            num_override(layer_iter), &
+            override_local, &
+            material_used, &
+            uncaptured_volume_vof(layer_iter), &
+            multi_centroidA, &
+            sdim)
 
-         loop_counter=loop_counter+1
-        enddo !while continue_material_processing==1
-
-       else if ((at_least_one(layer_iter).eq.0).or. &
-                (vfrac_sum_local(layer_iter).eq.zero)) then
-        !do nothing
-       else
-        print *,"at_least_one or vfrac_sum_local invalid ", &
-           at_least_one,vfrac_sum_local
-        stop
-       endif
-
-      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-
-      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-
-       do imaterial=1,num_materials
-        order_sanity(imaterial)=0
-       enddo
-       do imaterial=1,num_materials
-        if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
-         vofcomp=(imaterial-1)*ngeom_recon+1
-         if ((mofdata(vofcomp).ge.EPS2).and. &
-             (mofdata(vofcomp).le.one-EPS2)) then
-          test_order=NINT(mofdata(vofcomp+sdim+1))
-          if ((test_order.ge.1).and. &
-              (test_order.le.at_least_one(layer_iter))) then
-           if (material_used(imaterial).eq.test_order) then
-            !do nothing
-           else
-            print *,"material_used invalid ",material_used
-            print *,"imaterial= ",imaterial
-            print *,"test_order= ",test_order
-            stop
-           endif
-           if (order_sanity(test_order).eq.0) then
-            order_sanity(test_order)=imaterial
-           else
-            print *,"expecting order_sanity(test_order).eq.0"
-            stop
-           endif
           else
-           print *,"expecting test_order in proper range: ",test_order
+           print *,"single_material invalid ",single_material
+           print *,"or remaining_vfrac invalid: ",remaining_vfrac
+           print *,"or uncaptured_volume_fraction invalid: ", &
+            uncaptured_volume_fraction
            stop
           endif
-         else if ((mofdata(vofcomp).ge.-EPS1).and. &
-                  (mofdata(vofcomp).le.EPS2)) then
-          !do nothing
-         else if ((mofdata(vofcomp).ge.one-EPS2).and. &
-                  (mofdata(vofcomp).le.one+EPS1)) then
-          !do nothing
-         else
-          print *,"mofdata(vofcomp) invalid ",mofdata(vofcomp)
-          stop
-         endif
-        else if (is_proper_layer_local(imaterial,layer_iter).eq.0) then
+
+          loop_counter=loop_counter+1
+         enddo !while continue_material_processing==1
+
+        else if ((at_least_one(layer_iter).eq.0).or. &
+                 (vfrac_sum_local(layer_iter).eq.zero)) then
          !do nothing
         else
-         print *,"is_proper_layer_local(imaterial,layer_iter) invalid"
+         print *,"at_least_one or vfrac_sum_local invalid ", &
+           at_least_one,vfrac_sum_local
          stop
         endif
-       enddo !imaterial=1,num_materials
 
-      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+        do imaterial=1,num_materials
+         order_sanity(imaterial)=0
+        enddo
+        do imaterial=1,num_materials
+         if (is_proper_layer_local(imaterial,layer_iter).eq.1) then
+          vofcomp=(imaterial-1)*ngeom_recon+1
+          if ((mofdata(vofcomp).ge.EPS2).and. &
+              (mofdata(vofcomp).le.one-EPS2)) then
+           test_order=NINT(mofdata(vofcomp+sdim+1))
+           if ((test_order.ge.1).and. &
+               (test_order.le.at_least_one(layer_iter))) then
+            if (material_used(imaterial).eq.test_order) then
+             !do nothing
+            else
+             print *,"material_used invalid ",material_used
+             print *,"imaterial= ",imaterial
+             print *,"test_order= ",test_order
+             stop
+            endif
+            if (order_sanity(test_order).eq.0) then
+             order_sanity(test_order)=imaterial
+            else
+             print *,"expecting order_sanity(test_order).eq.0"
+             stop
+            endif
+           else
+            print *,"expecting test_order in proper range: ",test_order
+            stop
+           endif
+          else if ((mofdata(vofcomp).ge.-EPS1).and. &
+                   (mofdata(vofcomp).le.EPS2)) then
+           !do nothing
+          else if ((mofdata(vofcomp).ge.one-EPS2).and. &
+                   (mofdata(vofcomp).le.one+EPS1)) then
+           !do nothing
+          else
+           print *,"mofdata(vofcomp) invalid ",mofdata(vofcomp)
+           stop
+          endif
+         else if (is_proper_layer_local(imaterial,layer_iter).eq.0) then
+          !do nothing
+         else
+          print *,"is_proper_layer_local(imaterial,layer_iter) invalid"
+          stop
+         endif
+        enddo !imaterial=1,num_materials
+
+       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+FIX ME
+         mof_err=zero
+         do imaterial = 1,num_materials
+          if (is_rigid_local(imaterial).eq.1) then
+           ! do nothing
+          else if (is_rigid_local(imaterial).eq.0) then
+           vofcomp=(imaterial-1)*ngeom_recon+1
+           do dir=1,sdim
+            xref_mat(dir)=mofdata_in(vofcomp+dir)
+            xact_mat(dir)=multi_centroidA(imaterial,dir)
+           enddo
+           call RT_transform_offset(xref_mat,uncaptured_centroid_cen,xref_matT)
+           call RT_transform_offset(xact_mat,uncaptured_centroid_cen,xact_matT)
+
+           do dir=1,sdim
+            centroidA_array(order_count,imaterial,dir)= &
+             multi_centroidA(imaterial,dir)
+            mof_err = mof_err + &
+             mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
+           enddo ! dir
+          else
+           print *,"is_rigid invalid MOF.F90"
+           stop
+          endif
+         enddo ! imaterial=1,num_materials
+
+FIX ME
+       outer_sweeps=outer_sweeps+1
+
+FIX ME
+      enddo !while(outer_sweeps.lt.num_outer_sweeps)
+
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
@@ -15327,7 +15413,7 @@ contains
         sdim)
 
        do dir2=1,nrecon
-        mofdata(dir2)=zero !override_normal and override_order zapped out.
+        mofdata(dir2)=zero 
        enddo
        do im=1,num_materials
         vof_super(im)=zero
