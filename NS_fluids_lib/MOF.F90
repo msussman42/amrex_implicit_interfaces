@@ -13757,7 +13757,6 @@ contains
         ls_intercept, &
         bfact,dx, &
         xsten0,nhalf0, &
-        centroid_absolute, &
         im, &
         dxmaxLS_volume_constraint, & ! dx or (3 dx)
         sdim)
@@ -13773,7 +13772,6 @@ contains
       integer, INTENT(in) :: im
       integer, INTENT(in) :: sdim
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real), INTENT(in) :: centroid_absolute(sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: dxmaxLS_volume_constraint
       real(amrex_real) xpoint(sdim)
@@ -13885,23 +13883,6 @@ contains
         endif
         dxplus=xsten0(2,dir)-xsten0(0,dir)
         dxminus=xsten0(0,dir)-xsten0(-2,dir)
-
-        if (centroid_absolute(dir).ge.xsten0(-3,dir)-EPS2*dxminus) then
-         !do nothing
-        else
-         print *,"centroid_absolute invalid"
-         print *,"dir,centroid,xlo ", &
-           dir,centroid_absolute(dir),xsten0(-3,dir)
-         stop
-        endif
-        if (centroid_absolute(dir).le.xsten0(3,dir)+EPS2*dxplus) then
-         !do nothing
-        else
-         print *,"centroid_absolute invalid"
-         print *,"dir,centroid,xhi ", &
-           dir,centroid_absolute(dir),xsten0(3,dir)
-         stop
-        endif
 
         LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
         LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
@@ -14233,8 +14214,6 @@ contains
       integer dir
       integer loop_counter
 
-      real(amrex_real) centroid_absolute(sdim)
-
       real(amrex_real) vfrac_sum_local( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum( &
@@ -14346,6 +14325,7 @@ contains
        endif
 
        if (is_elastic(imaterial).eq.1) then
+
         ! order_algorithm is declared in mofdata.H
         if ((order_algorithm(imaterial).ge.1).and. &
             (order_algorithm(imaterial).le.num_materials-1)) then
@@ -14483,15 +14463,15 @@ contains
 
        voftest(imaterial)=mofdata(vofcomp)
 
-       if ((vof_super(imaterial).ge.-0.1d0).and. &
-           (vof_super(imaterial).le.1.1d0)) then
+       if ((vof_super(imaterial).ge.-EPS1).and. &
+           (vof_super(imaterial).le.one+EPS1)) then
         ! do nothing
        else
         print *,"vof_super out of range: ",imaterial,vof_super(imaterial)
         stop
        endif
-       if ((voftest(imaterial).ge.-0.1d0).and. &
-           (voftest(imaterial).le.1.1d0)) then
+       if ((voftest(imaterial).ge.-EPS1).and. &
+           (voftest(imaterial).le.one+EPS1)) then
         ! do nothing
        else
         print *,"voftest out of range: ",imaterial,voftest(imaterial)
@@ -14559,122 +14539,6 @@ contains
         mofdata, &
         sdim)
 
-      call Box_volumeFAST( &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX), &
-        uncaptured_centroid_local, &
-        sdim)
-
-      uncaptured_volume_vof(ELASTIC_LAYER_INDEX)= &
-        uncaptured_volume_vof(RIGID_LAYER_INDEX)
-
-      do dir=1,sdim
-       uncaptured_centroid_vof(RIGID_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-       uncaptured_centroid_vof(ELASTIC_LAYER_INDEX,dir)= &
-            uncaptured_centroid_local(dir)
-      enddo !dir=1,sdim
-
-      call Box_volumeFAST( &
-       bfact,dx,xsten0,nhalf0, &
-       uncaptured_volume_vof(FLUID_LAYER_INDEX), &
-       uncaptured_centroid_local, &
-       sdim)
-
-      do dir=1,sdim
-       uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
-           uncaptured_centroid_local(dir)
-      enddo
-
-      if (use_ls_data.eq.1) then
-
-       do k1=k1lo,k1hi
-       do j1=-1,1
-       do i1=-1,1
-       do imaterial=1,num_materials
-        ls_mof(D_DECL(i1,j1,k1),imaterial)= &
-         LS_stencil(D_DECL(i1,j1,k1),imaterial) 
-       enddo
-       enddo
-       enddo
-       enddo
-
-       do imaterial=1,num_materials
-
-        if ((voftest(imaterial).le.VOFTOL_MATERIAL).or. &
-            (voftest(imaterial).ge.one-VOFTOL_MATERIAL)) then
-
-         lsnormal_valid(imaterial)=0
-         override_normal_valid(imaterial)=0
-         override_order(imaterial)=0
-
-        else if ((voftest(imaterial).ge.VOFTOL_MATERIAL).and. &
-                 (voftest(imaterial).le.one-VOFTOL_MATERIAL)) then
-
-         mag(1)=zero
-         !refvfrac,refcen,order,slope,intercept
-         do dir=1,sdim
-          override_normal(imaterial,dir)= &
-               mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
-          mag(1)=mag(1)+override_normal(imaterial,dir)**2
-         enddo
-         mag(1)=sqrt(mag(1))
-         if (mag(1).eq.zero) then
-          override_normal_valid(imaterial)=0
-          override_order(imaterial)=0
-         else if ((mag(1).ge.one-EPS2).and. &
-                  (mag(1).le.one+EPS2)) then
-          do dir=1,sdim
-           override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
-          enddo
-          override_normal_valid(imaterial)=1
-          override_order(imaterial)= &
-             NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
-         else
-          print *,"mag(1) invalid: ",mag(1)
-          stop
-         endif
-         vofcomp=(imaterial-1)*ngeom_recon+1
-         do dir=1,sdim
-          centroid_absolute(dir)= &
-             uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)+ &
-             mofdata(vofcomp+dir)
-         enddo
-
-         ! in multimaterial_MOF
-         ! find n=grad phi/|grad phi| corresponding to "imaterial"
-         call find_cut_geom_slope_CLSVOF( &
-           ls_mof, & !intent(in)
-           lsnormal, & !intent(out)
-           lsnormal_valid, & !intent(out)
-           ls_intercept, & !intent(out)
-           bfact,dx, & !intent(in)
-           xsten0,nhalf0, & !intent(in)
-           centroid_absolute, & !intent(in)
-           imaterial, & !intent(in)
-           dxmaxLS_volume_constraint, & !intent(in)
-           sdim) !intent(in)
- 
-        else
-         print *,"voftest(imaterial) invalid: ",imaterial,voftest(imaterial)
-         stop
-        endif
-
-       enddo ! imaterial=1,num_materials
-
-      else if (use_ls_data.eq.0) then
-
-       do imaterial=1,num_materials
-        lsnormal_valid(imaterial)=0
-        override_normal_valid(imaterial)=0
-       enddo
-
-      else
-       print *,"use_ls_data invalid: ",use_ls_data
-       stop
-      endif
-
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
 
@@ -14686,17 +14550,19 @@ contains
        mof_errors(tid_in+1,imaterial)=0.0d0
        mof_calls(tid_in+1,imaterial)=0
 
-       if (mofdata(vofcomp).le.zero) then
+       if ((mofdata(vofcomp).ge.-EPS1).and. &
+           (mofdata(vofcomp).le.zero)) then
         mofdata(vofcomp)=zero
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero  ! centroid=0
         enddo
-       else if (mofdata(vofcomp).le.1.1) then
+       else if (mofdata(vofcomp).le.one+EPS1) then
         !do nothing
        else
         print *,"mofdata(vofcomp) invalid ",mofdata
         stop
-       endif         
+       endif
+
        mofdata(vofcomp+sdim+1)=zero  ! order=0
        do dir=1,sdim
         mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -14716,6 +14582,127 @@ contains
        enddo
 
       enddo !imaterial=1,num_materials
+
+      call Box_volumeFAST( &
+        bfact,dx, &
+        xsten0,nhalf0, &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX), &
+        uncaptured_centroid_local, &
+        sdim)
+
+      uncaptured_volume_vof(ELASTIC_LAYER_INDEX)= &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX)
+      uncaptured_volume_vof(FLUID_LAYER_INDEX)= &
+        uncaptured_volume_vof(RIGID_LAYER_INDEX)
+
+      do dir=1,sdim
+       uncaptured_centroid_vof(RIGID_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       uncaptured_centroid_vof(ELASTIC_LAYER_INDEX,dir)= &
+            uncaptured_centroid_local(dir)
+       uncaptured_centroid_vof(FLUID_LAYER_INDEX,dir)= &
+           uncaptured_centroid_local(dir)
+      enddo !dir=1,sdim
+
+      do imaterial=1,num_materials
+       lsnormal_valid(imaterial)=0
+       override_normal_valid(imaterial)=0
+       override_order(imaterial)=0
+      enddo
+
+       !update override_normal_valid
+
+      do imaterial=1,num_materials
+
+       if ((voftest(imaterial).le.VOFTOL_MATERIAL).or. &
+           (voftest(imaterial).ge.one-VOFTOL_MATERIAL)) then
+
+        !do nothing
+
+       else if ((voftest(imaterial).ge.VOFTOL_MATERIAL).and. &
+                (voftest(imaterial).le.one-VOFTOL_MATERIAL)) then
+
+        mag(1)=zero
+        !refvfrac,refcen,order,slope,intercept
+        do dir=1,sdim
+         override_normal(imaterial,dir)= &
+              mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
+         mag(1)=mag(1)+override_normal(imaterial,dir)**2
+        enddo
+        mag(1)=sqrt(mag(1))
+        if (mag(1).eq.zero) then
+         override_normal_valid(imaterial)=0
+         override_order(imaterial)=0
+        else if ((mag(1).ge.one-EPS2).and. &
+                 (mag(1).le.one+EPS2)) then
+         do dir=1,sdim
+          override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
+         enddo
+         override_normal_valid(imaterial)=1
+         override_order(imaterial)= &
+            NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
+        else
+         print *,"mag(1) invalid: ",mag(1)
+         stop
+        endif
+
+       else
+        print *,"voftest(imaterial) invalid: ",imaterial,voftest(imaterial)
+        stop
+       endif
+
+      enddo ! imaterial=1,num_materials
+
+      if (use_ls_data.eq.1) then
+
+       do imaterial=1,num_materials
+
+        if ((voftest(imaterial).le.VOFTOL_MATERIAL).or. &
+            (voftest(imaterial).ge.one-VOFTOL_MATERIAL)) then
+
+         !do nothing
+
+        else if ((voftest(imaterial).ge.VOFTOL_MATERIAL).and. &
+                 (voftest(imaterial).le.one-VOFTOL_MATERIAL)) then
+
+         do k1=k1lo,k1hi
+         do j1=-1,1
+         do i1=-1,1
+          ls_mof(D_DECL(i1,j1,k1),imaterial)= &
+           LS_stencil(D_DECL(i1,j1,k1),imaterial) 
+         enddo
+         enddo
+         enddo
+
+         ! in multimaterial_MOF
+         ! find n=grad phi/|grad phi| corresponding to "imaterial"
+         call find_cut_geom_slope_CLSVOF( &
+           ls_mof, & !intent(in)
+           lsnormal, & !intent(out)
+           lsnormal_valid, & !intent(out)
+           ls_intercept, & !intent(out)
+           bfact,dx, & !intent(in)
+           xsten0,nhalf0, & !intent(in)
+           imaterial, & !intent(in)
+           dxmaxLS_volume_constraint, & !intent(in)
+           sdim) !intent(in)
+
+        else
+         print *,"voftest(imaterial) invalid: ",imaterial,voftest(imaterial)
+         stop
+        endif
+
+       enddo !imaterial=1 ... num_materials
+
+      else if (use_ls_data.eq.0) then
+
+       !do nothing
+
+      else
+       print *,"use_ls_data invalid: ",use_ls_data
+       stop
+      endif
+
 
       num_processed_total=0
 
