@@ -11,8 +11,6 @@
 
 #define NOTUS_REAL (8)
 
-#define MOF_INITIAL_GUESS_CENTROIDS (3)
-
 #define MOFDEB (0)
 
 #define MAXTET (5)
@@ -9129,7 +9127,7 @@ contains
        nEQN, & ! sdim
        bfact,dx, &
        xsten0,nhalf0, &
-       slope, &
+       slope, & !intent(in)
        intercept, &
        xtetlist, & !intent(in)
        nlist_alloc, & !intent(in)
@@ -11011,8 +11009,9 @@ contains
         xsten0,nhalf0, &
         refcentroid, & ! relative to cell centroid of the cell.
         refvfrac, &
-        npredict, &
-        nslope,intercept, &
+        npredict, & !intent(in)
+        nslope, &
+        intercept, &
         xtetlist_vof, & !intent(in)
         nlist_vof, &  !intent(in)
         nlist_alloc, & !intent(in)
@@ -11052,9 +11051,7 @@ contains
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: refcentroid(nEQN)
       real(amrex_real), INTENT(in) :: refvfrac
-      integer :: ipredict
-      real(amrex_real) :: local_npredict(nEQN)
-      real(amrex_real), INTENT(in) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,nEQN)
+      real(amrex_real), INTENT(in) :: npredict(nEQN)
       real(amrex_real), INTENT(out) :: intercept
       real(amrex_real), INTENT(out) :: nslope(nEQN) 
 
@@ -11182,7 +11179,7 @@ contains
        stop
       endif
 
-      if ((MOFITERMAX.lt.num_materials+2+MOF_INITIAL_GUESS_CENTROIDS).or. &
+      if ((MOFITERMAX.lt.num_materials+3).or. &
           (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX out of range find cut geom slope"
        print *,"MOFITERMAX: ",MOFITERMAX
@@ -11322,26 +11319,18 @@ contains
         stop
        endif
 
-       do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-        do dir=1,sdim
-         local_npredict(dir)=npredict(ipredict,dir)
-        enddo
         ! -pi < angle < pi
-        call slope_to_angle(local_npredict,angle_init,sdim)
-        nguess=nguess+1
-        do dir=1,nDOF
-         angle_array(dir,nguess)=angle_init(dir)
-        enddo
+       call slope_to_angle(npredict,angle_init,sdim)
+       nguess=nguess+1
+       do dir=1,nDOF
+        angle_array(dir,nguess)=angle_init(dir)
+       enddo
 
-       enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-
-       if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
+       if (num_materials+4.le.MOFITERMAX) then
         ! do nothing
        else
         print *,"no room for initial guess"
         print *,"MOFITERMAX ",MOFITERMAX
-        print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
         print *,"num_materials ",num_materials
         stop
        endif
@@ -11990,8 +11979,8 @@ contains
       end subroutine find_cut_geom_slope
 
       subroutine find_predict_slope( &
-       slope, &
-       mag, &
+       slope, & !intent(out)
+       mag_vec, & !intent(out)
        vof_scale, &
        vof_free, &
        cen_free, &
@@ -12010,7 +11999,7 @@ contains
       integer :: dir
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(out) :: slope(3,sdim)
+      real(amrex_real), INTENT(out) :: slope(sdim)
       real(amrex_real) local_slope(sdim)
       real(amrex_real) slopeRT(sdim)
       real(amrex_real), INTENT(in) :: vof_scale
@@ -12020,13 +12009,10 @@ contains
       real(amrex_real), INTENT(in) :: cen_ref(sdim)
       real(amrex_real) :: local_ref(sdim)
       real(amrex_real) :: local_free(sdim)
-      real(amrex_real) :: dual_vof_ref
-      real(amrex_real) :: dual_cen_ref(sdim)
       real(amrex_real) cen_freeXYZ(sdim)
       real(amrex_real) cen_refXYZ(sdim)
-      real(amrex_real), INTENT(out) :: mag(3)
+      real(amrex_real), INTENT(out) :: mag_vec
       real(amrex_real) RR,theta,mag_temp
-      integer ipredict
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -12056,110 +12042,78 @@ contains
        stop
       endif
 
-      dual_vof_ref=vof_free-vof_ref
       do dir=1,sdim
-       if (dual_vof_ref.gt.zero) then
-        dual_cen_ref(dir)= &
-         (vof_free*cen_free(dir)-vof_ref*cen_ref(dir))/dual_vof_ref
-       else if (dual_vof_ref.eq.zero) then
-        dual_cen_ref(dir)=zero
-       else if ((dual_vof_ref.lt.zero).and. &
-                (dual_vof_ref.ge.-0.01d0*vof_scale)) then
-        dual_cen_ref(dir)=zero
+       local_ref(dir)=cen_ref(dir)
+       local_free(dir)=cen_free(dir)
+      enddo !dir=1,sdim
+           
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+          (levelrz.eq.COORDSYS_RZ)) then
+       RR=one
+       do dir=1,sdim
+        local_slope(dir)=local_ref(dir)-local_free(dir)
+       enddo
+       ! mag_vec=|slope|
+       call prepare_normal(local_slope,RR,mag_vec,sdim)
+
+       if (mag_vec.gt.zero) then
+        !do nothing
+       else if (mag_vec.eq.zero) then
+        do dir=1,sdim
+         local_slope(dir)=zero
+        enddo
+        local_slope(1)=one
        else
-        print *,"dual_vof_ref invalid: ",dual_vof_ref
-        print *,"vof_scale=",vof_scale
-        print *,"vof_free=",vof_free
-        print *,"vof_ref=",vof_ref
+        print *,"mag_vec invalid 13159: ",mag_vec
         stop
        endif
-      enddo !dir=1,sdim
-
-      do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
        do dir=1,sdim
-        if (ipredict.eq.1) then
-         local_ref(dir)=cen_ref(dir)
-         local_free(dir)=cen_free(dir)
-        else if (ipredict.eq.2) then
-         local_ref(dir)=cen_free(dir)
-         local_free(dir)=dual_cen_ref(dir)
-        else if (ipredict.eq.3) then
-         local_ref(dir)=cen_ref(dir)
-         local_free(dir)=dual_cen_ref(dir)
-        else
-         print *,"ipredict invalid"
-         stop
-        endif
-       enddo !dir=1,sdim
-           
-       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-           (levelrz.eq.COORDSYS_RZ)) then
-        RR=one
+        slope(dir)=local_slope(dir)
+       enddo
+
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+
+       call RT_transform(local_ref,cen_refXYZ) 
+       call RT_transform(local_free,cen_freeXYZ) 
+       do dir=1,sdim
+        local_slope(dir)=cen_refXYZ(dir)-cen_freeXYZ(dir)
+       enddo
+       RR=one
+       call prepare_normal(local_slope,RR,mag_vec,sdim)
+
+       if (mag_vec.gt.zero) then
+        !do nothing
+       else if (mag_vec.eq.zero) then
         do dir=1,sdim
-         local_slope(dir)=local_ref(dir)-local_free(dir)
+         local_slope(dir)=zero
         enddo
-        ! mag=|slope|
-        call prepare_normal(local_slope,RR,mag(ipredict),sdim)
-
-        if (mag(ipredict).gt.zero) then
-         !do nothing
-        else if (mag(ipredict).eq.zero) then
-         do dir=1,sdim
-          local_slope(dir)=zero
-         enddo
-         local_slope(1)=one
-        else
-         print *,"mag(ipredict) invalid 13159: ",mag(ipredict)
-         stop
-        endif
-
-        do dir=1,sdim
-         slope(ipredict,dir)=local_slope(dir)
-        enddo
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        call RT_transform(local_ref,cen_refXYZ) 
-        call RT_transform(local_free,cen_freeXYZ) 
-        do dir=1,sdim
-         local_slope(dir)=cen_refXYZ(dir)-cen_freeXYZ(dir)
-        enddo
-        RR=one
-        call prepare_normal(local_slope,RR,mag(ipredict),sdim)
-
-        if (mag(ipredict).gt.zero) then
-         !do nothing
-        else if (mag(ipredict).eq.zero) then
-         do dir=1,sdim
-          local_slope(dir)=zero
-         enddo
-         local_slope(1)=one
-        else
-         print *,"mag(ipredict) invalid 13183: ",mag(ipredict)
-         stop
-        endif
-
-        theta=xsten(0,2)
-        slopeRT(1)=cos(theta)*local_slope(1)+sin(theta)*local_slope(2)
-        slopeRT(2)=-sin(theta)*local_slope(1)+cos(theta)*local_slope(2)
-        if (sdim.eq.3) then
-         slopeRT(sdim)=local_slope(sdim)
-        endif
-        if (xsten(0,1).gt.zero) then
-         RR=one/xsten(0,1)
-         call prepare_normal(slopeRT,RR,mag_temp,sdim)
-         do dir=1,sdim
-          slope(ipredict,dir)=slopeRT(dir)
-         enddo
-        else
-         print *,"xsten(0,1) must be positive: ",xsten(0,1)
-         stop
-        endif
+        local_slope(1)=one
        else
-        print *,"find_predict_slope: levelrz invalid:",levelrz
+        print *,"mag_vec invalid 13183: ",mag_vec
         stop
        endif
 
-      enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
+       theta=xsten(0,2)
+       slopeRT(1)=cos(theta)*local_slope(1)+sin(theta)*local_slope(2)
+       slopeRT(2)=-sin(theta)*local_slope(1)+cos(theta)*local_slope(2)
+       if (sdim.eq.3) then
+        slopeRT(sdim)=local_slope(sdim)
+       endif
+       if (xsten(0,1).gt.zero) then
+        RR=one/xsten(0,1)
+        call prepare_normal(slopeRT,RR,mag_temp,sdim)
+        do dir=1,sdim
+         slope(dir)=slopeRT(dir)
+        enddo
+       else
+        print *,"xsten(0,1) must be positive: ",xsten(0,1)
+        stop
+       endif
+      else
+       print *,"find_predict_slope: levelrz invalid:",levelrz
+       stop
+      endif
 
       return
       end subroutine find_predict_slope
@@ -12190,8 +12144,9 @@ contains
         vfrac_sum_local, &
         num_processed_total, &
         num_processed, &
-        num_override, &
-        override_local, &
+        num_override_history, &
+        override_target, &
+        recon_history, &
         material_used, &
         uncaptured_volume_vof, &
         multi_centroidA, &
@@ -12229,14 +12184,15 @@ contains
       integer, INTENT(inout) :: num_processed
       integer, INTENT(inout) :: material_used(num_materials)
       integer, INTENT(in) :: loop_counter
-      integer, INTENT(in) :: num_override
-      integer, INTENT(in) :: override_local(num_materials)
+      integer, INTENT(in) :: num_override_history
+      integer, INTENT(in) :: override_target(num_materials)
+      integer, INTENT(inout) :: recon_history(num_materials)
       real(amrex_real) distmax
       integer ordermax
       integer order_min
       integer critical_material
       real(amrex_real) volcut_vof,volcell_vof
-      real(amrex_real) mag(3)
+      real(amrex_real) mag_vec
       real(amrex_real) cencut_vof(sdim)
       real(amrex_real) cencell_vof(sdim)
       real(amrex_real), INTENT(out) :: xtetlist_vof(4,3,nlist_alloc)
@@ -12246,9 +12202,7 @@ contains
       integer test_order
       real(amrex_real) test_vfrac,max_vfrac
       integer use_initial_guess
-      integer ipredict
-      real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
-      real(amrex_real) local_npredict(sdim)
+      real(amrex_real) npredict(sdim)
       real(amrex_real) refcentroid(num_materials*sdim)
       real(amrex_real) centroid_ref(sdim)
       real(amrex_real) centroid_free(sdim)
@@ -12361,6 +12315,16 @@ contains
         volcell_vof, &
         cencell_vof, &
         sdim)
+
+      if ((num_processed_total.ge.1).and. &
+          (num_processed_total.lt.num_materials)) then
+       !do nothing
+      else if (num_processed_total.eq.0) then
+       !do nothing
+      else 
+       print *,"num_processed_total invalid: ",num_processed_total
+       stop
+      endif
 
       if ((num_processed.ge.1).and. &
           (num_processed.lt.num_materials)) then
@@ -12569,7 +12533,7 @@ contains
            ! normal points from light to dark
            call find_predict_slope( &
              npredict, & !intent(out)
-             mag, & !intent(out)
+             mag_vec, & !intent(out)
              volcell_vof, &
              volcut_vof, &
              centroid_free, & !centroid of uncaptured region
@@ -12578,34 +12542,34 @@ contains
              bfact,dx, &
              xsten_local,nhalf0,sdim)
           
-           if (mag(1).gt.zero) then
+           if (mag_vec.gt.zero) then
 
              ! order_min initialized to be 9999.
             if (order_algorithm_in(im).le.0) then
              print *,"order_algorithm_in invalid: ", &
                im,order_algorithm_in(im)
              stop
-            else if ((num_override.gt.0).and. &
-                     (num_processed.lt.num_override).and. &
-                     (override_local(num_processed+1).eq.im)) then
+            else if ((num_override_history.gt.0).and. &
+                     (num_processed_total.lt.num_override_history).and. &
+                     (override_target(num_processed_total+1).eq.im)) then
              distmax=1.0e+10
              order_min=1
              critical_material=im
             else if (order_algorithm_in(im).lt.order_min) then
-             distmax=mag(1)
+             distmax=mag_vec
              order_min=order_algorithm_in(im)
              critical_material=im
             else if (order_algorithm_in(im).eq.order_min) then
-             if (mag(1).gt.distmax) then
-              distmax=mag(1)
+             if (mag_vec.gt.distmax) then
+              distmax=mag_vec
               critical_material=im
              endif
             endif
 
-           else if (mag(1).eq.zero) then
+           else if (mag_vec.eq.zero) then
             ! do nothing
            else
-            print *,"mag(1) invalid: ",mag(1)
+            print *,"mag_vec invalid: ",mag_vec
             stop
            endif
 
@@ -12675,7 +12639,7 @@ contains
           ! normal points from light to dark
          call find_predict_slope( &
            npredict, & !intent(out)
-           mag, & !intent(out)
+           mag_vec, & !intent(out)
            volcell_vof, &
            volcut_vof, &
            centroid_free, & !centroid of uncaptured region
@@ -12684,10 +12648,10 @@ contains
            bfact,dx, &
            xsten_local,nhalf0,sdim)
 
-         if (mag(1).gt.zero) then
+         if (mag_vec.gt.zero) then
           !do nothing
          else
-          print *,"mag(1) underflow: ",mag(1)
+          print *,"mag_vec underflow: ",mag_vec
           stop
          endif
 
@@ -12711,7 +12675,7 @@ contains
            xsten0,nhalf0, &
            refcentroid, &
            refvfrac, &
-           npredict, &
+           npredict, & !intent(in)
            nslope, &
            intercept, &
            xtetlist_vof, & !intent(in)
@@ -12728,6 +12692,7 @@ contains
          material_used(critical_material)=ordermax+1
          num_processed=num_processed+1
          num_processed_total=num_processed_total+1
+         recon_history(num_processed_total)=critical_material
 
          mofdata(vofcomp+sdim+1)=ordermax+1
          mofdata(vofcomp+2*sdim+2)=intercept
@@ -12836,31 +12801,29 @@ contains
          if ((mat_before.ge.1).and. &
              (mat_before.le.num_materials)) then
 
-           if (is_masked(mat_before).ne.0) then
-            print *,"is_masked invalid MOF.F90: ",is_masked
-            print *,"mat_before=",mat_before
-            stop
-           endif
+          if (is_masked(mat_before).ne.0) then
+           print *,"is_masked invalid MOF.F90: ",is_masked
+           print *,"mat_before=",mat_before
+           stop
+          endif
 
-           vofcomp_before=(mat_before-1)*ngeom_recon+1
-           do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-            do dir=1,sdim
-             npredict(ipredict,dir)=-mofdata(vofcomp_before+sdim+1+dir)
-            enddo
-           enddo
-           intercept=-mofdata(vofcomp_before+2*sdim+2)
+          vofcomp_before=(mat_before-1)*ngeom_recon+1
+          do dir=1,sdim
+           npredict(dir)=-mofdata(vofcomp_before+sdim+1+dir)
+          enddo
+          intercept=-mofdata(vofcomp_before+2*sdim+2)
 
          else if (mat_before.eq.0) then
 
-           do dir=1,sdim
-            centroid_free(dir)=cencell_vof(dir)
-            centroid_ref(dir)=cencut_vof(dir)
-           enddo
+          do dir=1,sdim
+           centroid_free(dir)=cencell_vof(dir)
+           centroid_ref(dir)=cencut_vof(dir)
+          enddo
 
-           ! centroid_ref-centroid_free
-           call find_predict_slope( &
-            npredict, &
-            mag, &
+          ! centroid_ref-centroid_free
+          call find_predict_slope( &
+            npredict, & !intent(out)
+            mag_vec, & !intent(out)
             volcell_vof, &
             volcell_vof, &
             centroid_free, &
@@ -12869,29 +12832,23 @@ contains
             bfact,dx, &
             xsten_local,nhalf0,sdim)
 
-           if (mag(1).gt.zero) then
-            ! do nothing
-           else if (mag(1).eq.zero) then
-            do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
-             do dir=1,sdim
-              npredict(ipredict,dir)=zero
-             enddo
-             npredict(ipredict,1)=one
-            enddo !ipredict
-           else
-            print *,"mag(1) invalid: ",mag(1)
-            stop
-           endif
-           intercept=mofdata(vofcomp)-half
+          if (mag_vec.gt.zero) then
+           ! do nothing
+          else if (mag_vec.eq.zero) then
+           do dir=1,sdim
+            npredict(dir)=zero
+           enddo
+           npredict(1)=one
+          else
+           print *,"mag_vec invalid: ",mag_vec
+           stop
+          endif
+          intercept=mofdata(vofcomp)-half
          else
           print *,"mat_before invalid: ",mat_before
           stop
          endif
  
-         do dir=1,sdim
-          local_npredict(dir)=npredict(1,dir)
-         enddo
-
          if ((single_material_takes_all.eq.1).and. &
              (mat_before.ge.1).and. &
              (mat_before.le.num_materials)) then
@@ -12899,12 +12856,13 @@ contains
           material_used(critical_material)=ordermax+1
           num_processed=num_processed+1
           num_processed_total=num_processed_total+1
+          recon_history(num_processed_total)=critical_material
 
           mofdata(vofcomp+sdim+1)=ordermax+1
 
           mofdata(vofcomp+2*sdim+2)=intercept
           do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
+           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
             ! cencut_vof is the uncaptured centroid in absolute frame 
            centroidA(dir)=cencut_vof(dir)
            multi_centroidA(critical_material,dir)= &
@@ -12926,7 +12884,7 @@ contains
            nEQN_standard, & !sdim
            bfact,dx, &
            xsten0,nhalf0, &
-           local_npredict, &
+           npredict, & !intent(in)
            intercept, &
            xtetlist_vof, & !intent(in)
            nlist_alloc, &  !intent(in)
@@ -12961,12 +12919,13 @@ contains
           material_used(critical_material)=ordermax+1
           num_processed=num_processed+1
           num_processed_total=num_processed_total+1
+          recon_history(num_processed_total)=critical_material
   
           mofdata(vofcomp+sdim+1)=ordermax+1
           mofdata(vofcomp+2*sdim+2)=intercept
            ! cencell is the cell centroid
           do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
+           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
            multi_centroidA(critical_material,dir)= &
             centroidA(dir)-cencell_vof(dir)
           enddo 
@@ -14153,10 +14112,12 @@ contains
 
       integer local_num_materials( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-FIX ME
-      integer override_target_history(num_materials)
+
+      integer override_target(num_materials)
       integer num_override_history
-      integer recon_hystory(num_materials)
+      integer recon_history(num_materials)
+      integer outer_sweeps
+      integer num_outer_sweeps
 
       integer material_used(num_materials)
       integer num_processed_total
@@ -14509,10 +14470,6 @@ FIX ME
            ngeom_recon,vofcomp,imaterial
         stop
        endif
-FIX ME
-       do dir=1,sdim
-        multi_centroidA(imaterial,dir)=zero
-       enddo
 
       enddo !imaterial=1,num_materials
 
@@ -14636,11 +14593,8 @@ FIX ME
       endif
 
 
-      num_processed_total=0
-
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       num_processed(layer_iter)=0
        local_num_materials(layer_iter)=0
        vfrac_sum_local(layer_iter)=zero
        vfrac_sum(layer_iter)=zero
@@ -14691,8 +14645,6 @@ FIX ME
       endif
 
       do imaterial=1,num_materials
-
-       material_used(imaterial)=0
 
        ! order_algorithm is declared in mofdata.H
        order_algorithm_in(imaterial)=order_algorithm(imaterial)
@@ -14778,11 +14730,9 @@ FIX ME
 
       num_outer_sweeps=1
       outer_sweeps=0
-      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       num_override(layer_iter)=0
-       do imaterial=1,num_materials
-        override_current(layer_iter,imaterial)=0
-       enddo
+      num_override_history=0
+      do imaterial=1,num_materials
+       override_target(imaterial)=0
       enddo
 
       do while (outer_sweeps.lt.num_outer_sweeps)
@@ -14793,6 +14743,10 @@ FIX ME
 
        do imaterial=1,num_materials
         material_used(imaterial)=0
+        recon_history(imaterial)=0
+        do dir=1,sdim
+         multi_centroidA(imaterial,dir)=zero
+        enddo
        enddo
        num_processed_total=0
        do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
@@ -14884,10 +14838,6 @@ FIX ME
                    (remaining_vfrac.ge.EPS_UNCAPTURED).or. &
                    (uncaptured_volume_fraction(layer_iter).lt.one)) then
 
-           do imaterial=1,num_materials
-            override_local(imaterial)=override_current(layer_iter,imaterial)
-           enddo
-
            call individual_MOF( &
             layer_flag, &
             tid_in, &
@@ -14908,8 +14858,9 @@ FIX ME
             vfrac_sum_local(layer_iter), &
             num_processed_total, &
             num_processed(layer_iter), &
-            num_override(layer_iter), &
-            override_local, &
+            num_override_history, &
+            override_target, &
+            recon_history, &
             material_used, &
             uncaptured_volume_vof(layer_iter), &
             multi_centroidA, &
