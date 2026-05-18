@@ -446,10 +446,10 @@ implicit none
       real(amrex_real), PARAMETER :: EPS_14_7=BL_REAL_E(1.0,-14)
       real(amrex_real), PARAMETER :: EPS_13_5=BL_REAL_E(1.0,-13)
 #endif
-      real(amrex_real), PARAMETER :: EPS_UNCAPTURED=EPS_11_4
+      real(amrex_real), PARAMETER :: EPS_UNCAPTURED=half*EPS_11_4
       real(amrex_real), PARAMETER :: EPS_UNCAPTURED_SANITY=EPS_8_4
       real(amrex_real), PARAMETER :: INTERCEPT_TOL=EPS_12_6
-      real(amrex_real), PARAMETER :: VOFTOL_LAYER=EPS_11_4
+      real(amrex_real), PARAMETER :: VOFTOL_LAYER=two*EPS_11_4
       real(amrex_real), PARAMETER :: VOFTOL_MATERIAL=EPS_11_4
       real(amrex_real), PARAMETER :: EPS_FULL_WEAK=EPS2
 

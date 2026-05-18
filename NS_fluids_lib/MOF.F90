@@ -9125,7 +9125,6 @@ contains
        ! centroid in absolute coordinate system
       subroutine multi_find_intercept( &
        tid_in, &
-       nMAT_OPT, & ! 1 
        nDOF, & ! sdim-1
        nEQN, & ! sdim
        bfact,dx, &
@@ -9148,7 +9147,6 @@ contains
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid_in
-      integer, INTENT(in) :: nMAT_OPT ! 1
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
@@ -9728,7 +9726,6 @@ contains
        ! centroid in absolute coordinate system
       subroutine single_find_intercept( &
        tid_in, &
-       nMAT_OPT, & ! 1 
        nDOF, & ! sdim-1
        nEQN, & ! sdim
        bfact,dx, &
@@ -9745,7 +9742,6 @@ contains
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid_in
-      integer, INTENT(in) :: nMAT_OPT ! 1 
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: bfact,nhalf0
@@ -10262,7 +10258,6 @@ contains
         tid_in, &
         uncaptured_volume_vof, & !intent(in)
         mofdata, &
-        nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1 
         nEQN, & ! sdim 
         use_MilcentLemoine, &
@@ -10297,7 +10292,6 @@ contains
 
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      integer, INTENT(in) :: nMAT_OPT ! 1 
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
       integer, INTENT(in) :: sdim
@@ -10311,7 +10305,7 @@ contains
 
       real(amrex_real), INTENT(in) :: refcentroid(nEQN)
       real(amrex_real) refcentroidT(nEQN)
-      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT)
+      real(amrex_real), INTENT(in) :: refvfrac
       integer, INTENT(in) :: use_initial_guess 
 
       real(amrex_real), INTENT(out) :: testcen(nEQN)
@@ -10327,7 +10321,7 @@ contains
       integer dir
       integer dir_local
       real(amrex_real) :: nslope(nEQN)
-      real(amrex_real), INTENT(inout) :: intercept(nMAT_OPT)
+      real(amrex_real), INTENT(inout) :: intercept
 
       real(amrex_real) volcell_vof
       real(amrex_real) cencell_vof(sdim)
@@ -10404,19 +10398,11 @@ contains
        stop
       endif
 
-      if (nMAT_OPT.eq.1) then
-
-       if ((nMAT_OPT.eq.1).and. &
-           (nDOF.eq.sdim-1).and. &
-           (nEQN.eq.sdim)) then
-        ! do nothing
-       else
-        print *,"invalid nMAT_OPT,nDOF, or nEQN"
-        stop
-       endif
-
+      if ((nDOF.eq.sdim-1).and. &
+          (nEQN.eq.sdim)) then
+       ! do nothing
       else
-       print *,"nMAT_OPT invalid: ",nMAT_OPT
+       print *,"invalid nDOF or nEQN"
        stop
       endif
 
@@ -10433,10 +10419,10 @@ contains
        stop
       endif
 
-      if (refvfrac(1)**2.ge.zero) then
+      if (refvfrac**2.ge.zero) then
        !do nothing
       else
-       print *,"corrupt: refvfrac(1) ",refvfrac(1)
+       print *,"corrupt: refvfrac ",refvfrac
        stop
       endif
 
@@ -10485,18 +10471,17 @@ contains
         !  the material region with the center cell 
        call multi_find_intercept( &
         tid_in, &
-        nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim 
         bfact,dx, &
         xsten0,nhalf0, &
         nslope, &  ! intent(in)
-        intercept(1), & ! intent(inout)
+        intercept, & ! intent(inout)
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
         nmax, &
-        refvfrac(1), &
+        refvfrac, &
         use_initial_guess, &
         testcen, & !intent(out)
         fastflag,sdim)
@@ -10517,7 +10502,7 @@ contains
           bfact,dx, &
           xsten_local,nhalf0, &
           nslope, &
-          intercept(1), &
+          intercept, &
           volume_cut, & !intent(out)
           testcen, & !intent(out)
           facearea, & !intent(out)
@@ -10534,7 +10519,7 @@ contains
         call fast_cut_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
           nslope, &
-          intercept(1), &
+          intercept, &
           volume_cut,testcen, &
           facearea, &
           xsten0,nhalf0, &
@@ -10564,7 +10549,7 @@ contains
         stop
        endif
 
-       intercept(1)=zero
+       intercept=zero
 
         ! MilcentLemoine slope points away from the material,
         ! so we have to reverse the normal and angles
@@ -10574,19 +10559,19 @@ contains
        enddo
        call slope_to_angle_NOTUS(local_nslope_NOTUS,local_angles_NOTUS,sdim)
 
-       local_refvfrac_NOTUS=refvfrac(1)
+       local_refvfrac_NOTUS=refvfrac
        do dir=1,sdim
         local_ref_centroid_NOTUS(dir)=refcentroid(dir)
        enddo
 
-       if ((refvfrac(1).ge.0.5d0).and. &
-           (refvfrac(1).lt.1.0d0)) then
+       if ((refvfrac.ge.0.5d0).and. &
+           (refvfrac.lt.1.0d0)) then
         local_refvfrac_NOTUS=1.0d0-local_refvfrac_NOTUS
 
         if (local_refvfrac_NOTUS.gt.0.0d0) then
          do dir=1,sdim
           local_ref_centroid_NOTUS(dir)= &
-            -refvfrac(1)*refcentroid(dir)/local_refvfrac_NOTUS
+            -refvfrac*refcentroid(dir)/local_refvfrac_NOTUS
           local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
          enddo
         else if (local_refvfrac_NOTUS.eq.0.0d0) then
@@ -10602,12 +10587,12 @@ contains
         call slope_to_angle_NOTUS(local_nslope_NOTUS, &
                 local_angles_NOTUS,sdim)
 
-       else if ((refvfrac(1).gt.0.0d0).and. &
-                (refvfrac(1).le.0.5d0)) then
+       else if ((refvfrac.gt.0.0d0).and. &
+                (refvfrac.le.0.5d0)) then
         ! do nothing
        else
         print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
-        print *,"refvfrac(1) Invalid: ",refvfrac(1)
+        print *,"refvfrac Invalid: ",refvfrac
         stop
        endif
 
@@ -10704,16 +10689,16 @@ contains
 
        if (NOTUS_worked.eq.1) then
 
-        if ((refvfrac(1).ge.0.5d0).and. &
-            (refvfrac(1).lt.1.0d0)) then
+        if ((refvfrac.ge.0.5d0).and. &
+            (refvfrac.lt.1.0d0)) then
          do dir=1,sdim
-          testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
+          testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac
          enddo
-        else if ((refvfrac(1).gt.0.0d0).and. &
-                 (refvfrac(1).le.0.5d0)) then
+        else if ((refvfrac.gt.0.0d0).and. &
+                 (refvfrac.le.0.5d0)) then
          ! do nothing
         else
-         print *,"refvfrac(1) invalid: ",refvfrac(1)
+         print *,"refvfrac invalid: ",refvfrac
          stop
         endif
 
@@ -10725,18 +10710,17 @@ contains
         !  the material region with the center cell 
         call multi_find_intercept( &
          tid_in, &
-         nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim 
          bfact,dx, &
          xsten0,nhalf0, &
          nslope, &  ! intent(in)
-         intercept(1), & ! intent(inout)
+         intercept, & ! intent(inout)
          xtetlist_vof, & !intent(in)
          nlist_alloc, &
          nlist_vof, &
          nmax, &
-         refvfrac(1), &
+         refvfrac, &
          use_initial_guess, &
          testcen, & !intent(out)
          fastflag,sdim)
@@ -10752,7 +10736,7 @@ contains
          call fast_cut_cell_intersection( &
            bfact,dx,xsten0,nhalf0, &
            nslope, &
-           intercept(1), &
+           intercept, &
            volume_cut,testcen, &
            facearea, &
            xsten0,nhalf0, &
@@ -10790,13 +10774,6 @@ contains
 
       else
        print *,"use_MilcentLemoine invalid: ",use_MilcentLemoine
-       stop
-      endif
-
-      if (nMAT_OPT.eq.1) then
-       !do nothing
-      else
-       print *,"nMAT_OPT invalid: ",nMAT_OPT
        stop
       endif
 
@@ -11044,7 +11021,6 @@ contains
         critical_material, & !INTENT(in)
         fastflag, &
         sdim, &
-        nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN)   ! sdim 
 
@@ -11058,7 +11034,6 @@ contains
 
       integer, INTENT(in) :: tid_in
 
-      integer, INTENT(in) :: nMAT_OPT ! 1 
       integer, INTENT(in) :: nDOF ! sdim-1
       integer, INTENT(in) :: nEQN ! sdim 
 
@@ -11076,11 +11051,11 @@ contains
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: refcentroid(nEQN)
-      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT)
+      real(amrex_real), INTENT(in) :: refvfrac
       integer :: ipredict
       real(amrex_real) :: local_npredict(nEQN)
       real(amrex_real), INTENT(in) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,nEQN)
-      real(amrex_real), INTENT(out) :: intercept(nMAT_OPT)
+      real(amrex_real), INTENT(out) :: intercept
       real(amrex_real), INTENT(out) :: nslope(nEQN) 
 
       real(amrex_real) new_angle(nDOF)
@@ -11096,10 +11071,10 @@ contains
 
       real(amrex_real) angle_init(nDOF)
 
-      real(amrex_real) intercept_init(nMAT_OPT)
+      real(amrex_real) intercept_init
       real(amrex_real) cen_derive_init(nEQN)
 
-      real(amrex_real) intercept_array(nMAT_OPT,MOFITERMAX+1)
+      real(amrex_real) intercept_array(MOFITERMAX+1)
       real(amrex_real) cen_array(nEQN,MOFITERMAX+1)
       real(amrex_real) angle_array(nDOF,MOFITERMAX+1)
       real(amrex_real) f_array(nEQN,MOFITERMAX+1)  
@@ -11119,15 +11094,15 @@ contains
       real(amrex_real) f_plus(nEQN,nDOF)
       real(amrex_real) f_minus(nEQN,nDOF)
 
-      real(amrex_real) local_int(nMAT_OPT)
+      real(amrex_real) local_int
 
-      real(amrex_real) intp(nMAT_OPT,nDOF)
-      real(amrex_real) intm(nMAT_OPT,nDOF)
-      real(amrex_real) int_gauss_newton(nMAT_OPT)
-      real(amrex_real) int_steepest(nMAT_OPT)
+      real(amrex_real) intp(nDOF)
+      real(amrex_real) intm(nDOF)
+      real(amrex_real) int_gauss_newton
+      real(amrex_real) int_steepest
       real(amrex_real) cen_gauss_newton(nEQN)
       real(amrex_real) cen_steepest(nEQN)
-      real(amrex_real) intopt(nMAT_OPT)
+      real(amrex_real) intopt
       real(amrex_real) cenp(nEQN)
       real(amrex_real) cenm(nEQN)
       real(amrex_real) cenopt(nEQN)
@@ -11246,19 +11221,11 @@ contains
        stop
       endif
 
-      if (nMAT_OPT.eq.1) then !only optimize one material at a time.
-
-       if ((nMAT_OPT.eq.1).and. &
-           (nDOF.eq.sdim-1).and. &
-           (nEQN.eq.sdim)) then
-        ! do nothing
-       else
-        print *,"invalid nMAT_OPT,nDOF, or nEQN:",nMAT_OPT,nDOF,nEQN
-        stop
-       endif
-
+      if ((nDOF.eq.sdim-1).and. &
+          (nEQN.eq.sdim)) then
+       ! do nothing
       else
-       print *,"nMAT_OPT invalid: ",nMAT_OPT
+       print *,"invalid nDOF or nEQN:",nDOF,nEQN
        stop
       endif
 
@@ -11292,13 +11259,6 @@ contains
 
       nguess=0
       use_only_override_data=0
-
-      if (nMAT_OPT.eq.1) then 
-       !do nothing
-      else
-       print *,"expecting nMAT_OPT.eq.1 ",nMAT_OPT
-       stop
-      endif
 
       if (override_normal_valid(critical_material).eq.1) then
 
@@ -11421,9 +11381,7 @@ contains
        ! find finit=xref-xact for cut domain cut by a line.
        use_initial_guess=0
 
-       do dir=1,nMAT_OPT
-        intercept_init(dir)=zero
-       enddo
+       intercept_init=zero
 
         ! calling from:
         !   find_cut_geom_slope
@@ -11431,7 +11389,6 @@ contains
         tid_in, &
         uncaptured_volume_vof, &
         mofdata, &
-        nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim
         use_MilcentLemoine, &
@@ -11456,7 +11413,7 @@ contains
        enddo
        errinit=sqrt(errinit)
        err=errinit
-       best_error=errinit*refvfrac(1)
+       best_error=errinit*refvfrac
 
        do dir=1,nEQN
         f_array(dir,iter)=finit(dir)
@@ -11471,9 +11428,7 @@ contains
           err_array(iter)
        endif
 
-       do dir=1,nMAT_OPT
-        intercept_array(dir,iter)=intercept_init(dir)
-       enddo
+       intercept_array(iter)=intercept_init
 
        do dir=1,nEQN
         cen_array(dir,iter)=cen_derive_init(dir)
@@ -11498,16 +11453,14 @@ contains
       enddo
       err_array(1)=err_array(iicrit)
       delangle_array(1)=zero
-      do dir=1,nMAT_OPT
-       intercept_array(dir,1)=intercept_array(dir,iicrit)
-      enddo
+      intercept_array(1)=intercept_array(iicrit)
       do dir=1,nEQN
        cen_array(dir,1)=cen_array(dir,iicrit)
       enddo 
   
       err_local_min=err_array(1)
       err=err_array(1)
-      best_error=err*refvfrac(1)
+      best_error=err*refvfrac
 
       iter=0
 
@@ -11551,16 +11504,12 @@ contains
          angle_minus_archive(i_angle,j_angle)=angle_minus(j_angle)
         enddo
 
-        do dir=1,nMAT_OPT
-         intp(dir,i_angle)=intercept_array(dir,iter+1)
-         intm(dir,i_angle)=intercept_array(dir,iter+1)
-        enddo
+        intp(i_angle)=intercept_array(iter+1)
+        intm(i_angle)=intercept_array(iter+1)
 
         use_initial_guess=1
 
-        do dir=1,nMAT_OPT
-         local_int(dir)=intp(dir,i_angle)
-        enddo
+        local_int=intp(i_angle)
 
          ! fp=xref-cenp
          ! calling from:
@@ -11569,7 +11518,6 @@ contains
          tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
-         nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim 
          use_MilcentLemoine, &
@@ -11587,9 +11535,7 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
-        do dir=1,nMAT_OPT
-         intp(dir,i_angle)=local_int(dir)
-        enddo
+        intp(i_angle)=local_int
 
         err_plus(i_angle)=zero
         do dir=1,nEQN
@@ -11599,9 +11545,7 @@ contains
         enddo
         err_plus(i_angle)=sqrt(err_plus(i_angle))
 
-        do dir=1,nMAT_OPT
-         local_int(dir)=intm(dir,i_angle)
-        enddo
+        local_int=intm(i_angle)
 
          ! fm=xref-cenm
          ! calling from:
@@ -11610,7 +11554,6 @@ contains
          tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
-         nMAT_OPT, & ! 1 
          nDOF, & ! sdim-
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
@@ -11627,9 +11570,7 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
-        do dir=1,nMAT_OPT
-         intm(dir,i_angle)=local_int(dir)
-        enddo
+        intm(i_angle)=local_int
 
         err_minus(i_angle)=zero
         do dir=1,nEQN
@@ -11709,9 +11650,7 @@ contains
         do i_angle=1,nDOF
          angle_opt(i_angle)=angle_array(i_angle,iter+1)
         enddo
-        do dir=1,nMAT_OPT
-         intopt(dir)=intercept_array(dir,iter+1)
-        enddo
+        intopt=intercept_array(iter+1)
 
         err=zero 
         do dir=1,nEQN
@@ -11759,9 +11698,7 @@ contains
          call advance_angle(angle_gauss_newton(i_angle),delangle(i_angle))
         enddo
 
-        do dir=1,nMAT_OPT
-         int_gauss_newton(dir)=intercept_array(dir,iter+1)
-        enddo
+        int_gauss_newton=intercept_array(iter+1)
 
         use_initial_guess=1
 
@@ -11771,7 +11708,6 @@ contains
          tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
-         nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim
          use_MilcentLemoine, &
@@ -11805,9 +11741,7 @@ contains
          call advance_angle(angle_steepest(i_angle),delangle(i_angle))
         enddo
 
-        do dir=1,nMAT_OPT
-         int_steepest(dir)=intercept_array(dir,iter+1)
-        enddo
+        int_steepest=intercept_array(iter+1)
 
         use_initial_guess=1
 
@@ -11817,7 +11751,6 @@ contains
          tid_in, &
          uncaptured_volume_vof, &
          mofdata, &
-         nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim
          use_MilcentLemoine, &
@@ -11848,9 +11781,7 @@ contains
         do i_angle=1,nDOF
          angle_opt(i_angle)=angle_array(i_angle,iter+1)
         enddo
-        do dir=1,nMAT_OPT
-         intopt(dir)=intercept_array(dir,iter+1)
-        enddo
+        intopt=intercept_array(iter+1)
      
         err=zero 
         do dir=1,nEQN
@@ -11869,9 +11800,7 @@ contains
            fopt(dir)=f_plus(dir,i_angle)
            cenopt(dir)=cen_plus(dir,i_angle)
           enddo 
-          do dir=1,nMAT_OPT
-           intopt(dir)=intp(dir,i_angle)
-          enddo
+          intopt=intp(i_angle)
           do j_angle=1,nDOF
            angle_opt(j_angle)=angle_plus_archive(i_angle,j_angle)
           enddo
@@ -11888,9 +11817,7 @@ contains
            fopt(dir)=f_minus(dir,i_angle)
            cenopt(dir)=cen_minus(dir,i_angle)
           enddo 
-          do dir=1,nMAT_OPT
-           intopt(dir)=intm(dir,i_angle)
-          enddo
+          intopt=intm(i_angle)
           do j_angle=1,nDOF
            angle_opt(j_angle)=angle_minus_archive(i_angle,j_angle)
           enddo
@@ -11910,9 +11837,7 @@ contains
           fopt(dir)=f_gauss_newton(dir)
           cenopt(dir)=cen_gauss_newton(dir)
          enddo 
-         do dir=1,nMAT_OPT
-          intopt(dir)=int_gauss_newton(dir)
-         enddo
+         intopt=int_gauss_newton
          do j_angle=1,nDOF
           angle_opt(j_angle)=angle_gauss_newton(j_angle)
          enddo
@@ -11931,9 +11856,7 @@ contains
           fopt(dir)=f_steepest(dir)
           cenopt(dir)=cen_steepest(dir)
          enddo 
-         do dir=1,nMAT_OPT
-          intopt(dir)=int_steepest(dir)
-         enddo
+         intopt=int_steepest
          do j_angle=1,nDOF
           angle_opt(j_angle)=angle_steepest(j_angle)
          enddo
@@ -11965,9 +11888,7 @@ contains
 
        err_array(iter+2)=err
 
-       do dir=1,nMAT_OPT
-        intercept_array(dir,iter+2)=intopt(dir)
-       enddo
+       intercept_array(iter+2)=intopt
 
        if (iter.ge.1) then
         if (err_array(iter+2).lt.err_array(iter+1)) then
@@ -12008,15 +11929,13 @@ contains
        print *,"AFTER------------------------------- "
       endif
 
-      best_error=err_array(iicrit+1)*refvfrac(1)
+      best_error=err_array(iicrit+1)*refvfrac
 
       do dir=1,nDOF
        new_angle(dir)=angle_array(dir,iicrit+1)
       enddo
 
-      do dir=1,nMAT_OPT
-       intercept(dir)=intercept_array(dir,iicrit+1)
-      enddo
+      intercept=intercept_array(iicrit+1)
 
       call angle_to_slope( &
         new_angle,nslope,sdim)
@@ -12029,12 +11948,11 @@ contains
        ! do nothing
       else if (use_MilcentLemoine.eq.1) then
 
-       if ((nMAT_OPT.eq.1).and. &
-           (nDOF.eq.sdim-1).and. &
+       if ((nDOF.eq.sdim-1).and. &
            (nEQN.eq.sdim)) then
         ! do nothing
        else
-        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        print *,"invalid nDOF or nEQN"
         stop
        endif
 
@@ -12042,18 +11960,17 @@ contains
 
        call multi_find_intercept( &
         tid_in, &
-        nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim
         bfact,dx, &
         xsten0,nhalf0, &
         nslope, &
-        intercept(1), &
+        intercept, &
         xtetlist_vof, & !intent(in)
         nlist_alloc, &
         nlist_vof, &
         nmax, &
-        refvfrac(1), &
+        refvfrac, &
         use_initial_guess, &
         cen_derive_init, & !intent(out)
         fastflag,sdim)
@@ -12335,10 +12252,10 @@ contains
       real(amrex_real) refcentroid(num_materials*sdim)
       real(amrex_real) centroid_ref(sdim)
       real(amrex_real) centroid_free(sdim)
-      real(amrex_real) refvfrac(num_materials)
+      real(amrex_real) refvfrac
       real(amrex_real) single_volume
       real(amrex_real) nslope(num_materials*sdim)
-      real(amrex_real) intercept(num_materials)
+      real(amrex_real) intercept
       integer mat_before,vofcomp_before
       integer fastflag
       real(amrex_real) vofmain(num_materials)
@@ -12352,7 +12269,6 @@ contains
       real(amrex_real), INTENT(in) :: override_normal(num_materials,sdim)
       integer, INTENT(in) :: override_normal_valid(num_materials)
 
-      integer, PARAMETER :: nMAT_OPT_standard=1
       integer :: nDOF_standard
       integer :: nEQN_standard
       integer is_masked(num_materials)
@@ -12778,7 +12694,7 @@ contains
          do dir=1,sdim
           refcentroid(dir)=mofdata(vofcomp+dir)
          enddo
-         refvfrac(1)=mofdata(vofcomp)
+         refvfrac=mofdata(vofcomp)
 
            ! centroidA and refcentroid relative to cell centroid of the cell.
            ! find_cut_geom_slope called from: individual_MOF
@@ -12806,7 +12722,6 @@ contains
            critical_material, & !INTENT(in)
            fastflag, &
            sdim, &
-           nMAT_OPT_standard, & !1
            nDOF_standard, & !sdim-1
            nEQN_standard)   !sdim
 
@@ -12815,16 +12730,16 @@ contains
          num_processed_total=num_processed_total+1
 
          mofdata(vofcomp+sdim+1)=ordermax+1
-         mofdata(vofcomp+2*sdim+2)=intercept(1)
+         mofdata(vofcomp+2*sdim+2)=intercept
          do dir=1,sdim
           mofdata(vofcomp+sdim+1+dir)=nslope(dir)
           multi_centroidA(critical_material,dir)=centroidA(dir)
          enddo 
-         uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
+         uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
          if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
           uncaptured_volume_vof=zero
          endif
-         uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
+         uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac
          if (uncaptured_volume_fraction.le. &
              one-vfrac_sum_local+EPS_UNCAPTURED) then
           uncaptured_volume_fraction=one-vfrac_sum_local
@@ -12987,7 +12902,7 @@ contains
 
           mofdata(vofcomp+sdim+1)=ordermax+1
 
-          mofdata(vofcomp+2*sdim+2)=intercept(1)
+          mofdata(vofcomp+2*sdim+2)=intercept
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
             ! cencut_vof is the uncaptured centroid in absolute frame 
@@ -13007,25 +12922,24 @@ contains
 
           call multi_find_intercept( &
            tid_in, &
-           nMAT_OPT_standard, & !1
            nDOF_standard, & !sdim-1
            nEQN_standard, & !sdim
            bfact,dx, &
            xsten0,nhalf0, &
            local_npredict, &
-           intercept(1), &
+           intercept, &
            xtetlist_vof, & !intent(in)
            nlist_alloc, &  !intent(in)
            nlist_vof, &    !intent(in)
            nmax, &         !intent(in)
-           refvfrac(1), &
+           refvfrac, &
            use_initial_guess,centroidA,fastflag,sdim)
 
-          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
+          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
           if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
            uncaptured_volume_vof=zero
           endif
-          uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac(1)
+          uncaptured_volume_fraction=uncaptured_volume_fraction-refvfrac
           if (uncaptured_volume_fraction.le. &
               one-vfrac_sum_local+EPS_UNCAPTURED) then
            uncaptured_volume_fraction=one-vfrac_sum_local
@@ -13049,7 +12963,7 @@ contains
           num_processed_total=num_processed_total+1
   
           mofdata(vofcomp+sdim+1)=ordermax+1
-          mofdata(vofcomp+2*sdim+2)=intercept(1)
+          mofdata(vofcomp+2*sdim+2)=intercept
            ! cencell is the cell centroid
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
@@ -14239,11 +14153,10 @@ contains
 
       integer local_num_materials( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer override_local(num_materials)
-      integer override_current( &
-           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,num_materials)
-      integer num_override( &
-           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX,num_materials)
+FIX ME
+      integer override_target_history(num_materials)
+      integer num_override_history
+      integer recon_hystory(num_materials)
 
       integer material_used(num_materials)
       integer num_processed_total
@@ -14283,9 +14196,8 @@ contains
 
       real(amrex_real), dimension(:), allocatable :: ls_intercept
 
-      real(amrex_real) mag(3)
+      real(amrex_real) mag_vec
 
-      integer, PARAMETER :: nMAT_OPT_standard=1
       integer, PARAMETER :: use_initial_guess=0
       integer :: nDOF_standard
       integer :: nEQN_standard
@@ -14597,7 +14509,7 @@ contains
            ngeom_recon,vofcomp,imaterial
         stop
        endif
-
+FIX ME
        do dir=1,sdim
         multi_centroidA(imaterial,dir)=zero
        enddo
@@ -14605,18 +14517,24 @@ contains
       enddo !imaterial=1,num_materials
 
       call Box_volumeFAST( &
-        bfact,dx, &
-        xsten0,nhalf0, &
-        uncaptured_volume_local, &
-        uncaptured_centroid_local, &
-        sdim)
+       bfact,dx, &
+       xsten0,nhalf0, &
+       uncaptured_volume_local, &
+       uncaptured_centroid_local, &
+       sdim)
 
-      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       uncaptured_volume_vof(layer_iter)=uncaptured_volume_local
-       do dir=1,sdim
-        uncaptured_centroid_vof(layer_iter,dir)=uncaptured_centroid_local(dir)
-       enddo !dir=1,sdim
-      enddo
+      if ((VOFTOL_LAYER.gt.VOFTOL_MATERIAL).and. &
+          (VOFTOL_MATERIAL.gt.EPS_UNCAPTURED).and. &
+          (EPS_UNCAPTURED.gt.INTERCEPT_TOL)) then
+       ! do nothing
+      else
+       print *,"tolerances incorrect"
+       print *,"VOFTOL_LAYER ",VOFTOL_LAYER
+       print *,"VOFTOL_MATERIAL ",VOFTOL_MATERIAL
+       print *,"EPS_UNCAPTURED ",EPS_UNCAPTURED
+       print *,"INTERCEPT_TOL ",INTERCEPT_TOL
+       stop
+      endif
 
       do imaterial=1,num_materials
        lsnormal_valid(imaterial)=0
@@ -14636,27 +14554,27 @@ contains
        else if ((voftest(imaterial).ge.VOFTOL_MATERIAL).and. &
                 (voftest(imaterial).le.one-VOFTOL_MATERIAL)) then
 
-        mag(1)=zero
+        mag_vec=zero
         !refvfrac,refcen,order,slope,intercept
         do dir=1,sdim
          override_normal(imaterial,dir)= &
               mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
-         mag(1)=mag(1)+override_normal(imaterial,dir)**2
+         mag_vec=mag_vec+override_normal(imaterial,dir)**2
         enddo
-        mag(1)=sqrt(mag(1))
-        if (mag(1).eq.zero) then
+        mag_vec=sqrt(mag_vec)
+        if (mag_vec.eq.zero) then
          override_normal_valid(imaterial)=0
          override_order(imaterial)=0
-        else if ((mag(1).ge.one-EPS2).and. &
-                 (mag(1).le.one+EPS2)) then
+        else if ((mag_vec.ge.one-EPS2).and. &
+                 (mag_vec.le.one+EPS2)) then
          do dir=1,sdim
-          override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag(1)
+          override_normal(imaterial,dir)=override_normal(imaterial,dir)/mag_vec
          enddo
          override_normal_valid(imaterial)=1
          override_order(imaterial)= &
             NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
         else
-         print *,"mag(1) invalid: ",mag(1)
+         print *,"mag_vec invalid: ",mag_vec
          stop
         endif
 
@@ -14724,7 +14642,6 @@ contains
 
        num_processed(layer_iter)=0
        local_num_materials(layer_iter)=0
-       uncaptured_volume_fraction(layer_iter)=one
        vfrac_sum_local(layer_iter)=zero
        vfrac_sum(layer_iter)=zero
 
