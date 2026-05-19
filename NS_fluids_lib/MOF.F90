@@ -14040,7 +14040,7 @@ contains
         nf=nf*i
        enddo
       else
-       print *,"n invalid"
+       print *,"n invalid ",n
        stop
       endif
  
@@ -14156,6 +14156,9 @@ contains
       integer, dimension(:), allocatable :: lsnormal_valid
 
       real(amrex_real), dimension(:), allocatable :: ls_intercept
+
+      integer, dimension(:,:), allocatable :: permutation_array
+      integer, dimension(num_materials) :: permute_c(num_materials)
 
       real(amrex_real) mag_vec
 
@@ -14734,6 +14737,7 @@ contains
       do imaterial=1,num_materials
        override_target(imaterial)=0
       enddo
+      old_repeat_count=0
 
       do while (outer_sweeps.lt.num_outer_sweeps)
 
@@ -14939,6 +14943,109 @@ contains
 
        enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
+       repeat_count=0
+       imaterial=recon_history(1)
+       vofcomp=(imaterial-1)*ngeom_recon+1
+       leading_vfrac_sum=mofdata(vofcomp)
+
+       do ihistory=2,num_processed_total
+        leading_rank=get_material_rank(recon_history(ihistory-1))
+        imaterial=recon_history(ihistory)
+        vofcomp=(imaterial-1)*ngeom_recon+1
+        compare_rank=get_material_rank(imaterial)
+        if (compare_rank.eq.leading_rank) then
+         if (repeat_count.eq.0) then
+          leading_vfrac_sum=leading_vfrac_sum+mofdata(vofcomp)
+         endif
+        else if (compare_rank.gt.leading_rank) then
+         if (repeat_count.eq.0) then
+          repeat_count=ihistory-1
+         endif
+        else
+         print *,"leading_rank or compare_rank invalid ", &
+          leading_rank,compare_rank
+         stop
+        endif
+       enddo ! ihistory=2,num_processed_total
+
+       if (outer_sweeps.eq.0) then
+        num_override_history=repeat_count
+        if ((leading_vfrac_sum.ge.zero).and. &
+            (leading_vfrac_sum.le.one-VOFTOL_LAYER)) then
+         num_override_history=0
+        else if ((leading_vfrac_sum.ge.one-VOFTOL_LAYER).and. &
+                 (leading_vfrac_sum.le.one+EPS1)) then
+         !do nothing
+        else
+         print *,"leading_vfrac_sum invalid ",leading_vfrac_sum
+         stop
+        endif
+
+        if ((num_override_history.ge.0).and. &
+            (num_override_history.le.2)) then
+         !do nothing
+        else if ((num_override_history.ge.3).and. &
+                 (num_override_history.le.num_materials)) then
+         call nfact(num_override_history,num_outer_sweeps)
+         allocate(permutation_array(num_outer_sweeps,num_override_history))
+         do ihistory=1,num_override_history
+          do ipermute=1,2
+           permutation_array(ipermute,ihistory)=recon_history(ihistory)
+          enddo
+         enddo 
+         do imaterial=1,num_materials
+          permute_c(imaterial)=0
+         enddo
+         ihistory=1
+         ipermute=2
+         do while (ihistory.lt.num_override_history)
+          if (permute_c(ihistory+1).lt.ihistory) then
+           if (2*(ihistory/2).eq.ihistory) then
+            ifirst=1
+            hold_swap=permutation_array(ipermute,ifirst)
+            permutation_array(ipermute,ifirst)= &
+               permutation_array(ipermute,ihistory+1)
+            permutation_array(ipermute,ihistory+1)= &
+               hold_swap
+           else
+            ifirst=permute_c(ihistory+1)+1
+            hold_swap=permutation_array(ipermute,ifirst)
+            permutation_array(ipermute,ifirst)= &
+               permutation_array(ipermute,ihistory+1)
+            permutation_array(ipermute,ihistory+1)= &
+               hold_swap
+           endif
+           ipermute=ipermute+1
+           if (ipermute.le.num_outer_sweeps) then
+            do imaterial=1,num_override_history
+             permutation_array(ipermute,imaterial)= &
+               permutation_array(ipermute-1,imaterial)
+            enddo
+           else if (ipermute.eq.num_outer_sweeps+1) then
+            !do nothing
+           else
+            print *,"ipermute out of range ",ipermute
+            print *,"num_outer_sweeps ",num_outer_sweeps
+            stop
+           endif
+           permute_c(ihistory+1)=permute_c(ihistory+1)+1
+           ihistory=1
+          else
+           permute_c(ihistory+1)=0
+           ihistory=ihistory+1
+          endif
+         enddo
+        else
+         print *,"num_override_history invalid ",num_override_history
+         stop
+        endif
+       else if (outer_sweeps.gt.0) then
+
+       else 
+        print *,"outer_sweeps invalid ",outer_sweeps
+        stop
+       endif
+
 FIX ME
          mof_err=zero
          do imaterial = 1,num_materials
@@ -14971,6 +15078,14 @@ FIX ME
 FIX ME
       enddo !while(outer_sweeps.lt.num_outer_sweeps)
 
+      if (num_outer_sweeps.eq.1) then
+       !do nothing
+      else if (num_outer_sweeps.ge.6) then
+       deallocate(permutation_array)
+      else
+       print *,"num_outer_sweeps invalid ",num_outer_sweeps
+       stop
+      endif
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
