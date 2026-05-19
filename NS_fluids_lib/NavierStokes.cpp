@@ -730,6 +730,7 @@ Vector<Real> NavierStokes::nucleation_pmg;
 Vector<Real> NavierStokes::nucleation_mach;
 Vector<Real> NavierStokes::nucleation_temp;
 Real NavierStokes::nucleation_period=0.0;
+Real NavierStokes::sato_cslope=0.0;
 Real NavierStokes::nucleation_init_time=0.0;
 int NavierStokes::n_sites=0;
 int NavierStokes::pos_sites_random_flag=1;
@@ -4226,6 +4227,7 @@ NavierStokes::read_params ()
     prerecalesce_heatviscconst.resize(num_materials);
 
     nucleation_period=0.0;
+    sato_cslope=0.0;
     nucleation_init_time=0.0;
 
     for (int i=0;i<num_materials;i++) {
@@ -4746,6 +4748,7 @@ NavierStokes::read_params ()
     pp.queryAdd("saturation_temp_max",saturation_temp_max,2*num_interfaces);
 
     pp.queryAdd("nucleation_period",nucleation_period);
+    pp.queryAdd("sato_cslope",sato_cslope);
     pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
     pp.queryAdd("perturbation_on_restart",perturbation_on_restart);
@@ -6389,6 +6392,7 @@ NavierStokes::read_params ()
 
      std::cout << "hydrate flag " << hydrate_flag << '\n';
      std::cout << "nucleation_period= " << nucleation_period << '\n';
+     std::cout << "sato_cslope= " << sato_cslope << '\n';
      std::cout << "nucleation_init_time= " << nucleation_init_time << '\n';
      std::cout << "n_sites= " << n_sites << '\n';
      if (n_sites>0) {
@@ -16794,6 +16798,7 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
    freezing_model.dataPtr(),
    saturation_temp.dataPtr(),
    sato_model_spec_id.dataPtr(),
+   &NavierStokes::sato_cslope,
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,

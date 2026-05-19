@@ -1827,6 +1827,7 @@ protected:
     static Vector<Real> nucleation_mach; 
     static Vector<Real> nucleation_temp; 
     static Real nucleation_period; 
+    static Real sato_cslope;
     static int pos_sites_random_flag; //default=1
     static int n_sites;
     static Vector<Real> pos_sites;

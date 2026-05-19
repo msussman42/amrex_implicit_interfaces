@@ -7467,13 +7467,14 @@ stop
       return
       end subroutine fort_getcolorsum
 
-      subroutine get_delta_ml_init(delta_ml,xpoint)
+      subroutine get_delta_ml_init(delta_ml,xpoint,cslope)
       use probcommon_module
 
       IMPLICIT NONE
 
       real(amrex_real), INTENT(out) :: delta_ml
       real(amrex_real), INTENT(in) :: xpoint(SDIM)
+      real(amrex_real), INTENT(in) :: cslope
       real(amrex_real) :: x_site(SDIM)
       real(amrex_real) :: dist_closest,cur_dist
       integer :: i_closest,i,dir
@@ -7538,6 +7539,7 @@ stop
        freezing_model, &
        saturation_temp, &
        sato_model_spec_id, &
+       sato_cslope, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -7565,6 +7567,7 @@ stop
       integer, INTENT(in) :: levelbc(SDIM,2)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: sato_cslope 
       integer, INTENT(in) :: sato_model_spec_id(num_materials)
 
       integer :: i,j,k
@@ -7862,7 +7865,7 @@ stop
 
              !check if microscale_vfrac is greater than
              !delta_ml_min otherwise, its a dry out zone
-             if (microscale_vfrac.gt.delta_ml_min) then
+             if ((microscale_vfrac*dx(SDIM)).gt.delta_ml_min) then
 
                !k units=Watts/(meter Kelvin)
                !qdot units=Watts/Meter
@@ -7906,7 +7909,8 @@ stop
                 !cell to the nucleation site.
                 !get_delta_ml_init calls "SUB_NUCLEATION_SITES"
                 !ASHWANI II
-                call get_delta_ml_init(delta_ml_init,xpoint)
+                call get_delta_ml_init(delta_ml_init,xpoint, &
+                sato_cslope)
 
                 delta_ml_temp=(area_new-area_old)*delta_ml_init 
                 delta_ml_temp=delta_ml_temp + &
