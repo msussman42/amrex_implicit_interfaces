@@ -14158,7 +14158,7 @@ contains
       real(amrex_real), dimension(:), allocatable :: ls_intercept
 
       integer, dimension(:,:), allocatable :: permutation_array
-      integer, dimension(num_materials) :: permute_c(num_materials)
+      integer permute_c(num_materials)
 
       real(amrex_real) mag_vec
 
@@ -15000,6 +15000,15 @@ contains
          ipermute=2
          do while (ihistory.lt.num_override_history)
           if (permute_c(ihistory+1).lt.ihistory) then
+
+           if ((ipermute.ge.2).and.(ipermute.le.num_outer_sweeps)) then
+            !do nothing
+           else
+            print *,"ipermute out of range ",ipermute
+            print *,"num_outer_sweeps ",num_outer_sweeps
+            stop
+           endif
+           
            if (2*(ihistory/2).eq.ihistory) then
             ifirst=1
             hold_swap=permutation_array(ipermute,ifirst)
