@@ -15231,6 +15231,18 @@ contains
 
        else if (outer_sweeps.gt.0) then
 
+        do ihistory=1,num_override_history
+         if (override_target(ihistory).eq.recon_history(ihistory)) then
+          !do nothing
+         else
+          print *,"override_target invalid ",override_target
+          print *,"or recon_history invalid ",recon_history
+          print *,"repeat_count ",repeat_count
+          print *,"num_override_history ",num_override_history
+          stop
+         endif
+        enddo !ihistory=1,num_override_history
+
         if (repeat_count.eq.num_override_history) then
          !do nothing
         else
