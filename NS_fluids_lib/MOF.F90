@@ -5939,6 +5939,44 @@ end subroutine volume_sanity_check
       return
       end subroutine get_cut_geom3D
 
+      integer function get_material_rank(im,order_algorithm_in)
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      integer, intent(in) :: im
+      integer, intent(in) :: order_algorithm_in
+      integer :: prefix
+
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       !do nothing
+      else
+       print *,"im invalid ",im
+       stop
+      endif
+      if ((order_algorithm_in.ge.1).and. &
+          (order_algorithm_in.le.num_materials+1)) then
+       !do nothing
+      else
+       print *,"order_algorithm_in invalid ",order_algorithm_in
+       stop
+      endif
+      if (is_rigid(im).eq.1) then
+       prefix=0
+      else if (is_elastic(im).eq.1) then
+       prefix=num_materials+1
+      else if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
+       prefix=2*(num_materials+1)
+      else
+       print *,"im invalid ",im
+       print *,"or is_rigid invalid ",is_rigid(im)
+       print *,"or is_elastic invalid ",is_elastic(im)
+       stop
+      endif
+      get_material_rank=prefix+order_algorithm_in
+
+      end function get_material_rank
+
       integer function is_proper_layer(im,layer_iter)
       use probcommon_module
       use global_utility_module
@@ -14047,6 +14085,54 @@ contains
       return
       end subroutine nfact
 
+      subroutine permute_sanity( &
+        permutation_array,i,j,ncomp_i,ncomp_j)
+      IMPLICIT NONE
+
+      integer, intent(in) :: i,j,ncomp_i,ncomp_j
+      integer, intent(in) :: permutation_array(ncomp_i,ncomp_j)
+      integer :: same_flag,jj,kk
+
+      do jj=1,ncomp_j
+       if ((permutation_array(i,jj).ge.1).and. &
+           (permutation_array(i,jj).le.ncomp_j).and. &
+           (permutation_array(j,jj).ge.1).and. &
+           (permutation_array(j,jj).le.ncomp_j)) then
+        !do nothing
+       else
+        print *,"permutation_array failure"
+        stop
+       endif
+      enddo
+   
+      do jj=1,ncomp_j-1
+      do kk=jj+1,ncomp_j
+       if ((permutation_array(i,jj).ne.permutation_array(i,kk)).and. &
+           (permutation_array(j,jj).ne.permutation_array(j,kk))) then
+        !do nothing
+       else
+        print *,"permutation_array failure"
+        stop
+       endif
+      enddo
+      enddo
+      same_flag=1
+      do jj=1,ncomp_j
+       if (permutation_array(i,jj).ne.permutation_array(j,jj)) then
+        same_flag=0
+       endif
+      enddo
+      if (same_flag.eq.0) then
+       !do nothing
+      else
+       print *,"permutation_array failure"
+       stop
+      endif
+     
+      return
+      end subroutine permute_sanity
+
+       
       subroutine multimaterial_MOF( &
         tessellate, &
         tid_in, &
@@ -14092,10 +14178,19 @@ contains
               mofdata
       real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: &
               mofdata_init
+      real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: &
+              mofdata_current
+      real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: &
+              mofdata_save
       real(amrex_real), INTENT (IN), DIMENSION(num_materials) :: vof_super
       real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: &
               multi_centroidA
+      real(amrex_real), DIMENSION(num_materials,sdim) :: &
+              multi_centroidA_current
+      real(amrex_real), DIMENSION(num_materials,sdim) :: &
+              multi_centroidA_save
 
+      integer imaterial_prev
       integer imaterial
       integer im_opp
       integer vofcomp
@@ -14116,6 +14211,7 @@ contains
       integer override_target(num_materials)
       integer num_override_history
       integer recon_history(num_materials)
+      integer recon_history_save(num_materials)
       integer outer_sweeps
       integer num_outer_sweeps
 
@@ -14140,7 +14236,7 @@ contains
       real(amrex_real) remaining_vfrac
 
       real(amrex_real) nrecon(sdim)
-      integer order_algorithm_in(num_materials)
+      integer order_algorithm_local(num_materials)
       real(amrex_real) voftest(num_materials)
       integer i1,j1,k1,k1lo,k1hi
       real(amrex_real) dxmaxLS
@@ -14159,6 +14255,20 @@ contains
 
       integer, dimension(:,:), allocatable :: permutation_array
       integer permute_c(num_materials)
+      integer repeat_count
+      integer ihistory
+      integer leading_rank
+      integer compare_rank
+      integer hold_swap
+      integer ifirst
+      integer ipermute
+      integer ipermute_prev
+      real(amrex_real) leading_vfrac_sum
+      real(amrex_real) mof_err,mof_err_save
+      real(amrex_real) xref_mat(sdim)
+      real(amrex_real) xact_mat(sdim)
+      real(amrex_real) xref_matT(sdim)
+      real(amrex_real) xact_matT(sdim)
 
       real(amrex_real) mag_vec
 
@@ -14650,7 +14760,7 @@ contains
       do imaterial=1,num_materials
 
        ! order_algorithm is declared in mofdata.H
-       order_algorithm_in(imaterial)=order_algorithm(imaterial)
+       order_algorithm_local(imaterial)=order_algorithm(imaterial)
 
        if (is_elastic(imaterial).eq.1) then
         if ((order_algorithm(imaterial).ge.1).and. &
@@ -14699,7 +14809,7 @@ contains
          !do nothing
         else if ((override_order(imaterial).ge.1).and. &
                  (override_order(imaterial).le.num_materials+1)) then
-         order_algorithm_in(imaterial)=override_order(imaterial)
+         order_algorithm_local(imaterial)=override_order(imaterial)
         else
          print *,"override_order invalid: ",override_order
          print *,"imaterial=",imaterial
@@ -14714,9 +14824,9 @@ contains
        endif 
         
        if (mofdata(vofcomp).ge.one-VOFTOL_MATERIAL) then
-        order_algorithm_in(imaterial)=num_materials+1
+        order_algorithm_local(imaterial)=num_materials+1
        else if (mofdata(vofcomp).le.VOFTOL_MATERIAL) then
-        order_algorithm_in(imaterial)=num_materials+1  
+        order_algorithm_local(imaterial)=num_materials+1  
        else if ((mofdata(vofcomp).gt.VOFTOL_MATERIAL).and. &
                 (mofdata(vofcomp).lt.one-VOFTOL_MATERIAL)) then
         ! do nothing
@@ -14737,7 +14847,6 @@ contains
       do imaterial=1,num_materials
        override_target(imaterial)=0
       enddo
-      old_repeat_count=0
 
       do while (outer_sweeps.lt.num_outer_sweeps)
 
@@ -14852,7 +14961,7 @@ contains
             override_normal_valid, &
             bfact,dx, &
             xsten0,nhalf0, &
-            order_algorithm_in, &
+            order_algorithm_local, &
             xtetlist_vof, & !intent(out)
             nlist_alloc, & !intent(in)
             nmax, &
@@ -14943,17 +15052,45 @@ contains
 
        enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
+       do imaterial=1,ngeom_recon*num_materials
+        mofdata_current(imaterial)=mofdata(imaterial)
+       enddo
+       do imaterial=1,num_materials
+       do dir=1,sdim
+        multi_centroidA_current(imaterial,dir)=multi_centroidA(imaterial,dir)
+       enddo
+       enddo
+
        repeat_count=0
        imaterial=recon_history(1)
        vofcomp=(imaterial-1)*ngeom_recon+1
        leading_vfrac_sum=mofdata(vofcomp)
 
        do ihistory=2,num_processed_total
-        leading_rank=get_material_rank(recon_history(ihistory-1))
+        imaterial_prev=recon_history(ihistory-1)
+
+        leading_rank=get_material_rank(imaterial_prev, &
+           order_algorithm_local(imaterial_prev))
+
         imaterial=recon_history(ihistory)
         vofcomp=(imaterial-1)*ngeom_recon+1
-        compare_rank=get_material_rank(imaterial)
+
+        compare_rank=get_material_rank(imaterial, &
+           order_algorithm_local(imaterial))
+
         if (compare_rank.eq.leading_rank) then
+         if (override_normal_valid(imaterial).eq.0) then
+          !do nothing
+         else
+          print *,"expecting override_normal_valid(imaterial).eq.0"
+          stop
+         endif
+         if (override_normal_valid(imaterial_prev).eq.0) then
+          !do nothing
+         else
+          print *,"expecting override_normal_valid(imaterial_prev).eq.0"
+          stop
+         endif
          if (repeat_count.eq.0) then
           leading_vfrac_sum=leading_vfrac_sum+mofdata(vofcomp)
          endif
@@ -14968,7 +15105,43 @@ contains
         endif
        enddo ! ihistory=2,num_processed_total
 
+       mof_err=zero
+       do ihistory=1,repeat_count
+        imaterial=recon_history(ihistory)
+        if ((imaterial.ge.1).and.(imaterial.le.num_materials)) then
+         vofcomp=(imaterial-1)*ngeom_recon+1
+         do dir=1,sdim
+          xref_mat(dir)=mofdata_current(vofcomp+dir)
+          xact_mat(dir)=multi_centroidA_current(imaterial,dir)
+         enddo
+         call RT_transform_offset(xref_mat,uncaptured_centroid_local,xref_matT)
+         call RT_transform_offset(xact_mat,uncaptured_centroid_local,xact_matT)
+         do dir=1,sdim
+          mof_err = mof_err + &
+            mofdata_current(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
+         enddo ! dir
+        else
+         print *,"imaterial invalid ",imaterial
+         stop
+        endif
+       enddo !ihistory=1,repeat_count
+
        if (outer_sweeps.eq.0) then
+
+        do imaterial=1,num_materials
+         recon_history_save(imaterial)=recon_history(imaterial)
+        enddo
+        mof_err_save=mof_err
+        do imaterial=1,ngeom_recon*num_materials
+         mofdata_save(imaterial)=mofdata_current(imaterial)
+        enddo
+        do imaterial=1,num_materials
+        do dir=1,sdim
+         multi_centroidA_save(imaterial,dir)= &
+            multi_centroidA_current(imaterial,dir)
+        enddo
+        enddo
+
         num_override_history=repeat_count
         if ((leading_vfrac_sum.ge.zero).and. &
             (leading_vfrac_sum.le.one-VOFTOL_LAYER)) then
@@ -14990,9 +15163,10 @@ contains
          allocate(permutation_array(num_outer_sweeps,num_override_history))
          do ihistory=1,num_override_history
           do ipermute=1,2
-           permutation_array(ipermute,ihistory)=recon_history(ihistory)
+           permutation_array(ipermute,ihistory)=ihistory
           enddo
          enddo 
+          !Heap's non recursive algorithm (B.R. Heap 1963)
          do imaterial=1,num_materials
           permute_c(imaterial)=0
          enddo
@@ -15024,6 +15198,12 @@ contains
             permutation_array(ipermute,ihistory+1)= &
                hold_swap
            endif
+           do ipermute_prev=1,ipermute-1
+            call permute_sanity( &
+              permutation_array, &
+              ipermute_prev,ipermute, &
+              num_outer_sweeps,num_override_history)
+           enddo
            ipermute=ipermute+1
            if (ipermute.le.num_outer_sweeps) then
             do imaterial=1,num_override_history
@@ -15048,43 +15228,57 @@ contains
          print *,"num_override_history invalid ",num_override_history
          stop
         endif
+
        else if (outer_sweeps.gt.0) then
 
+        if (repeat_count.eq.num_override_history) then
+         !do nothing
+        else
+         print *,"repeat_count changed ",repeat_count
+         stop
+        endif
+
+        if (mof_err.lt.mof_err_save) then
+         mof_err_save=mof_err
+         do imaterial=1,ngeom_recon*num_materials
+          mofdata_save(imaterial)=mofdata_current(imaterial)
+         enddo
+         do imaterial=1,num_materials
+         do dir=1,sdim
+          multi_centroidA_save(imaterial,dir)= &
+            multi_centroidA_current(imaterial,dir)
+         enddo
+         enddo
+        else if (mof_err.ge.mof_err_save) then
+         !do nothing
+        else
+         print *,"mof_err invalid ",mof_err
+         print *,"mof_err_save ",mof_err_save
+         stop
+        endif
+ 
        else 
         print *,"outer_sweeps invalid ",outer_sweeps
         stop
        endif
 
-FIX ME
-         mof_err=zero
-         do imaterial = 1,num_materials
-          if (is_rigid_local(imaterial).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(imaterial).eq.0) then
-           vofcomp=(imaterial-1)*ngeom_recon+1
-           do dir=1,sdim
-            xref_mat(dir)=mofdata_in(vofcomp+dir)
-            xact_mat(dir)=multi_centroidA(imaterial,dir)
-           enddo
-           call RT_transform_offset(xref_mat,uncaptured_centroid_cen,xref_matT)
-           call RT_transform_offset(xact_mat,uncaptured_centroid_cen,xact_matT)
-
-           do dir=1,sdim
-            centroidA_array(order_count,imaterial,dir)= &
-             multi_centroidA(imaterial,dir)
-            mof_err = mof_err + &
-             mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
-           enddo ! dir
-          else
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-         enddo ! imaterial=1,num_materials
-
-FIX ME
        outer_sweeps=outer_sweeps+1
 
-FIX ME
+       if (num_outer_sweeps.gt.1) then
+        do imaterial=1,num_materials
+         override_target(imaterial)=0
+        enddo 
+        do ihistory=1,num_override_history
+         override_target(ihistory)= &
+          recon_history_save(permutation_array(outer_sweeps,ihistory))
+        enddo
+       else if (num_outer_sweeps.eq.1) then
+        !do nothing
+       else
+        print *,"num_outer_sweeps invalid ",num_outer_sweeps
+        stop
+       endif
+
       enddo !while(outer_sweeps.lt.num_outer_sweeps)
 
       if (num_outer_sweeps.eq.1) then
@@ -15095,6 +15289,16 @@ FIX ME
        print *,"num_outer_sweeps invalid ",num_outer_sweeps
        stop
       endif
+
+      do imaterial=1,ngeom_recon*num_materials
+       mofdata(imaterial)=mofdata_save(imaterial)
+      enddo
+      do imaterial=1,num_materials
+      do dir=1,sdim
+       multi_centroidA(imaterial,dir)= &
+            multi_centroidA_save(imaterial,dir)
+      enddo
+      enddo
 
       if (mof_verbose.eq.1) then
        print *,"AFTER AFTER"
@@ -15109,6 +15313,8 @@ FIX ME
        do imaterial=1,num_materials
         print *,"imaterial,order_algorithm ",imaterial, &
          order_algorithm(imaterial)
+        print *,"imaterial,order_algorithm_local ",imaterial, &
+         order_algorithm_local(imaterial)
        enddo
        do dir=1,sdim
         print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
@@ -16829,6 +17035,7 @@ FIX ME
       integer, intent(in) :: is_masked(num_materials)
       integer im,vofcomp,testflag,testflag_save
       integer vofcomp_compare,testflag_compare
+      integer old_material_rank,current_material_rank
 
       critical_material=0
       do im=1,num_materials
@@ -16847,60 +17054,20 @@ FIX ME
            critical_material=im
           else if ((critical_material.ge.1).and. &
                    (critical_material.le.num_materials)) then
+
            vofcomp_compare=(critical_material-1)*ngeom_recon+1
            testflag_compare=NINT(mofdatasave(vofcomp_compare+sdim+1))
-           if ((testflag_compare.ge.1).and. &
-               (testflag_compare.le.num_materials)) then
-            if (is_rigid(critical_material).eq.1) then
-             if (is_rigid(im).eq.1) then
-              if (testflag_save.lt.testflag_compare) then
-               critical_material=im
-              endif
-             else if (is_rigid(im).eq.0) then
-              !do nothing
-             else
-              print *,"is_rigid(im) invalid ",im,is_rigid(im)
-              stop
-             endif
-            else if (is_elastic(critical_material).eq.1) then
-             if (is_rigid(im).eq.1) then
-              critical_material=im
-             else if (is_elastic(im).eq.1) then
-              if (testflag_save.lt.testflag_compare) then
-               critical_material=im
-              endif
-             else if ((is_elastic(im).eq.0).and. &
-                      (is_rigid(im).eq.0)) then
-              !do nothing
-             else
-              print *,"is_elastic(im) invalid ",im,is_elastic(im)
-              print *,"or is_rigid(im) invalid ",im,is_rigid(im)
-              stop
-             endif
-            else if ((is_rigid(critical_material).eq.0).and. &
-                     (is_elastic(critical_material).eq.0)) then
-             if ((is_rigid(im).eq.1).or. &
-                 (is_elastic(im).eq.1)) then
-              critical_material=im
-             else if ((is_rigid(im).eq.0).and. &
-                      (is_elastic(im).eq.0)) then
-              if (testflag_save.lt.testflag_compare) then
-               critical_material=im
-              endif
-             else
-              print *,"is_elastic(im) invalid ",im,is_elastic(im)
-              print *,"or is_rigid(im) invalid ",im,is_rigid(im)
-              stop
-             endif
-            else
-             print *,"is_elastic(critical_material) invalid ", &
-               critical_material,is_elastic(critical_material)
-             print *,"or is_rigid(critical_material) invalid ", &
-               critical_material,is_rigid(critical_material)
-             stop
-            endif
+
+           old_material_rank=get_material_rank(critical_material, &
+             testflag_compare)
+           current_material_rank=get_material_rank(im, &
+             testflag_save)
+           if (current_material_rank.lt.old_material_rank) then
+            critical_material=im
+           else if (current_material_rank.gt.old_material_rank) then
+            !do nothing
            else
-            print *,"testflag_compare invalid ",testflag_compare
+            print *,"expecting current_material_rank<>old_material_rank"
             stop
            endif
           else
