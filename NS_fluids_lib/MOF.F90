@@ -12102,7 +12102,8 @@ contains
         enddo
         local_slope(1)=one
        else
-        print *,"mag_vec invalid 13159: ",mag_vec
+        print *,"mag_vec invalid find_predict_slope: ",mag_vec
+        print *,"levelrz= ",levelrz
         stop
        endif
 
@@ -12128,7 +12129,8 @@ contains
         enddo
         local_slope(1)=one
        else
-        print *,"mag_vec invalid 13183: ",mag_vec
+        print *,"mag_vec invalid find_predict_slope: ",mag_vec
+        print *,"levelrz= ",levelrz
         stop
        endif
 
@@ -12227,7 +12229,8 @@ contains
       integer, INTENT(inout) :: recon_history(num_materials)
       real(amrex_real) distmax
       integer ordermax
-      integer order_min
+      integer rank_min
+      integer rank_current
       integer critical_material
       real(amrex_real) volcut_vof,volcell_vof
       real(amrex_real) mag_vec
@@ -12292,6 +12295,7 @@ contains
          uncaptured_volume_fraction
        print *,"vfrac_sum_local= ", &
          vfrac_sum_local
+       print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
        stop
       endif
       if ((vfrac_sum_local.ge.zero).and. &
@@ -12300,6 +12304,7 @@ contains
       else
        print *,"vfrac_sum_local invalid: ", &
          vfrac_sum_local
+       print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
        stop
       endif
 
@@ -12310,16 +12315,16 @@ contains
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon invalid"
+       print *,"ngeom_recon invalid(individual_MOF) ",ngeom_recon
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid individual_MOF"
+       print *,"sdim invalid individual_MOF ",sdim
        stop
       endif
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid individual mof"
+       print *,"num_materials invalid individual_MOF ",num_materials
        stop
       endif
       if ((loop_counter.lt.0).or. &
@@ -12328,7 +12333,7 @@ contains
        stop
       endif
       if (nmax.lt.10) then
-       print *,"nmax too small"
+       print *,"nmax too small ",nmax
        stop
       endif
 
@@ -12453,7 +12458,7 @@ contains
          ! figure out the next material to fill the unoccupied region.
          ! the order of the next material will be "ordermax+1"
       distmax=-one
-      order_min=9999
+      rank_min=9999
       ordermax=0
 
       do im=1,num_materials
@@ -12582,26 +12587,38 @@ contains
           
            if (mag_vec.gt.zero) then
 
-             ! order_min initialized to be 9999.
-            if (order_algorithm_in(im).le.0) then
+            rank_current=get_material_rank(im,order_algorithm_in(im))
+
+             ! rank_min initialized to be 9999.
+            if ((order_algorithm_in(im).lt.1).or. &
+                (order_algorithm_in(im).gt.num_materials+1).or. &
+                (rank_current.lt.1)) then
              print *,"order_algorithm_in invalid: ", &
                im,order_algorithm_in(im)
              stop
-            else if ((num_override_history.gt.0).and. &
+            else if ((order_algorithm_in(im).ge.1).and. &
+                     (order_algorithm_in(im).le.num_materials+1).and. &
+                     (rank_current.ge.1).and. &
+                     (num_override_history.gt.0).and. &
                      (num_processed_total.lt.num_override_history).and. &
                      (override_target(num_processed_total+1).eq.im)) then
              distmax=1.0e+10
-             order_min=1
+             rank_min=0
              critical_material=im
-            else if (order_algorithm_in(im).lt.order_min) then
+            else if (rank_current.lt.rank_min) then
              distmax=mag_vec
-             order_min=order_algorithm_in(im)
+             rank_min=rank_current
              critical_material=im
-            else if (order_algorithm_in(im).eq.order_min) then
+            else if (rank_current.eq.rank_min) then
              if (mag_vec.gt.distmax) then
               distmax=mag_vec
               critical_material=im
              endif
+            else if (rank_current.gt.rank_min) then
+             !do nothing
+            else
+             print *,"rank_current invalid ",rank_current
+             stop
             endif
 
            else if (mag_vec.eq.zero) then
@@ -12749,7 +12766,9 @@ contains
          endif
 
          ! above MOF reconstruct, below default slopes.
-      else if (distmax.le.EPS_8_4*dx(1)) then
+      else if ((distmax.eq.-one).or. &
+               ((distmax.ge.zero).and. &
+                (distmax.le.EPS_8_4*dx(1)))) then
 
           ! if single_material_takes_all=1, then
           !  distmax<0
@@ -14194,6 +14213,7 @@ contains
       integer imaterial
       integer im_opp
       integer vofcomp
+      integer vofcomp_prev
       integer dir
       integer loop_counter
 
@@ -15068,6 +15088,7 @@ contains
 
        do ihistory=2,num_processed_total
         imaterial_prev=recon_history(ihistory-1)
+        vofcomp_prev=(imaterial_prev-1)*ngeom_recon+1
 
         leading_rank=get_material_rank(imaterial_prev, &
            order_algorithm_local(imaterial_prev))
@@ -15083,17 +15104,36 @@ contains
           !do nothing
          else
           print *,"expecting override_normal_valid(imaterial).eq.0"
+          print *,"order_algorithm_local= ",order_algorithm_local
           stop
          endif
          if (override_normal_valid(imaterial_prev).eq.0) then
           !do nothing
          else
           print *,"expecting override_normal_valid(imaterial_prev).eq.0"
+          print *,"order_algorithm_local= ",order_algorithm_local
           stop
          endif
-         if (repeat_count.eq.0) then
-          leading_vfrac_sum=leading_vfrac_sum+mofdata(vofcomp)
+
+         if ((mofdata(vofcomp).ge.VOFTOL_ORDERING).and. &
+             (mofdata(vofcomp_prev).ge.VOFTOL_ORDERING)) then
+
+          if (repeat_count.eq.0) then
+           leading_vfrac_sum=leading_vfrac_sum+mofdata(vofcomp)
+          endif
+
+         else if ((mofdata(vofcomp).lt.VOFTOL_ORDERING).or. &
+                  (mofdata(vofcomp_prev).lt.VOFTOL_ORDERING)) then
+
+          if (repeat_count.eq.0) then
+           repeat_count=ihistory-1
+          endif
+
+         else
+          print *,"mofdata(vofcomp) or mofdata(vofcomp_prev) invalid ",mofdata
+          stop
          endif
+
         else if (compare_rank.gt.leading_rank) then
          if (repeat_count.eq.0) then
           repeat_count=ihistory-1

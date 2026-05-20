@@ -451,6 +451,7 @@ implicit none
       real(amrex_real), PARAMETER :: INTERCEPT_TOL=EPS_12_6
       real(amrex_real), PARAMETER :: VOFTOL_LAYER=two*EPS_11_4
       real(amrex_real), PARAMETER :: VOFTOL_MATERIAL=EPS_11_4
+      real(amrex_real), PARAMETER :: VOFTOL_ORDERING=EPS2
       real(amrex_real), PARAMETER :: EPS_FULL_WEAK=EPS2
 
       integer, PARAMETER :: tecplot_real=8
