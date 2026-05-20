@@ -20,6 +20,7 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=1
+ns.continuous_mof_radius=3
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=30
 #ns.mof_ordering=2 3 1
