@@ -12618,6 +12618,7 @@ contains
              !do nothing
             else
              print *,"rank_current invalid ",rank_current
+             print *,"or rank_min invalid ",rank_min
              stop
             endif
 
@@ -12650,10 +12651,10 @@ contains
       else if ((uncaptured_volume_vof.eq.zero).or. &
                (uncaptured_volume_fraction.eq.zero)) then
 
-        if (distmax.lt.zero) then
+        if (distmax.eq.-one) then
          ! do nothing
         else
-         print *,"distmax should be negative here: ",distmax
+         print *,"distmax should be -one here: ",distmax
          stop
         endif
 
@@ -14927,15 +14928,15 @@ contains
               uncaptured_volume_vof(layer_iter)).eq.1) 
 
           call check_for_single_material( & !multimaterial_MOF
-           single_material, &
-           remaining_vfrac, &
-           num_processed_total, &
-           material_used, &
-           is_masked, &
+           single_material, & !intent(out)
+           remaining_vfrac, & !intent(out)
+           num_processed_total, & !intent(out)
+           material_used, & !intent(in)
+           is_masked, & !intent(in)
            mofdata, &
-           mofdata, &
+           mofdata, &  !intent(inout)
            EPS_UNCAPTURED, &
-           uncaptured_volume_fraction, &
+           uncaptured_volume_fraction, & !intent(in)
            layer_iter, &
            tessellate, &
            tessellate, &
@@ -14946,12 +14947,20 @@ contains
               (uncaptured_volume_fraction(layer_iter).eq.one).and. &
               (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
+           if (num_processed_total.eq.0) then
+            !do nothing
+           else
+            print *,"expecting num_processed_total=0 ",num_processed_total
+            stop
+           endif
+ 
            uncaptured_volume_vof(layer_iter)=zero
            uncaptured_volume_fraction(layer_iter)=zero
 
            num_processed(layer_iter)=num_processed(layer_iter)+1
            num_processed_total=num_processed_total+1
            material_used(single_material)=1
+           recon_history(num_processed_total)=single_material
 
            vofcomp=(single_material-1)*ngeom_recon+1
            mofdata(vofcomp+sdim+1)=one  ! order=1
@@ -15083,8 +15092,29 @@ contains
 
        repeat_count=0
        imaterial=recon_history(1)
+
+       if ((imaterial.ge.1).and.(imaterial.le.num_materials)) then
+        !do nothing
+       else
+        print *,"imaterial invalid ",imaterial
+        print *,"recon_history ",recon_history
+        print *,"mofdata_init ",mofdata_init
+        print *,"mofdata ",mofdata
+        print *,"mofdata_current ",mofdata_current
+        print *,"outer_sweeps ",outer_sweeps
+        print *,"num_outer_sweeps ",num_outer_sweeps
+        do imaterial=1,num_materials
+         vofcomp=(imaterial-1)*ngeom_recon+1
+         print *,"vofcomp ",vofcomp
+         print *,"mofdata_init(vofcomp) ",mofdata_init(vofcomp)
+         print *,"mofdata(vofcomp) ",mofdata(vofcomp)
+         print *,"mofdata_current(vofcomp) ",mofdata_current(vofcomp)
+        enddo
+        stop
+       endif
+
        vofcomp=(imaterial-1)*ngeom_recon+1
-       leading_vfrac_sum=mofdata(vofcomp)
+       leading_vfrac_sum=mofdata_current(vofcomp)
 
        do ihistory=2,num_processed_total
         imaterial_prev=recon_history(ihistory-1)
@@ -15104,6 +15134,7 @@ contains
           !do nothing
          else
           print *,"expecting override_normal_valid(imaterial).eq.0"
+          print *,"override_normal_valid=",override_normal_valid
           print *,"order_algorithm_local= ",order_algorithm_local
           stop
          endif
@@ -15115,22 +15146,22 @@ contains
           stop
          endif
 
-         if ((mofdata(vofcomp).ge.VOFTOL_ORDERING).and. &
-             (mofdata(vofcomp_prev).ge.VOFTOL_ORDERING)) then
+         if ((mofdata_current(vofcomp).ge.VOFTOL_ORDERING).and. &
+             (mofdata_current(vofcomp_prev).ge.VOFTOL_ORDERING)) then
 
           if (repeat_count.eq.0) then
-           leading_vfrac_sum=leading_vfrac_sum+mofdata(vofcomp)
+           leading_vfrac_sum=leading_vfrac_sum+mofdata_current(vofcomp)
           endif
 
-         else if ((mofdata(vofcomp).lt.VOFTOL_ORDERING).or. &
-                  (mofdata(vofcomp_prev).lt.VOFTOL_ORDERING)) then
+         else if ((mofdata_current(vofcomp).lt.VOFTOL_ORDERING).or. &
+                  (mofdata_current(vofcomp_prev).lt.VOFTOL_ORDERING)) then
 
           if (repeat_count.eq.0) then
            repeat_count=ihistory-1
           endif
 
          else
-          print *,"mofdata(vofcomp) or mofdata(vofcomp_prev) invalid ",mofdata
+          print *,"mofdata_current invalid ",mofdata_current
           stop
          endif
 
@@ -15145,10 +15176,21 @@ contains
         endif
        enddo ! ihistory=2,num_processed_total
 
+       if (repeat_count.eq.0) then
+        repeat_count=num_processed_total
+       else if ((repeat_count.ge.1).and. &
+                (repeat_count.lt.num_processed_total)) then
+        !do nothing
+       else
+        print *,"repeat_count invalid ",repeat_count
+        stop
+       endif
+
        mof_err=zero
        do ihistory=1,repeat_count
         imaterial=recon_history(ihistory)
-        if ((imaterial.ge.1).and.(imaterial.le.num_materials)) then
+        if ((imaterial.ge.1).and. &
+            (imaterial.le.num_materials)) then
          vofcomp=(imaterial-1)*ngeom_recon+1
          do dir=1,sdim
           xref_mat(dir)=mofdata_current(vofcomp+dir)
@@ -15162,6 +15204,7 @@ contains
          enddo ! dir
         else
          print *,"imaterial invalid ",imaterial
+         print *,"ihistory ",ihistory
          stop
         endif
        enddo !ihistory=1,repeat_count
@@ -15200,6 +15243,14 @@ contains
         else if ((num_override_history.ge.3).and. &
                  (num_override_history.le.num_materials)) then
          call nfact(num_override_history,num_outer_sweeps)
+         if (num_outer_sweeps.ge.6) then
+          !do nothing
+         else
+          print *,"nfact invalid"
+          print *,"num_outer_sweeps ",num_outer_sweeps
+          print *,"num_override_history ",num_override_history
+          stop
+         endif
          allocate(permutation_array(num_outer_sweeps,num_override_history))
          do ihistory=1,num_override_history
           do ipermute=1,2
@@ -15263,7 +15314,7 @@ contains
            permute_c(ihistory+1)=0
            ihistory=ihistory+1
           endif
-         enddo
+         enddo ! while (ihistory.lt.num_override_history)
         else
          print *,"num_override_history invalid ",num_override_history
          stop
@@ -15287,6 +15338,7 @@ contains
          !do nothing
         else
          print *,"repeat_count changed ",repeat_count
+         print *,"num_override_history ",num_override_history
          stop
         endif
 
@@ -15316,7 +15368,7 @@ contains
 
        outer_sweeps=outer_sweeps+1
 
-       if (num_outer_sweeps.gt.1) then
+       if (num_outer_sweeps.ge.6) then
         do imaterial=1,num_materials
          override_target(imaterial)=0
         enddo 
@@ -17428,13 +17480,13 @@ contains
       end function continue_material_processing
 
       subroutine check_for_single_material( &
-         single_material, &
-         remaining_vfrac, &
-         num_processed_total, &
+         single_material, & !intent(out)
+         remaining_vfrac, & !intent(out)
+         num_processed_total, & !intent(out)
          material_used, &
          is_masked, &
          mofdatasave, &
-         mofdatalocal, &
+         mofdatalocal, & !intent(inout)
          EPS_LOCAL, &
          uncaptured_volume_fraction, &
          layer_iter, &
