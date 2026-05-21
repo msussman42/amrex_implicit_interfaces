@@ -14238,6 +14238,8 @@ contains
 
       integer material_used(num_materials)
       integer num_processed_total
+      integer sanity_num_processed_total
+      integer layer_sanity
 
       integer num_processed( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -14942,15 +14944,29 @@ contains
            tessellate, &
            sdim)
 
+          sanity_num_processed_total=0
+          do layer_sanity=RIGID_LAYER_INDEX,layer_iter
+           sanity_num_processed_total=sanity_num_processed_total+ &
+             num_processed(layer_sanity)
+          enddo
+          if (sanity_num_processed_total.eq.num_processed_total) then
+           !do nothing
+          else
+           print *,"num_processed_total invalid ",num_processed_total
+           print *,"sanity_num_processed_total ",sanity_num_processed_total
+           stop
+          endif
+
           if ((single_material.ge.1).and. &
               (single_material.le.num_materials).and. &
               (uncaptured_volume_fraction(layer_iter).eq.one).and. &
               (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
-           if (num_processed_total.eq.0) then
+           if (num_processed(layer_iter).eq.0) then
             !do nothing
            else
-            print *,"expecting num_processed_total=0 ",num_processed_total
+            print *,"expecting num_processed(layer_iter)=0 ", &
+              layer_iter,num_processed(layer_iter)
             stop
            endif
  
@@ -17779,6 +17795,9 @@ contains
 
       integer num_processed_total
 
+      integer sanity_num_processed_total
+      integer layer_sanity
+
       integer loop_counter
       integer is_masked(num_materials)
       integer is_rigid_local(num_materials)
@@ -18221,6 +18240,19 @@ contains
             tessellate_dest, &
             sdim)
 
+           sanity_num_processed_total=0
+           do layer_sanity=RIGID_LAYER_INDEX,layer_iter
+            sanity_num_processed_total=sanity_num_processed_total+ &
+             num_processed(layer_sanity)
+           enddo
+           if (sanity_num_processed_total.eq.num_processed_total) then
+            !do nothing
+           else
+            print *,"num_processed_total invalid ",num_processed_total
+            print *,"sanity_num_processed_total ",sanity_num_processed_total
+            stop
+           endif
+
            if ((single_material.ge.1).and. &
                (single_material.le.num_materials).and. &
                (remaining_vfrac.le.EPS_SINGLE)) then
@@ -18552,6 +18584,9 @@ contains
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
 
       integer num_processed_total
+
+      integer sanity_num_processed_total
+      integer layer_sanity
 
       integer loop_counter
       integer is_masked(num_materials)
@@ -19008,6 +19043,19 @@ contains
             tessellate_dest, &
             sdim)
 
+           sanity_num_processed_total=0
+           do layer_sanity=RIGID_LAYER_INDEX,layer_iter
+            sanity_num_processed_total=sanity_num_processed_total+ &
+              num_processed(layer_sanity)
+           enddo
+           if (sanity_num_processed_total.eq.num_processed_total) then
+            !do nothing
+           else
+            print *,"num_processed_total invalid ",num_processed_total
+            print *,"sanity_num_processed_total ",sanity_num_processed_total
+            stop
+           endif
+
            if ((single_material.ge.1).and. &
                (single_material.le.num_materials).and. &
                (remaining_vfrac.le.EPS_SINGLE)) then
@@ -19370,6 +19418,9 @@ contains
 
       integer num_processed_total
 
+      integer sanity_num_processed_total
+      integer layer_sanity
+
       integer loop_counter
       integer is_masked(num_materials)
       integer is_rigid_local(num_materials)
@@ -19731,6 +19782,19 @@ contains
             tessellate_source, &
             tessellate_dest, &
             sdim)
+
+          sanity_num_processed_total=0
+          do layer_sanity=RIGID_LAYER_INDEX,layer_iter
+           sanity_num_processed_total=sanity_num_processed_total+ &
+             num_processed(layer_sanity)
+          enddo
+          if (sanity_num_processed_total.eq.num_processed_total) then
+           !do nothing
+          else
+           print *,"num_processed_total invalid ",num_processed_total
+           print *,"sanity_num_processed_total ",sanity_num_processed_total
+           stop
+          endif
 
           if ((single_material.ge.1).and. &
               (single_material.le.num_materials).and. &

@@ -21556,7 +21556,7 @@ stop
            statecomp=(im-1)*num_state_material+istate
            dennew(D_DECL(i,j,k),statecomp)=den_hold(statecomp)
           enddo
-         enddo
+         enddo !im=1,num_materials
 
           ! solid volume fractions and centroids
          do im=1,num_materials
@@ -21659,7 +21659,7 @@ stop
             centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
            enddo
            do dir=1,SDIM
-            censolid_new(im,dir)=centroid(dir)-cencell(dir)
+            censolid_new(im_hard_material,dir)=centroid(dir)-cencell(dir)
            enddo
            do dir=1,SDIM
             nslope_solid(dir)= &

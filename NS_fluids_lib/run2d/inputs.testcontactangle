@@ -19,11 +19,10 @@ geometry.prob_lo   =  0.0  0.0
 geometry.prob_hi   =  6.0  3.0   # 6x6 box for 45 degree or 135
 geometry.is_periodic = 0 0 
 
-# 0 - centroid furthest from uncaptured centroid
-# 1 - smallest MOF error
 ns.mof_ordering=2 3 1
 ns.mof_renormalize_ordering=2 3 1
-ns.EILE_flag=-1 #Weymouth and Yue
+ns.EILE_flag=1
+#ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 
@@ -81,7 +80,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 48
 cg.min_max_grid_size=1024
-#amr.restart         = chk07400
+#amr.restart         = chk00009
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -100,13 +99,11 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
-#ns.surface_tension_smoothing=10
 #ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=8
 ns.visc_coef_boundary_layer_factor=1.0
 #liquid,gas,solid
 #12,13,23
-ns.lamb_capillary_wave_speed=0 # 1 => (rho_a+rho_w)/2, 0 => min(rho_a,rho_w)
 
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 45 degrees=>sigma_{SV}=sigma_{LV}  and

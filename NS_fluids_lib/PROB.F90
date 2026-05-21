@@ -25631,12 +25631,15 @@ end subroutine initialize2d
         vfracsum_test=zero
         do im=1,num_materials
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and. &
+             (is_elastic(im).eq.0)) then
           vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or. &
+                  (is_elastic(im).eq.1)) then
           ! do nothing
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
           stop
          endif
         enddo !im=1..num_materials

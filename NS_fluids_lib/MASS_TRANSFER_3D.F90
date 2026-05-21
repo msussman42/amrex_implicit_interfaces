@@ -3478,13 +3478,14 @@ stop
           print *,"local_VOF invalid:",im,local_VOF(im)
           stop
          endif
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
           species_vfrac_sum=species_vfrac_sum+local_VOF(im)
           species_mass_sum=species_mass_sum+local_MASS(im)
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid ",im,is_rigid(im)
+          print *,"or is_elastic invalid ",im,is_elastic(im)
           stop
          endif
 
