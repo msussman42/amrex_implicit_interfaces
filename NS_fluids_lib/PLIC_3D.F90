@@ -92,7 +92,7 @@ stop
 
       integer, INTENT(in) :: continuous_mof
       integer, INTENT(in) :: continuous_mof_radius
-      integer :: local_continuous_mof_radius
+      integer :: local_continuous_mof_radius_x
       integer, INTENT(in) :: update_flag
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: vofbc(SDIM,2)
@@ -156,7 +156,7 @@ stop
 
       integer continuous_mof_parm
      
-      integer klosten,khisten
+      integer klostenCMOF,khistenCMOF
       integer klostenLS,khistenLS
       integer, parameter :: nhalf=3
       integer :: nhalf_extend
@@ -277,6 +277,8 @@ stop
         !do nothing
        else
         print *,"ngrow_recon invalid ",ngrow_recon
+        print *,"ngrow_slope_recon ",ngrow_slope_recon
+        print *,"continuous_mof_radius ",continuous_mof_radius
         stop
        endif
       else
@@ -294,11 +296,11 @@ stop
       allocate(xsten_temp(-nhalf_extend:nhalf_extend,SDIM))
 
       if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid"
+       print *,"ngeom_recon invalid ",ngeom_recon
        stop
       endif
       if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid"
+       print *,"ngeom_raw invalid ",ngeom_raw
        stop
       endif
 
@@ -312,7 +314,7 @@ stop
       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
-       print *,"levelrz invalid fort_sloperecon"
+       print *,"levelrz invalid fort_sloperecon ",levelrz
        stop
       endif
 
@@ -368,7 +370,7 @@ stop
         stop
        endif
 
-       local_continuous_mof_radius=continuous_mof_radius
+       local_continuous_mof_radius_x=continuous_mof_radius
 
        call gridsten_level(xsten_temp,i,j,k,level,nhalf_extend)
 
@@ -394,20 +396,22 @@ stop
             xsten_extended(1,dir)=xsten_temp(1,dir)
             xsten_extended(-1,dir)=xsten_temp(-1,dir)
             xsten_extended(0,dir)=xsten_temp(0,dir)
-            local_continuous_mof_radius=1
+            local_continuous_mof_radius_x=0
            else if ((ihalf.lt.-1).and.(ihalf.gt.-nhalf_extend)) then
-            local_continuous_mof_radius=(-ihalf-1)/2
-            if (local_continuous_mof_radius*2.ne.-ihalf-1) then
+            local_continuous_mof_radius_x=(-ihalf-1)/2
+            if (local_continuous_mof_radius_x*2.ne.-ihalf-1) then
              print *,"ihalf invalid ",ihalf
              stop
             endif
             xsten_extended(1,dir)= &
-              xsten_temp(2*local_continuous_mof_radius+1,dir)
+              xsten_temp(2*local_continuous_mof_radius_x+1,dir)
             xsten_extended(-1,dir)= &
-              xsten_temp(-(2*local_continuous_mof_radius+1),dir)
+              xsten_temp(-(2*local_continuous_mof_radius_x+1),dir)
             xsten_extended(0,dir)=xsten_temp(0,dir)
            else
             print *,"ihalf invalid ",ihalf
+            print *,"nhalf_extend ",nhalf_extend
+            print *,"continuous_mof_radius ",continuous_mof_radius
             stop
            endif
           else if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -443,13 +447,13 @@ stop
        enddo !dir=1,sdim
 
        if (SDIM.eq.3) then
-        klosten=-local_continuous_mof_radius
-        khisten=local_continuous_mof_radius
+        klostenCMOF=-continuous_mof_radius
+        khistenCMOF=continuous_mof_radius
         klostenLS=-1
         khistenLS=1
        else if (SDIM.eq.2) then
-        klosten=0
-        khisten=0
+        klostenCMOF=0
+        khistenCMOF=0
         klostenLS=0
         khistenLS=0
        else
@@ -679,9 +683,9 @@ stop
 
         enddo ! im=1..num_materials
 
-        do k1=klosten,khisten
-        do j1=-local_continuous_mof_radius,local_continuous_mof_radius
-        do i1=-local_continuous_mof_radius,local_continuous_mof_radius
+        do k1=klostenCMOF,khistenCMOF
+        do j1=-continuous_mof_radius,continuous_mof_radius
+        do i1=-continuous_mof_radius,continuous_mof_radius
 
          call CISBOX(xstenbox, &
            nhalfbox_sten, & ! =1
@@ -972,7 +976,7 @@ stop
 
         if ((level.ge.0).and.(level.le.finest_level)) then
 
-         do k1=klosten,khisten
+         do k1=klostenLS,khistenLS
          do j1=-1,1
          do i1=-1,1
           local_mask=NINT(masknbr(D_DECL(i+i1,j+j1,k+k1),1))
