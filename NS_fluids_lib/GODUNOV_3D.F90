@@ -23617,7 +23617,7 @@ stop
       real(amrex_real) vfracmax
       real(amrex_real) vfractest(num_materials)
       real(amrex_real) vfrac_fluid
-      real(amrex_real) vfrac_sum_fluid,vfrac_sum_solid
+      real(amrex_real) vfrac_sum_fluid,vfrac_sum_solid,vfrac_sum_elastic
       integer clamped_cell_in_element
       real(amrex_real) xclamped(SDIM)
       integer iregions
@@ -23703,6 +23703,7 @@ stop
         do iofs=0,bfact-1
 
          call gridsten_level(xsten,i+iofs,j+jofs,k+kofs,level,nhalf)
+
          do dir=1,SDIM
           xclamped(dir)=xsten(0,dir)
          enddo
@@ -23715,7 +23716,7 @@ stop
          else if (LS_clamped.lt.zero) then
           ! do nothing
          else
-          print *,"LS_clamped is NaN"
+          print *,"LS_clamped is NaN ",LS_clamped
           stop
          endif
 
@@ -23733,10 +23734,13 @@ stop
 
          vfrac_sum_fluid=zero
          vfrac_sum_solid=zero
+         vfrac_sum_elastic=zero
 
          do im=1,num_materials
           vfractest(im)=vfrac(D_DECL(i+iofs,j+jofs,k+kofs),im)
+
           if (is_rigid(im).eq.1) then
+
            vfrac_sum_solid=vfrac_sum_solid+vfractest(im)
 
            if (vfractest(im).gt.vfracmax) then
@@ -23749,6 +23753,7 @@ stop
               vfractest(im),vfracmax
             stop
            endif
+
            if (vfractest(im).gt.VOFTOL_MATERIAL) then
             imcrit=im
             tag(im)=1
@@ -23760,32 +23765,69 @@ stop
             stop
            endif
 
-          else if (is_rigid(im).eq.0) then
+          else if (is_elastic(im).eq.1) then
+
+           vfrac_sum_elastic=vfrac_sum_elastic+vfractest(im)
+
+           if (vfractest(im).gt.vfracmax) then
+            im_max=im
+            vfracmax=vfractest(im)
+           else if (vfractest(im).le.vfracmax) then
+            ! do nothing
+           else
+            print *,"vfractest(im) is NaN vfractest,vfracmax=", &
+              vfractest(im),vfracmax
+            stop
+           endif
+
+           if (vfractest(im).gt.VOFTOL_MATERIAL) then
+            imcrit=im
+            tag(im)=1
+           else if (vfractest(im).le.VOFTOL_MATERIAL) then
+            ! do nothing
+           else
+            print *,"vfractest(im) is NaN vfractest,VOFTOL_MATERIAL=", &
+              vfractest(im),VOFTOL_MATERIAL
+            stop
+           endif
+
+          else if ((is_rigid(im).eq.0).and. &
+                   (is_elastic(im).eq.0)) then
 
            vfrac_sum_fluid=vfrac_sum_fluid+vfractest(im)
 
           else
-           print *,"is_rigid(im) invalid"
+           print *,"is_rigid(im) invalid ",im,is_rigid(im)
+           print *,"or is_elastic(im) invalid ",im,is_elastic(im)
            stop
           endif
+
          enddo ! im=1..num_materials
 
-         if ((vfrac_sum_solid.lt.-EPS1).or. &
-             (vfrac_sum_solid.gt.one+EPS1)) then
+         if ((vfrac_sum_solid.ge.-EPS1).and. &
+             (vfrac_sum_solid.le.one+EPS1)) then
+          !do nothing
+         else
           print *,"vfrac_sum_solid out of range"
           print *,"vfrac_sum_solid=",vfrac_sum_solid
           stop
-         else if ((vfrac_sum_solid.ge.-EPS1).and. &
-                  (vfrac_sum_solid.le.one+EPS1)) then
-          ! do nothing
+         endif
+
+         if ((vfrac_sum_elastic.ge.-EPS1).and. &
+             (vfrac_sum_elastic.le.one+EPS1)) then
+          !do nothing
          else
-          print *,"vfrac_sum_solid is NaN: ",vfrac_sum_solid
+          print *,"vfrac_sum_elastic out of range"
+          print *,"vfrac_sum_elastic=",vfrac_sum_elastic
           stop
          endif
 
-         if (abs(one-vfrac_sum_fluid).gt.0.01) then
+         if (abs(one-vfrac_sum_fluid).le.EPS2) then
+          !do nothing
+         else
           print *,"vfrac_sum_fluid out of range in build mask sem"
           print *,"vfrac_sum_solid=",vfrac_sum_solid
+          print *,"vfrac_sum_elastic=",vfrac_sum_elastic
           print *,"vfrac_sum_fluid=",vfrac_sum_fluid
           print *,"i,j,k ",i,j,k
           print *,"iofs,jofs,kofs ",iofs,jofs,kofs
@@ -23794,10 +23836,15 @@ stop
          endif
  
          do im=1,num_materials
-          if (is_rigid(im).eq.1) then
+
+          if ((is_rigid(im).eq.1).or. &
+              (is_elastic(im).eq.1)) then
            ! do nothing
-          else if (is_rigid(im).eq.0) then
-           vfrac_fluid=(one-vfrac_sum_solid)*vfractest(im)
+          else if ((is_rigid(im).eq.0).and. &
+                   (is_elastic(im).eq.0)) then
+           vfrac_fluid=(one-vfrac_sum_elastic)* &
+                       (one-vfrac_sum_solid)* &
+                       vfractest(im)
            if (vfrac_fluid.gt.vfracmax) then
             im_max=im
             vfracmax=vfrac_fluid
@@ -23806,10 +23853,13 @@ stop
             imcrit=im
             tag(im)=1
            endif
+
           else
-           print *,"is_rigid(im) invalid"
+           print *,"is_rigid(im) invalid ",im,is_rigid(im)
+           print *,"or is_elastic(im) invalid ",im,is_elastic(im)
            stop
           endif
+
          enddo ! im=1..num_materials
 
          test_maskcov=NINT(maskcov(D_DECL(i+iofs,j+jofs,k+kofs))) 
@@ -23827,11 +23877,11 @@ stop
         enddo ! iofs,jofs,kofs
 
         if ((imcrit.lt.1).or.(imcrit.gt.num_materials)) then
-         print *,"imcrit invalid"
+         print *,"imcrit invalid ",imcrit
          stop
         endif
         if ((im_max.lt.1).or.(im_max.gt.num_materials)) then
-         print *,"im_max invalid"
+         print *,"im_max invalid ",im_max
          stop
         endif
 
@@ -23866,6 +23916,8 @@ stop
          else if (clamped_cell_in_element.eq.0) then
           if (is_rigid(imcrit).eq.1) then
            local_maskSEM=0
+          else if (is_elastic(imcrit).eq.1) then
+           local_maskSEM=0
           else if (is_ice(imcrit).eq.1) then
            local_maskSEM=0
           else if (is_FSI_rigid(imcrit).eq.1) then
@@ -23887,7 +23939,7 @@ stop
         else if (sumtag.gt.1) then
          local_maskSEM=0
         else
-         print *,"sumtag bust"
+         print *,"sumtag bust ",sumtag
          stop
         endif
 
