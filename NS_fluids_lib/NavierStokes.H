@@ -2322,6 +2322,8 @@ protected:
      // 0 - MGPCG  1-PCG 2-MINV=I
     static int  project_solver_type;
     static int  initial_cg_cycles;
+    static int  initial_viscosity_cg_cycles;
+    static int  initial_thermal_cg_cycles;
     static int  num_divu_outer_sweeps;
 
     static int  debug_dot_product;

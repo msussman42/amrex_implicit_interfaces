@@ -11268,15 +11268,20 @@ void NavierStokes::multiphase_project(int project_option) {
 
     int jacobi_cycles_count=initial_project_cycles;
 
+    int local_initial_cg_cycles=initial_cg_cycles;
+
     if (project_option_singular_possible(project_option)==1) {
       // do nothing
     } else if (project_option==SOLVETYPE_HEAT) {
      jacobi_cycles_count=initial_thermal_cycles;
+     local_initial_cg_cycles=initial_thermal_cg_cycles;
     } else if ((project_option>=SOLVETYPE_SPEC)&&
                (project_option<SOLVETYPE_SPEC+num_species_var)) { 
      jacobi_cycles_count=initial_thermal_cycles;
+     local_initial_cg_cycles=initial_thermal_cg_cycles;
     } else if (project_option==SOLVETYPE_VISC) { 
      jacobi_cycles_count=initial_viscosity_cycles;
+     local_initial_cg_cycles=initial_viscosity_cg_cycles;
     } else
      amrex::Error("project_option invalid52");
 
@@ -11336,12 +11341,12 @@ void NavierStokes::multiphase_project(int project_option) {
     }
 
     int cg_loop_max=1;
-    if (initial_cg_cycles>0) {
+    if (local_initial_cg_cycles>0) {
      cg_loop_max=2;
-    } else if (initial_cg_cycles==0) {
+    } else if (local_initial_cg_cycles==0) {
      // do nothing
     } else
-     amrex::Error("initial_cg_cycles invalid");
+     amrex::Error("local_initial_cg_cycles invalid");
 
       // error_n,abs_tol
     Vector< Array<Real,2> > error_history;
@@ -11450,14 +11455,14 @@ void NavierStokes::multiphase_project(int project_option) {
      Real a2=0.0;
 
      int vcycle_max=multilevel_maxcycle;
-     if ((initial_cg_cycles==0)&&(cg_loop==0)) {
+     if ((local_initial_cg_cycles==0)&&(cg_loop==0)) {
       // do nothing
-     } else if ((initial_cg_cycles>0)&&(cg_loop==0)) {
-      vcycle_max=initial_cg_cycles;
-     } else if ((initial_cg_cycles>0)&&(cg_loop==1)) {
+     } else if ((local_initial_cg_cycles>0)&&(cg_loop==0)) {
+      vcycle_max=local_initial_cg_cycles;
+     } else if ((local_initial_cg_cycles>0)&&(cg_loop==1)) {
       // do nothing
      } else
-      amrex::Error("initial_cg_cycles or cg_loop invalid");
+      amrex::Error("local_initial_cg_cycles or cg_loop invalid");
 
      int restart_flag=0;
 

@@ -62,6 +62,19 @@ real(amrex_real) shockdrop_gamma
 integer, parameter :: n_data=94
 real(amrex_real) :: vel_data(n_data) ! m/s
 real(amrex_real) :: time_data(n_data) !ms
+integer :: dir_stream,dir_transverse
+real(amrex_real) :: nw_shockAngle
+real(amrex_real) :: nw_To
+real(amrex_real) :: nw_Mn1
+real(amrex_real) :: UpreState,UpostState,nw_dUdt
+real(amrex_real) :: VpreState,VpostState,nw_dVdt
+real(amrex_real) :: RhopreState,RhopostState,nw_dRhodt
+real(amrex_real) :: EpreState,EpostState,nw_dEdt
+real(amrex_real) :: TpreState,TpostState,nw_dTdt
+real(amrex_real) :: PpreState,PpostState,nw_dPdt
+real(amrex_real) :: vn,vt,c1,e1,e2,c1_Mn1,rho1,rho2,T1,T2
+real(amrex_real) :: dx_local(SDIM)
+
 
 CONTAINS
 
@@ -414,6 +427,7 @@ else
  stop
 endif
 
+#if defined(CheckDebugPart2)
 if (abs(shockdrop_DEN0-fort_denconst(2)).le.EPS6) then
  !do nothing
 else
@@ -439,6 +453,7 @@ else
  print *,"mismatch"
  stop
 endif
+#endif
 
 
  ! this value must be consistent with material_type=5 parameters
@@ -483,6 +498,7 @@ if (probtype.eq.shockdrop_PROB_TYPE) then
      (axis_dir.eq.151).or. &
      (axis_dir.eq.152).or. &
      (axis_dir.eq.154)) then
+#if defined(CheckDebugPart2)
   if (abs(test_pres-shockdrop_P0)/test_pres.gt.EPS3) then
    print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
    print *,"test_pres=",test_pres
@@ -498,6 +514,7 @@ if (probtype.eq.shockdrop_PROB_TYPE) then
    print *,"gravity_vector=",gravity_vector
    stop
   endif
+#endif
  else if (axis_dir.eq.153) then
   !check nothing
  else
@@ -510,11 +527,11 @@ else
  stop
 endif
 
-if (fort_material_type(2).ne.5) then
- print *,"only material_type=5 supported for gas for this problem"
- print *,"fort_material_type(2)=",fort_material_type(2)
- stop
-endif
+!if (fort_material_type(2).ne.5) then
+! print *,"only material_type=5 supported for gas for this problem"
+! print *,"fort_material_type(2)=",fort_material_type(2)
+ !stop
+!endif
 
 ! in shock frame of reference, the upstream velocity is -|V0| and the
 ! downstream velocity is -|V1|.  In upstream frame of reference the 
@@ -580,7 +597,14 @@ use global_utility_module
 IMPLICIT NONE
 real(amrex_real) time
 integer :: test_n_data
-integer :: idata
+integer :: idata,dir,ilev
+real(amrex_real) deltaP
+real(amrex_real) P1,Gamma_constant,GammaP1
+real(amrex_real) M1
+real(amrex_real) Db,Rb,Lb,Fw
+real(amrex_real) U2,V2,P2
+real(amrex_real) factor1
+
 
 time=0.0d0
 
@@ -619,6 +643,7 @@ shockdrop_init_VEL0=shockdrop_VEL0
 
 call recompute_globals(time) !modifies shockdrop_VEL0
 
+#if defined(CheckDebugPart2)
 print *,"shockdrop: init VEL0 ",shockdrop_init_VEL0
 print *,"shockdrop: VEL0 ",shockdrop_VEL0
 
@@ -626,31 +651,153 @@ print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
  shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
 print *,"shockdrop: downstream den,SPEED,T,M,C ", &
  shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
+#endif
 
 ! in shock frame of reference, the upstream velocity is -|V0| and the
 ! downstream velocity is -|V1|.  In upstream frame of reference the 
 ! downstream velocity is |V0|-|V1|
 
 if (shockdrop_VEL0.gt.shockdrop_VEL1) then
+#if defined(CheckDebugPart2)
  print *,"shockdrop_DownStreamVelocity=", &
     shockdrop_VEL0-shockdrop_VEL1
  print *,"shockdrop_We=",shockdrop_We
  print *,"shockdrop_Oh=",shockdrop_Oh
  print *,"shockdrop_Re=",shockdrop_Re
  print *,"shockdrop_inertial_time_scale=",shockdrop_inertial_time_scale
+#endif
 else
  print *,"shockdrop_VEL0 or shockdrop_VEL1 invalid: ", &
    shockdrop_VEL0,shockdrop_VEL1
  stop
 endif
 
+! setup the stream and transverse directions at initialization
+ call setup_stream
+
+! calculations related to N_wave_solution
+
+      Db = 0.42d0 * 2.8d0 !Diameter
+      Rb = Db/2.0d0 !Radius
+      Lb = 1.128d0 / 2.0d0 !ogival length of bullet
+
+      !Shape factor
+      Fw = Rb / Lb ** 0.25
+
+      !Farfield Mach
+      M1 = radblob2
+
+      !Pre-shock conditions
+      P1 = inflow_pressure
+      T1 = fort_tempconst(2)
+      Gamma_constant = 1.4d0
+      GammaP1 = Gamma_constant + 1.0d0
+      rho1=fort_denconst(2)
+      call INTERNAL_air(rho1,T1,e1)
+      call SOUNDSQR_air(rho1,e1,c1)
+      c1=sqrt(c1)
+
+      deltaP = P1 * 2.0**(0.25) * Gamma_constant*GammaP1**(-0.5)*(M1**2 - 1.)**(1./8.) * Fw * (0.31)**(-.75)
+
+      P2 = P1 + deltaP
+
+
+      nw_Mn1 = (((P2/P1) - 1.d0) * GammaP1/(2.0d0*Gamma_constant) + 1.0d0) ** 0.5
+      nw_shockAngle = asin(nw_Mn1/M1)
+
+      c1_Mn1 = c1*nw_Mn1
+
+
+       ! ANALYTICAL STUDY OF SONIC BOOM FROM SUPERSONIC PROJECTILES
+       ! Gottlieb and Ritzel
+       ! Marco Arienti's formulation used a more arcane formulation from
+       ! this paper:
+       ! Ballistic Wave from Projectiles and Vehicles of Simple Geometry
+       ! Varnier and Le Pape
+       ! It is more intuitive to have:
+       ! T_o= 2^(1/4) ....
+       ! and
+       ! Fw=Diameter_b/Lb ** 0.25
+      nw_To = 2.0**(5.0/4.0) * GammaP1**0.5 / c1 * M1 * (M1 ** 2 - 1.0)**(-3.0/8.0) * Fw * (0.31)**0.25
+      nw_To = nw_To / zblob4
+
+      rho1 = fort_denconst(2)
+      T1 = fort_tempconst(2)
+      call INTERNAL_air(rho1,T1,e1)
+      call postshock_air(nw_Mn1,rho1,T1,rho2,T2,P2)
+      call INTERNAL_air(rho2,T2,e2)
+      call vnpostshock_air(T1,nw_Mn1,vn)
+      vt=c1*radblob2*cos(nw_shockAngle)
+      V2 = 0.0d0
+      U2 = nw_Mn1 * c1 - vn
+      e2=e2+0.5d0*(U2*U2+V2*V2)
+
+      factor1 = radblob4
+
+      nw_dPdt = 2.0d0 * (P1 - P2)  / nw_To  * factor1
+      nw_dRhodt = 2.0d0 * (rho1 - rho2) / nw_To  * factor1
+      nw_dEdt = 2.0d0 * (e1 - e2) / nw_To  * factor1
+      nw_dUdt = 2.0d0 * (0.0d0 - U2) / nw_To  * factor1
+      nw_dVdt = 2.0d0 * (0.0d0 - V2) / nw_To  * factor1
+      nw_dTdt = 2.0d0 * (T1 - T2) / nw_To  * factor1
+
+      UpreState = 0.0d0
+      UpostState = U2 + 0.0d0
+      
+      VpreState = 0.0d0
+      VpostState = V2 + 0.0d0
+      
+      RhopreState = rho1
+      RhopostState = rho2
+         
+      EpreState = e1
+      EpostState = e2
+         
+      TpreState = T1
+      TpostState = T2
+         
+      PpreState = inflow_pressure
+      PpostState = p2
+
+
+
+if (fort_finest_level.ge.0) then
+ !do nothing
+else
+ print *,"fort_finest_level invalid: ",fort_finest_level
+ stop
+endif
+
+do dir=1,SDIM
+ if (fort_n_cell(dir).gt.0) then
+  if (problen_array(dir).gt.zero) then
+   dx_local(dir)=problen_array(dir)/fort_n_cell(dir)
+   do ilev=1,fort_finest_level
+    dx_local(dir)=dx_local(dir)/two
+   enddo
+   if (dx_local(dir).gt.zero) then
+    !do nothing
+   else
+    print *,"dx_local invalid: ",dir,dx_local(dir)
+    stop
+   endif
+  else
+   print *,"problen_array invalid: ",dir,problen_array(dir)
+   stop
+  endif
+ else
+  print *,"fort_n_cell invalid: ",dir,fort_n_cell(dir)
+  stop
+ endif
+enddo  !dir=1..sdim
+
+
 return
 end subroutine shockdrop_init
 
-subroutine setup_stream(dir_stream,dir_transverse)
+subroutine setup_stream()
 use probcommon_module
 
-integer, intent(out) :: dir_stream,dir_transverse
 
  if (SDIM.eq.3) then
   !inputs3d.nwave
@@ -661,8 +808,11 @@ integer, intent(out) :: dir_stream,dir_transverse
       (axis_dir.eq.151).or. &
       (axis_dir.eq.152).or. &
       (axis_dir.eq.154)) then
+   !FIX ME: for 2D shock-drop dir_stream is 2(y) instead of 1   
    dir_stream=1
    dir_transverse=2
+   !dir_stream=2
+   !dir_transverse=1
   else if (axis_dir.eq.153) then !Arienti shock sphere
     !inputs2d.nwave
    dir_stream=2
@@ -694,13 +844,12 @@ real(amrex_real) :: ls_local
 real(amrex_real), INTENT(out) :: vel(SDIM)
 integer dir
 integer, INTENT(in) :: velsolid_flag
-real(amrex_real) :: To,Mn,shockAngle,preState,x_vel,dudt,alpha,vn
-real(amrex_real) :: rho1,e1,c1sqr,c1,u1,u2
+real(amrex_real) :: x_vel,alpha
+real(amrex_real) :: rho1,u2
 real(amrex_real) :: Tcross,Tcross2,Tcross3
-integer :: dir_stream,dir_transverse
 
-call setup_stream(dir_stream,dir_transverse)
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
@@ -722,6 +871,7 @@ do dir=1,SDIM
   stop
  endif
 enddo
+#endif
 
 do dir=1,SDIM
  vel(dir)=zero
@@ -760,9 +910,11 @@ else
    vel(SDIM)=zero
   else if (ls_local.le.zero) then
    vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
+#if defined(CheckDebugPart2)
   else
    print *,"ls_local invalid: ",ls_local
    stop
+#endif
   endif
 
   !in: shockdrop_velocity
@@ -771,45 +923,48 @@ else
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
-   call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,preState,x_vel,dudt)
+ !  call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,preState,x_vel,dudt)
    alpha=0.5d0*(1d0+0.5d0*datan(200.5*ls_local/dx(dir_stream))/datan(1d0))
-   call vnpostshock_air(fort_tempconst(2),Mn,vn)
-   rho1=fort_denconst(2)
-   call INTERNAL_air(rho1,fort_tempconst(2),e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   c1=sqrt(c1sqr)
-   vel(dir_stream)=(1d0-alpha)*(Mn*c1 - vn)
+   !call vnpostshock_air(fort_tempconst(2),nw_Mn1,vn)
+   !rho1=fort_denconst(2)
+   !call INTERNAL_air(rho1,fort_tempconst(2),e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   !c1=sqrt(c1sqr)
+   vel(dir_stream)=(1d0-alpha)*(c1_Mn1 - vn)
    vel(dir_transverse)=zero
    if (SDIM.eq.3) then
     vel(SDIM)=zero
    endif
   else if (t.gt.zero) then
 
-   call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,u1,u2,dudt)
-   rho1=fort_denconst(2)
-   call INTERNAL_air(rho1,fort_tempconst(2),e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   Tcross = (x(dir_stream) - (xblob2) + 0.5d0*dx(dir_stream))/(sqrt(c1sqr)*Mn)
-   Tcross2 = Tcross + To
-   Tcross3 = Tcross2 + To * xblob4
+   !call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,1,u1,u2,dudt)
+   !rho1=fort_denconst(2)
+   !call INTERNAL_air(rho1,fort_tempconst(2),e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   Tcross = (x(dir_stream) - (xblob2) + 0.5d0*dx(dir_stream))/(c1_Mn1)
+   Tcross2 = Tcross + nw_To
+   Tcross3 = Tcross2 + nw_To * xblob4
       
    if(t.lt.Tcross) then
     ! pre-shock conditions
-    vel(dir_stream) = u1
+    vel(dir_stream) = UpreState
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    vel(dir_stream) = u2 + dudt * (t-Tcross)
+    vel(dir_stream) = UpostState + nw_dUdt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
-    u2 = u2 + dudt * (Tcross2-Tcross)
-    vel(dir_stream) = u2 - dudt * (t-Tcross2)/(2.0*xblob4)*yblob4
+    u2 = UpostState + nw_dUdt * (Tcross2-Tcross)
+    !vel(dir_stream) = u2 - dudt * (t-Tcross2)/(2.0*xblob4)*yblob4
+    vel(dir_stream) = u2 - (u2-UpreState) * (t-Tcross2)/(nw_To*xblob4)
    else
-    vel(dir_stream) = u1
+    vel(dir_stream) = UpreState
    endif
 
   else
+#if defined(CheckDebugPart2)
    print *,"t out of range: ",t
    stop
+#endif
   endif
 
  else
@@ -852,16 +1007,16 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
-integer :: dir_stream,dir_transverse
 
-call setup_stream(dir_stream,dir_transverse)
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
 
 call shockdrop_dropLS(x(dir_stream),x(dir_transverse),x(SDIM),LS(1))
 LS(2)=-LS(1)
@@ -880,19 +1035,19 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: ls(nmat)
 real(amrex_real) :: ls_local
 real(amrex_real), INTENT(out) :: pres
-real(amrex_real) :: To,Mn,shockAngle,p1,p2,dpdt
-real(amrex_real) :: rho1,e1,c1sqr
+real(amrex_real) :: p1,p2
+real(amrex_real) :: rho1
 real(amrex_real) :: Tcross,Tcross2,Tcross3
-integer :: dir_stream,dir_transverse
 
-call setup_stream(dir_stream,dir_transverse)
 
+#if defined(CheckDebugPart2)
 if (num_materials.eq.nmat) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
 
 call shockdrop_dropLS(x(dir_stream),x(dir_transverse),x(SDIM),ls_local)
 if (ls_local.ge.zero) then ! liquid
@@ -917,24 +1072,25 @@ else
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
     !stateIndex=6 p
-  call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,6,p1,p2,dpdt)
-  rho1=fort_denconst(2)
-  call INTERNAL_air(rho1,fort_tempconst(2),e1)
-  call SOUNDSQR_air(rho1,e1,c1sqr)
-  Tcross = (x(dir_stream) - (xblob2))/(sqrt(c1sqr)*Mn)
-  Tcross2 = Tcross + To
-  Tcross3 = Tcross2 + To * xblob4
+  !call N_wave_solution(t,x(dir_stream),x(dir_transverse),x(SDIM),To,Mn,shockAngle,6,p1,p2,dpdt)
+  !rho1=fort_denconst(2)
+  !call INTERNAL_air(rho1,fort_tempconst(2),e1)
+  !call SOUNDSQR_air(rho1,e1,c1sqr)
+  Tcross = (x(dir_stream) - (xblob2))/(c1_Mn1)
+  Tcross2 = Tcross + nw_To
+  Tcross3 = Tcross2 + nw_To * xblob4
 
   if (t.lt.Tcross) then
    ! pre-shock conditions
    pres = inflow_pressure
   else if (t.lt.Tcross2) then
    ! post-shock conditions
-   pres = p2 + dpdt * (t-Tcross)
+   pres = PpostState + nw_dPdt * (t-Tcross)
   else if (t.lt.Tcross3) then
    ! re-compression
-   p2  = p2 + dpdt * (Tcross2-Tcross)
-   pres = p2 - dpdt * (t-Tcross2) / (2.0*xblob4)*yblob4
+   p2  = PpostState + nw_dPdt * (Tcross2-Tcross)
+   !pres = p2 - dpdt * (t-Tcross2) / (2.0*xblob4)*yblob4
+   pres = p2 - (p2-inflow_pressure)*(t-Tcross2) / (nw_To*xblob4)
   else
    pres = inflow_pressure
   endif
@@ -956,44 +1112,9 @@ IMPLICIT NONE
 real(amrex_real), intent(in) :: t,x,y,z
 real(amrex_real), intent(out) :: den
 real(amrex_real) LS
-real(amrex_real) :: To,Mn,shockAngle,vn,alpha,preState,postState,dState_dt
-real(amrex_real) :: rho1,e1,c1sqr,c1,T1,T2,rho2,e2,vt,U2,V2,P2
+real(amrex_real) :: alpha
+real(amrex_real) :: U2,V2,P2
 real(amrex_real) :: Tcross,Tcross2,Tcross3
-real(amrex_real) :: dx_local(SDIM)
-integer :: dir,ilev
-integer :: dir_stream,dir_transverse
-
-call setup_stream(dir_stream,dir_transverse)
-
-if (fort_finest_level.ge.0) then
- !do nothing
-else
- print *,"fort_finest_level invalid: ",fort_finest_level
- stop
-endif
-
-do dir=1,SDIM
- if (fort_n_cell(dir).gt.0) then
-  if (problen_array(dir).gt.zero) then
-   dx_local(dir)=problen_array(dir)/fort_n_cell(dir)
-   do ilev=1,fort_finest_level
-    dx_local(dir)=dx_local(dir)/two
-   enddo
-   if (dx_local(dir).gt.zero) then
-    !do nothing
-   else
-    print *,"dx_local invalid: ",dir,dx_local(dir)
-    stop
-   endif
-  else
-   print *,"problen_array invalid: ",dir,problen_array(dir)
-   stop
-  endif
- else
-  print *,"fort_n_cell invalid: ",dir,fort_n_cell(dir)
-  stop
- endif
-enddo  !dir=1..sdim
 
 call shockdrop_dropLS(x,y,z,LS)
 if (LS.ge.zero) then ! liquid
@@ -1018,48 +1139,51 @@ else if (LS.le.zero) then !gas
  else if (axis_dir.eq.153) then !Arienti shock sphere
 
   if (t.eq.zero) then
-   call N_wave_solution1(t,x,y,z,shockAngle,Mn)
-   rho1=fort_denconst(2)
-   T1=fort_tempconst(2)
-   call INTERNAL_air(rho1,T1,e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   c1=sqrt(c1sqr)
-   call postshock_air(Mn,rho1,T1,rho2,T2,P2)
-   call INTERNAL_air(rho2,T2,e2)
-   call vnpostshock_air(T1,Mn,vn)
-   vt=c1*radblob2*cos(shockAngle)
-   U2= Mn * c1  - vn
+   !call N_wave_solution1(t,x,y,z,shockAngle,Mn)
+   !rho1=fort_denconst(2)
+   !T1=fort_tempconst(2)
+   !call INTERNAL_air(rho1,T1,e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   !c1=sqrt(c1sqr)
+   !call postshock_air(nw_Mn1,rho1,T1,rho2,T2,P2)
+   !call INTERNAL_air(rho2,T2,e2)
+   !call vnpostshock_air(T1,nw_Mn1,vn)
+   !vt=c1*radblob2*cos(nw_shockAngle)
+   U2= nw_Mn1 * c1  - vn
    V2= 0.0d0
    alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(dir_stream))/datan(1d0))
    den=rho1*alpha+rho2*(1d0-alpha)
 
   else if (t.gt.zero) then
 
-   call N_wave_solution(t,x,y,z,To,Mn,shockAngle,3, &
-    preState,postState,dState_dt)
-   rho1=fort_denconst(2)
-   call INTERNAL_air(rho1,fort_tempconst(2),e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   Tcross = (x - (xblob2))/(sqrt(c1sqr)*Mn)
-   Tcross2 = Tcross + To
-   Tcross3 = Tcross2 + To * xblob4
+  ! call N_wave_solution(t,x,y,z,To,Mn,shockAngle,3, &
+   ! preState,postState,dState_dt)
+  ! rho1=fort_denconst(2)
+   !call INTERNAL_air(rho1,fort_tempconst(2),e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   Tcross = (x - (xblob2))/(c1_Mn1)
+   Tcross2 = Tcross + nw_To
+   Tcross3 = Tcross2 + nw_To * xblob4
    if(t.lt.Tcross) then
     ! pre-shock conditions
-    den = preState
+    den = RhopreState
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    den = postState + dState_dt * (t-Tcross)
+    den = RhopostState + nw_dRhodt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
-    den = postState + dState_dt * (Tcross2-Tcross)
-    den = den - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
+    den = RhopostState + nw_dRhodt * (Tcross2-Tcross)
+    !den = den - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
+    den = den - (den - RhopreState) * (t-Tcross2) / (nw_To*xblob4)
    else
-    den = preState
+    den = RhopreState
    endif
 
   else
+#if defined(CheckDebugPart2)
    print *,"t invalid: ",t
    stop
+#endif
   endif
 
  else
@@ -1068,8 +1192,10 @@ else if (LS.le.zero) then !gas
  endif
 
 else
+#if defined(CheckDebugPart2)
  print *,"LS invalid: ",LS
  stop
+#endif
 endif 
 
 return
@@ -1083,45 +1209,10 @@ IMPLICIT NONE
 real(amrex_real), intent(in) :: t,x,y,z
 real(amrex_real), intent(out) :: temp
 real(amrex_real) LS
-real(amrex_real) :: To,Mn,shockAngle,vn,alpha,preState,postState,dState_dt
-real(amrex_real) :: rho1,e1,c1sqr,c1,T1,T2,rho2,e2,vt,U2,V2,P2
+real(amrex_real) :: alpha
+real(amrex_real) :: vt,U2,V2,P2
 real(amrex_real) :: Tcross,Tcross2,Tcross3
 real(amrex_real) :: den
-real(amrex_real) :: dx_local(SDIM)
-integer :: dir,ilev
-integer :: dir_stream,dir_transverse
-
-call setup_stream(dir_stream,dir_transverse)
-
-if (fort_finest_level.ge.0) then
- !do nothing
-else
- print *,"fort_finest_level invalid: ",fort_finest_level
- stop
-endif
-
-do dir=1,SDIM
- if (fort_n_cell(dir).gt.0) then
-  if (problen_array(dir).gt.zero) then
-   dx_local(dir)=problen_array(dir)/fort_n_cell(dir)
-   do ilev=1,fort_finest_level
-    dx_local(dir)=dx_local(dir)/two
-   enddo
-   if (dx_local(dir).gt.zero) then
-    !do nothing
-   else
-    print *,"dx_local invalid: ",dir,dx_local(dir)
-    stop
-   endif
-  else
-   print *,"problen_array invalid: ",dir,problen_array(dir)
-   stop
-  endif
- else
-  print *,"fort_n_cell invalid: ",dir,fort_n_cell(dir)
-  stop
- endif
-enddo  !dir=1..sdim
 
 call shockdrop_dropLS(x,y,z,LS)
 
@@ -1151,17 +1242,17 @@ else if (LS.le.zero) then !gas
 
   if (t.eq.zero) then
 
-   call N_wave_solution1(t,x,y,z,shockAngle,Mn)
-   rho1=fort_denconst(2)
-   T1=fort_tempconst(2)
-   call INTERNAL_air(rho1,T1,e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   c1=sqrt(c1sqr)
-   call postshock_air(Mn,rho1,T1,rho2,T2,P2)
-   call INTERNAL_air(rho2,T2,e2)
-   call vnpostshock_air(T1,Mn,vn)
-   vt=c1*radblob2*cos(shockAngle)
-   U2= Mn * c1  - vn
+   !call N_wave_solution1(t,x,y,z,shockAngle,Mn)
+   !rho1=fort_denconst(2)
+   !T1=fort_tempconst(2)
+   !call INTERNAL_air(rho1,T1,e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   !c1=sqrt(c1sqr)
+   !call postshock_air(nw_Mn1,rho1,T1,rho2,T2,P2)
+   !call INTERNAL_air(rho2,T2,e2)
+   !call vnpostshock_air(T1,nw_Mn1,vn)
+   !vt=c1*radblob2*cos(nw_shockAngle)
+   U2= c1_Mn1 - vn
    V2= 0.0d0
    alpha=0.5d0*(1d0+0.5d0*datan(200.5*LS/dx_local(dir_stream))/datan(1d0))
    den=rho1*alpha+rho2*(1d0-alpha)
@@ -1169,31 +1260,34 @@ else if (LS.le.zero) then !gas
 
   else if (t.gt.zero) then
 
-   call N_wave_solution(t,x,y,z,To,Mn,shockAngle,5, &
-    preState,postState,dState_dt)
-   rho1=fort_denconst(2)
-   call INTERNAL_air(rho1,fort_tempconst(2),e1)
-   call SOUNDSQR_air(rho1,e1,c1sqr)
-   Tcross = (x - (xblob2))/(sqrt(c1sqr)*Mn)
-   Tcross2 = Tcross + To
-   Tcross3 = Tcross2 + To * xblob4
+   !call N_wave_solution(t,x,y,z,To,Mn,shockAngle,5, &
+   ! preState,postState,dState_dt)
+   !rho1=fort_denconst(2)
+   !call INTERNAL_air(rho1,fort_tempconst(2),e1)
+   !call SOUNDSQR_air(rho1,e1,c1sqr)
+   Tcross = (x - (xblob2))/(c1_Mn1)
+   Tcross2 = Tcross + nw_To
+   Tcross3 = Tcross2 + nw_To * xblob4
    if(t.lt.Tcross) then
     ! pre-shock conditions
-    temp = preState
+    temp = TpreState
    else if (t.lt.Tcross2)then
     ! post-shock conditions
-    temp = postState + dState_dt * (t-Tcross)
+    temp = TpostState + nw_dTdt * (t-Tcross)
    else if (t.lt.Tcross3)then
     ! re-compression
-    temp = postState + dState_dt * (Tcross2-Tcross)
-    temp = temp - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
+    temp = TpostState + nw_dTdt * (Tcross2-Tcross)
+    !temp = temp - dState_dt * (t-Tcross2) / (2.0*xblob4)*yblob4
+    temp = temp - (temp - TpreState) * (t-Tcross2) / (nw_To*xblob4)
    else
-    temp = preState
+    temp = TpreState
    endif
 
   else
+#if defined(CheckDebugPart2)
    print *,"t invalid: ",t
    stop
+#endif
   endif
 
  else
@@ -1202,8 +1296,10 @@ else if (LS.le.zero) then !gas
  endif
 
 else
+#if defined(CheckDebugPart2)
  print *,"LS invalid: ",LS
  stop
+#endif
 endif 
 
 return
@@ -1323,10 +1419,9 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
 integer im,ibase,n
-integer :: dir_stream,dir_transverse
 
-call setup_stream(dir_stream,dir_transverse)
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
@@ -1339,6 +1434,7 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
+#endif
 
 if ((num_materials.eq.2).and. &
     (num_state_material.ge.2).and. &
@@ -1351,18 +1447,22 @@ if ((num_materials.eq.2).and. &
    !do nothing
   else if (im.eq.2) then
    call shockdrop_gas_density(t,x(dir_stream),x(dir_transverse),x(SDIM),STATE(ibase+ENUM_DENVAR+1))
+#if defined(CheckDebugPart2)
   else
    print *,"im out of range"
    stop
+#endif
   endif
 
   if (t.eq.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
   else if (t.gt.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+#if defined(CheckDebugPart2)
   else
    print *,"t invalid"
    stop
+#endif
   endif
 
   if (im.eq.1) then
@@ -1370,9 +1470,11 @@ if ((num_materials.eq.2).and. &
   else if (im.eq.2) then
    call shockdrop_gas_temperature(t,x(dir_stream),x(dir_transverse),x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
+#if defined(CheckDebugPart2)
   else
    print *,"im out of range: ",im
    stop
+#endif
   endif
 
   do n=1,num_species_var
@@ -1402,19 +1504,25 @@ real(amrex_real), INTENT(in) :: LS_in(nmat)
 integer, INTENT(in) :: dir,side
 real(amrex_real), INTENT(in) :: dx(SDIM)
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
+#if defined(CheckDebugPart2)
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
+#endif
  call shockdrop_LS(xghost,t,LS,nmat)
+#if defined(CheckDebugPart2)
 else
  print *,"dir or side invalid"
  stop
 endif
+#endif
 
 return
 end subroutine shockdrop_LS_BC
@@ -1438,24 +1546,30 @@ real(amrex_real), INTENT(in) :: dx(SDIM)
 real(amrex_real) local_VEL(SDIM)
 integer velsolid_flag
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
 velsolid_flag=0
+#if defined(CheckDebugPart2)
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
+#endif
 
  call shockdrop_velocity(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
  VEL=local_VEL(veldir)
 
+#if defined(CheckDebugPart2)
 else
  print *,"dir,side, or veldir invalid"
  stop
 endif
+#endif
 
 return
 end subroutine shockdrop_VEL_BC
@@ -1476,23 +1590,29 @@ real(amrex_real), INTENT(in) :: PRES_in
 integer, INTENT(in) :: dir,side
 real(amrex_real), INTENT(in) :: dx(SDIM)
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
 
 
+#if defined(CheckDebugPart2)
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
+#endif
 
  call shockdrop_pressure(xghost,t,LS,PRES,nmat)
 
+#if defined(CheckDebugPart2)
 else
  print *,"dir or side invalid"
  stop
 endif
+#endif
 
 return
 end subroutine shockdrop_PRES_BC
@@ -1519,19 +1639,23 @@ integer, INTENT(in) :: istate,im
 integer ibase,im_crit
 integer local_bcflag
 
+#if defined(CheckDebugPart2)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
  print *,"nmat invalid"
  stop
 endif
+#endif
 local_bcflag=1
 
 
+#if defined(CheckDebugPart2)
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
+#endif
  call shockdrop_STATE(xghost,t,LS,local_STATE, &
          local_bcflag,nmat,num_state_material)
  ibase=(im-1)*num_state_material
@@ -1539,10 +1663,12 @@ if ((istate.ge.1).and. &
  call get_primary_material(dx,LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
+#if defined(CheckDebugPart2)
 else
  print *,"istate invalid"
  stop
 endif
+#endif
 
 return
 end subroutine shockdrop_STATE_BC
@@ -1571,10 +1697,17 @@ real(amrex_real), dimension(SDIM) :: local_delta
 real(amrex_real) :: F_LIQUID,LS_LIQUID,LS_SHOCK,P_diff,mag
 integer :: dir
 integer :: ii,jj,kk
-integer :: dir_stream,dir_transverse
 
-call setup_stream(dir_stream,dir_transverse)
 
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+enddo
+
+#if defined(CheckDebugPart2)
 if (nhalf.lt.3) then
  print *,"nhalf invalid shock drop override tagflag"
  stop
@@ -1588,11 +1721,6 @@ else
  stop
 endif
 do dir=1,SDIM
- local_x(dir)=xsten(0,dir)
-enddo
-local_x(3)=xsten(0,SDIM)
-do dir=1,SDIM
- local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
  if (local_delta(dir).gt.zero) then
   ! do nothing
  else
@@ -1600,6 +1728,7 @@ do dir=1,SDIM
   stop
  endif
 enddo !dir=1..sdim
+#endif
 
 if ((num_materials.ge.2).and. &
     (probtype.eq.shockdrop_PROB_TYPE)) then
@@ -1629,15 +1758,19 @@ if ((num_materials.ge.2).and. &
    else if (abs(LS_SHOCK).ge.two*local_delta(SDIM)) then
     P_diff=zero
    else
+#if defined(CheckDebugPart2)
     print *,"LS_SHOCK invalid: ",LS_SHOCK
     stop
+#endif
    endif
   else if (time.gt.zero) then
    P_diff=abs((snew_ptr(D_DECL(i+ii,j+jj,k+kk),STATECOMP_PRES+1)- &
                snew_ptr(D_DECL(i,j,k),STATECOMP_PRES+1))/shockdrop_P0)
   else
+#if defined(CheckDebugPart2)
    print *,"time invalid: ",time
    stop
+#endif
   endif
 
   if (axis_dir.eq.150) then
@@ -1681,8 +1814,10 @@ if ((num_materials.ge.2).and. &
      tagflag=1
     endif
    else
+#if defined(CheckDebugPart2)
     print *,"mag invalid shockdrop.F90: ",mag
     stop
+#endif
    endif
 
    !inputs2d.nwave
@@ -1734,7 +1869,7 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM),dx(SDIM)
 integer, INTENT(in) :: num_cell_sponge !user defined number of cells
 integer, INTENT(out) :: activate_flag
-integer :: dir_stream, dir_transverse
+integer :: dir_streaml, dir_transversel
 real(amrex_real) :: damp_coeff, damp_max, dist,L_sponge
 
  damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
@@ -1742,26 +1877,44 @@ real(amrex_real) :: damp_coeff, damp_max, dist,L_sponge
                                   ! be the width of first cell of the domain 
  damp_coeff = 0.0d0 
  activate_flag=0 
- ! Call to setup_stream: already in shockdrop.F90
- call setup_stream(dir_stream,dir_transverse)
+
+ if (SDIM.eq.3) then
+  !inputs3d.nwave
+  dir_streaml=1
+  dir_transversel=2
+ else if (SDIM.eq.2) then
+   dir_streaml=2
+   dir_transversel=1
+ else
+  print *,"dimension bust: ",SDIM
+  stop
+ endif
 
  ! Sponge Strength (Quadratic ramp)
  ! For inflow boundary
- if (x(dir_stream) .lt. (problo_array(dir_stream) + L_sponge)) then
-  dist = ((problo_array(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
+ if (x(dir_streaml) .lt. (problo_array(dir_streaml) + L_sponge)) then
+  dist = ((problo_array(dir_streaml) + L_sponge) - x(dir_streaml)) / L_sponge
   damp_coeff = damp_max * (dist**2)
  ! For Outflow boundary 
- else if (x(dir_stream) .gt. (probhi_array(dir_stream) - L_sponge)) then
-  dist = (x(dir_stream) - (probhi_array(dir_stream) - L_sponge)) / L_sponge
+ else if (x(dir_streaml) .gt. (probhi_array(dir_streaml) - L_sponge)) then
+  dist = (x(dir_streaml) - (probhi_array(dir_streaml) - L_sponge)) / L_sponge
   damp_coeff = damp_max * (dist**2)
  else
   damp_coeff = 0.0d0
  endif
+
  ! If inside sponge, calculate 
  if (damp_coeff .gt. 0.0d0 .and. damp_coeff.le. 1.0d0) then
 
   activate_flag=1
  endif
+
+#if defined(CheckDebugPart2)
+ if (damp_coeff.lt.0d0 .or. damp_coeff .gt. 1.0d0) then
+  print*,'invalid damp_coeff in damp_nwave_activate'
+  stop
+ endif
+#endif
 
 end subroutine damp_nwave_activate
 
@@ -1799,12 +1952,12 @@ real(amrex_real) :: damp_coeff, damp_max, dist
 real(amrex_real) :: L_sponge
 
 integer :: velsolid_flag
-integer :: dir_stream, dir_transverse, dir
+integer :: dir_streaml, dir_transversel, dir
 integer, PARAMETER :: im_gas=2
 
  damp_max = 1.0d0   ! Strength: 1/dt forces it almost instantly
  L_sponge = num_cell_sponge*dx(1) ! Size of sponge zone: this dx has to 
-                                  ! be the width of first cell of the domain 
+                                  ! be the at the coarsest level 
  damp_coeff = 0.0d0 
  activate_flag=0
  
@@ -1818,63 +1971,67 @@ integer, PARAMETER :: im_gas=2
  den_damp = den(im_gas)
 
  ! Call to setup_stream: already in shockdrop.F90
- call setup_stream(dir_stream,dir_transverse)
+ !call setup_stream(dir_stream,dir_transverse)
+
+ if (SDIM.eq.3) then
+  !inputs3d.nwave
+  dir_streaml=1
+  dir_transversel=2
+ else if (SDIM.eq.2) then
+   dir_streaml=2
+   dir_transversel=1
+ else
+  print *,"dimension bust: ",SDIM
+  stop
+ endif
 
  ! Sponge Strength (Quadratic ramp)
  ! For inflow boundary
- if (x(dir_stream) .lt. (problo_array(dir_stream) + L_sponge)) then
-  dist = ((problo_array(dir_stream) + L_sponge) - x(dir_stream)) / L_sponge
+ if (x(dir_streaml) .lt. (problo_array(dir_streaml) + L_sponge)) then
+  dist = ((problo_array(dir_streaml) + L_sponge) - x(dir_streaml)) / L_sponge
   damp_coeff = damp_max * (dist**2)
   
  ! For Outflow boundary 
- else if (x(dir_stream) .gt. (probhi_array(dir_stream) - L_sponge)) then
-  dist = (x(dir_stream) - (probhi_array(dir_stream) - L_sponge)) / L_sponge
+ else if (x(dir_streaml) .gt. (probhi_array(dir_streaml) - L_sponge)) then
+  dist = (x(dir_streaml) - (probhi_array(dir_streaml) - L_sponge)) / L_sponge
   damp_coeff = damp_max * (dist**2)
-
  else
   damp_coeff = 0.0d0
  endif
-
-
+ 
  ! If inside sponge, calculate 
  if (damp_coeff .gt. 0.0d0 .and. damp_coeff.le. 1.0d0) then
 
   activate_flag=1
-
   ! To set the target values of flow variables, the N_wave solutions are called 
   ! at the inflow boundary 
-  !call to shockdrop flow varibales: These subroutines are defined in shockdrop.F90
-  call shockdrop_pressure(x,t,ls,P_target,nmat)
-  
   velsolid_flag = 0
-  
+   
   call shockdrop_velocity(x,t,ls,vel_target,velsolid_flag,dx,nmat)
-
-  call shockdrop_gas_density(t,x(dir_stream),x(dir_transverse),&
+ 
+  call shockdrop_gas_density(t,x(dir_streaml),x(dir_transversel),&
           x(SDIM),den_target)
 
-  call shockdrop_gas_temperature(t,x(dir_stream),&
-          x(dir_transverse),x(SDIM),T_target) 
+  call shockdrop_gas_temperature(t,x(dir_streaml),&
+          x(dir_transversel),x(SDIM),T_target) 
  
   ! Apply the Damping 
   do dir=1,SDIM
    vel_damp(dir) = vel(dir) - damp_coeff * ( vel(dir) - vel_target(dir) )
   enddo
-
-  !FIX ME this is obsolete 
-  !P_damp = P - damp_coeff * (P - P_target)
+  
   T_damp(im_gas) = Temperature(im_gas) -  &
      damp_coeff * (Temperature(im_gas) - T_target)
   den_damp(im_gas) = den(im_gas) - damp_coeff * (den(im_gas) - den_target)
   
  else if (damp_coeff.lt.0d0 .or. damp_coeff .gt. 1.0d0 ) then 
+#if defined(CheckDebugPart2)
    print*,'invalid damp_coeff in damp_nwave'
    stop   
+#endif
  endif
 
 end subroutine damp_nwave
-
-
 
 subroutine shockdrop_ASSIMILATE( &
      assimilate_in,assimilate_out, &
@@ -1889,7 +2046,7 @@ integer, INTENT(in) :: i,j,k,cell_flag
 
 integer :: nstate,nstate_test
 real(amrex_real) :: xcrit(SDIM)
-real(amrex_real) :: dx_local(SDIM)
+real(amrex_real) :: dx_loc(SDIM)
 real(amrex_real) :: vel_local(SDIM)
 real(amrex_real) :: temperature_local(num_materials)
 real(amrex_real) :: den_local(num_materials)
@@ -1902,11 +2059,12 @@ integer, PARAMETER :: im_gas=2
 integer :: dir
 integer :: ibase
 integer :: activate_flag
-integer, PARAMETER :: num_cell_sponge=10
+integer, PARAMETER :: num_cell_sponge=20
 
 nstate=assimilate_in%nstate
 
 nstate_test=STATE_NCOMP
+#if defined(CheckDebugPart2)
 if (nstate.eq.nstate_test) then
  ! do nothing
 else
@@ -1915,6 +2073,7 @@ else
  print *,"nstate_test=",nstate_test
  stop
 endif
+#endif
 
 if ((num_materials.ge.2).and. &
     (num_state_material.ge.2).and. & 
@@ -1922,15 +2081,17 @@ if ((num_materials.ge.2).and. &
 
  do dir=1,SDIM
   xcrit(dir)=assimilate_in%xsten(0,dir)
-  dx_local(dir)=assimilate_in%dx(dir)
+  dx_loc(dir)=assimilate_in%dx(dir)
  enddo
 
+#if defined(CheckDebugPart2)
  if (assimilate_in%nhalf.ge.2) then
   ! do nothing
  else
   print *,"(assimilate_in%nhalf.ge.2) violated"
   stop
  endif
+#endif
 
  if (cell_flag.eq.-1) then
 
@@ -1947,7 +2108,7 @@ if ((num_materials.ge.2).and. &
    LS_local(im)=assimilate_out%LS_state(D_DECL(i,j,k),im)
   enddo
 
-  call damp_nwave(xcrit,dx_local, &
+  call damp_nwave(xcrit,dx_loc, &
           assimilate_in%cur_time, &
           assimilate_in%dt, &
           num_cell_sponge, &
@@ -1973,11 +2134,13 @@ if ((num_materials.ge.2).and. &
   else if (activate_flag.eq.0) then
    !do nothing
   else
+#if defined(CheckDebugPart2)
    print *,"activate_flag invalid"
    stop
+#endif
   endif
  else if ((cell_flag.ge.0).and.(cell_flag.lt.SDIM)) then
-  call damp_nwave_activate(xcrit,dx_local,num_cell_sponge,activate_flag)
+  call damp_nwave_activate(xcrit,dx_loc,num_cell_sponge,activate_flag)
   if (activate_flag.eq.1) then
    if (cell_flag.eq.0) then
     assimilate_out%macx(D_DECL(i,j,k))=half*( &
@@ -1992,18 +2155,24 @@ if ((num_materials.ge.2).and. &
      assimilate_out%state(D_DECL(i,j,k),cell_flag+1)+ &
      assimilate_out%state(D_DECL(i,j,k-1),cell_flag+1))
    else 
+#if defined(CheckDebugPart2)
     print *,"cell_flag invalid ",cell_flag
     stop
+#endif
    endif
   else if (activate_flag.eq.0) then
    !do nothing
   else
+#if defined(CheckDebugPart2)
    print *,"activate_flag invalid"
    stop
+#endif
   endif
  else
+#if defined(CheckDebugPart2)
   print *,"cell_flag invalid ",cell_flag
   stop
+#endif
  endif
 else
  print *,"num_materials,num_state_material, or probtype invalid"
