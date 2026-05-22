@@ -957,6 +957,8 @@ int  NavierStokes::initial_thermal_cycles=3;
 // default is to do 5 MGPCG cycles, then restart the MGPCG iteration
 // and do as many cycles as necessary in order to achieve convergence.
 int  NavierStokes::initial_cg_cycles=5;
+int  NavierStokes::initial_viscosity_cg_cycles=5;
+int  NavierStokes::initial_thermal_cg_cycles=5;
 int  NavierStokes::debug_dot_product=0;
 
 int NavierStokes::smooth_type = 2; // 0=GSRB 1=weighted Jacobi 2=ILU
@@ -2748,8 +2750,11 @@ NavierStokes::read_params ()
      amrex::Error("tecplot_max_level invalid"); 
 
     if ((max_level_for_use<0)||
-        (max_level_for_use>ns_max_level))
+        (max_level_for_use>ns_max_level)) {
+     std::cout << "max_level_for_use " << max_level_for_use << '\n';
+     std::cout << "ns_max_level " << ns_max_level << '\n';
      amrex::Error("max_level_for_use invalid"); 
+    }
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "ncomp_sum_int_user1 " << 
@@ -5533,7 +5538,12 @@ NavierStokes::read_params ()
 
      // 0 - MGPCG  1-PCG 2-MINV=I
     pp.queryAdd("project_solver_type",project_solver_type);
+
     pp.queryAdd("initial_cg_cycles",initial_cg_cycles);
+    initial_viscosity_cg_cycles=initial_cg_cycles;
+    pp.queryAdd("initial_viscosity_cg_cycles",initial_viscosity_cg_cycles);
+    initial_thermal_cg_cycles=initial_viscosity_cg_cycles;
+    pp.queryAdd("initial_thermal_cg_cycles",initial_thermal_cg_cycles);
 
     pp.queryAdd("initial_project_cycles",initial_project_cycles);
     if (initial_project_cycles<1)
@@ -6342,7 +6352,13 @@ NavierStokes::read_params ()
      std::cout << "mac.visc_abs_tol " <<visc_abs_tol<< '\n';
      std::cout << "mac.thermal_abs_tol " <<thermal_abs_tol<< '\n';
      std::cout << "project_solver_type " <<project_solver_type<< '\n';
+
      std::cout << "initial_cg_cycles " <<initial_cg_cycles<< '\n';
+     std::cout << "initial_viscosity_cg_cycles " <<
+       initial_viscosity_cg_cycles<< '\n';
+     std::cout << "initial_thermal_cg_cycles " <<
+       initial_thermal_cg_cycles<< '\n';
+
      std::cout << "initial_project_cycles " <<initial_project_cycles<< '\n';
      std::cout << "initial_viscosity_cycles " <<initial_viscosity_cycles<< '\n';
      std::cout << "initial_thermal_cycles " <<initial_thermal_cycles<< '\n';

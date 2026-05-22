@@ -17609,8 +17609,11 @@ contains
       end subroutine check_for_single_material
 
 
-
       subroutine sanity_check_multi_get_volume( &
+       tessellate_source, &
+       tessellate_dest, &
+       multi_volume, &
+       uncaptured_volume_START, &
        uncaptured_volume, &
        volcell, &
        EPS_SANITY, &
@@ -17633,6 +17636,10 @@ contains
 
       IMPLICIT NONE
 
+      integer, intent(in) :: tessellate_source
+      integer, intent(in) :: tessellate_dest
+      real(amrex_real), intent(in) :: multi_volume(num_materials)
+      real(amrex_real), intent(in) :: uncaptured_volume_START
       real(amrex_real), intent(in) :: &
           uncaptured_volume(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real), intent(in) :: &
@@ -17642,6 +17649,7 @@ contains
          vfrac_sum_local( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real), intent(in) :: volcell
+      real(amrex_real) :: volcell_compare
       real(amrex_real), intent(in) :: EPS_SANITY,EPS_SINGLE
       integer, intent(in) :: caller_id
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
@@ -17698,6 +17706,44 @@ contains
 
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
+      if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+       volcell_compare=zero
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
+            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+         volcell_compare=volcell_compare+multi_volume(im)
+        else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
+         if (is_rigid(im).eq.1) then
+          !do nothing
+         else if (is_rigid(im).eq.0) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          stop
+         endif
+        endif
+       enddo !im=1,num_materials
+
+       if (abs(uncaptured_volume_START-volcell_compare).le. &
+           EPS2*uncaptured_volume_START) then
+        !do nothing
+       else
+        print *,"tessellate_source ",tessellate_source
+        print *,"tessellate_dest ",tessellate_dest
+        print *,"uncaptured_volume_fraction ", &
+         uncaptured_volume_fraction
+        print *,"multi_volume ",multi_volume
+        print *,"uncaptured_volume ",uncaptured_volume
+        print *,"is_rigid_local ",is_rigid_local
+        print *,"is_elastic_local ",is_elastic_local
+        print *,"uncaptured_volume_START or volcell_compare invalid: ", &
+          uncaptured_volume_START,volcell_compare, &
+          (uncaptured_volume_START-volcell_compare)/uncaptured_volume_START
+        stop
+       endif
+      endif
+
       return
 
       end subroutine sanity_check_multi_get_volume
@@ -17748,7 +17794,7 @@ contains
       integer im
       integer layer_iter
 
-      real(amrex_real) uncaptured_volume_START
+      real(amrex_real) :: uncaptured_volume_START
 
       real(amrex_real) &
           uncaptured_volume(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -17924,13 +17970,16 @@ contains
        cencell, &
        sdim)
 
-      call Box_volumeFAST(bfact,dx, &
-         xsten_grid,nhalf_grid, &
-         uncaptured_volume(RIGID_LAYER_INDEX), &
+      call Box_volumeFAST( &
+         bfact, &
+         dx, &
+         xsten_grid, &
+         nhalf_grid, &
+         uncaptured_volume_START, &
          uncaptured_centroid_local,sdim)
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       uncaptured_volume(layer_iter)=uncaptured_volume(RIGID_LAYER_INDEX)
+       uncaptured_volume(layer_iter)=uncaptured_volume_START
        do dir=1,sdim
         uncaptured_centroid(layer_iter,dir)= &
             uncaptured_centroid_local(dir)
@@ -17943,8 +17992,6 @@ contains
         stop
        endif
       enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-
-      uncaptured_volume_START=uncaptured_volume(RIGID_LAYER_INDEX)
 
       if (volcell.gt.zero) then
        !do nothing
@@ -18186,11 +18233,7 @@ contains
           endif
          enddo
 
-         if ((at_least_one(layer_iter).ge.1).and. &
-             (at_least_one(layer_iter).le.num_materials).and. &
-             (vfrac_sum_local(layer_iter).gt.zero)) then
-
-          call init_layer_flag( &
+         call init_layer_flag( &
             vfrac_sum, &
             vfrac_sum_local, &
             layer_flag, & !intent(out)
@@ -18198,11 +18241,11 @@ contains
             tessellate_source, &
             tessellate_dest)
             
-          call init_mask_flag( &
+         call init_mask_flag( &
             layer_flag, &
             is_masked)
 
-          call advance_uncaptured_vars( & !multi_get_volume_grid_simple
+         call advance_uncaptured_vars( & !multi_get_volume_grid_simple
             tessellate_source, &
             tessellate_dest, &
             layer_iter, &
@@ -18210,6 +18253,11 @@ contains
             uncaptured_centroid, &
             uncaptured_volume_fraction, &
             sdim)
+
+
+         if ((at_least_one(layer_iter).ge.1).and. &
+             (at_least_one(layer_iter).le.num_materials).and. &
+             (vfrac_sum_local(layer_iter).gt.zero)) then
 
            !uncaptured_volume(layer_iter) initialized to the box volume
            !for all "layer_iter"
@@ -18453,6 +18501,10 @@ contains
         enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
         call sanity_check_multi_get_volume( & !multi_get_volume_grid_simple
+         tessellate_source, &
+         tessellate_dest, &
+         multi_volume, &
+         uncaptured_volume_START, &
          uncaptured_volume, &
          volcell, &
          EPS2, &
@@ -18537,7 +18589,7 @@ contains
       integer im
       integer layer_iter
 
-      real(amrex_real) uncaptured_volume_START
+      real(amrex_real) :: uncaptured_volume_START
 
       real(amrex_real) &
           uncaptured_volume(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -18719,13 +18771,13 @@ contains
  
        call Box_volumeFAST(bfact,dx, &
          xsten_grid,nhalf_grid, &
-         uncaptured_volume(RIGID_LAYER_INDEX), &
+         uncaptured_volume_START, &
          uncaptured_centroid_local,sdim)
 
       else if (shapeflag.eq.1) then
 
        call tetrahedron_volume(xtet, &
-         uncaptured_volume(RIGID_LAYER_INDEX), &
+         uncaptured_volume_START, &
          uncaptured_centroid_local,sdim)
 
       else
@@ -18734,7 +18786,7 @@ contains
       endif
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       uncaptured_volume(layer_iter)=uncaptured_volume(RIGID_LAYER_INDEX)
+       uncaptured_volume(layer_iter)=uncaptured_volume_START
        do dir=1,sdim
         uncaptured_centroid(layer_iter,dir)= &
             uncaptured_centroid_local(dir)
@@ -18747,8 +18799,6 @@ contains
         stop
        endif
       enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-
-      uncaptured_volume_START=uncaptured_volume(RIGID_LAYER_INDEX)
 
       if (volcell.gt.zero) then
        !do nothing
@@ -18989,18 +19039,14 @@ contains
           endif
          enddo
 
-         if ((at_least_one(layer_iter).ge.1).and. &
-             (at_least_one(layer_iter).le.num_materials).and. &
-             (vfrac_sum_local(layer_iter).gt.zero)) then
+         call init_layer_flag( &
+           vfrac_sum, &
+           vfrac_sum_local, &
+           layer_flag, & !intent(out)
+           layer_iter, & !intent(in)
+           tessellate_source, &
+           tessellate_dest)
 
-          call init_layer_flag( &
-            vfrac_sum, &
-            vfrac_sum_local, &
-            layer_flag, & !intent(out)
-            layer_iter, & !intent(in)
-            tessellate_source, &
-            tessellate_dest)
-            
           call init_mask_flag( &
             layer_flag, &
             is_masked)
@@ -19013,6 +19059,11 @@ contains
             uncaptured_centroid, &
             uncaptured_volume_fraction, &
             sdim)
+
+         if ((at_least_one(layer_iter).ge.1).and. &
+             (at_least_one(layer_iter).le.num_materials).and. &
+             (vfrac_sum_local(layer_iter).gt.zero)) then
+
 
            !uncaptured_volume(layer_iter) initialized to the box volume
            !for all "layer_iter"
@@ -19281,7 +19332,11 @@ contains
          
         enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-        call sanity_check_multi_get_volume( &
+        call sanity_check_multi_get_volume( & !multi_get_volume_grid
+         tessellate_source, &
+         tessellate_dest, &
+         multi_volume, &
+         uncaptured_volume_START, &
          uncaptured_volume, &
          volcell, &
          EPS2, &
@@ -19531,15 +19586,15 @@ contains
         dx, &
         xsten_grid, &
         nhalf_grid, &
-        uncaptured_volume(RIGID_LAYER_INDEX), &
+        uncaptured_volume_START, &
         uncaptured_centroid_local, &
-        uncaptured_volume_map(RIGID_LAYER_INDEX), &
+        uncaptured_volume_map_START, &
         uncaptured_centroid_local_map, &
         sdim)
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-       uncaptured_volume(layer_iter)=uncaptured_volume(RIGID_LAYER_INDEX)
+       uncaptured_volume(layer_iter)=uncaptured_volume_START
        do dir=1,sdim
         uncaptured_centroid(layer_iter,dir)= &
             uncaptured_centroid_local(dir)
@@ -19552,8 +19607,7 @@ contains
         stop
        endif
 
-       uncaptured_volume_map(layer_iter)= &
-         uncaptured_volume_map(RIGID_LAYER_INDEX)
+       uncaptured_volume_map(layer_iter)=uncaptured_volume_map_START
        do dir=1,sdim
         uncaptured_centroid_map(layer_iter,dir)= &
             uncaptured_centroid_local_map(dir)
@@ -19567,9 +19621,6 @@ contains
        endif
 
       enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-
-      uncaptured_volume_START=uncaptured_volume(RIGID_LAYER_INDEX)
-      uncaptured_volume_map_START=uncaptured_volume_map(RIGID_LAYER_INDEX)
 
       if (volcell.gt.zero) then
        !do nothing
@@ -19721,11 +19772,7 @@ contains
          endif
         enddo
 
-        if ((at_least_one(layer_iter).ge.1).and. &
-            (at_least_one(layer_iter).le.num_materials).and. &
-            (vfrac_sum_local(layer_iter).gt.zero)) then
-
-         call init_layer_flag( &
+        call init_layer_flag( &
            vfrac_sum, &
            vfrac_sum_local, &
            layer_flag, & !intent(out)
@@ -19733,11 +19780,11 @@ contains
            tessellate_source, &
            tessellate_dest)
 
-         call init_mask_flag( &
+        call init_mask_flag( &
            layer_flag, &
            is_masked)
 
-         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
+        call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
            tessellate_source, &
            tessellate_dest, &
            layer_iter, &
@@ -19745,7 +19792,7 @@ contains
            uncaptured_centroid, &
            uncaptured_volume_fraction, &
            sdim)
-         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
+        call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
            tessellate_source, &
            tessellate_dest, &
            layer_iter, &
@@ -19753,6 +19800,11 @@ contains
            uncaptured_centroid_map, &
            uncaptured_volume_fraction, &
            sdim)
+
+
+        if ((at_least_one(layer_iter).ge.1).and. &
+            (at_least_one(layer_iter).le.num_materials).and. &
+            (vfrac_sum_local(layer_iter).gt.zero)) then
 
           !uncaptured_volume(layer_iter) initialized to the box volume
           !for all "layer_iter"
@@ -20023,6 +20075,10 @@ contains
        enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
        call sanity_check_multi_get_volume( & !multi_get_volume_grid_and_map
+         tessellate_source, &
+         tessellate_dest, &
+         multi_volume, &
+         uncaptured_volume_START, &
          uncaptured_volume, &
          volcell, &
          EPS2, &
@@ -20749,11 +20805,8 @@ contains
          endif
         enddo
 
-        if ((at_least_one(layer_iter).ge.1).and. &
-            (at_least_one(layer_iter).le.num_materials).and. &
-            (vfrac_sum_local(layer_iter).gt.zero)) then
 
-         call init_layer_flag( &
+        call init_layer_flag( &
            vfrac_sum, &
            vfrac_sum_local, &
            layer_flag, & !intent(out)
@@ -20761,11 +20814,11 @@ contains
            IGNORE_ISRIGID_tessellate, &
            IGNORE_ISRIGID_tessellate)
 
-         call init_mask_flag( &
+        call init_mask_flag( &
            layer_flag, &
            is_masked)
 
-         call advance_uncaptured_vars( & !multi_get_area_pairs
+        call advance_uncaptured_vars( & !multi_get_area_pairs
            IGNORE_ISRIGID_tessellate, &
            IGNORE_ISRIGID_tessellate, &
            layer_iter, &
@@ -20773,6 +20826,12 @@ contains
            uncaptured_centroid, &
            uncaptured_volume_fraction, &
            sdim)
+
+
+        if ((at_least_one(layer_iter).ge.1).and. &
+            (at_least_one(layer_iter).le.num_materials).and. &
+            (vfrac_sum_local(layer_iter).gt.zero)) then
+
 
          loop_counter=0
 
@@ -21642,6 +21701,9 @@ contains
       if (abs(volcell-volcell_compare).le.EPS2*volcell) then
        !do nothing
       else
+       print *,"tessellate_source ",tessellate_source
+       print *,"tessellate_dest ",tessellate_dest
+       print *,"multi_volume ",multi_volume
        print *,"volcell or volcell_compare invalid: ", &
          volcell,volcell_compare, &
          (volcell-volcell_compare)/volcell 
