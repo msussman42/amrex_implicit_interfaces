@@ -6910,6 +6910,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 		STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
    MultiFab* mofdata=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,time);
    MultiFab* dendata=getStateDen(1,time);
+    //tessellate=TESSELLATE_FLUIDS
    MultiFab* lsdata=getStateDist(ngrow_distance,time,local_caller_string);
 
    for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
@@ -6964,7 +6965,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
      // mask=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& lsfab=(*lsdata)[mfi];
+    FArrayBox& lsfab=(*lsdata)[mfi]; //tessellate==TESSELLATE_FLUIDS
     FArrayBox& moffab=(*mofdata)[mfi];
     FArrayBox& denfab=(*dendata)[mfi];
     FArrayBox& velfab=(*veldata)[mfi];
@@ -6993,7 +6994,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
       maskcov.dataPtr(),
       ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-      lsfab.dataPtr(),
+      lsfab.dataPtr(), //tessellate=TESSELLATE_FLUIDS
       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
       moffab.dataPtr(),
       ARLIM(moffab.loVect()),ARLIM(moffab.hiVect()),

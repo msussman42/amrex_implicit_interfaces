@@ -3345,14 +3345,11 @@ stop
       real(amrex_real) local_MASS(num_materials)
       real(amrex_real) species_vfrac_sum
       real(amrex_real) species_mass_sum
-      real(amrex_real) species_avg
-      real(amrex_real) speciesconst_avg
       real(amrex_real) local_rate
       integer vofcomp
       integer spec_comp
       integer dencomp
       real(amrex_real) spec_old,spec_new
-      real(amrex_real) species_scale
       real(amrex_real), PARAMETER :: species_max=1.0d0
 
       LSnew_ptr=>LSnew
@@ -3419,10 +3416,10 @@ stop
        stop
       endif
 
-      if (species_max.gt.zero) then
+      if (species_max.eq.one) then
        !do nothing
       else
-       print *,"species_max invalid: ",species_max
+       print *,"expecting species_max=1: ",species_max
        stop
       endif
 
@@ -3509,129 +3506,33 @@ stop
 
         do ispec=1,num_species_var
 
-         species_avg=zero
-         speciesconst_avg=zero
          do im=1,num_materials
           local_rate=speciesreactionrate((ispec-1)*num_materials+im)
 
           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
                ENUM_SPECIESVAR+ispec
 
-          species_scale=fort_speciesconst(im+num_materials*(ispec-1))
-          speciesconst_avg=speciesconst_avg+species_scale
+          spec_old=snew(D_DECL(i,j,k),spec_comp)
 
-          if (species_scale.eq.zero) then
-           species_scale=one
-          else if ((species_scale.gt.zero).and. &
-                   (species_scale.le.species_max)) then
-           !do nothing
-          else
-           print *,"species_scale invalid: ",species_scale
-           stop
-          endif
-
+           ! Y'=r Y
           if (local_rate.ge.zero) then
-           ! Y'=r(species_max-Y)
-           ! Ynew=Yold+dt * r * (species_max-Ynew)
-           ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
-           spec_old=snew(D_DECL(i,j,k),spec_comp)
-           if (abs(spec_old).le.EPS3*species_scale) then
-            spec_old=zero
-           else if (abs(spec_old-species_max).le.EPS3) then
-            spec_old=species_max
-           else if ((spec_old.ge.zero).and. &
-                    (spec_old.le.species_max)) then
-            ! do nothing
-           else
-            print *,"spec_old invalid: ",spec_old
-            stop
-           endif
-           spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
-
-           if (abs(spec_new).le.EPS3*species_scale) then
-            spec_new=zero
-           else if (abs(spec_new-species_max).le.EPS3) then
-            spec_new=species_max
-           else if ((spec_new.ge.zero).and. &
-                    (spec_new.le.species_max)) then
-            ! do nothing
-           else
-            print *,"spec_new invalid: ",spec_new
-            stop
-           endif
-           snew(D_DECL(i,j,k),spec_comp)=spec_new
+           spec_new=spec_old+dt*local_rate*spec_old
+          else if (local_rate.le.zero) then
+           spec_new=spec_old/(one+dt*local_rate)
           else
            print *,"local_rate invalid: ",local_rate
            stop
           endif
 
-          if (is_rigid(im).eq.0) then
-           species_avg=species_avg+spec_new*local_MASS(im)
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
+          if (spec_new.gt.species_max) then
+           spec_new=species_max
+          else if ((spec_new.ge.zero).and.(spec_new.le.species_max)) then
+           !do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"spec_new invalid ",spec_new
            stop
           endif
-         enddo ! im=1,num_materials
-
-         speciesconst_avg=speciesconst_avg/num_materials
-         species_scale=speciesconst_avg
-       
-         if (species_scale.eq.zero) then
-          species_scale=one
-         else if ((species_scale.gt.zero).and. &
-                  (species_scale.le.species_max)) then
-          !do nothing
-         else
-          print *,"species_scale invalid (avg): ",species_scale
-          stop
-         endif
-
-         if ((species_vfrac_sum.gt.zero).and. &
-             (species_mass_sum.gt.zero)) then
-          species_avg=species_avg/species_mass_sum
-         else
-          print *,"species_vfrac_sum or species_mass_sum invalid"
-          print *,"species_vfrac_sum: ",species_vfrac_sum
-          print *,"species_mass_sum: ",species_mass_sum
-          stop
-         endif
-         if ((species_avg.ge.zero).and. &
-             (species_avg.le.EPS3*species_scale)) then
-          species_avg=zero
-         else if (abs(species_avg-species_max).le.EPS3) then
-          species_avg=species_max
-         else if ((species_avg.gt.zero).and. &
-                  (species_avg.lt.species_max))  then
-          ! do nothing
-         else
-          print *,"species_avg invalid: ",species_avg
-          stop
-         endif
-
-         do im=1,num_materials
-          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
-                ENUM_SPECIESVAR+ispec
-          if (is_rigid(im).eq.0) then
-           if (local_VOF(im).eq.zero) then
-            snew(D_DECL(i,j,k),spec_comp)=species_avg
-           else if ((local_VOF(im).gt.zero).and. &
-                    (local_VOF(im).le.one)) then
-            ! do nothing
-           else
-            print *,"local_VOF invalid"
-            print *,"im=",im
-            print *,"local_VOF(im)=",local_VOF(im)
-            stop
-           endif
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-
+          snew(D_DECL(i,j,k),spec_comp)=spec_new
          enddo ! im=1,num_materials
 
         enddo ! ispec=1,num_species_var
@@ -3639,7 +3540,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 

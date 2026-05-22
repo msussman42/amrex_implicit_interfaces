@@ -20504,7 +20504,7 @@ stop
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
        maskcov,DIMS(maskcov), &
-       LS,DIMS(LS), & ! getStateDist(time)
+       LS,DIMS(LS), & ! getStateDist(time) tessellate=TESSELLATE_FLUIDS
        state_mof,DIMS(state_mof), &
        den,DIMS(den), &
        vel,DIMS(vel), &
@@ -20653,12 +20653,8 @@ stop
       real(amrex_real) local_species_sum(num_state_material)
       real(amrex_real) local_species
 
-      real(amrex_real) local_mass_sum
-      real(amrex_real) local_VOF(num_materials)
-      real(amrex_real) local_mass(num_materials)
-      real(amrex_real) local_density(num_materials)
-
       real(amrex_real) nslope_solid(SDIM)
+      real(amrex_real) mag_nslope_solid
       integer nmax
       real(amrex_real) LS_extend(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real) LS_temp(D_DECL(-1:1,-1:1,-1:1))
@@ -20674,7 +20670,10 @@ stop
       real(amrex_real) LS_virtual_new(num_materials)
        !used for insuring tessellation property of LS
       real(amrex_real) LS_virtual_max 
-      integer num_materials_fluid,num_materials_solid,num_materials_lag
+      integer num_materials_fluid
+      integer num_materials_elastic
+      integer num_materials_solid
+      integer num_materials_lag
       integer at_center
       integer ibase
       integer partid
@@ -20845,6 +20844,7 @@ stop
       cell_CP_parm%LS=>LS
 
       num_materials_fluid=0
+      num_materials_elastic=0
       num_materials_solid=0
       num_materials_lag=0
 
@@ -20852,41 +20852,45 @@ stop
 
        if (num_state_material.ne. &
            num_state_base+num_species_var) then
-        print *,"num_state_material invalid"
+        print *,"num_state_material invalid ",num_state_material
         stop
        endif
 
        if (is_lag_part(im).eq.1) then
         num_materials_lag=num_materials_lag+1
-        if (is_rigid(im).eq.1) then
-         num_materials_solid=num_materials_solid+1
-        else if (is_rigid(im).eq.0) then
-         num_materials_fluid=num_materials_fluid+1
-        else
-         print *,"is_rigid(im) invalid"
-         stop
-        endif
        else if (is_lag_part(im).eq.0) then
-        if (is_rigid(im).eq.0) then
-         num_materials_fluid=num_materials_fluid+1
-        else
-         print *,"is_rigid(im) invalid"
-         stop
-        endif
+        !do nothing
        else
-        print *,"is_lag_part(im) invalid"
+        print *,"is_lag_part(im) invalid ",im,is_lag_part(im)
+        stop
+       endif
+
+       if (is_rigid(im).eq.1) then
+        num_materials_solid=num_materials_solid+1
+       else if (is_elastic(im).eq.1) then
+        num_materials_elastic=num_materials_elastic+1
+       else if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
+         num_materials_fluid=num_materials_fluid+1
+       else
+        print *,"is_rigid(im) invalid ",im,is_rigid(im)
+        print *,"or is_elastic(im) invalid ",im,is_elastic(im)
         stop
        endif
 
       enddo ! im=1..num_materials
 
       if (num_materials_lag.ne.nparts) then
-       print *,"num_materials_lag invalid"
+       print *,"num_materials_lag invalid ",num_materials_lag
+       print *,"nparts= ",nparts
        stop
       endif
 
-      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
-       print *,"num_materials_fluid and/or num_materials_solid invalid"
+      if (num_materials_fluid+ &
+          num_materials_solid+ &
+          num_materials_elastic.ne.num_materials) then
+       print *,"num_materials_fluid invalid ",num_materials_fluid
+       print *,"or num_materials_solid invalid ",num_materials_solid
+       print *,"or num_materials_elastic invalid ",num_materials_elastic
        stop
       endif
 
@@ -20962,110 +20966,6 @@ stop
 
         if (LS_extrap_iter.eq.0) then
 
-         local_mass_sum=zero
-
-         do im=1,num_materials
-          vofcompraw=(im-1)*ngeom_raw+1
-          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
-
-          local_VOF(im)=state_mof(D_DECL(i,j,k),vofcompraw)
-          if ((local_VOF(im).ge.-EPS1).and. &
-              (local_VOF(im).le.VOFTOL_MATERIAL)) then
-           local_VOF(im)=zero
-          else if ((local_VOF(im).ge.one-VOFTOL_MATERIAL).and. &
-                   (local_VOF(im).le.one+EPS1)) then
-           local_VOF(im)=one
-          else if ((local_VOF(im).gt.zero).and. &
-                   (local_VOF(im).lt.one)) then
-           ! do nothing
-          else
-           print *,"local_VOF(im) invalid: ",im,local_VOF(im)
-           stop
-          endif
-         
-          if (is_rigid(im).eq.0) then 
-           if (constant_density_all_time(im).eq.1) then 
-            local_density(im)=fort_denconst(im)
-            if (fort_material_type(im).eq.0) then  ! incompressible
-             ! do nothing
-            else
-             print *,"fort_material_type(im) invalid: ", &
-               im,fort_material_type(im)
-             stop
-            endif
-           else if (constant_density_all_time(im).eq.0) then 
-            local_density(im)=den(D_DECL(i,j,k),dencomp)
-            if ((fort_material_type(im).ge.0).and. &
-                (fort_material_type(im).le.MAX_NUM_EOS)) then 
-             ! do nothing
-            else
-             print *,"fort_material_type(im) invalid(2): ", &
-               im,fort_material_type(im)
-             stop
-            endif
-           else
-            print *,"constant_density_all_time(im) invalid"
-            print *,"fort_renormalize_prescribe (local_density(im) loop)"
-            stop
-           endif
-          else if (is_rigid(im).eq.1) then 
-           local_density(im)=fort_denconst(im)
-          else
-           print *,"is_rigid invalid: ",im,is_rigid(im)
-           stop
-          endif
-
-          local_mass(im)=local_VOF(im)*local_density(im)
-
-          if (is_rigid(im).eq.1) then
-           ! do nothing
-          else if (is_rigid(im).eq.0) then
-           local_mass_sum=local_mass_sum+local_mass(im)
-          else
-           print *,"is_rigid(im) invalid: ",im,is_rigid(im)
-           stop
-          endif
-         enddo !im=1,num_materials
-
-         if (local_mass_sum.gt.zero) then
-          ! do nothing
-         else
-          print *,"local_mass_sum invalid: ",local_mass_sum
-          stop
-         endif
-
-         do istate=1,num_state_material
-          local_species_sum(istate)=zero
-         enddo
-
-         do im=1,num_materials
-          if (is_rigid(im).eq.1) then
-           ! do nothing
-          else if (is_rigid(im).eq.0) then
-
-           if (num_state_base.eq.1+ENUM_TEMPERATUREVAR) then
-            ! do nothing
-           else
-            print *,"num_state_base invalid(3): ",num_state_base
-            stop
-           endif
-
-           do istate=num_state_base,num_state_base+num_species_var
-            tempcomp=(im-1)*num_state_material+istate
-            local_species=den(D_DECL(i,j,k),tempcomp)
-            local_species_sum(istate)=local_species_sum(istate)+ &
-                local_species*local_mass(im) 
-           enddo ! istate=num_state_base,num_state_base+num_species_var
-          else 
-           print *,"is_rigid(im) invalid: ",im,is_rigid(im)
-           stop
-          endif
-         enddo !im=1,num_materials
-
-         do istate=num_state_base,num_state_base+num_species_var
-          local_species_sum(istate)=local_species_sum(istate)/local_mass_sum
-         enddo
-
          im_refine_density=0
 
          do im=1,num_materials
@@ -21096,7 +20996,12 @@ stop
 
           if (is_rigid(im).eq.1) then
            if (constant_density_all_time(im).eq.1) then
-            ! do nothing
+            if (fort_denconst(im).gt.zero) then
+             !do nothing
+            else
+             print *,"expecting fort_denconst>0 ",fort_denconst(im)
+             stop
+            endif
            else
             print *,"constant_density_all_time(im) invalid: ", &
                im,constant_density_all_time(im)
@@ -21105,120 +21010,175 @@ stop
             stop
            endif
           else if (is_rigid(im).eq.0) then
+           !do nothing
+          else
+           print *,"is_rigid invalid ",im,is_rigid(im)
+           stop
+          endif
 
-           if ((F_stencil.gt.VOFTOL_MATERIAL).and. &
-               (F_stencil.le.one+EPS1)) then
-            ! do nothing
-           else if (abs(F_stencil).le.EPS1) then
-            ! extrapolate into the empty cell.
+          if ((F_stencil.gt.VOFTOL_MATERIAL).and. &
+              (F_stencil.le.one+EPS1)) then
+           ! do nothing
+          else if (abs(F_stencil).le.EPS1) then
+           ! extrapolate into the empty cell.
 
-            F_stencil_sum=zero
-            density_stencil_sum=zero
+           F_stencil_sum=zero
+           density_stencil_sum=zero
+           do istate=1,num_state_material
+            local_species_sum(istate)=zero
+           enddo
   
-             ! -extrap_radius ... +extrap_radius
-             ! extrap_radius=1 
-            do k1=istenlo(3),istenhi(3)
-            do j1=istenlo(2),istenhi(2)
-            do i1=istenlo(1),istenhi(1)
+            ! -extrap_radius ... +extrap_radius
+            ! extrap_radius=1 
+           do k1=istenlo(3),istenhi(3)
+           do j1=istenlo(2),istenhi(2)
+           do i1=istenlo(1),istenhi(1)
 
-             F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
+            F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
-             if ((F_stencil.ge.-EPS1).and. &
-                 (F_stencil.le.VOFTOL_MATERIAL)) then
-              F_stencil=zero
-             else if ((F_stencil.ge.one-VOFTOL_MATERIAL).and. &
-                      (F_stencil.le.one+EPS1)) then
-              F_stencil=one
-             else if ((F_stencil.gt.zero).and. &
-                      (F_stencil.lt.one)) then
-              ! do nothing
-             else
-              print *,"F_stencil invalid: ",F_stencil
-              stop
-             endif
-
-              ! in: subroutine fort_renormalize_prescribe
-
-             dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
-
-             if (constant_density_all_time(im).eq.1) then 
-              density_stencil=fort_denconst(im)
-              if (fort_material_type(im).eq.0) then  ! incompressible
-               ! do nothing
-              else
-               print *,"fort_material_type(im) invalid(1):", &
-                 im,fort_material_type(im)
-               stop
-              endif
-             else if (constant_density_all_time(im).eq.0) then 
-              density_stencil=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
-              if ((fort_material_type(im).ge.0).and. &
-                  (fort_material_type(im).le.MAX_NUM_EOS)) then 
-               ! do nothing
-              else
-               print *,"fort_material_type(im) invalid(2):", &
-                 im,fort_material_type(im)
-               stop
-              endif
-             else
-              print *,"constant_density_all_time(im) invalid:", &
-                im,constant_density_all_time(im)
-              print *,"fort_renormalize_prescribe (2)"
-              stop
-             endif
-
-             F_stencil_sum=F_stencil_sum+F_stencil
-             density_stencil_sum=density_stencil_sum+ &
-                  F_stencil*density_stencil
-
-            enddo !i1,j1,k1=-1..1 (init: density_stencil_sum, F_stencil_sum)
-            enddo
-            enddo
-
-            if (F_stencil_sum.gt.VOFTOL_MATERIAL) then
-
-             statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
-             dennew(D_DECL(i,j,k),statecomp)=density_stencil_sum/F_stencil_sum
-
-             if (is_compressible_mat(im).eq.0) then
-              !do nothing
-             else if (is_compressible_mat(im).eq.1) then
-              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
-               !do nothing
-              else
-               print *,"fort_im_refine_density_map invalid"
-               stop
-              endif
-              do nfine=1,ENUM_NUM_REFINE_DENSITY_TYPE
-               refinedennew(D_DECL(i,j,k), &
-                 (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
-                   density_stencil_sum/F_stencil_sum
-              enddo
-             else
-              print *,"is_compressible(im) invalid"
-              stop
-             endif
-
-            else if ((F_stencil_sum.ge.zero).and. &
-                     (F_stencil_sum.le.VOFTOL_MATERIAL)) then
+            if ((F_stencil.ge.-EPS1).and. &
+                (F_stencil.le.VOFTOL_MATERIAL)) then
+             F_stencil=zero
+            else if ((F_stencil.ge.one-VOFTOL_MATERIAL).and. &
+                     (F_stencil.le.one+EPS1)) then
+             F_stencil=one
+            else if ((F_stencil.gt.zero).and. &
+                     (F_stencil.lt.one)) then
              ! do nothing
             else
-             print *,"F_stencil_sum invalid:",F_stencil_sum
+             print *,"F_stencil invalid: ",F_stencil
+             stop
+            endif
+
+             ! in: subroutine fort_renormalize_prescribe
+
+            dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+
+            if (constant_density_all_time(im).eq.1) then 
+             density_stencil=fort_denconst(im)
+             if (fort_material_type(im).eq.0) then  ! incompressible
+              ! do nothing
+             else
+              print *,"fort_material_type(im) invalid(1):", &
+                im,fort_material_type(im)
+              stop
+             endif
+            else if (constant_density_all_time(im).eq.0) then 
+             density_stencil=den(D_DECL(i+i1,j+j1,k+k1),dencomp)
+             if ((fort_material_type(im).ge.0).and. &
+                 (fort_material_type(im).le.MAX_NUM_EOS)) then 
+              ! do nothing
+             else
+              print *,"fort_material_type(im) invalid(2):", &
+                im,fort_material_type(im)
+              stop
+             endif
+            else
+             print *,"constant_density_all_time(im) invalid:", &
+               im,constant_density_all_time(im)
+             print *,"fort_renormalize_prescribe (2)"
+             stop
+            endif
+
+            F_stencil_sum=F_stencil_sum+F_stencil
+            density_stencil_sum=density_stencil_sum+ &
+                 F_stencil*density_stencil
+
+            if (num_state_base.eq.1+ENUM_TEMPERATUREVAR) then
+             ! do nothing
+            else
+             print *,"num_state_base invalid(3): ",num_state_base
              stop
             endif
 
             do istate=num_state_base,num_state_base+num_species_var
-             statecomp=(im-1)*num_state_material+istate
-             dennew(D_DECL(i,j,k),statecomp)=local_species_sum(istate)
-            enddo
+             tempcomp=(im-1)*num_state_material+istate
+             local_species=den(D_DECL(i+i1,j+j1,k+k1),tempcomp)
+             local_species_sum(istate)=local_species_sum(istate)+ &
+                local_species*F_stencil*density_stencil
+            enddo ! istate=num_state_base,num_state_base+num_species_var
+
+           enddo !i1,j1,k1=-1..1 (init: density_stencil_sum, F_stencil_sum)
+           enddo
+           enddo
+
+           if (F_stencil_sum.gt.VOFTOL_MATERIAL) then
+
+            if (density_stencil_sum.gt.zero) then
+             !do nothing
+            else
+             print *,"density_stencil_sum invalid"
+             stop
+            endif
+            statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
+            dennew(D_DECL(i,j,k),statecomp)=density_stencil_sum/F_stencil_sum
+
+            do istate=num_state_base,num_state_base+num_species_var
+             tempcomp=(im-1)*num_state_material+istate
+             dennew(D_DECL(i,j,k),tempcomp)=local_species_sum(istate)/ &
+                     density_stencil_sum
+            enddo ! istate=num_state_base,num_state_base+num_species_var
+
+            if (is_compressible_mat(im).eq.0) then
+             !do nothing
+            else if (is_compressible_mat(im).eq.1) then
+             if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+              !do nothing
+             else
+              print *,"fort_im_refine_density_map invalid"
+              stop
+             endif
+             do nfine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+              refinedennew(D_DECL(i,j,k), &
+                (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+                  density_stencil_sum/F_stencil_sum
+             enddo
+            else
+             print *,"is_compressible(im) invalid"
+             stop
+            endif
+
+           else if ((F_stencil_sum.ge.zero).and. &
+                    (F_stencil_sum.le.VOFTOL_MATERIAL)) then
+
+            statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
+            dennew(D_DECL(i,j,k),statecomp)=fort_denconst(im)
+            do istate=num_state_base,num_state_base+num_species_var
+             tempcomp=(im-1)*num_state_material+istate
+             if (istate.eq.num_state_base) then
+              dennew(D_DECL(i,j,k),tempcomp)=fort_tempconst(im)
+             else
+              dennew(D_DECL(i,j,k),tempcomp)= &
+                fort_speciesconst(im+(istate-num_state_base-1)*num_materials)
+             endif
+            enddo ! istate=num_state_base,num_state_base+num_species_var
+
+            if (is_compressible_mat(im).eq.0) then
+             !do nothing
+            else if (is_compressible_mat(im).eq.1) then
+             if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+              !do nothing
+             else
+              print *,"fort_im_refine_density_map invalid"
+              stop
+             endif
+             do nfine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+              refinedennew(D_DECL(i,j,k), &
+                (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+                  fort_denconst(im)
+             enddo
+            else
+             print *,"is_compressible(im) invalid"
+             stop
+            endif
 
            else
-            print *,"F_stencil must be >= 0 F_stencil= ",F_stencil
+            print *,"F_stencil_sum invalid:",F_stencil_sum
             stop
            endif
 
           else
-           print *,"is_rigid invalid LEVELSET_3D.F90"
+           print *,"F_stencil invalid LEVELSET_3D.F90"
            stop
           endif
 
@@ -21661,16 +21621,32 @@ stop
            do dir=1,SDIM
             censolid_new(im_hard_material,dir)=centroid(dir)-cencell(dir)
            enddo
+           mag_nslope_solid=zero
            do dir=1,SDIM
             nslope_solid(dir)= &
                LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
+            mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
            enddo
+           mag_nslope_solid=sqrt(mag_nslope_solid)
+           if (mag_nslope_solid.eq.zero) then
+            im_hard_material=0
+            check_elastic=0
+           else if (mag_nslope_solid.gt.zero) then
+            !do nothing
+           else
+            print *,"mag_nslope_solid invalid"
+            stop
+           endif
+
            if (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL) then
             vfrac_solid_new(im_hard_material)=zero
-           else if (vfrac_solid_new(im_hard_material).ge.one-VOFTOL_MATERIAL) then
+           else if (vfrac_solid_new(im_hard_material).ge. &
+                    one-VOFTOL_MATERIAL) then
             vfrac_solid_new(im_hard_material)=one
-           else if ((vfrac_solid_new(im_hard_material).ge.VOFTOL_MATERIAL).and. &
-                    (vfrac_solid_new(im_hard_material).le.one-VOFTOL_MATERIAL)) then
+           else if ((vfrac_solid_new(im_hard_material).ge. &
+                     VOFTOL_MATERIAL).and. &
+                    (vfrac_solid_new(im_hard_material).le. &
+                     one-VOFTOL_MATERIAL)) then
             ! do nothing
            else
             print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
@@ -21687,7 +21663,6 @@ stop
           print *,"check_elastic invalid: ",check_elastic
           stop
          endif
-            
 
           ! extend fluid LS,F,X into the solid.
          if ((im_hard_material.ge.1).and. &

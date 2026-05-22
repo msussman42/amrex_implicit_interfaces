@@ -13184,7 +13184,7 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<num_materials*num_species_var;im++) {
    if (speciesviscconst[im]>0.0) {
     //do nothing
-   } else if (speciesviscconst[im]==0.0) { //speciesreactionrate
+   } else if (speciesviscconst[im]==0.0) { 
     //do nothing
    } else
     amrex::Error("speciesviscconst invalid");
