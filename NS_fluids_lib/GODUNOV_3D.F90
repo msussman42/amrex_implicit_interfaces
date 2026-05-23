@@ -12053,7 +12053,8 @@ stop
        print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
-      LS_DONOR_CUTOFF=two*dxmaxLS
+      !LS_DONOR_CUTOFF=two*dxmaxLS
+      LS_DONOR_CUTOFF=zero
 
       if (time.ge.zero) then
        ! do nothing

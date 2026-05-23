@@ -16995,8 +16995,13 @@ contains
          layer_flag=RIGID_LAYER
          if (at_least_one.eq.0) then
           !do nothing
+         else if ((vfrac_sum(layer_iter).eq.zero).and. &
+                  (vfrac_sum_local(layer_iter).eq.zero)) then
+          !do nothing
          else
           print *,"expecting at_least_one=0 ",at_least_one
+          print *,"or expecting vfrac_sum=vfrac_sum_local=0 ", &
+           vfrac_sum(layer_iter),vfrac_sum_local(layer_iter)
           print *,"tessellate_source=",tessellate_source
           print *,"tessellate_dest=",tessellate_dest
           print *,"layer_iter ",layer_iter
