@@ -46,8 +46,6 @@ stop
          real(amrex_real) :: time
          real(amrex_real) :: default_normal(SDIM)
          integer :: im_hard_material
-         integer :: least_sqr_radius
-         integer :: least_sqrZ
          real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: LS
 
         end type cell_CP_parm_type
@@ -251,6 +249,7 @@ stop
          jsten=local_index(2)+j2
          ksten=local_index(SDIM)+k2
 
+          !safe_data_index is declared in GLOBALUTIL.F90
          call safe_data_index( &
            isten,jsten,ksten, & !intent(in)
            i_safe,j_safe,k_safe, & !intent(out)
@@ -20711,10 +20710,6 @@ stop
       integer partid_max
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: tessellate_transfer=TESSELLATE_ALL
-      integer, parameter :: LS_extrap_radius=1
-      integer, parameter :: extrap_radius=1
-      integer, parameter :: least_sqr_radius=1
-      integer least_sqrZ
       integer center_stencil_im_only
       integer center_stencil_wetting_im
       integer im1_substencil
@@ -20730,7 +20725,7 @@ stop
       real(amrex_real) cos_angle,sin_angle
       integer iten_13,iten_23
       real(amrex_real) local_temperature(num_materials)
-      type(cell_CP_parm_type) :: cell_CP_parm
+      type(cell_CP_parm_type) :: cell_CP_parm !fort_renormalize_prescribe
       integer cell_index(3)
       real(amrex_real) xCP(SDIM)
       real(amrex_real) xSOLID_BULK(SDIM)
@@ -20798,6 +20793,14 @@ stop
                ngrow_distance
        stop
       endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"in fort_renormalize_prescribe:"
+       print *,"ngrow_make_distance!=ngrow_distance-1"
+       print *,"ngrow_make_distance: ",ngrow_make_distance
+       print *,"ngrow_distance: ",ngrow_distance
+       stop
+      endif
+
 
       if (solidheat_flag.eq.0) then 
        !do nothing (heat conduction in solid)
@@ -20852,18 +20855,6 @@ stop
        stop
       endif
 
-      least_sqrZ=0
-      if (SDIM.eq.2) then
-       ! do nothing
-      else if (SDIM.eq.3) then
-       least_sqrZ=1
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      cell_CP_parm%least_sqrZ=least_sqrZ
-      cell_CP_parm%least_sqr_radius=least_sqr_radius
       cell_CP_parm%dxmaxLS=dxmaxLS
       cell_CP_parm%bfact=bfact
       cell_CP_parm%level=level
@@ -20960,15 +20951,15 @@ stop
       istenlo(3)=0
       istenhi(3)=0
       do dir=1,SDIM
-       istenlo(dir)=-extrap_radius
-       istenhi(dir)=extrap_radius
+       istenlo(dir)=-1
+       istenhi(dir)=1
       enddo
 
       LSstenlo(3)=0
       LSstenhi(3)=0
       do dir=1,SDIM
-       LSstenlo(dir)=-LS_extrap_radius
-       LSstenhi(dir)=LS_extrap_radius
+       LSstenlo(dir)=-1
+       LSstenhi(dir)=1
       enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -21047,10 +21038,11 @@ stop
            stop
           endif
 
-          if ((F_stencil.gt.VOFTOL_MATERIAL).and. &
+          if ((F_stencil.ge.VOFTOL_MATERIAL).and. &
               (F_stencil.le.one+EPS1)) then
            ! do nothing
-          else if (abs(F_stencil).le.EPS1) then
+          else if ((F_stencil.le.VOFTOL_MATERIAL).and. &
+                   (F_stencil.ge.-EPS1)) then
            ! extrapolate into the empty cell.
 
            F_stencil_sum=zero
@@ -21059,8 +21051,7 @@ stop
             local_species_sum(istate)=zero
            enddo
   
-            ! -extrap_radius ... +extrap_radius
-            ! extrap_radius=1 
+            ! -1,0,+1
            do k1=istenlo(3),istenhi(3)
            do j1=istenlo(2),istenhi(2)
            do i1=istenlo(1),istenhi(1)
@@ -21073,8 +21064,8 @@ stop
             else if ((F_stencil.ge.one-VOFTOL_MATERIAL).and. &
                      (F_stencil.le.one+EPS1)) then
              F_stencil=one
-            else if ((F_stencil.gt.zero).and. &
-                     (F_stencil.lt.one)) then
+            else if ((F_stencil.ge.VOFTOL_MATERIAL).and. &
+                     (F_stencil.le.one-VOFTOL_MATERIAL)) then
              ! do nothing
             else
              print *,"F_stencil invalid: ",F_stencil
@@ -21135,12 +21126,12 @@ stop
            enddo
            enddo
 
-           if (F_stencil_sum.gt.VOFTOL_MATERIAL) then
+           if (F_stencil_sum.ge.VOFTOL_MATERIAL) then
 
             if (density_stencil_sum.gt.zero) then
              !do nothing
             else
-             print *,"density_stencil_sum invalid"
+             print *,"density_stencil_sum invalid ",density_stencil_sum
              stop
             endif
             statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
@@ -21211,7 +21202,7 @@ stop
            endif
 
           else
-           print *,"F_stencil invalid LEVELSET_3D.F90"
+           print *,"F_stencil invalid LEVELSET_3D.F90 ",F_stencil
            stop
           endif
 
@@ -21759,7 +21750,7 @@ stop
             ! inner loop is needed since the fluid volume fraction
             ! at (i,j,k) depends on the fluid levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
-            ! LS_extrap_radius=1
+            ! -1,0,1
           do k1=LSstenlo(3),LSstenhi(3)
           do j1=LSstenlo(2),LSstenhi(2)
           do i1=LSstenlo(1),LSstenhi(1)
@@ -22012,8 +22003,8 @@ stop
            stop
           endif
 
-            ! default radius: extrap_radius=1 cell
-            ! make the extension fluid level set tessellating
+          ! make the extension fluid level set tessellating
+          ! -1,0,1
           do k1=istenlo(3),istenhi(3)
           do j1=istenlo(2),istenhi(2)
           do i1=istenlo(1),istenhi(1)
