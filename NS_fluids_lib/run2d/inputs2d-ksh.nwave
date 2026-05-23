@@ -137,6 +137,7 @@ ns.pressure_error_cutoff=1.0e+6 0.01
 # WATER COMPRESSIBLE: make material_type(1)=7
 # GALINSTAN COMPRESSIBLE: make material_type(1)=34
 ns.material_conservation_form=1 1 # 1 1 COMPRESSIBLE -> 0 0 INCOMPRESSIBLE
+# (p-padv)/(rho dt_factor c^2 dt^2)=-div ustar/dt
 # 1.0 1.0 COMPRESSIBLE->1.0e+10 1.0e+10 INCOMPRESSIBLE
 ns.compressible_dt_factor=1.0 1.0 
 #ns.material_type=0 0 
