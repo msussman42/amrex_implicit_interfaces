@@ -44,6 +44,7 @@ stop
          integer, pointer :: fabhi(:)
          real(amrex_real), pointer :: dx(:)
          real(amrex_real) :: time
+         real(amrex_real) :: default_normal(SDIM)
          integer :: im_hard_material
          integer :: least_sqr_radius
          integer :: least_sqrZ
@@ -122,6 +123,36 @@ stop
            print *,"CP%im_hard_material=",CP%im_hard_material
            print *,"FSI_flag(CP%im_hard_material)=", &
              FSI_flag(CP%im_hard_material)
+           stop
+          endif
+
+          mag=zero
+          do dir=1,SDIM
+           mag=mag+nslope_cell(dir)**2
+          enddo
+          mag=sqrt(mag)
+          
+          if (mag.eq.zero) then
+           mag=zero
+           do dir=1,SDIM
+            nslope_cell(dir)=CP%default_normal(dir)
+            mag=mag+nslope_cell(dir)**2
+           enddo
+           mag=sqrt(mag)
+           if (mag.gt.zero) then
+            do dir=1,SDIM
+             nslope_cell(dir)=nslope_cell(dir)/mag
+            enddo
+           else 
+            print *,"default normal corrupt ",nslope_cell
+            stop
+           endif
+          else if (mag.gt.zero) then
+           do dir=1,SDIM
+            nslope_cell(dir)=nslope_cell(dir)/mag
+           enddo
+          else
+           print *,"default normal corrupt ",nslope_cell
            stop
           endif
 
@@ -21058,6 +21089,8 @@ stop
              density_stencil=fort_denconst(im)
              if (fort_material_type(im).eq.0) then  ! incompressible
               ! do nothing
+             else if (fort_material_type(im).eq.999) then  ! rigid
+              ! do nothing
              else
               print *,"fort_material_type(im) invalid(1):", &
                 im,fort_material_type(im)
@@ -21324,9 +21357,23 @@ stop
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                 (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
+             mag_nslope_solid=zero
              do dir=1,SDIM
               nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
+              mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
              enddo
+             mag_nslope_solid=sqrt(mag_nslope_solid)
+             if (mag_nslope_solid.eq.zero) then
+              !do nothing
+             else if (mag_nslope_solid.gt.zero) then
+              do dir=1,SDIM
+               nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
+              enddo
+             else
+              print *,"mag_nslope_solid invalid ",mag_nslope_solid
+              stop
+             endif
+
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
@@ -21632,26 +21679,38 @@ stop
             im_hard_material=0
             check_elastic=0
            else if (mag_nslope_solid.gt.zero) then
-            !do nothing
+            do dir=1,SDIM
+             nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
+            enddo
            else
-            print *,"mag_nslope_solid invalid"
+            print *,"mag_nslope_solid invalid ",mag_nslope_solid
             stop
            endif
 
-           if (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL) then
-            vfrac_solid_new(im_hard_material)=zero
-           else if (vfrac_solid_new(im_hard_material).ge. &
-                    one-VOFTOL_MATERIAL) then
-            vfrac_solid_new(im_hard_material)=one
-           else if ((vfrac_solid_new(im_hard_material).ge. &
-                     VOFTOL_MATERIAL).and. &
-                    (vfrac_solid_new(im_hard_material).le. &
-                     one-VOFTOL_MATERIAL)) then
-            ! do nothing
+           if ((im_hard_material.ge.1).and. &
+               (im_hard_material.le.num_materials)) then
+
+            if (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL) then
+             vfrac_solid_new(im_hard_material)=zero
+            else if (vfrac_solid_new(im_hard_material).ge. &
+                     one-VOFTOL_MATERIAL) then
+             vfrac_solid_new(im_hard_material)=one
+            else if ((vfrac_solid_new(im_hard_material).ge. &
+                      VOFTOL_MATERIAL).and. &
+                     (vfrac_solid_new(im_hard_material).le. &
+                      one-VOFTOL_MATERIAL)) then
+             ! do nothing
+            else
+             print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
+             stop
+            endif  
+           else if (im_hard_material.eq.0) then
+            !do nothing
            else
-            print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
+            print *,"im_hard_material invalid ",im_hard_material
             stop
-           endif  
+           endif
+
           else if ((ls_hold(im_elastic_max).le.zero).and. &
                    (sum_vfrac_elastic.le.half)) then
            check_elastic=0
@@ -21667,6 +21726,27 @@ stop
           ! extend fluid LS,F,X into the solid.
          if ((im_hard_material.ge.1).and. &
              (im_hard_material.le.num_materials)) then
+
+          mag_nslope_solid=zero
+          do dir=1,SDIM
+           nslope_solid(dir)= &
+             LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
+           mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
+          enddo
+          mag_nslope_solid=sqrt(mag_nslope_solid)
+
+          if (mag_nslope_solid.eq.zero) then
+           print *,"cannot find default normal"
+           stop
+          else if (mag_nslope_solid.gt.zero) then
+           do dir=1,SDIM
+            nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
+            cell_CP_parm%default_normal(dir)=nslope_solid(dir)
+           enddo
+          else
+           print *,"mag_nslope_solid corrupt"
+           stop
+          endif
 
           center_stencil_im_only=0
           center_stencil_wetting_im=0
