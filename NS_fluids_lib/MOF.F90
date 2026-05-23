@@ -14908,7 +14908,8 @@ contains
             (at_least_one(layer_iter).le.num_materials).and. &
             (vfrac_sum_local(layer_iter).gt.zero)) then
 
-         call init_layer_flag( &
+         call init_layer_flag( &  !multimaterial_MOF
+          at_least_one(layer_iter), &
           vfrac_sum, &
           vfrac_sum_local, &
           layer_flag, & !intent(out)
@@ -16925,6 +16926,7 @@ contains
        
 
       subroutine init_layer_flag( &
+         at_least_one, &
          vfrac_sum, &
          vfrac_sum_local, &
          layer_flag, & !intent(out)
@@ -16937,6 +16939,8 @@ contains
 
       IMPLICIT NONE
 
+      integer, intent(in) :: at_least_one
+
       real(amrex_real), intent(in) :: vfrac_sum( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real), intent(in) :: vfrac_sum_local( &
@@ -16946,6 +16950,16 @@ contains
       integer, intent(in) :: tessellate_source
       integer, intent(in) :: tessellate_dest
 
+      if (at_least_one.eq.0) then
+       !do nothing
+      else if ((at_least_one.ge.1).and. &
+               (at_least_one.le.num_materials)) then
+       !do nothing
+      else
+       print *,"at_least_one invalid ",at_least_one
+       stop
+      endif
+
       if (layer_iter.eq.RIGID_LAYER_INDEX) then
 
        if (tessellate_source.eq.TESSELLATE_FLUIDS) then
@@ -16953,14 +16967,41 @@ contains
             (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
             (tessellate_dest.eq.TESSELLATE_ALL)) then
          layer_flag=RIGID_LAYER
+        else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+         layer_flag=RIGID_LAYER
+         if (at_least_one.eq.0) then
+          !do nothing
+         else if ((vfrac_sum(layer_iter).eq.zero).and. &
+                  (vfrac_sum_local(layer_iter).eq.zero)) then
+          !do nothing
+         else
+          print *,"expecting at_least_one=0 ",at_least_one
+          print *,"or expecting vfrac_sum=vfrac_sum_local=0 ", &
+           vfrac_sum(layer_iter),vfrac_sum_local(layer_iter)
+          print *,"tessellate_source=",tessellate_source
+          print *,"tessellate_dest=",tessellate_dest
+          print *,"layer_iter ",layer_iter
+          stop
+         endif
         else
-         print *,"tessellate_dest invalid ",tessellate_dest
+         print *,"tessellate_dest invalid in init_layer_flag ",tessellate_dest
          print *,"tessellate_source ",tessellate_source
          stop
         endif
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
         if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
          layer_flag=RIGID_LAYER
+        else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+         layer_flag=RIGID_LAYER
+         if (at_least_one.eq.0) then
+          !do nothing
+         else
+          print *,"expecting at_least_one=0 ",at_least_one
+          print *,"tessellate_source=",tessellate_source
+          print *,"tessellate_dest=",tessellate_dest
+          print *,"layer_iter ",layer_iter
+          stop
+         endif
         else
          print *,"tessellate_dest invalid ",tessellate_dest
          print *,"tessellate_source ",tessellate_source
@@ -16968,12 +17009,19 @@ contains
          stop
         endif
        else if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
-        print *,"tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID invalid"
-        print *,"tessellate_source ",tessellate_source
-        print *,"layer_iter ",layer_iter
-        stop
+        layer_flag=RIGID_LAYER
+        if (at_least_one.eq.0) then
+         !do nothing
+        else
+         print *,"expecting at_least_one=0 ",at_least_one
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
+         print *,"layer_iter ",layer_iter
+         stop
+        endif
        else
-        print *,"tessellate_source invalid ",tessellate_source
+        print *,"tessellate_source invalid in init_layer_flag ", &
+          tessellate_source
         print *,"tessellate_dest ",tessellate_dest
         stop
        endif
@@ -16988,8 +17036,20 @@ contains
         else if (tessellate_dest.eq.TESSELLATE_ALL) then
          layer_flag=ELASTIC_RIGID_LAYER
         else
-         print *,"tessellate_dest invalid ",tessellate_dest
+         print *,"tessellate_dest invalid in init_layer_flag ",tessellate_dest
          print *,"tessellate_source ",tessellate_source
+         stop
+        endif
+       else if ((tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+                (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+        layer_flag=ELASTIC_LAYER
+        if (at_least_one.eq.0) then
+         !do nothing
+        else
+         print *,"expecting at_least_one=0 ",at_least_one
+         print *,"tessellate_source=",tessellate_source
+         print *,"tessellate_dest=",tessellate_dest
+         print *,"layer_iter ",layer_iter
          stop
         endif
        else
@@ -17225,6 +17285,7 @@ contains
       end subroutine derive_critical_material
 
       subroutine advance_uncaptured_vars( &
+         at_least_one, &
          tessellate_source, &
          tessellate_dest, &
          layer_iter, &
@@ -17238,6 +17299,7 @@ contains
 
       IMPLICIT NONE
 
+      integer, intent(in) :: at_least_one
       integer, intent(in) :: sdim
       integer, intent(in) :: tessellate_source
       integer, intent(in) :: tessellate_dest
@@ -17292,19 +17354,19 @@ contains
             uncaptured_volume(RIGID_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
+         print *,"expect uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
          stop
         endif
         if (uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one"
+         print *,"expect uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
          !do nothing
         else
-         print *,"expecting tessellate_source=TESSELLATE_IGNORE_ISRIGID ", &
+         print *,"expect tessellate_source=TESSELLATE_IGNORE_ISRIGID ", &
             tessellate_source
          stop
         endif
@@ -17314,7 +17376,7 @@ contains
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
          !do nothing
         else
-         print *,"expecting tessellate_source=TESSELLATE_IGNORE_ISELASTIC ", &
+         print *,"expect tessellate_source=TESSELLATE_IGNORE_ISELASTIC ", &
             tessellate_source
          stop
         endif
@@ -17324,7 +17386,7 @@ contains
             uncaptured_volume(RIGID_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
+         print *,"expect uncaptured_volume(layer_iter).eq.(RIGID_LAYER_INDEX)"
          stop
         endif
         if (uncaptured_volume_fraction(RIGID_LAYER_INDEX).eq.one) then
@@ -17389,13 +17451,13 @@ contains
             uncaptured_volume(ELASTIC_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
+         print *,"expect uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
          stop
         endif
         if (uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
+         print *,"expect uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID) then
@@ -17413,13 +17475,13 @@ contains
             uncaptured_volume(ELASTIC_LAYER_INDEX)) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
+         print *,"expect uncaptured_volume(layer_iter).eq.(ELASTIC_LAYER_INDEX)"
          stop
         endif
         if (uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one) then
          !do nothing
         else
-         print *,"expecting uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
+         print *,"expect uncaptured_volume_fraction(ELASTIC_LAYER_INDEX).eq.one"
          stop
         endif
         if (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC) then
@@ -17706,22 +17768,52 @@ contains
 
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
-      if (tessellate_source.eq.TESSELLATE_FLUIDS) then
+      if ((tessellate_source.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate_source.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+          (tessellate_source.eq.TESSELLATE_IGNORE_ISELASTIC)) then
        volcell_compare=zero
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
-        if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
-            (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+        if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
          volcell_compare=volcell_compare+multi_volume(im)
-        else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
-         if (is_rigid(im).eq.1) then
+        else if (is_rigid(im).eq.1) then
+         if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
           !do nothing
-         else if (is_rigid(im).eq.0) then
+         else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
+          !do nothing
+         else if (tessellate_dest.eq.TESSELLATE_ALL) then
           volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
+          !do nothing
          else
-          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"tessellate_dest invalid ",tessellate_dest
           stop
          endif
+        else if (is_elastic(im).eq.1) then
+         if (tessellate_dest.eq.TESSELLATE_FLUIDS) then
+          !do nothing
+         else if (tessellate_dest.eq.TESSELLATE_FLUIDS_ELASTIC) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_ALL) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_ALL_RASTER) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISRIGID) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else if (tessellate_dest.eq.TESSELLATE_IGNORE_ISELASTIC) then
+          volcell_compare=volcell_compare+multi_volume(im)
+         else
+          print *,"tessellate_dest invalid ",tessellate_dest
+          stop
+         endif
+        else
+         print *,"is_rigid(im) invalid ",im,is_rigid(im)
+         print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+         stop
         endif
        enddo !im=1,num_materials
 
@@ -17737,8 +17829,11 @@ contains
         print *,"uncaptured_volume ",uncaptured_volume
         print *,"is_rigid_local ",is_rigid_local
         print *,"is_elastic_local ",is_elastic_local
-        print *,"uncaptured_volume_START or volcell_compare invalid: ", &
-          uncaptured_volume_START,volcell_compare, &
+        print *,"volcell= ",volcell
+        print *,"uncaptured_volume_START or volcell_compare invalid "
+        print *,"uncaptured_volume_START= ",uncaptured_volume_START
+        print *,"volcell_compare= ",volcell_compare
+        print *,"relative error: ", &
           (uncaptured_volume_START-volcell_compare)/uncaptured_volume_START
         stop
        endif
@@ -18233,26 +18328,28 @@ contains
           endif
          enddo
 
-         call init_layer_flag( &
-            vfrac_sum, &
-            vfrac_sum_local, &
-            layer_flag, & !intent(out)
-            layer_iter, & !intent(in)
-            tessellate_source, &
-            tessellate_dest)
+         call init_layer_flag( & !multi_get_volume_grid_simple
+          at_least_one(layer_iter), &
+          vfrac_sum, &
+          vfrac_sum_local, &
+          layer_flag, & !intent(out)
+          layer_iter, & !intent(in)
+          tessellate_source, &
+          tessellate_dest)
             
          call init_mask_flag( &
             layer_flag, &
             is_masked)
 
          call advance_uncaptured_vars( & !multi_get_volume_grid_simple
-            tessellate_source, &
-            tessellate_dest, &
-            layer_iter, &
-            uncaptured_volume, &
-            uncaptured_centroid, &
-            uncaptured_volume_fraction, &
-            sdim)
+          at_least_one(layer_iter), &
+          tessellate_source, &
+          tessellate_dest, &
+          layer_iter, &
+          uncaptured_volume, &
+          uncaptured_centroid, &
+          uncaptured_volume_fraction, &
+          sdim)
 
 
          if ((at_least_one(layer_iter).ge.1).and. &
@@ -19040,25 +19137,27 @@ contains
          enddo
 
          call init_layer_flag( &
-           vfrac_sum, &
-           vfrac_sum_local, &
-           layer_flag, & !intent(out)
-           layer_iter, & !intent(in)
-           tessellate_source, &
-           tessellate_dest)
+          at_least_one(layer_iter), &
+          vfrac_sum, &
+          vfrac_sum_local, &
+          layer_flag, & !intent(out)
+          layer_iter, & !intent(in)
+          tessellate_source, &
+          tessellate_dest)
 
-          call init_mask_flag( &
-            layer_flag, &
-            is_masked)
+         call init_mask_flag( &
+          layer_flag, &
+          is_masked)
 
-          call advance_uncaptured_vars( & !multi_get_volume_grid
-            tessellate_source, &
-            tessellate_dest, &
-            layer_iter, &
-            uncaptured_volume, &
-            uncaptured_centroid, &
-            uncaptured_volume_fraction, &
-            sdim)
+         call advance_uncaptured_vars( & !multi_get_volume_grid
+          at_least_one(layer_iter), &
+          tessellate_source, &
+          tessellate_dest, &
+          layer_iter, &
+          uncaptured_volume, &
+          uncaptured_centroid, &
+          uncaptured_volume_fraction, &
+          sdim)
 
          if ((at_least_one(layer_iter).ge.1).and. &
              (at_least_one(layer_iter).le.num_materials).and. &
@@ -19773,33 +19872,36 @@ contains
         enddo
 
         call init_layer_flag( &
-           vfrac_sum, &
-           vfrac_sum_local, &
-           layer_flag, & !intent(out)
-           layer_iter, & !intent(in)
-           tessellate_source, &
-           tessellate_dest)
+          at_least_one(layer_iter), &
+          vfrac_sum, &
+          vfrac_sum_local, &
+          layer_flag, & !intent(out)
+          layer_iter, & !intent(in)
+          tessellate_source, &
+          tessellate_dest)
 
         call init_mask_flag( &
            layer_flag, &
            is_masked)
 
         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
-           tessellate_source, &
-           tessellate_dest, &
-           layer_iter, &
-           uncaptured_volume, &
-           uncaptured_centroid, &
-           uncaptured_volume_fraction, &
-           sdim)
+          at_least_one(layer_iter), &
+          tessellate_source, &
+          tessellate_dest, &
+          layer_iter, &
+          uncaptured_volume, &
+          uncaptured_centroid, &
+          uncaptured_volume_fraction, &
+          sdim)
         call advance_uncaptured_vars( & !multi_get_volume_grid_and_map
-           tessellate_source, &
-           tessellate_dest, &
-           layer_iter, &
-           uncaptured_volume_map, &
-           uncaptured_centroid_map, &
-           uncaptured_volume_fraction, &
-           sdim)
+          at_least_one(layer_iter), &
+          tessellate_source, &
+          tessellate_dest, &
+          layer_iter, &
+          uncaptured_volume_map, &
+          uncaptured_centroid_map, &
+          uncaptured_volume_fraction, &
+          sdim)
 
 
         if ((at_least_one(layer_iter).ge.1).and. &
@@ -20807,25 +20909,27 @@ contains
 
 
         call init_layer_flag( &
-           vfrac_sum, &
-           vfrac_sum_local, &
-           layer_flag, & !intent(out)
-           layer_iter, & !intent(in)
-           IGNORE_ISRIGID_tessellate, &
-           IGNORE_ISRIGID_tessellate)
+         at_least_one(layer_iter), &
+         vfrac_sum, &
+         vfrac_sum_local, &
+         layer_flag, & !intent(out)
+         layer_iter, & !intent(in)
+         IGNORE_ISRIGID_tessellate, &
+         IGNORE_ISRIGID_tessellate)
 
         call init_mask_flag( &
            layer_flag, &
            is_masked)
 
         call advance_uncaptured_vars( & !multi_get_area_pairs
-           IGNORE_ISRIGID_tessellate, &
-           IGNORE_ISRIGID_tessellate, &
-           layer_iter, &
-           uncaptured_volume, &
-           uncaptured_centroid, &
-           uncaptured_volume_fraction, &
-           sdim)
+         at_least_one(layer_iter), &
+         IGNORE_ISRIGID_tessellate, &
+         IGNORE_ISRIGID_tessellate, &
+         layer_iter, &
+         uncaptured_volume, &
+         uncaptured_centroid, &
+         uncaptured_volume_fraction, &
+         sdim)
 
 
         if ((at_least_one(layer_iter).ge.1).and. &
