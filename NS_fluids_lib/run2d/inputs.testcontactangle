@@ -58,8 +58,9 @@ ns.initial_project_cycles=3
 ns.multilevel_maxcycle=200
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-# =0,1, or 3
-ns.visual_tessellate_vfrac=1
+# =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
+# or 4 (TESSELLATE_FLUIDS_ELASTIC)
+ns.visual_tessellate_vfrac=4
 amr.plotfile_on_restart=1
 ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 

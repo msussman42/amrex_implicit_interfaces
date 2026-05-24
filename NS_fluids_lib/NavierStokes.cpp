@@ -274,7 +274,8 @@ int  NavierStokes::step_through_data=0;
 
 // =TESSELLATE_FLUIDS (solids embed, fluids tessellate), 
 // =TESSELLATE_ALL (solids and fluids tessellate)
-// =TESSELLATE_ALL_RASTER (solids and fluids tessellate, 
+// =TESSELLATE_ALL_RASTER (solids and fluids tessellate)
+// =TESSELLATE_FLUIDS_ELASTIC (elastics and fluids tessellate)
 //    if F_solid>1/2, replace with F_solid=1,
 //    if F_solid<1/2, replace with F_solid=0.
 int  NavierStokes::visual_tessellate_vfrac=TESSELLATE_FLUIDS;   
@@ -3348,7 +3349,8 @@ NavierStokes::read_params ()
 
     if ((visual_tessellate_vfrac!=TESSELLATE_FLUIDS)&&
         (visual_tessellate_vfrac!=TESSELLATE_ALL)&&
-	(visual_tessellate_vfrac!=TESSELLATE_ALL_RASTER))
+	(visual_tessellate_vfrac!=TESSELLATE_ALL_RASTER)&&
+	(visual_tessellate_vfrac!=TESSELLATE_FLUIDS_ELASTIC))
      amrex::Error("visual_tessellate_vfrac invalid");
 
     if (visual_revolve<0) {
