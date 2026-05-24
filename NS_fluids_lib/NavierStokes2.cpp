@@ -7204,7 +7204,7 @@ void NavierStokes::output_triangles() {
   fort_isogrid(
    &tid_current,
    &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
-                            //TESSELLATE_ALL_RASTER 
+                            //TESSELLATE_ALL_RASTER,TESSELLATE_FLUIDS_ELASTIC
    reconfab.dataPtr(),
    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
    xlo,dx,
@@ -8059,7 +8059,7 @@ void NavierStokes::output_zones(
       &finest_level,
       &gridno,
       &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
-                               //TESSELLATE_ALL_RASTER 
+                            //TESSELLATE_ALL_RASTER,TESSELLATE_FLUIDS_ELASTIC 
       &NS_geometry_coord,
       &nparts,
       &nparts_def,
@@ -8325,7 +8325,7 @@ void NavierStokes::output_zones(
       &finest_level,
       &gridno,
       &visual_tessellate_vfrac,//TESSELLATE_FLUIDS,TESSELLATE_ALL,
-                               //TESSELLATE_ALL_RASTER 
+                            //TESSELLATE_ALL_RASTER,TESSELLATE_FLUIDS_ELASTIC
       &NS_geometry_coord,
       &nparts,
       &nparts_def,
