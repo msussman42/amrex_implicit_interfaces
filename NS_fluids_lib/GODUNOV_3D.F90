@@ -17365,15 +17365,9 @@ stop
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
       integer i,j,k
-      integer dir,im,im_opp,im_primary,irank,last
-      integer sub_rank
-      integer sub_im
-      integer use_standard
+      integer dir,im,im_opp,irank
       integer worst_rank
       integer num_materials_fluids
-      real(amrex_real) uncapt
-      real(amrex_real) test_vof
-      real(amrex_real) F_avail
       real(amrex_real) dxmin
       integer vofcompraw
       integer vofcomprecon
@@ -17550,157 +17544,48 @@ stop
 
        do im=1,num_materials 
         vofcompraw=(im-1)*ngeom_raw+1
+        vofcomprecon=(im-1)*ngeom_recon+1
+
         LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
         LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
         F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
         F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
-       enddo
-       call get_primary_material(dx,LS_standard,im_primary)
 
-       do im=1,num_materials
-        vofcompraw=(im-1)*ngeom_raw+1
-        vofcomprecon=(im-1)*ngeom_recon+1
-        do dir=1,SDIM+1
-         mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
-        enddo
-        local_LS(im)=LS_standard(im)
-       enddo
-
-       if (is_rigid(im_primary).eq.1) then
-        !do nothing
-       else if (is_rigid(im_primary).eq.0) then
-       
-        last=0
-        use_standard=0
-        uncapt=one 
-        do irank=1,worst_rank
-
-         im=material_list_by_rank(irank)
-         vofcompraw=(im-1)*ngeom_raw+1
-         vofcomprecon=(im-1)*ngeom_recon+1
-
-         if ((im.ge.1).and.(im.le.num_materials)) then
-          if (is_rigid(im).eq.0) then
-           !do nothing
-          else
-           print *,"expecting is_rigid(im).eq.0"
-           print *,"im=",im
-           print *,"irank=",irank
-           stop
-          endif
+        if (is_elastic(im).eq.1) then
+         if ((material_extend_velocity(im).ge.1).and. &
+             (material_extend_velocity(im).le.num_materials-1)) then
+          !do nothing
          else
-          print *,"im invalid ",im
+          print *,"material_extend_velocity invalid ",material_extend_velocity
           stop
          endif
-
-         if (uncapt.gt.zero) then
-
-          F_avail=zero
-          do sub_rank=irank,worst_rank
-           sub_im=material_list_by_rank(sub_rank)
-           if (material_extend_velocity(sub_im).ge.1) then
-            F_avail=F_avail+F_improved(sub_im)
-           else if (material_extend_velocity(sub_im).eq.0) then
-            F_avail=F_avail+F_standard(sub_im)
-           else
-            print *,"material_extend_velocity(sub_im) invalid:",sub_im, &
-             material_extend_velocity(sub_im)
-            stop
-           endif
-          enddo !sub_rank=irank,worst_rank
-
-          if ((F_avail.eq.zero).or. &
-              (material_extend_velocity(im).eq.0)) then
-           use_standard=1
-          else if ((F_avail.gt.zero).and. &
-                   (material_extend_velocity(im).ge.1)) then
-           !do nothing
-          else
-           print *,"F_avail: ",F_avail
-           print *,"im=",im
-           print *,"irank=",irank
-           print *,"material_extend_velocity(im) ", &
-              material_extend_velocity(im)
-           print *,"corruption"
-           stop
-          endif
-
-          if ((im.ge.1).and.(im.le.num_materials)) then
-           if (is_rigid(im).eq.0) then
-            !do nothing
-           else
-            print *,"expecting is_rigid(im).eq.0"
-            print *,"im=",im
-            print *,"irank=",irank
-            stop
-           endif
-
-           if (use_standard.eq.0) then
-            do dir=1,SDIM+1
-             mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
-            enddo
-            local_LS(im)=LS_improved(im)
-           else if (use_standard.eq.1) then
-            do dir=1,SDIM+1
-             mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
-            enddo
-            local_LS(im)=LS_standard(im)
-           else
-            print *,"use_standard invalid:",use_standard
-            stop
-           endif
-           test_vof=mofnew(vofcomprecon)
-           if (test_vof.gt.zero) then
-            last=im
-           endif
-           uncapt=uncapt-test_vof
-          else
-           print *,"im invalid ",im
-           stop
-          endif
-         else if (uncapt.le.zero) then
-          do dir=1,SDIM+1
-           mofnew(vofcomprecon+dir-1)=zero
-          enddo
-          if (LS_standard(im).lt.-half*dxmin) then
-           local_LS(im)=LS_standard(im)
-          else if (LS_standard(im).ge.-half*dxmin) then
-           local_LS(im)=-half*dxmin
-          else
-           print *,"LS_standard ",im,LS_standard(im)
-           stop
-          endif
+         do dir=1,SDIM+1
+          mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
+         enddo
+         local_LS(im)=LS_improved(im)
+        else if (is_elastic(im).eq.0) then
+         if (material_extend_velocity(im).eq.0) then
+          !do nothing
          else
-          print *,"uncapt=NaN: ",uncapt
+          print *,"material_extend_velocity invalid ",material_extend_velocity
           stop
          endif
- 
-        enddo !irank=1,worst_rank
-
-        if (last.eq.0) then
-         print *,"all volume from both improved and standard vanished"
-         print *,"F_improved=",F_improved
-         print *,"F_standard=",F_standard
-         print *,"LS_improved=",LS_improved
-         print *,"LS_standard=",LS_standard
-         stop
+         do dir=1,SDIM+1
+          mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+         enddo
+         local_LS(im)=LS_standard(im)
         else
-         im=last
-         vofcomprecon=(im-1)*ngeom_recon+1
-         mofnew(vofcomprecon)=mofnew(vofcomprecon)+uncapt
+         print *,"is_elastic invalid ",im,is_elastic(im)
+         stop
         endif
-
-       else
-        print *,"is_rigid(im_primary) invalid: ",im_primary, &
-         is_rigid(im_primary)
-        stop
-       endif
+       enddo !im=1,num_materials
 
        call make_vfrac_sum_ok_base( &
          xsten,nhalf, &
          bfact,dx, &
          tessellate, & !TESSELLATE_FLUIDS
-         mofnew,SDIM)
+         mofnew, &
+         SDIM)
 
        do im=1,num_materials
         vofcompraw=(im-1)*ngeom_raw+1

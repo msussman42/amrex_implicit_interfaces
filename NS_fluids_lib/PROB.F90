@@ -18759,8 +18759,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx ^ {3/2}/sqrt( pi * tension / den ) =
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
-!      den_mix=min(den1,den2)
-      den_mix=half*(den1+den2)
+      den_mix=min(den1,den2)
+!      den_mix=half*(den1+den2)
       if (den_mix.gt.zero) then
        !do nothing
       else
