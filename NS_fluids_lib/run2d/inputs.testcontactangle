@@ -20,7 +20,9 @@ geometry.prob_hi   =  6.0  3.0   # 6x6 box for 45 degree or 135
 geometry.is_periodic = 0 0 
 
 ns.mof_ordering=2 3 1
-ns.mof_renormalize_ordering=2 3 1
+ns.mof_renormalize_ordering=2 3 1 #FSI_RIGID_NOTPRESCIBED
+#ns.mof_renormalize_ordering=1 2 0 #FSI_PRESCIBED_PROBF90
+
 ns.EILE_flag=1
 #ns.EILE_flag=-1
 ns.continuous_mof=1
@@ -47,8 +49,8 @@ ns.v=1
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then
 # 64 points per drop diameter.
-amr.n_cell    = 48 24 
-#amr.n_cell    = 192 96 
+#amr.n_cell    = 48 24 
+amr.n_cell    = 192 96 
 amr.max_level =  0
 ns.ns_tiling=false
 
@@ -60,7 +62,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
 # or 4 (TESSELLATE_FLUIDS_ELASTIC)
-ns.visual_tessellate_vfrac=4
+ns.visual_tessellate_vfrac=0
 amr.plotfile_on_restart=1
 ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
@@ -76,7 +78,7 @@ ns.enable_spectral=0
 ns.diffusion_enable_spectral=0
 amr.check_int       = 100     # number of timesteps between checkpoints 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 100    # CHANGE TO 1000
+amr.plot_int        = 200    # CHANGE TO 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 48
@@ -165,15 +167,18 @@ ns.velfact=0.0
 ns.probtype=55
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.heatviscconst=0.0 0.0 0.0 0.0
-ns.material_extend_velocity=0 0 1
-ns.material_type=0 0 0 0 #0 0 0 0 if FSI_RIGID_NOTPRESCRIBED
+ns.material_extend_velocity=0 0 1 #FSI_RIGID_NOTPRESCRIBED
+#ns.material_extend_velocity=0 0 0 #FSI_PRESCRIBED_PROBF90
+ns.material_type=0 0 0 #FSI_RIGID_NOTPRESCRIBED
+#ns.material_type=0 0 999 #FSI_PRESCRIBED_PROBF90
 # FSI_flag for present phase/material
 # FSI_FLUID=0 fluid (default)
 # FSI_PRESCRIBED_PROBF90=1 solid (PROB_[23]D.F90)
 # FSI_PRESCRIBED_NODES=2 solid (lagrangian)
 # FSI_ICE_PROBF90=3 ice
 # FSI_RIGID_NOTPRESCRIBED=5
-ns.FSI_flag=0 0 5
+ns.FSI_flag=0 0 5 #FSI_RIGID_NOTPRESCRIBED
+#ns.FSI_flag=0 0 1 #FSI_PRESCRIBED_PROBF90
 ns.viscconst=1.0 0.0156552 10.0
 ns.denconst=1.0 0.001226 1.0 
 ns.tempconst=293.0 293.0 293.0 

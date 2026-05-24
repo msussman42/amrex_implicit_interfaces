@@ -15925,6 +15925,19 @@ contains
        stop
       endif
 
+      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
+          (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
+          (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+       !do nothing
+      else
+       print *,"in make_vfrac_sum_ok_base"
+       print *,"expecting tessellate=TESSELLATE_FLUIDS or"
+       print *,"tessellate=TESSELLATE_IGNORE_ISRIGID or"
+       print *,"tessellate=TESSELLATE_IGNORE_ISELASTIC"
+       print *,"tessellate=",tessellate
+       stop
+      endif
+
       call init_local_material_vars( & !subroutine make_vfrac_sum_ok_base
        is_rigid_local, &
        is_elastic_local, &
@@ -16185,6 +16198,7 @@ contains
       else if (vfrac_sum_local(FLUID_LAYER_INDEX).le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
        print *,"put breakpoint here to see the caller"
+       print *,"break MOF.F90:16201 (compile -g option)"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"vfrac_sum_local= ",vfrac_sum_local
@@ -16975,6 +16989,7 @@ contains
                   (vfrac_sum_local(layer_iter).eq.zero)) then
           !do nothing
          else
+          print *,"break MOF.F90:16992"
           print *,"expecting at_least_one=0 ",at_least_one
           print *,"or expecting vfrac_sum=vfrac_sum_local=0 ", &
            vfrac_sum(layer_iter),vfrac_sum_local(layer_iter)
@@ -18252,6 +18267,7 @@ contains
        else if (vfrac_sum_local(RIGID_LAYER_INDEX).le.half) then
 
         vfrac_sum_local(RIGID_LAYER_INDEX)=zero
+        vfrac_sum(RIGID_LAYER_INDEX)=zero
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          if (is_rigid_local(im).eq.0) then
@@ -19061,6 +19077,7 @@ contains
        else if (vfrac_sum_local(RIGID_LAYER_INDEX).le.half) then
 
         vfrac_sum_local(RIGID_LAYER_INDEX)=zero
+        vfrac_sum(RIGID_LAYER_INDEX)=zero
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          if (is_rigid_local(im).eq.0) then
