@@ -652,7 +652,6 @@ stop
 
          ! SOLVETYPE_PRES, 
          ! SOLVETYPE_INITPROJ
-         ! SOLVETYPE_SMOOTH
         if (project_option_projectionF(project_option).eq.1) then
 
          if (nsolve.ne.1) then
@@ -663,8 +662,6 @@ stop
          if (project_option.eq.SOLVETYPE_PRES) then
           local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
-          local_cterm(1)=zero
-         else if (project_option.eq.SOLVETYPE_SMOOTH) then
           local_cterm(1)=zero
          else
           print *,"project_option invalid fort_scalarcoeff: ",project_option

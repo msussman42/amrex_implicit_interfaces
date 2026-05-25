@@ -250,7 +250,6 @@ stop
        ! not used; all elastic/ice materials are fluids
        ! cc_group=cc (SOLVETYPE_PRES)
        ! cc_group=cc*cc_elasticmask (SOLVETYPE_INITPROJ)
-       ! cc_group=cc*cc_elasticmask (SOLVETYPE_SMOOTH)
        im_rigid_CL=num_materials 
       else if ((FSI_outer_sweeps.ge.1).and. &
                (FSI_outer_sweeps.lt. &
@@ -407,8 +406,6 @@ stop
        endif
 
         !if SOLVETYPE_INITPROJ then
-        ! cc_group=cc*cc_elasticmask
-        !if SOLVETYPE_SMOOTH then
         ! cc_group=cc*cc_elasticmask
         !if SOLVETYPE_PRES then
         ! if (num_FSI_outer_sweeps.eq.1) then
@@ -11470,7 +11467,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! SOLVETYPE_PRES, 
         ! SOLVETYPE_INITPROJ,
-        ! SOLVETYPE_SMOOTH,
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
@@ -11497,8 +11493,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
-         cc_group=cc*cc_elasticmask
-        else if (project_option.eq.SOLVETYPE_SMOOTH) then!curvature projection
          cc_group=cc*cc_elasticmask
         else
          print *,"project_option invalid eval_face_coeff: ",project_option
@@ -14235,7 +14229,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
 
-        ! SOLVETYPE_PRES, SOLVETYPE_INITPROJ, SOLVETYPE_SMOOTH
+        ! SOLVETYPE_PRES, SOLVETYPE_INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid2 SEM_MAC_TO_CELL"
@@ -18760,7 +18754,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
       den_mix=min(den1,den2)
-!      den_mix=half*(den1+den2)
       if (den_mix.gt.zero) then
        !do nothing
       else
@@ -22929,21 +22922,8 @@ end subroutine initialize2d
 
        integer, INTENT(in) :: homflag,project_option
 
-       if (project_option.eq.SOLVETYPE_SMOOTH) then
-
-        if (homflag.eq.0) then
-         pres_homflag=0
-         vel_homflag=0
-        else if (homflag.eq.1) then
-         pres_homflag=1
-         vel_homflag=1
-        else
-         print *,"homflag invalid in override pbc"
-         stop
-        endif
-
         ! project_option_singular_possibleF is declared in: GLOBALUTIL.F90
-       else if (project_option_singular_possibleF(project_option).eq.1) then
+       if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
          pres_homflag=0
         else if (homflag.eq.1) then

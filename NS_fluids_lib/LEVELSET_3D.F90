@@ -9188,6 +9188,7 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
+       denconst_interface_min, &
        freezing_model, &
        distribute_from_target, &
        solidheat_flag, &
@@ -9380,6 +9381,8 @@ stop
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
+      real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
+
       integer im1,jm1,km1
       integer i,j,k
       integer ii,jj,kk
@@ -9467,6 +9470,7 @@ stop
 
       real(amrex_real) DXMAXLS
       real(amrex_real) FFACE(num_materials)
+      integer iten_FFACE
       integer irefine
       integer solid_present_flag
       real(amrex_real) wtL,wtR,wtsum
@@ -9619,8 +9623,7 @@ stop
       endif
 
       if ((project_option.eq.SOLVETYPE_PRES).or. &
-          (project_option.eq.SOLVETYPE_INITPROJ).or. &
-          (project_option.eq.SOLVETYPE_SMOOTH)) then
+          (project_option.eq.SOLVETYPE_INITPROJ)) then
        ! do nothing
       else
        print *,"project_option invalid fort_init_physics_vars"
@@ -9696,6 +9699,17 @@ stop
        endif
 
       enddo !im=1,2*num_interfaces
+
+      do im=1,num_interfaces
+
+       if (denconst_interface_min(im).gt.zero) then
+        ! do nothing
+       else
+        print *,"denconst_interface_min invalid ",denconst_interface_min
+        stop
+       endif
+
+      enddo ! im=1..num_interfaces
 
       do im=1,num_materials
 
@@ -10262,8 +10276,6 @@ stop
         if ((project_option.eq.SOLVETYPE_PRES).or. &
             (project_option.eq.SOLVETYPE_INITPROJ)) then
          !do nothing
-        else if (project_option.eq.SOLVETYPE_SMOOTH) then
-         local_face(FACECOMP_FACEVEL+1)=zero
         else
          print *,"project_option invalid fort_init_physics_vars(FACEVEL): ", &
             project_option
@@ -11184,14 +11196,68 @@ stop
          local_face(FACECOMP_FACEDEN+1)= &
             one/density_for_mass_fraction_diffusion
 
-         local_face(FACECOMP_FACEDEN_BASE+1)=local_face(FACECOMP_FACEDEN+1)
+         do im=1,num_materials
+          do im_opp=im+1,num_materials
+
+           call get_iten(im,im_opp,iten_FFACE)
+
+           if (((FFACE(im).gt.EPS1).and. &
+                (FFACE(im_opp).gt.EPS1)).or. &
+               (iten_main.eq.iten_FFACE)) then
+
+            if (denconst_interface_min(iten_FFACE).gt.zero) then
+
+             if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
+
+              if (one/local_face(FACECOMP_FACEDEN+1).le. &
+                  denconst_interface_min(iten_FFACE)) then
+
+               local_face(FACECOMP_FACEDEN+1)=one/ &
+                 denconst_interface_min(iten_FFACE)
+
+              else if (one/local_face(FACECOMP_FACEDEN+1).ge. &
+                       denconst_interface_min(iten_FFACE)) then
+ 
+               !do nothing
+
+              else
+
+               print *,"local_face(FACECOMP_FACEDEN+1) invalid ", &
+                 local_face(FACECOMP_FACEDEN+1) 
+               print *,"or denconst_interface_min invalid ", &
+                denconst_interface_min
+ 
+              endif
+
+             else
+              print *,"local_face(FACECOMP_FACEDEN+1) invalid ", &
+                local_face(FACECOMP_FACEDEN+1)
+              stop
+             endif
+
+            else
+             print *,"denconst_interface_min invalid ", &
+               denconst_interface_min
+             stop
+            endif
+
+           else if (iten_main.ne.iten_FFACE) then
+            ! do nothing
+           else if ((FFACE(im).gt.-EPS1).and. &
+                    (FFACE(im_opp).gt.-EPS1)) then
+            ! do nothing
+           else
+            print *,"FFACE invalid: ",im,im_opp, &
+               FFACE(im),FFACE(im_opp)
+            stop
+           endif
+
+          enddo ! im_opp=im+1..num_materials
+         enddo ! im=1..num_materials
 
          if ((project_option.eq.SOLVETYPE_PRES).or. &
              (project_option.eq.SOLVETYPE_INITPROJ)) then
           !do nothing
-         else if (project_option.eq.SOLVETYPE_SMOOTH) then
-          local_face(FACECOMP_FACEDEN+1)=one
-          local_face(FACECOMP_FACEDEN_BASE+1)=one
          else
           print *,"project_option invalid fort_init_physics_vars(FACEVEL):", &
              project_option
@@ -11319,8 +11385,7 @@ stop
              if ((level.ge.0).and.(level.le.finest_level)) then
 
               if ((project_option.eq.SOLVETYPE_PRES).or. &
-                  (project_option.eq.SOLVETYPE_INITPROJ).or. &
-                  (project_option.eq.SOLVETYPE_SMOOTH)) then
+                  (project_option.eq.SOLVETYPE_INITPROJ)) then
 
                do icurv_ofs=1,CURVCOMP_NCOMP
                 curvL(icurv_ofs)=curv(D_DECL(im1,jm1,km1),icurv+icurv_ofs)
@@ -12290,8 +12355,6 @@ stop
            !do nothing
           else if (project_option.eq.SOLVETYPE_INITPROJ) then
            !do nothing
-          else if (project_option.eq.SOLVETYPE_SMOOTH) then
-           den_value=one
           else
            print *,"project_option invalid in build_semi_refine_vof ", &
             project_option
@@ -14477,11 +14540,6 @@ stop
           print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
           stop
          endif
-        else if (project_option.eq.SOLVETYPE_SMOOTH) then
-         print *,"not expecting project_option==SOLVETYPE_SMOOTH"
-         print *,"project_option invalid fort_mac_to_cell 5: ",project_option
-         print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
-         stop
         else
          print *,"project_option invalid fort_mac_to_cell 5"
          print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
@@ -16513,11 +16571,6 @@ stop
           if ((project_option.eq.SOLVETYPE_PRES).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
-          else if (project_option.eq.SOLVETYPE_SMOOTH) then
-           print *,"not expecting project_option=SOLVETYPE_SMOOTH:", &
-                project_option
-           print *,"operation_flag==OP_PRES_CELL_TO_MAC"
-           stop
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
@@ -16815,8 +16868,6 @@ stop
 
           if (project_option.eq.SOLVETYPE_PRES) then
            ! do nothing
-          else if (project_option.eq.SOLVETYPE_SMOOTH) then
-           ! do nothing
           else
            print *,"project_option invalid(fort_cell_to_mac): ",project_option
            stop
@@ -17051,8 +17102,7 @@ stop
                 mgoni(D_DECL(im1,jm1,km1),tcomp))
               enddo ! im_heat
 
-              if ((project_option.eq.SOLVETYPE_PRES).or. &
-                  (project_option.eq.SOLVETYPE_SMOOTH)) then
+              if (project_option.eq.SOLVETYPE_PRES) then
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
               else
@@ -20157,7 +20207,6 @@ stop
       if (project_option_is_validF(project_option).eq.1) then
 
        if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
-           (local_face_index.eq.FACECOMP_FACEDEN_BASE).or. &
            (local_face_index.eq.FACECOMP_FACEHEAT).or. &
            (local_face_index.eq.FACECOMP_FACEVISC).or. &
            (local_face_index.eq. &
@@ -20299,7 +20348,6 @@ stop
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing 
            !SOLVETYPE_PRES,
-           !SOLVETYPE_SMOOTH,
            !SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing
