@@ -2749,7 +2749,7 @@ stop
         enddo ! im
 
         if (iface.ne.num_materials*num_materials) then
-         print *,"iface invalid"
+         print *,"iface invalid ",iface
          stop
         endif
 
@@ -2768,7 +2768,7 @@ stop
 
          shapeflag=0
 
-          ! in: FORT_CELLFACEINIT
+          ! in: fort_cellfaceinit
          call multi_get_volume_grid( &
           caller_id, &
           tid, &
@@ -3743,7 +3743,8 @@ stop
        else if ((mask2.eq.0).and.(mask1.eq.1)) then
         ! do nothing
        else
-        print *,"mask invalid"
+        print *,"mask1 invalid or ",mask1
+        print *,"mask2 invalid ",mask2
         stop
        endif
 
