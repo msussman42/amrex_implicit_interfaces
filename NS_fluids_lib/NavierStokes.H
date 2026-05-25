@@ -2216,6 +2216,11 @@ protected:
      // S corresponding to velocity, interface, or state variables.
     static int cancel_advection;  // def=0
 
+     //def=2.0 if surface tension
+     //def=1000.0 if no surface tension
+    static Vector<Real> density_ratio_relaxation_factor; 
+    static Vector<Real> denconst_interface_min; 
+
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
     static Vector<Real> prerecalesce_stiffCV; // def=4.1855E+7

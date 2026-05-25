@@ -844,6 +844,8 @@ Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::molar_mass;  // def=1
 					//
 Vector<Real> NavierStokes::denconst;
+Vector<Real> NavierStokes::denconst_interface_min;
+Vector<Real> NavierStokes::density_ratio_relaxation_factor;
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -4106,6 +4108,10 @@ NavierStokes::read_params ()
 
     denconst.resize(num_materials);
     pp.getarr("denconst",denconst,0,num_materials);
+
+    denconst_interface_min.resize(num_interfaces);
+    density_ratio_relaxation_factor.resize(num_interfaces);
+
     pp.getarr("viscconst",viscconst,0,num_materials);
 
     for (int i=0;i<num_materials;i++) {
@@ -4404,6 +4410,30 @@ NavierStokes::read_params ()
      //do nothing
     } else
      amrex::Error("expecting num_materials>=2");
+
+    for (int iten=0;iten<num_interfaces;iten++) {
+     if (tension[iten]==0.0) {
+      density_ratio_relaxation_factor[iten]=1000.0;
+     } else if (tension[iten]>0.0) {
+      density_ratio_relaxation_factor[iten]=2.0;
+     } else
+      amrex::Error("tension[iten] invalid");
+    } //iten=0 ... num_interfaces-1
+
+    pp.queryAdd("density_ratio_relaxation_factor",
+     density_ratio_relaxation_factor,num_interfaces);
+
+    for (int im=0;im<num_materials;im++) {
+     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
+      Real max_den=std::max(denconst[im],denconst[im_opp]);
+      int iten=0;
+      get_iten_cpp(im+1,im_opp+1,iten);
+      if ((iten<1)||(iten>num_interfaces))
+       amrex::Error("iten invalid");
+      denconst_interface_min[iten-1]=
+           max_den/density_ratio_relaxation_factor[iten-1];
+     } //im_opp
+    } //im
 
     pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
     if (unscaled_min_curvature_radius<1.0) {
@@ -5814,6 +5844,13 @@ NavierStokes::read_params ()
          temperature_source_rad[i] << '\n';
      }
 
+     for (int i=0;i<num_interfaces;i++) {
+      std::cout << "i= " << i << " denconst_interface_min "  <<
+        denconst_interface_min[i] << '\n';
+      std::cout << "i= " << i << " density_ratio_relaxation_factor "  <<
+        density_ratio_relaxation_factor[i] << '\n';
+     } // i=0 ... num_interfaces-1
+
      for (int j=0;j<num_species_var;j++) {
       std::cout << " j= " << j << 
          " species_molar_mass "  <<
@@ -6696,7 +6733,6 @@ int NavierStokes::project_option_momeqn(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)||  
-     (project_option==SOLVETYPE_SMOOTH)||  
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
      (project_option==SOLVETYPE_VISC)) {
   return 1;
@@ -6724,7 +6760,6 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
-     (project_option==SOLVETYPE_SMOOTH)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 0;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
@@ -6744,7 +6779,6 @@ int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_SMOOTH)||
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
@@ -6790,7 +6824,6 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==SOLVETYPE_PRES)||   
-     (project_option==SOLVETYPE_SMOOTH)||
      (project_option==SOLVETYPE_INITPROJ)) { 
   nsolve=1;
   nlist=1;
@@ -7703,9 +7736,6 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_INITPROJ) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_INITPROJ) \n";
- } else if (project_option==SOLVETYPE_SMOOTH) {
-  std::cout << "project_option= " << project_option << 
-    " (SOLVETYPE_SMOOTH) \n";
  } else if (project_option==SOLVETYPE_HEAT) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_HEAT) \n";
@@ -20638,7 +20668,6 @@ void NavierStokes::project_right_hand_side(
 
   //SOLVETYPE_PRES, 
   //SOLVETYPE_INITPROJ,
-  //SOLVETYPE_SMOOTH,
   //SOLVETYPE_PRESEXTRAP
  if (project_option_singular_possible(project_option)==1) {
 
@@ -24181,6 +24210,7 @@ void NavierStokes::MaxAdvectSpeed(
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
+    denconst_interface_min.dataPtr(), //fort_estdt
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
@@ -28405,16 +28435,13 @@ NavierStokes::makeStateCurv(int project_option,
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_SMOOTH)) {
+     (project_option==SOLVETYPE_INITPROJ)) {
 
   const Real* dx = geom.CellSize();
 
   Real cl_time=prev_time_slab;
 
   if (project_option==SOLVETYPE_PRES)  
-   cl_time=prev_time_slab;
-  else if (project_option==SOLVETYPE_SMOOTH) 
    cl_time=prev_time_slab;
   else if (project_option==SOLVETYPE_INITPROJ) 
    cl_time=cur_time_slab;

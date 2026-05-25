@@ -10831,9 +10831,7 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       if (project_option.eq.SOLVETYPE_SMOOTH) then
-        local_cut=local_cut*cc_elasticmask
-       else if (project_option.eq.SOLVETYPE_PRES) then
+       if (project_option.eq.SOLVETYPE_PRES) then
         if (num_FSI_outer_sweeps.eq.1) then
          if (FSI_outer_sweeps.eq.0) then
           local_cut=local_cut*cc_elasticmask

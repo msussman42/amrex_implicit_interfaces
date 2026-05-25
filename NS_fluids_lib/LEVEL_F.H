@@ -467,6 +467,7 @@ namespace amrex{
        Real* curv_max,
        int* isweep,
        int* nrefine_vof,
+       Real* denconst_interface_min,
        int* freezing_model,
        int* distribute_from_target,
        int* solidheat_flag,

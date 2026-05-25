@@ -2406,6 +2406,7 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
+        denconst_interface_min, & !fort_estdt
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -2474,6 +2475,7 @@ stop
       integer, INTENT(in) :: mass_fraction_id(2*num_interfaces)
       real(amrex_real), INTENT(in) :: molar_mass(num_materials)
       real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var+1)
+      real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real) uu_estdt
@@ -2825,6 +2827,17 @@ stop
           visc1=visc_coef*mu+EPS10
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+EPS10
+
+          if (denconst_interface_min(iten).gt.zero) then
+           if (min(den1,den2).lt.denconst_interface_min(iten)) then
+            den1=denconst_interface_min(iten)
+            den2=den1
+           endif
+          else
+           print *,"denconst_interface_min invalid fort_estdt ", &
+             denconst_interface_min
+           stop
+          endif
 
            ! capillary_wave_speed declared in PROB.F90
            ! theory:
