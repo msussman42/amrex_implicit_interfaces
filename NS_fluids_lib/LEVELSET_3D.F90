@@ -2323,7 +2323,7 @@ stop
          n_node1(dir2)=n_node1LS(dir2)
          n_node2(dir2)=n_node2LS(dir2)
         else if (is_rigid_CL(im3).eq.1) then
-         ! do nothing
+         n_node1(dir2)=n_node1LS(dir2)
         else
          print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
