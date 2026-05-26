@@ -146,7 +146,6 @@ ns.gravity        = -980.0   # cgs
 # theta_L=18 degrees growth rate: sigma_LI=sigma_LG (1-cos(18 deg))
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
 ns.radblob9=0.0 # transition time from tension_init to tension.
-ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
 ns.tension     =72.8 0.0  72.8 72.8 143.1 72.8
 #ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
 #ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting

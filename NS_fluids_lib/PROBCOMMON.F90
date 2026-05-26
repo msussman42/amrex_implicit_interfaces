@@ -92,7 +92,7 @@ module probcommon_module_types
        integer :: i,j,k
        integer :: im_source
        integer :: im_dest
-       real(amrex_real) :: dxmaxLS
+       real(amrex_real) :: dxmax
        integer :: bfact
        integer :: level
        integer :: finest_level

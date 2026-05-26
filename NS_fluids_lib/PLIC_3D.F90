@@ -179,7 +179,7 @@ stop
       integer mof_verbose
       integer, parameter :: use_ls_data=1
       integer, parameter :: nhalfbox_sten=1
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       integer debugslope
       integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer, parameter :: shapeflag=0
@@ -335,7 +335,7 @@ stop
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       call checkbound_array(fablo,fabhi,slopes_ptr,ngrow_slope_recon,-1)
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
 
       call growntilebox(tilelo,tilehi, &
         fablo,fabhi,igridlo,igridhi,0)

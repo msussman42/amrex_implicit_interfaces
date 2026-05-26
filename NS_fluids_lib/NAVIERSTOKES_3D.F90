@@ -1305,7 +1305,7 @@ END SUBROUTINE SIMP
       integer infinite_weight
       integer local_infinite_weight
       real(amrex_real) csound_hold
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       real(amrex_real) cutoff
       real(amrex_real) rmaskcov
       integer local_mask
@@ -1378,8 +1378,8 @@ END SUBROUTINE SIMP
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=two*DXMAXLS
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=two*DXMAX
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -14621,11 +14621,11 @@ END SUBROUTINE SIMP
       integer tcomp
       real(amrex_real) local_vort
       integer local_mask
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      call get_dxmax(dx,bfact,DXMAX)
 
       if (bfact.lt.1) then
        print *,"bfact invalid163"
@@ -14691,7 +14691,7 @@ END SUBROUTINE SIMP
 
            ! only check pressure/temperature/vorticity
            ! magnitude away from interfaces
-         if (LStest(im).gt.DXMAXLS) then
+         if (LStest(im).gt.DXMAX) then
 
           tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 
@@ -14728,7 +14728,7 @@ END SUBROUTINE SIMP
            vorterr(im), &
            pressure_error_cutoff(im), &
            temperature_error_cutoff(im))
-         else if (LStest(im).le.DXMAXLS) then
+         else if (LStest(im).le.DXMAX) then
           ! do nothing
          else
           print *,"LStest(im) is NaN"

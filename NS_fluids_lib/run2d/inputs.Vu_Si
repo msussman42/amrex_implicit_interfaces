@@ -137,7 +137,6 @@ ns.incremental_gravity_flag=0
 ns.radblob9=0.0 # transition time from the wetting initial 
 #  contact angle to the "non-wetting" case.
 #  We=10.0
-ns.ice_normal_weight=1.0 0.0 1.0 1.0 1.0 1.0
 # 18 degrees growth angle:
 # sigma_LI=sigma_LG(1-cos(18 deg))=sigma_LG * .049
 # sigma_LI=sigma_LG(1-cos(45 deg))=sigma_LG * .293

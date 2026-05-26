@@ -336,7 +336,7 @@ stop
       real(amrex_real) lsnormal(num_materials,SDIM)
       integer lsnormal_valid(num_materials)
       real(amrex_real) ls_intercept(num_materials)
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       integer k1lo,k1hi
       integer i,j,k
       integer i1,j1,k1
@@ -418,7 +418,7 @@ stop
        print *,"dimension bust"
        stop
       endif
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
@@ -450,9 +450,9 @@ stop
        triple_point_flag=0
        do im=1,num_materials
         if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
-         if (abs(local_LS(im)).le.dxmaxLS) then
+         if (abs(local_LS(im)).le.dxmax) then
           triple_point_flag=1
-         else if (abs(local_LS(im)).ge.dxmaxLS) then
+         else if (abs(local_LS(im)).ge.dxmax) then
           ! do nothing
          else
           print *,"local_LS bust"
@@ -470,7 +470,7 @@ stop
 
         do im=1,num_materials
          if (is_rigid(im).eq.0) then
-          if (abs(local_LS(im)).le.two*dxmaxLS) then
+          if (abs(local_LS(im)).le.two*dxmax) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
 
             call find_cut_geom_slope_CLSVOF( &
@@ -481,7 +481,7 @@ stop
              bfact,dx, &
              xsten,nhalf, &
              im, &
-             dxmaxLS, &
+             dxmax, &
              SDIM)
 
             if (lsnormal_valid(im).eq.1) then
@@ -502,7 +502,7 @@ stop
             stop
            endif
 
-          else if (abs(local_LS(im)).ge.two*dxmaxLS) then
+          else if (abs(local_LS(im)).ge.two*dxmax) then
            ! do nothing
           else
            print *,"local_LS invalid"

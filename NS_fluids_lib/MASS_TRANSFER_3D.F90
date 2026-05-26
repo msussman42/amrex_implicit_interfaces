@@ -59,7 +59,7 @@ stop
        integer, pointer :: dencomp_dest
        real(amrex_real), pointer :: dxprobe_dest
        real(amrex_real), pointer, dimension(:) :: LSINT
-       real(amrex_real), pointer :: dxmaxLS
+       real(amrex_real), pointer :: dxmax
        integer, pointer :: bfact
        integer, pointer :: level
        integer, pointer :: finest_level
@@ -3754,7 +3754,7 @@ stop
       real(amrex_real) unsplit_snew(num_materials*ngeom_raw)
       real(amrex_real) unsplit_lsnew(num_materials)
       real(amrex_real) oldLS_point(num_materials*(1+SDIM))
-      real(amrex_real) dxmax,dxmaxLS
+      real(amrex_real) dxmax
       integer recon_ncomp
       integer scomp
  
@@ -3985,7 +3985,6 @@ stop
       call get_iten(im_outer,im_opp_outer,iten_outer)
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
       EBVOFTOL=VOFTOL_MATERIAL
       if (dt.lt.one) then
@@ -4847,10 +4846,10 @@ stop
             away_from_interface=1
            endif
 
-           if (((abs(unsplit_lsnew(im_source)).gt.dxmaxLS).or. &
-                (abs(unsplit_lsnew(im_dest)).gt.dxmaxLS)).and. &
-               ((abs(oldLS_point(im_dest)).gt.dxmaxLS).or. &
-                (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
+           if (((abs(unsplit_lsnew(im_source)).gt.dxmax).or. &
+                (abs(unsplit_lsnew(im_dest)).gt.dxmax)).and. &
+               ((abs(oldLS_point(im_dest)).gt.dxmax).or. &
+                (abs(oldLS_point(im_source)).gt.dxmax))) then
             away_from_interface=1
            endif
 
@@ -6660,7 +6659,7 @@ stop
       real(amrex_real) weight,total_weight
       real(amrex_real) vel_sum(SDIM)
       real(amrex_real) vel_local
-      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth,LL
+      real(amrex_real) dxmax,eps,extensionwidth,LL
       real(amrex_real) ls_local(num_materials)
       integer im_local
       integer scomp
@@ -6706,10 +6705,9 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
  
        ! Guard against division zero in the weight calculation
-      eps=dxmaxLS*EPS4
+      eps=dxmax*EPS4
 
       if (eps.gt.zero) then
        !do nothing
@@ -6718,7 +6716,7 @@ stop
        stop
       endif
 
-      extensionwidth=dxmaxLS*ngrow_make_distance 
+      extensionwidth=dxmax*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
@@ -6992,7 +6990,7 @@ stop
       real(amrex_real) weight,total_weight
       real(amrex_real) drag_sum(ncomp)
       real(amrex_real) drag_local(ncomp)
-      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth
+      real(amrex_real) dxmax,eps,extensionwidth
       real(amrex_real) ls_local(num_materials)
 
       drag_ptr=>drag
@@ -7026,10 +7024,9 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
  
        ! Guard against division zero in the weight calculation
-      eps=dxmaxLS*1.0E-4
+      eps=dxmax*1.0E-4
 
       if (eps.gt.zero) then
        !do nothing
@@ -7038,7 +7035,7 @@ stop
        stop
       endif
 
-      extensionwidth=dxmaxLS*ngrow_make_distance 
+      extensionwidth=dxmax*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
@@ -7771,8 +7768,8 @@ stop
       integer, target :: Ycomp_dest
       real(amrex_real) velmag_sum,local_velmag
       integer burnflag
-      real(amrex_real) dxmin,dxmax
-      real(amrex_real), target :: dxmaxLS
+      real(amrex_real) dxmin
+      real(amrex_real), target :: dxmax
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), target :: xI(SDIM)
       real(amrex_real), target :: xsrc(SDIM)
@@ -8072,7 +8069,6 @@ stop
 
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -8092,7 +8088,7 @@ stop
       create_inout%LSnew=>LSnew
 
       create_in%tid=tid
-      create_in%dxmaxLS=dxmaxLS
+      create_in%dxmax=dxmax
       create_in%bfact=bfact
       create_in%level=level
       create_in%finest_level=finest_level
@@ -8125,7 +8121,7 @@ stop
       PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
       PROBE_PARMS%recon=>recon
       PROBE_PARMS%pres=>pres
-      PROBE_PARMS%dxmaxLS=>dxmaxLS
+      PROBE_PARMS%dxmax=>dxmax
       PROBE_PARMS%bfact=>bfact
       PROBE_PARMS%level=>level
       PROBE_PARMS%finest_level=>finest_level
@@ -8360,8 +8356,8 @@ stop
 
                found_path=0
 
-               if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
-                   (abs(LShere(im_dest)).le.two*dxmaxLS).and. &
+               if ((abs(LShere(im_source)).le.two*dxmax).and. &
+                   (abs(LShere(im_dest)).le.two*dxmax).and. &
                    ((im_source.eq.im_primary).or. &
                     (im_dest.eq.im_primary))) then
 
@@ -10012,8 +10008,8 @@ stop
                  stop
                 endif
 
-               else if ((abs(LShere(im_source)).gt.two*dxmaxLS).or. &
-                        (abs(LShere(im_dest)).gt.two*dxmaxLS).or. &
+               else if ((abs(LShere(im_source)).gt.two*dxmax).or. &
+                        (abs(LShere(im_dest)).gt.two*dxmax).or. &
                         ((im_source.ne.im_primary).and. &
                          (im_dest.ne.im_primary))) then
                 ! do nothing

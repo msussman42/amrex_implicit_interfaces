@@ -24276,7 +24276,7 @@ end subroutine initialize2d
        real(amrex_real) L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
        real(amrex_real) T_FIELD
        real(amrex_real) den_ratio
-       real(amrex_real) dxmaxLS
+       real(amrex_real) dxmax
        integer im_solid_initdata
        real(amrex_real) lsnormal(num_materials,SDIM)
        integer lsnormal_valid(num_materials)
@@ -24333,7 +24333,7 @@ end subroutine initialize2d
         stop
        endif
 
-       call get_dxmaxLS(dx,bfact,dxmaxLS)
+       call get_dxmax(dx,bfact,dxmax)
 
        im_solid_initdata=im_solid_primary()
 
@@ -25655,7 +25655,7 @@ end subroutine initialize2d
           bfact,dx, &
           xsten,nhalf, &
           imls, &
-          dxmaxLS, &
+          dxmax, &
           SDIM)
 
          if (lsnormal_valid(imls).eq.1) then
