@@ -600,7 +600,6 @@ stop
       real(amrex_real) temperature_cen(num_materials)
       real(amrex_real) grad_tension(SDIM)
       real(amrex_real) RR
-      real(amrex_real), parameter :: RR_unit=1.0d0
       real(amrex_real) dnrm(SDIM)
       real(amrex_real) dxsten(SDIM)
       integer im_primary_sten( &
@@ -834,8 +833,7 @@ stop
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if ((levelrz.eq.COORDSYS_RZ).or. &
-               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      else if (levelrz.eq.COORDSYS_RZ) then
 
        if (xcenter(1).gt.zero) then
         ! do nothing
@@ -918,7 +916,7 @@ stop
        nrmcenter, & !intent(in)
        iten, &
        nfluid) !intent(out)
-      call prepare_normal(nfluid,RR_unit,mag,SDIM)
+      call prepare_normal(nfluid,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
@@ -933,13 +931,6 @@ stop
         print *,"dimension bust: ",SDIM
         stop
        endif
-       if (xcenter(1).gt.zero) then
-        !do nothing
-       else
-        print *,"xcenter invalid: ",xcenter
-        stop
-       endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        if (xcenter(1).gt.zero) then
         !do nothing
        else
@@ -1151,7 +1142,7 @@ stop
        endif
       enddo ! dir2
 
-      call prepare_normal(nfluid,RR_unit,mag,SDIM)
+      call prepare_normal(nfluid,mag,SDIM)
       if (mag.gt.zero) then
        !do nothing
       else
@@ -1162,7 +1153,7 @@ stop
       do dir2=1,SDIM
        nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
       enddo
-      call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
+      call prepare_normal(nfluid_least_squares,mag,SDIM)
       if (mag.ge.zero) then
        ! do nothing
       else
@@ -1248,14 +1239,6 @@ stop
           if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
               (levelrz.eq.COORDSYS_RZ)) then
            RR=one
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           RR=xcenter(1)
-           if (RR.gt.zero) then
-            ! do nothing
-           else
-            print *,"RR invalid: ",RR
-            stop
-           endif
           else
            print *,"grad_tension: levelrz invalid"
            stop
@@ -1328,8 +1311,7 @@ stop
       lmin=-ngrow_distance
       lmax=ngrow_distance
 
-      if ((levelrz.eq.COORDSYS_RZ).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_RZ) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
@@ -1369,14 +1351,6 @@ stop
            iwidthnew=0
           endif
          endif
-        endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (xsten(-2,1).gt.zero) then
-         !do nothing
-        else
-         print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
-         print *,"xsten=",xsten
-         stop
         endif
        else
         print *,"levelrz invalid initheight ls 4: ",levelrz
@@ -1589,7 +1563,7 @@ stop
         do dir2=1,SDIM
          nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
         enddo
-        call prepare_normal(nfluid_least_squares,RR_unit,mag,SDIM)
+        call prepare_normal(nfluid_least_squares,mag,SDIM)
         if (mag.ge.zero) then
          ! do nothing
         else
@@ -1667,7 +1641,6 @@ stop
     
       call prepare_normal( &
          normal_im3, & !intent(inout)
-         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1682,7 +1655,6 @@ stop
 
        call prepare_normal( &
          normal_im3, & !intent(inout)
-         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1695,7 +1667,6 @@ stop
         enddo
         call prepare_normal( &
          normal_im3, & !intent(inout)
-         RR_unit, & !intent(in)
          mag3, & !intent(out)
          SDIM) !intent(in);   im3 material
 
@@ -1729,7 +1700,7 @@ stop
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
        enddo
-       call prepare_normal(nfluid,RR_unit,mag,SDIM)
+       call prepare_normal(nfluid,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1747,7 +1718,7 @@ stop
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im_opp-1)+dir2)
        enddo
-       call prepare_normal(nfluid,RR_unit,mag,SDIM)
+       call prepare_normal(nfluid,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1799,7 +1770,7 @@ stop
           do dir2=1,SDIM
            nproject(dir2)=master_normal(dir2)-dotprod*normal_im3(dir2)
           enddo
-          call prepare_normal(nproject,RR_unit,mag,SDIM)
+          call prepare_normal(nproject,mag,SDIM)
 
           if (mag.gt.zero) then
            ! find u dot nproject
@@ -2272,10 +2243,8 @@ stop
         RR=one
         if (dir2.eq.1) then
          ! do nothing
-        else if (dir2.eq.2) then ! theta direction in cylindrical coord.
-         if (levelrz.eq.COORDSYS_CYLINDRICAL) then 
-          RR=abs(xsten_curv(node_index(1),1))
-         endif
+        else if (dir2.eq.2) then 
+         ! do nothing
         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
          ! do nothing
         else
@@ -2291,7 +2260,7 @@ stop
 
        enddo ! dir2
 
-       call prepare_normal(n_node1LS,RR_unit,mag,SDIM)
+       call prepare_normal(n_node1LS,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node1LS(dir2)=n_node1(dir2)
@@ -2302,7 +2271,7 @@ stop
         print *,"mag invalid LEVELSET_3D.F90 2108: ",mag
         stop
        endif
-       call prepare_normal(n_node2LS,RR_unit,mag,SDIM)
+       call prepare_normal(n_node2LS,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node2LS(dir2)=n_node2(dir2)
@@ -2331,8 +2300,8 @@ stop
 
        enddo ! dir2=1..sdim
 
-       call prepare_normal(n_node1,RR_unit,mag,SDIM)
-       call prepare_normal(n_node2,RR_unit,mag,SDIM)
+       call prepare_normal(n_node1,mag,SDIM)
+       call prepare_normal(n_node2,mag,SDIM)
 
        do dir2=1,SDIM
         n1=n_node1(dir2)
@@ -2361,8 +2330,7 @@ stop
         if (dir2.eq.1) then
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           RR=one
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           RR=abs(xsten_curv(node_index(1),1))
          else
           print *,"levelrz invalid initheightLS: RR levelrz=",levelrz
@@ -2408,8 +2376,7 @@ stop
         if (dir2.eq.1) then
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           RR=one
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           RR=abs(xsten_curv(0,1))
          else
           print *,"levelrz invalid initheightLS: RR 3: ",levelrz
@@ -2424,8 +2391,6 @@ stop
            stop
           endif
           RR=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          RR=abs(xsten_curv(0,1))
          else
           print *,"levelrz invalid initheightLS: RR 4: ",levelrz
           stop
@@ -2457,8 +2422,7 @@ stop
          print *,"sdim invalid: ",SDIM
          stop
         endif     
-       else if ((levelrz.eq.COORDSYS_RZ).or. &
-                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         maxcurv=two*maxcurv
        else
         print *,"initheightLS: levelrz invalid (b): ",levelrz
@@ -2685,10 +2649,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then 
-       ! do nothing
       else
-       print *,"rz_flag invalid in cellfaceinit"
+       print *,"rz_flag invalid in cellfaceinit ",rz_flag
        stop
       endif
 
@@ -3891,7 +3853,7 @@ stop
 
       real(amrex_real) xcenter(SDIM)
       integer dirloc
-      integer dircrossing,dirstar
+      integer dircrossing_opt,dirstar
       integer sidestar
       integer at_RZ_axis
 
@@ -3924,7 +3886,6 @@ stop
       real(amrex_real) least_squares_normal_material(num_materials,SDIM)
       real(amrex_real) least_squares_normal_material_wt(num_materials)
 
-      real(amrex_real) nrmPROBE(SDIM*num_materials)
       real(amrex_real) LS_PROBE(num_materials)
 
       real(amrex_real) nrmFD(SDIM*num_materials)
@@ -3934,14 +3895,13 @@ stop
       real(amrex_real) nrm_center(SDIM)
       real(amrex_real) curv_cellHT
       real(amrex_real) curv_cellFD
-      real(amrex_real) mag,RR
-      real(amrex_real), parameter :: RR_unit=one
+      real(amrex_real) mag
       integer itemperature
       integer donate_flag
-      integer signcrossing
+      integer signcrossing_opt
       integer signside
       integer critsign
-      real(amrex_real) dxcrossing
+      real(amrex_real) dxcrossing_opt
       real(amrex_real) dxside
       real(amrex_real) mgoni_force(SDIM)
 
@@ -4143,10 +4103,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in curvstrip"
+       print *,"rz_flag invalid in curvstrip ",rz_flag
        stop
       endif
 
@@ -4197,7 +4155,7 @@ stop
          enddo
 
           ! FIX_LS_tessellate is declared in: MOF.F90
-          ! input : fluids tessellate, solids are embedded
+          ! input : fluids tessellate, solids/elastics are embedded
           ! output: fluids tessellate and one and only one fluid LS is positive
          call FIX_LS_tessellate(LS,LS_fixed)
 
@@ -4309,6 +4267,10 @@ stop
               LSRIGHT_fixed(im)=LS_STAR_FIXED(1,dirloc,im)
              enddo
 
+              !get_LS_extend is declared in GLOBALUTIL.F90
+              !LS_extend=-LS(im_opp) if LS(im)>LS(im_opp)
+              !LS_extend=LS(im) if LS(im)<LS(im_opp)
+              !LS_extend=0.0 if LS(im)=LS(im_opp)
              call get_LS_extend(LSLEFT_fixed,iten,LSLEFT_EXTEND)
              call get_LS_extend(LSRIGHT_fixed,iten,LSRIGHT_EXTEND)
 
@@ -4327,15 +4289,13 @@ stop
               (LSRIGHT_EXTEND-LSLEFT_EXTEND)/(XRIGHT-XLEFT)
             enddo !dirloc=1..sdim
 
-            ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
-            RR=xcenter(1)
-            call prepare_normal(nrm_center,RR,mag,SDIM)
+            call prepare_normal(nrm_center,mag,SDIM)
 
-            dircrossing=0
+            dircrossing_opt=0
             ! 1D normal pointing towards the center cell.
-            signcrossing=0
+            signcrossing_opt=0
             ! abs(x1dcross-x1dcen)
-            dxcrossing=zero
+            dxcrossing_opt=zero
             im3=0
 
             do dirstar=1,SDIM
@@ -4352,7 +4312,7 @@ stop
              else if ((dirstar.eq.3).and.(SDIM.eq.3)) then
               kk=1
              else
-              print *,"dirstar invalid"
+              print *,"dirstar invalid ",dirstar
               stop
              endif
 
@@ -4369,7 +4329,7 @@ stop
                kface=k+kk
                side_index=2
               else
-               print *,"sidestar invalid"
+               print *,"sidestar invalid ",sidestar
                stop
               endif
 
@@ -4407,23 +4367,34 @@ stop
 
                  dxside=abs(x1dcross-x1dcen)
 
-                  ! signcrossing points to im_majority material
+                  ! signcrossing_opt points to im_majority material
                  if (donate_flag.eq.0) then
                   donate_flag=1
-                  dircrossing=dirstar
-                  signcrossing=-sidestar
-                  dxcrossing=dxside
+                  dircrossing_opt=dirstar
+                  signcrossing_opt=-sidestar
+                  dxcrossing_opt=dxside
                  else if (donate_flag.eq.1) then
-                  if (dxside.lt.(one-VOFTOL_MATERIAL)*dxcrossing) then
-                   dircrossing=dirstar
-                   signcrossing=-sidestar
-                   dxcrossing=dxside
-                  else if ((dxside.le.(one+VOFTOL_MATERIAL)*dxcrossing).and. &
+                  if (dxside.lt.(one-VOFTOL_MATERIAL)*dxcrossing_opt) then
+                   dircrossing_opt=dirstar
+                   signcrossing_opt=-sidestar
+                   dxcrossing_opt=dxside
+                  else if ((abs(dxside-dxcrossing_opt).le. &
+                            VOFTOL_MATERIAL*dxcrossing_opt).and. &
                            (abs(nrm_center(dirstar)).gt. &
-                            abs(nrm_center(dircrossing)))) then 
-                   dircrossing=dirstar
-                   signcrossing=-sidestar
-                   dxcrossing=dxside
+                            abs(nrm_center(dircrossing_opt)))) then 
+                   dircrossing_opt=dirstar
+                   signcrossing_opt=-sidestar
+                   dxcrossing_opt=dxside
+                  else if ((abs(dxside-dxcrossing_opt).ge. &
+                            VOFTOL_MATERIAL*dxcrossing_opt).or. &
+                           (abs(nrm_center(dirstar)).le. &
+                            abs(nrm_center(dircrossing_opt)))) then 
+                   !do nothing
+                  else
+                   print *,"dxside invalid ",dxside
+                   print *,"or dxcrossing_opt invalid ",dxcrossing_opt
+                   print *,"or nrm_center invalid ",nrm_center
+                   stop
                   endif
                  else
                   print *,"donate_flag invalid: ",donate_flag
@@ -4442,13 +4413,17 @@ stop
                 ! do nothing
                else
                 print *,"LSIDE, LCEN, or at_RZ_axis bust"
+                print *,"LSIDE= ",LSIDE
+                print *,"LCEN= ",LCEN
+                print *,"at_RZ_axis= ",at_RZ_axis
                 stop
                endif 
 
               else if (im_opp_test.ne.im_opp) then
                ! do nothing
               else
-               print *,"im_opp_test invalid: ",im_opp_test
+               print *,"im_opp invalid: ",im_opp
+               print *,"or im_opp_test invalid: ",im_opp_test
                stop
               endif 
 
@@ -4459,12 +4434,12 @@ stop
 
               ! sidestar points away from im_majority and towards the
               ! opposite material.
-              ! signcrossing points towards im_majority.
-             sidestar=-signcrossing
+              ! signcrossing_opt points towards im_majority.
+             sidestar=-signcrossing_opt
 
              if (im_majority.lt.im_opp) then
                ! signside points to im_majority=im_main
-              signside=signcrossing
+              signside=signcrossing_opt
               if ((im_majority.eq.im_main).and. &
                   (im_opp.eq.im_main_opp)) then
                ! do nothing
@@ -4473,10 +4448,10 @@ stop
                stop
               endif
              else if (im_majority.gt.im_opp) then
-               ! signcrossing points towards im_majority.
+               ! signcrossing_opt points towards im_majority.
                ! signside points away from im_majority
                ! signside points towards im_opp=im_main
-              signside=-signcrossing
+              signside=-signcrossing_opt
               if ((im_majority.eq.im_main_opp).and. &
                   (im_opp.eq.im_main)) then
                ! do nothing
@@ -4489,14 +4464,14 @@ stop
               stop
              endif
 
-             dxside=dxcrossing
-             dirstar=dircrossing
+             dxside=dxcrossing_opt
+             dirstar=dircrossing_opt
              if ((dirstar.lt.1).or.(dirstar.gt.SDIM)) then
-              print *,"dirstar invalid"
+              print *,"dirstar invalid ",dirstar
               stop
              endif
              if ((signside.ne.1).and.(signside.ne.-1)) then
-              print *,"signside invalid"
+              print *,"signside invalid ",signside
               stop
              endif
 
@@ -4514,7 +4489,7 @@ stop
              else if (mask2.eq.1) then ! mask2==1 => interior cell
               ! do nothing
              else
-              print *,"mask2 invalid"
+              print *,"mask2 invalid ",mask2
               stop
              endif
 
@@ -4525,10 +4500,6 @@ stop
               LSstenhi(dirloc)=ngrow_distance
              enddo
    
-             ! get normals at the cell center.
-             do inormal=1,SDIM*num_materials
-              nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),num_materials+inormal)
-             enddo ! inormal
              do im_curv=1,num_materials
               LS_PROBE(im_curv)=LSPC(D_DECL(i,j,k),im_curv)
              enddo
@@ -4554,7 +4525,7 @@ stop
 
                inormal=(im_curv-1)*SDIM+dirstar
 
-               if (dirstar.eq.dircrossing) then
+               if (dirstar.eq.dircrossing_opt) then
                 if (sidestar.eq.1) then
                  nrmFD(inormal)=(LSRIGHT_EXTEND-LCEN)/(XRIGHT-XCEN)
                 else if (sidestar.eq.-1) then
@@ -4563,7 +4534,7 @@ stop
                  print *,"sidestar invalid: ",sidestar
                  stop
                 endif
-               else if (dirstar.ne.dircrossing) then
+               else if (dirstar.ne.dircrossing_opt) then
                 nrmFD(inormal)= &
                   (LSRIGHT_EXTEND-LSLEFT_EXTEND)/(XRIGHT-XLEFT)
                else
@@ -4578,10 +4549,9 @@ stop
 
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrm_mat(dirloc)=nrmPROBE(inormal)
-               nrm_test(dirloc)=nrmFD(inormal)
+               nrm_mat(dirloc)=nrmFD(inormal)
               enddo ! dirloc=1..sdim
-              call prepare_normal(nrm_test,RR_unit,mag,SDIM)
+              call prepare_normal(nrm_mat,mag,SDIM)
 
               ! fix probe normal if it is inconsistent.
               ! iten: im_main,im_main_opp; normal points towards im_main
@@ -4600,67 +4570,12 @@ stop
                    im_main,im_main_opp,im_curv
                 stop
                endif
-               if (nrm_test(dircrossing)*critsign.gt.zero) then
+               if (nrm_mat(dircrossing_opt)*critsign.gt.zero) then
                 ! do nothing
                else
-                print *,"critsign and nrm_test mismatch"
-                print *,"dircrossing = ",dircrossing
-                print *,"sidestar= ",sidestar
-                print *,"signcrossing= ",signcrossing
-                print *,"dxcrossing= ",dxcrossing
-                print *,"critsign=",critsign
-                print *,"im_curv=",im_curv
-                print *,"im_majority= ",im_majority
-                print *,"im_main=",im_main
-                print *,"im_main_opp=",im_main_opp
-                print *,"iten= ",iten
-                print *,"im_opp=",im_opp
-                print *,"nrm_test points towards im_curv= ",im_curv
-                do dirloc=1,SDIM
-                 print *,"dirloc,nrm_test ",dirloc,nrm_test(dirloc)
-                enddo
-                print *,"nrm_center points towards im_main= ",im_main
-                do dirloc=1,SDIM
-                 print *,"dirloc,nrm_center ",dirloc,nrm_center(dirloc)
-                enddo
-                print *,"nrmPROBE points towards im_curv= ",im_curv
-                do dirloc=1,SDIM
-                 inormal=(im_curv-1)*SDIM+dirloc
-                 print *,"dirloc,nrmPROBE ", &
-                    dirloc,nrmPROBE(inormal)
-                enddo
-                print *,"nrmFD points towards im_curv= ",im_curv
-                do dirloc=1,SDIM
-                 inormal=(im_curv-1)*SDIM+dirloc
-                 print *,"dirloc,nrmFD ",dirloc,nrmFD(inormal)
-                enddo
-                stop
+                donate_flag=0
                endif
 
-                ! (note: If the distance function is zero, then the
-                ! closest point normal corresponds to the reconstructed
-                ! slope.)
-                ! nrm_mat: from PROBE (closest point) normal
-                ! nrm_test: from FD normal
-               if ((nrm_mat(dircrossing)*nrm_test(dircrossing).gt.zero).and. &
-                   (abs(nrm_mat(dircrossing)).gt. &
-                    half*abs(nrm_test(dircrossing)))) then
-                ! do nothing
-               else if  &
-                  ((nrm_mat(dircrossing)*nrm_test(dircrossing).le.zero).or. &
-                   (abs(nrm_mat(dircrossing)).le. &
-                    half*abs(nrm_test(dircrossing)))) then
-                do dirloc=1,SDIM
-                 nrm_mat(dirloc)=nrm_test(dirloc)
-                enddo
-               else
-                print *,"nrm_mat or nrm_test is NaN"
-                print *,"dircrossing: ",dircrossing
-                print *,"nrm_mat: ",nrm_mat(dircrossing)
-                print *,"nrm_test: ",nrm_test(dircrossing)
-                stop
-               endif
-  
               else if ((im_curv.ne.im_main).and. &
                        (im_curv.ne.im_main_opp)) then
                ! do nothing
@@ -4671,11 +4586,9 @@ stop
                print *,"im_main_opp=",im_main_opp
                stop
               endif 
-
-               ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
-              RR=xcenter(1) 
+FIX ME
                ! declared in GLOBALUTIL.F90
-              call prepare_normal(nrm_mat,RR,mag,SDIM)
+              call prepare_normal(nrm_mat,mag,SDIM)
 
               if (mag.eq.zero) then
                if (is_rigid_CL(im_curv).eq.0) then
@@ -4685,10 +4598,8 @@ stop
                 do dirloc=1,SDIM
                  nrm_mat(dirloc)=nrm_test(dirloc)
                 enddo
-                 ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
-                RR=xcenter(1) 
                  ! declared in GLOBALUTIL.F90
-                call prepare_normal(nrm_mat,RR,mag,SDIM)
+                call prepare_normal(nrm_mat,mag,SDIM)
                 if (mag.eq.zero) then
                  ! do nothing
                 else if (mag.gt.zero) then
@@ -4719,7 +4630,7 @@ stop
 
              if (1.eq.0) then
               print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
-              print *,"dircrossing ",dircrossing
+              print *,"dircrossing_opt ",dircrossing_opt
               print *,"im_majority,im_opp,im_main,im_main_opp ", &
                im_majority,im_opp,im_main,im_main_opp
              endif
@@ -4767,7 +4678,6 @@ stop
                vofsten(i1,j1,k1,im_curv)=vof_hold(im_curv)
               enddo
 
-              RR=one
               if (levelrz.eq.COORDSYS_CARTESIAN) then
                ! do nothing
               else if (levelrz.eq.COORDSYS_RZ) then
@@ -4775,8 +4685,6 @@ stop
                 print *,"levelrz invalid: ",levelrz
                 stop
                endif
-              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-               RR=abs(xsten_curv(2*i1,1))
               else
                print *,"transformed normal: levelrz invalid: ",levelrz
                stop
@@ -4932,7 +4840,7 @@ stop
                  stop
                 endif
 
-                call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+                call prepare_normal(n_loc,mag_loc,SDIM)
 
                 if (mag_loc.eq.zero) then
 
@@ -4964,7 +4872,7 @@ stop
 
                  enddo ! do dirloc=1,SDIM
 
-                 call prepare_normal(n_loc,RR,mag_loc,SDIM)
+                 call prepare_normal(n_loc,mag_loc,SDIM)
 
                  if (mag_loc.eq.zero) then
                   print *,"expecting mag_loc>0"
@@ -5104,7 +5012,7 @@ stop
                do dirloc=1,SDIM
                 n_loc(dirloc)=nrm_local(dirloc+(im_curv-1)*SDIM)
                enddo
-               call prepare_normal(n_loc,RR,mag_loc,SDIM)
+               call prepare_normal(n_loc,mag_loc,SDIM)
                if (mag_loc.eq.zero) then
                 wt_local=zero
                else if (mag_loc.gt.zero) then
@@ -5130,7 +5038,7 @@ stop
                  nrm_mat(dirloc)=nrm_local(inormal)
                 enddo
 
-                call prepare_normal(nrm_mat,RR,mag,SDIM)
+                call prepare_normal(nrm_mat,mag,SDIM)
 
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
@@ -5168,7 +5076,7 @@ stop
                endif
                n_loc(dirloc)=least_squares_normal(iten_local,dirloc)
               enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              call prepare_normal(n_loc,mag_loc,SDIM)
               do dirloc=1,SDIM
                least_squares_normal(iten_local,dirloc)=n_loc(dirloc)
               enddo
@@ -5187,7 +5095,7 @@ stop
                endif
                n_loc(dirloc)=least_squares_normal_triple(iten_local,dirloc)
               enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              call prepare_normal(n_loc,mag_loc,SDIM)
               do dirloc=1,SDIM
                least_squares_normal_triple(iten_local,dirloc)=n_loc(dirloc)
               enddo
@@ -5208,7 +5116,7 @@ stop
                endif
                n_loc(dirloc)=least_squares_normal_material(im_curv,dirloc)
               enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,RR_unit,mag_loc,SDIM)
+              call prepare_normal(n_loc,mag_loc,SDIM)
               do dirloc=1,SDIM
                least_squares_normal_material(im_curv,dirloc)=n_loc(dirloc)
               enddo
@@ -5249,7 +5157,7 @@ stop
               !nrmPROBE is derived from both the closest point
               !normal and the FD normal.
               nrmPROBE, &
-              dircrossing, & !intent(in)
+              dircrossing_opt, & !intent(in)
               sidestar, & !intent(in)
               signside, &
               time, &
@@ -5297,8 +5205,8 @@ stop
              endif
 
              if (DEBUG_CURVATURE.eq.1) then
-              print *,"i,j,k,dircrossing,sidestar,nrm ", &
-               i,j,k,dircrossing,sidestar, &
+              print *,"i,j,k,dircrossing_opt,sidestar,nrm ", &
+               i,j,k,dircrossing_opt,sidestar, &
                nrm_center(1),nrm_center(2),nrm_center(SDIM)
               print *,"curv_cellHT,curv_cellFD ",curv_cellHT,curv_cellFD
              endif
@@ -5317,7 +5225,7 @@ stop
               ! dir=1..sdim
               ! side=-1 or 1
              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_DIRSIDE_FLAG+1)= &
-              dircrossing*sidestar
+              dircrossing_opt*sidestar
              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MATERIAL3_ID+1)=im3
 
              if (curv_min.gt.curv_cellHT) then
@@ -5349,7 +5257,7 @@ stop
         else if ((mask2.eq.0).and.(mask1.eq.1)) then
          ! do nothing
         else
-         print *,"mask2 or mask1 invalid: ",mask1,mask2
+         print *,"mask1 or mask2 invalid: ",mask1,mask2
          stop
         endif
 
@@ -6306,16 +6214,8 @@ stop
           ! do nothing
          else if (levelrz.eq.COORDSYS_RZ) then
           ! do nothing
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          dx_sten(2)=dx_sten(2)*RR
-          if (RR.gt.zero) then
-           !do nothing
-          else
-           print *,"RR invalid: ",RR
-           stop
-          endif
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
 
@@ -6324,10 +6224,8 @@ stop
            dperim=one
           else if (levelrz.eq.COORDSYS_RZ) then
            dperim=two*Pi*RR
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           dperim=one
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
          else if (SDIM.eq.3) then
@@ -9992,8 +9890,6 @@ stop
           else
            im1=i-ii
           endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          im1=i-ii
          else
           print *,"levelrz invalid init physics var: ",levelrz
           stop
@@ -10967,43 +10863,14 @@ stop
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if (veldir.eq.0) then
-            if (icell.eq.-1) then 
-             if (xsten(0,1).lt.zero) then ! reflecting BC
-              icell=0
-             endif
-            else if (icell.ge.0) then
-             if (xsten(0,1).gt.zero) then
-              ! do nothing
-             else
-              print *,"xsten bust"
-              stop
-             endif
-            else
-             print *,"icell invalid"
-             stop
-            endif
-           else if ((veldir.eq.1).or.(veldir.eq.SDIM-1)) then
-            if (xsten(0,1).gt.zero) then
-             ! do nothing
-            else
-             print *,"xsten bust"
-             stop
-            endif
-           else 
-            print *,"veldir invalid"
-            stop
-           endif
           else
-           print *,"levelrz invalid init physics vars 2"
+           print *,"levelrz invalid init physics vars 2 ",levelrz
            stop
           endif
 
           if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if ((levelrz.eq.COORDSYS_RZ).or. &
-                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            if (veldir.eq.0) then
             if (iside.eq.0) then
              if (abs(xstenMAC_center(1)).le.EPS2*dx(1)) then
@@ -11332,10 +11199,8 @@ stop
            print *,"dimension bust"
            stop
           endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          ! do nothing
          else
-          print *,"levelrz invalid init physics vars 4"
+          print *,"levelrz invalid init physics vars 4: ",levelrz
           stop
          endif
 
@@ -12220,8 +12085,7 @@ stop
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if ((levelrz.eq.COORDSYS_RZ).or. &
-                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (xsten_recon(0,1).lt.EPS2*dx(1)) then
          check_donate=0
          if (i.lt.0) then
@@ -13811,15 +13675,8 @@ stop
               print *,"iface invalid"
               stop
              endif
-            else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-             if (xsten(0,1).gt.zero) then
-              ! do nothing
-             else
-              print *,"expecting xsten(0,1)>0: ",xsten(0,1)
-              stop
-             endif 
             else
-             print *,"levelrz invalid"
+             print *,"levelrz invalid ",levelrz
              stop
             endif
            else if (SDIM.eq.3) then
@@ -13979,15 +13836,6 @@ stop
          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
              (levelrz.eq.COORDSYS_RZ)) then
           RR=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if (dir.eq.1) then ! theta direction
-           RR=xsten(0,1)
-          else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
-           RR=one
-          else
-           print *,"dir invalid fort_mac_to_cell: ",dir
-           stop
-          endif
          else
           print *,"levelrz invalid edge pressure 2: ",levelrz
           stop
@@ -15683,14 +15531,8 @@ stop
           RR=one
          else if (levelrz.eq.COORDSYS_RZ) then
           RR=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if (dir.eq.1) then
-           RR=xstenMAC_center(1)
-          else
-           RR=one
-          endif
          else
-          print *,"levelrz invalid edgegradp"
+          print *,"levelrz invalid edgegradp ",levelrz
           stop
          endif 
 
@@ -15926,13 +15768,8 @@ stop
                (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.EPS2*dx(1))) then
-            at_RZ_face=1
-           endif
           else
-           print *,"levelrz invalid tfrmac"
+           print *,"levelrz invalid tfrmac ",levelrz
            stop
           endif 
 
@@ -16032,11 +15869,6 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.EPS2*dx(1))) then
-            at_RZ_face=1
-           endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((dir.eq.0).and. &
                (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
@@ -16653,10 +16485,8 @@ stop
              stop
             endif
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           ! do nothing
           else
-           print *,"levelrz invalid grad potential 2"
+           print *,"levelrz invalid grad potential 2 ",levelrz
            stop
           endif
 
@@ -16936,8 +16766,6 @@ stop
              stop
             endif
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           ! do nothing
           else
            print *,"levelrz invalid grad potential 2: ",levelrz
            stop
@@ -18063,10 +17891,8 @@ stop
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
         !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        !do nothing 
        else
-        print *,"levelrz invalid fort_project_to_rigid_velocity "
+        print *,"levelrz invalid fort_project_to_rigid_velocity ",levelrz
         stop
        endif 
 
@@ -18142,11 +17968,6 @@ stop
          print *,"dimension bust"
          stop
         endif
-        if ((dir.eq.0).and. &
-            (xstenMAC_center(1).le.EPS2*dx(1))) then
-         at_RZ_face=1
-        endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if ((dir.eq.0).and. &
             (xstenMAC_center(1).le.EPS2*dx(1))) then
          at_RZ_face=1
@@ -18363,10 +18184,8 @@ stop
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
         !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        !do nothing 
        else
-        print *,"levelrz invalid fort_project_to_rigid_velocity "
+        print *,"levelrz invalid fort_project_to_rigid_velocity ",levelrz
         stop
        endif 
 
@@ -18819,10 +18638,8 @@ stop
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
         !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        !do nothing 
        else
-        print *,"levelrz invalid fort_manage_elastic_velocity "
+        print *,"levelrz invalid fort_manage_elastic_velocity ",levelrz
         stop
        endif 
 
@@ -18861,19 +18678,6 @@ stop
           print *,"dimension bust"
           stop
          endif
-
-         if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
-          !do nothing
-         else
-          print *,"xstenMAC_center(1) invalid: ",xstenMAC_center(1)
-          stop
-         endif
-
-         if ((dir.eq.0).and. &
-             (abs(xstenMAC_center(1)).le.EPS2*dx(1))) then
-          at_RZ_face=1
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
          if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
           !do nothing
@@ -19021,11 +18825,6 @@ stop
                    print *,"dimension bust"
                    stop
                   endif
-                  if ((dir.eq.0).and. &
-                      (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
-                   at_RZ_face=1
-                  endif
-                 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
                   if ((dir.eq.0).and. &
                       (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
                    at_RZ_face=1
@@ -19183,8 +18982,6 @@ stop
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
-        !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         !do nothing 
        else
         print *,"levelrz invalid fort_manage_elastic_velocity: ",levelrz
@@ -19587,10 +19384,8 @@ stop
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
         !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        !do nothing 
        else
-        print *,"levelrz invalid fort_extend_elastic_velocity "
+        print *,"levelrz invalid fort_extend_elastic_velocity ",levelrz
         stop
        endif 
 
@@ -19629,19 +19424,6 @@ stop
           print *,"dimension bust"
           stop
          endif
-
-         if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
-          !do nothing
-         else
-          print *,"xstenMAC_center(1) invalid: ",xstenMAC_center(1)
-          stop
-         endif
-
-         if ((dir.eq.0).and. &
-             (abs(xstenMAC_center(1)).le.EPS2*dx(1))) then
-          at_RZ_face=1
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
          if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
           !do nothing
@@ -19811,11 +19593,6 @@ stop
                    (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
                 at_RZ_face=1
                endif
-              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-               if ((dir.eq.0).and. &
-                   (abs(local_xstenMAC_center(1)).le.EPS2*dx(1))) then
-                at_RZ_face=1
-               endif
               else
                print *,"levelrz invalid fort_extend_elastic_velocity: ", &
                  levelrz
@@ -19951,8 +19728,6 @@ stop
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         !do nothing 
        else if (levelrz.eq.COORDSYS_RZ) then
-        !do nothing 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         !do nothing 
        else
         print *,"levelrz invalid fort_extend_elastic_velocity: ",levelrz

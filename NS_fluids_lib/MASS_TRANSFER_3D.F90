@@ -8578,8 +8578,7 @@ stop
                   dxprobe_source=half*sqrt(dxprobe_source)
                   dxprobe_dest=dxprobe_source
 
-                  RR=one
-                  call prepare_normal(nrmCP,RR,mag,SDIM)
+                  call prepare_normal(nrmCP,mag,SDIM)
 
                   if (levelrz.eq.COORDSYS_CARTESIAN) then
                    ! do nothing
@@ -8594,7 +8593,7 @@ stop
                      theta_nrmCP(dir)=nrmCP(dir)
                     enddo
                     RR=xsten(0,1)
-                    call prepare_normal(theta_nrmCP,RR,mag,SDIM)
+                    call prepare_normal(theta_nrmCP,mag,SDIM)
                     if (mag.gt.zero) then
                      ! mag=theta_nrmCP dot nrmCP
                      mag=zero
