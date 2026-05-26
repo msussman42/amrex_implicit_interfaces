@@ -4456,13 +4456,8 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
 
       real(amrex_real) xtarget(SDIM)
-      real(amrex_real) xfoot(SDIM)
-      real(amrex_real) xtargetRT(SDIM)
-      real(amrex_real) xfootRT(SDIM)
       real(amrex_real) gradphi(SDIM) 
       real(amrex_real) phi,newphi
-      real(amrex_real) mag
-      integer dir
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        newphi=phi
@@ -6549,13 +6544,9 @@ end subroutine print_visual_descriptor
 
       integer, INTENT(in) :: i,j,k,im
       integer, INTENT(in) :: nhalf
-      integer :: dir
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(inout) :: LS
       real(amrex_real), INTENT(in), pointer :: dist(D_DECL(:,:,:),:)
-      real(amrex_real) n(SDIM)
-      real(amrex_real) nsave(SDIM)
-      real(amrex_real) mag
 
       if (nhalf.ne.3) then
        print *,"nhalf invalid"
@@ -7477,7 +7468,7 @@ end subroutine print_visual_descriptor
       real(amrex_real) hxR,hxL,hx,hxx
       real(amrex_real) hyR,hyL,hy,hyy
       real(amrex_real) hxy
-      real(amrex_real) arclen,arclenx,arcleny,arclenr,g,gx,gy,gr
+      real(amrex_real) arclen,arclenx,arcleny,g,gx,gy
       real(amrex_real) RR
 
       integer rowx,rowy,rowxy
@@ -8380,48 +8371,6 @@ end subroutine print_visual_descriptor
 
       end subroutine get_dxmax
 
-
-      subroutine get_dxmaxLS(dx,bfact,dxmax)
-      use probcommon_module
-      use LegendreNodes
-
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      integer, INTENT(in) :: bfact
-      integer dir
-      real(amrex_real), INTENT(out) :: dxmax
-      real(amrex_real) delta,xL,xR
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid18"
-       stop
-      endif
-
-      dxmax=zero
-      do dir=1,SDIM
-       if (bfact.eq.1) then
-        delta=dx(dir)
-       else if (bfact.gt.1) then
-        xL=cache_gauss(bfact,bfact/2-1,SPTYPE)
-        xR=cache_gauss(bfact,bfact/2,SPTYPE)
-        delta=bfact*(xR-xL)*dx(dir)/two
-       else
-        print *,"bfact invalid19"
-        stop
-       endif
-
-       if (delta.gt.zero) then
-        ! do nothing
-       else
-        print *,"delta invalid get_dxmaxLS"
-        stop
-       endif
-
-       if ((delta.gt.dxmax).or.(dir.eq.1)) then
-        dxmax=delta
-       endif
-      enddo ! dir=1..sdim
-
-      end subroutine get_dxmaxLS
 
       subroutine set_dimdec(DIMS(fabdim), &
                       fablo,fabhi,ngrow)

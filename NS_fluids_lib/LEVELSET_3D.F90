@@ -35,7 +35,7 @@ stop
         use probf90_module
 
         type cell_CP_parm_type
-         real(amrex_real) dxmaxLS
+         real(amrex_real) dxmax
          integer i,j,k
          integer bfact
          integer level
@@ -409,10 +409,6 @@ stop
         vofsten, & !intent(in)
         !3x3x3x num_materials x sdim components
         !closest point normal.
-        nrmsten, & !intent(in)
-        least_squares_normal, & !intent(in)
-        least_squares_normal_triple, & !intent(in)
-        least_squares_normal_material, & !intent(in)
         !scalar (i,j,k)
         vol_sten, & !intent(in)
         curvHT_choice, & !intent(out)
@@ -423,7 +419,6 @@ stop
         im3, & !intent(out)
         visc_coef, & !intent(in)
         unscaled_min_curvature_radius, & !intent(in)
-        ice_normal_weight, & !intent(in)
         im, & !intent(in)
         im_opp, & !intent(in)
         iten) !intent(in)
@@ -450,7 +445,6 @@ stop
       integer :: iten_test
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
-      real(amrex_real), INTENT(in) :: ice_normal_weight(num_interfaces)
       real(amrex_real) user_tension(num_interfaces)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: vol_sten
@@ -459,6 +453,7 @@ stop
       real(amrex_real), INTENT(out) :: curvHT_choice
       real(amrex_real), INTENT(out) :: curvFD
       real(amrex_real), INTENT(out) :: mgoni_force(SDIM)
+      integer :: failure_flag
  
       integer dir2
 
@@ -503,18 +498,6 @@ stop
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         num_materials)
-
-      real(amrex_real), INTENT(in) :: nrmsten( &
-       -1:1,-1:1,-1:1,SDIM*num_materials)
-
-      real(amrex_real),intent(in) :: &
-          least_squares_normal(num_interfaces,SDIM)
-
-      real(amrex_real),intent(in) :: &
-          least_squares_normal_triple(num_interfaces,SDIM)
-
-      real(amrex_real),intent(in) :: &
-          least_squares_normal_material(num_materials,SDIM)
 
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
 
@@ -566,33 +549,19 @@ stop
 
       real(amrex_real) nperp(SDIM) 
       real(amrex_real) nghost(SDIM) 
-      real(amrex_real) nmain(SDIM) 
-      real(amrex_real) nopp(SDIM) 
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
-      real(amrex_real) normal_13(SDIM)
-      real(amrex_real) normal_23(SDIM)
-      real(amrex_real) normal_11(SDIM)
-      real(amrex_real) normal_22(SDIM)
-      real(amrex_real) normal_33(SDIM)
       real(amrex_real) nfluid(SDIM) 
-      real(amrex_real) nfluid_least_squares(SDIM) 
       real(amrex_real) normal_im3(SDIM) 
       real(amrex_real) normal_im3_negate(SDIM) 
-      real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) ncurv1_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) ncurv2_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) n1
-      real(amrex_real) n2
-      real(amrex_real) n_node1(SDIM)
-      real(amrex_real) n_node2(SDIM)
+      real(amrex_real) n1(SDIM)
+      real(amrex_real) n2(SDIM)
       real(amrex_real) n_node1LS(SDIM)
       real(amrex_real) n_node2LS(SDIM)
       real(amrex_real) LSmain,LSopp
       real(amrex_real) LS1_save(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) LS2_save(D_DECL(-1:1,-1:1,-1:1))
       integer im_sort
-      real(amrex_real) dxmax,dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) dxmin
       real(amrex_real) delta_mgoni
       real(amrex_real) volpos,facearea
@@ -650,7 +619,8 @@ stop
       nhalf_height=2*ngrow_distance+1 
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+
+      failure_flag=0
 
       dxmin=dx(1)
       if (dx(2).lt.dxmin) then
@@ -798,19 +768,7 @@ stop
       else if (LS_CENTER(im_opp).ge.zero) then
        ! do nothing
       else
-       print *,"LS_CENTER is corrupt"
-       do im_sort=1,num_materials
-        print *,"im_sort,LS_CENTER,LS_OPP ",im_sort,LS_CENTER(im_sort), &
-           LS_OPP(im_sort)
-       enddo
-       print *,"level,finest_level ",level,finest_level
-       print *,"bfact ",bfact
-       print *,"dircrit= ",dircrit
-       print *,"side,signside ",side,signside
-       print *,"ii,jj,kk ",ii,jj,kk
-       print *,"time= ",time
-       print *,"im,im_opp,iten ",im,im_opp,iten
-       stop
+       failure_flag=1
       endif 
 
        ! get_LS_extend is declared in GLOBALUTIL.F90
@@ -818,17 +776,7 @@ stop
       call get_LS_extend(LS_OPP,iten,LS_OPP_EXTEND)
 
       if (LS_CENTER_EXTEND*LS_OPP_EXTEND.gt.zero) then
-       print *,"level set does not change sign"
-       print *,"num_materials,iten= ",num_materials,iten
-       print *,"LS_CENTER_EXTEND ",LS_CENTER_EXTEND
-       print *,"LS_OPP_EXTEND ",LS_OPP_EXTEND
-       print *,"icenter,jcenter,kcenter ",icenter,jcenter,kcenter
-       print *,"level,finest_level ",level,finest_level
-       print *,"LS_CENTER(im),LS_CENTER(im_opp) ", &
-        LS_CENTER(im),LS_CENTER(im_opp)
-       print *,"LS_OPP(im),LS_OPP(im_opp) ", &
-        LS_OPP(im),LS_OPP(im_opp)
-       stop
+       failure_flag=1
       endif
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -920,8 +868,7 @@ stop
       if (mag.gt.zero) then
        ! do nothing
       else
-       print *,"nfluid mag became corrupt (from nrmcenter): ",nfluid
-       stop
+       failure_flag=1
       endif
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -1130,7 +1077,7 @@ stop
       imhold=im_primary_sten(0,0,0)
 
       do dir2=1,SDIM
-        ! nrmcenter: derived from closest point normal and FD normal.
+        ! nrmcenter: derived from FD normal.
        if (imhold.eq.im) then
         nfluid(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
        else if (imhold.eq.im_opp) then
@@ -1146,48 +1093,19 @@ stop
       if (mag.gt.zero) then
        !do nothing
       else
-       print *,"nfluid mag became corrupt: ",mag
-       stop
+       failure_flag=1
       endif
 
-      do dir2=1,SDIM
-       nfluid_least_squares(dir2)=least_squares_normal(iten,dir2)
-      enddo
-      call prepare_normal(nfluid_least_squares,mag,SDIM)
-      if (mag.ge.zero) then
-       ! do nothing
-      else
-       print *,"nfluid_least_squares mag became corrupt: ", &
-        mag,nfluid_least_squares
-       stop
-      endif
- 
        ! signside points towards im 
       if (nfluid(dircrit)*signside.gt.zero) then
        !do nothing
       else
-       print *,"nfluid or signside has wrong sign"
-       print *,"dircrit,signside,nfluid ",dircrit,signside,nfluid
-       stop
+       failure_flag=1
       endif
 
-      if (nfluid_least_squares(dircrit)*signside.gt.zero) then
-       do dir2=1,SDIM
-        master_normal(dir2)=nfluid_least_squares(dir2)
-       enddo
-      else
-       print *,"WARNING nfluid_least_squares or signside has wrong sign"
-       print *,"nfluid_least_squares: ",nfluid_least_squares
-       print *,"nfluid: ",nfluid
-       print *,"dircrit, signside: ",dircrit,signside
-       print *,"xcenter: ",xcenter
-
-       do dir2=1,SDIM
-        master_normal(dir2)=nfluid(dir2)
-       enddo
-
-!      stop
-      endif
+      do dir2=1,SDIM
+       master_normal(dir2)=nfluid(dir2)
+      enddo
 
        ! Marangoni force:
        ! (I-nn^T)(grad sigma) delta=
@@ -1230,22 +1148,19 @@ stop
          iofs=0
          jofs=0
          kofs=0
-         RR=one
          if (dir2.eq.1) then
           iofs=1
-          RR=one
          else if (dir2.eq.2) then 
           jofs=1
           if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
               (levelrz.eq.COORDSYS_RZ)) then
-           RR=one
+           !do nothing
           else
-           print *,"grad_tension: levelrz invalid"
+           print *,"grad_tension: levelrz invalid ",levelrz
            stop
           endif
          else if ((dir2.eq.3).and.(SDIM.eq.3)) then
           kofs=1
-          RR=one
          else
           print *,"dir2 invalid: ",dir2
           stop
@@ -1254,7 +1169,7 @@ stop
          grad_tension(dir2)=( &
           mgoni_tension(iofs,jofs,kofs)- &
           mgoni_tension(-iofs,-jofs,-kofs))/ &
-          (RR*(xsten(2,dir2)-xsten(-2,dir2)))
+          (xsten(2,dir2)-xsten(-2,dir2))
 
          dotprod=dotprod+grad_tension(dir2)*master_normal(dir2)
         enddo ! dir2
@@ -1439,9 +1354,6 @@ stop
        if (crossing_status.eq.1) then
         ! do nothing
        else if (crossing_status.eq.0) then
-        if (1.eq.0) then
-         print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
-        endif
         overall_crossing_status=0 
        else
         print *,"crossing_status invalid: ",crossing_status
@@ -1542,54 +1454,18 @@ stop
 
        nghost(dir2)=master_normal(dir2) !initialization
 
-       normal_11(dir2)=least_squares_normal_material(im,dir2)
-       normal_22(dir2)=least_squares_normal_material(im_opp,dir2)
-
       enddo !dir2=1..sdim
 
       if (im3.eq.0) then
 
        do dir2=1,SDIM
         normal_im3(dir2)=master_normal(dir2)
-        normal_13(dir2)=master_normal(dir2)
-        normal_23(dir2)=master_normal(dir2)
-        normal_33(dir2)=master_normal(dir2)
        enddo !dir2=1..sdim
 
       else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
        if (is_rigid_CL(im3).eq.1) then
-
-        do dir2=1,SDIM
-         nfluid_least_squares(dir2)=least_squares_normal_triple(iten,dir2)
-        enddo
-        call prepare_normal(nfluid_least_squares,mag,SDIM)
-        if (mag.ge.zero) then
-         ! do nothing
-        else
-         print *,"nfluid_least_squares mag became corrupt(2): ", &
-          mag,nfluid_least_squares
-         stop
-        endif
-        if (nfluid_least_squares(dircrit)*signside.gt.zero) then
-         ! set DEBUG_DYNAMIC_CONTACT_ANGLE in PROBCOMMON.F90
-         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
-          print *,"switching master_normal (old) ",master_normal
-         endif
-         do dir2=1,SDIM
-          master_normal(dir2)=nfluid_least_squares(dir2)
-         enddo
-         if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
-          print *,"switching master_normal (new) ",master_normal
-         endif
-        else if (nfluid_least_squares(dircrit)*signside.le.zero) then
-         !do nothing
-        else
-         print *,"corruption (nfluid_least_squares):",nfluid_least_squares
-         print *,"dircrit,signside ",dircrit,signside
-         stop
-        endif
-
+        ! do nothing
        else if (is_rigid_CL(im3).eq.0) then
         ! do nothing
        else
@@ -1599,40 +1475,8 @@ stop
        endif
 
        do dir2=1,SDIM
-        normal_13(dir2)=least_squares_normal(iten_13,dir2)
-        normal_23(dir2)=least_squares_normal(iten_23,dir2)
-        normal_33(dir2)=least_squares_normal_material(im3,dir2)
+        normal_im3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        enddo !dir2=1..sdim
-
-       if ((ice_normal_weight(iten_13).ge.zero).and. &
-           (ice_normal_weight(iten_23).ge.zero).and. &
-           (ice_normal_weight(iten_13)+ &
-            ice_normal_weight(iten_23).gt.zero)) then
-        !do nothing
-       else
-        print *,"expecting ice_normal_weight>=0: ",ice_normal_weight
-        stop
-       endif
-
-       if (ice_normal_weight(iten_13).eq. &
-           ice_normal_weight(iten_23)) then
-        do dir2=1,SDIM
-         normal_im3(dir2)=normal_33(dir2)
-        enddo !dir2=1..sdim
-       else if ((ice_normal_weight(iten_13).eq.one).and. &
-                (ice_normal_weight(iten_23).eq.zero)) then
-        do dir2=1,SDIM
-         normal_im3(dir2)=-normal_11(dir2)
-        enddo !dir2=1..sdim
-       else if ((ice_normal_weight(iten_13).eq.zero).and. &
-                (ice_normal_weight(iten_23).eq.one)) then
-        do dir2=1,SDIM
-         normal_im3(dir2)=-normal_22(dir2)
-        enddo !dir2=1..sdim
-       else
-        print *,"ice_normal_weight invalid: ",ice_normal_weight
-        stop
-       endif
 
       else
        print *,"im3 invalid: ",im3
@@ -1647,43 +1491,7 @@ stop
       if (mag3.gt.zero) then
        !do nothing
       else if (mag3.eq.zero) then
-
-       do dir2=1,SDIM
-        ! nrmcenter is derived from closest point normal and FD normal.
-        normal_im3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
-       enddo
-
-       call prepare_normal( &
-         normal_im3, & !intent(inout)
-         mag3, & !intent(out)
-         SDIM) !intent(in);   im3 material
-
-       if (mag3.gt.zero) then
-        !do nothing
-       else if (mag3.eq.zero) then
-        im3=0
-        do dir2=1,SDIM
-         normal_im3(dir2)=master_normal(dir2)
-        enddo
-        call prepare_normal( &
-         normal_im3, & !intent(inout)
-         mag3, & !intent(out)
-         SDIM) !intent(in);   im3 material
-
-        if (mag3.gt.zero) then
-         !do nothing
-        else
-         print *,"mag3 invalid: ",mag3
-         print *,"normal_im3: ",normal_im3
-         print *,"master_normal: ",master_normal
-         stop
-        endif
-
-       else
-        print *,"mag3 invalid: ",mag3
-        stop
-       endif
-
+       failure_flag=1
       else
        print *,"mag3 invalid: ",mag3
        stop
@@ -1692,50 +1500,6 @@ stop
       do dir2=1,SDIM
        normal_im3_negate(dir2)=-normal_im3(dir2)
       enddo
-
-      do k=klo_sten_short,khi_sten_short 
-      do j=-1,1
-      do i=-1,1
-
-       do dir2=1,SDIM
-        nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
-       enddo
-       call prepare_normal(nfluid,mag,SDIM)
-       if (mag.gt.zero) then
-        ! do nothing
-       else if (mag.eq.zero) then
-        do dir2=1,SDIM
-         nfluid(dir2)=master_normal(dir2)
-        enddo
-       else
-        print *,"mag invalid LEVELSET_3D.F90 1551: ",mag
-        stop
-       endif 
-       do dir2=1,SDIM
-        nmain_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
-       enddo
-
-       do dir2=1,SDIM
-        nfluid(dir2)=nrmsten(i,j,k,SDIM*(im_opp-1)+dir2)
-       enddo
-       call prepare_normal(nfluid,mag,SDIM)
-       if (mag.gt.zero) then
-        ! do nothing
-       else if (mag.eq.zero) then
-        do dir2=1,SDIM
-         nfluid(dir2)=-master_normal(dir2)
-        enddo
-       else
-        print *,"mag invalid LEVELSET_3D.F90 1614: ",mag
-        stop
-       endif 
-       do dir2=1,SDIM
-        nopp_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
-       enddo
-
-      enddo
-      enddo
-      enddo ! i,j,k=-1,..,1
 
       if ((im3.ge.1).and.(im3.le.num_materials)) then
 
@@ -1984,10 +1748,6 @@ stop
           print *,"nproject=",nproject
           print *,"nghost=",nghost
           print *,"nperp=",nperp
-          print *,"normal_13=",normal_13
-          print *,"normal_23=",normal_23
-          print *,"normal_33=",normal_33
-          print *,"ice_normal_weight=",ice_normal_weight
           print *,"xcenter: ",xcenter
          endif
         else
@@ -2027,49 +1787,26 @@ stop
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
 
-        do dir2=1,SDIM
-         nmain(dir2)=nmain_save(D_DECL(i,j,k),dir2)
-         nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
-        enddo
-
        else if (im3.eq.0) then
 
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
 
-        do dir2=1,SDIM
-         nmain(dir2)=nmain_save(D_DECL(i,j,k),dir2)
-         nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
-        enddo
-
        else if (is_rigid_CL(im3).eq.0) then
 
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
-        do dir2=1,SDIM
-         nmain(dir2)=nmain_save(D_DECL(i,j,k),dir2)
-         nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
-        enddo
 
        else if (is_rigid_CL(im3).eq.1) then
 
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
 
-        do dir2=1,SDIM
-         nmain(dir2)=master_normal(dir2)
-         nopp(dir2)=nghost(dir2)
-        enddo
-
        else
         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
         stop
        endif
  
-       do dir2=1,SDIM
-        ncurv1_save(D_DECL(i,j,k),dir2)=nmain(dir2)
-        ncurv2_save(D_DECL(i,j,k),dir2)=nopp(dir2)
-       enddo  ! dir2
        LS1_save(D_DECL(i,j,k))=LSmain
        LS2_save(D_DECL(i,j,k))=LSopp
 
@@ -2101,8 +1838,6 @@ stop
        node_index(3)=knode 
 
        do dir2=1,SDIM 
-        n_node1(dir2)=zero
-        n_node2(dir2)=zero
         n_node1LS(dir2)=zero
         n_node2LS(dir2)=zero
        enddo
@@ -2154,9 +1889,6 @@ stop
          n_node1LS(dir2)=n_node1LS(dir2)+pm_val*LS1_save(D_DECL(i,j,k))
          n_node2LS(dir2)=n_node2LS(dir2)+pm_val*LS2_save(D_DECL(i,j,k))
 
-         n_node1(dir2)=n_node1(dir2)+ncurv1_save(D_DECL(i,j,k),dir2)
-         n_node2(dir2)=n_node2(dir2)+ncurv2_save(D_DECL(i,j,k),dir2)
-
         enddo ! dir2=1..sdim
 
         if (SDIM.eq.2) then
@@ -2190,29 +1922,7 @@ stop
                  (imhold.ge.1).and. &
                  (imhold.le.num_materials)) then 
 
-         if (im3.eq.0) then
-          !do nothing
-         else if (ice_normal_weight(iten_13).eq. &
-                  ice_normal_weight(iten_23)) then
-          !do nothing
-         else if ((ice_normal_weight(iten_13).eq.one).and. &
-                  (ice_normal_weight(iten_23).eq.zero)) then
-          if (imhold.eq.im_opp) then
-           im3_present_node=1
-          else
-           !do nothing
-          endif
-         else if ((ice_normal_weight(iten_13).eq.zero).and. &
-                  (ice_normal_weight(iten_23).eq.one)) then
-          if (imhold.eq.im) then
-           im3_present_node=1
-          else
-           !do nothing
-          endif
-         else
-          print *,"ice_normal_weight invalid: ",ice_normal_weight
-          stop
-         endif
+         !do nothing
 
         else
          print *,"imhold invalid: ",imhold
@@ -2240,7 +1950,6 @@ stop
          print *,"dxsten invalid: ",dxsten
          stop
         endif
-        RR=one
         if (dir2.eq.1) then
          ! do nothing
         else if (dir2.eq.2) then 
@@ -2251,20 +1960,16 @@ stop
          print *,"dir2 invalid: ",dir2
          stop
         endif
-        gx=two/(RR*wtnode*dxsten(dir2))
+        gx=two/(wtnode*dxsten(dir2))
 
         n_node1LS(dir2)=n_node1LS(dir2)*gx
         n_node2LS(dir2)=n_node2LS(dir2)*gx
-        n_node1(dir2)=n_node1(dir2)/wtnode
-        n_node2(dir2)=n_node2(dir2)/wtnode
 
        enddo ! dir2
 
        call prepare_normal(n_node1LS,mag,SDIM)
        if (mag.eq.zero) then
-        do dir2=1,SDIM
-         n_node1LS(dir2)=n_node1(dir2)
-        enddo
+        failure_flag=1
        else if (mag.gt.zero) then
         ! do nothing
        else
@@ -2273,9 +1978,7 @@ stop
        endif
        call prepare_normal(n_node2LS,mag,SDIM)
        if (mag.eq.zero) then
-        do dir2=1,SDIM
-         n_node2LS(dir2)=n_node2(dir2)
-        enddo
+        failure_flag=1
        else if (mag.gt.zero) then
         ! do nothing
        else
@@ -2286,13 +1989,14 @@ stop
        do dir2=1,SDIM
 
         if (im3.eq.0) then
-         n_node1(dir2)=n_node1LS(dir2)
-         n_node2(dir2)=n_node2LS(dir2)
+         n1(dir2)=n_node1LS(dir2)
+         n2(dir2)=n_node2LS(dir2)
         else if (is_rigid_CL(im3).eq.0) then
-         n_node1(dir2)=n_node1LS(dir2)
-         n_node2(dir2)=n_node2LS(dir2)
+         n1(dir2)=n_node1LS(dir2)
+         n2(dir2)=n_node2LS(dir2)
         else if (is_rigid_CL(im3).eq.1) then
-         n_node1(dir2)=n_node1LS(dir2)
+         n1(dir2)=n_node1LS(dir2)
+         n2(dir2)=nghost(dir2)
         else
          print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
@@ -2300,22 +2004,20 @@ stop
 
        enddo ! dir2=1..sdim
 
-       call prepare_normal(n_node1,mag,SDIM)
-       call prepare_normal(n_node2,mag,SDIM)
+       call prepare_normal(n1,mag,SDIM)
+       call prepare_normal(n2,mag,SDIM)
 
        do dir2=1,SDIM
-        n1=n_node1(dir2)
-        n2=n_node2(dir2)
 
         if (im3.eq.0) then
-         ngrid(dir2)=gamma1*n1-gamma2*n2
+         ngrid(dir2)=gamma1*n1(dir2)-gamma2*n2(dir2)
         else if (is_rigid_CL(im3).eq.0) then
-         ngrid(dir2)=gamma1*n1-gamma2*n2
+         ngrid(dir2)=gamma1*n1(dir2)-gamma2*n2(dir2)
         else if (is_rigid_CL(im3).eq.1) then
          if (im3_present_node.eq.1) then
-          ngrid(dir2)=n2
+          ngrid(dir2)=n2(dir2)
          else if (im3_present_node.eq.0) then 
-          ngrid(dir2)=n1
+          ngrid(dir2)=n1(dir2)
          else
           print *,"im3_present_node invalid: ",im3_present_node
           stop
@@ -2465,6 +2167,16 @@ stop
         print *,"maxcurv: ",maxcurv
         print *,"im3,curvFD,curvHT_choice ",im3,curvFD,curvHT_choice
        endif
+      endif
+ 
+      if (failure_flag.eq.0) then
+       !do nothing
+      else if (failure_flag.eq.1) then
+       curvFD=zero
+       curvHT_choice=zero
+      else
+       print *,"failure_flag invalid"
+       stop
       endif
 
       return
@@ -3749,7 +3461,6 @@ stop
        time, &
        visc_coef, &
        unscaled_min_curvature_radius, &
-       ice_normal_weight, &
        num_curv) & ! num_interfaces * CURVCOMP_NCOMP
       bind(c,name='fort_curvstrip')
 
@@ -3779,7 +3490,6 @@ stop
       integer icurv
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
-      real(amrex_real), INTENT(in) :: ice_normal_weight(num_interfaces)
 
       integer, INTENT(in) :: DIMDEC(history_dat)
       integer, INTENT(in) :: DIMDEC(maskcov)
@@ -3864,34 +3574,12 @@ stop
       integer im_majority
       integer im_main,im_main_opp
       integer iten
-      integer iten_local
       integer inormal
-      integer im_wt,im_opp_wt
-      integer in_top_two(num_materials)
-      real(amrex_real) :: wt_local
-      real(amrex_real) :: wt_local_combine
-      real(amrex_real) :: wt_local_triple_combine
-      real(amrex_real) :: wt_local_triple(num_materials)
-      real(amrex_real) :: mag_loc
-      real(amrex_real) :: n_loc(SDIM)
-      real(amrex_real) :: dist_local
-      integer :: normal_local
-
-      real(amrex_real) least_squares_normal(num_interfaces,SDIM)
-      real(amrex_real) least_squares_normal_wt(num_interfaces)
-
-      real(amrex_real) least_squares_normal_triple(num_interfaces,SDIM)
-      real(amrex_real) least_squares_normal_triple_wt(num_interfaces)
-
-      real(amrex_real) least_squares_normal_material(num_materials,SDIM)
-      real(amrex_real) least_squares_normal_material_wt(num_materials)
 
       real(amrex_real) LS_PROBE(num_materials)
 
       real(amrex_real) nrmFD(SDIM*num_materials)
-      real(amrex_real) nrm_local(SDIM*num_materials)
       real(amrex_real) nrm_mat(SDIM)
-      real(amrex_real) nrm_test(SDIM)
       real(amrex_real) nrm_center(SDIM)
       real(amrex_real) curv_cellHT
       real(amrex_real) curv_cellFD
@@ -3906,9 +3594,6 @@ stop
       real(amrex_real) mgoni_force(SDIM)
 
       integer im3
-      integer im3_local
-      integer im3_loop
-      integer local_rigid_flag
 
       real(amrex_real) LSCEN_hold(num_materials)
       real(amrex_real) LSCEN_hold_fixed(num_materials)
@@ -3925,7 +3610,6 @@ stop
       integer im_star_majority(-1:1,SDIM)
 
       real(amrex_real) velsten(-1:1,-1:1,-1:1,SDIM)
-      real(amrex_real) nrmsten(-1:1,-1:1,-1:1,SDIM*num_materials)
       real(amrex_real) mgoni_temp(-1:1,-1:1,-1:1,num_materials)
       real(amrex_real) lssten( &
         -ngrow_distance:ngrow_distance, &
@@ -3948,23 +3632,12 @@ stop
       integer nhalf_height ! in: fort_curvstrip
 
       real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten0
-      real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten_local
-      real(amrex_real) :: xcenter_local(SDIM)
 
 
       integer mask1,mask2
       integer local_mask
       integer ihist
       real(amrex_real) ZEYU_thet_d,ZEYU_u_cl
-
-      real(amrex_real) :: LS_sub(num_materials)
-      real(amrex_real) :: LS_sub_fixed(num_materials)
-      integer im_sub_primary,im_sub_secondary,im_sub
-
-      real(amrex_real), target :: xpart(SDIM)
-      real(amrex_real),target,dimension(num_materials):: data_interp_local_LS
-      type(interp_from_grid_parm_type) :: data_in 
-      type(interp_from_grid_out_parm_type) :: data_out_LS
 
       real(amrex_real), parameter :: weight_power=4.0d0
 
@@ -4214,7 +3887,10 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
 
-             !FIX_LS_tessellate is declared in MOF.F90
+            !FIX_LS_tessellate is declared in MOF.F90
+            ! input : fluids tessellate, solids/elastics are embedded
+            ! output: fluids tessellate and one and only one fluid LS is 
+            !         positive
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
             call get_primary_material(dx,LSSIDE_fixed,im_opp)
             do im=1,num_materials
@@ -4445,6 +4121,10 @@ stop
                ! do nothing
               else
                print *,"im_majority or im_opp invalid"
+               print *,"im_majority ",im_majority
+               print *,"im_opp ",im_opp
+               print *,"im_main ",im_main
+               print *,"im_main_opp ",im_main_opp
                stop
               endif
              else if (im_majority.gt.im_opp) then
@@ -4456,7 +4136,11 @@ stop
                   (im_opp.eq.im_main)) then
                ! do nothing
               else
-               print *,"im_majority or im_opp invalid",im_majority,im_opp
+               print *,"im_majority or im_opp invalid"
+               print *,"im_majority ",im_majority
+               print *,"im_opp ",im_opp
+               print *,"im_main ",im_main
+               print *,"im_main_opp ",im_main_opp
                stop
               endif
              else
@@ -4518,25 +4202,35 @@ stop
                stop
               endif
 
+              im_opp_test=im_star_majority(sidestar,dirstar)
+
               do im_curv=1,num_materials
-               LSRIGHT_EXTEND=LS_STAR_FIXED(1,dirstar,im_curv)
-               LSLEFT_EXTEND=LS_STAR_FIXED(-1,dirstar,im_curv)
+               LSRIGHT_fixed(im_curv)=LS_STAR_FIXED(1,dirstar,im_curv)
+               LSLEFT_fixed(im_curv)=LS_STAR_FIXED(-1,dirstar,im_curv)
                LCEN=LS_fixed(im_curv)
 
                inormal=(im_curv-1)*SDIM+dirstar
 
                if (dirstar.eq.dircrossing_opt) then
                 if (sidestar.eq.1) then
-                 nrmFD(inormal)=(LSRIGHT_EXTEND-LCEN)/(XRIGHT-XCEN)
+                 nrmFD(inormal)=(LSRIGHT_fixed(im_curv)-LCEN)/(XRIGHT-XCEN)
                 else if (sidestar.eq.-1) then
-                 nrmFD(inormal)=(LCEN-LSLEFT_EXTEND)/(XCEN-XLEFT)
+                 nrmFD(inormal)=(LCEN-LSLEFT_fixed(im_curv))/(XCEN-XLEFT)
                 else
                  print *,"sidestar invalid: ",sidestar
                  stop
                 endif
+                if (im_opp_test.eq.im_opp) then
+                 !do nothing
+                else
+                 print *,"expecting im_opp_test=im_opp"
+                 print *,"im_opp ",im_opp
+                 print *,"im_opp_test ",im_opp_test
+                 stop
+                endif
                else if (dirstar.ne.dircrossing_opt) then
                 nrmFD(inormal)= &
-                  (LSRIGHT_EXTEND-LSLEFT_EXTEND)/(XRIGHT-XLEFT)
+                  (LSRIGHT_fixed(im_curv)-LSLEFT_fixed(im_curv))/(XRIGHT-XLEFT)
                else
                 print *,"dirstar invalid: ",dirstar
                 stop
@@ -4558,7 +4252,7 @@ stop
               if ((im_curv.eq.im_main).or. &
                   (im_curv.eq.im_main_opp)) then
   
-               ! nrm_test points towards the im_curv material 
+               ! nrm_mat points towards the im_curv material 
                ! signside points towards im_main. 
                if (im_curv.eq.im_main) then
                 critsign=signside
@@ -4586,85 +4280,33 @@ stop
                print *,"im_main_opp=",im_main_opp
                stop
               endif 
-FIX ME
+
                ! declared in GLOBALUTIL.F90
               call prepare_normal(nrm_mat,mag,SDIM)
 
               if (mag.eq.zero) then
-               if (is_rigid_CL(im_curv).eq.0) then
-                ! do nothing
-               else if (is_rigid_CL(im_curv).eq.1) then
-                 ! nrm_test obtained via finite differences.
-                do dirloc=1,SDIM
-                 nrm_mat(dirloc)=nrm_test(dirloc)
-                enddo
-                 ! declared in GLOBALUTIL.F90
-                call prepare_normal(nrm_mat,mag,SDIM)
-                if (mag.eq.zero) then
-                 ! do nothing
-                else if (mag.gt.zero) then
-                 ! do nothing
-                else
-                 print *,"mag is invalid for im_curv material: ",mag
-                 stop
-                endif
-               else
-                print *,"is_rigid_CL invalid LEVELSET_3D.F90: "
-                print *,im_curv,is_rigid_CL(im_curv)
-                stop
+               if ((im_curv.eq.im_main).or. &
+                   (im_curv.eq.im_main_opp)) then
+                donate_flag=0
                endif
-
               else if (mag.gt.zero) then
-               ! do nothing
+               !do nothing
               else
-               print *,"mag invalid; mag=",mag
+               print *,"mag invalid ",mag
                stop
               endif
-
+  
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrmPROBE(inormal)=nrm_mat(dirloc)
+               nrmFD(inormal)=nrm_mat(dirloc)
               enddo
 
              enddo ! im_curv=1..num_materials
-
-             if (1.eq.0) then
-              print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
-              print *,"dircrossing_opt ",dircrossing_opt
-              print *,"im_majority,im_opp,im_main,im_main_opp ", &
-               im_majority,im_opp,im_main,im_main_opp
-             endif
-
-             do iten_local=1,num_interfaces
-              do dirloc=1,SDIM
-               least_squares_normal(iten_local,dirloc)=zero
-               least_squares_normal_triple(iten_local,dirloc)=zero
-              enddo
-              least_squares_normal_wt(iten_local)=zero
-              least_squares_normal_triple_wt(iten_local)=zero
-             enddo
-
-             do im_curv=1,num_materials
-              do dirloc=1,SDIM
-               least_squares_normal_material(im_curv,dirloc)=zero
-              enddo
-              least_squares_normal_material_wt(im_curv)=zero
-             enddo
 
              ! i1,j1,k1=-ngrow_distance ... ngrow_distance
              do k1=LSstenlo(3),LSstenhi(3)
              do j1=LSstenlo(2),LSstenhi(2)
              do i1=LSstenlo(1),LSstenhi(1)
-
-              call gridsten_level(xsten_local,i+i1,j+j1,k+k1,level,nhalf)
-              do dirloc=1,SDIM
-               xcenter_local(dirloc)=xsten_local(0,dirloc)
-              enddo
-
-              do inormal=1,SDIM*num_materials
-               call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
-                 LSPC_ptr,nrm_local(inormal))
-              enddo
 
               do im_curv=1,num_materials
                call safe_data(i+i1,j+j1,k+k1,im_curv, &
@@ -4696,433 +4338,16 @@ FIX ME
               !         and one and only one fluid LS is positive
               call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
 
-              do im_wt=1,num_materials
-               LCEN=LSCEN_hold_fixed(im_wt)
-               LCEN=abs(LCEN)
-               wt_local_triple(im_wt)=one/(one+(four*LCEN/dx(1))**weight_power)
-              enddo ! do im_wt=1,num_materials
-
-              do im_wt=1,num_materials
-               do im_opp_wt=im_wt+1,num_materials
-                call get_iten(im_wt,im_opp_wt,iten_local)
-
-                wt_local= &
-                  one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
-
-                if (is_rigid_CL(im_wt).eq.1) then
-                 wt_local=wt_local*wt_local_triple(im_wt)
-                 local_rigid_flag=1
-                else if (is_rigid_CL(im_opp_wt).eq.1) then
-                 wt_local=wt_local*wt_local_triple(im_opp_wt)
-                 local_rigid_flag=1
-                else if ((is_rigid_CL(im_wt).eq.0).and. &
-                         (is_rigid_CL(im_opp_wt).eq.0)) then
-                 LCEN=half*(LSCEN_hold_fixed(im_wt)- &
-                            LSCEN_hold_fixed(im_opp_wt))
-                 LCEN=abs(LCEN)
-                 wt_local=wt_local/ &
-                    (one+(four*LCEN/dx(1))**weight_power)
-                 local_rigid_flag=0
-                else
-                 print *,"is_rigid_CL(im_wt) or is_rigid_CL(im_opp_wt) invalid"
-                 print *,"im_wt,is_rigid_CL(im_wt) ",im_wt,is_rigid_CL(im_wt)
-                 print *,"im_opp_wt,is_rigid_CL(im_opp_wt) ", &
-                   im_opp_wt,is_rigid_CL(im_opp_wt)
-                 stop
-                endif
-
-                im3_local=0
-                do im3_loop=1,num_materials
-                 if ((im3_loop.ne.im_wt).and. &
-                     (im3_loop.ne.im_opp_wt)) then
-                  if (im3_local.eq.0) then
-                   im3_local=im3_loop
-                  else if ((im3_local.ge.1).and. &
-                           (im3_local.le.num_materials)) then
-                   if (abs(LSCEN_hold_fixed(im3_loop)).le. &
-                       abs(LSCEN_hold_fixed(im3_local))) then
-                    im3_local=im3_loop
-                   endif
-                  else
-                   print *,"im3_local invalid: ",im3_local
-                   stop
-                  endif
-                 else if ((im3_loop.eq.im_wt).or. &
-                          (im3_loop.eq.im_opp_wt)) then
-                  !do nothing
-                 else
-                  print *,"im3_loop invalid: ",im3_loop
-                  stop
-                 endif
-                enddo !im3_loop=1,num_materials
-
-                if (local_rigid_flag.eq.1) then
-
-                 if ((is_rigid_CL(im_wt).eq.1).and. &
-                     (is_rigid_CL(im_opp_wt).eq.1)) then
-                
-                  if (LSCEN_hold_fixed(im_wt).ge. &
-                      LSCEN_hold_fixed(im_opp_wt)) then
-
-                   do dirloc=1,SDIM
-                    n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
-                   enddo
-                   dist_local=-LSCEN_hold_fixed(im_opp_wt)
-
-                  else if (LSCEN_hold_fixed(im_wt).le. &
-                           LSCEN_hold_fixed(im_opp_wt)) then
-
-                   do dirloc=1,SDIM
-                    n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
-                   enddo
-                   dist_local=LSCEN_hold_fixed(im_wt)
-
-                  else
-                   print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
-                   print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
-                   print *,"is_rigid_CL(im_wt): ",is_rigid_CL(im_wt)
-                   print *,"is_rigid_CL(im_opp_wt): ",is_rigid_CL(im_opp_wt)
-                   stop
-                  endif
-
-                 else if ((is_rigid_CL(im_wt).eq.1).and. &
-                          (is_rigid_CL(im_opp_wt).eq.0)) then
-
-                  do dirloc=1,SDIM
-                   n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
-                  enddo
-                  dist_local=LSCEN_hold_fixed(im_wt)
-
-                 else if ((is_rigid_CL(im_wt).eq.0).and. &
-                          (is_rigid_CL(im_opp_wt).eq.1)) then
-
-                  do dirloc=1,SDIM
-                   n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
-                  enddo
-                  dist_local=-LSCEN_hold_fixed(im_opp_wt)
-  
-                 else
-                  print *,"is_rigid_CL(im_wt or im_opp_wt) invalid: ", &
-                   im_wt,im_opp_wt, &
-                   is_rigid_CL(im_wt), &
-                   is_rigid_CL(im_opp_wt)
-                  stop
-                 endif
- 
-                else if (local_rigid_flag.eq.0) then
-
-                 if (LSCEN_hold_fixed(im_wt).ge. &
-                     LSCEN_hold_fixed(im_opp_wt)) then
-                  do dirloc=1,SDIM
-                   n_loc(dirloc)=-nrm_local(dirloc+(im_opp_wt-1)*SDIM)
-                  enddo
-                  dist_local=-LSCEN_hold_fixed(im_opp_wt)
-
-                 else if (LSCEN_hold_fixed(im_wt).le. &
-                          LSCEN_hold_fixed(im_opp_wt)) then
-                  do dirloc=1,SDIM
-                   n_loc(dirloc)=nrm_local(dirloc+(im_wt-1)*SDIM)
-                  enddo
-                  dist_local=LSCEN_hold_fixed(im_wt)
-
-                 else
-                  print *,"LSCEN_hold_fixed invalid: ",LSCEN_hold_fixed
-                  print *,"im_wt,im_opp_wt ",im_wt,im_opp_wt
-                  stop
-                 endif
-
-                else
-                 print *,"local_rigid_flag invalid: ",local_rigid_flag
-                 print *,"is_rigid_CL(im_wt or im_opp_wt) invalid: ", &
-                   im_wt,im_opp_wt, &
-                   is_rigid_CL(im_wt), &
-                   is_rigid_CL(im_opp_wt)
-                 stop
-                endif
-
-                call prepare_normal(n_loc,mag_loc,SDIM)
-
-                if (mag_loc.eq.zero) then
-
-                 normal_local=0
-
-                else if (mag_loc.gt.zero) then
-
-                 normal_local=1
-
-                 do dirloc=1,SDIM
-                  xpart(dirloc)= &
-                    xcenter_local(dirloc)-dist_local*n_loc(dirloc)
-
-                  if ((xpart(dirloc).lt. &
-                       xsten_curv(-nhalf_height,dirloc)).or. &
-                      (xpart(dirloc).gt. &
-                       xsten_curv(nhalf_height,dirloc))) then
-                   normal_local=0
-                  else if ((xpart(dirloc).ge. &
-                            xsten_curv(-nhalf_height,dirloc)).and. &
-                           (xpart(dirloc).le. &
-                            xsten_curv(nhalf_height,dirloc))) then
-                   !do nothing
-                  else
-                   print *,"xpart or xsten_curv invalid: ", &
-                     xpart,xsten_curv
-                   stop
-                  endif
-
-                 enddo ! do dirloc=1,SDIM
-
-                 call prepare_normal(n_loc,mag_loc,SDIM)
-
-                 if (mag_loc.eq.zero) then
-                  print *,"expecting mag_loc>0"
-                  stop
-                 else if (mag_loc.gt.zero) then
-                  ! do nothing
-                 else
-                  print *,"mag_loc corrupt: ",mag_loc
-                  stop
-                 endif
-
-                 if (normal_local.eq.1) then
-
-                   data_out_LS%data_interp=>data_interp_local_LS
-                   data_in%scomp=1 
-                   data_in%ncomp=num_materials
-                   data_in%level=level
-                   data_in%finest_level=finest_level
-                   data_in%bfact=bfact
-                   data_in%dx=dx
-                   data_in%xlo=xlo
-                   data_in%fablo=fablo
-                   data_in%fabhi=fabhi
-                   data_in%xtarget=xpart
-                   call interp_from_grid_util(data_in,LSPC_ptr,data_out_LS)
-                   do im_sub=1,num_materials
-                    LS_sub(im_sub)=data_out_LS%data_interp(im_sub)
-                   enddo
-                   call FIX_LS_tessellate(LS_sub,LS_sub_fixed)
-                   call get_primary_material(dx,LS_sub_fixed,im_sub_primary)
-                   call get_secondary_material(dx,LS_sub_fixed, &
-                     im_sub_primary,im_sub_secondary,SDIM)
-  
-                   do im_sub=1,num_materials
-                    if ((im_sub.eq.im_sub_primary).or. &
-                        (im_sub.eq.im_sub_secondary)) then
-                     in_top_two(im_sub)=1
-                    else if ((im_sub.ne.im_sub_primary).and. &
-                             (im_sub.ne.im_sub_secondary)) then
-                     in_top_two(im_sub)=0
-                    else
-                     print *,"im_sub invalid: ",im_sub
-                     stop
-                    endif
-                   enddo !im_sub=1,..,nmat
-
-                   if ((is_rigid_CL(im_wt).eq.1).and. &
-                       (in_top_two(im_wt).eq.1)) then
-                    !do nothing
-                   else if ((is_rigid_CL(im_opp_wt).eq.1).and. &
-                            (in_top_two(im_opp_wt).eq.1)) then
-                    !do nothing
-                   else if ((in_top_two(im_wt).eq.1).and. &
-                            (in_top_two(im_opp_wt).eq.1)) then
-                    do im_sub=1,num_materials
-                     if ((im_sub.ne.im_wt).and. &
-                         (im_sub.ne.im_opp_wt)) then
-                      if (LS_sub_fixed(im_sub).ge.-EPS2*dx(1)) then
-                       normal_local=0
-                      else if (LS_sub_fixed(im_sub).le.-EPS2*dx(1)) then
-                       !do nothing
-                      else
-                       print *,"LS_sub_fixed(im_sub) invalid ",im_sub, &
-                         LS_sub_fixed
-                       stop
-                      endif
-                     else if ((im_sub.eq.im_wt).or. &
-                              (im_sub.eq.im_opp_wt)) then
-                      !do nothing
-                     else
-                      print *,"im_sub invalid: ",im_sub
-                      stop
-                     endif
-                    enddo ! do im_sub=1,num_materials
-                   else if ((in_top_two(im_wt).eq.0).or. &
-                            (in_top_two(im_opp_wt).eq.0)) then
-                    normal_local=0
-                   else
-                    print *,"in_top_two invalid ",in_top_two
-                    stop
-                   endif
-
-                 else if (normal_local.eq.0) then
-                  !do nothing
-                 else
-                  print *,"normal_local invalid: ",normal_local
-                  stop
-                 endif
-              
-                else
-                 print *,"mag_loc invalid: ",mag_loc
-                 stop
-                endif
-
-                if (normal_local.eq.0) then
-                 wt_local_combine=0.0001d0
-                 wt_local_triple_combine=0.0001d0
-                else if (normal_local.eq.1) then
-                 wt_local_combine=wt_local
-                 if (local_rigid_flag.eq.1) then
-                  wt_local_triple_combine=1.0d0
-                 else if (im3_local.eq.0) then
-                  wt_local_triple_combine=1.0d0
-                 else if ((im3_local.ge.1).and. &
-                          (im3_local.le.num_materials)) then
-                  wt_local_triple_combine=wt_local_triple(im3_local)
-                 else
-                  print *,"im3_local invalid ",im3_local
-                  stop
-                 endif
-                else
-                 print *,"normal_local invalid: ",normal_local
-                 stop
-                endif
- 
-                do dirloc=1,SDIM
-                 least_squares_normal(iten_local,dirloc)= &
-                  least_squares_normal(iten_local,dirloc)+ &
-                  wt_local_combine*n_loc(dirloc)
-                 least_squares_normal_triple(iten_local,dirloc)= &
-                  least_squares_normal_triple(iten_local,dirloc)+ &
-                  wt_local_triple_combine*wt_local_combine*n_loc(dirloc)
-                enddo
-                least_squares_normal_wt(iten_local)= &
-                  least_squares_normal_wt(iten_local)+wt_local_combine
-                least_squares_normal_triple_wt(iten_local)= &
-                  least_squares_normal_triple_wt(iten_local)+ &
-                  wt_local_triple_combine*wt_local_combine
-               enddo !im_opp_wt=im_wt+1,num_materials
-              enddo !im_wt=1,num_materials
-
               do im_curv=1,num_materials
-
-               wt_local=one/(one+(i1**2+j1**2+k1**2)**(half*weight_power))
-               wt_local=wt_local*wt_local_triple(im_curv)
-
-               do dirloc=1,SDIM
-                n_loc(dirloc)=nrm_local(dirloc+(im_curv-1)*SDIM)
-               enddo
-               call prepare_normal(n_loc,mag_loc,SDIM)
-               if (mag_loc.eq.zero) then
-                wt_local=zero
-               else if (mag_loc.gt.zero) then
-                !do nothing
-               else
-                print *,"mag_loc invalid: ",mag_loc
-                stop
-               endif
-
-               do dirloc=1,SDIM
-                least_squares_normal_material(im_curv,dirloc)= &
-                  least_squares_normal_material(im_curv,dirloc)+ &
-                  wt_local*n_loc(dirloc)
-               enddo
-               least_squares_normal_material_wt(im_curv)= &
-                 least_squares_normal_material_wt(im_curv)+wt_local
-
                lssten(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
-
-               if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
-                do dirloc=1,SDIM
-                 inormal=(im_curv-1)*SDIM+dirloc
-                 nrm_mat(dirloc)=nrm_local(inormal)
-                enddo
-
-                call prepare_normal(nrm_mat,mag,SDIM)
-
-                do dirloc=1,SDIM
-                 inormal=(im_curv-1)*SDIM+dirloc
-                 nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
-                enddo
-               else if ((abs(i1).le.ngrow_distance).and. &
-                        (abs(j1).le.ngrow_distance).and. &
-                        (abs(k1).le.ngrow_distance)) then
-                ! do nothing
-               else
-                print *,"i1,j1, or k1 invalid: ",i1,j1,k1
-                stop
-               endif
-
               enddo ! im_curv=1..num_materials
 
              enddo
              enddo
              enddo ! i1,j1,k1=LSstenlo,LSstenhi
-                   ! (init nrmsten,lssten,vofsten,least_squares_normal)
+                   ! (init lssten,vofsten)
 
-             do iten_local=1,num_interfaces
-
-              do dirloc=1,SDIM
-               if (least_squares_normal_wt(iten_local).eq.zero) then
-                least_squares_normal(iten_local,dirloc)=zero
-               else if (least_squares_normal_wt(iten_local).gt.zero) then
-                least_squares_normal(iten_local,dirloc)= &
-                 least_squares_normal(iten_local,dirloc)/ &
-                 least_squares_normal_wt(iten_local)
-               else
-                print *,"least_squares_normal_wt(iten_local) invalid: ", &
-                 iten_local,least_squares_normal_wt(iten_local)
-                stop
-               endif
-               n_loc(dirloc)=least_squares_normal(iten_local,dirloc)
-              enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,mag_loc,SDIM)
-              do dirloc=1,SDIM
-               least_squares_normal(iten_local,dirloc)=n_loc(dirloc)
-              enddo
-
-              do dirloc=1,SDIM
-               if (least_squares_normal_triple_wt(iten_local).eq.zero) then
-                least_squares_normal_triple(iten_local,dirloc)=zero
-               else if (least_squares_normal_triple_wt(iten_local).gt.zero) then
-                least_squares_normal_triple(iten_local,dirloc)= &
-                 least_squares_normal_triple(iten_local,dirloc)/ &
-                 least_squares_normal_triple_wt(iten_local)
-               else
-                print *,"least_squares_normal_triple_wt(iten_local) invalid:", &
-                 iten_local,least_squares_normal_triple_wt(iten_local)
-                stop
-               endif
-               n_loc(dirloc)=least_squares_normal_triple(iten_local,dirloc)
-              enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,mag_loc,SDIM)
-              do dirloc=1,SDIM
-               least_squares_normal_triple(iten_local,dirloc)=n_loc(dirloc)
-              enddo
-             enddo !iten_local=1,num_interfaces
      
-             do im_curv=1,num_materials
-              do dirloc=1,SDIM
-               if (least_squares_normal_material_wt(im_curv).eq.zero) then
-                least_squares_normal_material(im_curv,dirloc)=zero
-               else if (least_squares_normal_material_wt(im_curv).gt.zero) then
-                least_squares_normal_material(im_curv,dirloc)= &
-                 least_squares_normal_material(im_curv,dirloc)/ &
-                 least_squares_normal_material_wt(im_curv)
-               else
-                print *,"least_squares_normal_material_wt(im_curv) invalid: ", &
-                 im_curv,least_squares_normal_material_wt(im_curv)
-                stop
-               endif
-               n_loc(dirloc)=least_squares_normal_material(im_curv,dirloc)
-              enddo !dirloc=1,sdim
-              call prepare_normal(n_loc,mag_loc,SDIM)
-              do dirloc=1,SDIM
-               least_squares_normal_material(im_curv,dirloc)=n_loc(dirloc)
-              enddo
-             enddo !im_curv=1,num_materials
-
-
              ! i1,j1,k1=-1..1
              do k1=istenlo(3),istenhi(3)
              do j1=istenlo(2),istenhi(2)
@@ -5154,9 +4379,7 @@ FIX ME
               bfact,dx, &
               xcenter, &
               !num_materials x sdim components("nrmcenter" in initheightLS)
-              !nrmPROBE is derived from both the closest point
-              !normal and the FD normal.
-              nrmPROBE, &
+              nrmFD, &
               dircrossing_opt, & !intent(in)
               sidestar, & !intent(in)
               signside, &
@@ -5169,12 +4392,6 @@ FIX ME
               lssten, &
               ! -ngrow_distance:ngrow_distance ^{3} x num_materials
               vofsten, &
-              !3x3x3x num_materials x sdim components
-              !closest point normal.
-              nrmsten, &
-              least_squares_normal, &
-              least_squares_normal_triple, &
-              least_squares_normal_material, &
               !scalar (i,j,k)
               vol_sten, &
               curv_cellHT, & !intent(out)
@@ -5185,10 +4402,19 @@ FIX ME
               im3, & !intent(out)
               visc_coef, &
               unscaled_min_curvature_radius, &
-              ice_normal_weight, & !intent(in)
               im_main, & !intent(in)
               im_main_opp, & !intent(in) 
               iten) !intent(in)
+
+             if (donate_flag.eq.1) then
+              !do nothing
+             else if (donate_flag.eq.0) then
+              curv_cellHT=zero
+              curv_cellFD=zero
+             else
+              print *,"donate_flag invalid"
+              stop
+             endif
 
              if (im3.eq.0) then
               ! do nothing
@@ -5661,7 +4887,7 @@ FIX ME
       real(amrex_real) phi_row(3)
       real(amrex_real) phi_col(3)
       integer irow,icol,veltype
-      real(amrex_real) DXMAXLS,cutoff
+      real(amrex_real) DXMAX,cutoff
       integer i_mdot
         !weights for BLB_MATRIX:
         !(1) weight=1 if LS>dx  weight=.001 otherwise
@@ -5772,8 +4998,8 @@ FIX ME
       endif
 
        ! presently in: fort_getcolorsum
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=DXMAX
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,mdot_ptr,0,-1)
@@ -6293,7 +5519,7 @@ FIX ME
 
               ! local_interior_wt(1): avoid noisy velocity conditions near the
               ! interface.
-             if (LScen(im).ge.cutoff) then ! cutoff=DXMAXLS
+             if (LScen(im).ge.cutoff) then ! cutoff=DXMAX
               local_interior_wt(1)=one
              else if (LScen(im).lt.cutoff) then
               local_interior_wt(1)=1.0E-3
@@ -9367,7 +8593,7 @@ FIX ME
       real(amrex_real) LSIDE(2)
       real(amrex_real) LSIDE_tension(2)
 
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       real(amrex_real) FFACE(num_materials)
       integer iten_FFACE
       integer irefine
@@ -9573,12 +8799,12 @@ FIX ME
       call checkbound_array(fablo,fabhi,vofF_ptr,1,-1)
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      call get_dxmax(dx,bfact,DXMAX)
 
-      if (DXMAXLS.gt.zero) then
+      if (DXMAX.gt.zero) then
        ! do nothing
       else
-       print *,"DXMAXLS invalid: fort_init_physics_vars: ",DXMAXLS
+       print *,"DXMAX invalid: fort_init_physics_vars: ",DXMAX
        stop
       endif
 
@@ -10229,6 +9455,8 @@ FIX ME
            if ((is_rigid_CL(im_main_opp).eq.0).and. &
                (is_rigid_CL(im_main).eq.0).and. &
                (gradh.ne.zero)) then
+              !call get_primary_material(dx,LSleft,imL)
+              !call get_primary_material(dx,LSright,imR)
             call fluid_interface_tension( &
              xstenMAC_center,dx,time, &
              LSleft,LSright, &
@@ -12563,7 +11791,7 @@ FIX ME
       real(amrex_real), INTENT(in), target :: maskres(DIMV(maskres))
       real(amrex_real), pointer :: maskres_ptr(D_DECL(:,:,:))
 
-      real(amrex_real) DXMAXLS,cutoff
+      real(amrex_real) DXMAX,cutoff
       real(amrex_real) Eforce_conservative
       real(amrex_real) Eforce_non_conservative
       real(amrex_real) Eforce_non_conservative_EOS
@@ -13082,10 +12310,8 @@ FIX ME
        stop
       endif
 
-        ! max(dx,dy,dz) if XYZ or R - Theta - Z
-        ! (get_dxmax(): max(dr,r probhix,dz) if R - Theta - Z)
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=DXMAX
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -14170,7 +13396,7 @@ FIX ME
                half*veldest(D_DECL(i,j,k),velcomp)**2
             enddo ! velcomp=1..sdim
 
-            if (LStest(im).ge.-DXMAXLS) then
+            if (LStest(im).ge.-DXMAX) then
 
              if (is_compressible_mat(im).eq.1) then
 
@@ -14360,7 +13586,7 @@ FIX ME
                  is_compressible_mat(im)
               stop
              endif
-            else if (LStest(im).le.-DXMAXLS) then
+            else if (LStest(im).le.-DXMAX) then
              ! do nothing
             else
              print *,"LStest(im) invalid: ",im,LStest(im)
@@ -14966,7 +14192,7 @@ FIX ME
       integer, parameter :: nhalf=3
       real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenMAC_center(SDIM)
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       real(amrex_real) local_vel_MAC
       real(amrex_real) local_vel_old_MAC
       real(amrex_real) uedge
@@ -15446,8 +14672,8 @@ FIX ME
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=DXMAX
 
       do im=1,num_materials
 
@@ -18409,7 +17635,7 @@ FIX ME
       integer ipart
       integer end_loop
       real(amrex_real) extend_offset
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
@@ -18432,12 +17658,12 @@ FIX ME
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
        ! see also:
        ! H_radius in subroutine fort_elastic_force
        ! FSI_band_cells in subroutine fort_extrapolate_tensor
        ! in: fort_manage_elastic_velocity
-      extend_offset=FSI_extend_cells*dxmaxLS
+      extend_offset=FSI_extend_cells*dxmax
 
        ! intent(in) :: extend_solid_velocity
       if (extend_solid_velocity.eq.0) then
@@ -18868,7 +18094,7 @@ FIX ME
                 endif
 
                 if (local_wt.eq.one) then
-                 local_wt=dxmaxLS**2
+                 local_wt=dxmax**2
                  do dir2=1,SDIM
                   local_wt=local_wt+(local_xstenMAC_center(dir2)- &
                     xstenMAC_center(dir2))**2
@@ -19209,7 +18435,7 @@ FIX ME
       real(amrex_real) loc_xclamped_plus_sten(-nhalf:nhalf,SDIM)
       integer, intent(in) :: im_critical !1<=im_critical<=num_materials+1
       real(amrex_real) extend_offset
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) vel_sum,wtsum
       real(amrex_real) local_vel,local_wt
       integer i1,j1,k1,k1low,k1high
@@ -19235,14 +18461,14 @@ FIX ME
       maskcoef_ptr=>maskcoef
       levelPC_ptr=>levelPC
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
        ! see also:
        ! H_radius in subroutine fort_elastic_force
        ! FSI_band_cells in subroutine fort_extrapolate_tensor
        ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
        ! in: fort_extend_elastic_velocity
       elastic_extend_cells=ngrow_make_distance
-      extend_offset=elastic_extend_cells*dxmaxLS
+      extend_offset=elastic_extend_cells*dxmax
 
       if (bfact.lt.1) then
        print *,"bfact invalid fort_extend_elastic_velocity: ",bfact
@@ -19640,7 +18866,7 @@ FIX ME
              endif
 
              if (local_wt.eq.one) then
-              local_wt=dxmaxLS**2
+              local_wt=dxmax**2
               do dir2=1,SDIM
                local_wt=local_wt+(local_xstenMAC_center(dir2)- &
                  xstenMAC_center(dir2))**2
@@ -20514,7 +19740,7 @@ FIX ME
       real(amrex_real) LSfacearea
       real(amrex_real) LScentroid(SDIM)
       integer nrefine_geom
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) ls_hold(num_materials*(1+SDIM))
       real(amrex_real) max_solid_LS
       real(amrex_real) sum_vfrac_solid_new
@@ -20609,9 +19835,9 @@ FIX ME
        stop
       endif 
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
 
-      LS_extend_thick=LS_extend_band*dxmaxLS
+      LS_extend_thick=LS_extend_band*dxmax
 
       if (ngrow_distance.ge.4) then
        ! do nothing
@@ -20682,7 +19908,7 @@ FIX ME
        stop
       endif
 
-      cell_CP_parm%dxmaxLS=dxmaxLS
+      cell_CP_parm%dxmax=dxmax
       cell_CP_parm%bfact=bfact
       cell_CP_parm%level=level
       cell_CP_parm%finest_level=finest_level
@@ -21572,7 +20798,7 @@ FIX ME
             if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
              vofcomp=(im-1)*ngeom_recon+1
              if (im.eq.im_fluid_critical) then
-              ls_hold(im)=(ngrow_distance+1)*dxmaxLS
+              ls_hold(im)=(ngrow_distance+1)*dxmax
               mofnew(vofcomp)=one
               do dir=1,SDIM 
                mofnew(vofcomp+dir)=zero
@@ -21582,7 +20808,7 @@ FIX ME
                mofnew(vofcomp+istate-1)=zero
               enddo
              else
-              ls_hold(im)=-(ngrow_distance+1)*dxmaxLS
+              ls_hold(im)=-(ngrow_distance+1)*dxmax
               mofnew(vofcomp)=zero
               do dir=1,SDIM 
                mofnew(vofcomp+dir)=zero

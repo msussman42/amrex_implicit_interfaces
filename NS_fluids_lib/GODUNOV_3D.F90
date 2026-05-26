@@ -883,7 +883,7 @@ stop
       integer inorm_elem
       integer local_bc
 
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
 
       real(amrex_real) local_flux_val
       real(amrex_real) local_flux_val_in
@@ -1043,11 +1043,11 @@ stop
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
 
@@ -1265,7 +1265,7 @@ stop
            print *,"dirtan(1) ",dirtan(1)
            print *,"dirtan(2) ",dirtan(2)
            print *,"dx ",dx
-           print *,"dxmaxLS ",dxmaxLS
+           print *,"dxmax ",dxmax
            print *,"bfact ",bfact
            print *,"tileloop ",tileloop
            print *,"spectral_loop ",spectral_loop
@@ -2555,7 +2555,7 @@ stop
       real(amrex_real) massfrac_parm_right(num_species_var+1)
       real(amrex_real) gradh
       real(amrex_real) weymouth_factor,weymouth_cfl
-      real(amrex_real) dxmin,dxmax,dxmaxLS
+      real(amrex_real) dxmin,dxmax
       real(amrex_real) den1,den2,visc1,visc2
       integer recompute_wave_speed
       real(amrex_real) uulocal
@@ -2663,7 +2663,6 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
       if (visc_coef.ge.zero) then
        ! do nothing
@@ -3475,8 +3474,8 @@ stop
             stop
            endif
 
-           if ((abs(LS1).le.two*dxmaxLS).and. &
-               (abs(LS2).le.two*dxmaxLS)) then 
+           if ((abs(LS1).le.two*dxmax).and. &
+               (abs(LS2).le.two*dxmax)) then 
 
             delta=dxmin
 
@@ -8804,7 +8803,7 @@ stop
       real(amrex_real) told_average,told_weight,local_weight
       real(amrex_real) rval
       integer, parameter :: remove_checkerboard=1
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) heating_buffer
       real(amrex_real) LS_clamped
       real(amrex_real) temperature_clamped
@@ -8969,9 +8968,9 @@ stop
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-!     heating_buffer=dxmaxLS*ngrow_make_distance
-      heating_buffer=dxmaxLS
+      call get_dxmax(dx,bfact,dxmax)
+!     heating_buffer=dxmax*ngrow_make_distance
+      heating_buffer=dxmax
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -9454,7 +9453,7 @@ stop
       real(amrex_real) xcorner(SDIM)
       real(amrex_real) xcorner2(SDIM)
       real(amrex_real) band_offset
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
 
       real(amrex_real), parameter :: FSI_band_cells=0.0d0
 
@@ -9472,11 +9471,11 @@ stop
 
       tnew_ptr=>tnew
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
        ! see also:
        ! H_radius in subroutine fort_elastic_force
        ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
-      band_offset=FSI_band_cells*dxmaxLS
+      band_offset=FSI_band_cells*dxmax
 
       if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
        ! do nothing
@@ -12049,7 +12048,7 @@ stop
       integer index_compare
       integer complement_flag
       real(amrex_real) LL
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) LS_DONOR_CUTOFF
 
       tag_ptr=>tag
@@ -12059,14 +12058,14 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
-      !LS_DONOR_CUTOFF=two*dxmaxLS
+      !LS_DONOR_CUTOFF=two*dxmax
       LS_DONOR_CUTOFF=zero
 
       if (time.ge.zero) then
@@ -13700,7 +13699,7 @@ stop
       integer iside
       integer vofcomp
       integer im
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
 
       real(amrex_real) mom2(SDIM)
       real(amrex_real) xsten_MAC(-nhalf:nhalf,SDIM)
@@ -14150,11 +14149,11 @@ stop
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
 
@@ -16354,7 +16353,7 @@ stop
       integer dir2
       integer vofcomp
       integer im
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
 
       real(amrex_real) xsten_accept(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_donate(-nhalf:nhalf,SDIM)
@@ -16580,11 +16579,11 @@ stop
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
 
@@ -17723,7 +17722,7 @@ stop
              nsolve*num_materials_combine)
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM) 
-      real(amrex_real) :: dxmaxLS
+      real(amrex_real) :: dxmax
 
       real(amrex_real), INTENT(in) :: cur_time
 
@@ -18057,7 +18056,7 @@ stop
       TgammaFAB_ptr=>TgammaFAB
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1)
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx,bfact,dxmax)
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -19091,8 +19090,8 @@ stop
               LS_source=LS(D_DECL(i,j,k),im_source)
               LS_dest=LS(D_DECL(i,j,k),im_dest)
 
-              if ((abs(LS_source).le.two*dxmaxLS).and. &
-                  (abs(LS_dest).le.two*dxmaxLS)) then
+              if ((abs(LS_source).le.two*dxmax).and. &
+                  (abs(LS_dest).le.two*dxmax)) then
                if (LS_dest.ge.zero) then
                 do dir=1,SDIM
                  nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
@@ -19110,8 +19109,8 @@ stop
                 print *,"LS_dest or LS_source invalid"
                 stop
                endif
-              else if ((abs(LS_source).ge.two*dxmaxLS).or. &
-                       (abs(LS_dest).ge.two*dxmaxLS)) then
+              else if ((abs(LS_source).ge.two*dxmax).or. &
+                       (abs(LS_dest).ge.two*dxmax)) then
                tsat_flag=0
               else
                print *,"LS_dest or LS_source invalid"
@@ -21544,7 +21543,7 @@ stop
       real(amrex_real) dTdx
       real(amrex_real) local_invden
       real(amrex_real) local_invden_from_cell
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) H_radius
 
       SNEW_ptr=>SNEW
@@ -21621,11 +21620,11 @@ stop
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
       if ((ngrow_distance.ge.4).and. &
@@ -21649,8 +21648,8 @@ stop
        stop
       endif
 
-!     H_radius=(ngrow_make_distance)*dxmaxLS
-      H_radius=(ngrow_elastic)*dxmaxLS
+!     H_radius=(ngrow_make_distance)*dxmax
+      H_radius=(ngrow_elastic)*dxmax
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then
        ! do nothing
       else if (is_FSI_elastic(im_viscoelastic_p1).eq.0) then
@@ -22108,7 +22107,7 @@ stop
          if (itan_dir.eq.0) then
           rplus=xsten(1,itan_dir+1)
           rminus=xsten(-1,itan_dir+1)
-          if (abs(rminus).le.EPS2*dxmaxLS) then
+          if (abs(rminus).le.EPS2*dxmax) then
            rminus=zero
           else if (rminus.gt.zero) then
            !do nothing
@@ -23337,7 +23336,7 @@ stop
        cell_evec(DIMV(cell_evec))
       real(amrex_real), pointer :: cell_evec_ptr(D_DECL(:,:,:))
 
-      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmax
       real(amrex_real) testLS
       real(amrex_real) test_max
       integer i,j,k
@@ -23368,11 +23367,11 @@ stop
        stop
       endif 
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      if (dxmaxLS.gt.zero) then
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
        !do nothing
       else
-       print *,"dxmaxLS invalid: ",dxmaxLS
+       print *,"dxmax invalid: ",dxmax
        stop
       endif
 
@@ -23399,16 +23398,16 @@ stop
          ! if a point is far from the interface, then we zero out the
          ! eigenvector there.
          ! FIX ME NARROW BAND SIZE LSA
-        if (testLS.ge.three*dxmaxLS) then
+        if (testLS.ge.three*dxmax) then
          cell_evec(D_DECL(i,j,k))=zero
-        else if (testLS.le.three*dxmaxLS) then
+        else if (testLS.le.three*dxmax) then
          !do nothing
         else
          print *,"test_LS ??? ",testLS
          stop
         endif
 
-        if (testLS.le.dxmaxLS) then
+        if (testLS.le.dxmax) then
          test_max=abs(cell_evec(D_DECL(i,j,k)))
          if (test_max.gt.local_max) then
           local_max=test_max
@@ -23418,7 +23417,7 @@ stop
           print *,"test_max,local_max? ",test_max,local_max
           stop
          endif
-        else if (testLS.gt.dxmaxLS) then
+        else if (testLS.gt.dxmax) then
          !do nothing
         else
          print *,"testLS invalid: ",testLS

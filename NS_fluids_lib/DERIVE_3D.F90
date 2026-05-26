@@ -741,7 +741,7 @@ stop
       integer dir_local
       real(amrex_real) Q(3,3)
       real(amrex_real) traceA,modtime,viscoelastic_coeff
-      real(amrex_real) DXMAXLS,cutoff
+      real(amrex_real) DXMAX,cutoff
       real(amrex_real) LS_local(num_materials)
       integer im_primary,im_local
 
@@ -969,8 +969,8 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS*(ngrow_distance-one)
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=DXMAX*(ngrow_distance-one)
 
       if (is_rigid(im_parm).eq.1) then
 

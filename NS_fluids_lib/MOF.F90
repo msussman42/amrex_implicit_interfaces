@@ -6790,9 +6790,6 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: cencell(sdim)
       real(amrex_real) slope(sdim)
       real(amrex_real) xtarget(sdim)
-      real(amrex_real) xclosest(sdim)
-      real(amrex_real) xtargetXYZ(sdim)
-      real(amrex_real) xclosestXYZ(sdim)
       real(amrex_real), INTENT(in) :: dist_tol
       real(amrex_real) mag
       real(amrex_real), INTENT(out) :: dist_to_line
@@ -11911,7 +11908,6 @@ contains
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(out) :: slope(sdim)
       real(amrex_real) local_slope(sdim)
-      real(amrex_real) slopeRT(sdim)
       real(amrex_real), INTENT(in) :: vof_scale
       real(amrex_real), INTENT(in) :: vof_free
       real(amrex_real), INTENT(in) :: cen_free(sdim)
@@ -11919,10 +11915,7 @@ contains
       real(amrex_real), INTENT(in) :: cen_ref(sdim)
       real(amrex_real) :: local_ref(sdim)
       real(amrex_real) :: local_free(sdim)
-      real(amrex_real) cen_freeXYZ(sdim)
-      real(amrex_real) cen_refXYZ(sdim)
       real(amrex_real), INTENT(out) :: mag_vec
-      real(amrex_real) theta,mag_temp
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -13504,8 +13497,6 @@ contains
 ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
 ! grad=(d/dr,d/dz) or
 ! grad=(d/dr,d/dtheta,d/dz)
-! dxmaxLS_volume_constraint=dx if STANDARD_MOF, CMOF_X
-! dxmaxLS_volume_constraint=3 dx if CMOF_F_AND_X
       subroutine find_cut_geom_slope_CLSVOF( &
         ls_mof, &
         lsnormal, &
@@ -13514,7 +13505,7 @@ contains
         bfact,dx, &
         xsten0,nhalf0, &
         im, &
-        dxmaxLS_volume_constraint, & ! dx or (3 dx)
+        dxmax_volume_constraint, & 
         sdim)
 
       use probcommon_module
@@ -13529,7 +13520,7 @@ contains
       integer, INTENT(in) :: sdim
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
-      real(amrex_real), INTENT(in) :: dxmaxLS_volume_constraint
+      real(amrex_real), INTENT(in) :: dxmax_volume_constraint
       real(amrex_real) xpoint(sdim)
       real(amrex_real) cutoff,m1,m2
       real(amrex_real) nsimple(sdim)
@@ -13567,11 +13558,11 @@ contains
        stop
       endif
 
-      if (dxmaxLS_volume_constraint.gt.zero) then
+      if (dxmax_volume_constraint.gt.zero) then
        ! do nothing
       else
-       print *,"dxmaxLS_volume_constraint invalid: ", &
-               dxmaxLS_volume_constraint
+       print *,"dxmax_volume_constraint invalid: ", &
+               dxmax_volume_constraint
        stop
       endif
 
@@ -13597,11 +13588,11 @@ contains
       if (sdim.eq.3) then
        klo=-1
        khi=1
-       cutoff=four*dxmaxLS_volume_constraint
+       cutoff=four*dxmax_volume_constraint
       else if (sdim.eq.2) then
        klo=0
        khi=0
-       cutoff=four*dxmaxLS_volume_constraint
+       cutoff=four*dxmax_volume_constraint
       else
        print *,"dimension bust"
        stop
@@ -13612,9 +13603,9 @@ contains
       LS_cen=ls_mof(D_DECL(0,0,0),im)
 
        ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
-      if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
+      if (abs(LS_cen).gt.two*dxmax_volume_constraint) then
        lsnormal_valid(im)=0
-      else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
+      else if (abs(LS_cen).le.two*dxmax_volume_constraint) then
        !do nothing
       else
        print *,"LS_cen invalid: ",LS_cen
@@ -13644,11 +13635,11 @@ contains
         LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
         ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
-        if ((abs(LS_plus).le.three*dxmaxLS_volume_constraint).and. &
-            (abs(LS_minus).le.three*dxmaxLS_volume_constraint)) then
+        if ((abs(LS_plus).le.three*dxmax_volume_constraint).and. &
+            (abs(LS_minus).le.three*dxmax_volume_constraint)) then
          !do nothing
-        else if ((abs(LS_plus).ge.three*dxmaxLS_volume_constraint).or. &
-                 (abs(LS_minus).ge.three*dxmaxLS_volume_constraint)) then
+        else if ((abs(LS_plus).ge.three*dxmax_volume_constraint).or. &
+                 (abs(LS_minus).ge.three*dxmax_volume_constraint)) then
          lsnormal_valid(im)=0
         else
          print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
@@ -13760,9 +13751,9 @@ contains
           do i=-1,1
 
            LSWT=abs(ls_mof(D_DECL(i,j,k),im))
-           if (LSWT.le.three*dxmaxLS_volume_constraint) then
+           if (LSWT.le.three*dxmax_volume_constraint) then
             !do nothing
-           else if (LSWT.gt.three*dxmaxLS_volume_constraint) then
+           else if (LSWT.gt.three*dxmax_volume_constraint) then
             lsnormal_valid(im)=0
            else
             print *,"LSWT invalid: ",LSWT
@@ -14002,6 +13993,7 @@ contains
             LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
+      real(amrex_real), DIMENSION(sdim) :: dx_extend
 
       real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: &
               xtetlist_vof
@@ -14074,8 +14066,8 @@ contains
       integer order_algorithm_local(num_materials)
       real(amrex_real) voftest(num_materials)
       integer i1,j1,k1,k1lo,k1hi
-      real(amrex_real) dxmaxLS
-      real(amrex_real) dxmaxLS_volume_constraint
+      real(amrex_real) dxmax
+      real(amrex_real) dxmax_volume_constraint
       real(amrex_real) null_intercept
       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
 
@@ -14147,6 +14139,17 @@ contains
 
       nDOF_standard=sdim-1
       nEQN_standard=sdim
+
+      do dir=1,sdim
+       dx_extend(dir)=xsten0(1,dir)-xsten0(-1,dir)
+       if (dx_extend(dir).gt.zero) then
+        !do nothing
+       else
+        print *,"dx_extend invalid dir,dx_extend(dir) ", &
+          dir,dx_extend(dir)
+        stop
+       endif
+      enddo !dir=1,sdim
 
       do imaterial=1,num_materials
 
@@ -14283,10 +14286,10 @@ contains
        stop
       endif
 
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      call get_dxmax(dx_extend,bfact,dxmax)
 
-      dxmaxLS_volume_constraint=dxmaxLS
-      null_intercept=two*bfact*dxmaxLS_volume_constraint
+      dxmax_volume_constraint=dxmax
+      null_intercept=two*bfact*dxmax_volume_constraint
 
       if (sdim.eq.2) then
        k1lo=0
@@ -14521,7 +14524,7 @@ contains
            bfact,dx, & !intent(in)
            xsten0,nhalf0, & !intent(in)
            imaterial, & !intent(in)
-           dxmaxLS_volume_constraint, & !intent(in)
+           dxmax_volume_constraint, & !intent(in)
            sdim) !intent(in)
 
         else
@@ -14798,7 +14801,7 @@ contains
            enddo
            nrecon(1)=one ! null slope=(1 0 0) 
 
-           !null_intercept=two*bfact*dxmaxLS_volume_constraint
+           !null_intercept=two*bfact*dxmax_volume_constraint
            mofdata(vofcomp+2*sdim+2)=null_intercept
            do dir=1,sdim
             mofdata(vofcomp+sdim+1+dir)=nrecon(dir)

@@ -635,7 +635,6 @@ namespace amrex{
        Real* time,
        Real* visc_coef,
        Real* unscaled_min_curvature_radius,
-       Real* ice_normal_weight,
        int* num_curv);
 
   }
