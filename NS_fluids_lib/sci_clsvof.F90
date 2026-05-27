@@ -11572,8 +11572,7 @@ integer, PARAMETER :: debug_overlap_element=0
 
     if (levelrz.eq.COORDSYS_CARTESIAN) then
      ! do nothing
-    else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-             (levelrz.eq.COORDSYS_RZ)) then
+    else if (levelrz.eq.COORDSYS_RZ) then
      if (xmap3D(dir).eq.1) then
       if (local_avgnode.ge.zero) then
        !do nothing
@@ -11594,7 +11593,7 @@ integer, PARAMETER :: debug_overlap_element=0
       stop
      endif
     else
-     print *,"levelrz invalid"
+     print *,"levelrz invalid ",levelrz
      stop
     endif
 
@@ -11769,8 +11768,7 @@ integer, PARAMETER :: debug_overlap_node=0
 
      if (levelrz.eq.COORDSYS_CARTESIAN) then
       ! do nothing
-     else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-              (levelrz.eq.COORDSYS_RZ)) then
+     else if (levelrz.eq.COORDSYS_RZ) then
       if (xmap3D(dir).eq.1) then
        if (local_minnode.ge.zero) then
         !do nothing
@@ -11789,7 +11787,7 @@ integer, PARAMETER :: debug_overlap_node=0
        stop
       endif
      else
-      print *,"levelrz invalid"
+      print *,"levelrz invalid ",levelrz
       stop
      endif
 
@@ -15234,8 +15232,7 @@ end subroutine CLSVOF_InitBox
 
         if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-                 (levelrz.eq.COORDSYS_RZ)) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          do dir=1,3
           if (xmap3D(dir).eq.1) then
            if (local_xnot(dir).ge.zero) then
@@ -17353,8 +17350,7 @@ logical :: theboss
 
      if (levelrz.eq.COORDSYS_CARTESIAN) then
       ! do nothing
-     else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-              (levelrz.eq.COORDSYS_RZ)) then
+     else if (levelrz.eq.COORDSYS_RZ) then
 
       do part_id=1,TOTAL_NPARTS
        ctml_part_id=ctml_part_id_map(part_id)
@@ -17591,8 +17587,7 @@ logical :: theboss
 
      if (levelrz.eq.COORDSYS_CARTESIAN) then
       ! do nothing
-     else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-              (levelrz.eq.COORDSYS_RZ)) then
+     else if (levelrz.eq.COORDSYS_RZ) then
 
       do part_id=1,TOTAL_NPARTS
        ctml_part_id=ctml_part_id_map(part_id)

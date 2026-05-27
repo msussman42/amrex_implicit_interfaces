@@ -2700,32 +2700,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
 
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (angular_velocity_vector(1).eq.zero) then
-         ! do nothing
-        else
-         print *,"angular_velocity_vector(1) must be 0 for RTZ"
-         stop
-        endif
-        if (angular_velocity_vector(2).eq.zero) then
-         ! do nothing
-        else
-         print *,"angular_velocity_vector(2) must be 0 for RTZ"
-         stop
-        endif
-        if ((lever_arm_custom(1).eq.zero).and. &
-            (lever_arm_custom(2).eq.zero).and. &
-            (lever_arm_custom(SDIM).eq.zero)) then
-         !do nothing
-        else
-         print *,"lever_arm_custom must be zero for RTZ"
-         stop
-        endif
-
-        pres_hydrostatic=pres_hydrostatic+ &
-           half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2)
-
        else
         print *,"levelrz invalid general hydrostatic pressure density"
         print *,"levelrz=",levelrz
@@ -5344,10 +5318,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid get_symmetric error"
+       print *,"levelrz invalid get_symmetric error ",levelrz
        stop
       endif
 
@@ -5653,10 +5625,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid stackerror"
+       print *,"levelrz invalid stackerror ",levelrz
        stop
       endif
 
@@ -11434,10 +11404,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
           else if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           ! do nothing
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -14676,10 +14644,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           RR=xstenMAC(0,1)
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -14865,10 +14831,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           RR=xsten(0,1)
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -14878,10 +14842,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"dir_main invalid sem mac to cell 4"
           stop
          endif 
-
-         if ((dir_main.eq.2).and.(levelrz.eq.COORDSYS_CYLINDRICAL)) then ! theta direction
-          RRTHETA=xsten(0,1)
-         endif
 
          if (operation_flag.eq.OP_GRADU_MAC_TO_CELL) then ! interp grad U
 

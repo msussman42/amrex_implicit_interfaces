@@ -230,12 +230,8 @@ stop
         endif
         rr=xsten(0,1)
         g(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=xsten(0,1)
-        g(2,2)=g(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
-        g(1,2)=g(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
-        print *,"levelrz invalid getturbvisc"
+        print *,"levelrz invalid getturbvisc ",levelrz
         stop
        endif
  
@@ -499,10 +495,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid getshear"
+       print *,"levelrz invalid getshear ",levelrz
        stop
       endif
 
@@ -554,18 +548,8 @@ stop
          print *,"rr invalid"
          stop
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=abs(xsten(0,1))
-        if (rr.gt.zero) then
-         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/rr
-           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
-         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/rr
-        else
-         print *,"rr invalid"
-         stop
-        endif
        else
-        print *,"levelrz invalid getshear 2"
+        print *,"levelrz invalid getshear 2 ",levelrz
         stop
        endif
 
@@ -1146,13 +1130,12 @@ stop
           if (SDIM.eq.3) then
            ! do nothing
           else if (SDIM.eq.2) then
-           if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
            else if (levelrz.eq.COORDSYS_RZ) then
             ! do nothing
            else
-            print *,"levelrz invalid"
+            print *,"levelrz invalid ",levelrz
             stop
            endif
           else
@@ -1863,12 +1846,8 @@ stop
         endif
         rr=xsten(0,1)
         gradu(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=xsten(0,1)
-        gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
-        gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
-        print *,"levelrz invalid dermagtrace 2"
+        print *,"levelrz invalid dermagtrace 2 ",levelrz
         stop
        endif
 
@@ -2346,10 +2325,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rzflag invalid"
+       print *,"rzflag invalid ",rzflag
        stop
       endif
 
@@ -2415,10 +2392,8 @@ stop
            stop
           endif
           global_centroid(1)=zero
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          ! do nothing
          else
-          print *,"levelrz invalid fort_getdrag"
+          print *,"levelrz invalid fort_getdrag ",levelrz
           stop
          endif
         else

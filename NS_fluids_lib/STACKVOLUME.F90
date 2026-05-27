@@ -148,10 +148,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid get volume data batch"
+       print *,"levelrz invalid get volume data batch ",levelrz
        stop
       endif
 
@@ -290,10 +288,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid stack volume batch"
+       print *,"levelrz invalid stack volume batch ",levelrz
        stop
       endif
 

@@ -459,10 +459,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in cellgrid"
+       print *,"rz_flag invalid in cellgrid ",rz_flag
        stop
       endif
 
@@ -849,8 +847,7 @@ stop
       endif
 
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
@@ -871,7 +868,7 @@ stop
         stop
        endif
       else 
-       print *,"levelrz invalid combine zones"
+       print *,"levelrz invalid combine zones ",levelrz
        stop
       endif
 
@@ -934,10 +931,8 @@ stop
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else
-        print *,"levelrz invalid combine zones 3"
+        print *,"levelrz invalid combine zones 3 ",levelrz
         stop
        endif
 

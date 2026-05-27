@@ -401,10 +401,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid in fort_fd_normal"
+       print *,"levelrz invalid in fort_fd_normal ",levelrz
        stop
       endif
       k1lo=0
@@ -639,10 +637,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid in fort_fd_node_normal"
+       print *,"levelrz invalid in fort_fd_node_normal ",levelrz
        stop
       endif
 
@@ -707,22 +703,8 @@ stop
           if ((dir.eq.1).and.(xminus.lt.zero)) then
            local_normal(dir)=zero
           endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          RR=one
-          if ((dir.eq.1).and.(xminus.lt.zero)) then
-           local_normal(dir)=zero
-          endif
-          if (dir.eq.2) then ! theta direction
-           RR=xsten_nd(0,1)
-           if (RR.gt.zero) then
-            ! do nothing
-           else
-            print *,"RR invalid"
-            stop
-           endif
-          endif 
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
          local_normal(dir)=local_normal(dir)/RR
@@ -1049,10 +1031,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid in fort_node_to_cell"
+       print *,"levelrz invalid in fort_node_to_cell ",levelrz
        stop
       endif
 
@@ -1215,15 +1195,8 @@ stop
                RR=zero
               endif
              endif
-            else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-             if (dir.eq.1) then
-              RR=xsten(2*i1-1,dir)
-              if (RR.lt.zero) then
-               RR=zero
-              endif
-             endif
             else
-             print *,"dir invalid"
+             print *,"levelrz invalid ",levelrz
              stop
             endif
 
@@ -1257,30 +1230,8 @@ stop
               stop
              endif
             endif
-           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-            RR=one
-            if (dir.eq.1) then
-             if (xmiddle.le.zero) then
-              local_curv(dir)=zero
-             else if (xmiddle.gt.zero) then
-              RR=xmiddle
-             else
-              print *,"xmiddle invalid"
-              stop
-             endif
-            endif
-            if (dir.eq.2) then ! theta direction
-             if (xsten(0,1).le.zero) then
-              local_curv(dir)=zero
-             else if (xsten(0,1).gt.zero) then
-              RR=xsten(0,1)
-             else
-              print *,"xsten(0,1) invalid"
-              stop
-             endif
-            endif 
            else
-            print *,"levelrz invalid"
+            print *,"levelrz invalid ",levelrz
             stop
            endif
            local_curv(dir)=local_curv(dir)/RR
@@ -1398,8 +1349,7 @@ stop
            if (dir.eq.1) then
             if (levelrz.eq.COORDSYS_CARTESIAN) then
              ! do nothing
-            else if ((levelrz.eq.COORDSYS_RZ).or. &
-                     (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+            else if (levelrz.eq.COORDSYS_RZ) then
 
              if (xsten_grow(-2*ngrow_tower,1).lt.zero) then
               normal_test(dir)=zero
@@ -1411,7 +1361,7 @@ stop
              endif
 
             else
-             print *,"levelrz invalid"
+             print *,"levelrz invalid ",levelrz
              stop
             endif
            else if ((dir.eq.2).or.(dir.eq.SDIM)) then
@@ -1536,14 +1486,6 @@ stop
                    iwidthnew=0
                   endif
                  endif
-                endif
-               else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                if (xsten_grow(-2,1).gt.zero) then
-                 !do nothing
-                else
-                 print *,"xsten_grow cannot be negative "
-                 print *,"for levelrz==COORDSYS_CYLINDRICAL"
-                 stop
                 endif
                else
                 print *,"levelrz invalid node_to_cell: ",levelrz
@@ -1970,10 +1912,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in levelstrip"
+       print *,"rz_flag invalid in levelstrip ",rz_flag
        stop
       endif
      
@@ -2738,8 +2678,6 @@ stop
            print *,"dimension bust"
            stop
           endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          bypass_update_closest=0
          else
           print *,"levelrz invalid in fort_levelstrip: ",levelrz
           stop
@@ -3168,10 +3106,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in steninit"
+       print *,"rz_flag invalid in steninit ",rz_flag
        stop
       endif
 
@@ -3872,10 +3808,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then 
-       ! do nothing
       else
-       print *,"rz_flag invalid in faceinit"
+       print *,"rz_flag invalid in faceinit ",rz_flag
        stop
       endif
  
@@ -4262,10 +4196,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then 
-       ! do nothing
       else
-       print *,"rz_flag invalid in faceinit"
+       print *,"rz_flag invalid in faceinit ",rz_flag
        stop
       endif
 
@@ -4340,26 +4272,12 @@ stop
            at_RZ_face=1
           endif
          else
-          print *,"inormal invalid"
-          stop
-         endif
-        endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (dir.eq.0) then
-         if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
-          at_RZ_face=1
-         endif
-         if (inormal.eq.i) then
-          if (xstenMAC(0,1).lt.zero) then
-           at_RZ_face=1
-          endif
-         else
-          print *,"inormal invalid"
+          print *,"inormal invalid ",inormal
           stop
          endif
         endif
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop
        endif
 
@@ -4637,10 +4555,8 @@ stop
              if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
                  (levelrz.eq.COORDSYS_RZ)) then !XY or RZ
               RR=one 
-             else if (levelrz.eq.COORDSYS_CYLINDRICAL) then ! R-theta
-              RR=half*(xsten_right(0,1)+xsten_left(0,1))
              else
-              print *,"levelrz invalid"
+              print *,"levelrz invalid ",levelrz
               stop
              endif
              dist_pair(ml,mr)=dist_pair(ml,mr)*RR
