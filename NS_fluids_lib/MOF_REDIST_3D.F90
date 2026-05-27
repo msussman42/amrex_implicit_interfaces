@@ -871,6 +871,10 @@ stop
 
       IMPLICIT NONE
 
+      integer, parameter :: nhalf_height=9
+      integer, parameter :: ngrow_tower=4
+      integer, parameter :: nhalf=3
+
       integer, INTENT(in) :: tid_current
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: height_function_flag
@@ -901,17 +905,15 @@ stop
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      real(amrex_real) xsten(-3:3,SDIM)
-      real(amrex_real) xsten_grow(-(2*ngrow_distance+1):(2*ngrow_distance+1),SDIM)
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_grow(-nhalf_height:nhalf_height,SDIM)
       real(amrex_real) xcenter(SDIM)
 
       real(amrex_real) dx_col(SDIM)
       real(amrex_real) x_col(SDIM)
       real(amrex_real) x_col_avg(SDIM)
 
-      integer nhalf_grow
       integer n_normal_test
-      integer nhalf
       integer k1hi
       integer i,j,k
       integer i1,j1,k1
@@ -936,12 +938,12 @@ stop
       integer local_status
       integer crossing_status
       real(amrex_real) local_LS(num_materials)
-      real(amrex_real), dimension(-ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance) :: vofsten
-      real(amrex_real), dimension(-ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance) :: lssten
+      real(amrex_real), dimension(-ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower) :: vofsten
+      real(amrex_real), dimension(-ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower) :: lssten
       integer ngrow_null
       real(amrex_real) curv_LS
       real(amrex_real) curv_VOF
@@ -973,8 +975,8 @@ stop
       integer iwidthnew
       integer jwidth
       real(amrex_real) n1d
-      real(amrex_real) ls_column(-ngrow_distance:ngrow_distance)
-      real(amrex_real) vof_column(-ngrow_distance:ngrow_distance)
+      real(amrex_real) ls_column(-ngrow_tower:ngrow_tower)
+      real(amrex_real) vof_column(-ngrow_tower:ngrow_tower)
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -982,8 +984,6 @@ stop
       endif
 
       ngrow_null=0
-      nhalf=3 
-      nhalf_grow=2*ngrow_distance+1
  
       nmax=POLYGON_LIST_MAX ! in: fort_node_to_cell
 
@@ -1095,7 +1095,7 @@ stop
        !   status (0=bad 1=good)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
-       call gridsten_level(xsten_grow,i,j,k,level,nhalf_grow)
+       call gridsten_level(xsten_grow,i,j,k,level,nhalf_height)
        do dir=1,SDIM
         xcenter(dir)=xsten(0,dir)
        enddo
@@ -1314,11 +1314,11 @@ stop
           LSstenlo(3)=0
           LSstenhi(3)=0
           do dir=1,SDIM
-           LSstenlo(dir)=-ngrow_distance
-           LSstenhi(dir)=ngrow_distance
+           LSstenlo(dir)=-ngrow_tower
+           LSstenhi(dir)=ngrow_tower
           enddo
 
-          ! i1,j1,k1=-ngrow_distance ... ngrow_distance
+          ! i1,j1,k1=-ngrow_tower,ngrow_tower
           do k1=LSstenlo(3),LSstenhi(3)
           do j1=LSstenlo(2),LSstenhi(2)
           do i1=LSstenlo(1),LSstenhi(1)
@@ -1401,9 +1401,9 @@ stop
             else if ((levelrz.eq.COORDSYS_RZ).or. &
                      (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
-             if (xsten_grow(-2*ngrow_distance,1).lt.zero) then
+             if (xsten_grow(-2*ngrow_tower,1).lt.zero) then
               normal_test(dir)=zero
-             else if (xsten_grow(-2*ngrow_distance,1).ge.zero) then
+             else if (xsten_grow(-2*ngrow_tower,1).ge.zero) then
               ! do nothing
              else
               print *,"xsten_grow is NaN"
@@ -1459,8 +1459,8 @@ stop
              HTstenhi(2)=j1
              HTstenlo(3)=k1
              HTstenhi(3)=k1
-             HTstenlo(normal_dir)=-ngrow_distance
-             HTstenhi(normal_dir)=ngrow_distance
+             HTstenlo(normal_dir)=-ngrow_tower
+             HTstenhi(normal_dir)=ngrow_tower
            
              sign_change_dir=normal_dir
              call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
@@ -1481,7 +1481,7 @@ stop
               else if ((height_function_flag.eq.1).and. &
                        (local_status.eq.1)) then
 
-               do ivert=-ngrow_distance,ngrow_distance
+               do ivert=-ngrow_tower,ngrow_tower
                 icol=i1  
                 jcol=j1  
                 kcol=k1  
@@ -1510,7 +1510,7 @@ stop
                 endif
                 ls_column(ivert)=lssten(icol,jcol,kcol)
                 vof_column(ivert)=vofsten(icol,jcol,kcol)
-               enddo !ivert=-ngrow_distance,ngrow_distance
+               enddo !ivert=-ngrow_tower,ngrow_tower
 
                if (num_sign_changes_plus.eq.1) then
                 n1d=one
@@ -1655,7 +1655,7 @@ stop
             htfunc_LS, &
             htfunc_VOF, &
             xsten_grow, &
-            nhalf_grow, &
+            nhalf_height, &
             itan,jtan, &
             curv_LS, &
             curv_VOF, &
@@ -1788,9 +1788,9 @@ stop
       integer i,j,k,i1,j1,k1
       real(amrex_real) vcenter(num_materials)
       real(amrex_real) VFRAC_TEMP
-      integer nhalf
-      real(amrex_real) xsten_accept(-3:3,SDIM)
-      real(amrex_real) xsten_donate(-3:3,SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten_accept(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_donate(-nhalf:nhalf,SDIM)
       integer dir,dir2
 
       integer isten,jsten,ksten
@@ -1885,8 +1885,6 @@ stop
        k_DEB_DIST=-9999
       endif
 
-      nhalf=3 
-     
       if (bfact.ge.1) then
        ! do nothing
       else

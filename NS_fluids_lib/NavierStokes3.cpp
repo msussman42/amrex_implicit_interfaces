@@ -12696,8 +12696,6 @@ void NavierStokes::diffusion_heatingALL(
    amrex::Error("dimension bust");
  } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
   // do nothing
- } else if (NS_geometry_coord==COORDSYS_CYLINDRICAL) {
-  // do nothing
  } else
   amrex::Error("NS_geometry_coord bust 61");
 

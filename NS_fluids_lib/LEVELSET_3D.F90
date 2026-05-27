@@ -403,9 +403,9 @@ stop
         xsten, & !intent(in)
         velsten, & !intent(in)
         mgoni_temp, & !intent(in)
-        ! -ngrow_distance:ngrow_distance ^{3} x num_materials
+        ! -ngrow_tower:ngrow_tower ^{3} x num_materials
         lssten, & !intent(in)
-        ! -ngrow_distance:ngrow_distance ^{3} x num_materials
+        ! -ngrow_tower:ngrow_tower ^{3} x num_materials
         vofsten, & !intent(in)
         !3x3x3x num_materials x sdim components
         !closest point normal.
@@ -426,6 +426,9 @@ stop
       use geometry_intersect_module
       use MOF_routines_module
       IMPLICIT NONE
+
+      integer, parameter :: nhalf_height=9 ! in: initheightLS
+      integer, parameter :: ngrow_tower=4 ! in: initheightLS
 
       integer, INTENT(in) :: vof_height_function
       integer, INTENT(in) :: icenter,jcenter,kcenter
@@ -457,23 +460,24 @@ stop
  
       integer dir2
 
-      real(amrex_real) columnLS(-ngrow_distance:ngrow_distance)
-      real(amrex_real) columnVOF(-ngrow_distance:ngrow_distance)
+      real(amrex_real) columnLS(-ngrow_tower:ngrow_tower)
+      real(amrex_real) columnVOF(-ngrow_tower:ngrow_tower)
 
       real(amrex_real) lsdata( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower)
       real(amrex_real) vofdata( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower)
 
       real(amrex_real) htfunc_LS(-1:1,-1:1)
       real(amrex_real) htfunc_VOF(-1:1,-1:1)
 
+
       real(amrex_real), INTENT(in) :: xsten( &
-       -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+       -nhalf_height:nhalf_height, & !nhalf_height=9
        SDIM)
               
       real(amrex_real) xsten_curv(-2:2,SDIM)
@@ -488,15 +492,15 @@ stop
       real(amrex_real) :: local_tension(num_interfaces)
 
       real(amrex_real), INTENT(in) :: lssten( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
         num_materials)
 
       real(amrex_real), INTENT(in) :: vofsten( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
         num_materials)
 
       real(amrex_real), INTENT(in) :: nrmcenter(SDIM*num_materials)
@@ -572,9 +576,9 @@ stop
       real(amrex_real) dnrm(SDIM)
       real(amrex_real) dxsten(SDIM)
       integer im_primary_sten( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower)
 
       integer crossing_status
       integer overall_crossing_status
@@ -613,10 +617,6 @@ stop
       integer local_index(3)
       real(amrex_real) local_x(SDIM)
       real(amrex_real) local_temperature(num_materials)
-
-      integer nhalf_height ! in: initheightLS
-
-      nhalf_height=2*ngrow_distance+1 
 
       call get_dxmax(dx,bfact,dxmax)
 
@@ -662,6 +662,16 @@ stop
        print *,"bfact invalid85: ",bfact
        stop
       endif
+      if (ngrow_tower.ne.4) then
+       print *,"expecting ngrow_tower=4: ",ngrow_tower
+       stop
+      endif
+      if (nhalf_height.ne.2*ngrow_tower+1) then
+       print *,"expecting nhalf_height=2*ngrow_tower+1 ",nhalf_height, &
+              ngrow_tower
+       stop
+      endif 
+
       if (ngrow_distance.lt.4) then
        print *,"expecting ngrow_distance>=4 in initheightLS: ",ngrow_distance
        stop
@@ -722,8 +732,8 @@ stop
       if (SDIM.eq.3) then
        klo_sten_short=-1
        khi_sten_short=1
-       klo_sten_ht=-ngrow_distance
-       khi_sten_ht=ngrow_distance
+       klo_sten_ht=-ngrow_tower
+       khi_sten_ht=ngrow_tower
       else if (SDIM.eq.2) then
        klo_sten_short=0
        khi_sten_short=0
@@ -769,6 +779,7 @@ stop
        ! do nothing
       else
        failure_flag=1
+       print *,"initheightLS WARNING: LS_CENTER  ",LS_CENTER
       endif 
 
        ! get_LS_extend is declared in GLOBALUTIL.F90
@@ -777,6 +788,9 @@ stop
 
       if (LS_CENTER_EXTEND*LS_OPP_EXTEND.gt.zero) then
        failure_flag=1
+       print *,"initheightLS WARNING  "
+       print *,"LS_CENTER_EXTEND ",LS_CENTER_EXTEND
+       print *,"LS_OPP_EXTEND ",LS_OPP_EXTEND
       endif
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -848,7 +862,9 @@ stop
        ! centroid in absolute coordinate system
        ! returns a volume fraction
       call getvolume( &
-       bfact,dx,xsten,nhalf_height, &
+       bfact,dx, &
+       xsten, &
+       nhalf_height, & !nhalf_height=9
        LS1_save,volpos,facearea, &
        cenpos,VOFTOL_MATERIAL,SDIM)
 
@@ -869,6 +885,9 @@ stop
        ! do nothing
       else
        failure_flag=1
+       print *,"initheightLS WARNING"
+       print *,"nrmcenter= ",nrmcenter
+       print *,"nfluid=",nfluid
       endif
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -892,8 +911,8 @@ stop
       im3=0
       LSMAX=-1.0D+10
       do k=klo_sten_ht,khi_sten_ht
-      do j=-ngrow_distance,ngrow_distance
-      do i=-ngrow_distance,ngrow_distance
+      do j=-ngrow_tower,ngrow_tower
+      do i=-ngrow_tower,ngrow_tower
 
        do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
@@ -951,7 +970,7 @@ stop
        endif ! abs(i)<=1 abs(j)<=1 abs(k)<=1
       enddo
       enddo
-      enddo ! i,j,k (-ngrow_distance .. ngrow_distance)
+      enddo ! i,j,k (-ngrow_tower .. ngrow_tower)
      
       cos_angle=zero
       sin_angle=zero
@@ -1094,6 +1113,10 @@ stop
        !do nothing
       else
        failure_flag=1
+       print *,"initheightLS WARNING"
+       print *,"im,im_opp ",im,im_opp
+       print *,"nrmcenter ",nrmcenter
+       print *,"nfluid ",nfluid
       endif
 
        ! signside points towards im 
@@ -1101,6 +1124,11 @@ stop
        !do nothing
       else
        failure_flag=1
+       print *,"initheightLS WARNING"
+       print *,"im,im_opp ",im,im_opp
+       print *,"dircrit,signside ",dircrit,signside
+       print *,"nrmcenter ",nrmcenter
+       print *,"nfluid ",nfluid
       endif
 
       do dir2=1,SDIM
@@ -1223,14 +1251,14 @@ stop
        stop
       endif
 
-      lmin=-ngrow_distance
-      lmax=ngrow_distance
+      lmin=-ngrow_tower
+      lmax=ngrow_tower
 
       if (levelrz.eq.COORDSYS_RZ) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
-         if (2*lmin.gt.2*ngrow_distance+1) then
+         if (2*lmin.gt.2*ngrow_tower+1) then
           print *,"lmin too big: ",lmin
           stop
          endif
@@ -1295,7 +1323,7 @@ stop
         stop
        endif
  
-       do kheight=-ngrow_distance,ngrow_distance
+       do kheight=-ngrow_tower,ngrow_tower
 
         if (dircrit.eq.1) then
          icell=kheight
@@ -1395,7 +1423,7 @@ stop
        htfunc_LS, &
        htfunc_VOF, &
        xsten, &
-       nhalf_height, &
+       nhalf_height, & !nhalf_height=9
        itan,jtan, &
        curvHT_LS, &
        curvHT_VOF, &
@@ -1492,6 +1520,9 @@ stop
        !do nothing
       else if (mag3.eq.zero) then
        failure_flag=1
+       print *,"initheightLS WARNING"
+       print *,"nrmcenter=",nrmcenter
+       print *,"normal_im3 ",normal_im3
       else
        print *,"mag3 invalid: ",mag3
        stop
@@ -1970,6 +2001,8 @@ stop
        call prepare_normal(n_node1LS,mag,SDIM)
        if (mag.eq.zero) then
         failure_flag=1
+        print *,"initheightLS WARNING"
+        print *,"n_node1LS= ",n_node1LS
        else if (mag.gt.zero) then
         ! do nothing
        else
@@ -1979,6 +2012,8 @@ stop
        call prepare_normal(n_node2LS,mag,SDIM)
        if (mag.eq.zero) then
         failure_flag=1
+        print *,"initheightLS WARNING"
+        print *,"n_node2LS= ",n_node2LS
        else if (mag.gt.zero) then
         ! do nothing
        else
@@ -2175,7 +2210,7 @@ stop
        curvFD=zero
        curvHT_choice=zero
       else
-       print *,"failure_flag invalid"
+       print *,"failure_flag invalid ",failure_flag
        stop
       endif
 
@@ -3473,6 +3508,10 @@ stop
 
       IMPLICIT NONE
 
+      integer, parameter :: nhalf=3
+      integer, parameter :: nhalf_height=9 ! in: fort_curvstrip
+      integer, parameter :: ngrow_tower=4
+
       integer, INTENT(in) :: nhistory
 
       CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
@@ -3612,14 +3651,14 @@ stop
       real(amrex_real) velsten(-1:1,-1:1,-1:1,SDIM)
       real(amrex_real) mgoni_temp(-1:1,-1:1,-1:1,num_materials)
       real(amrex_real) lssten( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
         num_materials)
       real(amrex_real) vofsten( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
+        -ngrow_tower:ngrow_tower, &
         num_materials)
 
       real(amrex_real), dimension(:,:), allocatable :: xsten_curv
@@ -3627,9 +3666,6 @@ stop
       real(amrex_real) x1dcen,x1dside,x1dcross
       real(amrex_real) vol_sten
       integer side_index
-
-      integer, parameter :: nhalf=3
-      integer nhalf_height ! in: fort_curvstrip
 
       real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten0
 
@@ -3653,9 +3689,12 @@ stop
        print *,"ngrow_distance invalid in curvstrip: ",ngrow_distance
        stop
       endif 
- 
-      nhalf_height=2*ngrow_distance+1 
+      if (ngrow_tower.ne.4) then
+       print *,"ngrow_tower invalid in curvstrip: ",ngrow_tower
+       stop
+      endif 
 
+        !nhalf_height=9 
       allocate(xsten_curv(-nhalf_height:nhalf_height,SDIM))
  
       if (bfact.lt.1) then
@@ -3809,7 +3848,8 @@ stop
         if ((mask2.eq.1).or.(mask1.eq.0)) then
 
          call gridsten_level(xsten0,i,j,k,level,nhalf)
-         call gridsten_level(xsten_curv,i,j,k,level,nhalf_height)
+         call gridsten_level(xsten_curv,i,j,k,level, &
+                 nhalf_height) !nhalf_height=9
 
          ! center of cell
          do dirloc=1,SDIM
@@ -4180,8 +4220,8 @@ stop
              LSstenlo(3)=0
              LSstenhi(3)=0
              do dirloc=1,SDIM
-              LSstenlo(dirloc)=-ngrow_distance
-              LSstenhi(dirloc)=ngrow_distance
+              LSstenlo(dirloc)=-ngrow_tower
+              LSstenhi(dirloc)=ngrow_tower
              enddo
    
              do im_curv=1,num_materials
@@ -4303,7 +4343,7 @@ stop
 
              enddo ! im_curv=1..num_materials
 
-             ! i1,j1,k1=-ngrow_distance ... ngrow_distance
+             ! i1,j1,k1=-ngrow_tower ... ngrow_tower
              do k1=LSstenlo(3),LSstenhi(3)
              do j1=LSstenlo(2),LSstenhi(2)
              do i1=LSstenlo(1),LSstenhi(1)
@@ -4388,9 +4428,9 @@ stop
               !3x3x3xSDIM
               velsten, &
               mgoni_temp, &
-              ! -ngrow_distance:ngrow_distance ^{3} x num_materials
+              ! -ngrow_tower:ngrow_tower ^{3} x num_materials
               lssten, &
-              ! -ngrow_distance:ngrow_distance ^{3} x num_materials
+              ! -ngrow_tower:ngrow_tower ^{3} x num_materials
               vofsten, &
               !scalar (i,j,k)
               vol_sten, &
