@@ -311,8 +311,6 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
        print *,"levelrz invalid fort_sloperecon ",levelrz
        stop
@@ -381,8 +379,7 @@ stop
 
         if (dir.eq.1) then
          if (xsten_extended(-1,dir).le.-dx(1)*EPS2) then
-          if ((levelrz.eq.COORDSYS_RZ).or. &
-              (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+          if (levelrz.eq.COORDSYS_RZ) then
            ihalf=-nhalf_extend
            do while ((xsten_temp(ihalf,dir).le.-dx(1)*EPS2).and. &
                      (ihalf.lt.0))

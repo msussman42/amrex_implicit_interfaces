@@ -2365,10 +2365,8 @@ END SUBROUTINE SIMP
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in cellgrid"
+       print *,"rz_flag invalid in cellgrid ",rz_flag
        stop
       endif
 
@@ -4507,8 +4505,7 @@ END SUBROUTINE SIMP
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
@@ -4529,7 +4526,7 @@ END SUBROUTINE SIMP
         stop
        endif
       else 
-       print *,"levelrz invalid combine zones"
+       print *,"levelrz invalid combine zones ",levelrz
        stop
       endif
 
@@ -4593,10 +4590,8 @@ END SUBROUTINE SIMP
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else
-        print *,"levelrz invalid combine zones 3"
+        print *,"levelrz invalid combine zones 3 ",levelrz
         stop
        endif
 
@@ -7646,13 +7641,8 @@ END SUBROUTINE SIMP
          endif
          rr=xsten(0,1)
          gradu(3,3)=vel(D_DECL(i,j,k),velcomp)/abs(rr)
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         rr=xsten(0,1)
-         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
-           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
-         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
         else
-         print *,"levelrz invalid summass"
+         print *,"levelrz invalid summass ",levelrz
          stop
         endif
 
@@ -7731,10 +7721,8 @@ END SUBROUTINE SIMP
            stop
           endif
           volgrid=volgrid*two*Pi*xsten(0,1)
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          volgrid=volgrid*xsten(0,1)
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
          
@@ -10876,10 +10864,8 @@ END SUBROUTINE SIMP
             (xsten(0,1).le.EPS2*dx(1))) then
          local_macnew=zero
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop 
        endif
 
@@ -15158,8 +15144,7 @@ END SUBROUTINE SIMP
 
        do n=1,ncomp
         crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-        if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-            (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
         else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
@@ -15305,19 +15290,8 @@ END SUBROUTINE SIMP
           print *,"dir invalid"
           stop
          endif
-        else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-         if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
-          ! do nothing
-         else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.EPS2*dx(dir+1)) then
-           at_z_axis=1
-          endif
-         else
-          print *,"dir invalid"
-          stop
-         endif
         else
-         print *,"rzflag invalid"
+         print *,"rzflag invalid ",rzflag
          stop
         endif
         if ((local_area.gt.zero).or. &

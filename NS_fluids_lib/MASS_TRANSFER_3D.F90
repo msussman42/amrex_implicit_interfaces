@@ -254,8 +254,7 @@ stop
         ! r=rf-new du
         ! new du=rf-sqrt(rf^2-2 rf du) =2rf du/(rf+sqrt(rf^2-2 rf du))=
         ! du/(1/2+sqrt(1/4-du/(2rf))
-      if ((levelrz.eq.COORDSYS_RZ).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_RZ) then
        if (normdir.eq.0) then
         if (rval.le.zero) then
          du=zero
@@ -282,7 +281,7 @@ stop
       else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else 
-       print *,"levelrz invalid adjust du"
+       print *,"levelrz invalid adjust du ",levelrz
        stop
       endif
  
@@ -3131,10 +3130,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid node displace"
+       print *,"levelrz invalid node displace ",levelrz
        stop
       endif
        
@@ -3235,19 +3232,14 @@ stop
          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
              (levelrz.eq.COORDSYS_RZ)) then
           ! do nothing
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if (dir.eq.2) then
-           delta=delta/xstenND(0,1)
-          endif
          else
-          print *,"levelrz invalid node displace 2"
+          print *,"levelrz invalid node displace 2 ",levelrz
           stop
          endif
 
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (dir.eq.1) then
            if (abs(xstenND(0,dir)).le.EPS_8_4*dx(dir)) then
             delta=zero
@@ -3257,11 +3249,11 @@ stop
           else if ((dir.eq.2).or.(dir.eq.SDIM)) then
            ! do nothing
           else
-           print *,"dir invalid nodedisplace"
+           print *,"dir invalid nodedisplace ",dir
            stop
           endif 
          else
-          print *,"levelrz invalid node displace 3"
+          print *,"levelrz invalid node displace 3 ",levelrz
           stop
          endif
 
@@ -8583,41 +8575,8 @@ stop
                     print *,"dimension bust"
                     stop
                    endif
-                  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                   if (mag.gt.zero) then
-                    do dir=1,SDIM
-                     theta_nrmCP(dir)=nrmCP(dir)
-                    enddo
-                    RR=xsten(0,1)
-                    call prepare_normal(theta_nrmCP,mag,SDIM)
-                    if (mag.gt.zero) then
-                     ! mag=theta_nrmCP dot nrmCP
-                     mag=zero
-                     do dir=1,SDIM
-                      mag=mag+theta_nrmCP(dir)*nrmCP(dir)
-                     enddo
-                     if (abs(mag).gt.one+EPS_8_4) then
-                      print *,"dot product bust: ",mag
-                      stop
-                     endif
-                     if (abs(mag).gt.zero) then
-                      dxprobe_source=dxprobe_source*abs(mag)
-                      dxprobe_dest=dxprobe_dest*abs(mag)
-                     endif
-                    else if (mag.eq.zero) then
-                     ! do nothing
-                    else
-                     print *,"mag bust"
-                     stop
-                    endif 
-                   else if (mag.eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"mag bust"
-                    stop
-                   endif 
                   else
-                   print *,"levelrz invalid rate mass change"
+                   print *,"levelrz invalid rate mass change ",levelrz
                    stop
                   endif
 

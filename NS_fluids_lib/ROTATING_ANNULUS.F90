@@ -120,13 +120,10 @@ do dir=1,SDIM
  endif
 enddo
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- !do nothing
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
+if (levelrz.eq.COORDSYS_CARTESIAN) then
  !do nothing
 else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
+ print *,"expecting levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -220,13 +217,10 @@ else
  stop
 endif
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
+if (levelrz.eq.COORDSYS_CARTESIAN) then
  radial_dir=2
 else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
+ print *,"expecting levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -466,13 +460,10 @@ do local_dir=1,SDIM
 enddo
 xwall_vec(dir)=xwall
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
+if (levelrz.eq.COORDSYS_CARTESIAN) then
  radial_dir=2
 else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
+ print *,"expecting levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -586,15 +577,11 @@ else
  stop
 endif
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
- azimuthal_dir=2
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
+if (levelrz.eq.COORDSYS_CARTESIAN) then
  radial_dir=2
  azimuthal_dir=1
 else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
+ print *,"expecting levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -687,13 +674,10 @@ real(amrex_real), INTENT(out) :: T0
  endif
 
  T0=fort_tempconst(im)
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  T0=T0+dT_dr*x(1)
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   T0=T0+dT_dr*x(2)
  else
-  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
-  print *,"levelrz=COORDSYS_CARTESIAN "
+  print *,"expecting levelrz=COORDSYS_CARTESIAN "
   stop
  endif
  T0=T0+dT_dz*x(SDIM)
@@ -740,13 +724,10 @@ real(amrex_real) :: dV_dz
  dV_dz=dT_dr*abs(gravity_vector(SDIM)*fort_DrhoDT(1))/ &
              (two*fort_angular_velocity_vector(3))
 
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  V0(2)=dV_dz*x(SDIM)
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   V0(1)=-dV_dz*x(SDIM)
  else
-  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
-  print *,"levelrz=COORDSYS_CARTESIAN "
+  print *,"expecting levelrz=COORDSYS_CARTESIAN "
   stop
  endif
 
