@@ -2328,6 +2328,7 @@ stop
       integer material_processed(num_materials)
       integer, parameter :: caller_id=4
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_ignore=TESSELLATE_IGNORE_ISRIGID
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -2419,10 +2420,14 @@ stop
         ! xsten(0,dir)  dir=1..sdim  is center of cell
         ! xsten(1,dir)  is right coordinate in dir direction
         ! xsten(-1,dir) is left coordinate in dir direction.
-        call CISBOX(xsten,nhalf, &
-         xlo,dx,i,j,k, &
-         bfact,level, &
-         volcell,cencell,SDIM)   
+        ! CISBOX is declared in MOF.F90
+        call CISBOX(
+         xsten, & !intent(out)
+         nhalf, & !intent(in)
+         xlo,dx,i,j,k, & !intent(in)
+         bfact,level, & !intent(in)
+         volcell,cencell, & !intent(out)
+         SDIM)   
         
         do im=1,num_materials*ngeom_recon
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
@@ -2475,6 +2480,18 @@ stop
            mofdatavalid, &
            SDIM)
 
+         call multi_get_volume_tessellate( &
+          tid, &
+          tessellate_source, & !TESSELLATE_FLUIDS 
+          tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+          bfact,dx, &
+          xsten,nhalf, &
+          mofdatavalid, & !intent(inout)
+          geom_xtetlist_uncapt(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          SDIM)
+         
          shapeflag=0
 
           ! in: fort_cellfaceinit
@@ -2482,8 +2499,8 @@ stop
           caller_id, &
           tid, &
           EPS2, &
-          tessellate_source, & !TESSELLATE_FLUIDS 
-          tessellate, & !TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+          tessellate_ignore, & !TESSELLATE_IGNORE_ISRIGID
+          tessellate_ignore, & !TESSELLATE_IGNORE_ISRIGID
           bfact,dx, &
           xsten,nhalf, &
           mofdatavalid, & !fluids tessellate, solids embedded.
@@ -2502,6 +2519,7 @@ stop
           is_processed(iten)=0
          enddo
 
+FIX ME
          do im=1,num_materials
           total_facearea_mat(im)=zero
          enddo
@@ -4308,6 +4326,11 @@ stop
                 ! do nothing
                else
                 donate_flag=0
+                print *,"fort_curvstrip WARNING "
+                print *,"im_curv ",im_curv
+                print *,"critsign ",critsign
+                print *,"nrm_mat ",nrm_mat
+                print *,"nrmFD ",nrmFD
                endif
 
               else if ((im_curv.ne.im_main).and. &
@@ -4328,6 +4351,10 @@ stop
                if ((im_curv.eq.im_main).or. &
                    (im_curv.eq.im_main_opp)) then
                 donate_flag=0
+                print *,"fort_curvstrip WARNING "
+                print *,"im_curv ",im_curv
+                print *,"nrm_mat ",nrm_mat
+                print *,"nrmFD ",nrmFD
                endif
               else if (mag.gt.zero) then
                !do nothing
@@ -4452,7 +4479,7 @@ stop
               curv_cellHT=zero
               curv_cellFD=zero
              else
-              print *,"donate_flag invalid"
+              print *,"donate_flag invalid ",donate_flag
               stop
              endif
 

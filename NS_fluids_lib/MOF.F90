@@ -21489,7 +21489,7 @@ contains
        tessellate_dest, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
        bfact,dx, &
        xsten0,nhalf0, &
-       mofdata, &
+       mofdata, & !intent(inout)
        xtetlist, &
        nlist_alloc, &
        nmax, &
