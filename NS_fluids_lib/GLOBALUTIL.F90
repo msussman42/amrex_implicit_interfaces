@@ -7437,7 +7437,7 @@ end subroutine print_visual_descriptor
         htfunc_LS, & !intent(in)
         htfunc_VOF, & !intent(in)
         xsten, &
-        nhalf, &
+        nhalf_height, & !nhalf_height=9
         itan,jtan, &
         curvHT_LS, & !intent(out)
         curvHT_VOF, & !intent(out)
@@ -7455,8 +7455,8 @@ end subroutine print_visual_descriptor
       integer, INTENT(in) :: vof_height_function
       real(amrex_real), INTENT(in) :: htfunc_LS(-1:1,-1:1)
       real(amrex_real), INTENT(in) :: htfunc_VOF(-1:1,-1:1)
-      integer, INTENT(in) :: nhalf
-      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      integer, INTENT(in) :: nhalf_height !nhalf_height=9
+      real(amrex_real), INTENT(in) :: xsten(-nhalf_height:nhalf_height,SDIM)
       integer, INTENT(in) :: itan,jtan
       integer, INTENT(in) :: normal_dir
       real(amrex_real), INTENT(out) :: curvHT_LS
@@ -7493,10 +7493,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) hprime_of_r,hdprime_of_r
       integer dir2
 
-      if (nhalf.eq.2*ngrow_distance+1) then
+      if (ngrow_distance.lt.4) then
+       print *,"expecting ngrow_distance>=4(analyze_heights) ",ngrow_distance
+       stop
+      endif
+
+      if (nhalf_height.eq.9) then
        ! do nothing
       else
-       print *,"nhalf invalid"
+       print *,"expecting nhalf_height=9(analyze_heights) ",nhalf_height
        stop
       endif
       if ((n1d.eq.-one).or.(n1d.eq.one)) then
@@ -7849,7 +7854,7 @@ end subroutine print_visual_descriptor
        else if (vof_height_function.eq.0) then
         ! do nothing
        else
-        print *,"vof_height_function invalid"
+        print *,"vof_height_function invalid ",vof_height_function
         stop
        endif
    

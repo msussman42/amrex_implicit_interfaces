@@ -12856,21 +12856,24 @@ contains
 
       IMPLICIT NONE
 
+      integer, parameter :: nhalf_height=9
+      integer, parameter :: ngrow_tower=4
+
       integer, INTENT(in) :: vof_height_function
       integer, INTENT(out) :: crossing_status
       integer, INTENT(in) :: sdim
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0( &
-        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+        -nhalf_height:nhalf_height, &
         sdim)
       real(amrex_real), INTENT(in) :: dx_col(sdim)
       real(amrex_real), INTENT(in) :: x_col(sdim)
       real(amrex_real), INTENT(in) :: x_col_avg(sdim)
       real(amrex_real), INTENT(in) :: lsdata( &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_tower:ngrow_tower)
       real(amrex_real), INTENT(in) :: vofdata( &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_tower:ngrow_tower)
       real(amrex_real), INTENT(out) :: ht_from_LS
       real(amrex_real), INTENT(out) :: ht_from_VOF
       real(amrex_real), INTENT(in) :: n1d
@@ -12888,13 +12891,22 @@ contains
       real(amrex_real) X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
       real(amrex_real) ls1,ls2,x1,x2,slope
-      real(amrex_real) charfn(-ngrow_distance:ngrow_distance)
+      real(amrex_real) charfn(-ngrow_tower:ngrow_tower)
       real(amrex_real) LS
       real(amrex_real) vof_top_sum,vof_bot_sum
       real(amrex_real) dr,dz
       real(amrex_real) volcell
       real(amrex_real) vof_crit
       real(amrex_real) dx_norm,dx_tan1,dx_tan2
+
+      if (ngrow_tower.ne.4) then
+       print *,"expecting ngrow_tower=4 ",ngrow_tower
+       stop
+      endif
+      if (nhalf_height.ne.9) then
+       print *,"expecting nhalf_height=9 ",nhalf_height
+       stop
+      endif
 
       if (ngrow_distance.lt.4) then
        print *,"ngrow_distance invalid: ",ngrow_distance
@@ -12954,13 +12966,13 @@ contains
        stop
       endif
 
-      lmin=-ngrow_distance
-      lmax=ngrow_distance
+      lmin=-ngrow_tower
+      lmax=ngrow_tower
       if (levelrz.eq.COORDSYS_RZ) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
-         if ((2*lmin.gt.2*ngrow_distance+1).or. &
+         if ((2*lmin.gt.2*ngrow_tower+1).or. &
              (lmin.gt.lmax)) then
           print *,"lmin too big"
           stop
@@ -13017,7 +13029,7 @@ contains
 
        ! n1d>0 if LS>0 material on top and LS<0 material on bottom.
        ! n1d<0 otherwise
-      do l=0,ngrow_make_distance
+      do l=0,ngrow_tower-1
 
         ! first check upper half of stencil for a crossing
        if ((crossing_status.eq.0).and.(l+1.le.lmax)) then 
@@ -13122,7 +13134,7 @@ contains
         stop
        endif
 
-      enddo ! l=0,ngrow_make_distance
+      enddo ! l=0,ngrow_tower-1
 
          ! given volume for column, find the interface.
          ! for RZ, if dircrit=1, then column extends to r=0
