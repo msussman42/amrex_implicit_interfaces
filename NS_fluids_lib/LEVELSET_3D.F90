@@ -19046,9 +19046,11 @@ stop
          F_stencil_array(-1:1,-1:1,-1:1,num_materials)
       real(amrex_real),intent(inout) :: &
          mofnew(num_materials*ngeom_recon)
-      real(amrex_real),intent(in) :: primary_floatsam_tol
-      real(amrex_real),intent(in) :: secondary_floatsam_tol
+      real(amrex_real),intent(in) :: primary_flotsam_tol
+      real(amrex_real),intent(in) :: secondary_flotsam_tol
       integer istenlo(3),istenhi(3)
+      integer dir,im,vofcomp,truncate_low,truncate_high
+      integer i1,j1,k1
 
       istenlo(3)=0
       istenhi(3)=0
@@ -19067,6 +19069,7 @@ stop
          truncate_high=1
          if (F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
           truncate_low=0
+         endif
          if (one-F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
           truncate_high=0
          endif
@@ -19091,11 +19094,16 @@ stop
            enddo
            enddo
           else
-           print *,"secondary_flotsam invalid"
+           print *,"secondary_flotsam_tol invalid ",secondary_flotsam_tol
            stop
           endif 
+         else if ((truncate_low.eq.1).or.(truncate_high.eq.1)) then
+          !do nothing
+         else
+          print *,"truncate_low or truncate_high invalid"
+          stop
          endif
-         if ((truncate_low.eq.1).and.(truncate_new.eq.1)) then
+         if ((truncate_low.eq.1).and.(truncate_high.eq.1)) then
           print *,"cannot truncate both high and low"
           stop
          endif
@@ -19113,7 +19121,7 @@ stop
          endif
  
         else
-         print *,"primary_flotsam invalid"
+         print *,"primary_flotsam_tol invalid ",primary_flotsam_tol
          stop
         endif 
 
@@ -19598,7 +19606,7 @@ stop
         do i1=istenlo(1),istenhi(1)
          do im=1,num_materials
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil_array(i1,j1,k1)= &
+          F_stencil_array(i1,j1,k1,im)= &
             state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
          enddo
         enddo
