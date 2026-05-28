@@ -4019,12 +4019,14 @@ stop
       integer, INTENT(in) ::  DIMDEC(source_fab)
       integer, INTENT(in) ::  DIMDEC(typefab)
 
-      real(amrex_real), INTENT(in),target :: source_fab(DIMV(source_fab),ncomp_source)
+      real(amrex_real), INTENT(in),target :: &
+        source_fab(DIMV(source_fab),ncomp_source)
       real(amrex_real), pointer :: source_fab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out),target :: typefab(DIMV(typefab))
       real(amrex_real), pointer :: typefab_ptr(D_DECL(:,:,:))
 
       integer i,j,k,im,base_type
+      real(amrex_real) :: LS(num_materials)
 
 
       if (bfact.lt.1) then
@@ -4035,30 +4037,30 @@ stop
        if (ncomp_source.eq.num_materials*(1+SDIM)) then
         ! do nothing
        else
-        print *,"ncomp_source invalid"
+        print *,"ncomp_source invalid ",ncomp_source
         stop
        endif
        if (ncomp_type.eq.num_materials) then
         ! do nothing
        else
-        print *,"ncomp_type invalid"
+        print *,"ncomp_type invalid ",ncomp_type
         stop
        endif
       else if (zero_diag_flag.eq.1) then
        if (ncomp_source.eq.1) then
         ! do nothing
        else
-        print *,"ncomp_source invalid"
+        print *,"ncomp_source invalid ",ncomp_source
         stop
        endif
        if (ncomp_type.eq.2) then
         ! do nothing
        else
-        print *,"ncomp_type invalid"
+        print *,"ncomp_type invalid ",ncomp_type
         stop
        endif
       else
-       print *,"zero_diag_flag invalid"
+       print *,"zero_diag_flag invalid ",zero_diag_flag
        stop
       endif
 
@@ -4074,30 +4076,14 @@ stop
 
        if (zero_diag_flag.eq.0) then
 
-        base_type=1
-        do im=2,num_materials
-         if (source_fab(D_DECL(i,j,k),im).gt. &
-             source_fab(D_DECL(i,j,k),base_type)) then
-          base_type=im
-         endif
-        enddo
-
         do im=1,num_materials
-         if (is_rigid(im).eq.1) then
-          if (source_fab(D_DECL(i,j,k),im).ge.zero) then
-           base_type=im
-          endif
-         else if (is_rigid(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid LEVELSET_3D.F90"
-          stop
-         endif
-        enddo ! im=1..num_materials
+         LS(im)=source_fab(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(dx,LS,base_type)
 
         typefab(D_DECL(i,j,k))=base_type
         if ((base_type.gt.num_materials).or.(base_type.lt.1)) then
-         print *,"base_type invalid"
+         print *,"base_type invalid ",base_type
          stop
         else
          type_flag(base_type)=1
@@ -4117,7 +4103,7 @@ stop
         type_flag(base_type)=1
 
        else
-        print *,"zero_diag_flag invalid"
+        print *,"zero_diag_flag invalid ",zero_diag_flag
         stop
        endif
 
@@ -19050,6 +19036,99 @@ stop
       return
       end subroutine fort_buildfacewt
 
+      subroutine remove_flotsam( &
+       F_stencil_array, &
+       mofnew, &
+       primary_flotsam_tol, &
+       secondary_flotsam_tol)
+      use global_utility_module
+      real(amrex_real),intent(in) :: &
+         F_stencil_array(-1:1,-1:1,-1:1,num_materials)
+      real(amrex_real),intent(inout) :: &
+         mofnew(num_materials*ngeom_recon)
+      real(amrex_real),intent(in) :: primary_floatsam_tol
+      real(amrex_real),intent(in) :: secondary_floatsam_tol
+      integer istenlo(3),istenhi(3)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=-1
+       istenhi(dir)=1
+      enddo
+
+      do im=1,num_materials
+       if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
+        vofcomp=(im-1)*ngeom_recon+1
+        if (primary_flotsam_tol.eq.zero) then
+         !do nothing
+        else if (primary_flotsam_tol.gt.zero) then
+         truncate_low=1
+         truncate_high=1
+         if (F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
+          truncate_low=0
+         if (one-F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
+          truncate_high=0
+         endif
+         if ((truncate_low.eq.0).and.(truncate_high.eq.0)) then
+          if (secondary_flotsam_tol.eq.zero) then
+           !do nothing
+          else if (secondary_flotsam_tol.gt.zero) then
+           truncate_low=1
+           truncate_high=1
+            ! -1,0,+1
+           do k1=istenlo(3),istenhi(3)
+           do j1=istenlo(2),istenhi(2)
+           do i1=istenlo(1),istenhi(1)
+            if (F_stencil_array(i1,j1,k1,im).gt.secondary_flotsam_tol) then
+             truncate_low=0
+            endif
+            if (one-F_stencil_array(i1,j1,k1,im).gt. &
+                secondary_flotsam_tol) then
+             truncate_high=0
+            endif
+           enddo
+           enddo
+           enddo
+          else
+           print *,"secondary_flotsam invalid"
+           stop
+          endif 
+         endif
+         if ((truncate_low.eq.1).and.(truncate_new.eq.1)) then
+          print *,"cannot truncate both high and low"
+          stop
+         endif
+         if (truncate_low.eq.1) then
+          mofnew(vofcomp)=zero
+          do dir=1,SDIM
+           mofnew(vofcomp+dir)=zero
+          enddo
+         endif
+         if (truncate_high.eq.1) then
+          mofnew(vofcomp)=one
+          do dir=1,SDIM
+           mofnew(vofcomp+dir)=zero
+          enddo
+         endif
+ 
+        else
+         print *,"primary_flotsam invalid"
+         stop
+        endif 
+
+       else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
+        !do nothing
+       else
+        print *,"im,is_rigid(im) invalid ",im,is_rigid(im)
+        print *,"or im,is_elastic(im) invalid ",im,is_elastic(im)
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      return
+      end subroutine remove_flotsam
+
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
        ! called from: NavierStokes::prescribe_solid_geometry
        !   (declared in NavierStokes2.cpp)
@@ -19084,7 +19163,9 @@ stop
        num_LS_extrap, &
        num_LS_extrap_iter, &
        LS_extrap_iter, &
-       constant_density_all_time) &
+       constant_density_all_time, &
+       primary_flotsam_tol, &
+       secondary_flotsam_tol) &
       bind(c,name='fort_renormalize_prescribe')
       use global_utility_module
       use global_distance_module
@@ -19105,6 +19186,9 @@ stop
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       real(amrex_real), INTENT(in) :: solid_time
+
+      real(amrex_real), INTENT(in) :: primary_flotsam_tol
+      real(amrex_real), INTENT(in) :: secondary_flotsam_tol
 
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       real(amrex_real), INTENT(in), target :: dx(SDIM)
@@ -19196,11 +19280,11 @@ stop
 
       real(amrex_real) mofnew(num_materials*ngeom_recon)
       integer istenlo(3),istenhi(3)
-      integer LSstenlo(3),LSstenhi(3)
       integer local_maskcov
       real(amrex_real) vfrac_solid_new(num_materials)
       real(amrex_real) F_stencil
       real(amrex_real) F_stencil_sum
+      real(amrex_real) F_stencil_array(-1:1,-1:1,-1:1,num_materials)
       integer statecomp
       integer statecomp_solid
       integer istate
@@ -19488,13 +19572,6 @@ stop
        istenhi(dir)=1
       enddo
 
-      LSstenlo(3)=0
-      LSstenhi(3)=0
-      do dir=1,SDIM
-       LSstenlo(dir)=-1
-       LSstenhi(dir)=1
-      enddo
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       do k=growlo(3),growhi(3)
@@ -19514,6 +19591,19 @@ stop
        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
 
        if (local_maskcov.eq.1) then
+
+         ! -1,0,+1
+        do k1=istenlo(3),istenhi(3)
+        do j1=istenlo(2),istenhi(2)
+        do i1=istenlo(1),istenhi(1)
+         do im=1,num_materials
+          vofcompraw=(im-1)*ngeom_raw+1
+          F_stencil_array(i1,j1,k1)= &
+            state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
+         enddo
+        enddo
+        enddo
+        enddo
 
         ! --------------------------------------------------------- 
         ! first: fluid state variable extrapolation into empty cells.
@@ -19547,7 +19637,7 @@ stop
           endif
 
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
+          F_stencil=F_stencil_array(0,0,0,im)
 
           if (is_rigid(im).eq.1) then
            if (constant_density_all_time(im).eq.1) then
@@ -19589,7 +19679,7 @@ stop
            do j1=istenlo(2),istenhi(2)
            do i1=istenlo(1),istenhi(1)
 
-            F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
+            F_stencil=F_stencil_array(i1,j1,k1,im)
 
             if ((F_stencil.ge.-EPS1).and. &
                 (F_stencil.le.VOFTOL_MATERIAL)) then
@@ -20342,9 +20432,9 @@ stop
              ! at (i,j,k) depends on the fluid levelset function values
              ! in the (i+i1,j+j1,k+k1) node stencil.
              ! -1,0,1
-           do k1=LSstenlo(3),LSstenhi(3)
-           do j1=LSstenlo(2),LSstenhi(2)
-           do i1=LSstenlo(1),LSstenhi(1)
+           do k1=istenlo(3),istenhi(3)
+           do j1=istenlo(2),istenhi(2)
+           do i1=istenlo(1),istenhi(1)
 
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
@@ -20781,6 +20871,12 @@ stop
           stop
          endif
 
+         call remove_flotsam( &
+          F_stencil_array, &
+          mofnew, &
+          primary_flotsam_tol, &
+          secondary_flotsam_tol)
+
           ! sum of F_fluid=1
           ! sum of F_rigid<=1
          call make_vfrac_sum_ok_base( &
@@ -20800,6 +20896,12 @@ stop
          if (1.eq.0) then
           print *,"i,j,k ",i,j,k
          endif
+
+         call remove_flotsam( &
+          F_stencil_array, &
+          mofnew, &
+          primary_flotsam_tol, &
+          secondary_flotsam_tol)
 
          call make_vfrac_sum_ok_base( &
            xsten,nhalf, &

@@ -2320,6 +2320,9 @@ protected:
     static Real visc_abs_tol;
     static Real thermal_abs_tol;
 
+    static Real primary_flotsam_tol; //def=0.0
+    static Real secondary_flotsam_tol; //def=0.0
+
     static int  multilevel_maxcycle;
     static int  multilevel_restart_period;
     static int  initial_project_cycles;
