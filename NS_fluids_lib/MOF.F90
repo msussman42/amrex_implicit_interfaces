@@ -21601,7 +21601,7 @@ contains
       call multi_get_volume_grid( &
        caller_id, &
        tid_in, &
-       EPS_FULL_WEAK, & ! tolerance for "single material" criterion
+       EPS_UNCAPTURED, & ! tolerance for "single material" criterion
        tessellate_source, & !=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
        tessellate_dest, & ! =TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
        bfact,dx, &

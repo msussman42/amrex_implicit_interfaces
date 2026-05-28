@@ -7769,7 +7769,6 @@ stop
       real(amrex_real), target :: xsrc_micro(SDIM)
       real(amrex_real), target :: xdst_micro(SDIM)
       real(amrex_real) nrmCP(SDIM)  ! closest point normal
-      real(amrex_real) theta_nrmCP(SDIM)
       real(amrex_real), target :: LSINT(num_materials*(SDIM+1))
       real(amrex_real) LShere(num_materials)
       real(amrex_real) :: test_k_source,test_k_dest
@@ -7801,7 +7800,7 @@ stop
       real(amrex_real) LSSIGN,SIGNVEL
       integer found_path
       integer, target :: debugrate
-      real(amrex_real) RR,mag
+      real(amrex_real) mag
       integer for_estdt
       integer local_mask
       integer microlayer_substrate_source
