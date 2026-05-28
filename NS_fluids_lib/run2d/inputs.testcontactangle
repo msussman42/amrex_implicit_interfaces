@@ -54,6 +54,9 @@ amr.n_cell    = 192 96
 amr.max_level =  0
 ns.ns_tiling=false
 
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
+
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=3
 ns.initial_project_cycles=3
