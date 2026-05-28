@@ -94,6 +94,9 @@ ns.post_init_pressure_solve=1
 # FSI_ICE_PROBF90=3 ice
 ns.FSI_flag=0 0 1
 
+ns.primary_flotsam_tol=1.0e-7
+ns.secondary_flotsam_tol=0.1
+
 # multigrid class
 mg.verbose = 0
 cg.verbose = 0
