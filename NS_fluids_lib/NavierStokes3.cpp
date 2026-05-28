@@ -6204,8 +6204,11 @@ NavierStokes::ColorSum(
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
    //TESSELLATE_ALL|ALL_RASTER
+   //makeFaceFrac declared in: NavierStokes.cpp
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
+   //ProcessFaceFrac declared in: NavierStokes.cpp
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
+   //makeCellFrac declared in: NavierStokes.cpp
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
   // do nothing
