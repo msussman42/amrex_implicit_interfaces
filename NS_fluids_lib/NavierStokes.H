@@ -226,6 +226,8 @@ public:
 
     void writeInterfaceReconstruction();
     void writeTECPLOT_File(int do_plot,int do_slice);
+
+      //tecplot_debug is declared in: NavierStokes2.cpp
     void tecplot_debug(FArrayBox& fabdata,
       const Real* xlo,const int* fablo,const int* fabhi,
       const Real* dx,int dir,int id,int comp,int ncomp,

@@ -27475,6 +27475,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 			 
 } // end subroutine build_NRM_FD_MF
 
+//makeStateDist is called by: NavierStokes::sub_makeStateDistALL
 void
 NavierStokes::makeStateDist(int tessellate) {
 
@@ -27854,6 +27855,18 @@ NavierStokes::build_elastic_fluid_moment() {
     &bfact,
     xlo,dx,
     &cur_time_slab);
+
+  if (1==0) {
+   int dirplot=-1;
+   int id=0;
+   int scomp=0;
+   int ncomp=num_materials*ngeom_recon;
+   int interior_only=1;
+   std::cout << "output: localMF[ELASTIC_FLUID_MOMENT_MF]\n";
+   tecplot_debug(old_vof_fab,xlo,fablo,fabhi,dx,dirplot,id,scomp,ncomp,
+		 interior_only);
+  }
+
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_BUILDELASTICFLUID,"build_elastic_fluid_moment");
@@ -27940,6 +27953,7 @@ NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
    int interior_only=1;
    int local_id=0;
    int ncomp=num_materials*(1+AMREX_SPACEDIM);
+   std::cout << "output: build_elastic_fluid_ls\n";
    tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,local_id,0,ncomp,interior_only); 
   }
 
@@ -27964,6 +27978,24 @@ NavierStokes::save_elastic_LS() {
  delete_localMF_if_exist(ELASTIC_FLUID_LEVELSET_MF,1); 
  getStateDist_localMF(ELASTIC_FLUID_LEVELSET_MF,ngrow_distance,cur_time_slab,
 		local_caller_string);
+
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=1;
+  FArrayBox& elastic_ls_fab=(*localMF[ELASTIC_FLUID_LEVELSET_MF])[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=0;
+  int dirplot=-1;
+  int id=0;
+  std::cout << "output: localMF[ELASTIC_FLUID_LEVELSET_MF]\n";
+  tecplot_debug(elastic_ls_fab,xlo,fablo,fabhi,dxplot,dirplot,id,
+     scomp,num_materials*(1+AMREX_SPACEDIM),interior_only);
+ }
+
 
 } // end subroutine save_elastic_LS()
 
