@@ -7453,6 +7453,8 @@ NavierStokes::ColorSumALL(
   // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
   // updates one ghost cell of TYPE_MF
   // fluid(s) and solid(s) tessellate the domain.
+  // zero_diag_flag=0 => color by material
+  // zero_diag_flag=1 => color by masked cells
   int zero_diag_flag=0;
   TypeALL(idx_type,type_flag,zero_diag_flag);
 
@@ -8206,7 +8208,7 @@ NavierStokes::ColorSumALL(
 
 } // end subroutine ColorSumALL
 
-
+//called from: NavierStokes::TypeALL
 void
 NavierStokes::Type_level(
   MultiFab* typemf,Vector<int>& type_flag,
@@ -8292,7 +8294,7 @@ NavierStokes::Type_level(
    // updates one ghost cell.
    // declared in: LEVELSET_3D.F90
    //  for each cell,
-   //   if is_rigid(im)==1 and LS>=0 then type=im
+   //   calls "get_primary_material"
   fort_gettypefab(
    source_fab.dataPtr(),
    ARLIM(source_fab.loVect()),ARLIM(source_fab.hiVect()),
@@ -8333,6 +8335,9 @@ NavierStokes::Type_level(
 
 // zero_diag_flag=0 => color by material
 // zero_diag_flag=1 => color by masked cells
+// TypeALL called from:
+//   NavierStokes::multiphase_project
+//   NavierStokes::ColorSumALL
 void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
 		int zero_diag_flag) {
 
@@ -8370,7 +8375,7 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
      type_flag[im] << ' ' << '\n';
    std::cout << "TypeALL color_counter= " << color_counter << '\n'; 
   }
-} // subroutine TypeALL
+} // end subroutine TypeALL
 
 void NavierStokes::remove_pressure_work_vars() {
 

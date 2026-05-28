@@ -251,7 +251,9 @@ namespace amrex{
        int* num_LS_extrap,
        int* num_LS_extrap_iter,
        int* LS_extrap_iter,
-       int* constant_density_all_time);
+       int* constant_density_all_time,
+       Real* primary_flotsam_tol,
+       Real* secondary_flotsam_tol);
 
 
      void fort_purgeflotsam(

@@ -6888,7 +6888,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       LS_extrap_iter++) {
 
   if ((num_LS_extrap[0]==0)&&(LS_extrap_iter>=1)) {
-	  // do nothing
+   // do nothing
   } else if ((num_LS_extrap[0]>=1)||(LS_extrap_iter==0)) {
 
    for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -7009,7 +7009,9 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       &num_LS_extrap[tid_current],
       &num_LS_extrap_iter,
       &LS_extrap_iter,
-      constant_density_all_time.dataPtr());
+      constant_density_all_time.dataPtr(),
+      &primary_flotsam_tol,
+      &secondary_flotsam_tol);
 
    }  // mfi
 } // omp

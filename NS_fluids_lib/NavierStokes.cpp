@@ -1040,6 +1040,9 @@ int NavierStokes::multilevel_restart_period=20000;
 Real NavierStokes::minimum_relative_error = CPP_EPS_11_5;
 Real NavierStokes::diffusion_minimum_relative_error = CPP_EPS_11_5;
 
+Real NavierStokes::primary_flotsam_tol=0.0;
+Real NavierStokes::secondary_flotsam_tol=0.0;
+
 Real NavierStokes::save_atol_b=CPP_EPS_14_6;
 Real NavierStokes::save_mac_abs_tol=CPP_EPS_10_5;
 Real NavierStokes::save_min_rel_error=CPP_EPS_11_5;
@@ -5487,6 +5490,9 @@ NavierStokes::read_params ()
     if (thermal_abs_tol<=0.0)
      amrex::Error("thermal_abs_tol must be positive");
 
+    pp.queryAdd("primary_flotsam_tol",primary_flotsam_tol);
+    pp.queryAdd("secondary_flotsam_tol",secondary_flotsam_tol);
+
     extra_circle_parameters(
        xblob2,yblob2,zblob2,radblob2,
        xblob3,yblob3,zblob3,radblob3,
@@ -6380,6 +6386,9 @@ NavierStokes::read_params ()
       std::cout << "cg.maxiter " << 
 	     cg_maxiter << '\n';
      }
+
+     std::cout << "primary_flotsam_tol " << primary_flotsam_tol << '\n';
+     std::cout << "secondary_flotsam_tol " << secondary_flotsam_tol << '\n';
 
      std::cout << "mac.mac_abs_tol " <<mac_abs_tol<< '\n';
      std::cout << "mac.visc_abs_tol " <<visc_abs_tol<< '\n';
