@@ -17665,7 +17665,7 @@ contains
        enddo !im=1,num_materials
 
        if (abs(uncaptured_volume_START-volcell_compare).le. &
-           EPS2*uncaptured_volume_START) then
+           EPS2*volcell) then
         !do nothing
        else
         print *,"tessellate_source ",tessellate_source
@@ -17682,6 +17682,8 @@ contains
         print *,"volcell_compare= ",volcell_compare
         print *,"relative error: ", &
           (uncaptured_volume_START-volcell_compare)/uncaptured_volume_START
+        print *,"relative error using volcell: ", &
+          (uncaptured_volume_START-volcell_compare)/volcell
         stop
        endif
       endif
