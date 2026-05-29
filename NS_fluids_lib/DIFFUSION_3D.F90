@@ -306,9 +306,7 @@ stop
        real(amrex_real) V_BASE(SDIM)
        real(amrex_real) cell_density_denom
        real(amrex_real) Fsolid
-       real(amrex_real) vt_over_r,ut_over_r
        real(amrex_real) param1,param2,hoop_force_coef
-       integer ut_comp
        integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
        integer im_rigid_CL

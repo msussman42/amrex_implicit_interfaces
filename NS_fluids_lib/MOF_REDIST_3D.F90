@@ -3720,7 +3720,6 @@ stop
       real(amrex_real) vcenter_thin(num_materials)
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) mofdatavalid(num_materials*ngeom_recon)
-      real(amrex_real) mofdataproject(num_materials*ngeom_recon)
       real(amrex_real) localface(num_materials,SDIM,2)
       real(amrex_real) totalface(SDIM,2)
 
@@ -3898,7 +3897,6 @@ stop
 
         else if (im_crit.eq.0) then
 
-          !EPS_FULL_WEAK=EPS2
          call multi_get_volume_tessellate( &
           tid, &
           tessellate_source, & !TESSELLATE_FLUIDS
@@ -3928,7 +3926,7 @@ stop
           else if (side.eq.2) then
            xsten_thin(-1,dir)=xsten(1,dir)-dxthin
           else
-           print *,"side invalid"
+           print *,"side invalid ",side
            stop
           endif
           xsten_thin(0,dir)=half*(xsten_thin(-1,dir)+xsten_thin(1,dir))
@@ -3936,26 +3934,18 @@ stop
            ! xsten_thin box: xsten_thin(0,dir) = center of thin box
            ! xsten_thin(1,dir) right side in dir direction
            ! xsten_thin(-1,dir) left side
-           ! multi_cen(SDIM,num_materials) is "absolute" 
-          call project_slopes_to_face( &
-           bfact,dx,xsten,nhalf, &
-           mofdatavalid, &
-           mofdataproject, &
-           SDIM,dir,side)
-
            ! base case (also area fractions)
            ! multi_cen in absolute coordinate system (not relative to cell
            ! centroid)
            ! in: fort_faceinit
-           ! EPS_FULL_WEAK=EPS2
           call multi_get_volume_grid( &
             caller_id, &
             tid, &
-            EPS_FULL_WEAK, &
+            EPS_UNCAPTURED, &
             local_tessellate, &  !TESSELLATE_IGNORE_ISRIGID
             local_tessellate, &  !TESSELLATE_IGNORE_ISRIGID
             bfact,dx,xsten,nhalf, &
-            mofdataproject, &
+            mofdatavalid, &
             xsten_thin,nhalf_thin, &
             dummy_tri, &
             multi_volume, &

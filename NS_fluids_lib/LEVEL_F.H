@@ -248,8 +248,6 @@ namespace amrex{
        int* im_solid_map,
        int* renormalize_only,
        int* solidheat_flag,
-       int* num_LS_extrap,
-       int* num_LS_extrap_iter,
        int* LS_extrap_iter,
        int* constant_density_all_time,
        Real* primary_flotsam_tol,
