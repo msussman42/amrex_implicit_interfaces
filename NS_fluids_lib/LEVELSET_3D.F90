@@ -20050,10 +20050,11 @@ stop
             enddo !im=1..num_materials*(1+SDIM)
             if (LS_local(im_hard_material).ge.zero) then
              wt_local=1.0D-2
-            else if (LS_local(im_hard_material).gt.zero) then
+            else if (LS_local(im_hard_material).lt.zero) then
              wt_local=one/((LS_local(im_hard_material)/dxmax)**2+one)
             else
-             print *,"LS_local(im_hard_material) invalid"
+             print *,"LS_local(im_hard_material) invalid ", &
+                  LS_local(im_hard_material)
              stop
             endif
             wt_sum=wt_sum+wt_local
