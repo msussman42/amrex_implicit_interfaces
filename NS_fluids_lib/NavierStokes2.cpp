@@ -6869,166 +6869,143 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  } else
   amrex::Error("nparts invalid");
 
- Vector<int> num_LS_extrap;
- num_LS_extrap.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  num_LS_extrap[tid]=0;
- }
-
  int num_LS_extrap_iter=1;
 
  if (renormalize_only==1) {
   // do nothing
  } else if (renormalize_only==0) {
-  num_LS_extrap_iter=3;
+  num_LS_extrap_iter=2;
  } else
   amrex::Error("renormalize_only invalid");	 
 
  for (int LS_extrap_iter=0;LS_extrap_iter<num_LS_extrap_iter; 
       LS_extrap_iter++) {
 
-  if ((num_LS_extrap[0]==0)&&(LS_extrap_iter>=1)) {
-   // do nothing
-  } else if ((num_LS_extrap[0]>=1)||(LS_extrap_iter==0)) {
-
-   for (int tid=0;tid<thread_class::nthreads;tid++) {
-    num_LS_extrap[tid]=0;
-   }
-
-   MultiFab* veldata=getState(1,STATECOMP_VEL, 
-		STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
-   MultiFab* mofdata=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,time);
-   MultiFab* dendata=getStateDen(1,time);
+  MultiFab* veldata=getState(1,STATECOMP_VEL, 
+     STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
+  MultiFab* mofdata=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,time);
+  MultiFab* dendata=getStateDen(1,time);
     //tessellate=TESSELLATE_FLUIDS
-   MultiFab* lsdata=getStateDist(ngrow_distance,time,local_caller_string);
+  MultiFab* lsdata=getStateDist(ngrow_distance,time,local_caller_string);
 
-   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-    if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-    if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
-   }
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+  }
 
-   if (veldata->nComp()!=(STATE_NCOMP_VEL+STATE_NCOMP_PRES))
-    amrex::Error("veldata incorrect ncomp");
-   if (dendata->nComp()!=num_materials*num_state_material)
-    amrex::Error("dendata incorrect ncomp");
-   if (mofdata->nComp()!=num_materials*ngeom_raw)
-    amrex::Error("mofdata incorrect ncomp");
-   if (lsdata->nComp()!=num_materials*(1+AMREX_SPACEDIM))
-    amrex::Error("lsdata incorrect ncomp");
-   if (lsdata->nGrow()!=ngrow_distance)
-    amrex::Error("lsdata->nGrow()!=ngrow_distance");
-   if (ngrow_distance<4)
-    amrex::Error("ngrow_distance invalid");
+  if (veldata->nComp()!=(STATE_NCOMP_VEL+STATE_NCOMP_PRES))
+   amrex::Error("veldata incorrect ncomp");
+  if (dendata->nComp()!=num_materials*num_state_material)
+   amrex::Error("dendata incorrect ncomp");
+  if (mofdata->nComp()!=num_materials*ngeom_raw)
+   amrex::Error("mofdata incorrect ncomp");
+  if (lsdata->nComp()!=num_materials*(1+AMREX_SPACEDIM))
+   amrex::Error("lsdata incorrect ncomp");
+  if (lsdata->nGrow()!=ngrow_distance)
+   amrex::Error("lsdata->nGrow()!=ngrow_distance");
+  if (ngrow_distance<4)
+   amrex::Error("ngrow_distance invalid");
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
 
-    FArrayBox& vofnew=S_new[mfi];
-    FArrayBox& velnew=S_new[mfi];
-    FArrayBox& dennew=S_new[mfi];
-    FArrayBox& lsnew=LS_new[mfi];
+   FArrayBox& vofnew=S_new[mfi];
+   FArrayBox& velnew=S_new[mfi];
+   FArrayBox& dennew=S_new[mfi];
+   FArrayBox& lsnew=LS_new[mfi];
 
-    FArrayBox& refinedennew=Refine_Density_new[mfi];
+   FArrayBox& refinedennew=Refine_Density_new[mfi];
 
-    FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
-    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
-    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
-     // mask=tag if not covered by level+1 or outside the domain.
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& lsfab=(*lsdata)[mfi]; //tessellate==TESSELLATE_FLUIDS
-    FArrayBox& moffab=(*mofdata)[mfi];
-    FArrayBox& denfab=(*dendata)[mfi];
-    FArrayBox& velfab=(*veldata)[mfi];
+    // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+   FArrayBox& lsfab=(*lsdata)[mfi]; //tessellate==TESSELLATE_FLUIDS
+   FArrayBox& moffab=(*mofdata)[mfi];
+   FArrayBox& denfab=(*dendata)[mfi];
+   FArrayBox& velfab=(*veldata)[mfi];
 
-    const Real* xlo = grid_loc[gridno].lo();
+   const Real* xlo = grid_loc[gridno].lo();
 
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // in: LEVELSET_3D.F90
-    fort_renormalize_prescribe(
-      &tid_current,
-      &level,&finest_level,
-      &time,
-      tilelo,tilehi,
-      fablo,fabhi,&bfact,
-      vofnew.dataPtr(STATECOMP_MOF),
-      ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
-      solxfab.dataPtr(),
-      ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
-      solyfab.dataPtr(),
-      ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
-      solzfab.dataPtr(),
-      ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
-      maskcov.dataPtr(),
-      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-      lsfab.dataPtr(), //tessellate=TESSELLATE_FLUIDS
-      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-      moffab.dataPtr(),
-      ARLIM(moffab.loVect()),ARLIM(moffab.hiVect()),
-      denfab.dataPtr(),
-      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-      velfab.dataPtr(),
-      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-      velnew.dataPtr(),
-      ARLIM(velnew.loVect()),ARLIM(velnew.hiVect()),
-      dennew.dataPtr(STATECOMP_STATES),
-      ARLIM(dennew.loVect()),ARLIM(dennew.hiVect()),
-      refinedennew.dataPtr(),
-      ARLIM(refinedennew.loVect()),ARLIM(refinedennew.hiVect()),
-      lsnew.dataPtr(),
-      ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
-      xlo,dx,
-      &cur_time_slab,
-      &nparts,
-      &nparts_def,
-      im_solid_map_ptr,
-      &renormalize_only, 
-      &solidheat_flag,
-      &num_LS_extrap[tid_current],
-      &num_LS_extrap_iter,
-      &LS_extrap_iter,
-      constant_density_all_time.dataPtr(),
-      &primary_flotsam_tol,
-      &secondary_flotsam_tol);
+    // in: LEVELSET_3D.F90
+   fort_renormalize_prescribe(
+     &tid_current,
+     &level,&finest_level,
+     &time,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     vofnew.dataPtr(STATECOMP_MOF),
+     ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
+     solxfab.dataPtr(),
+     ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
+     solyfab.dataPtr(),
+     ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
+     solzfab.dataPtr(),
+     ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+     maskcov.dataPtr(),
+     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     lsfab.dataPtr(), //tessellate=TESSELLATE_FLUIDS
+     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     moffab.dataPtr(),
+     ARLIM(moffab.loVect()),ARLIM(moffab.hiVect()),
+     denfab.dataPtr(),
+     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+     velfab.dataPtr(),
+     ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+     velnew.dataPtr(),
+     ARLIM(velnew.loVect()),ARLIM(velnew.hiVect()),
+     dennew.dataPtr(STATECOMP_STATES),
+     ARLIM(dennew.loVect()),ARLIM(dennew.hiVect()),
+     refinedennew.dataPtr(),
+     ARLIM(refinedennew.loVect()),ARLIM(refinedennew.hiVect()),
+     lsnew.dataPtr(),
+     ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
+     xlo,dx,
+     &cur_time_slab,
+     &nparts,
+     &nparts_def,
+     im_solid_map_ptr,
+     &renormalize_only, 
+     &solidheat_flag,
+     &LS_extrap_iter,
+     constant_density_all_time.dataPtr(),
+     &primary_flotsam_tol,
+     &secondary_flotsam_tol);
 
-   }  // mfi
+  }  // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_RENORMALIZE_PRESCRIBE,"prescribe_solid_geometry");
+  ns_reconcile_d_num(LOOP_RENORMALIZE_PRESCRIBE,"prescribe_solid_geometry");
 
-   for (int tid=1;tid<thread_class::nthreads;tid++) {
-    num_LS_extrap[0]+=num_LS_extrap[tid];
-   } // tid
-   ParallelDescriptor::ReduceIntSum(num_LS_extrap[0]);
+  delete veldata;
+  delete mofdata;
+  delete dendata;
+  delete lsdata;
 
-   delete veldata;
-   delete mofdata;
-   delete dendata;
-   delete lsdata;
-
-  } else
-   amrex::Error("num_LS_extrap or LS_extrap_iter invalid");
 
  } // LS_extrap_iter=0..num_LS_extrap_iter-1
 

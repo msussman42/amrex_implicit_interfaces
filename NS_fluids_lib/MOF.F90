@@ -16422,146 +16422,6 @@ contains
       end subroutine make_vfrac_sum_ok_copy
 
 
-      subroutine project_slopes_to_face( &
-       bfact,dx,xsten0,nhalf0, &
-       mofdata,mofdataproject, &
-       sdim,dir_side,side)
-
-      use probcommon_module
-      use geometry_intersect_module
-
-      IMPLICIT NONE
-
-      integer, INTENT(in)  :: sdim,dir_side,side
-      integer, INTENT(in)  :: bfact,nhalf0
-      real(amrex_real), INTENT(in)  :: mofdata(num_materials*ngeom_recon)
-      real(amrex_real), INTENT(out) :: mofdataproject(num_materials*ngeom_recon)
-      real(amrex_real), INTENT(in)  :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real), INTENT(in)  :: dx(sdim)
-      integer vofcomp,im
-      integer dir_local
-      real(amrex_real) x0_face(sdim)
-      real(amrex_real) slope(sdim)
-      real(amrex_real) slope_project(sdim)
-      real(amrex_real) intercept_project
-      real(amrex_real) mag
-
-      if (ngeom_recon.eq.2*sdim+3) then
-       ! do nothing
-      else
-       print *,"ngeom_recon.ne.2*sdim+3"
-       stop
-      endif
-
-      if ((dir_side.ge.1).and.(dir_side.le.sdim)) then
-       ! do nothing
-      else
-       print *,"dir_side invalid project slopes to face"
-       stop
-      endif
-      if ((side.eq.1).or.(side.eq.2)) then
-       ! do nothing
-      else
-       print *,"side invalid"
-       stop
-      endif
-
-      if (nhalf0.ge.1) then
-       ! do nothing
-      else
-       print *,"nhalf0 invalid project_slopes_to_face"
-       stop
-      endif
-      if (bfact.ge.1) then
-       ! do nothing
-      else
-       print *,"bfact invalid135"
-       stop
-      endif
-      if ((sdim.eq.3).or.(sdim.eq.2)) then
-       ! do nothing
-      else
-       print *,"sdim invalid project_slopes_to_face"
-       stop
-      endif
-      if ((num_materials.ge.1).and.(num_materials.le.MAX_NUM_MATERIALS)) then
-       ! do nothing
-      else
-       print *,"num_materials invalid project_slopes_to_face"
-       stop
-      endif
-
-       ! F,X,order,slope,intercept
-      do im=1,num_materials
-
-       vofcomp=(im-1)*ngeom_recon+1
-
-       do dir_local=1,ngeom_recon
-        mofdataproject(vofcomp+dir_local-1)=mofdata(vofcomp+dir_local-1)
-       enddo
-
-       do dir_local=1,sdim
-        slope(dir_local)=mofdata(vofcomp+sdim+1+dir_local)
-        slope_project(dir_local)=slope(dir_local)
-       enddo
-       intercept_project=mofdata(vofcomp+2*sdim+2)
-        ! Pr(n) = (I-nf nf^T)n  nf=normal to face
-       slope_project(dir_side)=zero  
-       mag=zero
-       do dir_local=1,sdim
-        mag=mag+slope_project(dir_local)*slope_project(dir_local)
-       enddo
-       mag=sqrt(mag)
-       if (mag.gt.zero) then
-        do dir_local=1,sdim
-         slope_project(dir_local)=slope_project(dir_local)/mag
-         x0_face(dir_local)=xsten0(0,dir_local)
-        enddo 
-        if (side.eq.1) then
-         x0_face(dir_side)=xsten0(-1,dir_side)
-        else if (side.eq.2) then
-         x0_face(dir_side)=xsten0(1,dir_side)
-        else
-         print *,"side invalid"
-         stop
-        endif
-        intercept_project=(intercept_project+ &
-         slope(dir_side)*(x0_face(dir_side)-xsten0(0,dir_side)))/mag
-
-         ! Pr(n)=(I-nf nf^T)n
-         ! ntilde=Pr(n)/||Pr(n)||
-         ! intercept_project=(n dot (xf-x0) + intercept_old)/||Pr(n)||
-         ! projected representation:
-         ! ntilde dot (x-x0) + intercept_project =
-         ! (Pr(n) dot (x-x0) + n dot (xf-x0) + intercept_old)/||Pr(n)||
-         ! Since Pr(n) has no nf component, Pr(n) dot (x-x0)=
-         ! Pr(n) dot (x-xf).
-         ! If x is on the face, then Pr(n) dot (x-xf)=n dot (x-xf)
-         ! so that
-         ! ntilde dot (x-x0)+ intercept_project=
-         ! (n dot (x-xf) + n dot (xf-x0) + intercept_old)/||Pr(n)||=
-         ! (n dot (x-x0) + intercept_old)/||Pr(n)||.
-
-        do dir_local=1,sdim
-         mofdataproject(vofcomp+sdim+1+dir_local)=slope_project(dir_local)
-        enddo
-        mofdataproject(vofcomp+2*sdim+2)=intercept_project
-       else if (mag.eq.zero) then
-        ! do not modify the slope or intercept
-       else
-        print *,"mag invalid in project_slopes_to_face"
-        print *,"mag=",mag
-        print *,"dir_side=",dir_side
-        print *,"intercept_project= ",intercept_project
-        print *,"slope_project=",slope_project
-        stop
-       endif
-
-      enddo ! im=1..num_materials
-
-      return
-      end subroutine project_slopes_to_face
-
       subroutine init_local_material_vars( &
          is_rigid_local, &
          is_elastic_local, &
@@ -17043,8 +16903,8 @@ contains
       end subroutine init_layer_flag
 
       subroutine derive_critical_material( &
-        mofdatalocal, &
-        mofdatasave, &
+        mofdatalocal, & !intent(in) "progress"
+        mofdatasave, &  !intent(in) "original"
         material_used, &
         is_masked, &
         critical_material, &
@@ -17410,7 +17270,7 @@ contains
          num_processed_total, & !intent(out)
          material_used, &
          is_masked, &
-         mofdatasave, &
+         mofdatasave, & !intent(in)
          mofdatalocal, & !intent(inout)
          EPS_LOCAL, &
          uncaptured_volume_fraction, &
@@ -17665,7 +17525,7 @@ contains
        enddo !im=1,num_materials
 
        if (abs(uncaptured_volume_START-volcell_compare).le. &
-           EPS2*volcell) then
+           EPS2*uncaptured_volume_START) then
         !do nothing
        else
         print *,"tessellate_source ",tessellate_source
@@ -18334,8 +18194,8 @@ contains
             endif
 
             call derive_critical_material( & !multi_get_volume_grid_simple
-             mofdatalocal, &
-             mofdatasave, &
+             mofdatalocal, & !intent(in)
+             mofdatasave, &  !intent(in)
              material_used, &
              is_masked, &
              critical_material, &
@@ -19165,8 +19025,8 @@ contains
             endif
 
             call derive_critical_material( & !multi_get_volume_grid
-             mofdatalocal, &
-             mofdatasave, &
+             mofdatalocal, & !intent(in)
+             mofdatasave, &  !intent(in)
              material_used, &
              is_masked, &
              critical_material, &
@@ -19890,8 +19750,8 @@ contains
            endif
 
            call derive_critical_material( &
-             mofdatalocal, &
-             mofdatasave, &
+             mofdatalocal, & !intent(in)
+             mofdatasave, &  !intent(in)
              material_used, &
              is_masked, &
              critical_material, &
@@ -20298,11 +20158,11 @@ contains
         multi_area_pair(num_materials,num_materials)
       real(amrex_real) :: mofdatavalid_plus(num_materials*ngeom_recon)
       real(amrex_real) :: mofdatavalid_minus(num_materials*ngeom_recon)
-      real(amrex_real) :: mofdataproject_plus(num_materials*ngeom_recon)
-      real(amrex_real) :: mofdataproject_minus(num_materials*ngeom_recon)
+
+      real(amrex_real) :: mofdata_hold_plus(num_materials*ngeom_recon)
+      real(amrex_real) :: mofdata_hold_minus(num_materials*ngeom_recon)
 
       integer im,im_opp,im_test
-      integer side
       integer dir_local
       integer, PARAMETER :: nhalf_thin=1
       integer isten 
@@ -20498,8 +20358,14 @@ contains
 
       if ((tessellate_dest.eq.TESSELLATE_ALL).or. &
           (tessellate_dest.eq.TESSELLATE_ALL_RASTER)) then
+       !do nothing
+      else
+       print *,"tessellate_dest invalid(multi_get_area_pairs): ", &
+         tessellate_dest
+       stop
+      endif
 
-       call multi_get_volume_tessellate( &
+      call multi_get_volume_tessellate( &
         tid_in, &
         tessellate_source, & !TESSELLATE_FLUIDS 
         tessellate_dest, & !=TESSELLATE_ALL or TESSELLATE_ALL_RASTER 
@@ -20511,7 +20377,7 @@ contains
         nmax, &
         sdim)
 
-       call multi_get_volume_tessellate( &
+      call multi_get_volume_tessellate( &
         tid_in, &
         tessellate_source, & !TESSELLATE_FLUIDS 
         tessellate_dest, & ! =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
@@ -20523,34 +20389,15 @@ contains
         nmax, &
         sdim)
 
-      else
-       print *,"tessellate_dest invalid: ",tessellate_dest
-       stop
-      endif
-
-       ! only slopes and intercepts modified.
-      side=1
-      call project_slopes_to_face( &
-        bfact,dx,xsten0_plus,nhalf0, &
-        mofdatavalid_plus, &
-        mofdataproject_plus, &
-        sdim,dir_plus,side)
-      side=2
-      call project_slopes_to_face( &
-        bfact,dx,xsten0_minus,nhalf0, &
-        mofdatavalid_minus, &
-        mofdataproject_minus, &
-        sdim,dir_plus,side)
-
       call multi_get_volume_grid( &
        caller_id, &
        tid_in, &
-       EPS_FULL_WEAK, & !tolerance for "single material" criterion
+       EPS_UNCAPTURED, & !tolerance for "single material" criterion
        IGNORE_ISRIGID_tessellate, & !TESSELLATE_IGNORE_ISRIGID
        IGNORE_ISRIGID_tessellate, & !TESSELLATE_IGNORE_ISRIGID
        bfact,dx, &
        xsten0_plus,nhalf0, &
-       mofdataproject_plus, &
+       mofdatavalid_plus, &
        xsten_thin,nhalf_thin, &
        xtet, &
        multi_volume_plus_thin, &
@@ -20613,6 +20460,11 @@ contains
 
       if (uncaptured_area.gt.zero) then
 
+       do im=1,num_materials*ngeom_recon
+        mofdata_hold_plus(im)=mofdatavalid_plus(im)
+        mofdata_hold_minus(im)=mofdatavalid_minus(im)
+       enddo
+
        call init_local_material_vars( & !subroutine multi_get_area_pairs
          is_rigid_local, &
          is_elastic_local, &
@@ -20648,13 +20500,13 @@ contains
 
          if (is_proper_layer(im,layer_iter).eq.1) then
           vfrac_sum(layer_iter)= &
-            vfrac_sum(layer_iter)+mofdataproject_minus(vofcomp)
+            vfrac_sum(layer_iter)+mofdatavalid_minus(vofcomp)
          endif
  
          if (is_proper_layer_local(im,layer_iter).eq.1) then
 
           vfrac_sum_local(layer_iter)= &
-            vfrac_sum_local(layer_iter)+mofdataproject_minus(vofcomp)
+            vfrac_sum_local(layer_iter)+mofdatavalid_minus(vofcomp)
 
           local_num_materials(layer_iter)=local_num_materials(layer_iter)+1
 
@@ -20810,8 +20662,8 @@ contains
             num_processed_total, & !intent(out)
             material_used, &
             is_masked, &
-            mofdataproject_minus, &
-            mofdataproject_minus, &
+            mofdatavalid_minus, & !intent(in)
+            mofdatavalid_minus, & !intent(inout)
             EPS_FULL_WEAK, &
             uncaptured_volume_fraction, &
             layer_iter, &
@@ -20844,7 +20696,7 @@ contains
             bfact,dx, &
             xsten0_minus,nhalf0, &
             xsten_thin,nhalf_thin, &
-            mofdataproject_minus, &
+            mofdatavalid_minus, &
             xtetlist_minus, &
             nlist_alloc_minus, &
             nlist, &
@@ -20887,10 +20739,10 @@ contains
               !minus side uncaptured space.
              call multi_get_volume_tetlist( &
               tid_in, &
-              EPS_FULL_WEAK, & !tolerance for "single material" criterion
+              EPS_UNCAPTURED, & !tolerance for "single material" criterion
               bfact,dx, &
               xsten0_plus,nhalf0, &
-              mofdataproject_plus, &
+              mofdatavalid_plus, &
               xtetlist_minus, &
               nlist_alloc_minus, &
               nlist, &
@@ -20992,12 +20844,12 @@ contains
              print *,"i,mofdatavalid_minus ",im_test,mofdatavalid_minus(im_test)
             enddo
             do im_test=1,num_materials*ngeom_recon
-             print *,"i,mofdataproject_plus ",im_test, &
-               mofdataproject_plus(im_test)
+             print *,"i,mofdata_hold_plus ",im_test, &
+               mofdata_hold_plus(im_test)
             enddo
             do im_test=1,num_materials*ngeom_recon
-             print *,"i,mofdataproject_minus ", &
-              im_test,mofdataproject_minus(im_test)
+             print *,"i,mofdata_hold_minus ", &
+              im_test,mofdata_hold_minus(im_test)
             enddo
             print *,"uncaptured_volume: ",uncaptured_volume
             print *,"uncaptured_volume_fraction: ", &
@@ -21061,8 +20913,8 @@ contains
                    (remaining_vfrac.ge.EPS_FULL_WEAK)) then
 
            call derive_critical_material( & !multi_get_area_pairs
-             mofdataproject_minus, &
-             mofdatavalid_minus, &
+             mofdatavalid_minus, & !intent(in) "progress"
+             mofdata_hold_minus, & !intent(in) "original"
              material_used, &
              is_masked, &
              critical_material, &
@@ -21075,9 +20927,9 @@ contains
 
             vofcomp=(critical_material-1)*ngeom_recon+1
             do dir_local=1,sdim
-             nrecon(dir_local)=mofdataproject_minus(vofcomp+sdim+1+dir_local)
+             nrecon(dir_local)=mofdatavalid_minus(vofcomp+sdim+1+dir_local)
             enddo
-            intercept=mofdataproject_minus(vofcomp+2*sdim+2)
+            intercept=mofdatavalid_minus(vofcomp+2*sdim+2)
 
             if (fastflag.eq.0) then
              !calling from "multi_get_area_pairs"
@@ -21117,7 +20969,7 @@ contains
 
             uncaptured_volume_fraction(layer_iter)= &
               uncaptured_volume_fraction(layer_iter)- &
-              mofdataproject_minus(vofcomp)
+              mofdatavalid_minus(vofcomp)
             if (uncaptured_volume_fraction(layer_iter).lt.EPS_FULL_WEAK) then
              uncaptured_volume_fraction(layer_iter)=zero
             endif
@@ -21218,11 +21070,10 @@ contains
            print *,"i,mofdatavalid_minus ",im_test,mofdatavalid_minus(im_test)
           enddo
           do im_test=1,num_materials*ngeom_recon
-           print *,"i,mofdataproject_plus ",im_test,mofdataproject_plus(im_test)
+           print *,"i,mofdata_hold_plus ",im_test,mofdata_hold_plus(im_test)
           enddo
           do im_test=1,num_materials*ngeom_recon
-           print *,"i,mofdataproject_minus ", &
-            im_test,mofdataproject_minus(im_test)
+           print *,"i,mofdata_hold_minus ",im_test,mofdata_hold_minus(im_test)
           enddo
 !         stop
          endif
