@@ -19595,6 +19595,9 @@ stop
        endif
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        local_XPOS(dir)=xsten(0,dir)
+       enddo
 
        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
 
@@ -19911,7 +19914,7 @@ stop
 
             ! positive in the rigid body
             call materialdistsolid( &
-             xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+             local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
              ls_hold(im),time,im)
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
@@ -20053,7 +20056,8 @@ stop
                   (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
-               call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+               call tempsolid( &
+                local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
                 den_hold(statecomp),time,im)
               else
                print *,"FSI_flag invalid in fort_renormalize_prescribe"
@@ -20065,7 +20069,8 @@ stop
                   (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
-               call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
+               call tempsolid( &
+                local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
                 den_hold(statecomp),time,im)
               else
                print *,"FSI_flag invalid in fort_renormalize_prescribe"
@@ -20343,6 +20348,9 @@ stop
            check_elastic=0
           else
            print *,"ls_hold(im_elastic_max) or sum_vfrac_elastic invalid"
+           print *,"im_elastic_max=",im_elastic_max
+           print *,"ls_hold= ",ls_hold
+           print *,"sum_vfrac_elastic=",sum_vfrac_elastic
            stop
           endif 
          else
@@ -20355,7 +20363,15 @@ stop
              (im_hard_material.le.num_materials)) then
 
           if (ls_hold(im_hard_material).ge.LS_extend_thick) then
-          
+         
+           if (1.eq.1) then
+            print *,"OUT OF THE BAND"
+            print *,"i,j,k,LS_extend_thick ",i,j,k,LS_extend_thick
+            print *,"dx ",dx
+            print *,"LS_extrap_iter ",LS_extrap_iter
+            print *,"local_XPOS ",local_XPOS
+           endif
+
            im_fluid_critical=0
            do im=1,num_materials
             if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
@@ -20406,7 +20422,15 @@ stop
 
           else if ((ls_hold(im_hard_material).le.LS_extend_thick).and. &
                    (ls_hold(im_hard_material).ge.zero)) then
- 
+
+           if (1.eq.1) then
+            print *,"IN THE BAND"
+            print *,"i,j,k,LS_extend_thick ",i,j,k,LS_extend_thick
+            print *,"dx ",dx
+            print *,"LS_extrap_iter ",LS_extrap_iter
+            print *,"local_XPOS ",local_XPOS
+           endif
+
            mag_nslope_solid=zero
            do dir=1,SDIM
             nslope_solid(dir)= &
@@ -20642,12 +20666,8 @@ stop
               dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
               local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
              enddo
-              ! coordinate of (i,j,k)
-             do dir=1,SDIM
-              local_XPOS(dir)=xsten(0,dir)
-             enddo
              call get_user_tension( &
-               local_XPOS, &
+               local_XPOS, & !coordinate of i,j,k
                time, &
                fort_tension,user_tension, &
                local_temperature)
