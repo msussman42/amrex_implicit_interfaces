@@ -6726,6 +6726,24 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  std::string local_caller_string="prescribe_solid_geometryALL";
  local_caller_string=caller_string+local_caller_string;
 
+
+ if ((step_through_data==1)||(1==0)) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     project_slab_step,
+     divu_outer_sweeps);
+  std::cout << "time= " << time << '\n';
+  std::cout << "renormalize_only= " << renormalize_only << '\n';
+  std::cout << "local_truncate= " << local_truncate << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
+  std::cout << "press any number then enter:begin prescribe_solid_geometryALL\n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
+
  if (renormalize_only==1) {
   //do nothing
  } else if (renormalize_only==0) {
@@ -6783,6 +6801,23 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   }
   ns_level.prescribe_solid_geometry(time,renormalize_only);
  } //ilev=finest_level downto level
+
+ if ((step_through_data==1)||(1==0)) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     project_slab_step,
+     divu_outer_sweeps);
+  std::cout << "time= " << time << '\n';
+  std::cout << "renormalize_only= " << renormalize_only << '\n';
+  std::cout << "local_truncate= " << local_truncate << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
+  std::cout << "press any number then enter:at the end prescribe_solid_geometryALL\n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
  
 } // end subroutine prescribe_solid_geometryALL
 
