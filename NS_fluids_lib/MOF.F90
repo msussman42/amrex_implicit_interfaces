@@ -15016,11 +15016,34 @@ contains
         else
          print *,"leading_rank or compare_rank invalid ", &
           leading_rank,compare_rank
+         do dir=1,sdim
+          print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
+         enddo
+         print *,"imaterial_prev= ",imaterial_prev
+         print *,"imaterial= ",imaterial
+         print *,"centroid prev "
+         do dir=1,sdim
+          print *,dir,mofdata_current(vofcomp_prev+dir)
+         enddo
+         print *,"centroid current "
+         do dir=1,sdim
+          print *,dir,mofdata_current(vofcomp+dir)
+         enddo
+         print *,"recon_history ",recon_history
+         print *,"num_processed_total ",num_processed_total
+         print *,"order_algorithm_local ",order_algorithm_local
+         print *,"override_normal_valid ",override_normal_valid
+         print *,"tessellate ",tessellate
+         print *,"repeat_count ",repeat_count
+         print *,"leading_vfrac_sum ",leading_vfrac_sum
+         print *,"vof_super= ",vof_super
+         print *,"use_ls_data= ",use_ls_data
          stop
         endif
        enddo ! ihistory=2,num_processed_total
 
        if (repeat_count.eq.0) then
+         !all processed materials are tied at the top
         repeat_count=num_processed_total
        else if ((repeat_count.ge.1).and. &
                 (repeat_count.lt.num_processed_total)) then

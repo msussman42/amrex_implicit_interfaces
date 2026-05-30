@@ -74,8 +74,7 @@ stop
         total_errors, &
         ngrow_slope_recon, &
         ngrow_recon, &
-        continuous_mof, &
-        continuous_mof_radius) &
+        continuous_mof) &
       bind(c,name='fort_sloperecon')
 
       use probf90_module
@@ -91,8 +90,6 @@ stop
       integer, INTENT(in) :: nsteps
 
       integer, INTENT(in) :: continuous_mof
-      integer, INTENT(in) :: continuous_mof_radius
-      integer :: local_continuous_mof_radius_x
       integer, INTENT(in) :: update_flag
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: vofbc(SDIM,2)
@@ -137,7 +134,19 @@ stop
       real(amrex_real) mofdata_super(num_materials*ngeom_recon)
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) vof_extended(num_materials)
+
       real(amrex_real) mofsten(num_materials*ngeom_recon)
+      real(amrex_real) mofsten_array(D_DECL(-1:1,-1:1,-1:1), &
+        num_materials*ngeom_recon)
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer coeff
+      integer istenlo(3),istenhi(3)
+      integer cmofsten_normal(SDIM)
+      integer dircrit
+      integer at_rz_boundary
+      integer stencil_primary_count(num_materials)
+      integer fluid_stencil_count
+
       real(amrex_real) multi_centroidA(num_materials,SDIM)
 
       integer vofcomprecon
@@ -156,15 +165,11 @@ stop
 
       integer continuous_mof_parm
      
-      integer klostenCMOF,khistenCMOF
       integer klostenLS,khistenLS
       integer, parameter :: nhalf=3
-      integer :: nhalf_extend
 
-      integer ihalf
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_extended(-nhalf:nhalf,SDIM)
-      real(amrex_real), dimension(:,:), allocatable :: xsten_temp
       real(amrex_real) xstencil_point(SDIM)
 
       real(amrex_real) xstenbox(-1:1,SDIM)
@@ -273,27 +278,17 @@ stop
         stop
        endif
       else if (continuous_mof.eq.CMOF_X) then !CMOF
-       if (ngrow_recon.ge.ngrow_slope_recon+continuous_mof_radius) then
+       if (ngrow_recon.ge.ngrow_slope_recon+1) then
         !do nothing
        else
         print *,"ngrow_recon invalid ",ngrow_recon
         print *,"ngrow_slope_recon ",ngrow_slope_recon
-        print *,"continuous_mof_radius ",continuous_mof_radius
         stop
        endif
       else
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
        stop
       endif
-      if (continuous_mof_radius.ge.1) then
-       !do nothing
-      else
-       print *,"continuous_mof_radius invalid ",continuous_mof_radius
-       stop
-      endif
-
-      nhalf_extend=2*continuous_mof_radius+1
-      allocate(xsten_temp(-nhalf_extend:nhalf_extend,SDIM))
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid ",ngeom_recon
@@ -367,50 +362,39 @@ stop
         print *,"igridhi ",igridhi(1),igridhi(2),igridhi(3)
         stop
        endif
+  
+        !nhalf=3
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xstencil_point(dir)=xsten(0,dir)
+       enddo
 
-       local_continuous_mof_radius_x=continuous_mof_radius
-
-       call gridsten_level(xsten_temp,i,j,k,level,nhalf_extend)
+       at_rz_boundary=0
 
        do dir=1,SDIM
-        xsten_extended(1,dir)=xsten_temp(nhalf_extend,dir)
-        xsten_extended(-1,dir)=xsten_temp(-nhalf_extend,dir)
-        xsten_extended(0,dir)=xsten_temp(0,dir)
+        xsten_extended(1,dir)=xsten(3,dir)
+        xsten_extended(-1,dir)=xsten(-3,dir)
+        xsten_extended(0,dir)=xsten(0,dir)
 
         if (dir.eq.1) then
          if (xsten_extended(-1,dir).le.-dx(1)*EPS2) then
           if (levelrz.eq.COORDSYS_RZ) then
-           ihalf=-nhalf_extend
-           do while ((xsten_temp(ihalf,dir).le.-dx(1)*EPS2).and. &
-                     (ihalf.lt.0))
-            ihalf=ihalf+1
-           enddo
-           if (ihalf.ge.0) then
-            print *,"ihalf became corrupt ",ihalf
-            stop
-           endif
-           if (ihalf.eq.-1) then
-            xsten_extended(1,dir)=xsten_temp(1,dir)
-            xsten_extended(-1,dir)=xsten_temp(-1,dir)
-            xsten_extended(0,dir)=xsten_temp(0,dir)
-            local_continuous_mof_radius_x=0
-           else if ((ihalf.lt.-1).and.(ihalf.gt.-nhalf_extend)) then
-            local_continuous_mof_radius_x=(-ihalf-1)/2
-            if (local_continuous_mof_radius_x*2.ne.-ihalf-1) then
-             print *,"ihalf invalid ",ihalf
-             stop
-            endif
-            xsten_extended(1,dir)= &
-              xsten_temp(2*local_continuous_mof_radius_x+1,dir)
-            xsten_extended(-1,dir)= &
-              xsten_temp(-(2*local_continuous_mof_radius_x+1),dir)
-            xsten_extended(0,dir)=xsten_temp(0,dir)
+           if (SDIM.eq.2) then
+            !do nothing
            else
-            print *,"ihalf invalid ",ihalf
-            print *,"nhalf_extend ",nhalf_extend
-            print *,"continuous_mof_radius ",continuous_mof_radius
+            print *,"expecting SDIM=2"
             stop
            endif
+           if (xsten(-1,dir).ge.-dx(1)*EPS2) then
+            !do nothing
+           else
+            print *,"expecting xsten(-1,dir)=0 ",xsten(-1,dir)
+            stop
+           endif
+           at_rz_boundary=1
+           xsten_extended(1,dir)=xsten(1,dir)
+           xsten_extended(-1,dir)=xsten(-1,dir)
+           xsten_extended(0,dir)=xsten(0,dir)
           else if (levelrz.eq.COORDSYS_CARTESIAN) then
            !do nothing
           else
@@ -444,24 +428,15 @@ stop
        enddo !dir=1,sdim
 
        if (SDIM.eq.3) then
-        klostenCMOF=-continuous_mof_radius
-        khistenCMOF=continuous_mof_radius
         klostenLS=-1
         khistenLS=1
        else if (SDIM.eq.2) then
-        klostenCMOF=0
-        khistenCMOF=0
         klostenLS=0
         khistenLS=0
        else
         print *,"dimension bust"
         stop
        endif
-
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-       do dir=1,SDIM
-        xstencil_point(dir)=xsten(0,dir)
-       enddo
 
        do im=1,num_materials
 
@@ -661,30 +636,17 @@ stop
         ! supercell for centroid cost function.
         ! center cell for volume constraint.
        if (continuous_mof_parm.eq.CMOF_X) then
-  
-        volume_super=zero ! volume of the extended region
-
-        do dir=1,SDIM
-         cen_super(dir)=zero
+ 
+        do im=1,num_materials
+         stencil_primary_count(im)=0
         enddo
 
-        do im=1,num_materials
+        do k1=klostenLS,khistenLS
+        do j1=-1,1
+        do i1=-1,1
 
-         vofcomprecon=(im-1)*ngeom_recon+1
-
-         do dir=0,SDIM
-          mofdata_extended(vofcomprecon+dir)=zero
-         enddo
-
-         vof_extended(im)=zero
-
-        enddo ! im=1..num_materials
-
-        do k1=klostenCMOF,khistenCMOF
-        do j1=-continuous_mof_radius,continuous_mof_radius
-        do i1=-continuous_mof_radius,continuous_mof_radius
-
-         call CISBOX(xstenbox, &
+         call CISBOX( &
+           xstenbox, &
            nhalfbox_sten, & ! =1
            xlo,dx,i+i1,j+j1,k+k1, &
            bfact,level, &
@@ -723,61 +685,242 @@ stop
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
           vfrac_local(im)=mofsten(vofcomprecon)
-          volmat=volsten*vfrac_local(im)
-          do dir=1,SDIM
-           mofdata_extended(vofcomprecon+dir)= &
-               mofdata_extended(vofcomprecon+dir)+ &
-               volmat*(censten(dir)+mofsten(vofcomprecon+dir))
-          enddo ! dir
-          mofdata_extended(vofcomprecon)= &
-            mofdata_extended(vofcomprecon)+volmat
-          vof_extended(im)=vof_extended(im)+volmat
          enddo ! im=1..num_materials
 
-         volume_super=volume_super+volsten
-         do dir=1,SDIM
-          cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+         call get_primary_material_VFRAC(vfrac_local,im)
+         stencil_primary_count(im)=stencil_primary_count(im)+1
+
+         if ((is_rigid(im).eq.1).or. &
+             (is_elastic(im).eq.1)) then
+          cmofsten(D_DECL(i1,j1,k1))=1
+         else if ((is_rigid(im).eq.0).and. &
+                  (is_elastic(im).eq.0)) then
+          cmofsten(D_DECL(i1,j1,k1))=0
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+          stop
+         endif
+
+         do im=1,num_materials*ngeom_recon
+          mofsten_array(D_DECL(i1,j1,k1),im)=mofsten(im)
          enddo
 
         enddo
         enddo
         enddo ! i1,j1,k1
 
-        if (volume_super.gt.zero) then
-         ! do nothing
-        else
-         print *,"volume_super invalid: ",volume_super
-         stop
-        endif
-
-        do dir=1,SDIM
-         cen_super(dir)=cen_super(dir)/volume_super
-        enddo
-
+        fluid_stencil_count=0
         do im=1,num_materials
-         vofcomprecon=(im-1)*ngeom_recon+1
+         if ((is_rigid(im).eq.1).or. &
+             (is_elastic(im).eq.1)) then
+          !do nothing
+         else if ((is_rigid(im).eq.0).and. &
+                  (is_elastic(im).eq.0)) then
+          if (stencil_primary_count(im).ge.1) then
+           fluid_stencil_count=fluid_stencil_count+1
+          else if (stencil_primary_count(im).eq.0) then
+           !do nothing
+          else
+           print *,"stencil_primary_count invalid"
+           stop
+          endif 
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+          stop
+         endif
+        enddo ! im=1..num_materials
 
-         if (vof_extended(im).gt.zero) then
-          do dir=1,SDIM
-           mofdata_extended(vofcomprecon+dir)= &
-             mofdata_extended(vofcomprecon+dir)/ &
-             vof_extended(im)- &
-             cen_super(dir)
-          enddo
-          vof_extended(im)=vof_extended(im)/volume_super
-          mofdata_extended(vofcomprecon)= &
-             mofdata_extended(vofcomprecon)/volume_super
-         else if (vof_extended(im).eq.zero) then
+        if ((fluid_stencil_count.ge.2).and. &
+            (fluid_stencil_count.le.num_materials)) then
+
+         volume_super=zero ! volume of the extended region
+
+         do dir=1,SDIM
+          cen_super(dir)=zero
+         enddo
+
+         do im=1,num_materials
+
+          vofcomprecon=(im-1)*ngeom_recon+1
+
           do dir=0,SDIM
            mofdata_extended(vofcomprecon+dir)=zero
           enddo
+
           vof_extended(im)=zero
+
+         enddo ! im=1..num_materials
+
+         dircrit=1
+         do dir=1,SDIM
+          cmofsten_normal(dir)=0
+          do k1=klostenLS,khistenLS
+          do j1=-1,1
+          do i1=-1,1
+           if (dir.eq.1) then
+            coeff=i1
+           else if (dir.eq.2) then
+            coeff=j1
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then
+            coeff=k1
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           cmofsten_normal(dir)=cmofsten_normal(dir)+ &
+              coeff*cmofsten(D_DECL(i1,j1,k1))
+          enddo 
+          enddo 
+          enddo 
+          if (abs(cmofsten_normal(dir)).gt. &
+              abs(cmofsten_normal(dircrit))) then
+           dircrit=dir
+          endif
+         enddo !dir=1,SDIM
+
+         istenlo(3)=0
+         istenhi(3)=0
+         do dir=1,SDIM
+          istenlo(dir)=-1
+          istenhi(dir)=1
+         enddo
+         
+         if ((at_rz_boundary.eq.1).and.(dircrit.eq.1)) then
+          !do nothing
+         else if ((at_rz_boundary.eq.0).or.(dircrit.eq.2)) then
+          if (cmofsten_normal(dircrit).eq.0) then
+           !do nothing
+          else if (abs(cmofsten_normal(dircrit)).gt.0) then
+           if (cmofsten_normal(dircrit).gt.0) then
+            istenhi(dircrit)=istenhi(dircrit)-1
+            xsten_extended(1,dircrit)=xsten(1,dircrit)
+           else if (cmofsten_normal(dircrit).lt.0) then
+            istenlo(dircrit)=istenlo(dircrit)+1
+            xsten_extended(-1,dircrit)=xsten(-1,dircrit)
+           else
+            print *,"cmofsten_normal invalid"
+            stop
+           endif
+
+           xsten_extended(0,dircrit)=half*(xsten_extended(-1,dircrit)+ &
+             xsten_extended(1,dircrit))
+
+           dx_extended(dircrit)=xsten_extended(1,dircrit)- &
+              xsten_extended(-1,dircrit)
+           if (dx_extended(dircrit).gt.zero) then
+            !do nothing
+           else
+            print *,"dx_extended invalid: ",dx_extended
+            stop
+           endif
+           xsten_extended(3,dircrit)=xsten_extended(1,dircrit)+ &
+              dx_extended(dircrit)
+           xsten_extended(-3,dircrit)=xsten_extended(-1,dircrit)- &
+              dx_extended(dircrit)
+           xsten_extended(2,dircrit)=xsten_extended(1,dircrit)+ &
+              half*dx_extended(dircrit)
+           xsten_extended(-2,dircrit)=xsten_extended(-1,dircrit)- &
+              half*dx_extended(dircrit)
+
+           if (1.eq.1) then
+            print *,"modifying CMOFSTEN "
+            print *,"i,j,k ",i,j,k
+            print *,"dircrit= ",dircrit
+            print *,"cmofsten_normal ",cmofsten_normal
+            print *,"xstencil_point ",xstencil_point
+           endif  
+          else
+           print *,"cmof_normal corrupt"
+           stop
+          endif
          else
-          print *,"vof_extended invalid ",vof_extended
+          print *,"at_rz_boundary or dircrit invalid"
           stop
          endif
 
-        enddo ! im=1..num_materials
+         ! i1,j1,k1=-1..1
+         do k1=istenlo(3),istenhi(3)
+         do j1=istenlo(2),istenhi(2)
+         do i1=istenlo(1),istenhi(1)
+
+          call CISBOX( &
+            xstenbox, &
+            nhalfbox_sten, & ! =1
+            xlo,dx,i+i1,j+j1,k+k1, &
+            bfact,level, &
+            volsten,censten,SDIM)
+
+          do im=1,num_materials*ngeom_recon
+           mofsten(im)=mofsten_array(D_DECL(i1,j1,k1),im)
+          enddo
+
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+           vfrac_local(im)=mofsten(vofcomprecon)
+           volmat=volsten*vfrac_local(im)
+           do dir=1,SDIM
+            mofdata_extended(vofcomprecon+dir)= &
+                mofdata_extended(vofcomprecon+dir)+ &
+                volmat*(censten(dir)+mofsten(vofcomprecon+dir))
+           enddo ! dir
+           mofdata_extended(vofcomprecon)= &
+             mofdata_extended(vofcomprecon)+volmat
+           vof_extended(im)=vof_extended(im)+volmat
+          enddo ! im=1..num_materials
+
+          volume_super=volume_super+volsten
+          do dir=1,SDIM
+           cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+          enddo
+
+         enddo
+         enddo
+         enddo ! i1,j1,k1
+
+         if (volume_super.gt.zero) then
+          ! do nothing
+         else
+          print *,"volume_super invalid: ",volume_super
+          stop
+         endif
+
+         do dir=1,SDIM
+          cen_super(dir)=cen_super(dir)/volume_super
+         enddo
+
+         do im=1,num_materials
+          vofcomprecon=(im-1)*ngeom_recon+1
+
+          if (vof_extended(im).gt.zero) then
+           do dir=1,SDIM
+            mofdata_extended(vofcomprecon+dir)= &
+              mofdata_extended(vofcomprecon+dir)/ &
+              vof_extended(im)- &
+              cen_super(dir)
+           enddo
+           vof_extended(im)=vof_extended(im)/volume_super
+           mofdata_extended(vofcomprecon)= &
+              mofdata_extended(vofcomprecon)/volume_super
+          else if (vof_extended(im).eq.zero) then
+           do dir=0,SDIM
+            mofdata_extended(vofcomprecon+dir)=zero
+           enddo
+           vof_extended(im)=zero
+          else
+           print *,"vof_extended invalid ",vof_extended
+           stop
+          endif
+
+         enddo ! im=1..num_materials
+        else if ((fluid_stencil_count.eq.0).or. &
+                 (fluid_stencil_count.eq.1)) then
+         continuous_mof_parm=STANDARD_MOF
+        else
+         print *,"fluid_stencil_count invalid"
+         stop
+        endif
 
        else if (continuous_mof_parm.eq.STANDARD_MOF) then
         ! do nothing
@@ -1031,8 +1174,6 @@ stop
        print *,"grid,level,finest ",gridno,level,finest_level
        print *,"STEP,TIME ",nsteps,time
       endif
-
-      deallocate(xsten_temp)
 
       return
       end subroutine fort_sloperecon
