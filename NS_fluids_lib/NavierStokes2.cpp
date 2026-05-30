@@ -8968,9 +8968,9 @@ void NavierStokes::VOF_Recon_ALL(
    if (continuous_mof==STANDARD_MOF) {
     //do nothing
    } else if (continuous_mof==CMOF_X) {
-    ngrow_recon+=continuous_mof_radius;
+    ngrow_recon+=1;
    } else
-     amrex::Error("continuous_mof invalid");
+    amrex::Error("continuous_mof invalid");
 
    ngrow_recon=max(ngrow_recon,2);
 
@@ -9056,7 +9056,6 @@ void NavierStokes::VOF_Recon_ALL(
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "continuous_mof= " << continuous_mof << '\n';
-    std::cout << "continuous_mof_radius= " << continuous_mof_radius << '\n';
    } //IOProc?
   } else if (verbose==0) {
    //do nothing
@@ -9142,7 +9141,7 @@ void NavierStokes::VOF_Recon(Real time,
  if (continuous_mof==STANDARD_MOF) {
   //do nothing
  } else if (continuous_mof==CMOF_X) {
-  ngrow_recon+=continuous_mof_radius;
+  ngrow_recon+=1;
  } else
    amrex::Error("continuous_mof invalid");
 
@@ -9284,8 +9283,7 @@ void NavierStokes::VOF_Recon(Real time,
     total_errors[tid_current].dataPtr(),
     &ngrow_slope_recon,
     &ngrow_recon,
-    &continuous_mof,
-    &continuous_mof_radius);  //fort_sloperecon
+    &continuous_mof);  //fort_sloperecon
  }  // mfi
 } // omp
  ns_reconcile_d_num(LOOP_SLOPE_RECON,"VOF_Recon");

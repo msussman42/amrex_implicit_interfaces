@@ -18714,7 +18714,7 @@ stop
       use geometry_intersect_module
 
       real(amrex_real),intent(in) :: &
-         F_stencil_array(-1:1,-1:1,-1:1,num_materials)
+         F_stencil_array(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real),intent(inout) :: &
          mofnew(num_materials*ngeom_recon)
       real(amrex_real),intent(in) :: primary_flotsam_tol
@@ -18723,7 +18723,8 @@ stop
       integer dir,im,vofcomp,truncate_low,truncate_high
       integer i1,j1,k1
       real(amrex_real) &
-        vfrac_sum_array(-1:1,-1:1,-1:1,RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+        vfrac_sum_array(D_DECL(-1:1,-1:1,-1:1), &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer layer_iter
       real(amrex_real) updated_vfrac_sum
 
@@ -18739,12 +18740,12 @@ stop
        do k1=istenlo(3),istenhi(3)
        do j1=istenlo(2),istenhi(2)
        do i1=istenlo(1),istenhi(1)
-        vfrac_sum_array(i1,j1,k1,layer_iter)=zero
+        vfrac_sum_array(D_DECL(i1,j1,k1),layer_iter)=zero
         do im=1,num_materials
          if (is_proper_layer(im,layer_iter).eq.1) then
-          vfrac_sum_array(i1,j1,k1,layer_iter)= &
-            vfrac_sum_array(i1,j1,k1,layer_iter)+ &
-            F_stencil_array(i1,j1,k1,im)
+          vfrac_sum_array(D_DECL(i1,j1,k1),layer_iter)= &
+            vfrac_sum_array(D_DECL(i1,j1,k1),layer_iter)+ &
+            F_stencil_array(D_DECL(i1,j1,k1),im)
          else if (is_proper_layer(im,layer_iter).eq.0) then
           !do nothing
          else
@@ -18761,10 +18762,12 @@ stop
        else if (primary_flotsam_tol.gt.zero) then
         truncate_low=1
         truncate_high=1
-        if (vfrac_sum_array(0,0,0,layer_iter).gt.primary_flotsam_tol) then
+        if (vfrac_sum_array(D_DECL(0,0,0),layer_iter).gt. &
+            primary_flotsam_tol) then
          truncate_low=0
         endif
-        if (one-vfrac_sum_array(0,0,0,layer_iter).gt.primary_flotsam_tol) then
+        if (one-vfrac_sum_array(D_DECL(0,0,0),layer_iter).gt. &
+            primary_flotsam_tol) then
          truncate_high=0
         endif
         if ((truncate_low.eq.0).and.(truncate_high.eq.0)) then
@@ -18777,11 +18780,11 @@ stop
           do k1=istenlo(3),istenhi(3)
           do j1=istenlo(2),istenhi(2)
           do i1=istenlo(1),istenhi(1)
-           if (vfrac_sum_array(i1,j1,k1,layer_iter).gt. &
+           if (vfrac_sum_array(D_DECL(i1,j1,k1),layer_iter).gt. &
                secondary_flotsam_tol) then
             truncate_low=0
            endif
-           if (one-vfrac_sum_array(i1,j1,k1,layer_iter).gt. &
+           if (one-vfrac_sum_array(D_DECL(i1,j1,k1),layer_iter).gt. &
                secondary_flotsam_tol) then
             truncate_high=0
            endif
@@ -18803,21 +18806,21 @@ stop
          stop
         endif
         if (truncate_low.eq.1) then
-         vfrac_sum_array(0,0,0,layer_iter)=zero
+         vfrac_sum_array(D_DECL(0,0,0),layer_iter)=zero
         endif
         if (truncate_high.eq.1) then
-         vfrac_sum_array(0,0,0,layer_iter)=one
+         vfrac_sum_array(D_DECL(0,0,0),layer_iter)=one
         endif
        else
         print *,"primary_flotsam_tol invalid ",primary_flotsam_tol
         stop
        endif 
        if (layer_iter.eq.FLUID_LAYER_INDEX) then
-        if (vfrac_sum_array(0,0,0,layer_iter).le.zero) then
+        if (vfrac_sum_array(D_DECL(0,0,0),layer_iter).le.zero) then
          print *,"vfrac_sum_array vacuum error"
          stop
         endif
-        vfrac_sum_array(0,0,0,layer_iter)=one
+        vfrac_sum_array(D_DECL(0,0,0),layer_iter)=one
        endif
 
        do im=1,num_materials
@@ -18829,10 +18832,10 @@ stop
          else if (primary_flotsam_tol.gt.zero) then
           truncate_low=1
           truncate_high=1
-          if (F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
+          if (F_stencil_array(D_DECL(0,0,0),im).gt.primary_flotsam_tol) then
            truncate_low=0
           endif
-          if (one-F_stencil_array(0,0,0,im).gt.primary_flotsam_tol) then
+          if (one-F_stencil_array(D_DECL(0,0,0),im).gt.primary_flotsam_tol) then
            truncate_high=0
           endif
           if ((truncate_low.eq.0).and.(truncate_high.eq.0)) then
@@ -18845,10 +18848,11 @@ stop
             do k1=istenlo(3),istenhi(3)
             do j1=istenlo(2),istenhi(2)
             do i1=istenlo(1),istenhi(1)
-             if (F_stencil_array(i1,j1,k1,im).gt.secondary_flotsam_tol) then
+             if (F_stencil_array(D_DECL(i1,j1,k1),im).gt. &
+                 secondary_flotsam_tol) then
               truncate_low=0
              endif
-             if (one-F_stencil_array(i1,j1,k1,im).gt. &
+             if (one-F_stencil_array(D_DECL(i1,j1,k1),im).gt. &
                  secondary_flotsam_tol) then
               truncate_high=0
              endif
@@ -18910,16 +18914,16 @@ stop
 
        if (layer_iter.eq.FLUID_LAYER_INDEX) then
 
-        if ((vfrac_sum_array(0,0,0,layer_iter).eq.zero).or. &
+        if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).eq.zero).or. &
             (updated_vfrac_sum.eq.zero)) then
          print *,"vfrac_sum_array vacuum error"
          stop
-        else if ((vfrac_sum_array(0,0,0,layer_iter).gt.zero).and. &
+        else if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).gt.zero).and. &
                  (updated_vfrac_sum.gt.zero)) then
          !do nothing (renormalization in: make_vfrac_sum_ok_base)
         else
-         print *,"vfrac_sum_array(0,0,0,layer_iter) bad ", &
-           vfrac_sum_array(0,0,0,layer_iter)
+         print *,"vfrac_sum_array(D_DECL(0,0,0),layer_iter) bad ", &
+           vfrac_sum_array(D_DECL(0,0,0),layer_iter)
          print *,"or updated_vfrac_sum bad ",updated_vfrac_sum
          stop
         endif
@@ -18930,17 +18934,17 @@ stop
         do im=1,num_materials
          if (is_proper_layer(im,layer_iter).eq.1) then
           vofcomp=(im-1)*ngeom_recon+1
-          if ((vfrac_sum_array(0,0,0,layer_iter).eq.zero).or. &
+          if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).eq.zero).or. &
               (updated_vfrac_sum.eq.zero)) then
            mofnew(vofcomp)=zero
            do dir=1,SDIM
             mofnew(vofcomp+dir)=zero
            enddo
-          else if ((vfrac_sum_array(0,0,0,layer_iter).gt.zero).and. &
-                   (vfrac_sum_array(0,0,0,layer_iter).le.one).and. &
+          else if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).gt.zero).and. &
+                   (vfrac_sum_array(D_DECL(0,0,0),layer_iter).le.one).and. &
                    (updated_vfrac_sum.gt.zero)) then
            mofnew(vofcomp)=mofnew(vofcomp)* &
-               vfrac_sum_array(0,0,0,layer_iter)/ &
+               vfrac_sum_array(D_DECL(0,0,0),layer_iter)/ &
                updated_vfrac_sum
            if (mofnew(vofcomp).ge.one) then
             mofnew(vofcomp)=one
@@ -18950,7 +18954,7 @@ stop
            endif
           else
            print *,"vfrac_sum_array invalid ", &
-              vfrac_sum_array(0,0,0,layer_iter)
+              vfrac_sum_array(D_DECL(0,0,0),layer_iter)
            print *,"or updated_vfrac_sum invalid ",updated_vfrac_sum
            stop
           endif
@@ -19122,7 +19126,7 @@ stop
       real(amrex_real) vfrac_solid_new(num_materials)
       real(amrex_real) F_stencil
       real(amrex_real) F_stencil_sum
-      real(amrex_real) F_stencil_array(-1:1,-1:1,-1:1,num_materials)
+      real(amrex_real) F_stencil_array(D_DECL(-1:1,-1:1,-1:1),num_materials)
       integer statecomp
       integer statecomp_solid
       integer istate
@@ -19406,7 +19410,7 @@ stop
         do i1=istenlo(1),istenhi(1)
          do im=1,num_materials
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil_array(i1,j1,k1,im)= &
+          F_stencil_array(D_DECL(i1,j1,k1),im)= &
             state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
          enddo
         enddo
@@ -19445,7 +19449,7 @@ stop
           endif
 
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil=F_stencil_array(0,0,0,im)
+          F_stencil=F_stencil_array(D_DECL(0,0,0),im)
 
           if (is_rigid(im).eq.1) then
            if (constant_density_all_time(im).eq.1) then
@@ -19487,7 +19491,7 @@ stop
            do j1=istenlo(2),istenhi(2)
            do i1=istenlo(1),istenhi(1)
 
-            F_stencil=F_stencil_array(i1,j1,k1,im)
+            F_stencil=F_stencil_array(D_DECL(i1,j1,k1),im)
 
             if ((F_stencil.ge.-EPS1).and. &
                 (F_stencil.le.VOFTOL_MATERIAL)) then
@@ -19989,7 +19993,7 @@ stop
           else if (is_rigid(im).eq.1) then
 
            mofnew(vofcomp)=vfrac_solid_new(im)
-           F_stencil_array(0,0,0,im)=vfrac_solid_new(im)
+           F_stencil_array(D_DECL(0,0,0),im)=vfrac_solid_new(im)
 
            do dir=1,SDIM
             mofnew(vofcomp+dir)=censolid_new(im,dir)
@@ -20123,7 +20127,7 @@ stop
 
            vofcomp=(im_hard_material-1)*ngeom_recon+1
            mofnew(vofcomp)=vfrac_solid_new(im_hard_material)
-           F_stencil_array(0,0,0,im_hard_material)=mofnew(vofcomp)
+           F_stencil_array(D_DECL(0,0,0),im_hard_material)=mofnew(vofcomp)
            do dir=1,SDIM
             mofnew(vofcomp+dir)=censolid_new(im_hard_material,dir)
            enddo
@@ -20176,7 +20180,7 @@ stop
              if (im.eq.im_fluid_critical) then
               ls_hold(im)=(ngrow_distance+1)*dxmax
               mofnew(vofcomp)=one
-              F_stencil_array(0,0,0,im)=mofnew(vofcomp)
+              F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
               do dir=1,SDIM 
                mofnew(vofcomp+dir)=zero
                ls_hold(num_materials+SDIM*(im-1)+dir)=zero
@@ -20187,7 +20191,7 @@ stop
              else
               ls_hold(im)=-(ngrow_distance+1)*dxmax
               mofnew(vofcomp)=zero
-              F_stencil_array(0,0,0,im)=mofnew(vofcomp)
+              F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
               do dir=1,SDIM 
                mofnew(vofcomp+dir)=zero
                ls_hold(num_materials+SDIM*(im-1)+dir)=zero
@@ -20306,7 +20310,7 @@ stop
               print *,"mofnew(vofcomp) invalid"
               stop
              endif
-             F_stencil_array(0,0,0,im)=mofnew(vofcomp)
+             F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
 
             else
              print *,"is_rigid_CL invalid LEVELSET_3D.F90: ", &

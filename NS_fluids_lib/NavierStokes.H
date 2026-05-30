@@ -1649,7 +1649,6 @@ protected:
     static int  enable_spectral;
 
     static int  continuous_mof; //default is 1
-    static int  continuous_mof_radius; //default is 1
     static int  update_centroid_after_recon;  //default is 1
     static Vector<Real> centroid_noise_factor; //default is 0.0
 

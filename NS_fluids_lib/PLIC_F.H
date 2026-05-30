@@ -38,8 +38,7 @@ extern "C"
         Real* total_errors,
         int* ngrow_slope_recon, 
         int* ngrow_recon, 
-        int* continuous_mof,
-        int* continuous_mof_radius);
+        int* continuous_mof);
 
 }
 }/* namespace amrex */

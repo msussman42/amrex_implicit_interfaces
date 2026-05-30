@@ -122,7 +122,6 @@ continuous_mof=CMOF_X
 */
 
 int  NavierStokes::continuous_mof=CMOF_X;
-int  NavierStokes::continuous_mof_radius=1;
 int  NavierStokes::update_centroid_after_recon=1;
 
 
@@ -2997,12 +2996,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("continuous_mof invalid");
 
-    pp.queryAdd("continuous_mof_radius",continuous_mof_radius);
-    if (continuous_mof_radius>=1) {
-     //do nothing
-    } else
-     amrex::Error("continuous_mof_radius invalid");
-
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
 
     if ((update_centroid_after_recon==0)||
@@ -3267,7 +3260,6 @@ NavierStokes::read_params ()
      std::cout << "enable_spectral " << enable_spectral << '\n';
 
      std::cout << "continuous_mof " << continuous_mof << '\n';
-     std::cout << "continuous_mof_radius " << continuous_mof_radius << '\n';
 
      std::cout << "update_centroid_after_recon " << 
 	    update_centroid_after_recon << '\n';
