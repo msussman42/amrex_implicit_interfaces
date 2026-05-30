@@ -18895,23 +18895,37 @@ stop
         endif
        enddo !im=1,num_materials
 
+       updated_vfrac_sum=zero
+       do im=1,num_materials
+        if (is_proper_layer(im,layer_iter).eq.1) then
+         vofcomp=(im-1)*ngeom_recon+1
+         updated_vfrac_sum=updated_vfrac_sum+mofnew(vofcomp)
+        else if (is_proper_layer(im,layer_iter).eq.0) then
+         !do nothing
+        else
+         print *,"is_proper_layer invalid ",im,layer_iter
+         stop
+        endif
+       enddo !im=1,num_materials
+
        if (layer_iter.eq.FLUID_LAYER_INDEX) then
-        !do nothing (renormalization in: make_vfrac_sum_ok_base)
+
+        if ((vfrac_sum_array(0,0,0,layer_iter).eq.zero).or. &
+            (updated_vfrac_sum.eq.zero)) then
+         print *,"vfrac_sum_array vacuum error"
+         stop
+        else if ((vfrac_sum_array(0,0,0,layer_iter).gt.zero).and. &
+                 (updated_vfrac_sum.gt.zero)) then
+         !do nothing (renormalization in: make_vfrac_sum_ok_base)
+        else
+         print *,"vfrac_sum_array(0,0,0,layer_iter) bad ", &
+           vfrac_sum_array(0,0,0,layer_iter)
+         print *,"or updated_vfrac_sum bad ",updated_vfrac_sum
+         stop
+        endif
+
        else if ((layer_iter.eq.RIGID_LAYER_INDEX).or. &
                 (layer_iter.eq.ELASTIC_LAYER_INDEX)) then
-
-        updated_vfrac_sum=zero
-        do im=1,num_materials
-         if (is_proper_layer(im,layer_iter).eq.1) then
-          vofcomp=(im-1)*ngeom_recon+1
-          updated_vfrac_sum=updated_vfrac_sum+mofnew(vofcomp)
-         else if (is_proper_layer(im,layer_iter).eq.0) then
-          !do nothing
-         else
-          print *,"is_proper_layer invalid ",im,layer_iter
-          stop
-         endif
-        enddo !im=1,num_materials
 
         do im=1,num_materials
          if (is_proper_layer(im,layer_iter).eq.1) then
