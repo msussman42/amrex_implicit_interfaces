@@ -824,7 +824,7 @@ stop
            xsten_extended(-2,dircrit)=xsten_extended(-1,dircrit)- &
               half*dx_extended(dircrit)
 
-           if (1.eq.1) then
+           if (1.eq.0) then
             print *,"modifying CMOFSTEN "
             print *,"i,j,k ",i,j,k
             print *,"dircrit= ",dircrit
