@@ -18944,8 +18944,7 @@ stop
                    (vfrac_sum_array(D_DECL(0,0,0),layer_iter).le.one).and. &
                    (updated_vfrac_sum.gt.zero)) then
            mofnew(vofcomp)=mofnew(vofcomp)* &
-               vfrac_sum_array(D_DECL(0,0,0),layer_iter)/ &
-               updated_vfrac_sum
+            (vfrac_sum_array(D_DECL(0,0,0),layer_iter)/updated_vfrac_sum)
            if (mofnew(vofcomp).ge.one) then
             mofnew(vofcomp)=one
             do dir=1,SDIM
@@ -19156,7 +19155,6 @@ stop
       integer partid
       integer partid_max
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
-      integer, parameter :: tessellate_transfer=TESSELLATE_ALL
       integer im_fluid_critical
 
       integer :: grid_index(SDIM)
@@ -19168,7 +19166,6 @@ stop
       real(amrex_real) :: LS_extrap_sum(num_materials*(1+SDIM))
       real(amrex_real) :: LS_extrap_sum_fixed(num_materials*(1+SDIM))
       real(amrex_real) :: LS_local(num_materials*(1+SDIM))
-
 
       if (renormalize_only.eq.1) then
        if (LS_extrap_iter.eq.0) then
@@ -19386,7 +19383,6 @@ stop
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
-
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
 
        grid_index(1)=i
@@ -20257,7 +20253,7 @@ stop
              call safe_data(i+i1,j+j1,k+k1,im,LS_ptr,LS_local(im))
             enddo !im=1..num_materials*(1+SDIM)
             if (LS_local(im_hard_material).ge.zero) then
-             wt_local=1.0D-2
+             wt_local=EPS12
             else if (LS_local(im_hard_material).lt.zero) then
              wt_local=one/((LS_local(im_hard_material)/dxmax)**2+one)
             else
@@ -20388,10 +20384,6 @@ stop
          ! above: prescribe new solid location
          ! below: just normalize the volume fractions.
         else if (renormalize_only.eq.1) then
-
-         if (1.eq.0) then
-          print *,"i,j,k ",i,j,k
-         endif
 
          call remove_flotsam( &
           F_stencil_array, &

@@ -14974,8 +14974,9 @@ contains
            order_algorithm_local(imaterial))
 
         if (compare_rank.eq.leading_rank) then
+
          if (override_normal_valid(imaterial).eq.0) then
-          !do nothing
+          !do nothing (ranks are unique for the 2nd pass)
          else
           print *,"expecting override_normal_valid(imaterial).eq.0"
           print *,"override_normal_valid=",override_normal_valid
@@ -14983,7 +14984,7 @@ contains
           stop
          endif
          if (override_normal_valid(imaterial_prev).eq.0) then
-          !do nothing
+          !do nothing (ranks are unique for the 2nd pass)
          else
           print *,"expecting override_normal_valid(imaterial_prev).eq.0"
           print *,"order_algorithm_local= ",order_algorithm_local
@@ -15010,36 +15011,49 @@ contains
          endif
 
         else if (compare_rank.gt.leading_rank) then
+
          if (repeat_count.eq.0) then
           repeat_count=ihistory-1
          endif
+
+        else if (compare_rank.lt.leading_rank) then
+
+         if (repeat_count.ge.1) then
+          !do nothing
+         else
+          print *,"leading_rank or compare_rank invalid ", &
+           leading_rank,compare_rank
+          do dir=1,sdim
+           print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
+          enddo
+          print *,"imaterial_prev= ",imaterial_prev
+          print *,"imaterial= ",imaterial
+          print *,"centroid prev "
+          do dir=1,sdim
+           print *,dir,mofdata_current(vofcomp_prev+dir)
+          enddo
+          print *,"centroid current "
+          do dir=1,sdim
+           print *,dir,mofdata_current(vofcomp+dir)
+          enddo
+          print *,"recon_history ",recon_history
+          print *,"num_processed_total ",num_processed_total
+          print *,"order_algorithm_local ",order_algorithm_local
+          print *,"override_normal_valid ",override_normal_valid
+          print *,"tessellate ",tessellate
+          print *,"repeat_count ",repeat_count
+          print *,"leading_vfrac_sum ",leading_vfrac_sum
+          print *,"vof_super= ",vof_super
+          print *,"use_ls_data= ",use_ls_data
+          stop
+         endif
+      
         else
          print *,"leading_rank or compare_rank invalid ", &
           leading_rank,compare_rank
-         do dir=1,sdim
-          print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
-         enddo
-         print *,"imaterial_prev= ",imaterial_prev
-         print *,"imaterial= ",imaterial
-         print *,"centroid prev "
-         do dir=1,sdim
-          print *,dir,mofdata_current(vofcomp_prev+dir)
-         enddo
-         print *,"centroid current "
-         do dir=1,sdim
-          print *,dir,mofdata_current(vofcomp+dir)
-         enddo
-         print *,"recon_history ",recon_history
-         print *,"num_processed_total ",num_processed_total
-         print *,"order_algorithm_local ",order_algorithm_local
-         print *,"override_normal_valid ",override_normal_valid
-         print *,"tessellate ",tessellate
-         print *,"repeat_count ",repeat_count
-         print *,"leading_vfrac_sum ",leading_vfrac_sum
-         print *,"vof_super= ",vof_super
-         print *,"use_ls_data= ",use_ls_data
          stop
         endif
+
        enddo ! ihistory=2,num_processed_total
 
        if (repeat_count.eq.0) then
@@ -15718,7 +15732,7 @@ contains
         nhalf, &
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
-        mofdata, &
+        mofdata, & !intent(inout)
         sdim)
       use probcommon_module
       use geometry_intersect_module
@@ -15757,7 +15771,6 @@ contains
       real(amrex_real) vfrac_sum_truncate(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer num_materials_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-
 #include "mofdata.H"
 
       if (nhalf.ge.1) then
@@ -15962,7 +15975,7 @@ contains
         endif
 
        else
-        print *,"layer_iter invalid"
+        print *,"layer_iter invalid ",layer_iter
         stop
        endif
 
@@ -16013,14 +16026,16 @@ contains
        enddo !im=1,num_materials
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
-        if (vfrac_sum_truncate(layer_iter).gt.zero) then
-         mofdata(vofcomp)=mofdata(vofcomp)*vfrac_sum(layer_iter)/ &
-               vfrac_sum_truncate(layer_iter)
-        else if (vfrac_sum_truncate(layer_iter).eq.zero) then
-         !do nothing
-        else
-         print *,"vfrac_sum_truncate invalid ",vfrac_sum_truncate
-         stop
+        if (is_proper_layer(im,layer_iter).eq.1) then
+         if (vfrac_sum_truncate(layer_iter).gt.zero) then
+          mofdata(vofcomp)=mofdata(vofcomp)* &
+           (vfrac_sum(layer_iter)/vfrac_sum_truncate(layer_iter))
+         else if (vfrac_sum_truncate(layer_iter).eq.zero) then
+          !do nothing
+         else
+          print *,"vfrac_sum_truncate invalid ",vfrac_sum_truncate
+          stop
+         endif
         endif
        enddo !im=1,num_materials
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
