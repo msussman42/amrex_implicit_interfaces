@@ -20033,8 +20033,11 @@ stop
          im_hard_material=0
 
          if (check_elastic.eq.0) then
+
           im_hard_material=im_solid_max
+
          else if (check_elastic.eq.1) then
+
           sum_vfrac_elastic=zero
           im_elastic_max=0
           do im=1,num_materials
@@ -20073,78 +20076,99 @@ stop
          
           if (im_elastic_max.eq.0) then
            check_elastic=0 
-          else if ((ls_hold(im_elastic_max).ge.zero).or. &
-                   (sum_vfrac_elastic.ge.half)) then
+          else if ((im_elastic_max.ge.1).and. &
+                   (im_elastic_max.le.num_materials)) then
 
-           im_hard_material=im_elastic_max
-           ls_hold(im_hard_material)=LS(D_DECL(i,j,k),im_hard_material)
-           vofcompraw=(im_hard_material-1)*ngeom_raw+1
-           vfrac_solid_new(im_hard_material)=vofnew(D_DECL(i,j,k),vofcompraw)
-           do dir=1,SDIM
-            centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
-           enddo
-           do dir=1,SDIM
-            censolid_new(im_hard_material,dir)=centroid(dir)-cencell(dir)
-           enddo
-           mag_nslope_solid=zero
-           do dir=1,SDIM
-            nslope_solid(dir)= &
-               LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
-            mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
-           enddo
-           mag_nslope_solid=sqrt(mag_nslope_solid)
-           if (mag_nslope_solid.eq.zero) then
+           if (is_elastic(im_elastic_max).eq.1) then
             !do nothing
-           else if (mag_nslope_solid.gt.zero) then
-            do dir=1,SDIM
-             nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
-            enddo
            else
-            print *,"mag_nslope_solid invalid ",mag_nslope_solid
+            print *,"is_elastic(im_elastic_max) invalid: ",im_elastic_max, &
+              is_elastic(im_elastic_max)
             stop
            endif
-           do dir=1,SDIM
-            ls_hold(num_materials+SDIM*(im_hard_material-1)+dir)= &
-                nslope_solid(dir)
-           enddo
-           if ((vfrac_solid_new(im_hard_material).ge.-EPS1).and. &
-               (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL)) then
-            vfrac_solid_new(im_hard_material)=zero
-           else if ((vfrac_solid_new(im_hard_material).ge. &
-                     one-VOFTOL_MATERIAL).and. &
-                    (vfrac_solid_new(im_hard_material).le. &
-                     one+EPS1)) then
-            vfrac_solid_new(im_hard_material)=one
-           else if ((vfrac_solid_new(im_hard_material).ge. &
-                     VOFTOL_MATERIAL).and. &
-                    (vfrac_solid_new(im_hard_material).le. &
-                     one-VOFTOL_MATERIAL)) then
-            ! do nothing
+
+           if ((ls_hold(im_elastic_max).ge.zero).or. &
+               (sum_vfrac_elastic.ge.half)) then
+
+            im_hard_material=im_elastic_max
+            ls_hold(im_hard_material)=LS(D_DECL(i,j,k),im_hard_material)
+            vofcompraw=(im_hard_material-1)*ngeom_raw+1
+            vfrac_solid_new(im_hard_material)=vofnew(D_DECL(i,j,k),vofcompraw)
+            do dir=1,SDIM
+             centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
+            enddo
+            do dir=1,SDIM
+             censolid_new(im_hard_material,dir)=centroid(dir)-cencell(dir)
+            enddo
+            mag_nslope_solid=zero
+            do dir=1,SDIM
+             nslope_solid(dir)= &
+               LS(D_DECL(i,j,k),num_materials+SDIM*(im_hard_material-1)+dir)
+             mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
+            enddo
+            mag_nslope_solid=sqrt(mag_nslope_solid)
+            if (mag_nslope_solid.eq.zero) then
+             !do nothing
+            else if (mag_nslope_solid.gt.zero) then
+             do dir=1,SDIM
+              nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
+             enddo
+            else
+             print *,"mag_nslope_solid invalid ",mag_nslope_solid
+             stop
+            endif
+            do dir=1,SDIM
+             ls_hold(num_materials+SDIM*(im_hard_material-1)+dir)= &
+                 nslope_solid(dir)
+            enddo
+            if ((vfrac_solid_new(im_hard_material).ge.-EPS1).and. &
+                (vfrac_solid_new(im_hard_material).le.VOFTOL_MATERIAL)) then
+             vfrac_solid_new(im_hard_material)=zero
+            else if ((vfrac_solid_new(im_hard_material).ge. &
+                      one-VOFTOL_MATERIAL).and. &
+                     (vfrac_solid_new(im_hard_material).le. &
+                      one+EPS1)) then
+             vfrac_solid_new(im_hard_material)=one
+            else if ((vfrac_solid_new(im_hard_material).ge. &
+                      VOFTOL_MATERIAL).and. &
+                     (vfrac_solid_new(im_hard_material).le. &
+                      one-VOFTOL_MATERIAL)) then
+             ! do nothing
+            else
+             print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
+             stop
+            endif  
+
+            vofcomp=(im_hard_material-1)*ngeom_recon+1
+            mofnew(vofcomp)=vfrac_solid_new(im_hard_material)
+            F_stencil_array(D_DECL(0,0,0),im_hard_material)=mofnew(vofcomp)
+            do dir=1,SDIM
+             mofnew(vofcomp+dir)=censolid_new(im_hard_material,dir)
+            enddo
+            do istate=SDIM+2,ngeom_recon
+             mofnew(vofcomp+istate-1)=zero
+            enddo
+
+           else if ((ls_hold(im_elastic_max).le.zero).and. &
+                    (sum_vfrac_elastic.le.half)) then
+
+            check_elastic=0
+
            else
-            print *,"vfrac_solid_new bust: ",vfrac_solid_new(im_hard_material)
+            print *,"ls_hold(im_elastic_max) or sum_vfrac_elastic invalid"
+            print *,"im_elastic_max=",im_elastic_max
+            print *,"ls_hold= ",ls_hold
+            print *,"sum_vfrac_elastic=",sum_vfrac_elastic
             stop
-           endif  
+           endif 
 
-           vofcomp=(im_hard_material-1)*ngeom_recon+1
-           mofnew(vofcomp)=vfrac_solid_new(im_hard_material)
-           F_stencil_array(D_DECL(0,0,0),im_hard_material)=mofnew(vofcomp)
-           do dir=1,SDIM
-            mofnew(vofcomp+dir)=censolid_new(im_hard_material,dir)
-           enddo
-           do istate=SDIM+2,ngeom_recon
-            mofnew(vofcomp+istate-1)=zero
-           enddo
-
-          else if ((ls_hold(im_elastic_max).le.zero).and. &
-                   (sum_vfrac_elastic.le.half)) then
-           check_elastic=0
           else
-           print *,"ls_hold(im_elastic_max) or sum_vfrac_elastic invalid"
-           print *,"im_elastic_max=",im_elastic_max
-           print *,"ls_hold= ",ls_hold
-           print *,"sum_vfrac_elastic=",sum_vfrac_elastic
+
+           print *,"im_elastic_max invalid ",im_elastic_max
            stop
-          endif 
+
+          endif
+
          else
           print *,"check_elastic invalid: ",check_elastic
           stop
@@ -20171,12 +20195,20 @@ stop
              print *,"or is_elastic invalid ",im,is_elastic(im)
              stop
             endif
-           enddo
-    
+           enddo !im=1,num_materials
+   
+           if ((im_fluid_critical.ge.1).and. &
+               (im_fluid_critical.le.num_materials)) then
+            !do nothing
+           else
+            print *,"im_fluid_critical invalid ",im_fluid_critical
+            stop
+           endif
+
            do im=1,num_materials
+            vofcomp=(im-1)*ngeom_recon+1
             if ((is_rigid(im).eq.0).and. &
                 (is_elastic(im).eq.0)) then
-             vofcomp=(im-1)*ngeom_recon+1
              if (im.eq.im_fluid_critical) then
               ls_hold(im)=(ngrow_distance+1)*dxmax
               mofnew(vofcomp)=one
