@@ -6108,6 +6108,27 @@ end subroutine volume_sanity_check
          use_super_cell=0
         endif
        enddo !side=1,2
+       if ((xsten_box(-1,1).le.-EPS13*dx(1)).and. &
+           (xsten_box(1,1).ge.EPS13*dx(1))) then
+        if (use_super_cell.eq.1) then
+         !do nothing
+        else
+         print *,"expecting use_super_cell=1 ",use_super_cell
+         stop
+        endif
+       else if ((xsten_box(-1,1).ge.-EPS13*dx(1)).or. &
+                (xsten_box(1,1).le.EPS13*dx(1))) then
+        if (use_super_cell.eq.0) then
+         !do nothing
+        else
+         print *,"expecting use_super_cell=0 ",use_super_cell
+         stop
+        endif
+       else
+        print *,"xsten_box is corrupt ",xsten_box
+        stop
+       endif
+        
       else
        print *,"levelrz invalid ",levelrz
        stop
@@ -6130,6 +6151,13 @@ end subroutine volume_sanity_check
 
       else if (use_super_cell.eq.1) then
 
+       if (levelrz.eq.COORDSYS_RZ) then
+        !do nothing
+       else
+        print *,"expecting levelrz=COORDSYS_RZ"
+        stop
+       endif
+
        nlist=0
 
        do side=1,2
@@ -6138,6 +6166,19 @@ end subroutine volume_sanity_check
          side, &
          dx, &
          xsten_box,xsten_box_local,nhalf_box,sdim)
+
+        volumeRZ=zero
+        call Box_volumeRZ( &
+         side, &
+         bfact,dx, &
+         xsten_box_local,nhalf_box, &
+         volumeRZ,centroidRZ,sdim)
+        if (volumeRZ.gt.zero) then
+         !do nothing
+        else
+         print *,"expecting volumeRZ>0"
+         stop
+        endif
 
         call sub_tets_box_planes( &
          layer_flag, &
@@ -6242,16 +6283,16 @@ end subroutine volume_sanity_check
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
-       print *,"nlist_alloc invalid"
+       print *,"nlist_alloc invalid ",nlist_alloc
        stop
       endif
 
       if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid sub tets box planes"
+       print *,"nhalf0 invalid sub tets box planes ",nhalf0
        stop
       endif
       if (nhalf_box.lt.1) then
-       print *,"nhalf_box invalid sub tets box planes"
+       print *,"nhalf_box invalid sub tets box planes ",nhalf_box
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -6264,7 +6305,7 @@ end subroutine volume_sanity_check
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid121"
+       print *,"bfact invalid121 sub_tets_box_planes ",bfact
        stop
       endif
 
@@ -7206,6 +7247,7 @@ end subroutine volume_sanity_check
         side, &
         dx, &
         xsten,xsten_local,nhalf,sdim)
+      use probcommon_module
       IMPLICIT NONE
 
       integer, intent(in) :: side,nhalf,sdim
@@ -7220,6 +7262,12 @@ end subroutine volume_sanity_check
        print *,"dx(1) invalid cutRZ"
        stop
       endif
+      if (dx(2).gt.zero) then
+       !do nothing
+      else
+       print *,"dx(2) invalid cutRZ"
+       stop
+      endif
 
       do i=-nhalf,nhalf
        do dir=1,sdim
@@ -7228,18 +7276,39 @@ end subroutine volume_sanity_check
       enddo
 
       if (side.eq.1) then
-       do i=-nhalf,nhalf
-        xsten_local(i,1)=min(xsten_local(i,1),zero)
-       enddo
+       if (xsten_local(1,1).le.EPS13*dx(1)) then
+        ! do nothing
+       else if (xsten_local(-1,1).ge.-EPS13*dx(1)) then
+        do i=-nhalf,nhalf
+         xsten_local(i,1)=zero
+        enddo
+       else if ((xsten_local(-1,1).le.-EPS13*dx(1)).and. &
+                (xsten_local(1,1).ge.EPS13*dx(1))) then
+        xsten_local(1,1)=zero  
+        xsten_local(0,1)=half*(xsten_local(-1,1)+xsten_local(1,1))
+       else
+        print *,"xsten_local bust"
+        stop
+       endif
       else if (side.eq.2) then
-       do i=-nhalf,nhalf
-        xsten_local(i,1)=max(xsten_local(i,1),zero)
-       enddo
+       if (xsten_local(-1,1).ge.-EPS13*dx(1)) then
+        ! do nothing
+       else if (xsten_local(1,1).le.EPS13*dx(1)) then
+        do i=-nhalf,nhalf
+         xsten_local(i,1)=zero
+        enddo
+       else if ((xsten_local(1,1).ge.EPS13*dx(1)).and. &
+                (xsten_local(-1,1).le.-EPS13*dx(1))) then
+        xsten_local(-1,1)=zero  
+        xsten_local(0,1)=half*(xsten_local(-1,1)+xsten_local(1,1))
+       else
+        print *,"xsten_local bust"
+        stop
+       endif
       else
        print *,"side invalid ",side
        stop
       endif
-      xsten_local(0,1)=half*(xsten_local(-1,1)+xsten_local(1,1))
 
       return
       end subroutine cutRZ
@@ -7289,6 +7358,12 @@ end subroutine volume_sanity_check
        print *,"dx(1) invalid Box_volumeRZ"
        stop
       endif
+      if (dx(2).gt.zero) then
+       !do nothing
+      else
+       print *,"dx(2) invalid Box_volumeRZ"
+       stop
+      endif
 
       call cutRZ( &
        side, &
@@ -7325,8 +7400,8 @@ end subroutine volume_sanity_check
         do dir=1,sdim
          centroid(dir)=(volume_local*centroid_local(dir)+ &
           volume*centroid(dir))/(volume+volume_local)
-         volume=volume+volume_local
         enddo
+        volume=volume+volume_local
        else if (volume+volume_local.eq.zero) then
         volume=zero
         do dir=1,sdim
