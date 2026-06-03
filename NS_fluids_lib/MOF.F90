@@ -6020,6 +6020,7 @@ end subroutine volume_sanity_check
 
       subroutine tets_box_planes( &
        layer_flag, &
+       tid_in, &
        bfact,dx, &
        xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
        xsten_box,nhalf_box, &
@@ -6036,47 +6037,35 @@ end subroutine volume_sanity_check
       IMPLICIT NONE
 
       integer, INTENT(in) :: layer_flag
+      integer, INTENT(in) :: tid_in
       integer, INTENT(in) :: nlist_alloc
       integer, INTENT(in) :: sdim,bfact
       integer, INTENT(in) :: nhalf0
       integer, INTENT(in) :: nhalf_box
-      integer symmetry_flag,ntetbox
       integer, INTENT(out) :: nlist
+      integer :: nlist_local,nn
       integer, INTENT(in) :: nmax
-      integer nlist_old,iplane,n,nsub,narea,n2
-      integer j_dir
-      integer i_tet_node
-      integer i_grid_node
-      integer j_grid_node
-      integer k_grid_node
-      integer id,icrit,im,vofcomp,iorder
-      integer dir
+      integer dir,side
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
+      real(amrex_real) :: xsten_box_local(-nhalf_box:nhalf_box,sdim)
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      real(amrex_real) xtetlist_old(4,3,nlist_alloc)
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
-      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
-      real(amrex_real) phi1(sdim+1),dummyphi(sdim+1)
-      real(amrex_real) voltest
-      real(amrex_real) centroidtest(sdim)
-      real(amrex_real) xcandidate(sdim+1,sdim)
-      real(amrex_real) xx(sdim+1,sdim)
-      real(amrex_real) x1old(sdim+1,sdim)
-      real(amrex_real) xnode(4*(sdim-1),sdim)
-      real(amrex_real) phinode(4*(sdim-1))
-      integer inode
-      integer layer_iter
-      real(amrex_real) nn(sdim)
-      real(amrex_real) intercept
-      integer is_masked(num_materials)
+      integer itri
+      integer use_super_cell
+      real(amrex_real) volumeRZ
+      real(amrex_real) centroidRZ(sdim)
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
        print *,"nlist_alloc invalid"
+       stop
+      endif
+
+      if ((tid_in.lt.0).or.(tid_in.ge.geom_nthreads)) then
+       print *,"tid_in invalid (tets_box_planes) ",tid_in
        stop
       endif
 
@@ -6097,23 +6086,30 @@ end subroutine volume_sanity_check
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        use_super_cell=0
       else if (levelrz.eq.COORDSYS_RZ) then
+       if (sdim.eq.2) then
+        !do nothing
+       else
+        print *,"expecting sdim=2 if COORDSYS_RZ ",levelrz,sdim
+        stop
+       endif
        use_super_cell=1
        do side=1,2
-        volume=zero
+        volumeRZ=zero
         call cutRZ( &
          side, &
+         dx, &
          xsten_box,xsten_box_local,nhalf_box,sdim)
-        call Box_VolumeRZ( &
+        call Box_volumeRZ( &
          side, &
          bfact,dx, &
          xsten_box_local,nhalf_box, &
-         volume,centroid,sdim)
-        if (volume.eq.zero) then
+         volumeRZ,centroidRZ,sdim)
+        if (volumeRZ.eq.zero) then
          use_super_cell=0
         endif
        enddo !side=1,2
       else
-       print *,"levelrz invalid"
+       print *,"levelrz invalid ",levelrz
        stop
       endif 
           
@@ -6140,6 +6136,7 @@ end subroutine volume_sanity_check
 
         call cutRZ( &
          side, &
+         dx, &
          xsten_box,xsten_box_local,nhalf_box,sdim)
 
         call sub_tets_box_planes( &
@@ -6148,38 +6145,32 @@ end subroutine volume_sanity_check
          xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
          xsten_box_local,nhalf_box, &
          mofdata, &
-         xtetlist, &
-         nlist_alloc, &
+         geom_xtetlist_local(1,1,1,tid_in+1), &
+         geom_nmax, &
          nlist_local, &
          nmax, &
          sdim)
 
-FIX ME
-          geom_xtetlist_local(1,1,1,tid_in+1), &
-          geom_nmax, &
-          nlist_local, &
-          nmax, &
-          sdim)
-         if (nlist_local+nlist.gt.nmax) then
-          print *,"too many tetrahedrons in tets_box_planes_super"
-          print *,"tessellate=",tessellate
-          print *,"bfact=",bfact
-          print *,"tid_in=",tid_in
-          print *,"nlist_local=",nlist_local
-          print *,"nlist=",nlist
-          print *,"nmax=",nmax
-          print *,"num_materials=",num_materials
-          print *,"sdim=",sdim
-          stop
-         endif
-         do nn=1,nlist_local
-          nlist=nlist+1
-          do itri=1,sdim+1
-          do dir=1,sdim
-           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid_in+1)
-          enddo
-          enddo
-         enddo  ! nn
+        if (nlist_local+nlist.gt.nmax) then
+         print *,"too many tetrahedrons in tets_box_planes"
+         print *,"layer_flag=",layer_flag
+         print *,"bfact=",bfact
+         print *,"tid_in=",tid_in
+         print *,"nlist_local=",nlist_local
+         print *,"nlist=",nlist
+         print *,"nmax=",nmax
+         print *,"num_materials=",num_materials
+         print *,"sdim=",sdim
+         stop
+        endif
+        do nn=1,nlist_local
+         nlist=nlist+1
+         do itri=1,sdim+1
+         do dir=1,sdim
+          xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid_in+1)
+         enddo
+         enddo
+        enddo  ! nn
           
        enddo ! side=1,2
 
@@ -6440,7 +6431,7 @@ FIX ME
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       return
-      end subroutine tets_box_planes
+      end subroutine sub_tets_box_planes
 
       subroutine init_mask_flag( &
         layer_flag, &
@@ -7213,13 +7204,22 @@ FIX ME
 
       subroutine cutRZ( &
         side, &
+        dx, &
         xsten,xsten_local,nhalf,sdim)
       IMPLICIT NONE
 
       integer, intent(in) :: side,nhalf,sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(out) :: xsten_local(-nhalf:nhalf,sdim)
       integer i,dir
+
+      if (dx(1).gt.zero) then
+       !do nothing
+      else
+       print *,"dx(1) invalid cutRZ"
+       stop
+      endif
 
       do i=-nhalf,nhalf
        do dir=1,sdim
@@ -7236,7 +7236,7 @@ FIX ME
         xsten_local(i,1)=max(xsten_local(i,1),zero)
        enddo
       else
-       print *,"side invalid"
+       print *,"side invalid ",side
        stop
       endif
       xsten_local(0,1)=half*(xsten_local(-1,1)+xsten_local(1,1))
@@ -7283,9 +7283,16 @@ FIX ME
        print *,"expecting levelrz=COORDSYS_RZ"
        stop
       endif
+      if (dx(1).gt.zero) then
+       !do nothing
+      else
+       print *,"dx(1) invalid Box_volumeRZ"
+       stop
+      endif
 
       call cutRZ( &
        side, &
+       dx, &
        xsten,xsten_local,nhalf,sdim)
  
       volume_local=one
@@ -7295,14 +7302,16 @@ FIX ME
       enddo
       rval=centroid_local(1)
       dr=xsten_local(1,1)-xsten_local(-1,1)
-      if (rval.ne.zero) then
+      if ((abs(rval).ge.EPS13*dx(1)).and. &
+          (dr.ge.EPS13*dx(1))) then
        volume_local=volume_local*two*Pi*abs(rval)
        centroid_local(1)=rval+dr*dr/(12.0*rval)
-      else if (rval.eq.zero) then
+      else if ((abs(rval).le.EPS13*dx(1)).or. &
+               ((dr.ge.zero).and.(dr.le.EPS13*dx(1)))) then
        volume_local=zero
        centroid_local(1)=zero
       else
-       print *,"rval is NaN (Box_volumeRZ): ",rval
+       print *,"rval or dr bust (Box_volumeRZ): ",rval,dr
        stop
       endif
 
@@ -7363,6 +7372,14 @@ FIX ME
        print *,"bfact invalid127 Box_volumeFAST: ",bfact
        stop
       endif
+      do dir=1,sdim
+       if (dx(dir).gt.zero) then
+        !do nothing
+       else
+        print *,"dx invalid ",dx
+        stop
+       endif
+      enddo
 
       if (sdim.eq.2) then
 
@@ -12458,6 +12475,7 @@ contains
          ! in: individual_MOF
        call tets_box_planes( &
          layer_flag, &
+         tid_in, &
          bfact,dx, &
          xsten0,nhalf0, &
          xsten0,nhalf0, &
@@ -18441,6 +18459,7 @@ contains
              ! in: multi_volume_grid
              call tets_box_planes( &
                layer_flag, &
+               tid_in, &
                bfact,dx, &
                xsten0,nhalf0, &
                xsten_grid,nhalf_grid, &
@@ -19251,6 +19270,7 @@ contains
               ! in: multi_volume_grid
               call tets_box_planes( &
                layer_flag, &
+               tid_in, &
                bfact,dx, &
                xsten0,nhalf0, &
                xsten_grid,nhalf_grid, &
@@ -19998,6 +20018,7 @@ contains
             ! in: multi_volume_grid
             call tets_box_planes( &
               layer_flag, &
+              tid_in, &
               bfact,dx, &
               xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
@@ -20989,6 +21010,7 @@ contains
 
            call tets_box_planes( &
             layer_flag, &
+            tid_in, &
             bfact,dx, &
             xsten0_minus,nhalf0, &
             xsten_thin,nhalf_thin, &
