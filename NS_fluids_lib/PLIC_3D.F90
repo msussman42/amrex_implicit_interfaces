@@ -201,6 +201,11 @@ stop
       real(amrex_real) LS_clamped
       real(amrex_real) VEL_clamped(SDIM)
       real(amrex_real) temperature_clamped
+
+      real(amrex_real) slope_val,slope_mag
+      integer slope_order
+
+
       integer :: prescribed_flag
       integer :: verification_flag
       integer, parameter :: caller_id=7
@@ -813,7 +818,7 @@ stop
          geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
-         mofdata_super, & !intent(inout)
+         mofdata_super, & !intent(inout) override normal and order cleared.
          vof_super, &
          multi_centroidA, & ! (num_materials,sdim) relative to supercell
          SDIM)
@@ -843,7 +848,7 @@ stop
           geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
-          mofdata_extended, & !intent(inout)
+          mofdata_extended, & !intent(inout) override normal and order cleared
           vof_extended, & !intent(in)
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           SDIM)
@@ -862,12 +867,22 @@ stop
 
          vofcomprecon=(im-1)*ngeom_recon+1
 
+         slope_mag=zero
+
          do dir=1,SDIM
-          mofdata_super(vofcomprecon+SDIM+1+dir)= &
-           mofdata_extended(vofcomprecon+SDIM+1+dir)
+          slope_val=mofdata_extended(vofcomprecon+SDIM+1+dir)
+          slope_mag=slope_mag+slope_val**2
+          mofdata_super(vofcomprecon+SDIM+1+dir)=slope_val
          enddo
-         mofdata_super(vofcomprecon+SDIM+1)= &
-           mofdata_extended(vofcomprecon+SDIM+1)
+         slope_mag=sqrt(slope_mag)
+
+         slope_order=NINT(mofdata_extended(vofcomprecon+SDIM+1))
+         mofdata_super(vofcomprecon+SDIM+1)=slope_order
+
+         if (1.eq.0) then
+          print *,"i,j,k,im,slope_mag,slope_order ", &
+             i,j,k,im,slope_mag,slope_order
+         endif
 
         enddo ! im=1,num_materials
 

@@ -10649,7 +10649,7 @@ contains
         stop
        endif
       else
-       print *,"fastflag invalid"
+       print *,"fastflag invalid ",fastflag
        stop
       endif
 
@@ -11506,6 +11506,10 @@ contains
 
       if (override_normal_valid(critical_material).eq.1) then
 
+       if (1.eq.0) then
+        print *,"critical_material override ",critical_material
+       endif
+
        use_only_override_data=1
 
        magLS=zero
@@ -11713,6 +11717,12 @@ contains
       delta_theta_max=10.0d0*Pi/180.0d0  ! 10 degrees
       delta_theta_local=delta_theta
 
+      if (1.eq.0) then
+       if (local_MOFITERMAX.eq.0) then
+        print *,"local_MOFITERMAX ",local_MOFITERMAX
+       endif
+      endif
+                      
       do while ((iter.lt.local_MOFITERMAX).and. &
                 (err.gt.tol).and. &
                 (err_local_min.gt.local_tol))
@@ -12184,9 +12194,11 @@ contains
        centroidA(dir)=cen_array(dir,iicrit+1)
       enddo
 
-      if (use_MilcentLemoine.eq.0) then
+      if ((use_MilcentLemoine.eq.0).and. &
+          (use_only_override_data.eq.0)) then
        ! do nothing
-      else if (use_MilcentLemoine.eq.1) then
+      else if ((use_MilcentLemoine.eq.1).or. &
+               (use_only_override_data.eq.1)) then
 
        if ((nDOF.eq.sdim-1).and. &
            (nEQN.eq.sdim)) then
@@ -12214,8 +12226,10 @@ contains
         use_initial_guess, &
         cen_derive_init, & !intent(out)
         fastflag,sdim)
+
       else
-       print *,"use_MilcentLemoine invalid"
+       print *,"use_MilcentLemoine invalid ",use_MilcentLemoine
+       print *,"or use_only_override_data invalid ",use_only_override_data
        stop
       endif
 
@@ -12536,7 +12550,14 @@ contains
           (num_processed.lt.num_materials)) then
        fastflag=0
       else if (num_processed.eq.0) then
-       fastflag=1
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        fastflag=1
+       else if (levelrz.eq.COORDSYS_RZ) then
+        fastflag=0
+       else
+        print *,"levelrz invalid ",levelrz
+        stop
+       endif
       else 
        print *,"num_processed invalid: ",num_processed
        stop
@@ -14768,10 +14789,8 @@ contains
         stop
        endif
 
-       mofdata(vofcomp+sdim+1)=zero  ! order=0
-       do dir=1,sdim
-        mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
-       enddo
+        !the order and slope cannot be cleared since they hold
+        !the override normal/order information
        mofdata(vofcomp+2*sdim+2)=zero  ! intercept=0
 
        if (vofcomp+2*sdim+2.eq.imaterial*ngeom_recon) then
@@ -14841,6 +14860,16 @@ contains
          override_normal_valid(imaterial)=1
          override_order(imaterial)= &
             NINT(mofdata((imaterial-1)*ngeom_recon+sdim+2))
+
+         if (1.eq.0) then
+          print *,"multimaterialMOF im,override_normal,order ", &
+               imaterial, &
+               override_normal(imaterial,1), &
+               override_normal(imaterial,2), &
+               override_normal(imaterial,sdim), &
+               override_order(imaterial)
+         endif
+
         else
          print *,"mag_vec invalid: ",mag_vec
          stop
@@ -15767,7 +15796,9 @@ contains
        print *,"ngeom_recon (global) = ",ngeom_recon
        stop
       endif
+
       nrecon=num_materials*ngeom_recon
+
       allocate(LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials))
       if (sdim.eq.2) then
        k1lo=0
@@ -15945,9 +15976,11 @@ contains
         xtet_domain,shapeflag, &
         sdim)
 
+        ! zap out override slope and order.
        do dir2=1,nrecon
         mofdata(dir2)=zero 
        enddo
+
        do im=1,num_materials
         vof_super(im)=zero
        enddo
@@ -16012,7 +16045,7 @@ contains
         xtetlist, &
         nmax, &
         nmax, &
-        mofdata, & !intent(inout)
+        mofdata, & !intent(inout) (override slope and order cleared)
         vof_super, &
         multi_centroidA, &
         sdim)
@@ -21945,7 +21978,7 @@ contains
         xtetlist, &
         nlist_alloc, &
         nmax, &
-        mofdata_convert, & !intent(inout)
+        mofdata_convert, & !intent(inout) (override slope and order cleared)
         vof_super, &
         multi_centroidA, &
         sdim)

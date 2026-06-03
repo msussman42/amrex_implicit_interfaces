@@ -20255,7 +20255,7 @@ stop
             if (LS_local(im_hard_material).ge.zero) then
              wt_local=EPS12
             else if (LS_local(im_hard_material).lt.zero) then
-             wt_local=one/((LS_local(im_hard_material)/dxmax)**2+one)
+             wt_local=one/((LS_local(im_hard_material)/dxmax)**4+one)
             else
              print *,"LS_local(im_hard_material) invalid ", &
                   LS_local(im_hard_material)
