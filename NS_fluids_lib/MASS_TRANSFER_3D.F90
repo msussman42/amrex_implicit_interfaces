@@ -5409,6 +5409,7 @@ stop
 
               mofdata_new(vofcomp_recon+SDIM+1+udir)=zero ! placeholder slope
              enddo ! udir
+
             enddo ! u_im=1..num_materials
 
              ! LS=n dot (x-x0)+intercept
@@ -5425,7 +5426,7 @@ stop
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             mofdata_new, & !intent(inout)
+             mofdata_new, & !intent(inout) override_normal and order cleared.
              vof_super, &
              multi_centroidA, &
              SDIM)

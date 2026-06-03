@@ -279,6 +279,7 @@ stop
          vofcomp_old=(im-1)*ngeom_raw+1
          vofcomp_new=(im-1)*ngeom_recon+1
          mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
+
          do dir=1,SDIM
           mofdata(vofcomp_new+dir)=datamof(D_DECL(i,j,k),vofcomp_old+dir)
            !slope=0
@@ -317,7 +318,7 @@ stop
           geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
-          mofdata, & !intent(inout)
+          mofdata, & !intent(inout) (override slope and order cleared)
           vof_super, &
           multi_centroidA, &
           SDIM)
@@ -1093,6 +1094,7 @@ stop
         vofcomp_new=(im-1)*ngeom_recon+1
         mofdata(vofcomp_new)= &
           fdatamof(D_DECL(ifine,jfine,kfine),vofcomp_old)
+
         do dir=1,SDIM
          mofdata(vofcomp_new+dir)= &
            fdatamof(D_DECL(ifine,jfine,kfine),vofcomp_old+dir)
@@ -1133,7 +1135,7 @@ stop
          geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
-         mofdata, & !intent(inout)
+         mofdata, & !intent(inout) (override slope and order cleared)
          vof_super, &
          multi_centroidA, &
          SDIM)

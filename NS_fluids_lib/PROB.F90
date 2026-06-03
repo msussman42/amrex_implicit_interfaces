@@ -19439,7 +19439,7 @@ end subroutine RatePhaseChange
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
-         mofdata, & !intent(inout)
+         mofdata, & !intent(inout) override normal and order cleared.
          vof_super, &
          multi_centroidA, &
          SDIM)
@@ -29363,7 +29363,7 @@ end subroutine initialize2d
           geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
-          mofdata, & !intent(inout)
+          mofdata, & !intent(inout) override normal and order cleared.
           vof_super, &
           multi_centroidA, &
           SDIM)

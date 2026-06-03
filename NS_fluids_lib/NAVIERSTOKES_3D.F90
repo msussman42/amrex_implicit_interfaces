@@ -14042,9 +14042,11 @@ END SUBROUTINE SIMP
                 mofdatafine(vofcomp_recon+dir-1)= &
                  fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir-1)
                enddo
+
                do dir=SDIM+2,ngeom_recon
                 mofdatafine(vofcomp_recon+dir-1)=zero
                enddo
+
               enddo ! im=1,num_materials
 
               call gridsten(xstencoarse,problo,ic,jc,kc, &
@@ -14126,7 +14128,7 @@ END SUBROUTINE SIMP
                 geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &
-                mofdatafine, & !intent(inout)
+                mofdatafine, & !intent(inout) override normal and order cleared
                 vof_super, &
                 multi_centroidA, &
                 SDIM)
