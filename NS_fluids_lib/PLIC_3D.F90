@@ -125,7 +125,7 @@ stop
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       
       integer :: i,j,k
-      integer :: dir,index_local,dirtan
+      integer :: dir
       integer :: igridlo(3),igridhi(3)
 
       integer im
@@ -138,18 +138,9 @@ stop
       real(amrex_real) mofsten(num_materials*ngeom_recon)
       real(amrex_real) mofsten_array(D_DECL(-1:1,-1:1,-1:1), &
         num_materials*ngeom_recon)
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      integer coeff
       integer istenlo(3),istenhi(3)
-      integer cmofsten_normal(SDIM)
-      integer dircrit
-      integer at_rz_boundary
       integer stencil_primary_count(num_materials)
-      integer stencil_exist_count(num_materials)
       integer fluid_stencil_count
-      integer fluid_exist_count
-      integer elvira_flag,im_elvira,im_opp_elvira
-      real(amrex_real) F1,F2,F_fluid
 
       real(amrex_real) multi_centroidA(num_materials,SDIM)
 
@@ -164,8 +155,6 @@ stop
       real(amrex_real) total_errors(num_materials)
       integer i1,j1,k1
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      real(amrex_real) tower_data(-1:1,-1:1,SDIM)
-      real(amrex_real) tower_pos(-1:1,-1:1,-1:1,SDIM)
 
       integer, PARAMETER :: nmax=POLYGON_LIST_MAX !in: fort_sloperecon
 
@@ -375,50 +364,10 @@ stop
         xstencil_point(dir)=xsten(0,dir)
        enddo
 
-       at_rz_boundary=0
-
        do dir=1,SDIM
         xsten_extended(1,dir)=xsten(3,dir)
         xsten_extended(-1,dir)=xsten(-3,dir)
         xsten_extended(0,dir)=xsten(0,dir)
-
-        if (dir.eq.1) then
-         if (xsten_extended(-1,dir).le.-dx(1)*EPS2) then
-          if (levelrz.eq.COORDSYS_RZ) then
-           if (SDIM.eq.2) then
-            !do nothing
-           else
-            print *,"expecting SDIM=2"
-            stop
-           endif
-           if (xsten(-1,dir).ge.-dx(1)*EPS2) then
-            !do nothing
-           else
-            print *,"expecting xsten(-1,dir)=0 ",xsten(-1,dir)
-            stop
-           endif
-           at_rz_boundary=1
-           xsten_extended(1,dir)=xsten(1,dir)
-           xsten_extended(-1,dir)=xsten(-1,dir)
-           xsten_extended(0,dir)=xsten(0,dir)
-          else if (levelrz.eq.COORDSYS_CARTESIAN) then
-           !do nothing
-          else
-           print *,"levelrz invalid fort_sloperecon ",levelrz
-           stop
-          endif
-         else if (xsten_extended(-1,dir).ge.-dx(1)*EPS2) then
-          ! do nothing
-         else
-          print *,"xsten_extended invalid ",xsten_extended
-          stop
-         endif 
-        else if ((dir.eq.2).or.(dir.eq.SDIM)) then
-         !do nothing
-        else
-         print *,"dir invalid fort_sloperecon ",dir
-         stop
-        endif
 
         dx_extended(dir)=xsten_extended(1,dir)-xsten_extended(-1,dir)
         if (dx_extended(dir).gt.zero) then
@@ -427,6 +376,7 @@ stop
          print *,"dx_extended invalid: ",dx_extended
          stop
         endif
+
         xsten_extended(3,dir)=xsten_extended(1,dir)+dx_extended(dir)
         xsten_extended(-3,dir)=xsten_extended(-1,dir)-dx_extended(dir)
         xsten_extended(2,dir)=xsten_extended(1,dir)+half*dx_extended(dir)
@@ -645,7 +595,6 @@ stop
  
         do im=1,num_materials
          stencil_primary_count(im)=0
-         stencil_exist_count(im)=0
         enddo
 
         do k1=klostenLS,khistenLS
@@ -697,31 +646,6 @@ stop
          call get_primary_material_VFRAC(vfrac_local,im)
          stencil_primary_count(im)=stencil_primary_count(im)+1
 
-         if ((is_rigid(im).eq.1).or. &
-             (is_elastic(im).eq.1)) then
-          cmofsten(D_DECL(i1,j1,k1))=1
-         else if ((is_rigid(im).eq.0).and. &
-                  (is_elastic(im).eq.0)) then
-          cmofsten(D_DECL(i1,j1,k1))=0
-         else
-          print *,"is_rigid(im) invalid ",im,is_rigid(im)
-          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
-          stop
-         endif
-
-         do im=1,num_materials
-          if ((vfrac_local(im).ge.-EPS1).and. &
-              (vfrac_local(im).le.VOFTOL_MATERIAL)) then
-           !do nothing
-          else if ((vfrac_local(im).ge.VOFTOL_MATERIAL).and. &
-                   (vfrac_local(im).le.one+EPS1)) then
-           stencil_exist_count(im)=stencil_exist_count(im)+1
-          else
-           print *,"vfrac_local invalid ",vfrac_local
-           stop
-          endif
-         enddo !im=1,num_materials
-         
          do im=1,num_materials*ngeom_recon
           mofsten_array(D_DECL(i1,j1,k1),im)=mofsten(im)
          enddo
@@ -731,7 +655,6 @@ stop
         enddo ! i1,j1,k1
 
         fluid_stencil_count=0
-        fluid_exist_count=0
 
         do im=1,num_materials
          if ((is_rigid(im).eq.1).or. &
@@ -749,15 +672,6 @@ stop
            stop
           endif 
 
-          if (stencil_exist_count(im).ge.1) then
-           fluid_exist_count=fluid_exist_count+1
-          else if (stencil_exist_count(im).eq.0) then
-           !do nothing
-          else
-           print *,"stencil_exist_count invalid"
-           stop
-          endif 
-
          else
           print *,"is_rigid(im) invalid ",im,is_rigid(im)
           print *,"or is_elastic(im) invalid ",im,is_elastic(im)
@@ -765,52 +679,10 @@ stop
          endif
         enddo ! im=1..num_materials
 
-        elvira_flag=0
-        im_elvira=0
-        im_opp_elvira=0
 
         if ((fluid_stencil_count.ge.2).and. &
             (fluid_stencil_count.le.num_materials)) then
          
-         if (fluid_exist_count.eq.2) then
-      
-          elvira_flag=1 
-          do im=1,num_materials
-           if ((is_rigid(im).eq.1).or. &
-               (is_elastic(im).eq.1)) then
-            !do nothing
-           else if ((is_rigid(im).eq.0).and. &
-                    (is_elastic(im).eq.0)) then
-
-            if (stencil_primary_count(im).ge.1) then
-             if (im_elvira.eq.0) then
-              im_elvira=im
-             else if ((im_elvira.gt.0).and.(im_elvira.ne.im)) then
-              im_opp_elvira=im
-             endif
-            endif
-
-           else
-            print *,"is_rigid(im) invalid ",im,is_rigid(im)
-            print *,"or is_elastic(im) invalid ",im,is_elastic(im)
-            stop
-           endif
-
-          enddo ! im=1..num_materials
-
-          if ((im_elvira.ge.1).and.(im_opp_elvira.ge.1)) then
-           !do nothing
-          else
-           print *,"expecting im_elvira and im_opp_elvira>=1"
-           stop
-          endif 
-         else if (fluid_exist_count.gt.2) then
-          !do nothing
-         else
-          print *,"fluid_exist_count invalid"
-          stop
-         endif
-
          volume_super=zero ! volume of the extended region
 
          do dir=1,SDIM
@@ -829,33 +701,6 @@ stop
 
          enddo ! im=1..num_materials
 
-         dircrit=1
-         do dir=1,SDIM
-          cmofsten_normal(dir)=0
-          do k1=klostenLS,khistenLS
-          do j1=-1,1
-          do i1=-1,1
-           if (dir.eq.1) then
-            coeff=i1
-           else if (dir.eq.2) then
-            coeff=j1
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
-            coeff=k1
-           else
-            print *,"dir invalid"
-            stop
-           endif
-           cmofsten_normal(dir)=cmofsten_normal(dir)+ &
-              coeff*cmofsten(D_DECL(i1,j1,k1))
-          enddo 
-          enddo 
-          enddo 
-          if (abs(cmofsten_normal(dir)).gt. &
-              abs(cmofsten_normal(dircrit))) then
-           dircrit=dir
-          endif
-         enddo !dir=1,SDIM
-
          istenlo(3)=0
          istenhi(3)=0
          do dir=1,SDIM
@@ -863,72 +708,6 @@ stop
           istenhi(dir)=1
          enddo
          
-         if ((at_rz_boundary.eq.1).and.(dircrit.eq.1)) then
-          !do nothing
-         else if ((at_rz_boundary.eq.0).or.(dircrit.eq.2)) then
-          if (cmofsten_normal(dircrit).eq.0) then
-           !do nothing
-          else if (abs(cmofsten_normal(dircrit)).gt.0) then
-           if (cmofsten_normal(dircrit).gt.0) then
-            istenhi(dircrit)=istenhi(dircrit)-1
-            xsten_extended(1,dircrit)=xsten(1,dircrit)
-           else if (cmofsten_normal(dircrit).lt.0) then
-            istenlo(dircrit)=istenlo(dircrit)+1
-            xsten_extended(-1,dircrit)=xsten(-1,dircrit)
-           else
-            print *,"cmofsten_normal invalid"
-            stop
-           endif
-
-           xsten_extended(0,dircrit)=half*(xsten_extended(-1,dircrit)+ &
-             xsten_extended(1,dircrit))
-
-           dx_extended(dircrit)=xsten_extended(1,dircrit)- &
-              xsten_extended(-1,dircrit)
-           if (dx_extended(dircrit).gt.zero) then
-            !do nothing
-           else
-            print *,"dx_extended invalid: ",dx_extended
-            stop
-           endif
-           xsten_extended(3,dircrit)=xsten_extended(1,dircrit)+ &
-              dx_extended(dircrit)
-           xsten_extended(-3,dircrit)=xsten_extended(-1,dircrit)- &
-              dx_extended(dircrit)
-           xsten_extended(2,dircrit)=xsten_extended(1,dircrit)+ &
-              half*dx_extended(dircrit)
-           xsten_extended(-2,dircrit)=xsten_extended(-1,dircrit)- &
-              half*dx_extended(dircrit)
-
-           if (1.eq.0) then
-            print *,"modifying CMOFSTEN "
-            print *,"i,j,k ",i,j,k
-            print *,"dircrit= ",dircrit
-            print *,"cmofsten_normal ",cmofsten_normal
-            print *,"xstencil_point ",xstencil_point
-           endif  
-          else
-           print *,"cmof_normal corrupt"
-           stop
-          endif
-         else
-          print *,"at_rz_boundary or dircrit invalid"
-          stop
-         endif
-
-         do i1=-1,1
-         do j1=-1,1
-          do dir=1,SDIM
-           tower_data(i1,j1,dir)=zero
-          enddo
-          do k1=-1,1
-          do dir=1,SDIM
-           tower_pos(i1,j1,k1,dir)=zero
-          enddo
-          enddo
-         enddo
-         enddo
-
          ! i1,j1,k1=-1..1
          do k1=istenlo(3),istenhi(3)
          do j1=istenlo(2),istenhi(2)
@@ -964,69 +743,6 @@ stop
            cen_super(dir)=cen_super(dir)+volsten*censten(dir)
           enddo
 
-          F1=vfrac_local(im_elvira)
-          if (F1.lt.zero) then
-           F1=zero
-          else if (one-F1.lt.zero) then
-           F1=one
-          endif
-          F2=vfrac_local(im_opp_elvira)
-          if (F2.lt.zero) then
-           F2=zero
-          else if (one-F2.lt.zero) then
-           F2=one
-          endif
-          F_fluid=F1+F2
-          F1=F1/F_fluid
-          F2=F2/F_fluid
-          if (SDIM.eq.2) then
-           if (dir.eq.SDIM) then
-            dirtan=1
-            tower_data(i1,0,dir)=tower_data(i1,0,dir)+F1*volsten
-            do index_local=-1,1
-             tower_pos(i1,0,index_local,dirtan)=xstenbox(index_local,dirtan)
-            enddo
-           else if (dir.eq.1) then
-            dirtan=SDIM
-            tower_data(j1,0,dir)=tower_data(j1,0,dir)+F1*volsten
-            do index_local=-1,1
-             tower_pos(j1,0,index_local,dirtan)=xstenbox(index_local,dirtan)
-            enddo
-           else
-            print *,"dir invalid"
-            stop
-           endif
-          else if (SDIM.eq.3) then
-           if (dir.eq.SDIM) then
-            tower_data(i1,j1,dir)=tower_data(i1,j1,dir)+F1*volsten
-            do dirtan=1,2
-             do index_local=-1,1
-              tower_pos(i1,j1,index_local,dirtan)=xstenbox(index_local,dirtan)
-             enddo
-            enddo
-           else if (dir.eq.1) then
-            tower_data(j1,k1,dir)=tower_data(j1,k1,dir)+F1*volsten
-            do dirtan=2,3
-             do index_local=-1,1
-              tower_pos(j1,k1,index_local,dirtan)=xstenbox(index_local,dirtan)
-             enddo
-            enddo
-           else if (dir.eq.2) then
-            tower_data(i1,k1,dir)=tower_data(i1,k1,dir)+F1*volsten
-            do dirtan=1,3,2
-             do index_local=-1,1
-              tower_pos(i1,k1,index_local,dirtan)=xstenbox(index_local,dirtan)
-             enddo
-            enddo
-           else
-            print *,"dir invalid"
-            stop
-           endif
-          else
-           print *,"dimension bust"
-           stop
-          endif
- 
          enddo
          enddo
          enddo ! i1,j1,k1

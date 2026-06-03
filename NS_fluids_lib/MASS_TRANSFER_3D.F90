@@ -5417,7 +5417,8 @@ stop
              tessellate_source, & !TESSELLATE_IGNORE_ISELASTIC
              tid, &
              bfact,dx, &
-             u_xsten_updatecell,nhalf, &
+             u_xsten_updatecell, &
+             nhalf, &
              mof_verbose, & !=0
              use_ls_data, & !=0
              LS_stencil, &

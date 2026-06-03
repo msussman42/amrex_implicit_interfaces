@@ -19431,7 +19431,8 @@ end subroutine RatePhaseChange
          nucleate_in%tid, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
-         xsten,nhalf, &
+         xsten, &
+         nhalf, &
          mof_verbose, & ! =0
          use_ls_data, & ! =0
          LS_stencil, &
@@ -29353,7 +29354,9 @@ end subroutine initialize2d
          call multimaterial_MOF( &
           tessellate_source, &  ! =TESSELLATE_FLUIDS
           tid_in, &
-          bfact,dx,xsten,nhalf, &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
           mof_verbose, & !=0
           use_ls_data, & !=0
           LS_stencil, & 

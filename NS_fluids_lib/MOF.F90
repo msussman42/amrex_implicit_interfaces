@@ -6016,6 +6016,8 @@ end subroutine volume_sanity_check
 !  multi_get_volume_grid_simple,
 !  multi_get_volume_grid_and_map,
 !  multi_get_area_pairs
+
+
       subroutine tets_box_planes( &
        layer_flag, &
        bfact,dx, &
@@ -6052,7 +6054,179 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       real(amrex_real), INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
-      real(amrex_real) :: xsten0_LS(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real) phi1(sdim+1),dummyphi(sdim+1)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real) phinode(4*(sdim-1))
+      integer inode
+      integer layer_iter
+      real(amrex_real) nn(sdim)
+      real(amrex_real) intercept
+      integer is_masked(num_materials)
+
+      if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
+       ! do nothing
+      else
+       print *,"nlist_alloc invalid"
+       stop
+      endif
+
+      if ((sdim.ne.2).and.(sdim.ne.3)) then
+       print *,"sdim invalid tets_box_planes"
+       stop
+      endif
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials invalid tets box planes "
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid122"
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       use_super_cell=0
+      else if (levelrz.eq.COORDSYS_RZ) then
+       use_super_cell=1
+       do side=1,2
+        volume=zero
+        call cutRZ( &
+         side, &
+         xsten_box,xsten_box_local,nhalf_box,sdim)
+        call Box_VolumeRZ( &
+         side, &
+         bfact,dx, &
+         xsten_box_local,nhalf_box, &
+         volume,centroid,sdim)
+        if (volume.eq.zero) then
+         use_super_cell=0
+        endif
+       enddo !side=1,2
+      else
+       print *,"levelrz invalid"
+       stop
+      endif 
+          
+       ! in: tets_box_planes_super
+      if (use_super_cell.eq.0) then
+
+       call sub_tets_box_planes( &
+        layer_flag, &
+        bfact,dx, &
+        xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
+        xsten_box,nhalf_box, &
+        mofdata, &
+        xtetlist, &
+        nlist_alloc, &
+        nlist, &
+        nmax, &
+        sdim)
+
+      else if (use_super_cell.eq.1) then
+
+       nlist=0
+
+       do side=1,2
+
+        call cutRZ( &
+         side, &
+         xsten_box,xsten_box_local,nhalf_box,sdim)
+
+        call sub_tets_box_planes( &
+         layer_flag, &
+         bfact,dx, &
+         xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
+         xsten_box_local,nhalf_box, &
+         mofdata, &
+         xtetlist, &
+         nlist_alloc, &
+         nlist_local, &
+         nmax, &
+         sdim)
+
+FIX ME
+          geom_xtetlist_local(1,1,1,tid_in+1), &
+          geom_nmax, &
+          nlist_local, &
+          nmax, &
+          sdim)
+         if (nlist_local+nlist.gt.nmax) then
+          print *,"too many tetrahedrons in tets_box_planes_super"
+          print *,"tessellate=",tessellate
+          print *,"bfact=",bfact
+          print *,"tid_in=",tid_in
+          print *,"nlist_local=",nlist_local
+          print *,"nlist=",nlist
+          print *,"nmax=",nmax
+          print *,"num_materials=",num_materials
+          print *,"sdim=",sdim
+          stop
+         endif
+         do nn=1,nlist_local
+          nlist=nlist+1
+          do itri=1,sdim+1
+          do dir=1,sdim
+           xtetlist(itri,dir,nlist)=geom_xtetlist_local(itri,dir,nn,tid_in+1)
+          enddo
+          enddo
+         enddo  ! nn
+          
+       enddo ! side=1,2
+
+      else
+       print *,"use_super_cell invalid"
+       stop
+      endif
+
+      return
+      end subroutine tets_box_planes
+
+      subroutine sub_tets_box_planes( &
+       layer_flag, &
+       bfact,dx, &
+       xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
+       xsten_box,nhalf_box, &
+       mofdata, &
+       xtetlist, &
+       nlist_alloc, &
+       nlist, &
+       nmax, &
+       sdim)
+
+      use probcommon_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: layer_flag
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: sdim,bfact
+      integer, INTENT(in) :: nhalf0
+      integer, INTENT(in) :: nhalf_box
+      integer symmetry_flag,ntetbox
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old,iplane,n,nsub,narea,n2
+      integer j_dir
+      integer i_tet_node
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer id,icrit,im,vofcomp,iorder
+      integer dir
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       real(amrex_real) xtetlist_old(4,3,nlist_alloc)
       real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
@@ -6082,32 +6256,26 @@ end subroutine volume_sanity_check
       endif
 
       if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid tets box planes"
+       print *,"nhalf0 invalid sub tets box planes"
        stop
       endif
       if (nhalf_box.lt.1) then
-       print *,"nhalf_box invalid tets box planes"
+       print *,"nhalf_box invalid sub tets box planes"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid tets_box_planes"
+       print *,"sdim invalid sub_tets_box_planes"
        stop
       endif
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid tets box planes"
+       print *,"num_materials invalid sub tets box planes"
        stop
       endif
       if (bfact.lt.1) then
        print *,"bfact invalid121"
        stop
       endif
-
-      do i_tet_node=-nhalf0,nhalf0
-      do j_dir=1,sdim
-       xsten0_LS(i_tet_node,j_dir)=xsten0(i_tet_node,j_dir)
-      enddo
-      enddo
 
       symmetry_flag=0
       call get_ntetbox(ntetbox,symmetry_flag,sdim)
@@ -6206,7 +6374,7 @@ end subroutine volume_sanity_check
            phi1(i_tet_node)=intercept
            do j_dir=1,sdim
             phi1(i_tet_node)=phi1(i_tet_node)+ &
-              nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0_LS(0,j_dir))
+              nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
            enddo
           enddo
            ! tetrahedras representing intersection of region where phi1>0
@@ -7043,6 +7211,129 @@ end subroutine volume_sanity_check
       return
       end subroutine CISBOXHALF 
 
+      subroutine cutRZ( &
+        side, &
+        xsten,xsten_local,nhalf,sdim)
+      IMPLICIT NONE
+
+      integer, intent(in) :: side,nhalf,sdim
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(out) :: xsten_local(-nhalf:nhalf,sdim)
+      integer i,dir
+
+      do i=-nhalf,nhalf
+       do dir=1,sdim
+        xsten_local(i,dir)=xsten(i,dir)
+       enddo
+      enddo
+
+      if (side.eq.1) then
+       do i=-nhalf,nhalf
+        xsten_local(i,1)=min(xsten_local(i,1),zero)
+       enddo
+      else if (side.eq.2) then
+       do i=-nhalf,nhalf
+        xsten_local(i,1)=max(xsten_local(i,1),zero)
+       enddo
+      else
+       print *,"side invalid"
+       stop
+      endif
+      xsten_local(0,1)=half*(xsten_local(-1,1)+xsten_local(1,1))
+
+      return
+      end subroutine cutRZ
+
+       ! centroid is in absolute coordinate system 
+      subroutine Box_volumeRZ( &
+        side, &
+        bfact,dx, &
+        xsten,nhalf, &
+        volume,centroid,sdim)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: sdim,bfact,nhalf,side
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real) :: xsten_local(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(inout) :: volume
+      real(amrex_real) :: volume_local
+      real(amrex_real), INTENT(inout) :: centroid(sdim)
+      real(amrex_real) :: centroid_local(sdim)
+      integer dir
+      real(amrex_real) rval,dr
+    
+      if (sdim.ne.2) then
+       print *,"sdim invalid Box_volumeRZ: ",sdim
+       stop
+      endif 
+      if (nhalf.lt.1) then
+       print *,"nhalf invalid Box_volumeRZ: ",nhalf
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid127 Box_volumeRZ: ",bfact
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_RZ) then
+       !do nothing
+      else
+       print *,"expecting levelrz=COORDSYS_RZ"
+       stop
+      endif
+
+      call cutRZ( &
+       side, &
+       xsten,xsten_local,nhalf,sdim)
+ 
+      volume_local=one
+      do dir=1,sdim
+       volume_local=volume_local*(xsten_local(1,dir)-xsten_local(-1,dir))
+       centroid_local(dir)=half*(xsten_local(1,dir)+xsten_local(-1,dir))
+      enddo
+      rval=centroid_local(1)
+      dr=xsten_local(1,1)-xsten_local(-1,1)
+      if (rval.ne.zero) then
+       volume_local=volume_local*two*Pi*abs(rval)
+       centroid_local(1)=rval+dr*dr/(12.0*rval)
+      else if (rval.eq.zero) then
+       volume_local=zero
+       centroid_local(1)=zero
+      else
+       print *,"rval is NaN (Box_volumeRZ): ",rval
+       stop
+      endif
+
+      if (side.eq.1) then 
+       volume=volume_local 
+       do dir=1,sdim
+        centroid(dir)=centroid_local(dir)
+       enddo
+      else if (side.eq.2) then
+       if (volume+volume_local.gt.zero) then
+        do dir=1,sdim
+         centroid(dir)=(volume_local*centroid_local(dir)+ &
+          volume*centroid(dir))/(volume+volume_local)
+         volume=volume+volume_local
+        enddo
+       else if (volume+volume_local.eq.zero) then
+        volume=zero
+        do dir=1,sdim
+         centroid(dir)=zero
+        enddo
+       else
+        print *,"volume+volume_local invalid"
+        stop
+       endif
+      else
+       print *,"side invalid"
+       stop
+      endif
+         
+      return
+      end subroutine Box_volumeRZ
 
 
        ! centroid is in absolute coordinate system 
@@ -7058,8 +7349,7 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(out) :: volume
       real(amrex_real), INTENT(out) :: centroid(sdim)
-      integer dir
-      real(amrex_real) rval,dr
+      integer dir,side
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid Box_volumeFAST: ",sdim
@@ -7083,23 +7373,17 @@ end subroutine volume_sanity_check
          centroid(dir)=half*(xsten(1,dir)+xsten(-1,dir))
         enddo
        else if (levelrz.eq.COORDSYS_RZ) then
-        volume=one
-        do dir=1,sdim
-         volume=volume*(xsten(1,dir)-xsten(-1,dir))
-         centroid(dir)=half*(xsten(1,dir)+xsten(-1,dir))
+
+        do side=1,2
+         call Box_volumeRZ( &
+           side, &
+           bfact,dx, &
+           xsten,nhalf, &
+           volume, &
+           centroid, &
+           sdim)
         enddo
-        rval=centroid(1)
-        dr=xsten(1,1)-xsten(-1,1)
-        if (rval.ne.zero) then
-         volume=volume*two*Pi*abs(rval)
-         centroid(1)=rval+dr*dr/(12.0*rval)
-        else if (rval.eq.zero) then
-         volume=zero
-         centroid(1)=zero
-        else
-         print *,"rval is NaN (Box_volumeFAST): ",rval
-         stop
-        endif
+
        else
         print *,"levelrz invalid Box_volumeFAST(1): ",levelrz
         stop
@@ -8379,13 +8663,11 @@ contains
       integer, INTENT(in) :: nlist,nmax,sdim,bfact,nhalf
       real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      real(amrex_real) :: xsten_local(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(in) :: slope(sdim)
       real(amrex_real) xtarget(sdim)
       real(amrex_real), INTENT(in) :: dx(sdim)
       integer dir
       integer i_tet_node
-      integer i_stencil_node
       integer n
       real(amrex_real), INTENT(out) :: minphi,maxphi
       real(amrex_real) intercept,dist
@@ -8406,13 +8688,6 @@ contains
       endif
 
 
-       ! xsten_local used for LS dist.
-      do i_stencil_node=-nhalf,nhalf
-      do dir=1,sdim
-       xsten_local(i_stencil_node,dir)=xsten(i_stencil_node,dir)
-      enddo !dir
-      enddo !i_stencil_node
-
       intercept=zero
       minphi=1.0D+10
       maxphi=-1.0D+10
@@ -8422,7 +8697,7 @@ contains
          xtarget(dir)=xtetlist(i_tet_node,dir,n)
         enddo
 
-        call distfunc(bfact,dx,xsten_local,nhalf, &
+        call distfunc(bfact,dx,xsten,nhalf, &
          intercept,slope,xtarget,dist,sdim)
 
         if (dist.lt.minphi) then
@@ -8889,8 +9164,6 @@ contains
       real(amrex_real), INTENT(out) :: centroid(sdim)
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
       real(amrex_real) xtet(sdim+1,sdim)
-      real(amrex_real) xsten_local(-nhalf0:nhalf0,sdim)
-      integer i,dir
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_ff"
@@ -8908,7 +9181,8 @@ contains
       endif
 
       call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
@@ -8922,17 +9196,10 @@ contains
 
       if (fastflag.eq.0) then
 
-         ! xsten_local used for LS dist.
-       do i=-nhalf0,nhalf0
-       do dir=1,sdim
-         xsten_local(i,dir)=xsten0(i,dir)
-       enddo
-       enddo
-
          !calling from "multi_ff"
        call multi_cell_intersection( &
          bfact,dx, &
-         xsten_local,nhalf0, &
+         xsten0,nhalf0, &
          slope, &
          intercept, &
          voln, &
@@ -10219,8 +10486,6 @@ contains
       real(amrex_real), INTENT(in) :: angle(nDOF)
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      real(amrex_real) xsten_local(-nhalf0:nhalf0,sdim)
-      integer isten
       integer, PARAMETER :: nhalf2=1
       real(amrex_real), INTENT(out) :: ff(nEQN) 
       real(amrex_real) volume_cut,facearea
@@ -10233,7 +10498,6 @@ contains
       real(amrex_real) cencell_vof(sdim)
       real(amrex_real) xtet(sdim+1,sdim)
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
-      integer ksten_low,ksten_high
       real(NOTUS_REAL) local_angles_NOTUS(2)
       real(NOTUS_REAL) local_volume_NOTUS
       real(NOTUS_REAL) local_cell_size_NOTUS(3)
@@ -10358,17 +10622,6 @@ contains
         nslope, &
         sdim)
 
-      if (sdim.eq.3) then
-       ksten_low=-1
-       ksten_high=1
-      else if (sdim.eq.2) then
-       ksten_low=0
-       ksten_high=0
-      else
-       print *,"sdim invalid"
-       stop
-      endif
-
       if (use_MilcentLemoine.eq.0) then
 
         ! inside of multi_rotatefunc
@@ -10394,19 +10647,13 @@ contains
 
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
-          ! xsten_local used for LS dist.
-        do isten=-nhalf0,nhalf0
-        do dir=1,sdim
-         xsten_local(isten,dir)=xsten0(isten,dir)
-        enddo
-        enddo
 
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
           ! calling from "mult_rotatefunc"
         call multi_cell_intersection( &
           bfact,dx, &
-          xsten_local,nhalf0, &
+          xsten0,nhalf0, &
           nslope, &
           intercept, &
           volume_cut, & !intent(out)
@@ -10914,7 +11161,8 @@ contains
         override_normal, &
         override_normal_valid, &
         bfact,dx, &
-        xsten0,nhalf0, &
+        xsten0, &
+        nhalf0, &
         refcentroid, & ! relative to cell centroid of the cell.
         refvfrac, &
         npredict, & !intent(in)
@@ -11417,7 +11665,8 @@ contains
          nDOF, & ! sdim-1
          nEQN, & ! sdim 
          use_MilcentLemoine, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
          nlist_alloc, & !intent(in)
@@ -11453,7 +11702,8 @@ contains
          nDOF, & ! sdim-
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
          nlist_alloc, & !intent(in)
@@ -11607,7 +11857,8 @@ contains
          nDOF, & ! sdim-1
          nEQN, & ! sdim
          use_MilcentLemoine, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
          nlist_alloc, & !intent(in)
@@ -11650,7 +11901,8 @@ contains
          nDOF, & ! sdim-1
          nEQN, & ! sdim
          use_MilcentLemoine, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          xtetlist_vof, & !intent(in)
          nlist_vof, & !intent(in)
          nlist_alloc, & !intent(in)
@@ -11894,7 +12146,9 @@ contains
        vof_ref, &
        cen_ref, &
        bfact,dx, &
-       xsten,nhalf,sdim)
+       xsten, &
+       nhalf, &
+       sdim)
       use probcommon_module
       use global_utility_module
 
@@ -11998,7 +12252,8 @@ contains
         override_normal, &
         override_normal_valid, &
         bfact,dx, &
-        xsten0,nhalf0, &
+        xsten0, &
+        nhalf0, &
         order_algorithm_in, &
         xtetlist_vof, & !intent(out)
         nlist_alloc, & !intent(in)
@@ -12031,9 +12286,7 @@ contains
       integer, INTENT (IN) :: bfact
       real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
-      real(amrex_real), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
       integer dir
-      integer i_stencil_node
       integer, INTENT(in) :: nmax
       integer, INTENT(in) :: order_algorithm_in(num_materials)
       real(amrex_real), INTENT(inout) :: uncaptured_volume_fraction
@@ -12168,13 +12421,6 @@ contains
        print *,"nlist_alloc invalid: ",nlist_alloc
        stop
       endif
-
-      do i_stencil_node=-nhalf0,nhalf0
-      do dir=1,sdim
-       xsten_local(i_stencil_node,dir)=xsten0(i_stencil_node,dir)
-      enddo !dir
-      enddo !i_stencil_node
-
 
        ! cencell_vof is in absolute coordinate system
 
@@ -12408,7 +12654,9 @@ contains
              single_volume, &
              centroid_ref, &  !absolute coordinate system
              bfact,dx, &
-             xsten_local,nhalf0,sdim)
+             xsten0, &
+             nhalf0, &
+             sdim)
           
            if (mag_vec.gt.zero) then
 
@@ -12527,7 +12775,9 @@ contains
            single_volume, &
            centroid_ref, &  !absolute coordinate system
            bfact,dx, &
-           xsten_local,nhalf0,sdim)
+           xsten0, &
+           nhalf0, &
+           sdim)
 
          if (mag_vec.gt.zero) then
           !do nothing
@@ -12553,7 +12803,8 @@ contains
            override_normal, &
            override_normal_valid, &
            bfact,dx, &
-           xsten0,nhalf0, &
+           xsten0, &
+           nhalf0, &
            refcentroid, &
            refvfrac, &
            npredict, & !intent(in)
@@ -12713,7 +12964,9 @@ contains
             volcut_vof, &
             centroid_ref, &
             bfact,dx, &
-            xsten_local,nhalf0,sdim)
+            xsten0, &
+            nhalf0, &
+            sdim)
 
           if (mag_vec.gt.zero) then
            ! do nothing
@@ -13515,7 +13768,8 @@ contains
         lsnormal_valid, &
         ls_intercept, &
         bfact,dx, &
-        xsten0,nhalf0, &
+        xsten0, &
+        nhalf0, &
         im, &
         dxmax_volume_constraint, & 
         sdim)
@@ -13972,7 +14226,8 @@ contains
         tessellate, &
         tid_in, &
         bfact,dx, &
-        xsten0,nhalf0, &
+        xsten0, &
+        nhalf0, &
         mof_verbose, &
         use_ls_data, &
         LS_stencil, &
@@ -14534,7 +14789,8 @@ contains
            lsnormal_valid, & !intent(out)
            ls_intercept, & !intent(out)
            bfact,dx, & !intent(in)
-           xsten0,nhalf0, & !intent(in)
+           xsten0, &
+           nhalf0, & !intent(in)
            imaterial, & !intent(in)
            dxmax_volume_constraint, & !intent(in)
            sdim) !intent(in)
@@ -14833,7 +15089,8 @@ contains
             override_normal, &
             override_normal_valid, &
             bfact,dx, &
-            xsten0,nhalf0, &
+            xsten0, &
+            nhalf0, &
             order_algorithm_local, &
             xtetlist_vof, & !intent(out)
             nlist_alloc, & !intent(in)
@@ -15654,7 +15911,8 @@ contains
         tessellate , &  !TESSELLATE_FLUIDS
         tid_diagnostic, &
         bfact,dx, &
-        xsten0_recon,nhalf0, &
+        xsten0_recon, &
+        nhalf0, &
         mof_verbose, &
         use_ls_data, &
         LS_stencil, &
@@ -21582,7 +21840,8 @@ contains
         local_tessellate, & !TESSELLATE_IGNORE_ISRIGID|ISELASTIC
         tid_in, &
         bfact,dx, &
-        xsten0,nhalf0, &
+        xsten0, &
+        nhalf0, &
         mof_verbose, &
         use_ls_data, &
         LS_stencil, &
