@@ -308,7 +308,9 @@ stop
         call multimaterial_MOF( &
           tessellate, & !=TESSELLATE_FLUIDS
           tid_in, &
-          bfact_coarse,dxc,xsten,nhalf, &
+          bfact_coarse,dxc, &
+          xsten, &
+          nhalf, &
           mof_verbose, &
           use_ls_data, & ! use_ls_data=0
           LS_stencil, &
@@ -1122,7 +1124,9 @@ stop
        call multimaterial_MOF( &
          tessellate, & !=TESSELLATE_FLUIDS
          tid_in, &
-         bfact_fine,dxf,xstenfine,nhalf, &
+         bfact_fine,dxf, &
+         xstenfine, &
+         nhalf, &
          mof_verbose, &
          use_ls_data, &
          LS_stencil, &

@@ -14117,7 +14117,9 @@ END SUBROUTINE SIMP
                call multimaterial_MOF( &
                 tessellate_source, & !TESSELLATE_FLUIDS
                 tid_in, &
-                bfact_f,dxf,xstenfine,nhalf, &
+                bfact_f,dxf, &
+                xstenfine, &
+                nhalf, &
                 mof_verbose, & ! =0
                 use_ls_data, & ! =0
                 LS_stencil, &
