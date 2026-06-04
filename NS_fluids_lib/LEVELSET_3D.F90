@@ -2766,6 +2766,8 @@ stop
       real(amrex_real) dxcrossing_opt
       real(amrex_real) dxside
       real(amrex_real) mgoni_force(SDIM)
+      real(amrex_real) xcrossing(SDIM)
+      real(amrex_real) nghost(SDIM)
 
       integer im3
 
