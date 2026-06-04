@@ -76,17 +76,13 @@ stop
         lssten, & !intent(in)
         ! -ngrow_tower:ngrow_tower ^{3} x num_materials
         vofsten, & !intent(in)
-        !3x3x3x num_materials x sdim components
-        !closest point normal.
-        !scalar (i,j,k)
-        vol_sten, & !intent(in)
         curvHT_choice, & !intent(out)
         curvFD, & !intent(out)
         mgoni_force, & !intent(out)
         ZEYU_thet_d, & !intent(out)
         ZEYU_u_cl, & !intent(out)
         im3, & !intent(out)
-        xcrossing, & !intent(out)
+        xcrossing_offset, & !intent(out)
         nghost, & !intent(out)
         visc_coef, & !intent(in)
         unscaled_min_curvature_radius, & !intent(in)
@@ -121,7 +117,7 @@ stop
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
       real(amrex_real) user_tension(num_interfaces)
       real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(in) :: vol_sten
+      real(amrex_real) :: vol_sten
       real(amrex_real) :: curvHT_LS
       real(amrex_real) :: curvHT_VOF
       real(amrex_real), INTENT(out) :: curvHT_choice
@@ -223,7 +219,7 @@ stop
       real(amrex_real) gx
 
       real(amrex_real) nperp(SDIM) 
-      real(amrex_real), INTENT(out) :: xcrossing(SDIM) 
+      real(amrex_real), INTENT(out) :: xcrossing_offset(SDIM) 
       real(amrex_real), INTENT(out) :: nghost(SDIM) 
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) nfluid(SDIM) 
@@ -390,12 +386,6 @@ stop
        print *,"iten and iten_test differ: ",iten,iten_test
        stop
       endif
-      if (vol_sten.gt.zero) then
-       ! do nothing
-      else
-       print *,"vol_sten invalid: ",vol_sten
-       stop
-      endif
 
       if ((dircrit.lt.1).or.(dircrit.gt.SDIM)) then
        print *,"dircrit invalid initheightLS dircrit=",dircrit
@@ -500,7 +490,7 @@ stop
       endif
 
       do dir2=1,SDIM
-       xcrossing(dir2)=xcenter(dir2)
+       xcrossing_offset(dir2)=zero
        nghost(dir2)=zero
       enddo
 
@@ -515,11 +505,12 @@ stop
        if (LS_base.eq.zero) then
         !do nothing
        else if (LS_star.eq.zero) then
-        xcrossing(dircrit)=x_star
+        xcrossing_offset(dircrit)=x_star-xcenter(dircrit)
        else if (LS_base*LS_star.gt.zero) then
         !do nothing
        else if (LS_base*LS_star.lt.zero) then
-        xcrossing(dircrit)=(x_base*LS_star-x_star*LS_base)/(LS_star-LS_base)
+        xcrossing_offset(dircrit)= &
+          (x_base*LS_star-x_star*LS_base)/(LS_star-LS_base)-xcenter(dircrit)
        else
         print *,"LS_base or LS_star invalid ",LS_base,LS_star
         stop
@@ -565,12 +556,22 @@ stop
        ! centroid in absolute coordinate system
        ! returns a volume fraction
       call getvolume( &
+       vol_sten, & !intent(out)
        bfact,dx, &
        xsten, &
        nhalf_height, & !nhalf_height=9
-       LS1_save,volpos,facearea, &
-       cenpos,VOFTOL_MATERIAL,SDIM)
+       LS1_save, &
+       volpos, &
+       facearea, &
+       cenpos, &
+       VOFTOL_MATERIAL,SDIM)
 
+      if (vol_sten.gt.zero) then
+       ! do nothing
+      else
+       print *,"vol_sten invalid: ",vol_sten
+       stop
+      endif
       if (facearea.ge.zero) then
        delta_mgoni=facearea/vol_sten
       else
@@ -2612,10 +2613,6 @@ stop
        history_dat, &
        DIMS(history_dat), &
        maskcov,DIMS(maskcov), &
-       vol,DIMS(vol), &
-       areax,DIMS(areax), &
-       areay,DIMS(areay), &
-       areaz,DIMS(areaz), &
        masknbr,DIMS(masknbr), &
        LSPC,DIMS(LSPC), &
        recon,DIMS(recon), &
@@ -2655,6 +2652,8 @@ stop
       integer :: fort_caller_string_len
       CHARACTER(len=255) :: pattern_string
       integer :: pattern_string_len
+      CHARACTER(len=255) :: pattern_string_prescribe
+      integer :: pattern_string_prescribe_len
 
       integer, INTENT(in) :: vof_height_function
       integer :: vof_height_function_local
@@ -2674,24 +2673,11 @@ stop
       integer, INTENT(in) :: DIMDEC(velfab)
       integer, INTENT(in) :: DIMDEC(denfab)
 
-      integer, INTENT(in) :: DIMDEC(vol)
-      integer, INTENT(in) :: DIMDEC(areax)
-      integer, INTENT(in) :: DIMDEC(areay)
-      integer, INTENT(in) :: DIMDEC(areaz)
-
       real(amrex_real), INTENT(out) :: curv_min
       real(amrex_real), INTENT(out) :: curv_max
 
       real(amrex_real), INTENT(in),target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
-      real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: areax(DIMV(areax))
-      real(amrex_real), INTENT(in), target :: areay(DIMV(areay))
-      real(amrex_real), INTENT(in), target :: areaz(DIMV(areaz))
-      real(amrex_real), pointer :: areax_ptr(D_DECL(:,:,:))
-      real(amrex_real), pointer :: areay_ptr(D_DECL(:,:,:))
-      real(amrex_real), pointer :: areaz_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(out),target :: &
               history_dat(DIMV(history_dat),nhistory)
@@ -2766,7 +2752,7 @@ stop
       real(amrex_real) dxcrossing_opt
       real(amrex_real) dxside
       real(amrex_real) mgoni_force(SDIM)
-      real(amrex_real) xcrossing(SDIM)
+      real(amrex_real) xcrossing_offset(SDIM)
       real(amrex_real) nghost(SDIM)
 
       integer im3
@@ -2801,7 +2787,6 @@ stop
       real(amrex_real), dimension(:,:), allocatable :: xsten_curv
 
       real(amrex_real) x1dcen,x1dside,x1dcross
-      real(amrex_real) vol_sten
       integer side_index
 
       real(amrex_real), dimension(-nhalf:nhalf,SDIM) :: xsten0
@@ -2815,6 +2800,7 @@ stop
       real(amrex_real), parameter :: weight_power=4.0d0
 
       integer test_for_post_restart
+      integer test_for_prescribe
    
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
       do i=1,caller_string_len
@@ -2889,7 +2875,14 @@ stop
         fort_caller_string,fort_caller_string_len, &
         pattern_string,pattern_string_len)
 
-      if (test_for_post_restart.eq.0) then
+      pattern_string_prescribe='prescribe_solid';
+      pattern_string_prescribe_len=15
+      test_for_prescribe=fort_pattern_test( &
+        fort_caller_string,fort_caller_string_len, &
+        pattern_string_prescribe,pattern_string_prescribe_len)
+
+      if ((test_for_post_restart.eq.0).and. &
+          (test_for_prescribe.eq.0)) then
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
          print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
@@ -2900,39 +2893,31 @@ stop
          stop
         endif
        enddo ! dirloc=1..sdim
-      else if (test_for_post_restart.eq.1) then
+      else if ((test_for_post_restart.eq.1).or. &
+               (test_for_prescribe.eq.1)) then
        ! do nothing
       else
-       print *,"fort_caller_string invalid"
+       print *,"test_for_post_restart or test_for_prescribe invalid"
        stop
       endif
 
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
       LSPC_ptr=>LSPC
       call checkbound_array(fablo,fabhi,LSPC_ptr,ngrow_distance,-1)
       recon_ptr=>recon
       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
       masknbr_ptr=>masknbr
-      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,masknbr_ptr,ngrow_distance,-1)
       curvfab_ptr=>curvfab
-      call checkbound_array(fablo,fabhi,curvfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,curvfab_ptr,ngrow_distance,-1)
       velfab_ptr=>velfab
-      call checkbound_array(fablo,fabhi,velfab_ptr,2,-1)
+      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow_distance,-1)
       denfab_ptr=>denfab
-      call checkbound_array(fablo,fabhi,denfab_ptr,2,-1)
-
-      vol_ptr=>vol
-      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1)
-      areax_ptr=>areax
-      areay_ptr=>areay
-      areaz_ptr=>areaz
-      call checkbound_array1(fablo,fabhi,areax_ptr,1,0)
-      call checkbound_array1(fablo,fabhi,areay_ptr,1,1)
-      call checkbound_array1(fablo,fabhi,areaz_ptr,1,SDIM-1)
+      call checkbound_array(fablo,fabhi,denfab_ptr,ngrow_distance,-1)
 
       history_dat_ptr=>history_dat
-      call checkbound_array(fablo,fabhi,history_dat_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,history_dat_ptr,ngrow_distance,-1)
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid curv strip"
@@ -2963,7 +2948,7 @@ stop
       endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,1) 
+        growlo,growhi,ngrow_distance) 
 
        ! curvature stencil is 9x9x9
        ! loop through all cells
@@ -2992,8 +2977,6 @@ stop
          do dirloc=1,SDIM
           xcenter(dirloc)=xsten0(0,dirloc)
          enddo
-
-         vol_sten=vol(D_DECL(i,j,k))
 
           ! num_curv=num_interfaces * CURVCOMP_NCOMP
          do icurv=1,num_curv
@@ -3030,14 +3013,6 @@ stop
            stop
           endif
 
-          if (vol_sten.gt.zero) then
-           ! do nothing
-          else
-           print *,"vol_sten invalid: cell volume should be positive"
-           print *,"vol_sten: ",vol_sten
-           stop
-          endif
-
           do dirstar=1,SDIM
 
            ii=0
@@ -3061,7 +3036,8 @@ stop
             kside=k+sidestar*kk
 
             do im=1,num_materials
-             LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
+             call safe_data(iside,jside,kside,im, &
+              LSPC_ptr,LSSIDE(im))
             enddo
 
             !FIX_LS_tessellate is declared in MOF.F90
@@ -3540,15 +3516,17 @@ stop
              do i1=istenlo(1),istenhi(1)
 
               do dirloc=1,SDIM
-               velsten(i1,j1,k1,dirloc)= &
-                velfab(D_DECL(i+i1,j+j1,k+k1),dirloc)
+               call safe_data(i+i1,j+j1,k+k1,dirloc, &
+                 velfab_ptr, &
+                 velsten(i1,j1,k1,dirloc))
               enddo
 
               do im_curv=1,num_materials
                itemperature= &
                  (im_curv-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-               mgoni_temp(i1,j1,k1,im_curv)= &
-                denfab(D_DECL(i+i1,j+j1,k+k1),itemperature)
+               call safe_data(i+i1,j+j1,k+k1,itemperature, &
+                 denfab_ptr, &
+                 mgoni_temp(i1,j1,k1,im_curv))
               enddo
   
              enddo
@@ -3578,15 +3556,13 @@ stop
               lssten, &
               ! -ngrow_tower:ngrow_tower ^{3} x num_materials
               vofsten, &
-              !scalar (i,j,k)
-              vol_sten, &
               curv_cellHT, & !intent(out)
               curv_cellFD, & !intent(out)
               mgoni_force, & !intent(out) (I-nn^T)(grad sigma) delta
               ZEYU_thet_d, & !intent(out)
               ZEYU_u_cl, & !intent(out)
               im3, & !intent(out)
-              xcrossing, & !intent(out)
+              xcrossing_offset, & !intent(out)
               nghost, & !intent(out) points from im_opp to im.
               visc_coef, &
               unscaled_min_curvature_radius, &
@@ -3636,7 +3612,7 @@ stop
               curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MARANGONI+dirloc)= &
                  mgoni_force(dirloc)
               curvfab(D_DECL(i,j,k),icurv+CURVCOMP_XCROSSING+dirloc)= &
-                 xcrossing(dirloc)
+                 xcrossing_offset(dirloc)
               curvfab(D_DECL(i,j,k),icurv+CURVCOMP_NGHOST+dirloc)= &
                  nghost(dirloc)
              enddo
@@ -7961,7 +7937,7 @@ stop
       call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,slope_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,curv_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,curv_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1)
       call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1)
@@ -19155,6 +19131,7 @@ stop
       integer i1,j1,k1
       real(amrex_real) centroid(SDIM)
       real(amrex_real) volcell
+      real(amrex_real) volcell_parm
       real(amrex_real) cencell(SDIM)
       real(amrex_real) censolid_new(num_materials,SDIM)
 
@@ -20359,9 +20336,11 @@ stop
 
              vofcomp=(im-1)*ngeom_recon+1
 
-             call getvolume(bfact,dx,xsten,nhalf, &
+             call getvolume( &
+              volcell_parm, & !intent(out)
+              bfact,dx,xsten,nhalf, &
               LS_temp,mofnew(vofcomp),LSfacearea, &
-               LScentroid,VOFTOL_MATERIAL,SDIM)
+              LScentroid,VOFTOL_MATERIAL,SDIM)
 
              do dir=1,SDIM
               mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)

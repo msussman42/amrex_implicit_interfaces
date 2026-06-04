@@ -8543,6 +8543,7 @@ stop
           LS_center=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
 
           call getvolume( &
+           volcell, & !intent(out)
            bfact,dx,xsten,nhalf, &
            ldata,volume_frac,facearea, &
            centroid,VOFTOL_MATERIAL,SDIM)

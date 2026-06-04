@@ -7687,6 +7687,7 @@ end subroutine volume_sanity_check
        ! centroid in absolute coordinate system
        ! returns a volume fraction
       subroutine getvolume( &
+        volcell, &
         bfact,dxgrid,xsten,nhalf, &
         ldata,volume,facearea, &
         centroid,EBVOFTOL,sdim)
@@ -7700,7 +7701,7 @@ end subroutine volume_sanity_check
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       real(amrex_real), INTENT(in) :: dxgrid(sdim)
       real(amrex_real), INTENT(out) :: volume,facearea
-      real(amrex_real) volcell
+      real(amrex_real), INTENT(out) :: volcell
       real(amrex_real), INTENT(out) :: centroid(sdim)
       real(amrex_real) cenall(sdim)
       integer dir
@@ -7740,7 +7741,9 @@ end subroutine volume_sanity_check
        bfact,dxgrid,xsten,nhalf, &       
        lnode, &
        volume,centroid,facearea, &
-       volcell,cenall,sdim)
+       volcell, &
+       cenall, &
+       sdim)
 
       if (volcell.le.zero) then
        volume=zero

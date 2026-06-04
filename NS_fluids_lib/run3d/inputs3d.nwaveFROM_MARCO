@@ -1,0 +1,224 @@
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+# drop bag breakup in crossflow
+#
+max_step  = 180000     # maximum timestep
+stop_time =  1 # maximum problem time
+
+#ns.solid_internal=0 # 0=solid prescribed in PROB_3D.F90
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =-0.0000 -0.06666666666666 -0.06666666666666
+geometry.prob_hi   = 0.4000  0.06666666666666  0.06666666666666  # units of cm
+geometry.is_periodic = 0 1 1
+
+ns.minimum_relative_error=1.0e-15
+ns.initial_project_cycles=10  
+ns.initial_cg_cycles=10 
+#ns.solvability_projection=0
+ns.use_lsa=0
+fab.do_initval=0  # default is 1
+ns.post_init_pressure_solve=0
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.maxiter = 100
+cg.maxiter = 9000
+mg.usecg=0
+mg.bot_atol = 1.0e-10  # the coarsest coarsening of level 0 in old version;  
+                      # level 0 in the new version.
+mg.rtol_b = -0.01
+Lp.smooth_type=2
+Lp.v = 0
+Lp.harmavg = 0
+diffuse.max_order=1
+godunov.printMinMax=0
+
+# limit amr to the block below
+#ns.ncoarseblocks =  3
+#ns.xcoarseblocks =  0.08 0.08 0.08
+#ns.rxcoarseblocks = 0.04 0.04 0.04
+#ns.ycoarseblocks =  0.06 0.06 0.06
+#ns.rycoarseblocks = 0.04 0.04 0.04
+#ns.zcoarseblocks =  0. 0. 0.
+#ns.rzcoarseblocks = 0.04 0.04 0.04
+
+ns.visual_option=-2 # tecplot (amr hierarchy preserved)
+#ns.visual_option=-1 # tecplot (amr hierarchy preserved)
+ns.visual_option_preplot=2  # do not run preplot
+ns.noutblocks = 1
+ns.xoutblocks = 0.0
+ns.rxoutblocks = 200.0
+ns.youtblocks = 0.
+ns.ryoutblocks = 200.0
+ns.zoutblocks = 0.
+ns.rzoutblocks = 200.0
+
+ns.fluid_stable_factor=0.0
+ns.weymouth_flag=0
+ns.elvira_flag=0
+
+ns.num_materials=2      
+ns.num_species_var=1
+ns.configuration_tensor_var=0 
+ns.coarse_boundary_order=2
+ns.operator_split=1
+ns.reverse_in_timestep=1
+ns.num_outer_sweeps=2
+
+ns.combine_velocity_after_advection=1
+ns.slope_limiter_option=1  # 0=no limiting  1=minmod
+ns.advection_order=2 2
+ns.shock_timestep=2 1 
+ns.backwards_tracing_only=0
+ns.start_curvature_level=99999
+ns.use_LS_height=1        # 0: use vof  1: use ls
+ns.curv_stencil_height=3
+#ns.interp_before_curvature_flag=0
+
+amr.n_cell    = 48 16 16
+amr.max_level =  5 #3 
+ns.repeat_iter = 3
+amr.ref_ratio       = 2 2 2 2 2 2 2 2    # refinement ratio
+amr.regrid_int      = 5      # how often to regrid
+amr.regrid_on_restart  = 1
+
+amr.n_error_buf     = 4 2 1 1 1 1 1 1 1   # number of buffer cells in error est
+amr.grid_eff        = 0.85  # what constitutes an efficient grid
+DistributionMapping.strategy        = KNAPSACK
+#DistributionMapping.strategy        = SFC
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 16     # block factor in grid generation
+amr.check_int       = 25 # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 50
+amr.plot_file       = plt 
+#amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32
+amr.restart         = chk00425
+amr.n_cycle           = 1 1 1 1 1 1 1
+#amr.trace   =1
+ns.face_flag=0
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+#ns.dt_cutoff      = 0.0000005  # level 0 timestep below which we halt
+
+mac.mac_tol        = 1.0e-9  # tolerence for mac projections
+mac.mac_order      = 1        # interp type: 0 => pc 1 => quad 2 => jbb 
+mac.mac_abs_tol    = 1.0e-9
+mac.use_cg_solve   = 1
+
+ns.cfl            = 0.35    # cfl number for hyperbolic system
+ns.init_shrink    = 0.1      # scale back initial timestep
+ns.change_max     = 1.1      
+ns.visc_coef      = 1.0
+ns.visc_abs_tol   = 1.0e-8
+#ns.gravity        = 980. # body force
+#ns.gravity_dir    = 3
+#ns.invert_gravity = 1
+#ns.gravityangle = 0.0
+ns.tension        = 72
+
+#ns.fixed_dt	  = 1e-9     # hardwire dt
+ns.sum_interval   = 50      # timesteps between computing mass 
+ns.version_A      = 1        # 1 => ver A, 0 => ver B
+ns.kinematicfixed = 0
+ns.do_radiation   = 0        # 1 => do discrete-ordinates radiation
+ns.dump_time = -1.2
+ns.ignition       = -30000.0
+
+ns.axis_dir=1
+ns.vorterr=0. 0. 0.
+ns.rgasinlet=0.
+ns.vinletgas=0.
+ns.twall=0.1
+ns.advbot=10000. 
+ns.adv_vel=10000. # inflow of air from the side at t=0
+ns.adv_dir=1      # inflow in x-direction
+ns.material_type=7 5 
+#ns.material_type=12 5 
+ns.heatviscconst= 16.5e5  2400.  # g/(cm s^2)
+#ns.viscconst=0.0089 0.000018706  # is air 10 times smaller ?g/(cm s)
+ns.viscconst=0.0089 0.000038706  # g/(cm s)
+ns.denconst=0.999   0.00102  # @84.1 kPa
+ns.speciesviscconst=0.0 0.0758
+ns.tempconst=300. 300. 
+
+ns.inflow_pressure= 878380.0 
+#ns.outflow_pressure = 1514260.42973874
+ns.outflow_pressure=3468112.
+
+ns.tempconserve=1 1 
+
+ns.pressure_error_cutoff=0.0 0.0
+ns.adapt_material_override=0 0 
+
+# bullet's center
+ns.xblob=-0.03 
+ns.yblob=0.
+ns.zblob=0.
+ns.radblob=0.215 # cap radius (cm)
+
+ns.xblob2=0.01 # initial shock vertex position. Initialize outside of domain (<0)
+ns.yblob2=0.5 # shock angle for probtype 392, unused for 394
+ns.zblob2=0.015   # length of bullet's cylinder
+ns.radblob2=4.5 # inlet Mach number
+ns.xblob3=0.08  # initial drop position
+ns.yblob3=0.0  # initial drop position
+ns.zblob3=0.0  # initial drop position
+ns.radblob3=96.0e-4 # drop radius
+
+ns.xblob4=1.0 #This parameter is now defines the re-compression process
+              #If xblob4=1, the recompression occurs over the same amount of time as
+              #the N-wave period T_o. If xblob4=2, the recompression will occur over
+              #a duration of 2T_o. If xblob4=0, the recompression process will instead
+              #be a recompression shock.
+
+ns.radblob4=0.65
+ns.zblob4=8.0 #This is the reduction factor for T_o. 8.0 means T_o is reduced by a factor of 8.
+ns.yblob4=0.430769231 #This is the gradient reduction factor. It should be 2.0*(radblob4-0.5)/radblob4
+
+ns.probtype=395
+
+ns.is_calc_les=0
+ns.is_phase_change=0
+ns.num_diff_species_gas=1
+ns.num_diff_species_liquid=0
+ns.num_immisc_interface_types=2
+
+ns.probe_interval = 2000 # in this problem it has to be the same as sum_interval
+ns.nprobe_points = 1 # in this problem probes are defined at run time
+ns.xloc_probe = 0.
+ns.yloc_probe = 0.
+ns.zloc_probe = 0.
+
+ns.denfact=1.0
+ns.velfact=0.0
+
+ns.conserveden    = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 1 0 0
+ns.hi_bc          = 1 0 0
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+# select form of FAB output: default is IEEE
+#        ASCII  (this is very slow)
+#	 NATIVE (native binary form on machine)
+#        IEEE   (default, this is portable)
+fab.format =  IEEE
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE

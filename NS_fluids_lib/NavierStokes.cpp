@@ -28394,7 +28394,29 @@ NavierStokes::makeCellFrac(
 
 // called from make_physics_varsALL
 void
-NavierStokes::makeStateCurv(int project_option,
+NavierStokes::makeStateCurvALL(Real cl_time,
+   const std::string& caller_string) {
+
+ std::string local_caller_string="makeStateCurvALL";
+ local_caller_string=caller_string+local_caller_string;
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==0");
+
+ int finest_level=parent->finestLevel();
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.makeStateCurv(cl_time,local_caller_string);
+ }
+
+} //end subroutine makeStateCurvALL
+
+//called from makeStateCurvALL
+void
+NavierStokes::makeStateCurv(Real cl_time,
    const std::string& caller_string) {
  
  std::string local_caller_string="makeStateCurv";
@@ -28405,6 +28427,9 @@ NavierStokes::makeStateCurv(int project_option,
  } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
   //do nothing
  } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
+  //do nothing
+ } else if (pattern_test(local_caller_string,
+            "prescribe_solid_geometryALL")==1) {
   //do nothing
  } else {
   std::cout << "local_caller_string=" << local_caller_string << '\n';
@@ -28435,8 +28460,6 @@ NavierStokes::makeStateCurv(int project_option,
 
  int num_curv=num_interfaces*CURVCOMP_NCOMP;
 
- resize_metrics(1);
-
  resize_levelset(ngrow_distance,LEVELPC_MF);
 
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
@@ -28461,186 +28484,162 @@ NavierStokes::makeStateCurv(int project_option,
  } else
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)) {
+ const Real* dx = geom.CellSize();
 
-  const Real* dx = geom.CellSize();
+ MultiFab* CL_velocity=getState(ngrow_distance,STATECOMP_VEL,
+    STATE_NCOMP_VEL+STATE_NCOMP_PRES,cl_time);
+ MultiFab* den=getStateDen(ngrow_distance,cl_time);
+ if (den->nComp()!=num_materials*num_state_material)
+  amrex::Error("invalid ncomp for den");
 
-  Real cl_time=prev_time_slab;
+  // mask=1 if not covered or if outside the domain.
+  // NavierStokes::maskfiner_localMF
+  // NavierStokes::maskfiner
+ resize_maskfiner(ngrow_distance,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,ngrow_distance,local_caller_string); 
+ resize_mask_nbr(1);
+ debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
 
-  if (project_option==SOLVETYPE_PRES)  
-   cl_time=prev_time_slab;
-  else if (project_option==SOLVETYPE_INITPROJ) 
-   cl_time=cur_time_slab;
-  else
-   amrex::Error("project_option invalid makeStateCurv");
-
-  MultiFab* CL_velocity=getState(2,STATECOMP_VEL,
-     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cl_time);
-  MultiFab* den=getStateDen(2,cl_time);
-  if (den->nComp()!=num_materials*num_state_material)
-   amrex::Error("invalid ncomp for den");
-
-   // mask=1 if not covered or if outside the domain.
-   // NavierStokes::maskfiner_localMF
-   // NavierStokes::maskfiner
-  resize_maskfiner(1,MASKCOEF_MF);
-  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
-  resize_mask_nbr(1);
-  debug_ngrow(MASK_NBR_MF,1,local_caller_string);
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(CL_velocity->boxArray().d_numPts());
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(CL_velocity->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*CL_velocity,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*CL_velocity,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact_space=parent->Space_blockingFactor(level);
+   int bfact_grid=parent->Old_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   FArrayBox& histfab=(*localMF[HISTORY_MF])[mfi];
+
+   // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
+   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
+
+   FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
+   FArrayBox& velfab=(*CL_velocity)[mfi];
+   FArrayBox& denfab=(*den)[mfi];
+   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // declared in: LEVELSET_3D.F90
+   fort_curvstrip(
+    local_caller_string.c_str(),
+    local_caller_string.size(),
+    &vof_height_function,
+    &level,
+    &finest_level,
+    &curv_min_local[tid_current],
+    &curv_max_local[tid_current],
+    &nhistory,
+    histfab.dataPtr(),
+    ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
+    maskcov.dataPtr(),
+    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+    maskfab.dataPtr(),
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+    lsfab.dataPtr(),
+    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+    reconfab.dataPtr(),
+    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    curvfab.dataPtr(),
+    ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
+    velfab.dataPtr(),
+    ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+    denfab.dataPtr(),
+    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi, 
+    &bfact_space,
+    &bfact_grid,
+    &NS_geometry_coord,
+    xlo,dx,
+    &cur_time_slab,
+    &visc_coef,
+    &unscaled_min_curvature_radius,
+    &num_curv);
+ } // mfi
+} //omp
+ ns_reconcile_d_num(LOOP_CURVSTRIP,"makeStateCurv");
+
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+   if (curv_min_local[tid]<curv_min_local[0])
+    curv_min_local[0]=curv_min_local[tid];
+   if (curv_max_local[tid]>curv_max_local[0])
+    curv_max_local[0]=curv_max_local[tid];
+ } // tid
+
+ ParallelDescriptor::ReduceRealMin(curv_min_local[0]);
+ ParallelDescriptor::ReduceRealMax(curv_max_local[0]);
+ if (curv_min_local[0]<curv_min[0])
+   curv_min[0]=curv_min_local[0];
+ if (curv_max_local[0]>curv_max[0])
+   curv_max[0]=curv_max_local[0];
+
+ localMF[DIST_CURV_MF]->FillBoundary(geom.periodicity());
+
+ if ((fab_verbose==1)||(fab_verbose==3)) {
+
+   std::cout << "c++ level,finest_level " << level << ' ' <<
+    finest_level << '\n';
+   std::cout << "c++ ngrow_distance " << ngrow_distance << '\n';
+   std::cout << "curv_min_local(HT)= " << curv_min_local[0] << '\n';
+   std::cout << "curv_max_local(HT)= " << curv_max_local[0] << '\n';
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(CL_velocity->boxArray().d_numPts());
+
+   for (MFIter mfi(*CL_velocity,false); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact_space=parent->Space_blockingFactor(level);
-    int bfact_grid=parent->Old_blockingFactor(level);
-
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& histfab=(*localMF[HISTORY_MF])[mfi];
-
-    // mask=tag if not covered by level+1 or outside the domain.
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-    FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
-
-    FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
-    FArrayBox& velfab=(*CL_velocity)[mfi];
-    FArrayBox& denfab=(*den)[mfi];
-    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
-
-    FArrayBox& areax=(*localMF[AREA_MF])[mfi];
-    FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
-    FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
-    FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // declared in: LEVELSET_3D.F90
-    fort_curvstrip(
-     local_caller_string.c_str(),
-     local_caller_string.size(),
-     &vof_height_function,
-     &level,
-     &finest_level,
-     &curv_min_local[tid_current],
-     &curv_max_local[tid_current],
-     &nhistory,
-     histfab.dataPtr(),
-     ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-     areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
-     areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
-     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()),
-     maskfab.dataPtr(),
-     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     lsfab.dataPtr(),
-     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-     reconfab.dataPtr(),
-     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-     curvfab.dataPtr(),
-     ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
-     velfab.dataPtr(),
-     ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     denfab.dataPtr(),
-     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-     tilelo,tilehi,
-     fablo,fabhi, 
-     &bfact_space,
-     &bfact_grid,
-     &NS_geometry_coord,
-     xlo,dx,
-     &cur_time_slab,
-     &visc_coef,
-     &unscaled_min_curvature_radius,
-     &num_curv);
-  } // mfi
-} //omp
-  ns_reconcile_d_num(LOOP_CURVSTRIP,"makeStateCurv");
+    const int gridno = mfi.index();
+    const Box& fabgrid = grids[gridno];
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    const Real* xlo = grid_loc[gridno].lo();
+    std::cout << "gridno= " << gridno << '\n';
+    int interior_only=0;
 
-  for (int tid=1;tid<thread_class::nthreads;tid++) {
-    if (curv_min_local[tid]<curv_min_local[0])
-     curv_min_local[0]=curv_min_local[tid];
-    if (curv_max_local[tid]>curv_max_local[0])
-     curv_max_local[0]=curv_max_local[tid];
-  } // tid
+    std::cout << "output of curvfab" << '\n';
+    FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
+    tecplot_debug(curvfab,xlo,fablo,fabhi,dx,-1,0,0,num_curv,interior_only);
 
-  ParallelDescriptor::ReduceRealMin(curv_min_local[0]);
-  ParallelDescriptor::ReduceRealMax(curv_max_local[0]);
-  if (curv_min_local[0]<curv_min[0])
-    curv_min[0]=curv_min_local[0];
-  if (curv_max_local[0]>curv_max[0])
-    curv_max[0]=curv_max_local[0];
+    std::cout << "output of lsfab (LEVELPC)" << '\n';
+    FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+    tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,0,0,num_materials,interior_only);
 
-  localMF[DIST_CURV_MF]->FillBoundary(geom.periodicity());
+   } // mfi
+   ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV,"makeStateCurv");
 
-  if ((fab_verbose==1)||(fab_verbose==3)) {
+ } // ((fab_verbose==1)||(fab_verbose==3))
 
-    std::cout << "c++ level,finest_level " << level << ' ' <<
-     finest_level << '\n';
-    std::cout << "c++ ngrow_distance " << ngrow_distance << '\n';
-    std::cout << "curv_min_local(HT)= " << curv_min_local[0] << '\n';
-    std::cout << "curv_max_local(HT)= " << curv_max_local[0] << '\n';
-
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(CL_velocity->boxArray().d_numPts());
-
-    for (MFIter mfi(*CL_velocity,false); mfi.isValid(); ++mfi) {
-     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-     const Box& tilegrid = mfi.tilebox();
-
-     int tid_current=ns_thread();
-     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-      amrex::Error("tid_current invalid");
-     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     const int gridno = mfi.index();
-     const Box& fabgrid = grids[gridno];
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     const Real* xlo = grid_loc[gridno].lo();
-     std::cout << "gridno= " << gridno << '\n';
-     int interior_only=0;
-
-     std::cout << "output of curvfab" << '\n';
-     FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
-     tecplot_debug(curvfab,xlo,fablo,fabhi,dx,-1,0,0,num_curv,interior_only);
-
-     std::cout << "output of lsfab (LEVELPC)" << '\n';
-     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-     tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,0,0,num_materials,interior_only);
-
-    } // mfi
-    ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV,"makeStateCurv");
-
-  } // ((fab_verbose==1)||(fab_verbose==3))
-
-  delete CL_velocity;
-  delete den;
-
- } else
-   amrex::Error("project_option invalid10");
+ delete CL_velocity;
+ delete den;
 
 }  // end subroutine makeStateCurv
 

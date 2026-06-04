@@ -25915,6 +25915,7 @@ end subroutine initialize2d
          enddo
          enddo
          call getvolume( &
+           volcell, & !intent(out)
            bfact, &
            dx, &
            xsten, &

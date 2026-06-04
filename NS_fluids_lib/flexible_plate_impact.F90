@@ -803,6 +803,7 @@ if ((num_materials.eq.3).and. &
     enddo
      ! getvolume is declared in MOF.F90
     call getvolume( &
+     volcell, & !intent(out)
      assimilate_in%bfact, &
      assimilate_in%dx, &
      assimilate_in%xsten, &
