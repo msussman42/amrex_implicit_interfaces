@@ -28412,6 +28412,12 @@ NavierStokes::makeStateCurvALL(Real cl_time,
   ns_level.makeStateCurv(cl_time,local_caller_string);
  }
 
+  //DIST_CURV_MF is initialized and filled in makeStateCurv.
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.avgDownCURV_localMF();
+ }
+
 } //end subroutine makeStateCurvALL
 
 //called from makeStateCurvALL
