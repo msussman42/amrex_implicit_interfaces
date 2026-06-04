@@ -13700,7 +13700,7 @@ END SUBROUTINE SIMP
       integer idx_dirside
 
       if (ncomp_curv_total.ne.num_interfaces*CURVCOMP_NCOMP) then
-       print *,"ncomp_curv_total invalid35"
+       print *,"ncomp_curv_total invalid35 ",ncomp_curv_total
        stop
       endif
 
@@ -13775,7 +13775,7 @@ END SUBROUTINE SIMP
               coarse_test=NINT(crse_value(idx_dirside))
               if ((coarse_test.ne.0).and. &
                   (coarse_test.ne.SDIM+1)) then
-               print *,"coarse_test invalid"
+               print *,"coarse_test invalid ",coarse_test
                stop
               endif
               if (fine_test.eq.0) then
@@ -13787,6 +13787,7 @@ END SUBROUTINE SIMP
               else if ((abs(fine_test).ge.1).and. &
                        (abs(fine_test).le.SDIM+1)) then
                velwt(iten)=velwt(iten)+volall
+                !idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
                crse_value(idx_dirside)=SDIM+1
                crse_value(icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
                do dir2=1,CURVCOMP_DIRSIDE_FLAG
@@ -13838,7 +13839,7 @@ END SUBROUTINE SIMP
          if (velwt(iten).eq.zero) then
           ! do nothing
          else
-          print *,"velwt invalid"
+          print *,"velwt invalid ",velwt
           stop
          endif
          do dir2=1,CURVCOMP_NCOMP
@@ -13846,18 +13847,24 @@ END SUBROUTINE SIMP
          enddo
         else if (coarse_test.eq.SDIM+1) then
          if (velwt(iten).gt.zero) then
+           !idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
           crse(D_DECL(ic,jc,kc),idx_dirside)=SDIM+1 ! dir x side
           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
           do dir2=1,CURVCOMP_DIRSIDE_FLAG
            crse(D_DECL(ic,jc,kc),icurv+dir2)= &
             crse_value(icurv+dir2)/velwt(iten)
           enddo
+           ! triple points should be on the finest level.
+          do dir2=1,SDIM
+           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_XCROSSING+dir2)=zero
+           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_NGHOST+dir2)=zero
+          enddo
          else
-          print *,"velwt invalid"
+          print *,"velwt invalid ",velwt
           stop
          endif
         else
-         print *,"coarse_test invalid"
+         print *,"coarse_test invalid ",coarse_test
          stop
         endif
 

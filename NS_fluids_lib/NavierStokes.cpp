@@ -12615,7 +12615,7 @@ void NavierStokes::make_marangoni_and_disjoining_pressure_force() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(DIST_CURV_MF,1,local_caller_string);
+ debug_ngrow(DIST_CURV_MF,ngrow_distance,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
@@ -28451,7 +28451,7 @@ NavierStokes::makeStateCurv(int project_option,
   amrex::Error("nhistory invalid");
 
  delete_localMF_if_exist(DIST_CURV_MF,1);
- new_localMF(DIST_CURV_MF,num_curv,1,-1);
+ new_localMF(DIST_CURV_MF,num_curv,ngrow_distance,-1);
  localMF[DIST_CURV_MF]->setVal(0.0);
 
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF

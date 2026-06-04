@@ -86,6 +86,8 @@ stop
         ZEYU_thet_d, & !intent(out)
         ZEYU_u_cl, & !intent(out)
         im3, & !intent(out)
+        xcrossing, & !intent(out)
+        nghost, & !intent(out)
         visc_coef, & !intent(in)
         unscaled_min_curvature_radius, & !intent(in)
         im, & !intent(in)
@@ -221,7 +223,8 @@ stop
       real(amrex_real) gx
 
       real(amrex_real) nperp(SDIM) 
-      real(amrex_real) nghost(SDIM) 
+      real(amrex_real), INTENT(out) :: xcrossing(SDIM) 
+      real(amrex_real), INTENT(out) :: nghost(SDIM) 
       real(amrex_real) master_normal(SDIM) !points from im_opp into im.
       real(amrex_real) nfluid(SDIM) 
       real(amrex_real) normal_im3(SDIM) 
@@ -286,6 +289,7 @@ stop
       integer local_index(3)
       real(amrex_real) local_x(SDIM)
       real(amrex_real) local_temperature(num_materials)
+      real(amrex_real) x_base,x_star,LS_base,LS_star
 
       call get_dxmax(dx,bfact,dxmax)
 
@@ -495,6 +499,36 @@ stop
        stop
       endif
 
+      do dir2=1,SDIM
+       xcrossing(dir2)=xcenter(dir2)
+       nghost(dir2)=zero
+      enddo
+
+      if (failure_flag.eq.1) then
+       !do nothing
+      else if (failure_flag.eq.0) then
+       x_base=xcenter(dircrit)
+       x_star=xsten(side,dircrit)
+       LS_base=LS_CENTER_EXTEND
+       LS_star=LS_OPP_EXTEND
+        !0=LS_base+(LS_star-LS_base)*(x-x_base)/(x_star-x_base)
+       if (LS_base.eq.zero) then
+        !do nothing
+       else if (LS_star.eq.zero) then
+        xcrossing(dircrit)=x_star
+       else if (LS_base*LS_star.gt.zero) then
+        !do nothing
+       else if (LS_base*LS_star.lt.zero) then
+        xcrossing(dircrit)=(x_base*LS_star-x_star*LS_base)/(LS_star-LS_base)
+       else
+        print *,"LS_base or LS_star invalid ",LS_base,LS_star
+        stop
+       endif
+      else
+       print *,"failure_flag invalid ",failure_flag
+       stop
+      endif
+       
       do dir2=1,num_interfaces
 
        if (fort_tension(dir2).ge.zero) then
@@ -578,6 +612,7 @@ stop
       endif
 
       im3=0
+
       LSMAX=-1.0D+10
       do k=klo_sten_ht,khi_sten_ht
       do j=-ngrow_tower,ngrow_tower
@@ -3549,11 +3584,13 @@ stop
               ZEYU_thet_d, & !intent(out)
               ZEYU_u_cl, & !intent(out)
               im3, & !intent(out)
+              xcrossing, & !intent(out)
+              nghost, & !intent(out) points from im_opp to im.
               visc_coef, &
               unscaled_min_curvature_radius, &
-              im_main, & !intent(in)
-              im_main_opp, & !intent(in) 
-              iten) !intent(in)
+              im_main, & !intent(in) (locally im)
+              im_main_opp, & !intent(in) (locally im_opp)
+              iten) !intent(in) (im_main,im_main_opp)
 
              if (donate_flag.eq.1) then
               !do nothing
@@ -3596,6 +3633,10 @@ stop
              do dirloc=1,SDIM
               curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MARANGONI+dirloc)= &
                  mgoni_force(dirloc)
+              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_XCROSSING+dirloc)= &
+                 xcrossing(dirloc)
+              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_NGHOST+dirloc)= &
+                 nghost(dirloc)
              enddo
               ! dir=1..sdim
               ! side=-1 or 1

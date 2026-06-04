@@ -5383,7 +5383,7 @@ void NavierStokes::make_physics_vars(int project_option,
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("slope_recon_mf has incorrect ncomp");
 
- debug_ngrow(DIST_CURV_MF,1,local_caller_string);
+ debug_ngrow(DIST_CURV_MF,ngrow_distance,local_caller_string);
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,local_caller_string);
