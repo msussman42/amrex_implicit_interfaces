@@ -7412,7 +7412,7 @@ END SUBROUTINE SIMP
       real(amrex_real) errorparm(num_materials*2) ! fi,ei
       real(amrex_real) xbottom,xtop,ls_above,ls_below,ZZgrid
       real(amrex_real) vof_below,vof_above,vof_face
-      real(amrex_real) volgrid,distbound
+      real(amrex_real) volgrid,distbound,volcell_parm
       real(amrex_real) cengrid(SDIM)
       real(amrex_real) xboundary(SDIM)
 
@@ -7765,7 +7765,9 @@ END SUBROUTINE SIMP
          enddo
           ! LSvolume is a volume fraction.
           ! LScentroid is in an absolute coordinate system.
-         call getvolume(bfact,dx,xsten,nhalf, &
+         call getvolume( &
+          volcell_parm, & !intent(out)
+          bfact,dx,xsten,nhalf, &
           ldata,LSvolume,LSfacearea, &
           LScentroid,VOFTOL_MATERIAL,SDIM)
 

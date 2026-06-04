@@ -927,17 +927,17 @@ void NavierStokes::avgDownDRAG_MF() {
 
 } // end subroutine avgDownDRAG_MF
 
-void NavierStokes::avgDownCURV_localMF(int idxMF) {
+void NavierStokes::avgDownCURV_localMF() {
 
  std::string local_caller_string="avgDownCURV_localMF";
 
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
-  debug_ngrow(idxMF,0,local_caller_string);
-  ns_fine.debug_ngrow(idxMF,0,local_caller_string);
-  MultiFab& S_crse=*localMF[idxMF];
-  MultiFab& S_fine=*ns_fine.localMF[idxMF];
+  debug_ngrow(DIST_CURV_MF,ngrow_distance,local_caller_string);
+  ns_fine.debug_ngrow(DIST_CURV_MF,ngrow_distance,local_caller_string);
+  MultiFab& S_crse=*localMF[DIST_CURV_MF];
+  MultiFab& S_fine=*ns_fine.localMF[DIST_CURV_MF];
   level_avgDownCURV(S_crse,S_fine);
  }
 
@@ -5095,13 +5095,19 @@ void NavierStokes::make_physics_varsALL(int project_option,
   curv_max[tid]=-1.0e+30;
  } // tid
 
- allocate_array(1,nhistory,-1,HISTORY_MF);
+ allocate_array(ngrow_distance,nhistory,-1,HISTORY_MF);
 
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-   //NavierStokes::makeStateCurv is declared in NavierStokes.cpp
-  ns_level.makeStateCurv(project_option,local_caller_string);
- }
+ Real cl_time=prev_time_slab;
+ if (project_option==SOLVETYPE_PRES)  
+  cl_time=prev_time_slab;
+ else if (project_option==SOLVETYPE_INITPROJ)
+  cl_time=cur_time_slab;
+ else
+  amrex::Error("project_option invalid make_physics_varsALL");
+
+  //NavierStokes::makeStateCurvALL is declared in NavierStokes.cpp
+ makeStateCurvALL(cl_time,local_caller_string);
+
   // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
   // if GNBC is used, then the "ghost normal" in the substrate
   // is extrapolated from the interior.
@@ -5126,7 +5132,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   //DIST_CURV_MF is initialized and filled in makeStateCurv.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.avgDownCURV_localMF(DIST_CURV_MF);
+  ns_level.avgDownCURV_localMF();
  }
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
@@ -6714,6 +6720,23 @@ void NavierStokes::metrics_data_min_max(const std::string& caller_string) {
 
 } // subroutine metrics_data_min_max
 
+
+
+// 1. renormalize variables
+// 2. extend from F>0 fluid regions into F=0 regions
+// 3. if renormalize_only==0, 
+//    a. init F,X,LS for the solid materials.
+//    b. init U,T in the solid regions.
+//    c. extrapolate F,X,LS from fluid regions into solid regions.
+//   
+// called from:
+//  NavierStokes::prepare_post_process -> called from post_init_state 
+//  NavierStokes::prepare_post_process -> called from post_restart
+//    renormalize_only=0 when called from prepare_post_process.
+//  NavierStokes::nonlinear_advection
+//  NavierStokes::advance
+//    renormalize_only=0 when called from advance.
+//
 void NavierStokes::prescribe_solid_geometryALL(Real time,
   int renormalize_only,int local_truncate,
   const std::string& caller_string) {
@@ -6738,7 +6761,9 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   std::cout << "renormalize_only= " << renormalize_only << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';
-  std::cout << "press any number then enter:begin prescribe_solid_geometryALL\n";
+  std::cout << 
+   "press any number then enter:begin prescribe_solid_geometryALL\n";
+
   int n_input;
   std::cin >> n_input;
  }
@@ -6747,7 +6772,9 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  if (renormalize_only==1) {
   //do nothing
  } else if (renormalize_only==0) {
-  //do nothing
+
+  makeStateCurvALL(cur_time_slab,local_caller_string);
+
  } else
   amrex::Error("expecting renormalize_only=0 or 1");
 
@@ -6821,21 +6848,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  
 } // end subroutine prescribe_solid_geometryALL
 
-// 1. renormalize variables
-// 2. extend from F>0 fluid regions into F=0 regions
-// 3. if renormalize_only==0, 
-//    a. init F,X,LS for the solid materials.
-//    b. init U,T in the solid regions.
-//    c. extrapolate F,X,LS from fluid regions into solid regions.
-//   
-// called from:
-//  NavierStokes::prepare_post_process -> called from post_init_state 
-//  NavierStokes::prepare_post_process -> called from post_restart
-//    renormalize_only=0 when called from prepare_post_process.
-//  NavierStokes::nonlinear_advection
-//  NavierStokes::advance
-//    renormalize_only=0 when called from advance.
-//
+// NavierStokes::prescribe_solid_geometry is called by
+// NavierStokes::prescribe_solid_geometryALL
 void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  
  std::string local_caller_string="prescribe_solid_geometry";

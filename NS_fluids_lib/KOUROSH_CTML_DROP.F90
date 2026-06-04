@@ -1129,6 +1129,7 @@ if ((num_materials.ge.3).and. &
        enddo
        enddo
        call getvolume( &
+         volcell, &
          assimilate_in%bfact, &
          assimilate_in%dx, &
          assimilate_in%xsten, &

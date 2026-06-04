@@ -460,7 +460,7 @@ protected:
 		int TSAT_MF);
     void level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,int velflag);
 
-    void avgDownCURV_localMF(int idxMF);
+    void avgDownCURV_localMF();
     void level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine);
 
     void avgDown_and_Copy_localMF(
@@ -1385,7 +1385,9 @@ void apply_pressure_grad(
 
     void correct_dist_uninit(int tessellate);
 
-    void makeStateCurv(int project_option,
+    void makeStateCurvALL(Real cl_time,
+	  const std::string& caller_string);
+    void makeStateCurv(Real cl_time,
 	  const std::string& caller_string);
 
     void make_marangoni_and_disjoining_pressure_force();
