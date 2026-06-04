@@ -5129,12 +5129,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
  delete_array(HISTORY_MF);
 
-  //DIST_CURV_MF is initialized and filled in makeStateCurv.
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.avgDownCURV_localMF();
- }
-
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
   // delete_array(CELLTENSOR_MF);
