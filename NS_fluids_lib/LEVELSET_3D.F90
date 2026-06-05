@@ -84,6 +84,7 @@ stop
         im3, & !intent(out)
         xcrossing_offset, & !intent(out)
         nghost, & !intent(out)
+        cosangle_parm, & !intent(out)
         visc_coef, & !intent(in)
         unscaled_min_curvature_radius, & !intent(in)
         im, & !intent(in)
@@ -120,6 +121,7 @@ stop
       real(amrex_real) :: vol_sten
       real(amrex_real) :: curvHT_LS
       real(amrex_real) :: curvHT_VOF
+      real(amrex_real), INTENT(out) :: cosangle_parm
       real(amrex_real), INTENT(out) :: curvHT_choice
       real(amrex_real), INTENT(out) :: curvFD
       real(amrex_real), INTENT(out) :: mgoni_force(SDIM)
@@ -493,6 +495,7 @@ stop
        xcrossing_offset(dir2)=zero
        nghost(dir2)=zero
       enddo
+      cosangle_parm=zero
 
       if (failure_flag.eq.1) then
        !do nothing
@@ -748,6 +751,7 @@ stop
 
        gamma1=zero
        gamma2=zero
+       cos_angle=zero
 
       else if (user_tension(iten).gt.zero) then
 
@@ -1247,7 +1251,7 @@ stop
          stop
         endif
         if (user_tension(iten).eq.zero) then  
-         ! do nothing
+         cos_angle=zero
         else if (user_tension(iten).gt.zero) then
 
          ! implement dynamic contact angle algorithm here.
@@ -1457,7 +1461,8 @@ stop
             print *," cos dynamic angle ",cos_angle
            endif
           else if (mag.eq.zero) then
-           ! do nothing (nproject has mag=0)
+           ! nproject has mag=0
+           ! do nothing
           else
            print *,"mag cannot be negative: ",mag
            stop
@@ -1910,8 +1915,23 @@ stop
       endif
  
       if (failure_flag.eq.0) then
-       !do nothing
+       if (im3.eq.0) then
+        !do nothing
+       else if (is_rigid_CL(im3).eq.0) then
+        !do nothing
+       else if (is_rigid_CL(im3).eq.1) then
+        cosangle_parm=cos_angle
+       else
+        print *,"is_rigid_CL(im3) invalid ",im3,is_rigid_CL(im3)
+        stop
+       endif
       else if (failure_flag.eq.1) then
+       do dir2=1,SDIM
+        xcrossing_offset(dir2)=zero
+        nghost(dir2)=zero
+       enddo
+       cosangle_parm=zero
+
        curvFD=zero
        curvHT_choice=zero
       else
@@ -2615,7 +2635,7 @@ stop
        maskcov,DIMS(maskcov), &
        masknbr,DIMS(masknbr), &
        LSPC,DIMS(LSPC), &
-       recon,DIMS(recon), &
+       mofdata,DIMS(mofdata), &
        curvfab,DIMS(curvfab), &
        velfab,DIMS(velfab), &
        denfab,DIMS(denfab), &
@@ -2668,7 +2688,7 @@ stop
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(masknbr)
       integer, INTENT(in) :: DIMDEC(LSPC)
-      integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(mofdata)
       integer, INTENT(in) :: DIMDEC(curvfab)
       integer, INTENT(in) :: DIMDEC(velfab)
       integer, INTENT(in) :: DIMDEC(denfab)
@@ -2688,8 +2708,8 @@ stop
               LSPC(DIMV(LSPC),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LSPC_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target ::  &
-           recon(DIMV(recon),num_materials*ngeom_recon)
-      real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+           mofdata(DIMV(mofdata),num_materials*ngeom_raw)
+      real(amrex_real), pointer :: mofdata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out),target :: curvfab(DIMV(curvfab),num_curv)
       real(amrex_real), pointer :: curvfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
@@ -2754,6 +2774,7 @@ stop
       real(amrex_real) mgoni_force(SDIM)
       real(amrex_real) xcrossing_offset(SDIM)
       real(amrex_real) nghost(SDIM)
+      real(amrex_real) cosangle
 
       integer im3
 
@@ -2905,8 +2926,8 @@ stop
       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
       LSPC_ptr=>LSPC
       call checkbound_array(fablo,fabhi,LSPC_ptr,ngrow_distance,-1)
-      recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
+      mofdata_ptr=>mofdata
+      call checkbound_array(fablo,fabhi,mofdata_ptr,ngrow_distance,-1)
       masknbr_ptr=>masknbr
       call checkbound_array(fablo,fabhi,masknbr_ptr,ngrow_distance,-1)
       curvfab_ptr=>curvfab
@@ -3473,9 +3494,9 @@ stop
               do im_curv=1,num_materials
                call safe_data(i+i1,j+j1,k+k1,im_curv, &
                  LSPC_ptr,LSCEN_hold(im_curv))
-               vofcomp=(im_curv-1)*ngeom_recon+1
+               vofcomp=(im_curv-1)*ngeom_raw+1
                call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-                 recon_ptr,vof_hold(im_curv))
+                 mofdata_ptr,vof_hold(im_curv))
               enddo !im_curv=1..num_materials
 
               do im_curv=1,num_materials
@@ -3564,6 +3585,7 @@ stop
               im3, & !intent(out)
               xcrossing_offset, & !intent(out)
               nghost, & !intent(out) points from im_opp to im.
+              cosangle, & !intent(out)
               visc_coef, &
               unscaled_min_curvature_radius, &
               im_main, & !intent(in) (locally im)
@@ -3621,6 +3643,7 @@ stop
              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_DIRSIDE_FLAG+1)= &
               dircrossing_opt*sidestar
              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MATERIAL3_ID+1)=im3
+             curvfab(D_DECL(i,j,k),icurv+CURVCOMP_COSANGLE+1)=cosangle
 
              if (curv_min.gt.curv_cellHT) then
               curv_min=curv_cellHT
