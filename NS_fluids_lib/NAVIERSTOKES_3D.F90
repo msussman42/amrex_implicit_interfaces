@@ -13861,6 +13861,7 @@ END SUBROUTINE SIMP
            crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_XCROSSING+dir2)=zero
            crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_NGHOST+dir2)=zero
           enddo
+          crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_COSANGLE+1)=zero
          else
           print *,"velwt invalid ",velwt
           stop

@@ -28483,12 +28483,18 @@ NavierStokes::makeStateCurv(Real cl_time,
  new_localMF(DIST_CURV_MF,num_curv,ngrow_distance,-1);
  localMF[DIST_CURV_MF]->setVal(0.0);
 
- VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
- debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
- if (localMF[SLOPE_RECON_MF]->nComp()==num_materials*ngeom_recon) {
-  // do nothing
+ MultiFab* mofdata=getState(ngrow_distance,STATECOMP_MOF,
+		 num_materials*ngeom_raw,cur_time_slab);
+
+ if (mofdata->nGrow()==ngrow_distance) {
+  //do nothing
  } else
-  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+  amrex::Error("mofdata->nGrow invalid");
+
+ if (mofdata->nComp()==num_materials*ngeom_raw) {
+  //do nothing
+ } else
+  amrex::Error("mofdata->nComp invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -28534,7 +28540,7 @@ NavierStokes::makeStateCurv(Real cl_time,
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
    FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
+   FArrayBox& mofdatafab=(*mofdata)[mfi];
 
    FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
    FArrayBox& velfab=(*CL_velocity)[mfi];
@@ -28564,8 +28570,8 @@ NavierStokes::makeStateCurv(Real cl_time,
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    reconfab.dataPtr(),
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    mofdatafab.dataPtr(),
+    ARLIM(mofdatafab.loVect()),ARLIM(mofdatafab.hiVect()),
     curvfab.dataPtr(),
     ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
     velfab.dataPtr(),
@@ -28646,6 +28652,7 @@ NavierStokes::makeStateCurv(Real cl_time,
 
  delete CL_velocity;
  delete den;
+ delete mofdata;
 
 }  // end subroutine makeStateCurv
 
