@@ -230,6 +230,7 @@ namespace amrex{
        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
        Real* mof,AMREX_ARLIM_P(moflo),AMREX_ARLIM_P(mofhi),
+       Real* curv,AMREX_ARLIM_P(curvlo),AMREX_ARLIM_P(curvhi),
        Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
        Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
        Real* velnew,AMREX_ARLIM_P(velnewlo),AMREX_ARLIM_P(velnewhi),
@@ -249,6 +250,7 @@ namespace amrex{
        int* renormalize_only,
        int* solidheat_flag,
        int* LS_extrap_iter,
+       int* num_curv,
        int* constant_density_all_time,
        Real* primary_flotsam_tol,
        Real* secondary_flotsam_tol);

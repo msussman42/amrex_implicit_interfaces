@@ -6931,6 +6931,25 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     //tessellate=TESSELLATE_FLUIDS
   MultiFab* lsdata=getStateDist(ngrow_distance,time,local_caller_string);
 
+  MultiFab* curv_data_ptr=nullptr;
+  int num_curv=num_interfaces*CURVCOMP_NCOMP;
+
+  if (renormalize_only==1) {
+   curv_data_ptr=lsdata;
+  } else if (renormalize_only==0) {
+   curv_data_ptr=localMF[DIST_CURV_MF];
+   if (curv_data_ptr->nComp()==num_curv) {
+    //do nothing
+   } else
+    amrex::Error("curv_data_ptr->nComp()==num_curv failed");
+  } else
+   amrex::Error("renormalize_only invalid");
+
+  if (curv_data_ptr->nGrow()==ngrow_distance) {
+   //do nothing
+  } else
+   amrex::Error("curv_data_ptr->nGrow()==ngrow_distance failed");
+
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
    if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
@@ -6987,6 +7006,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
    FArrayBox& moffab=(*mofdata)[mfi];
    FArrayBox& denfab=(*dendata)[mfi];
    FArrayBox& velfab=(*veldata)[mfi];
+   FArrayBox& curvfab=(*curv_data_ptr)[mfi];
 
    const Real* xlo = grid_loc[gridno].lo();
 
@@ -7016,6 +7036,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      moffab.dataPtr(),
      ARLIM(moffab.loVect()),ARLIM(moffab.hiVect()),
+     curvfab.dataPtr(),
+     ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
      denfab.dataPtr(),
      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
      velfab.dataPtr(),
@@ -7036,6 +7058,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      &renormalize_only, 
      &solidheat_flag,
      &LS_extrap_iter,
+     &num_curv, //num_interfaces * CURVCOMP_NCOMP
      constant_density_all_time.dataPtr(),
      &primary_flotsam_tol,
      &secondary_flotsam_tol);
