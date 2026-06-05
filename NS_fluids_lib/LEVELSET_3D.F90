@@ -19033,6 +19033,7 @@ stop
        maskcov,DIMS(maskcov), &
        LS,DIMS(LS), & ! getStateDist(time) tessellate=TESSELLATE_FLUIDS
        state_mof,DIMS(state_mof), &
+       curv,DIMS(curv), &
        den,DIMS(den), &
        vel,DIMS(vel), &
        velnew,DIMS(velnew), &
@@ -19049,6 +19050,7 @@ stop
        renormalize_only, &
        solidheat_flag, &
        LS_extrap_iter, &
+       num_curv, &
        constant_density_all_time, &
        primary_flotsam_tol, &
        secondary_flotsam_tol) &
@@ -19066,6 +19068,7 @@ stop
 
       integer, INTENT(in) :: renormalize_only
       integer, INTENT(in) :: LS_extrap_iter
+      integer, INTENT(in) :: num_curv
 
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -19090,6 +19093,7 @@ stop
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(LS)
       integer, INTENT(in) :: DIMDEC(state_mof)
+      integer, INTENT(in) :: DIMDEC(curv)
       integer, INTENT(in) :: DIMDEC(den)
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(velnew)
@@ -19108,9 +19112,15 @@ stop
       real(amrex_real), INTENT(in),target ::  &
               LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in),target :: &
               state_mof(DIMV(state_mof),num_materials*ngeom_raw)
       real(amrex_real), pointer :: state_mof_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in),target :: &
+              curv(DIMV(curv),num_curv)
+      real(amrex_real), pointer :: curv_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in),target :: &
               den(DIMV(den),num_materials*num_state_material)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
@@ -19144,6 +19154,10 @@ stop
       integer i,j,k
       integer dir
       integer im
+      integer im_opp
+      integer im3
+      integer iten
+      integer icurv
       integer nfine
       integer im_refine_density
       integer im_solid_max
@@ -19160,6 +19174,7 @@ stop
 
       integer, parameter :: nhalf=9
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_local(-nhalf:nhalf,SDIM)
 
       real(amrex_real) mofnew(num_materials*ngeom_recon)
       integer istenlo(3),istenhi(3)
@@ -19205,10 +19220,20 @@ stop
 
       real(amrex_real) :: local_XPOS(SDIM)
       real(amrex_real) :: LS_extend_thick
-      real(amrex_real) :: wt_local,wt_sum
-      real(amrex_real) :: LS_extrap_sum(num_materials*(1+SDIM))
-      real(amrex_real) :: LS_extrap_sum_fixed(num_materials*(1+SDIM))
+      real(amrex_real) :: LS_closest(num_materials*(1+SDIM))
+      real(amrex_real) :: LS_closest_CL(num_materials*(1+SDIM))
+      real(amrex_real) :: dist_closest(num_materials)
+      real(amrex_real) :: dist_closest_CL(num_materials)
       real(amrex_real) :: LS_local(num_materials*(1+SDIM))
+      real(amrex_real) :: curv_local(num_curv)
+      real(amrex_real) :: dist_local
+      real(amrex_real) :: cosangle
+      real(amrex_real) :: nghost_mag
+      real(amrex_real) :: nghost(SDIM)
+      real(amrex_real) :: xcrossing(SDIM)
+
+      real(amrex_real) :: LS_extrap_fixed(num_materials*(1+SDIM))
+      real(amrex_real) :: LS_extrap(num_materials*(1+SDIM))
 
       if (renormalize_only.eq.1) then
        if (LS_extrap_iter.eq.0) then
@@ -19391,8 +19416,13 @@ stop
       call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1)
       LS_ptr=>LS
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+
       state_mof_ptr=>state_mof
       call checkbound_array(fablo,fabhi,state_mof_ptr,1,-1)
+
+      curv_ptr=>curv
+      call checkbound_array(fablo,fabhi,curv_ptr,ngrow_distance,-1)
+
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
       den_ptr=>den
@@ -20284,55 +20314,196 @@ stop
                    (ls_hold(im_hard_material).ge.zero)) then
 
            do im=1,num_materials*(1+SDIM)
-            LS_extrap_sum(im)=zero
+            LS_closest(im)=zero
+            LS_closest_CL(im)=zero
            enddo
-           wt_sum=zero
+           do im=1,num_materials
+            dist_closest(im)=-one
+            dist_closest_CL(im)=-one
+           enddo
+
             ! -ngrow_distance,...,ngrow_distance
            do k1=big_stenlo(3),big_stenhi(3)
            do j1=big_stenlo(2),big_stenhi(2)
            do i1=big_stenlo(1),big_stenhi(1)
 
+            call gridsten_level(xsten_local,i+i1,j+j1,k+k1,level,nhalf)
             do im=1,num_materials*(1+SDIM)
              call safe_data(i+i1,j+j1,k+k1,im,LS_ptr,LS_local(im))
             enddo !im=1..num_materials*(1+SDIM)
+            do im=1,num_curv
+             call safe_data(i+i1,j+j1,k+k1,im,curv_ptr,curv_local(im))
+            enddo !im=1..num_curv
+
             if (LS_local(im_hard_material).ge.zero) then
-             wt_local=EPS12
+             !do nothing
             else if (LS_local(im_hard_material).lt.zero) then
-             wt_local=one/((LS_local(im_hard_material)/dxmax)**4+one)
+             dist_local=zero
+             do dir=1,SDIM 
+              dist_local=dist_local+(xsten_local(0,dir)-local_XPOS(dir))**2
+             enddo
+             dist_local=sqrt(dist_local)
+             do im=1,num_materials
+
+              if ((dist_local.lt.dist_closest(im)).or. &
+                  (dist_closest(im).eq.-one)) then
+               LS_closest(im)=LS_local(im)
+               do dir=1,SDIM 
+                LS_closest(num_materials+(im-1)*SDIM+dir)= &
+                 LS_local(num_materials+(im-1)*SDIM+dir)
+               enddo
+               dist_closest(im)=dist_local
+              else if ((dist_local.ge.dist_closest(im)).and. &
+                       (dist_closest(im).ge.zero)) then
+               !do nothing
+              else
+               print *,"dist_local invalid"
+               stop
+              endif
+
+              if ((dist_local.lt.dist_closest_CL(im)).or. &
+                  (dist_closest_CL(im).eq.-one)) then
+               do im_opp=1,num_materials
+                if ((im_opp.ne.im).and.(is_rigid_CL(im_opp).eq.0)) then
+                 call get_iten(im,im_opp,iten)
+                 icurv=(iten-1)*CURVCOMP_NCOMP
+                 im3=curv_local(icurv+CURVCOMP_MATERIAL3_ID+1)
+                 if (im3.eq.im_hard_material) then
+                  cosangle=curv_local(icurv+CURVCOMP_COSANGLE+1)
+                  nghost_mag=zero
+                  do dir=1,SDIM
+                   nghost(dir)=curv_local(icurv+CURVCOMP_NGHOST+dir)
+                   nghost_mag=nghost_mag+nghost(dir)**2
+                   xcrossing(dir)=curv_local(icurv+CURVCOMP_XCROSSING+dir)
+                  enddo
+                  nghost_mag=sqrt(nghost_mag)
+               
+                  if ((abs(cosangle).le.EPS2).or.(nghost_mag.eq.zero)) then
+                   !do nothing
+                  else if ((abs(cosangle).ge.EPS2).and. &
+                           (nghost_mag.gt.zero)) then
+                   dist_closest_CL(im)=dist_local
+                   LS_closest_CL(im)=zero
+                   do dir=1,SDIM
+                    LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                      nghost(dir)/nghost_mag
+                    LS_closest_CL(im)=LS_closest_CL(im)+ &
+                       nghost(dir)*(xsten_local(0,dir)- &
+                       (local_XPOS(dir)+xcrossing(dir)))
+                   enddo
+                   if (im.lt.im_opp) then
+                    !do nothing
+                   else if (im.gt.im_opp) then
+                    LS_closest_CL(im)=-LS_closest_CL(im)
+                    do dir=1,SDIM
+                     LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                      -LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+                    enddo
+                   else
+                    print *,"im or im_opp invalid"
+                    stop
+                   endif
+                  else
+                   print *,"cosangle or nghost_mag invalid ", &
+                    cosangle,nghost_mag
+                   stop
+                  endif
+                 else if ((im3.ge.0).and.(im3.le.num_materials)) then
+                  !do nothing
+                 else
+                  print *,"im3 invalid"
+                  stop
+                 endif
+                else if ((im_opp.eq.im).or.(is_rigid_CL(im_opp).eq.1)) then
+                 !do nothing
+                else
+                 print *,"im,im_opp, or is_rigid_CL(im_opp) invalid"
+                 stop
+                endif
+               enddo !im_opp=1,num_materials
+              else if ((dist_local.ge.dist_closest_CL(im)).and. &
+                       (dist_closest_CL(im).ge.zero)) then
+               !do nothing
+              else
+               print *,"dist_local invalid"
+               stop
+              endif
+                   
+             enddo !im=1,num_materials
+             
             else
              print *,"LS_local(im_hard_material) invalid ", &
                   LS_local(im_hard_material)
              stop
             endif
-            wt_sum=wt_sum+wt_local
-            do im=1,num_materials*(1+SDIM)
-             LS_extrap_sum(im)=LS_extrap_sum(im)+wt_local*LS_local(im)
-            enddo
 
            enddo
            enddo
            enddo
 
-           if (wt_sum.gt.zero) then
-            do im=1,num_materials*(1+SDIM)
-             LS_extrap_sum(im)=LS_extrap_sum(im)/wt_sum
-            enddo
-           else
-            print *,"wt_sum invalid ",wt_sum
-            stop
-           endif
+           do im=1,num_materials
+
+            if (is_rigid_CL(im).eq.1) then
+
+             LS_extrap(im)=ls_hold(im)
+             do dir=1,SDIM 
+              LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                ls_hold(num_materials+(im-1)*SDIM+dir)
+             enddo
+
+            else if (is_rigid_CL(im).eq.0) then
+          
+             if (dist_closest(im).eq.-one) then
+              LS_extrap(im)=LS(D_DECL(i,j,k),im)
+              do dir=1,SDIM 
+               LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                 LS(D_DECL(i,j,k),num_materials+(im-1)*SDIM+dir)
+              enddo
+             else if (dist_closest(im).ge.zero) then
+              LS_extrap(im)=LS_closest(im)
+              do dir=1,SDIM 
+               LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                 LS_closest(num_materials+(im-1)*SDIM+dir)
+              enddo
+              if (dist_closest_CL(im).eq.-one) then
+               !do nothing
+              else if (dist_closest_CL(im).ge.LS_extend_thick) then
+               !do nothing
+              else if (dist_closest_CL(im).ge.zero) then
+               LS_extrap(im)=LS_closest_CL(im)
+               do dir=1,SDIM 
+                LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                  LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+               enddo
+              else
+               print *,"dist_closest_CL invalid: ",dist_closest_CL
+               stop
+              endif
+
+             else
+              print *,"dist_closest invalid: ",dist_closest
+              stop
+             endif
+
+            else 
+             print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
+             stop
+            endif
+
+           enddo !im=1,num_materials
+
            ! FIX_LS_tessellate is declared in: MOF.F90
            ! input : fluids tessellate, solids/elastics are embedded
            ! output: fluids tessellate and one and only one fluid LS is positive
-           call FIX_LS_tessellate(LS_extrap_sum,LS_extrap_sum_fixed)
+           call FIX_LS_tessellate(LS_extrap,LS_extrap_fixed)
 
            do im=1,num_materials
             if ((is_rigid(im).eq.0).and. &
                 (is_elastic(im).eq.0)) then
-             ls_hold(im)=LS_extrap_sum_fixed(im)
+             ls_hold(im)=LS_extrap_fixed(im)
              do dir=1,SDIM
               ls_hold(num_materials+(im-1)*SDIM+dir)= &
-                LS_extrap_sum(num_materials+(im-1)*SDIM+dir)
+                LS_extrap(num_materials+(im-1)*SDIM+dir)
              enddo
             else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
              !do nothing
