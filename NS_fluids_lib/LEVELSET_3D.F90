@@ -2964,7 +2964,7 @@ stop
       endif
 
       if (num_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
-       print *,"num_curv invalid"
+       print *,"num_curv invalid ",num_curv
        stop
       endif
 
@@ -19423,6 +19423,11 @@ stop
       curv_ptr=>curv
       call checkbound_array(fablo,fabhi,curv_ptr,ngrow_distance,-1)
 
+      if (num_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
+       print *,"num_curv invalid ",num_curv
+       stop
+      endif
+
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
       den_ptr=>den
@@ -20210,6 +20215,7 @@ stop
 
             vofcomp=(im_hard_material-1)*ngeom_recon+1
             mofnew(vofcomp)=vfrac_solid_new(im_hard_material)
+             !F_stencil_array is 3x3x3
             F_stencil_array(D_DECL(0,0,0),im_hard_material)=mofnew(vofcomp)
             do dir=1,SDIM
              mofnew(vofcomp+dir)=censolid_new(im_hard_material,dir)
@@ -20357,89 +20363,119 @@ stop
                        (dist_closest(im).ge.zero)) then
                !do nothing
               else
-               print *,"dist_local invalid"
+               print *,"dist_local invalid ",dist_local
+               print *,"or dist_closest invalid ",im,dist_closest(im)
                stop
               endif
 
-              if ((dist_local.lt.dist_closest_CL(im)).or. &
-                  (dist_closest_CL(im).eq.-one)) then
-               do im_opp=1,num_materials
-                if ((im_opp.ne.im).and.(is_rigid_CL(im_opp).eq.0)) then
-                 call get_iten(im,im_opp,iten)
-                 icurv=(iten-1)*CURVCOMP_NCOMP
-                 im3=curv_local(icurv+CURVCOMP_MATERIAL3_ID+1)
-                 if (im3.eq.im_hard_material) then
-                  cosangle=curv_local(icurv+CURVCOMP_COSANGLE+1)
-                  nghost_mag=zero
-                  do dir=1,SDIM
-                   nghost(dir)=curv_local(icurv+CURVCOMP_NGHOST+dir)
-                   nghost_mag=nghost_mag+nghost(dir)**2
-                   xcrossing(dir)=curv_local(icurv+CURVCOMP_XCROSSING+dir)
-                  enddo
-                  nghost_mag=sqrt(nghost_mag)
-               
-                  if ((abs(cosangle).le.EPS2).or.(nghost_mag.eq.zero)) then
-                   !do nothing
-                  else if ((abs(cosangle).ge.EPS2).and. &
-                           (nghost_mag.gt.zero)) then
-                   dist_closest_CL(im)=dist_local
-                   LS_closest_CL(im)=zero
-                   do dir=1,SDIM
-                    LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
-                      nghost(dir)/nghost_mag
-                    LS_closest_CL(im)=LS_closest_CL(im)+ &
-                       nghost(dir)*(xsten_local(0,dir)- &
-                       (local_XPOS(dir)+xcrossing(dir)))
-                   enddo
-                   if (im.lt.im_opp) then
+              if (is_rigid_CL(im).eq.0) then
+
+               if ((dist_local.lt.dist_closest_CL(im)).or. &
+                   (dist_closest_CL(im).eq.-one)) then
+
+                do im_opp=1,num_materials
+                 if ((im_opp.ne.im).and.(is_rigid_CL(im_opp).eq.0)) then
+
+                  call get_iten(im,im_opp,iten)
+                  icurv=(iten-1)*CURVCOMP_NCOMP
+                  im3=curv_local(icurv+CURVCOMP_MATERIAL3_ID+1)
+                  if (im3.eq.im_hard_material) then
+                   cosangle=curv_local(icurv+CURVCOMP_COSANGLE+1)
+ 
+                   if (abs(cosangle).le.one+EPS2) then
                     !do nothing
-                   else if (im.gt.im_opp) then
-                    LS_closest_CL(im)=-LS_closest_CL(im)
-                    do dir=1,SDIM
-                     LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
-                      -LS_closest_CL(num_materials+(im-1)*SDIM+dir)
-                    enddo
                    else
-                    print *,"im or im_opp invalid"
+                    print *,"cosangle invalid ",cosangle
                     stop
                    endif
+
+                   nghost_mag=zero
+                   do dir=1,SDIM
+                    nghost(dir)=curv_local(icurv+CURVCOMP_NGHOST+dir)
+                    nghost_mag=nghost_mag+nghost(dir)**2
+                    xcrossing(dir)=curv_local(icurv+CURVCOMP_XCROSSING+dir)
+                   enddo
+                   nghost_mag=sqrt(nghost_mag)
+                
+                   if ((abs(cosangle).le.EPS2).or.(nghost_mag.eq.zero)) then
+                    !do nothing
+                   else if ((abs(cosangle).ge.EPS2).and. &
+                            (abs(cosangle).le.one+EPS2).and. &
+                            (nghost_mag.gt.zero)) then
+                    dist_closest_CL(im)=dist_local
+                    LS_closest_CL(im)=zero
+                    do dir=1,SDIM
+                     LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                       nghost(dir)/nghost_mag
+                      ! local_XPOS=x_{i,j,k}
+                      ! l
+                     LS_closest_CL(im)=LS_closest_CL(im)+ &
+                        nghost(dir)*( &
+                          local_XPOS(dir)- &  !x_{i,j,k}
+                          (xsten_local(0,dir)+xcrossing(dir)))/ & !x_{i',j',k'} 
+                          nghost_mag
+                    enddo !dir=1,sdim
+                    if (im.lt.im_opp) then
+                     !do nothing
+                    else if (im.gt.im_opp) then
+                     LS_closest_CL(im)=-LS_closest_CL(im)
+                     do dir=1,SDIM
+                      LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                       -LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+                     enddo
+                    else
+                     print *,"im or im_opp invalid ",im,im_opp
+                     stop
+                    endif
+                   else
+                    print *,"cosangle or nghost_mag invalid ", &
+                     cosangle,nghost_mag
+                    stop
+                   endif
+                  else if ((im3.ge.0).and.(im3.le.num_materials)) then
+                   !do nothing
                   else
-                   print *,"cosangle or nghost_mag invalid ", &
-                    cosangle,nghost_mag
+                   print *,"im3 invalid ",im3
                    stop
                   endif
-                 else if ((im3.ge.0).and.(im3.le.num_materials)) then
+
+                 else if ((im_opp.eq.im).or.(is_rigid_CL(im_opp).eq.1)) then
                   !do nothing
                  else
-                  print *,"im3 invalid"
+                  print *,"im,im_opp, or is_rigid_CL(im_opp) invalid ", &
+                   im,im_opp,is_rigid_CL(im_opp)
                   stop
                  endif
-                else if ((im_opp.eq.im).or.(is_rigid_CL(im_opp).eq.1)) then
-                 !do nothing
-                else
-                 print *,"im,im_opp, or is_rigid_CL(im_opp) invalid"
-                 stop
-                endif
-               enddo !im_opp=1,num_materials
-              else if ((dist_local.ge.dist_closest_CL(im)).and. &
-                       (dist_closest_CL(im).ge.zero)) then
+                enddo !im_opp=1,num_materials
+
+               else if ((dist_local.ge.dist_closest_CL(im)).and. &
+                        (dist_closest_CL(im).ge.zero)) then
+                !do nothing
+               else
+                print *,"dist_local invalid ",dist_local
+                print *,"or dist_closest_CL(im) invalid ",im, &
+                 dist_closest_CL(im)
+                stop
+               endif
+               
+              else if (is_rigid_CL(im).eq.1) then
                !do nothing
               else
-               print *,"dist_local invalid"
+               print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
                stop
               endif
-                   
+    
              enddo !im=1,num_materials
              
             else
              print *,"LS_local(im_hard_material) invalid ", &
-                  LS_local(im_hard_material)
+                  im_hard_material,LS_local(im_hard_material)
              stop
             endif
 
-           enddo
-           enddo
-           enddo
+           enddo !i1
+           enddo !j1
+           enddo !k1
 
            do im=1,num_materials
 
@@ -20467,7 +20503,7 @@ stop
               enddo
               if (dist_closest_CL(im).eq.-one) then
                !do nothing
-              else if (dist_closest_CL(im).ge.LS_extend_thick) then
+              else if (dist_closest_CL(im).ge.two*dxmax) then
                !do nothing
               else if (dist_closest_CL(im).ge.zero) then
                LS_extrap(im)=LS_closest_CL(im)
