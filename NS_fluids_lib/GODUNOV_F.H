@@ -739,6 +739,7 @@ extern "C"
      int* velbc,
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps,
+     int* material_conservation_form,
      int* EILE_flag,
      int* dir_counter,
      int* normdir,

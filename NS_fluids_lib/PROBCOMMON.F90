@@ -257,6 +257,7 @@ implicit none
 ! fort_hardening_coefficient added August 20, 2025
 ! Johnson_Cook_C added August 21, 2025
 ! adapt_whole_material added October 9, 2025
+! fort_material_conservation_form passed as parameter now, June 7, 2026
 
       integer, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2

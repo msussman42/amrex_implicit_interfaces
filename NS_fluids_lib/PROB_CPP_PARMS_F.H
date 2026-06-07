@@ -111,7 +111,6 @@ namespace amrex{
        int* cpp_num_materials,
        int* material_extend_velocity,
        int* material_type,
-       int* material_conservation_form,
        int* cpp_num_interfaces,
        Real* DrhoDT,
        Real* tempconst,

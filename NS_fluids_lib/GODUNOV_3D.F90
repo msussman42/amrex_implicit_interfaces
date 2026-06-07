@@ -13424,6 +13424,7 @@ stop
        velbc, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
+       material_conservation_form, &
        EILE_flag, &
        dir_counter, &
        normdir, &
@@ -13497,6 +13498,7 @@ stop
       integer, PARAMETER :: ngrow=2
       integer, INTENT(in) :: stokes_flow
       integer, INTENT(in) :: solidheat_flag
+      integer, INTENT(in) :: material_conservation_form(num_materials)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
 
@@ -14443,14 +14445,14 @@ stop
            tempcomp_data=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
            local_temperature=den(D_DECL(icrse,jcrse,kcrse),tempcomp_data)
            if ((is_compressible_mat(im).eq.0).or. &
-               (fort_material_conservation_form(im).eq.0)) then
+               (material_conservation_form(im).eq.0)) then
              ! den * T
             conserve(D_DECL(icrse,jcrse,kcrse), &
               fine_offset+CISLCOMP_STATES+tempcomp_data)= &
                    dencore(im)*local_temperature
 
            else if ((is_compressible_mat(im).eq.1).and. &
-                    (fort_material_conservation_form(im).eq.1)) then
+                    (material_conservation_form(im).eq.1)) then
 
             call init_massfrac_parm(dencore(im),massfrac_parm,im)
             do ispecies=1,num_species_var
@@ -14475,11 +14477,11 @@ stop
 
            else
             print *, &
-             "is_compressible_mat or fort_material_conservation_form invalid"
+             "is_compressible_mat or material_conservation_form invalid"
             print *,"im=",im
             print *,"is_compressible_mat ",is_compressible_mat(im)
-            print *,"fort_material_conservation_form ", &
-                fort_material_conservation_form(im)
+            print *,"material_conservation_form ", &
+                material_conservation_form(im)
             stop
            endif
            istate=istate+1
@@ -15477,18 +15479,18 @@ stop
         endif
 
         if ((is_compressible_mat(im).eq.0).or. &
-            (fort_material_conservation_form(im).eq.0)) then
+            (material_conservation_form(im).eq.0)) then
          vol_target_local=volmat_depart_cor(im)
         else if ((is_compressible_mat(im).eq.1).and. &
-                 (fort_material_conservation_form(im).eq.1)) then
+                 (material_conservation_form(im).eq.1)) then
          !do nothing
         else
          print *, &
-           "is_compressible_mat or fort_material_conservation_form invalid"
+           "is_compressible_mat or material_conservation_form invalid"
          print *,"im,is_compressible_mat: ", &
               im,is_compressible_mat(im)
-         print *,"im,fort_material_conservation_form: ", &
-              im,fort_material_conservation_form(im)
+         print *,"im,material_conservation_form: ", &
+              im,material_conservation_form(im)
          stop
         endif
 
@@ -15735,10 +15737,10 @@ stop
             ! integral_omega_depart rho T F_m /
             ! integral_omega_depart rho F_m
             if ((is_compressible_mat(im).eq.0).or. &
-                (fort_material_conservation_form(im).eq.0)) then
+                (material_conservation_form(im).eq.0)) then
              ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
             else if ((is_compressible_mat(im).eq.1).and. &
-                     (fort_material_conservation_form(im).eq.1)) then
+                     (material_conservation_form(im).eq.1)) then
              ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
              ! integral_omega_depart rho F_m
              ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
@@ -15770,11 +15772,11 @@ stop
              endif
             else
              print *, &
-              "is_compressible_mat or fort_material_conservation_form invalid"
+              "is_compressible_mat or material_conservation_form invalid"
              print *,"im,is_compressible_mat: ", &
               im,is_compressible_mat(im)
-             print *,"im,fort_material_conservation_form: ", &
-              im,fort_material_conservation_form(im)
+             print *,"im,material_conservation_form: ", &
+              im,material_conservation_form(im)
              stop
             endif
             if (ETcore.lt.fort_tempcutoff(im)) then
