@@ -5070,8 +5070,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
  } else
   amrex::Error("SDC_outer_sweeps invalid");
 
- int nhistory=num_interfaces*2;
-
  int finest_level = parent->finestLevel();
 
  debug_ngrow(SLOPE_RECON_MF,0,local_caller_string);
@@ -5087,16 +5085,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
    // create DIST_CURV_MF 
 
- curv_min.resize(thread_class::nthreads);
- curv_max.resize(thread_class::nthreads);
-
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  curv_min[tid]=1.0e+30;
-  curv_max[tid]=-1.0e+30;
- } // tid
-
- allocate_array(ngrow_distance,nhistory,-1,HISTORY_MF);
-
  Real cl_time=prev_time_slab;
  if (project_option==SOLVETYPE_PRES)  
   cl_time=prev_time_slab;
@@ -5107,27 +5095,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   //NavierStokes::makeStateCurvALL is declared in NavierStokes.cpp
  makeStateCurvALL(cl_time,local_caller_string);
-
-  // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
-  // if GNBC is used, then the "ghost normal" in the substrate
-  // is extrapolated from the interior.
-  // if GNBC is not used, then the "ghost normal" is either
-  // (a) corresponding to the static angle condition or
-  // (b) some dynamic angle condition depending on utan.
-  // "angle" = static angle if use_DCA=-1, dynamic angle otherwise.
- if (1==0) {
-  writeSanityCheckData(
-    "ANGLE_UTAN",
-    "in: make_physics_varsALL, after makeStateCurv: HISTORY_MF, angle, utan", 
-    local_caller_string,
-    HISTORY_MF, //tower_mf_id
-    localMF[HISTORY_MF]->nComp(),
-    HISTORY_MF,
-    -1, // State_Type==-1
-    -1, // data_dir==-1
-    parent->levelSteps(0)); 
- }
- delete_array(HISTORY_MF);
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
@@ -6743,7 +6710,6 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  std::string local_caller_string="prescribe_solid_geometryALL";
  local_caller_string=caller_string+local_caller_string;
 
-
  if ((step_through_data==1)||(1==0)) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
@@ -6762,6 +6728,9 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   std::cin >> n_input;
  }
 
+  // piecewise constant interpolation.
+  // deletes localMF[LEVELPC_MF] if it exists.
+ allocate_levelset_ALL(1,LEVELPC_MF);
 
  if (renormalize_only==1) {
   //do nothing
@@ -6834,7 +6803,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   std::cout << "renormalize_only= " << renormalize_only << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';
-  std::cout << "press any number then enter:at the end prescribe_solid_geometryALL\n";
+  std::cout << 
+   "press any number then enter:at the end prescribe_solid_geometryALL\n";
   int n_input;
   std::cin >> n_input;
  }

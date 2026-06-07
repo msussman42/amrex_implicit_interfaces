@@ -19154,6 +19154,7 @@ stop
       integer i,j,k
       integer dir
       integer im
+      integer im_local
       integer im_opp
       integer im3
       integer iten
@@ -20253,71 +20254,7 @@ stop
          if ((im_hard_material.ge.1).and. &
              (im_hard_material.le.num_materials)) then
 
-          if (ls_hold(im_hard_material).ge.LS_extend_thick) then
-         
-           im_fluid_critical=0
-           do im=1,num_materials
-            if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
-             if (im_fluid_critical.eq.0) then
-              im_fluid_critical=im
-             else if (ls_hold(im).gt.ls_hold(im_fluid_critical)) then
-              im_fluid_critical=im
-             endif
-            else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
-             !do nothing
-            else
-             print *,"is_rigid invalid ",im,is_rigid(im)
-             print *,"or is_elastic invalid ",im,is_elastic(im)
-             stop
-            endif
-           enddo !im=1,num_materials
-   
-           if ((im_fluid_critical.ge.1).and. &
-               (im_fluid_critical.le.num_materials)) then
-            !do nothing
-           else
-            print *,"im_fluid_critical invalid ",im_fluid_critical
-            stop
-           endif
-
-           do im=1,num_materials
-            vofcomp=(im-1)*ngeom_recon+1
-            if ((is_rigid(im).eq.0).and. &
-                (is_elastic(im).eq.0)) then
-             if (im.eq.im_fluid_critical) then
-              ls_hold(im)=(ngrow_distance+1)*dxmax
-              mofnew(vofcomp)=one
-              F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
-              do dir=1,SDIM 
-               mofnew(vofcomp+dir)=zero
-               ls_hold(num_materials+SDIM*(im-1)+dir)=zero
-              enddo
-              do istate=SDIM+2,ngeom_recon
-               mofnew(vofcomp+istate-1)=zero
-              enddo
-             else
-              ls_hold(im)=-(ngrow_distance+1)*dxmax
-              mofnew(vofcomp)=zero
-              F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
-              do dir=1,SDIM 
-               mofnew(vofcomp+dir)=zero
-               ls_hold(num_materials+SDIM*(im-1)+dir)=zero
-              enddo
-              do istate=SDIM+2,ngeom_recon
-               mofnew(vofcomp+istate-1)=zero
-              enddo
-             endif
-            else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
-             !do nothing
-            else
-             print *,"is_rigid invalid ",im,is_rigid(im)
-             print *,"or is_elastic invalid ",im,is_elastic(im)
-             stop
-            endif
-           enddo !im=1,num_materials
-
-          else if ((ls_hold(im_hard_material).le.LS_extend_thick).and. &
-                   (ls_hold(im_hard_material).ge.zero)) then
+          if (ls_hold(im_hard_material).ge.zero) then
 
            do im=1,num_materials*(1+SDIM)
             LS_closest(im)=zero
@@ -20473,9 +20410,9 @@ stop
              stop
             endif
 
-           enddo !i1
-           enddo !j1
-           enddo !k1
+           enddo !i1=-ngrow_distance,ngrow_distance
+           enddo !j1=-ngrow_distance,ngrow_distance
+           enddo !k1=-ngrow_distance,ngrow_distance
 
            do im=1,num_materials
 
@@ -20490,20 +20427,80 @@ stop
             else if (is_rigid_CL(im).eq.0) then
           
              if (dist_closest(im).eq.-one) then
-              LS_extrap(im)=LS(D_DECL(i,j,k),im)
-              do dir=1,SDIM 
-               LS_extrap(num_materials+(im-1)*SDIM+dir)= &
-                 LS(D_DECL(i,j,k),num_materials+(im-1)*SDIM+dir)
-              enddo
+
+              im_fluid_critical=0
+              do im_local=1,num_materials
+               if (is_rigid_CL(im_local).eq.0) then
+                if (im_fluid_critical.eq.0) then
+                 im_fluid_critical=im_local
+                else if (ls_hold(im_local).gt. &
+                         ls_hold(im_fluid_critical)) then
+                 im_fluid_critical=im_local
+                endif
+               else if (is_rigid_CL(im_local).eq.1) then
+                !do nothing
+               else
+                print *,"is_rigid_CL invalid ",im_local,is_rigid_CL(im_local)
+                stop
+               endif
+              enddo !im_local=1,num_materials
+   
+              if ((im_fluid_critical.ge.1).and. &
+                  (im_fluid_critical.le.num_materials)) then
+               !do nothing
+              else
+               print *,"im_fluid_critical invalid ",im_fluid_critical
+               stop
+              endif
+
+              do im_local=1,num_materials
+               vofcomp=(im_local-1)*ngeom_recon+1
+               if (is_rigid_CL(im_local).eq.0) then
+                if (im_local.eq.im_fluid_critical) then
+                 LS_extrap(im_local)=(ngrow_distance+1)*dxmax
+                 mofnew(vofcomp)=one
+                 F_stencil_array(D_DECL(0,0,0),im_local)=mofnew(vofcomp)
+                 do dir=1,SDIM 
+                  mofnew(vofcomp+dir)=zero
+                  LS_extrap(num_materials+SDIM*(im_local-1)+dir)=zero
+                 enddo
+                 do istate=SDIM+2,ngeom_recon
+                  mofnew(vofcomp+istate-1)=zero
+                 enddo
+                else if ((im_local.ge.1).and.(im_local.le.num_materials)) then
+                 LS_extrap(im_local)=-(ngrow_distance+1)*dxmax
+                 mofnew(vofcomp)=zero
+                 F_stencil_array(D_DECL(0,0,0),im_local)=mofnew(vofcomp)
+                 do dir=1,SDIM 
+                  mofnew(vofcomp+dir)=zero
+                  LS_extrap(num_materials+SDIM*(im_local-1)+dir)=zero
+                 enddo
+                 do istate=SDIM+2,ngeom_recon
+                  mofnew(vofcomp+istate-1)=zero
+                 enddo
+                else
+                 print *,"im_local invalid ",im_local
+                 stop
+                endif
+               else if (is_rigid_CL(im_local).eq.1) then
+                !do nothing
+               else
+                print *,"is_rigid_CL invalid ",im_local,is_rigid_CL(im_local)
+                stop
+               endif
+              enddo !im_local=1,num_materials
+
              else if (dist_closest(im).ge.zero) then
+
               LS_extrap(im)=LS_closest(im)
               do dir=1,SDIM 
                LS_extrap(num_materials+(im-1)*SDIM+dir)= &
                  LS_closest(num_materials+(im-1)*SDIM+dir)
               enddo
+
               if (dist_closest_CL(im).eq.-one) then
                !do nothing
-              else if (dist_closest_CL(im).ge.two*dxmax) then
+              else if (dist_closest_CL(im).ge.LS_extend_thick) then
                !do nothing
               else if (dist_closest_CL(im).ge.zero) then
                LS_extrap(im)=LS_closest_CL(im)
