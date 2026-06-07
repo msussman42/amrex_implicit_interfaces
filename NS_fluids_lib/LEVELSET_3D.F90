@@ -10770,6 +10770,7 @@ stop
        ns_time_order, &
        divu_outer_sweeps, &
        num_divu_outer_sweeps, &
+       material_conservation_form, &
        operation_flag, &
        energyflag, &
        constant_density_all_time, &
@@ -10841,6 +10842,7 @@ stop
       integer, INTENT(in) :: ns_time_order
       integer, INTENT(in) :: divu_outer_sweeps
       integer, INTENT(in) :: num_divu_outer_sweeps
+      integer, INTENT(in) :: material_conservation_form(num_materials)
       integer, INTENT(in) :: operation_flag
       integer, INTENT(in) :: slab_step
       integer, INTENT(in) :: enable_spectral
@@ -12499,7 +12501,7 @@ stop
           if (is_compressible_mat(im_majority).eq.0) then
            rhs(D_DECL(i,j,k),1)=zero
           else if (is_compressible_mat(im_majority).eq.1) then
-           if (fort_material_conservation_form(im_majority).eq.0) then
+           if (material_conservation_form(im_majority).eq.0) then
             if (is_rigid_CL(im_majority).eq.0) then
              rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
             else if (is_rigid_CL(im_majority).eq.1) then
@@ -12518,7 +12520,7 @@ stop
                im_majority,is_rigid_CL(im_majority)
              stop
             endif
-           else if (fort_material_conservation_form(im_majority).eq.1) then
+           else if (material_conservation_form(im_majority).eq.1) then
 
             if (is_rigid_CL(im_majority).eq.0) then
              rhs(D_DECL(i,j,k),1)=Eforce_conservative
@@ -12526,8 +12528,8 @@ stop
              print *,"im_majority=",im_majority
              print *,"is_rigid_CL(im_majority) invalid: ", &
                is_rigid_CL(im_majority)
-             print *,"fort_material_conservation_form(im_majority)=", &
-               fort_material_conservation_form(im_majority)
+             print *,"material_conservation_form(im_majority)=", &
+               material_conservation_form(im_majority)
              stop
              rhs(D_DECL(i,j,k),1)=Eforce_conservative
             else
@@ -12538,10 +12540,10 @@ stop
 
            else 
 
-            print *,"fort_material_conservation_form(im_majority) bad"
+            print *,"material_conservation_form(im_majority) bad"
             print *,"im_majority=",im_majority
-            print *,"fort_material_conservation_form(im_majority): ", &
-              fort_material_conservation_form(im_majority)
+            print *,"material_conservation_form(im_majority): ", &
+              material_conservation_form(im_majority)
             stop
            endif
 
@@ -12638,7 +12640,7 @@ stop
                stop
               endif
 
-              if (fort_material_conservation_form(im).eq.1) then
+              if (material_conservation_form(im).eq.1) then
 
                ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
                if (is_rigid_CL(im).eq.0) then
@@ -12646,8 +12648,8 @@ stop
                else if (is_rigid_CL(im).eq.1) then
                 print *,"im=",im
                 print *,"is_rigid_CL(im) invalid: ",is_rigid_CL(im)
-                print *,"fort_material_conservation_form(im)=", &
-                  fort_material_conservation_form(im)
+                print *,"material_conservation_form(im)=", &
+                  material_conservation_form(im)
                 stop
                 internal_e=internal_e+KE_diff+Eforce_conservative
                else
@@ -12656,7 +12658,7 @@ stop
                 stop
                endif
 
-              else if (fort_material_conservation_form(im).eq.0) then
+              else if (material_conservation_form(im).eq.0) then
 
                 ! dt div(u)
                 ! rho^{n+1}=rho^{n} - dt divu \rho
@@ -12727,10 +12729,10 @@ stop
                endif
  
               else
-               print *,"fort_material_conservation_form(im) invalid"
+               print *,"material_conservation_form(im) invalid"
                print *,"im=",im
-               print *,"fort_material_conservation_form(im): ", &
-                 fort_material_conservation_form(im)
+               print *,"material_conservation_form(im): ", &
+                 material_conservation_form(im)
                stop
               endif
 

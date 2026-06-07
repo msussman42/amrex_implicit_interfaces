@@ -1892,6 +1892,7 @@ void NavierStokes::apply_div(
    &ns_time_order, 
    &divu_outer_sweeps, 
    &num_divu_outer_sweeps, 
+   material_conservation_form.dataPtr(),
    &operation_flag,  //operation_flag=100=OP_RHS_CELL
    &energyflag,
    constant_density_all_time.dataPtr(),
@@ -2587,6 +2588,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
+    material_conservation_form.dataPtr(),
     &operation_flag, // operation_flag==110=OP_DIV_CELL
     &energyflag,
     constant_density_all_time.dataPtr(),

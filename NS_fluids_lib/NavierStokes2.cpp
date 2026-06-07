@@ -2417,6 +2417,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      &ns_time_order,
      &divu_outer_sweeps,
      &num_divu_outer_sweeps,
+     material_conservation_form.dataPtr(),
      // OP_VEL_MAC_TO_CELL (mac_vel->cell_vel) or 
      // OP_VEL_DIVUP_TO_CELL ( div(up) low order only)
      &operation_flag_interp_macvel, 
@@ -3661,6 +3662,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
+   material_conservation_form.dataPtr(),
    // operation_flag=OP_VEL_MAC_TO_CELL
    &operation_flag, 
    &energyflag,

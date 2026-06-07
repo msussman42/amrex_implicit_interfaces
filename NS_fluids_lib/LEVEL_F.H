@@ -395,6 +395,7 @@ namespace amrex{
         int* ns_time_order,
         int* divu_outer_sweeps,
         int* num_divu_outer_sweeps,
+        int* material_conservation_form,
         int* operation_flag,
         int* energyflag,
         int* constant_density_all_time,

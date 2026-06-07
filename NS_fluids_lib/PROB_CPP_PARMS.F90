@@ -430,7 +430,6 @@ stop
         ccnum_materials, &
         ccmaterial_extend_velocity, &
         ccmaterial_type, &
-        ccmaterial_conservation_form, &
         ccnten, &
         ccDrhoDT, &
         cctempconst, &
@@ -608,7 +607,6 @@ stop
       
       integer, INTENT(in) :: ccmaterial_extend_velocity(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
-      integer, INTENT(in) :: ccmaterial_conservation_form(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
@@ -1591,7 +1589,6 @@ stop
        fort_material_extend_velocity(im)= &
               ccmaterial_extend_velocity(im)
        fort_material_type(im)=ccmaterial_type(im)
-       fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -1931,8 +1928,6 @@ stop
                 fort_material_extend_velocity(im)
         print *,"im,material_type ",im, &
                 fort_material_type(im)
-        print *,"im,material_conservation_form ", &
-          im,fort_material_conservation_form(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
         print *,"im,DrhoDT ",im,fort_DrhoDT(im)
         print *,"im,temp ",im,fort_tempconst(im)
