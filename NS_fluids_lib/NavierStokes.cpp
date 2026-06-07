@@ -28400,12 +28400,23 @@ NavierStokes::makeStateCurvALL(Real cl_time,
  std::string local_caller_string="makeStateCurvALL";
  local_caller_string=caller_string+local_caller_string;
 
+ curv_min.resize(thread_class::nthreads);
+ curv_max.resize(thread_class::nthreads);
+
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  curv_min[tid]=1.0e+30;
+  curv_max[tid]=-1.0e+30;
+ } // tid
+ 
  if (level==0) {
   //do nothing
  } else
   amrex::Error("expecting level==0");
 
  int finest_level=parent->finestLevel();
+
+ int nhistory=num_interfaces*2;
+ allocate_array(ngrow_distance,nhistory,-1,HISTORY_MF);
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -28418,6 +28429,27 @@ NavierStokes::makeStateCurvALL(Real cl_time,
   ns_level.avgDownCURV_localMF();
  }
 
+  // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
+  // if GNBC is used, then the "ghost normal" in the substrate
+  // is extrapolated from the interior.
+  // if GNBC is not used, then the "ghost normal" is either
+  // (a) corresponding to the static angle condition or
+  // (b) some dynamic angle condition depending on utan.
+  // "angle" = static angle if use_DCA=-1, dynamic angle otherwise.
+ if (1==0) {
+  writeSanityCheckData(
+    "ANGLE_UTAN",
+    "in: makeStateCurvALL: HISTORY_MF, angle, utan", 
+    local_caller_string,
+    HISTORY_MF, //tower_mf_id
+    localMF[HISTORY_MF]->nComp(),
+    HISTORY_MF,
+    -1, // State_Type==-1
+    -1, // data_dir==-1
+    parent->levelSteps(0)); 
+ }
+ delete_array(HISTORY_MF);
+ 
 } //end subroutine makeStateCurvALL
 
 //called from makeStateCurvALL
@@ -28509,7 +28541,7 @@ NavierStokes::makeStateCurv(Real cl_time,
   // NavierStokes::maskfiner
  resize_maskfiner(ngrow_distance,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,ngrow_distance,local_caller_string); 
- resize_mask_nbr(1);
+ resize_mask_nbr(ngrow_distance);
  debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
 
  if (thread_class::nthreads<1)
