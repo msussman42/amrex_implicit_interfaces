@@ -422,6 +422,7 @@ public:
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_conservation_form; 
     static Vector<int> hold_material_conservation_form; 
+    static int positive_preserving_predictor;  //def=1
     static Vector<int> material_extend_velocity; 
     static int material_extend_velocity_flag;
 

@@ -3122,7 +3122,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (hold_material_conservation_form[im]==0) {
        material_conservation_form[im]=0;
       } else if (hold_material_conservation_form[im]==1) {
-       material_conservation_form[im]=0;
+       if (positive_preserving_predictor==1) {
+        material_conservation_form[im]=0;
+       } else if (positive_preserving_predictor==0) {
+        material_conservation_form[im]=1;
+       } else
+        amrex::Error("positive_preserving_predictor invalid");
       } else
        amrex::Error("hold_material_conservation_form invalid");
      } //im=0 ... num_materials-1
