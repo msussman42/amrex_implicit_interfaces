@@ -925,6 +925,7 @@ int NavierStokes::solidheat_flag=0;
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_conservation_form;
 Vector<int> NavierStokes::hold_material_conservation_form;
+int NavierStokes::positive_preserving_predictor=1;
 //nmat components.
 //values range from 0 to nmat-1
 //0=>do not extend this materials' velocity.
@@ -4780,6 +4781,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("material_conservation_form",
       material_conservation_form,num_materials);
+    pp.queryAdd("positive_preserving_predictor",positive_preserving_predictor);
 
     for (int im=0;im<num_materials;im++) {
      hold_material_conservation_form[im]=material_conservation_form[im];
@@ -5914,6 +5916,8 @@ NavierStokes::read_params ()
       std::cout << "force_blob_symmetry i= " << i << ' ' <<
         force_blob_symmetry[i] << '\n';
      }
+     std::cout << "positive_preserving_predictor= " << 
+	     positive_preserving_predictor << '\n';
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
