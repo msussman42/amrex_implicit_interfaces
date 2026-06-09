@@ -391,6 +391,7 @@ public:
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<int> store_refine_density_data; // refine density parameter
 
+    static int ncell_mdot_shift; // default=2
     static int ngrow_distance;  // should always be at least 4
     static int ngrow_make_distance;  // should always be at least 3
     static Real ngrow_elastic; //ngrow_elastic<=ngrow_make_distance

@@ -385,6 +385,7 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_materials=0;
 int  NavierStokes::num_interfaces=0;
 
+int  NavierStokes::ncell_mdot_shift=2;
 int  NavierStokes::ngrow_distance=4;
 int  NavierStokes::ngrow_make_distance=3;
 Real NavierStokes::ngrow_elastic=3.0;
@@ -2584,6 +2585,11 @@ NavierStokes::read_params ()
     pp.get("num_materials",num_materials);
     if ((num_materials<2)||(num_materials>999))
      amrex::Error("num materials invalid");
+
+    pp.queryAdd("ncell_mdot_shift",ncell_mdot_shift);
+    if ((ncell_mdot_shift<0)||
+        (ncell_mdot_shift>2))
+     amrex::Error("ncell_mdot_shift invalid");
 
     pp.queryAdd("ngrow_distance",ngrow_distance);
     if ((ngrow_distance<4)||
@@ -5850,6 +5856,8 @@ NavierStokes::read_params ()
 
      std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
 
+     std::cout << "ncell_mdot_shift= " << 
+      ncell_mdot_shift << '\n';
      std::cout << "ngrow_make_distance= " << 
       ngrow_make_distance << '\n';
      std::cout << "ngrow_distance= " << 
@@ -16476,6 +16484,10 @@ NavierStokes::phase_change_redistributeALL() {
  } else
   amrex::Error("expecting ngrow_make_distance+1==ngrow_distance");
 
+ if ((ncell_mdot_shift<0)||
+     (ncell_mdot_shift>2))
+  amrex::Error("ncell_mdot_shift invalid");
+
  if ((ngrow_distance>=4)&&
      (ngrow_distance<=64)) {
   // do nothing
@@ -17067,6 +17079,7 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
+    &ncell_mdot_shift,
     im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,

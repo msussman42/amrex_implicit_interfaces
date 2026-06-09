@@ -629,6 +629,7 @@ extern "C"
     AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
+    int* ncell_mdot_shift,
     int* im_elastic_map,
     int* num_FSI_outer_sweeps,
     int* FSI_outer_sweeps,
