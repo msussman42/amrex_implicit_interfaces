@@ -11879,6 +11879,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
+       ncell_mdot_shift, &
        im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
@@ -11917,6 +11918,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: ncell_mdot_shift
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
@@ -12019,8 +12021,16 @@ stop
        print *,"dxmax invalid: ",dxmax
        stop
       endif
-      !LS_DONOR_CUTOFF=two*dxmax
-      LS_DONOR_CUTOFF=zero
+
+      if ((ncell_mdot_shift.ge.0).and. &
+          (ncell_mdot_shift.le.2)) then
+       !do nothing
+      else
+       print *,"ncell_mdot_shift invalid ",ncell_mdot_shift
+       stop
+      endif
+
+      LS_DONOR_CUTOFF=ncell_mdot_shift*dxmax
 
       if (time.ge.zero) then
        ! do nothing
