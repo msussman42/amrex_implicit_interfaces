@@ -55,6 +55,14 @@ integer, parameter :: im_solid=3
    !CTML takes care of this.
    Phi=-99999.0
   else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
+
    if (AMREX_SPACEDIM.eq.2) then
       !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
@@ -93,12 +101,14 @@ end subroutine flexible_substrateLS
  ! fluids tessellate the domain, solids are immersed. 
 subroutine flexible_plate_impact_LS(x,t,LS,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
   integer, INTENT(in) :: nmat
   real(amrex_real), INTENT(in) :: x(SDIM)
   real(amrex_real), INTENT(in) :: t
   real(amrex_real), INTENT(out) :: LS(nmat)
+  integer, parameter :: im_solid=3
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -108,6 +118,13 @@ IMPLICIT NONE
   endif
 
 if ((num_materials.eq.3).and.(probtype.eq.2000)) then
+
+ if (is_elastic(im_solid).eq.1) then
+  !do nothing
+ else
+  print *,"expecting is_elastic(im_solid)=1"
+  stop
+ endif
 
  ! liquid
  if (SDIM.eq.3) then
@@ -120,20 +137,14 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  endif
  LS(2)=-LS(1)
 
- call flexible_substrateLS(x,LS(3))
- if (FSI_flag(3).eq.FSI_SHOELE_CTML) then
+ call flexible_substrateLS(x,LS(im_solid))
+
+ if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
- else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
-  if (LS(3).ge.zero) then !in the substrate
-   LS(2)=-LS(3)
-  else if (LS(3).le.zero) then !outside of the substrate
-   LS(2)=min(LS(2),-LS(3))
-  else
-   print *,"LS(3) invalid"
-   stop
-  endif
+ else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+  !do nothing
  else
-  print *,"FSI_flag(3) invalid"
+  print *,"FSI_flag(im_solid) invalid"
   stop
  endif
 else
