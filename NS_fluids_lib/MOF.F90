@@ -7686,6 +7686,91 @@ end subroutine volume_sanity_check
 
        ! centroid in absolute coordinate system
        ! returns a volume fraction
+      subroutine getvolumeNODE( &
+        volcell, & !intent(out)
+        bfact,dxgrid, &
+        xsten,nhalf, &
+        lnode, &
+        volume,facearea, &
+        centroid,EBVOFTOL,sdim)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: EBVOFTOL
+      real(amrex_real), INTENT(in) :: lnode(4*(sdim-1))
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volume,facearea
+      real(amrex_real), INTENT(out) :: volcell
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) cenall(sdim)
+      integer dir
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid130 getvolumeNODE ",bfact
+       stop
+      endif
+      if (nhalf.lt.1) then
+       print *,"nhalf invalid getvolumeNODE ",nhalf
+       stop
+      endif
+      if (EBVOFTOL.gt.zero) then
+       ! do nothing
+      else
+       print *,"getvolumeNODE: EBVOFTOL too small EBVOFTOL=",EBVOFTOL
+       stop
+      endif
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       if (sdim.ne.2) then
+        print *,"levelrz invalid get volume NODE ",levelrz
+        stop
+       endif
+      else
+       print *,"levelrz invalid get volume NODE 2 ",levelrz
+       stop
+      endif
+      if (AMREX_SPACEDIM.ne.sdim) then
+       print *,"dimension mismatch"
+       stop
+      endif
+
+      call fast_cell_intersection_grid( &
+       bfact,dxgrid,xsten,nhalf, &       
+       lnode, &
+       volume,centroid,facearea, &
+       volcell, &
+       cenall, &
+       sdim)
+
+      if (volcell.le.zero) then
+       volume=zero
+      else
+       volume=volume/volcell
+      endif
+
+      if (volume.le.EBVOFTOL) then
+       volume=zero
+       do dir=1,sdim
+        centroid(dir)=cenall(dir)
+       enddo
+      endif
+      if (volume.ge.one-EBVOFTOL) then
+       volume=one
+       do dir=1,sdim
+        centroid(dir)=cenall(dir)
+       enddo
+      endif
+
+      return
+      end subroutine getvolumeNODE
+
+
+
+       ! centroid in absolute coordinate system
+       ! returns a volume fraction
       subroutine getvolume( &
         volcell, &
         bfact,dxgrid,xsten,nhalf, &
@@ -7934,9 +8019,9 @@ end subroutine volume_sanity_check
            wtprod*datasten(D_DECL(i1+2,j1+2,k1+2),im)
         enddo
         wtsum=wtsum+wtprod
-       enddo
-       enddo
-       enddo ! i1,j1,k1
+       enddo !i1=-1,1
+       enddo !j1=-1,1
+       enddo !k1=-1,1
        if (wtsum.le.zero) then
         print *,"wtsum invalid in data_to_node"
         stop
@@ -7945,9 +8030,9 @@ end subroutine volume_sanity_check
         datanode(inode,im)=datanode(inode,im)/wtsum
        enddo
        inode=inode+1
-      enddo  
-      enddo  
-      enddo  ! i,j,k
+      enddo !i=-1,1,2
+      enddo !j=-1,1,2 
+      enddo !k=-1,1,2
 
       return
       end subroutine data_to_node

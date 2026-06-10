@@ -18961,6 +18961,9 @@ stop
         if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).eq.zero).or. &
             (updated_vfrac_sum.eq.zero)) then
          print *,"vfrac_sum_array vacuum error"
+         print *,"updated_vfrac_sum=",updated_vfrac_sum
+         print *,"vfrac_sum_array(D_DECL(0,0,0),layer_iter)=", &
+           vfrac_sum_array(D_DECL(0,0,0),layer_iter)
          stop
         else if ((vfrac_sum_array(D_DECL(0,0,0),layer_iter).gt.zero).and. &
                  (updated_vfrac_sum.gt.zero)) then
