@@ -3484,6 +3484,12 @@ NavierStokes::read_params ()
      if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
       num_FSI_outer_sweeps++;
       im_elastic_map.push_back(im);
+
+      if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1) {
+       //do nothing
+      } else
+       amrex::Error("expecting material_extend_velocity>0 if ice");
+
      } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
       num_FSI_outer_sweeps++;
       im_elastic_map.push_back(im);

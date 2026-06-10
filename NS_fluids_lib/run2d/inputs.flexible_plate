@@ -54,7 +54,8 @@ amr.max_level=0
 ns.ngrow_distance=6
 
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
-
+ns.mof_renormalize_ordering=2 3 1 #EULERIAN FSI
+ns.material_extend_velocity=0 0 1 #EULERIAN FSI
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10
