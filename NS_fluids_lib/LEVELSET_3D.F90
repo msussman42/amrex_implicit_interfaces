@@ -15410,6 +15410,12 @@ stop
                LSright_grav=-two*LSright(im_opp_gravity)
               else
                print *,"is_elastic invalid"
+               print *,"im_gravity ",im_gravity
+               print *,"is_elastic(im_gravity) ", &
+                   im_gravity,is_elastic(im_gravity)
+               print *,"im_opp_gravity ",im_opp_gravity
+               print *,"is_elastic(im_opp_gravity) ", &
+                   im_opp_gravity,is_elastic(im_opp_gravity)
                stop
               endif
                
