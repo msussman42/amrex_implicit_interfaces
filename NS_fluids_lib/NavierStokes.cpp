@@ -5073,6 +5073,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
+     //ice, FSI_rigid, FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC)
     if (num_FSI_outer_sweeps>=2) {
      num_divu_outer_sweeps=2;
     } else if (num_FSI_outer_sweeps==1) {
@@ -5099,6 +5100,13 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_CTML() invalid");
 
+     //elastic_viscosity>0 and one of,
+     //NN_FENE_CR
+     //NN_OLDROYD_B
+     //NN_MAIRE_ABGRALL_ETAL
+     //NN_NEO_HOOKEAN
+     //NN_FENE_P
+     //NN_LINEAR_PTT
     if (num_materials_viscoelastic>=1) {
      if (num_divu_outer_sweeps<2) 
       amrex::Error("num_divu_outer_sweeps must be >1 (viscoelastic)");
@@ -5114,6 +5122,16 @@ NavierStokes::read_params ()
      //do nothing
     } else
      amrex::Error("num_FSI_outer_sweeps invalid");
+
+    if (num_divu_outer_sweeps>1) {
+     if (ncell_mdot_shift==2) {
+      //do nothing
+     } else
+      amrex::Error("expecting ncell_mdot_shift=2 if num_divu_outer_sweeps>1");
+    } else if (num_divu_outer_sweeps==1) {
+     //do nothing
+    } else
+     amrex::Error("num_divu_outer_sweeps invalid");
      
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
@@ -5750,6 +5768,8 @@ NavierStokes::read_params ()
 
      } else if (is_rigid_local[im]==0) {
 
+       //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
+       //is_ice, is_FSI_rigid
       int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
       if (is_rigid_CL_flag==0) {
        if (material_extend_velocity[im]==0) {

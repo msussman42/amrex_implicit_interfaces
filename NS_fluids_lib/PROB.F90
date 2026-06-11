@@ -1192,6 +1192,7 @@ stop
         stop
        endif
 
+       ! in: subroutine check_user_defined_velbc
        ! vinletgas is a prescribed boiling rate
        if (probtype.eq.801) then
         uu=max(abs(uu),abs(vinletgas)*fort_denconst(1)/fort_denconst(2))
@@ -6900,6 +6901,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) distsolid
       real(amrex_real) drat,veltop,velbot,ytop,ybot
       integer im_solid_materialdist
+      integer im_ice_materialdist
       integer dir
       real(amrex_real) x_in(SDIM)
       real(amrex_real) maxdx
@@ -7003,7 +7005,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (probtype.eq.311) then ! user defined problem
        call USERDEF_LS(x_in,time,dist)
 
-       ! HYDRATE (materialdist_batch)
+       !inside of: subroutine materialdist_batch
+       !HYDRATE
       else if (probtype.eq.199) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid for hydrate problem"
@@ -7019,7 +7022,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo
 
-       !in: materialdist_batch
+       !inside of: subroutine materialdist_batch
       else if (probtype.eq.220) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid for unimaterial problem"
@@ -7093,7 +7096,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo
 
-       ! in: materialdist_batch
+       !inside of: subroutine materialdist_batch
        ! cavitation
       else if ((probtype.eq.46).and. &
                (axis_dir.ne.10).and. &
@@ -7106,6 +7109,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"num_materials invalid"
          stop
         endif
+         !inside of: subroutine materialdist_batch
         call vapordist(xsten,nhalf,dx,bfact,dist(1))  ! water
         call cavitation_bubble_dist(xsten,nhalf,dist(2),dx,bfact) ! jwl
         dist(3)=y-(zblob+yblob) ! air
@@ -7138,8 +7142,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dist(1)=dist(1)-z
        dist(2)=-dist(1)
 
-       ! hydrobulge
-       ! (materialdist_batch)
+       !inside of: subroutine materialdist_batch
+       !hydrobulge
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
         !vapordist is declared in PROB.F90
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
@@ -7201,6 +7205,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
+         !inside of: subroutine materialdist_batch
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (probtype.eq.42) then
         ball_id=2
@@ -7256,6 +7261,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else
 
+         !inside of: subroutine materialdist_batch
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (im_solid_materialdist.ne.2) then
         dist(2)=-dist(1)
@@ -7275,25 +7281,39 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        endif ! probtype.eq.531 ?
 
+        ! inside of: subroutine materialdist_batch
         ! freezing disk: ice, water, air
-       if ((probtype.eq.801).and. &
-           (num_materials.eq.3).and.(radblob2.gt.zero)) then
-        if (axis_dir.eq.3) then
-         dist(3)=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob2
-        else if (axis_dir.eq.0) then
-         dist(3)=sqrt( (x-xblob)**2 )-radblob2
+       if (probtype.eq.801) then
+
+        im_ice_materialdist=2
+        if (is_ice(im_ice_materialdist).eq.1) then
+         dist(1)=99999.0
+        else if (is_ice(im_ice_materialdist).eq.0) then
+         !do nothing
         else
-         print *,"axis_dir invalid probtype=801"
+         print *,"is_ice(im_ice_materialdist) invalid"
          stop
         endif
-        if (dist(1).gt.zero) then
-         if (dist(3).ge.zero) then
-          dist(1)=-dist(3)
+
+        if ((num_materials.eq.3).and.(radblob2.gt.zero)) then
+         if (axis_dir.eq.3) then
+          dist(3)=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob2
+         else if (axis_dir.eq.0) then
+          dist(3)=sqrt( (x-xblob)**2 )-radblob2
          else
-          dist(1)=min(dist(1),-dist(3))
+          print *,"axis_dir invalid probtype=801"
+          stop
+         endif
+         if (dist(1).gt.zero) then
+          if (dist(3).ge.zero) then
+           dist(1)=-dist(3)
+          else
+           dist(1)=min(dist(1),-dist(3))
+          endif
          endif
         endif
-       endif
+
+       endif !probtype.eq.801
 
         ! material 1 = top half  material 2=inside circle
         ! material 3 = bottom half
@@ -8529,9 +8549,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call cylinderdist(x,y2d,z,xblob,yblob,radblob,zmin,zmax,dist)
         dist=-dist
 
+       !inside of: subroutine vapordist
       else if (probtype.eq.801) then
 
-       ! vapordist:
        ! test problems from Welch and Wilson 2000
        ! vapor on left, water on right.
 
