@@ -8635,7 +8635,8 @@ stop
               !call get_primary_material(dx,LSleft,imL)
               !call get_primary_material(dx,LSright,imR)
             call fluid_interface_tension( &
-             xstenMAC_center,dx,time, &
+             dx, &
+             time, &
              LSleft,LSright, &
              gradh_tension, &
              im_opp_tension,im_tension, & !INTENT(out)
@@ -8720,7 +8721,7 @@ stop
           else if (LSIDE(1)*LSIDE(2).gt.zero) then
            LS_consistent=0
           else
-           print *,"LSIDE is NaN"
+           print *,"LSIDE is NaN ",LSIDE
            stop
           endif
          else if (gradh.eq.zero) then
@@ -15300,7 +15301,6 @@ stop
 
              ! fluid_interface_tension is declared in: PROB.F90
              call fluid_interface_tension( &
-               xstenMAC_center, &
                dx, &
                time, &
                LSleft,LSright, &
@@ -15413,36 +15413,42 @@ stop
                stop
               endif
                
-             
-              dencomp_im=(im_gravity-1)*num_state_material+1+ENUM_DENVAR 
-              dencomp_im_opp=(im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 
+              dencomp_im= &
+                (im_gravity-1)*num_state_material+1+ENUM_DENVAR 
+              dencomp_im_opp= &
+                (im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 
+
+              if (LSleft_grav.ge.LSright_grav) then
+               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)
+              else if (LSleft_grav.le.LSright_grav) then 
+               den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
+               den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+              else
+               print *,"LSleft_grav or LSright_grav invalid: ", &
+                 LSleft_grav,LSright_grav
+               stop
+              endif
+              
               if ((LSleft_grav.eq.zero).and. &
                   (LSright_grav.eq.zero)) then
                interp_factor=half
-               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
               else if (LSleft_grav.eq.zero) then
                interp_factor=zero
-               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
               else if (LSright_grav.eq.zero) then
                interp_factor=one
-               den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
-               den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
               else if (LSleft_grav*LSright_grav.lt.zero) then
                interp_factor=LSleft_grav/(LSleft_grav-LSright_grav)
                if (LSleft_grav.gt.zero) then
                 if (gradh_gravity.lt.zero) then
-                 den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-                 den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+                 !do nothing
                 else
                  print *,"gradh_gravity (LSleft_grav) invalid: ",gradh_gravity
                  stop
                 endif 
                else if (LSright_grav.gt.zero) then
                 if (gradh_gravity.gt.zero) then
-                 den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
-                 den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+                 !do nothing
                 else
                  print *,"gradh_gravity (LSright_grav) invalid: ",gradh_gravity
                  stop
@@ -15452,7 +15458,16 @@ stop
                   LSleft_grav,LSright_grav
                 stop
                endif
-
+              else if (LSleft_grav*LSright_grav.ge.zero) then
+               if (LSleft_grav.ge.LSright_grav) then
+                interp_factor=zero
+               else if (LSleft_grav.le.LSright_grav) then
+                interp_factor=one
+               else
+                print *,"LSleft_grav or LSright_grav invalid: ", &
+                  LSleft_grav,LSright_grav
+                stop
+               endif
               else
                print *,"LSleft_grav,LSright_grav invalid(2): ", &
                  LSleft_grav,LSright_grav

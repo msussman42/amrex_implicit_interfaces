@@ -3793,14 +3793,15 @@ stop
        endif
 
         ! fluid region
-       if ((is_rigid(im_primaryL).eq.0).and. &
-           (is_rigid(im_primaryR).eq.0)) then 
+       if ((is_rigid_CL(im_primaryL).eq.0).and. &
+           (is_rigid_CL(im_primaryR).eq.0)) then 
 
-        call fluid_interface( &
-         dx, &
-         LSleft,LSright,gradh, &
-         im_opp,im, &
-         im_left_interface,im_right_interface)
+        call fluid_interface_tension( &
+         dx,time, &
+         LSleft,LSright, &
+         gradh, & !intent(out)
+         im_opp,im, & !intent(out)
+         im_left_interface,im_right_interface) !intent(out)
 
         if (gradh.ne.zero) then
          if ((im.gt.num_materials).or. &
@@ -3822,12 +3823,12 @@ stop
          im_opp=0
          iten=0
         else
-         print *,"gradh invalid"
+         print *,"gradh invalid ",gradh
          stop
         endif
 
-       else if ((is_rigid(im_primaryL).eq.1).or. &
-                (is_rigid(im_primaryR).eq.1)) then
+       else if ((is_rigid_CL(im_primaryL).eq.1).or. &
+                (is_rigid_CL(im_primaryR).eq.1)) then
         gradh=zero
         im=0
         im_opp=0
@@ -3888,13 +3889,13 @@ stop
        else if (gradh.eq.zero) then
         ! do nothing
        else
-        print *,"gradh invalid fort_estdt"
+        print *,"gradh invalid fort_estdt ",gradh
         stop
        endif 
 
-      enddo !i
-      enddo !j
-      enddo !k
+      enddo !i=growlo(1),growhi(1)
+      enddo !j=growlo(2),growhi(2)
+      enddo !k=growlo(3),growhi(3)
 
       if (local_gravity_mag.gt.zero) then
 

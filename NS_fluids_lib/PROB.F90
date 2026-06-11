@@ -4664,7 +4664,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_init_physics_vars
        !   fort_cell_to_mac (surface tension force on MAC grid)
       subroutine fluid_interface_tension( &
-         xpos,dx,time, &
+         dx,time, &
          LSleft,LSright, &
          gradh, & !INTENT(out)
          im_opp,im, & !INTENT(out)
@@ -4674,7 +4674,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
-      real(amrex_real), INTENT(in) :: xpos(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(out) :: im_opp,im
