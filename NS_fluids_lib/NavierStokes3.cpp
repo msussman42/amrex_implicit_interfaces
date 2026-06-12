@@ -319,7 +319,8 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 } //end subroutine finalize_rest_fraction
 
 void NavierStokes::save_interface_data(
-  int control_flag,int im_extension) {
+  int control_flag,
+  int im_extension) { //-1=main advection  0=just elastic interfaces
 
  std::string local_caller_string="save_interface_data";
 
@@ -332,25 +333,47 @@ void NavierStokes::save_interface_data(
 
  if (control_flag==SAVE_CONTROL) {
 
+  if (im_extension==-1) { //just prior to regular advection
+   //do nothing
+  } else
+   amrex::Error("expecting im_extension==-1");
+
+  if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==prev_time_slab");
+
   new_localMF(interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(improved_interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(standard_interface_hold_MF,ncomp_interface,1,-1);
+
   MultiFab* vofmf=
-   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
+   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,advect_time_slab); 
+
   MultiFab::Copy(*localMF[interface_hold_MF],*vofmf,0,0,
     num_materials*ngeom_raw,1);
-  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
+
+  MultiFab* lsmf=getStateDist(1,advect_time_slab,local_caller_string);
+
   MultiFab::Copy(*localMF[interface_hold_MF],*lsmf,0,
     num_materials*ngeom_raw,num_materials,1);
+
   MultiFab::Copy(*localMF[improved_interface_hold_MF],
     *localMF[interface_hold_MF],0,0,ncomp_interface,1);
   MultiFab::Copy(*localMF[standard_interface_hold_MF],
     *localMF[interface_hold_MF],0,0,ncomp_interface,1);
 
+   //if divu_outer_sweeps>0 then vel_time_slab=t^{n+1}.
+   //during second pass, im_extension==0, need to restore this
+   //velocity for creating extended velocity.
+   //The updated velocity from first pass, im_extension==-1, needs to
+   //be saved too, then restored after the second pass.
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //ncomp=1 ngrow=0
    new_localMF(interface_velocity_hold_MF+dir,1,0,dir);
+
    MultiFab* velmf=getStateMAC(0,dir,vel_time_slab);
+
    MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],*velmf,0,0,1,0);
    delete velmf;
   } //dir=0;dir<AMREX_SPACEDIM
@@ -362,7 +385,8 @@ void NavierStokes::save_interface_data(
   //for (int ilev=level;ilev<=finest_level;ilev++) 
  } else if (control_flag==POST_PROCESS_CONTROL) {
 
-  if (im_extension==-1) {
+  if (im_extension==-1) { //after main advection
+
    MultiFab* vofmf=
     getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
    MultiFab::Copy(*localMF[standard_interface_hold_MF],*vofmf,0,0,
@@ -373,6 +397,10 @@ void NavierStokes::save_interface_data(
    delete vofmf;
    delete lsmf;
 
+    //this velocity must be saved since it will be overwritten
+    //when divu_outer_sweeps>0 in order to create an extended velocity.
+    //After the im_extension==0 sweep, standard_interface_velocity_hold
+    //is restored.
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //ncomp=1 ngrow=0
     new_localMF(standard_interface_velocity_hold_MF+dir,1,0,dir);
@@ -382,7 +410,7 @@ void NavierStokes::save_interface_data(
     delete velmf;
    } //dir=0;dir<AMREX_SPACEDIM
 
-  } else if (im_extension==0) {
+  } else if (im_extension==0) { // after elastic material advection
 
    MultiFab* vofmf=
     getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
@@ -447,17 +475,25 @@ void NavierStokes::save_interface_data(
  
  } else if (control_flag==RESTORE_CONTROL) {
 
-  if (im_extension==0) {
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+  if (im_extension==0) { //just prior to elastic advection
    //do nothing
   } else
    amrex::Error("im_extension invalid (RESTORE_CONTROL)");
 
   //restore F,X,LS
   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+
    //dest,source,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(S_new,*localMF[interface_hold_MF],0,
     STATECOMP_MOF,num_materials*ngeom_raw,1);
+
   MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+
   MultiFab::Copy(LS_new,*localMF[interface_hold_MF],num_materials*ngeom_raw,
     0,num_materials,1);
 
@@ -528,7 +564,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    ns_level.prepare_advect_vars(prev_time_slab);
  }
 
- int im_extension=-1;
+ int im_extension=-1; //regular advection
 
  if (material_extend_velocity_flag==0) {
   //do nothing
@@ -539,7 +575,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
- sub_nonlinear_advection(caller_string,im_extension);
+ sub_nonlinear_advection(caller_string,im_extension); //regular advection
 
  if (material_extend_velocity_flag==0) {
   //do nothing
@@ -547,7 +583,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    //copy VFRAC,CEN,LS to standard_interface_hold_MF
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
-  im_extension=0;
+  im_extension=0; //elastic material advection
 
    //copy interface_hold_MF, interface_velocity_hold_MF back to
    //state data. (project_slab_step+1)
@@ -558,6 +594,12 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    delete_array(FSI_MAC_VELOCITY_MF+dir);
   }
 
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+   //elastic material advection 
   sub_nonlinear_advection(caller_string,im_extension);
 
   if ((step_through_data==1)||(1==0)) {
@@ -620,10 +662,11 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  init_rest_fraction(local_caller_string);
 
- int renormalize_only=1;
+ int renormalize_flag=RENORMALIZE_ONLY;
+ int local_truncate=0;
 
  if (level!=0)
-  amrex::Error("level invalid nonlinear_advection");
+  amrex::Error("level invalid sub_nonlinear_advection");
 
  if (cur_time_slab>0.0) {
   // do nothing
@@ -639,13 +682,13 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid nonlinear_advection");
+  amrex::Error("SDC_outer_sweeps invalid sub_nonlinear_advection");
 
  if ((divu_outer_sweeps>=0)&&
      (divu_outer_sweeps<num_divu_outer_sweeps)) {
   // do nothing
  } else
-  amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
+  amrex::Error("divu_outer_sweeps invalid sub_nonlinear_advection");
 
  int finest_level=parent->finestLevel();
 
@@ -733,11 +776,18 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
 
- interface_touch_flag=1; //nonlinear_advection
+ interface_touch_flag=1; //sub_nonlinear_advection
+
+ renormalize_flag=RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE;
+ prescribe_solid_geometryALL(
+  advect_time_slab,
+  renormalize_flag,
+  local_truncate,
+  local_caller_string);
 
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL( 
-  local_caller_string, //nonlinear_advection
+  local_caller_string, //sub_nonlinear_advection
   advect_time_slab,
   RECON_UPDATE_NULL,
   init_vof_prev_time);
@@ -746,6 +796,32 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.prepare_displacement();
  } // ilev
+
+ if (step_through_data==1) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
+  std::cout << "press any number then enter: sub_nonlinear_advection \n";
+  std::cout << "im_extension = " << im_extension << '\n';
+  std::cout << "advect_time_slab= " << advect_time_slab << '\n';
+  std::cout << "prev_time_slab= " << prev_time_slab << '\n';
+  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+  std::cout << "dt_slab= " << dt_slab << '\n';
+  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+  std::cout << "num_divu_outer_sweeps= " << 
+     num_divu_outer_sweeps << '\n';
+  std::cout << "slab_step= " << slab_step << '\n';
+  std::cout << "project_slab_step= " << project_slab_step << '\n';
+  std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
+  std::cout << "FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
+  std::cout << "num_FSI_outer_sweeps= " << num_FSI_outer_sweeps << '\n';
+  std::cout << "NFSI_LIMIT= " << NFSI_LIMIT << '\n';
+  int n_input;
+  std::cin >> n_input;
+ }
 
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
@@ -784,13 +860,13 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
-     // in: nonlinear_advection
-     // calls MOFavgDown, LS_Type avgDown
-     // projects volume fractions so that sum F_m_fluid=1.
-    renormalize_only=1;
-    int local_truncate=0;
-    prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-      local_truncate,local_caller_string);
+
+    renormalize_flag=RENORMALIZE_ONLY;
+    prescribe_solid_geometryALL(
+      cur_time_slab,
+      renormalize_flag,
+      local_truncate,
+      local_caller_string);
 
      // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,
@@ -843,20 +919,14 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 //   (b) update Lagrangian node positions
 //   (c) convert Lagrangian position, velocity, temperature, and
 //       force (if CTML) to Eulerian.
-// 1. renormalize variables
-// 2. extend from F>0 fluid regions into F=0 regions
-// 3. if renormalize_only==0, 
-//    a. init F,X,LS for the solid materials.
-//    b. init U,T in the solid regions.
-//    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if (im_extension==-1) {
+ if (im_extension==-1) { //standard advection (both fluids and elastics)
 
   if (read_from_CAD()==1) {
 
     //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
-   renormalize_only=1;
-   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+   renormalize_flag=RENORMALIZE_ONLY;
+   init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
    int fast_mode=0;
    setup_integrated_quantities();
@@ -959,7 +1029,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     parent->levelSteps(0)); 
   }
 
- } else if (im_extension==0) {
+ } else if (im_extension==0) { //just elastics
   //do nothing
  } else
   amrex::Error("im_extension invalid");
@@ -968,12 +1038,15 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
- renormalize_only=0;
- int local_truncate=1;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-   local_truncate,local_caller_string);
+ renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+ local_truncate=1;
+ prescribe_solid_geometryALL(
+   cur_time_slab,
+   renormalize_flag,
+   local_truncate,
+   local_caller_string);
 
- interface_touch_flag=1; //nonlinear_advection
+ interface_touch_flag=1; //sub_nonlinear_advection
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
@@ -1608,7 +1681,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
       //restore t^n data into "get_new_data"
       //restore data prior to adding level set perturbations.
-      LSA_save_state_dataALL(LSA_N_EXTRA,RESTORE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,LSA_RESTORE_CONTROL);
       CopyNewToOldALL();
 
      } else if (NS_LSA_step_count>0) {
@@ -1673,12 +1746,16 @@ Real NavierStokes::advance(Real time,Real dt) {
    avgDownALL(DIV_Type,0,1,1);
 
     // in: advance
+    // take care of AMR grid change.
     // calls MOFavgDown, LS_Type avgDown
     // projects volume fractions so that sum F_m_fluid=1.
-   int renormalize_only=0;
+   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
    int local_truncate=0;
-   prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
-      local_truncate,local_caller_string);
+   prescribe_solid_geometryALL(
+     upper_slab_time,
+     renormalize_flag,
+     local_truncate,
+     local_caller_string);
 
    if (verbose>0) {
     std::fflush(NULL);
@@ -1719,7 +1796,7 @@ Real NavierStokes::advance(Real time,Real dt) {
       //save t^n data from "get_new_data"
       //LSA_save_state_data is declared in NavierStokes.cpp
       //LSA_save_state_data calls NavierStokes::init_boundary
-      LSA_save_state_dataALL(LSA_N_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,LSA_SAVE_CONTROL);
 
      } else if (NS_LSA_step_count>0) {
       //do nothing
@@ -1847,9 +1924,9 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} unperturbed data
-      LSA_save_state_dataALL(LSA_NP1_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_NP1_EXTRA,LSA_SAVE_CONTROL);
       //save t^{n+1} data 
-      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
       LSA_default_eigenvectorALL(
@@ -1870,7 +1947,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
-      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
       LSA_eigenvectorALL(
 	LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
@@ -2730,10 +2807,13 @@ void NavierStokes::phase_change_code_segment(
   // 1. prescribe solid temperature, velocity, and geometry where
   //    appropriate.
   // 2. extend level set functions into the solid.
- int renormalize_only=0;
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
  int local_truncate=0;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-  local_truncate,local_caller_string);
+ prescribe_solid_geometryALL(
+   cur_time_slab,
+   renormalize_flag,
+   local_truncate,
+   local_caller_string);
 
  int local_redistribute_main=0;
 
@@ -3173,8 +3253,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //  or
       // initialize "GNBC" velocity.
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
-    int renormalize_only=1;
-    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+    int renormalize_flag=RENORMALIZE_ONLY;
+    init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
     int mass_transfer_active=0;
 
@@ -3474,8 +3554,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      // initialize "GNBC" velocity.
      // in: NavierStokes::do_the_advance (prior to viscous force step, and
      //  after reinitialization)
-    renormalize_only=1;
-    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+    renormalize_flag=RENORMALIZE_ONLY;
+    init_FSI_GHOST_MAC_MF_ALL(
+      renormalize_flag,
+      local_caller_string);
 
 // At this stage, variables are not scaled, so FACECOMP_FACEVEL component (c++)
 // will have to be scaled later.
@@ -4155,9 +4237,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-       renormalize_only=0;
+       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
        int local_truncate=0;
-       prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+       prescribe_solid_geometryALL(
+        cur_time_slab,
+        renormalize_flag,
         local_truncate,local_caller_string);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {

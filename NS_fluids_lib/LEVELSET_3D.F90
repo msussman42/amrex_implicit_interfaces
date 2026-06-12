@@ -19073,7 +19073,7 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       renormalize_only, &
+       renormalize_flag, &
        solidheat_flag, &
        LS_extrap_iter, &
        num_curv, &
@@ -19092,7 +19092,7 @@ stop
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: solidheat_flag
 
-      integer, INTENT(in) :: renormalize_only
+      integer, INTENT(in) :: renormalize_flag
       integer, INTENT(in) :: LS_extrap_iter
       integer, INTENT(in) :: num_curv
 
@@ -19262,25 +19262,29 @@ stop
       real(amrex_real) :: LS_extrap_fixed(num_materials*(1+SDIM))
       real(amrex_real) :: LS_extrap(num_materials*(1+SDIM))
 
-      if (renormalize_only.eq.1) then
+      if (renormalize_flag.eq.RENORMALIZE_ONLY) then
        if (LS_extrap_iter.eq.0) then
         ! do nothing
        else
         print *,"LS_extrap_iter invalid: ",LS_extrap_iter
-        print *,"renormalize_only=",renormalize_only
+        print *,"renormalize_flag=",renormalize_flag
         stop
        endif
-      else if (renormalize_only.eq.0) then
-       if ((LS_extrap_iter.eq.0).or.(LS_extrap_iter.eq.1)) then
+      else if ((renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE).or. &
+               (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE)) then
+       if ((LS_extrap_iter.eq.0).or. &
+           (LS_extrap_iter.eq.1)) then
         ! do nothing
        else
         print *,"LS_extrap_iter invalid: ",LS_extrap_iter
-        print *,"renormalize_only=",renormalize_only
+        print *,"renormalize_flag=",renormalize_flag
         stop
        endif
       else
-       print *,"renormalize_only invalid"
-       print *,"renormalize_only=",renormalize_only
+       print *,"renormalize_flag invalid"
+       print *,"renormalize_flag=",renormalize_flag
        stop
       endif
 
@@ -19290,7 +19294,7 @@ stop
       else
        print *,"LS_extrap_iter invalid fort_renormalize_prescribe ", &
            LS_extrap_iter
-       print *,"renormalize_only=",renormalize_only
+       print *,"renormalize_flag=",renormalize_flag
        stop
       endif
  
@@ -19312,7 +19316,7 @@ stop
        ! do nothing
       else
        print *,"ngrow_distance invalid fort_renormalize_prescribe: ", &
-               ngrow_distance
+          ngrow_distance
        stop
       endif
       if (ngrow_make_distance.ne.ngrow_distance-1) then
@@ -19341,10 +19345,6 @@ stop
       endif
       if (num_state_base.ne.1+ENUM_TEMPERATUREVAR) then
        print *,"num_state_base invalid (2): ",num_state_base
-       stop
-      endif
-      if ((renormalize_only.ne.0).and.(renormalize_only.ne.1)) then
-       print *,"renormalize_only invalid: ",renormalize_only
        stop
       endif
       if (level.lt.0) then
@@ -19781,7 +19781,10 @@ stop
          ! 2. extend the fluid level set functions into the solids and 
          !    elastic materials..
          !   (F,X,LS fluid)
-        if (renormalize_only.eq.0) then
+        if ((renormalize_flag.eq. &
+             RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE).or. &
+            (renormalize_flag.eq. &
+             RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE)) then
 
          do im=1,num_materials*(1+SDIM)
           ls_hold(im)=lsnew(D_DECL(i,j,k),im)
@@ -19814,10 +19817,19 @@ stop
             ! do nothing
            else if (is_rigid(im).eq.1) then
 
-            ! positive in the rigid body
-            call materialdistsolid( &
-             local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
-             ls_hold(im),time,im)
+            if (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
+             ! positive in the rigid body
+             call materialdistsolid( &
+              local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
+              ls_hold(im),time,im)
+            else if (renormalize_flag.eq. &
+                     RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+             ls_hold(im)=LS(D_DECL(i,j,k),im)
+            else
+             print *,"renormalize_flag invalid ",renormalize_flag
+             stop
+            endif
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                 (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
@@ -19838,20 +19850,33 @@ stop
 
             nrefine_geom=1
 
-            ! find_LS_stencil_volume is in: PROB.F90, and
-            ! calls find_LS_stencil_volume_coarse, which
-            ! calls materialdistsolid many times.
-            ! centroid in absolute coordinate system
-            ! returns a volume fraction
-            call find_LS_stencil_volume( &
-             bfact, &
-             dx, &
-             xsten,nhalf, &
-             nrefine_geom, &
-             time, &
-             vfrac_solid_new(im), &
-             centroid, &
-             im)
+            if (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
+             ! find_LS_stencil_volume is in: PROB.F90, and
+             ! calls find_LS_stencil_volume_coarse, which
+             ! calls materialdistsolid many times.
+             ! centroid in absolute coordinate system
+             ! returns a volume fraction
+             call find_LS_stencil_volume( &
+              bfact, &
+              dx, &
+              xsten,nhalf, &
+              nrefine_geom, &
+              time, &
+              vfrac_solid_new(im), &
+              centroid, &
+              im)
+            else if (renormalize_flag.eq. &
+                     RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+             vofcompraw=(im-1)*ngeom_raw+1
+             vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
+             do dir=1,SDIM
+              centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
+             enddo
+            else
+             print *,"renormalize_flag invalid ",renormalize_flag
+             stop
+            endif
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                 (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
@@ -19872,15 +19897,46 @@ stop
              censolid_new(im,dir)=centroid(dir)-cencell(dir)
             enddo
 
-            call find_LS_stencil_slope( &
-             bfact, &
-             dx, &
-             xsten,nhalf, &
-             nslope_solid, &
-             time,im)
+            mag_nslope_solid=zero
+
+            if (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
+
+             call find_LS_stencil_slope( &
+              bfact, &
+              dx, &
+              xsten,nhalf, &
+              nslope_solid, &
+              time,im)
+
+            else if (renormalize_flag.eq. &
+                     RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+
+             mag_nslope_solid=zero
+             do dir=1,SDIM
+              nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
+              mag_nslope_solid=mag_nslope_solid+nslope_solid(dir)**2
+             enddo
+             mag_nslope_solid=sqrt(mag_nslope_solid)
+             if (mag_nslope_solid.eq.zero) then
+              !do nothing
+             else if (mag_nslope_solid.gt.zero) then
+              do dir=1,SDIM
+               nslope_solid(dir)=nslope_solid(dir)/mag_nslope_solid
+              enddo
+             else
+              print *,"mag_nslope_solid invalid ",mag_nslope_solid
+              stop
+             endif
+
+            else
+             print *,"renormalize_flag invalid ",renormalize_flag
+             stop
+            endif
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
+                (FSI_flag(im).eq.FSI_SHOELE_CTML)) then
+
              mag_nslope_solid=zero
              do dir=1,SDIM
               nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
@@ -19899,7 +19955,9 @@ stop
              endif
 
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
+
              ! do nothing
+
             else
              print *,"FSI_flag invalid in fort_renormalize_prescribe"
              print *,"im,FSI_flag(im): ",im,FSI_flag(im)
@@ -19934,6 +19992,7 @@ stop
              print *,"ls_hold(im)=",ls_hold(im)
              stop
             endif
+
             if ((vfrac_solid_new(im).ge.one-VOFTOL_MATERIAL).and. &
                 (ls_hold(im).le.zero)) then
              print *,"cannot have F>1-eps and LS<0"
@@ -19944,51 +20003,62 @@ stop
             endif
 
             ! temperature in rigid solid.
-            if ((ls_hold(im).ge.zero).or. &
-                (vfrac_solid_new(im).ge.half)) then
-             istate=2
-             statecomp=(im-1)*num_state_material+istate
-             if (solidheat_flag.eq.0) then
-              ! do nothing (heat conduction in solid)
-             else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
-              if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
-               ! den_hold(statecomp) already has the solid temperature
-              else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
-               call tempsolid( &
-                local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
-                den_hold(statecomp),time,im)
+            if (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
+
+             if ((ls_hold(im).ge.zero).or. &
+                 (vfrac_solid_new(im).ge.half)) then
+              istate=2
+              statecomp=(im-1)*num_state_material+istate
+              if (solidheat_flag.eq.0) then
+               ! do nothing (heat conduction in solid)
+              else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
+               if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                   (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
+                ! den_hold(statecomp) already has the solid temperature
+               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
+                call tempsolid( &
+                 local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
+                 den_hold(statecomp),time,im)
+               else
+                print *,"FSI_flag invalid in fort_renormalize_prescribe"
+                print *,"im,FSI_flag(im): ",im,FSI_flag(im)
+                stop
+               endif
+              else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
+               if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                   (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
+                ! den_hold(statecomp) already has the solid temperature
+               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
+                call tempsolid( &
+                 local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
+                 den_hold(statecomp),time,im)
+               else
+                print *,"FSI_flag invalid in fort_renormalize_prescribe"
+                print *,"im,FSI_flag(im): ",im,FSI_flag(im)
+                stop
+               endif
               else
-               print *,"FSI_flag invalid in fort_renormalize_prescribe"
-               print *,"im,FSI_flag(im): ",im,FSI_flag(im)
-               stop
-              endif
-             else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
-              if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
-               ! den_hold(statecomp) already has the solid temperature
-              else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
-               call tempsolid( &
-                local_XPOS(1),local_XPOS(2),local_XPOS(SDIM), &
-                den_hold(statecomp),time,im)
-              else
-               print *,"FSI_flag invalid in fort_renormalize_prescribe"
-               print *,"im,FSI_flag(im): ",im,FSI_flag(im)
-               stop
-              endif
-             else
-              print *,"solidheat_flag invalid(fort_renormalize_prescribe):", &
+               print *,"solidheat_flag invalid(fort_renormalize_prescribe):", &
                 solidheat_flag
+               stop
+              endif
+             else if ((ls_hold(im).le.zero).and. &
+                      (vfrac_solid_new(im).le.half)) then
+              ! do nothing
+             else
+              print *,"ls_hold or vfrac_solid_new invalid"
+              print *,"im=",im
+              print *,"ls_hold(im)=",ls_hold(im)
+              print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
               stop
              endif
-            else if ((ls_hold(im).le.zero).and. &
-                     (vfrac_solid_new(im).le.half)) then
-             ! do nothing
+
+            else if (renormalize_flag.eq. &
+                     RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+             !do nothing
             else
-             print *,"ls_hold or vfrac_solid_new invalid"
-             print *,"im=",im
-             print *,"ls_hold(im)=",ls_hold(im)
-             print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
+             print *,"renormalize_flag invalid ",renormalize_flag
              stop
             endif
 
@@ -19996,6 +20066,7 @@ stop
             print *,"is_rigid invalid LEVELSET_3D.F90 ",im,is_rigid(im)
             stop
            endif
+
           else 
            print *,"is_lag_part(im) invalid: ",im,is_lag_part(im)
            stop
@@ -20003,88 +20074,99 @@ stop
 
          enddo ! partid=1..nparts
 
-           ! velocity and temperature in rigid solid.
-         if ((sum_vfrac_solid_new.ge.half).or. &
-             (max_solid_LS.ge.zero)) then 
+          ! velocity and temperature in rigid solid.
+         if (renormalize_flag.eq. &
+             RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
 
-          if ((im_solid_max.lt.1).or. &
-              (im_solid_max.gt.num_materials).or. &
-              (partid_max.lt.1).or. &
-              (partid_max.gt.nparts).or. &
-              (is_rigid(im_solid_max).ne.1)) then
-           print *,"im_solid_max/partid_max corrupt fort_renormalize_pescribe "
-           print *,"im_solid_max=",im_solid_max
-           print *,"partid_max=",partid_max
-           print *,"is_rigid(im_solid_max) ", &
-              im_solid_max,is_rigid(im_solid_max)
-           stop
-          endif
+          if ((sum_vfrac_solid_new.ge.half).or. &
+              (max_solid_LS.ge.zero)) then 
 
-           ! solid velocity
-          ibase=(partid_max-1)*SDIM
-
-           ! velocity
-          if (is_rigid(im_solid_max).eq.1) then
-
-           dir=1
-           velnew(D_DECL(i,j,k),dir)= &
-              half*(solxfab(D_DECL(i,j,k),ibase+dir)+ &
-                    solxfab(D_DECL(i+1,j,k),ibase+dir))
-           dir=2
-           velnew(D_DECL(i,j,k),dir)= &
-              half*(solyfab(D_DECL(i,j,k),ibase+dir)+ &
-                    solyfab(D_DECL(i,j+1,k),ibase+dir))
-           if (SDIM.eq.3) then
-            dir=SDIM
-            velnew(D_DECL(i,j,k),dir)= &
-              half*(solzfab(D_DECL(i,j,k),ibase+dir)+ &
-                    solzfab(D_DECL(i,j,k+1),ibase+dir))
-           endif
-
-          else if (is_rigid(im_solid_max).eq.0) then
-           print *,"expecting is_rigid(im_solid_max)=1"
-           print *,"is_rigid(im_solid_max) ", &
-              im_solid_max,is_rigid(im_solid_max)
-           stop
-          else
-           print *,"is_rigid(im_solid_max) invalid: ", &
-            im_solid_max,is_rigid(im_solid_max)
-           print *,"is_rigid(im_solid_max) ", &
-              im_solid_max,is_rigid(im_solid_max)
-           stop
-          endif
-
-           ! initialize the fluid temperature with the solid temperature
-           ! in the solid regions.
-          do im=1,num_materials
-           if (is_rigid(im).eq.1) then
-            ! do nothing
-           else if (is_rigid(im).eq.0) then
-            istate=2
-            statecomp=(im-1)*num_state_material+istate
-            statecomp_solid=(im_solid_max-1)*num_state_material+istate
-            den_hold(statecomp)=den_hold(statecomp_solid)
-           else
-            print *,"is_rigid invalid LEVELSET_3D.F90 ",im,is_rigid(im)
+           if ((im_solid_max.lt.1).or. &
+               (im_solid_max.gt.num_materials).or. &
+               (partid_max.lt.1).or. &
+               (partid_max.gt.nparts).or. &
+               (is_rigid(im_solid_max).ne.1)) then
+            print *,"im_solid_max/partid_max corrupt fort_renormalize_pescribe "
+            print *,"im_solid_max=",im_solid_max
+            print *,"partid_max=",partid_max
+            print *,"is_rigid(im_solid_max) ", &
+               im_solid_max,is_rigid(im_solid_max)
             stop
            endif
-          enddo ! im=1..num_materials
 
-         else if ((sum_vfrac_solid_new.le.half).and. &
-                  (max_solid_LS.le.zero)) then
-          ! do nothing
+            ! solid velocity
+           ibase=(partid_max-1)*SDIM
+
+            ! velocity
+           if (is_rigid(im_solid_max).eq.1) then
+
+            dir=1
+            velnew(D_DECL(i,j,k),dir)= &
+               half*(solxfab(D_DECL(i,j,k),ibase+dir)+ &
+                     solxfab(D_DECL(i+1,j,k),ibase+dir))
+            dir=2
+            velnew(D_DECL(i,j,k),dir)= &
+               half*(solyfab(D_DECL(i,j,k),ibase+dir)+ &
+                     solyfab(D_DECL(i,j+1,k),ibase+dir))
+            if (SDIM.eq.3) then
+             dir=SDIM
+             velnew(D_DECL(i,j,k),dir)= &
+               half*(solzfab(D_DECL(i,j,k),ibase+dir)+ &
+                     solzfab(D_DECL(i,j,k+1),ibase+dir))
+            endif
+
+           else if (is_rigid(im_solid_max).eq.0) then
+            print *,"expecting is_rigid(im_solid_max)=1"
+            print *,"is_rigid(im_solid_max) ", &
+               im_solid_max,is_rigid(im_solid_max)
+            stop
+           else
+            print *,"is_rigid(im_solid_max) invalid: ", &
+             im_solid_max,is_rigid(im_solid_max)
+            print *,"is_rigid(im_solid_max) ", &
+               im_solid_max,is_rigid(im_solid_max)
+            stop
+           endif
+
+            ! initialize the fluid temperature with the solid temperature
+            ! in the solid regions.
+           do im=1,num_materials
+            if (is_rigid(im).eq.1) then
+             ! do nothing
+            else if (is_rigid(im).eq.0) then
+             istate=2
+             statecomp=(im-1)*num_state_material+istate
+             statecomp_solid=(im_solid_max-1)*num_state_material+istate
+             den_hold(statecomp)=den_hold(statecomp_solid)
+            else
+             print *,"is_rigid invalid LEVELSET_3D.F90 ",im,is_rigid(im)
+             stop
+            endif
+           enddo ! im=1..num_materials
+
+          else if ((sum_vfrac_solid_new.le.half).and. &
+                   (max_solid_LS.le.zero)) then
+           ! do nothing
+          else
+           print *,"sum_vfrac_solid_new or max_solid_LS invalid: ", &
+            sum_vfrac_solid_new,max_solid_LS
+           stop
+          endif
+
+          do im=1,num_materials
+           do istate=1,num_state_material
+            statecomp=(im-1)*num_state_material+istate
+            dennew(D_DECL(i,j,k),statecomp)=den_hold(statecomp)
+           enddo
+          enddo !im=1,num_materials
+
+         else if (renormalize_flag.eq. &
+                  RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+          !do nothing
          else
-          print *,"sum_vfrac_solid_new or max_solid_LS invalid: ", &
-           sum_vfrac_solid_new,max_solid_LS
+          print *,"renormalize_flag invalid ",renormalize_flag
           stop
          endif
-
-         do im=1,num_materials
-          do istate=1,num_state_material
-           statecomp=(im-1)*num_state_material+istate
-           dennew(D_DECL(i,j,k),statecomp)=den_hold(statecomp)
-          enddo
-         enddo !im=1,num_materials
 
           ! solid volume fractions and centroids
          do im=1,num_materials
@@ -20297,21 +20379,34 @@ stop
            do i1=big_stenlo(1),big_stenhi(1)
 
             call gridsten_level(xsten_local,i+i1,j+j1,k+k1,level,nhalf)
+
             do im=1,num_materials*(1+SDIM)
              call safe_data(i+i1,j+j1,k+k1,im,LS_ptr,LS_local(im))
             enddo !im=1..num_materials*(1+SDIM)
-            do im=1,num_curv
-             call safe_data(i+i1,j+j1,k+k1,im,curv_ptr,curv_local(im))
-            enddo !im=1..num_curv
+
+            if (renormalize_flag.eq. &
+                RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
+             do im=1,num_curv
+              call safe_data(i+i1,j+j1,k+k1,im,curv_ptr,curv_local(im))
+             enddo !im=1..num_curv
+            else if (renormalize_flag.eq. &
+                     RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
+             !do nothing
+            else
+             print *,"renormalize_flag invalid ",renormalize_flag
+             stop
+            endif
 
             if (LS_local(im_hard_material).ge.zero) then
              !do nothing
             else if (LS_local(im_hard_material).lt.zero) then
+
              dist_local=zero
              do dir=1,SDIM 
               dist_local=dist_local+(xsten_local(0,dir)-local_XPOS(dir))**2
              enddo
              dist_local=sqrt(dist_local)
+
              do im=1,num_materials
 
               if ((dist_local.lt.dist_closest(im)).or. &
@@ -20331,103 +20426,114 @@ stop
                stop
               endif
 
-              if (is_rigid_CL(im).eq.0) then
+              if (renormalize_flag.eq. &
+                  RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) then
 
-               if ((dist_local.lt.dist_closest_CL(im)).or. &
-                   (dist_closest_CL(im).eq.-one)) then
+               if (is_rigid_CL(im).eq.0) then
 
-                do im_opp=1,num_materials
-                 if ((im_opp.ne.im).and.(is_rigid_CL(im_opp).eq.0)) then
+                if ((dist_local.lt.dist_closest_CL(im)).or. &
+                    (dist_closest_CL(im).eq.-one)) then
 
-                  call get_iten(im,im_opp,iten)
-                  icurv=(iten-1)*CURVCOMP_NCOMP
-                  im3=curv_local(icurv+CURVCOMP_MATERIAL3_ID+1)
-                  if (im3.eq.im_hard_material) then
-                   cosangle=curv_local(icurv+CURVCOMP_COSANGLE+1)
- 
-                   if (abs(cosangle).le.one+EPS2) then
-                    !do nothing
-                   else
-                    print *,"cosangle invalid ",cosangle
-                    stop
-                   endif
+                 do im_opp=1,num_materials
+                  if ((im_opp.ne.im).and.(is_rigid_CL(im_opp).eq.0)) then
 
-                   nghost_mag=zero
-                   do dir=1,SDIM
-                    nghost(dir)=curv_local(icurv+CURVCOMP_NGHOST+dir)
-                    nghost_mag=nghost_mag+nghost(dir)**2
-                    xcrossing(dir)=curv_local(icurv+CURVCOMP_XCROSSING+dir)
-                   enddo
-                   nghost_mag=sqrt(nghost_mag)
-                
-                   if ((abs(cosangle).le.EPS2).or.(nghost_mag.eq.zero)) then
-                    !do nothing
-                   else if ((abs(cosangle).ge.EPS2).and. &
-                            (abs(cosangle).le.one+EPS2).and. &
-                            (nghost_mag.gt.zero)) then
-                    dist_closest_CL(im)=dist_local
-                    LS_closest_CL(im)=zero
-                    do dir=1,SDIM
-                     LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
-                       nghost(dir)/nghost_mag
-                      ! local_XPOS=x_{i,j,k}
-                      ! l
-                     LS_closest_CL(im)=LS_closest_CL(im)+ &
-                        nghost(dir)*( &
-                          local_XPOS(dir)- &  !x_{i,j,k}
-                          (xsten_local(0,dir)+xcrossing(dir)))/ & !x_{i',j',k'} 
-                          nghost_mag
-                    enddo !dir=1,sdim
-                    if (im.lt.im_opp) then
+                   call get_iten(im,im_opp,iten)
+                   icurv=(iten-1)*CURVCOMP_NCOMP
+                   im3=curv_local(icurv+CURVCOMP_MATERIAL3_ID+1)
+                   if (im3.eq.im_hard_material) then
+                    cosangle=curv_local(icurv+CURVCOMP_COSANGLE+1)
+  
+                    if (abs(cosangle).le.one+EPS2) then
                      !do nothing
-                    else if (im.gt.im_opp) then
-                     LS_closest_CL(im)=-LS_closest_CL(im)
-                     do dir=1,SDIM
-                      LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
-                       -LS_closest_CL(num_materials+(im-1)*SDIM+dir)
-                     enddo
                     else
-                     print *,"im or im_opp invalid ",im,im_opp
+                     print *,"cosangle invalid ",cosangle
                      stop
                     endif
+
+                    nghost_mag=zero
+                    do dir=1,SDIM
+                     nghost(dir)=curv_local(icurv+CURVCOMP_NGHOST+dir)
+                     nghost_mag=nghost_mag+nghost(dir)**2
+                     xcrossing(dir)=curv_local(icurv+CURVCOMP_XCROSSING+dir)
+                    enddo
+                    nghost_mag=sqrt(nghost_mag)
+                 
+                    if ((abs(cosangle).le.EPS2).or.(nghost_mag.eq.zero)) then
+                     !do nothing
+                    else if ((abs(cosangle).ge.EPS2).and. &
+                             (abs(cosangle).le.one+EPS2).and. &
+                             (nghost_mag.gt.zero)) then
+                     dist_closest_CL(im)=dist_local
+                     LS_closest_CL(im)=zero
+                     do dir=1,SDIM
+                      LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                        nghost(dir)/nghost_mag
+                       ! local_XPOS=x_{i,j,k}
+                       ! l
+                      LS_closest_CL(im)=LS_closest_CL(im)+ &
+                         nghost(dir)*( &
+                          local_XPOS(dir)- &  !x_{i,j,k}
+                          (xsten_local(0,dir)+xcrossing(dir)))/ &!x_{i',j',k'} 
+                          nghost_mag
+                     enddo !dir=1,sdim
+                     if (im.lt.im_opp) then
+                      !do nothing
+                     else if (im.gt.im_opp) then
+                      LS_closest_CL(im)=-LS_closest_CL(im)
+                      do dir=1,SDIM
+                       LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
+                        -LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+                      enddo
+                     else
+                      print *,"im or im_opp invalid ",im,im_opp
+                      stop
+                     endif
+                    else
+                     print *,"cosangle or nghost_mag invalid ", &
+                      cosangle,nghost_mag
+                     stop
+                    endif
+                   else if ((im3.ge.0).and.(im3.le.num_materials)) then
+                    !do nothing
                    else
-                    print *,"cosangle or nghost_mag invalid ", &
-                     cosangle,nghost_mag
+                    print *,"im3 invalid ",im3
                     stop
                    endif
-                  else if ((im3.ge.0).and.(im3.le.num_materials)) then
+
+                  else if ((im_opp.eq.im).or.(is_rigid_CL(im_opp).eq.1)) then
                    !do nothing
                   else
-                   print *,"im3 invalid ",im3
+                   print *,"im,im_opp, or is_rigid_CL(im_opp) invalid ", &
+                    im,im_opp,is_rigid_CL(im_opp)
                    stop
                   endif
+                 enddo !im_opp=1,num_materials
 
-                 else if ((im_opp.eq.im).or.(is_rigid_CL(im_opp).eq.1)) then
-                  !do nothing
-                 else
-                  print *,"im,im_opp, or is_rigid_CL(im_opp) invalid ", &
-                   im,im_opp,is_rigid_CL(im_opp)
-                  stop
-                 endif
-                enddo !im_opp=1,num_materials
-
-               else if ((dist_local.ge.dist_closest_CL(im)).and. &
-                        (dist_closest_CL(im).ge.zero)) then
+                else if ((dist_local.ge.dist_closest_CL(im)).and. &
+                         (dist_closest_CL(im).ge.zero)) then
+                 !do nothing
+                else
+                 print *,"dist_local invalid ",dist_local
+                 print *,"or dist_closest_CL(im) invalid ",im, &
+                  dist_closest_CL(im)
+                 stop
+                endif
+                
+               else if (is_rigid_CL(im).eq.1) then
                 !do nothing
                else
-                print *,"dist_local invalid ",dist_local
-                print *,"or dist_closest_CL(im) invalid ",im, &
-                 dist_closest_CL(im)
+                print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
                 stop
                endif
-               
-              else if (is_rigid_CL(im).eq.1) then
+    
+              else if (renormalize_flag.eq. &
+                       RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) then
                !do nothing
               else
-               print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
+               print *,"renormalize_flag invalid ",renormalize_flag
                stop
               endif
-    
+              
              enddo !im=1,num_materials
              
             else
@@ -20658,7 +20764,7 @@ stop
  
          ! above: prescribe new solid location
          ! below: just normalize the volume fractions.
-        else if (renormalize_only.eq.1) then
+        else if (renormalize_flag.eq.RENORMALIZE_ONLY) then
 
          call remove_flotsam( &
           F_stencil_array, &
@@ -20671,8 +20777,9 @@ stop
            bfact,dx, &
            tessellate_source, & !TESSELLATE_FLUIDS
            mofnew,SDIM)
+
         else
-         print *,"renormalize only invalid"
+         print *,"renormalize flag invalid ",renormalize_flag
          stop
         endif
 
