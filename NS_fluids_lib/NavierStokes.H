@@ -1033,12 +1033,15 @@ protected:
     void avgDown_list(int stateidx,Vector<int> scomp,
       Vector<int> ncomp,int spectral_override); 
 
-    void prescribe_solid_geometryALL(Real time,
-      int renormalize_only,
+    void prescribe_solid_geometryALL(
+      Real time,
+      int renormalize_flag,
       int local_truncate,
       const std::string& caller_string);
 
-    void prescribe_solid_geometry(Real time,int renormalize_only);
+    void prescribe_solid_geometry(
+      Real time,
+      int renormalize_flag);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1481,7 +1484,7 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_predict();
 
     void init_FSI_GHOST_MAC_MF_ALL(
-      int renormalize_only,
+      int renormalize_flag,
       const std::string& caller_string);
 
     void init_FSI_GHOST_MAC_MF(int dealloc_history);

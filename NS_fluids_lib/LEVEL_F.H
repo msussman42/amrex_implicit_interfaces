@@ -247,7 +247,7 @@ namespace amrex{
        int* nparts,
        int* nparts_def,
        int* im_solid_map,
-       int* renormalize_only,
+       int* renormalize_flag,
        int* solidheat_flag,
        int* LS_extrap_iter,
        int* num_curv,

@@ -6683,25 +6683,16 @@ void NavierStokes::metrics_data_min_max(const std::string& caller_string) {
 
 } // subroutine metrics_data_min_max
 
-
-
-// 1. renormalize variables
-// 2. extend from F>0 fluid regions into F=0 regions
-// 3. if renormalize_only==0, 
-//    a. init F,X,LS for the solid materials.
-//    b. init U,T in the solid regions.
-//    c. extrapolate F,X,LS from fluid regions into solid regions.
-//   
 // called from:
 //  NavierStokes::prepare_post_process -> called from post_init_state 
 //  NavierStokes::prepare_post_process -> called from post_restart
-//    renormalize_only=0 when called from prepare_post_process.
 //  NavierStokes::nonlinear_advection
 //  NavierStokes::advance
-//    renormalize_only=0 when called from advance.
 //
-void NavierStokes::prescribe_solid_geometryALL(Real time,
-  int renormalize_only,int local_truncate,
+void NavierStokes::prescribe_solid_geometryALL(
+  Real time,
+  int renormalize_flag,
+  int local_truncate,
   const std::string& caller_string) {
 
  if (level!=0)
@@ -6720,7 +6711,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
      project_slab_step,
      divu_outer_sweeps);
   std::cout << "time= " << time << '\n';
-  std::cout << "renormalize_only= " << renormalize_only << '\n';
+  std::cout << "renormalize_flag= " << renormalize_flag << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';
   std::cout << 
@@ -6734,14 +6725,18 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   // deletes localMF[LEVELPC_MF] if it exists.
  allocate_levelset_ALL(1,LEVELPC_MF);
 
- if (renormalize_only==1) {
+ if (renormalize_flag==RENORMALIZE_ONLY) {
   //do nothing
- } else if (renormalize_only==0) {
+ } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
+  //do nothing
+ } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
 
   makeStateCurvALL(cur_time_slab,local_caller_string);
 
- } else
-  amrex::Error("expecting renormalize_only=0 or 1");
+ } else {
+  std::cout << "renormalize_flag " << renormalize_flag << '\n';
+  amrex::Error("renormalize_flag invalid");
+ }
 
  if (local_truncate==1) {
   Vector<Real> delta_mass_all;
@@ -6770,20 +6765,24 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  } else
   amrex::Error("local_truncate invalid");
 
- if (renormalize_only==0) {
+ if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
 
   if (std::abs(time-cur_time_slab)>CPP_EPS_8_5)
    amrex::Error("prescribe solid at the new time");
 
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
-  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+  init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
  
   interface_touch_flag=1; //prescribe_solid_geometryALL
 			  
- } else if (renormalize_only==1) {
+ } else if (renormalize_flag==RENORMALIZE_ONLY) {
   // do nothing
- } else
-  amrex::Error("renormalize_only invalid");
+ } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
+  //do nothing
+ } else {
+  std::cout << "renormalize_flag " << renormalize_flag << '\n';
+  amrex::Error("renormalize_flag invalid");
+ }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -6791,7 +6790,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
    ns_level.avgDown(LS_Type,0,num_materials,0);
    ns_level.MOFavgDown();
   }
-  ns_level.prescribe_solid_geometry(time,renormalize_only);
+  ns_level.prescribe_solid_geometry(time,renormalize_flag);
  } //ilev=finest_level downto level
 
  if ((step_through_data==1)||(1==0)) {
@@ -6802,7 +6801,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
      project_slab_step,
      divu_outer_sweeps);
   std::cout << "time= " << time << '\n';
-  std::cout << "renormalize_only= " << renormalize_only << '\n';
+  std::cout << "renormalize_flag= " << renormalize_flag << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';
   std::cout << 
@@ -6810,13 +6809,12 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   int n_input;
   std::cin >> n_input;
  }
-
  
 } // end subroutine prescribe_solid_geometryALL
 
 // NavierStokes::prescribe_solid_geometry is called by
 // NavierStokes::prescribe_solid_geometryALL
-void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
+void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_flag) {
  
  std::string local_caller_string="prescribe_solid_geometry";
 
@@ -6860,12 +6858,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
  const Real* dx = geom.CellSize();
 
-  // renormalize_only==1:
-  //   project so that sum F_m_fluid=1
-  // renormalize_only==0:
-  //   correct F_m according to prescribed solid interface.
-  //   project so that sum F_m_fluid=1 
-
  // nparts x (velocity + LS + temperature + flag)
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>num_materials))
@@ -6886,12 +6878,15 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
  int num_LS_extrap_iter=1;
 
- if (renormalize_only==1) {
+ if (renormalize_flag==RENORMALIZE_ONLY) {
   // do nothing
- } else if (renormalize_only==0) {
+ } else if ((renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE)||
+            (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE)) {
   num_LS_extrap_iter=2;
- } else
-  amrex::Error("renormalize_only invalid");	 
+ } else {
+  std::cout << "renormalize_flag " << renormalize_flag << '\n';
+  amrex::Error("renormalize_flag invalid");
+ }
 
  for (int LS_extrap_iter=0;LS_extrap_iter<num_LS_extrap_iter; 
       LS_extrap_iter++) {
@@ -6906,16 +6901,20 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
   MultiFab* curv_data_ptr=nullptr;
   int num_curv=num_interfaces*CURVCOMP_NCOMP;
 
-  if (renormalize_only==1) {
+  if (renormalize_flag==RENORMALIZE_ONLY) {
    curv_data_ptr=lsdata;
-  } else if (renormalize_only==0) {
+  } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
+   curv_data_ptr=lsdata;
+  } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
    curv_data_ptr=localMF[DIST_CURV_MF];
    if (curv_data_ptr->nComp()==num_curv) {
     //do nothing
    } else
     amrex::Error("curv_data_ptr->nComp()==num_curv failed");
-  } else
-   amrex::Error("renormalize_only invalid");
+  } else {
+   std::cout << "renormalize_flag " << renormalize_flag << '\n';
+   amrex::Error("renormalize_flag invalid");
+  }
 
   if (curv_data_ptr->nGrow()==ngrow_distance) {
    //do nothing
@@ -7027,7 +7026,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      &nparts,
      &nparts_def,
      im_solid_map_ptr,
-     &renormalize_only, 
+     &renormalize_flag, 
      &solidheat_flag,
      &LS_extrap_iter,
      &num_curv, //num_interfaces * CURVCOMP_NCOMP

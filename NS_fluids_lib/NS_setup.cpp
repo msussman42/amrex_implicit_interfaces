@@ -2306,8 +2306,8 @@ NavierStokes::sum_integrated_quantities (
 
  } // ilev=level..finest_level
 
- int renormalize_only=1;
- init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+ int renormalize_flag=RENORMALIZE_ONLY;
+ init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
  build_masksemALL();
 

@@ -7934,7 +7934,7 @@ int NavierStokes::pattern_test(const std::string& source,
 } // end subroutine pattern_test
 
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
-  int renormalize_only,
+  int renormalize_flag,
   const std::string& caller_string) {
 
  int finest_level=parent->finestLevel();
@@ -7967,7 +7967,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
 
- if (renormalize_only==0) {
+ if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
   if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
    if (pattern_test(local_caller_string,"prescribe_solid_geometryALL")==1) {
 
@@ -8045,10 +8045,12 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
     } //data_dir=0..sdim-1
    } // called from prescribe_solid_geometryALL?
   } // called from nonlinear_advection?
- } else if (renormalize_only==1) {
+ } else if (renormalize_flag==RENORMALIZE_ONLY) {
   //do nothing
- } else
-  amrex::Error("renormalize_only invalid");
+ } else {
+  std::cout << "renormalize_flag= " << renormalize_flag << '\n';
+  amrex::Error("renormalize_flag invalid");
+ }
 			 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   delete_array(HISTORY_MAC_MF+data_dir);
@@ -10930,7 +10932,7 @@ void NavierStokes::init_boundary(
      //do nothing
     } else
      amrex::Error("expecting extra_comp==-1");
-   } else if (control_flag==SAVE_CONTROL) {
+   } else if (control_flag==LSA_SAVE_CONTROL) {
 
     if ((extra_comp==LSA_N_EXTRA)||
         (extra_comp==LSA_NP1_EXTRA)||
@@ -10942,7 +10944,7 @@ void NavierStokes::init_boundary(
     MultiFab& S_new_extra=get_new_data(k,ns_time_order+extra_comp+1);
     MultiFab::Copy(S_new_extra,S_new,0,0,ncomp[k],1);
 
-   } else if (control_flag==RESTORE_CONTROL) {
+   } else if (control_flag==LSA_RESTORE_CONTROL) {
 
     if ((extra_comp==LSA_N_EXTRA)||
         (extra_comp==LSA_NP1_EXTRA)||
@@ -11132,9 +11134,9 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
 
  std::string local_caller_string="LSA_save_state_data";
 
- if (control_flag_in==SAVE_CONTROL) {
+ if (control_flag_in==LSA_SAVE_CONTROL) {
   //do nothing
- } else if (control_flag_in==RESTORE_CONTROL) {
+ } else if (control_flag_in==LSA_RESTORE_CONTROL) {
   //do nothing
  } else
   amrex::Error("control_flag_in invalid");
@@ -11150,7 +11152,7 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
    ncomp_total,
    scomp,ncomp);
  
- if (control_flag_in==SAVE_CONTROL) {
+ if (control_flag_in==LSA_SAVE_CONTROL) {
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab* temp_mac_velocity=getStateMAC(0,dir,cur_time_slab);
@@ -11159,7 +11161,7 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
    delete temp_mac_velocity;
   }
 
- } else if (control_flag_in==RESTORE_CONTROL) {
+ } else if (control_flag_in==LSA_RESTORE_CONTROL) {
 
   if (project_slab_step==ns_time_order-1) {
    //do nothing
@@ -24004,8 +24006,8 @@ void NavierStokes::MaxAdvectSpeedALL(
   dt_min=dt_max;
 
  if (localMF_grow[FSI_GHOST_MAC_MF]==-1) {
-   int filler_renormalize_only=1;
-   init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_only,local_caller_string);
+   int filler_renormalize_flag=RENORMALIZE_ONLY;
+   init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_flag,local_caller_string);
  } else if (localMF_grow[FSI_GHOST_MAC_MF]>=0) {
   // do nothing
  } else {
@@ -25423,8 +25425,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
  build_masksemALL();
 
- int filler_renormalize_only=1;
- init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_only,local_caller_string);
+ int filler_renormalize_flag=RENORMALIZE_ONLY;
+ init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_flag,local_caller_string);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -25435,7 +25437,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
  int init_vof_prev_time=0;
  int error_update_flag=0;
- int renormalize_only=0; // init:solid TEMP,VEL,LS,extend LSfluid into solid.
+   // init:solid TEMP,VEL,LS,extend LSfluid into solid.
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE; 
  int local_truncate=0; // do not force removal of flotsam.
 
  if (pattern_test(local_caller_string,"writePlotFile")==1) {
@@ -25455,7 +25458,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   //output:SLOPE_RECON_MF
  VOF_Recon_ALL(
   local_caller_string, //prepare_post_process
-  cur_time_slab,error_update_flag,
+  cur_time_slab,
+  error_update_flag,
   init_vof_prev_time);
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
@@ -25465,9 +25469,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   makeStateDistALL(local_redistribute_main);
 
   prescribe_solid_geometryALL(cur_time_slab,
-		  renormalize_only,
-		  local_truncate,
-		  local_caller_string);
+    renormalize_flag,
+    local_truncate,
+    local_caller_string);
 
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
