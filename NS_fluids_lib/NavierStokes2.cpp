@@ -6711,6 +6711,9 @@ void NavierStokes::prescribe_solid_geometryALL(
      project_slab_step,
      divu_outer_sweeps);
   std::cout << "time= " << time << '\n';
+  std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
+	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
+	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
   std::cout << "renormalize_flag= " << renormalize_flag << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';
@@ -6801,6 +6804,9 @@ void NavierStokes::prescribe_solid_geometryALL(
      project_slab_step,
      divu_outer_sweeps);
   std::cout << "time= " << time << '\n';
+  std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
+	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
+	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
   std::cout << "renormalize_flag= " << renormalize_flag << '\n';
   std::cout << "local_truncate= " << local_truncate << '\n';
   std::cout << "caller_string= " << caller_string << '\n';

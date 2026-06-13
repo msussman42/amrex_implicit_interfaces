@@ -19137,6 +19137,16 @@ NavierStokes::split_scalar_advectionALL(int im_extension) {
  BLProfiler bprof(local_caller_string);
 #endif
 
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "split_scalar_advectionALL im_extension " << 
+     im_extension << '\n';
+   std::cout << "split_scalar_advectionALL dir_absolute_direct_split " << 
+     dir_absolute_direct_split << '\n';
+  }
+ }
+
   // order_direct_split=base_step mod 2=0 or 1
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -23694,6 +23704,7 @@ NavierStokes::writePlotFile (
   amrex::Error("LSA_code invalid in writePlotFile");
 
  if (level==0) {
+
   if (LSA_code>=0) {
 
    if (swap_flag==1) {
