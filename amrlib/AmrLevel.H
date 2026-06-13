@@ -235,6 +235,7 @@ public:
     //
     //
     virtual void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,

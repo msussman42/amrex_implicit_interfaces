@@ -343,6 +343,11 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("expecting advect_time_slab==prev_time_slab");
 
+  if (advect_slab_step==project_slab_step) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_slab_step==project_slab_step");
+
   new_localMF(interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(improved_interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(standard_interface_hold_MF,ncomp_interface,1,-1);
@@ -542,6 +547,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
 
   advect_time_slab=prev_time_slab;
+  advect_slab_step=project_slab_step;
 
   if (divu_outer_sweeps==0) {
    vel_time_slab=prev_time_slab;
@@ -602,12 +608,18 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   } else
    amrex::Error("expecting advect_time_slab==cur_time_slab");
 
+  if (advect_slab_step==project_slab_step+1) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_slab_step==project_slab_step+1");
+
    //elastic material advection 
   sub_nonlinear_advection(local_caller_string,im_extension);
 
   if ((step_through_data==1)||(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
+     local_caller_string,
      basestep_debug,
      SDC_outer_sweeps,
      project_slab_step,
@@ -784,6 +796,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  renormalize_flag=RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE;
  prescribe_solid_geometryALL(
   advect_time_slab,
+  advect_slab_step,
   renormalize_flag,
   local_truncate,
   local_caller_string);
@@ -818,6 +831,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {
 
     advect_time_slab=cur_time_slab;
+    advect_slab_step=project_slab_step+1;
 
     interface_touch_flag=1; //sub_nonlinear_advection
 
@@ -841,6 +855,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     renormalize_flag=RENORMALIZE_ONLY;
     prescribe_solid_geometryALL(
       cur_time_slab,
+      project_slab_step+1,
       renormalize_flag,
       local_truncate,
       local_caller_string);
@@ -1019,6 +1034,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  local_truncate=1;
  prescribe_solid_geometryALL(
    cur_time_slab,
+   project_slab_step+1,
    renormalize_flag,
    local_truncate,
    local_caller_string);
@@ -1187,6 +1203,7 @@ void NavierStokes::tensor_advection_updateALL() {
        if (step_through_data==1) {
         int basestep_debug=nStep();
         parent->writeDEBUG_PlotFile(
+         local_caller_string,
          basestep_debug,
          SDC_outer_sweeps,
          project_slab_step,
@@ -1229,6 +1246,7 @@ void NavierStokes::tensor_advection_updateALL() {
        if (step_through_data==1) {
         int basestep_debug=nStep();
         parent->writeDEBUG_PlotFile(
+         local_caller_string,
          basestep_debug,
          SDC_outer_sweeps,
          project_slab_step,
@@ -1730,6 +1748,7 @@ Real NavierStokes::advance(Real time,Real dt) {
    int local_truncate=0;
    prescribe_solid_geometryALL(
      upper_slab_time,
+     project_slab_step+1,
      renormalize_flag,
      local_truncate,
      local_caller_string);
@@ -2233,11 +2252,14 @@ void NavierStokes::SEM_advectALL(int source_term) {
 
     if (source_term==SUB_OP_SDC_LOW_TIME) { 
      advect_time_slab=prev_time_slab;
+     advect_slab_step=project_slab_step;
     } else if (source_term==SUB_OP_SDC_ISCHEME) {
      if (advect_iter==SUB_OP_ISCHEME_PREDICT) {
       advect_time_slab=prev_time_slab;
+      advect_slab_step=project_slab_step;
      } else if (advect_iter==SUB_OP_ISCHEME_CORRECT) {
       advect_time_slab=cur_time_slab;
+      advect_slab_step=project_slab_step+1;
      } else
       amrex::Error("advect_iter invalid");
     } else
@@ -2409,10 +2431,11 @@ void NavierStokes::pressure_gradient_code_segment(
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  project_slab_step,
-  divu_outer_sweeps);
+   local_caller_string,
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: after SOLVETYPE_PRES \n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -2456,10 +2479,11 @@ void NavierStokes::pressure_gradient_code_segment(
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     project_slab_step,
-     divu_outer_sweeps);
+      local_caller_string,
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
      std::cout << "press any number then enter: after PRESEXTRAP\n";
      std::cout << "cur_time_slab= " << cur_time_slab << '\n';
      std::cout << "dt_slab= " << dt_slab << '\n';
@@ -2788,6 +2812,7 @@ void NavierStokes::phase_change_code_segment(
  int local_truncate=0;
  prescribe_solid_geometryALL(
    cur_time_slab,
+   project_slab_step+1,
    renormalize_flag,
    local_truncate,
    local_caller_string);
@@ -2863,6 +2888,7 @@ void NavierStokes::nucleation_code_segment(
  if (1==0) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     project_slab_step,
@@ -2959,6 +2985,7 @@ void NavierStokes::nucleation_code_segment(
  if (1==0) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     project_slab_step,
@@ -3247,6 +3274,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (step_through_data==1) {
        int basestep_debug=nStep();
        parent->writeDEBUG_PlotFile(
+         local_caller_string,
 	 basestep_debug,
 	 SDC_outer_sweeps,
 	 project_slab_step,
@@ -3517,6 +3545,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (1==0) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+        local_caller_string,
 	basestep_debug,
 	SDC_outer_sweeps,
 	project_slab_step,
@@ -3550,6 +3579,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (1==0) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+       local_caller_string,
        basestep_debug,
        SDC_outer_sweeps,
        project_slab_step,
@@ -3603,6 +3633,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (step_through_data==1) {
        int basestep_debug=nStep();
        parent->writeDEBUG_PlotFile(
+         local_caller_string,
 	 basestep_debug,
 	 SDC_outer_sweeps,
 	 project_slab_step,
@@ -3820,6 +3851,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -3858,6 +3890,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -3911,6 +3944,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          if (step_through_data==1) {
           int basestep_debug=nStep();
           parent->writeDEBUG_PlotFile(
+           local_caller_string,
 	   basestep_debug,
 	   SDC_outer_sweeps,
 	   project_slab_step,
@@ -3969,6 +4003,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4061,6 +4096,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (1==0) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4218,6 +4254,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int local_truncate=0;
        prescribe_solid_geometryALL(
         cur_time_slab,
+        project_slab_step+1,
         renormalize_flag,
         local_truncate,local_caller_string);
 
@@ -4532,6 +4569,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+       local_caller_string,
        basestep_debug,
        SDC_outer_sweeps,
        project_slab_step,
@@ -10641,6 +10679,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (1==0) {
    int basestep_debug=nStep()+1;
    parent->writeDEBUG_PlotFile(
+     local_caller_string,
      basestep_debug,
      SDC_outer_sweeps,
      slab_step,
@@ -10841,6 +10880,7 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+      local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
       project_slab_step,
@@ -10879,6 +10919,7 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+      local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
       project_slab_step,
@@ -13381,6 +13422,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13420,6 +13462,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13535,6 +13578,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13567,6 +13611,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13620,6 +13665,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13653,6 +13699,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13695,6 +13742,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13992,6 +14040,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,

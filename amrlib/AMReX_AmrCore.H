@@ -125,6 +125,7 @@ public:
     //
 
     void writeDEBUG_PlotFile(
+      const std::string& caller_string,
       int num,
       int SDC_outer_sweeps_in,
       int slab_step_in,
@@ -152,6 +153,7 @@ protected:
     // Write the plot file to be used for visualization.
     //
     void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,

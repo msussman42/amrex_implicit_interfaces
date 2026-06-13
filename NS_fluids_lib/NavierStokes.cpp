@@ -76,6 +76,7 @@ int  NavierStokes::ns_time_order=1; // time_blocking_factor
 int  NavierStokes::slab_step=0;
 int  NavierStokes::project_slab_step=0;
 int  NavierStokes::velocity_slab_step=0;
+int  NavierStokes::advect_slab_step=0;
 int  NavierStokes::SDC_outer_sweeps=0;
 int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
@@ -23615,10 +23616,18 @@ void NavierStokes::writeSanityCheckData(
 //     writePlotFile
 void
 NavierStokes::writePlotFile (
+  const std::string& caller_string,
   int do_plot,int do_slice,
   int SDC_outer_sweeps_in,
   int slab_step_in,
   int divu_outer_sweeps_in) {
+
+ if (level==0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "NavierStokes::writePlotFile level==0\n";
+   std::cout << "caller_string= " << caller_string << '\n';
+  }
+ }
 
  int finest_level=parent->finestLevel();
 
@@ -23630,6 +23639,7 @@ NavierStokes::writePlotFile (
  UtilCreateDirectoryDestructive(util_path);
 
  std::string local_caller_string="writePlotFile";
+ local_caller_string=caller_string+local_caller_string;
 
  ns_time_order=parent->Time_blockingFactor();
 
@@ -25479,7 +25489,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
   makeStateDistALL(local_redistribute_main);
 
-  prescribe_solid_geometryALL(cur_time_slab,
+  prescribe_solid_geometryALL(
+    cur_time_slab,
+    project_slab_step+1,
     renormalize_flag,
     local_truncate,
     local_caller_string);
@@ -25643,6 +25655,7 @@ NavierStokes::post_init_state () {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     slab_step,
@@ -25745,6 +25758,7 @@ NavierStokes::post_init_state () {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     slab_step,
