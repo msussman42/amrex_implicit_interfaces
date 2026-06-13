@@ -534,9 +534,12 @@ void NavierStokes::save_interface_dataALL(
 
 void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
+ std::string local_caller_string="nonlinear_advection";
+ local_caller_string=caller_string+local_caller_string;
+
  int finest_level=parent->finestLevel();
 
- if (pattern_test(caller_string,"do_the_advance")==1) {
+ if (pattern_test(local_caller_string,"do_the_advance")==1) {
 
   advect_time_slab=prev_time_slab;
 
@@ -575,7 +578,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
- sub_nonlinear_advection(caller_string,im_extension); //regular advection
+ sub_nonlinear_advection(local_caller_string,im_extension); //regular advection
 
  if (material_extend_velocity_flag==0) {
   //do nothing
@@ -600,7 +603,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    amrex::Error("expecting advect_time_slab==cur_time_slab");
 
    //elastic material advection 
-  sub_nonlinear_advection(caller_string,im_extension);
+  sub_nonlinear_advection(local_caller_string,im_extension);
 
   if ((step_through_data==1)||(1==0)) {
    int basestep_debug=nStep();
@@ -657,7 +660,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   int im_extension) {
 
- std::string local_caller_string="nonlinear_advection";
+ std::string local_caller_string="sub_nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
 
  init_rest_fraction(local_caller_string);
@@ -797,32 +800,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   ns_level.prepare_displacement();
  } // ilev
 
- if (step_through_data==1) {
-  int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(
-   basestep_debug,
-   SDC_outer_sweeps,
-   project_slab_step,
-   divu_outer_sweeps);
-  std::cout << "press any number then enter: sub_nonlinear_advection \n";
-  std::cout << "im_extension = " << im_extension << '\n';
-  std::cout << "advect_time_slab= " << advect_time_slab << '\n';
-  std::cout << "prev_time_slab= " << prev_time_slab << '\n';
-  std::cout << "cur_time_slab= " << cur_time_slab << '\n';
-  std::cout << "dt_slab= " << dt_slab << '\n';
-  std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
-  std::cout << "num_divu_outer_sweeps= " << 
-     num_divu_outer_sweeps << '\n';
-  std::cout << "slab_step= " << slab_step << '\n';
-  std::cout << "project_slab_step= " << project_slab_step << '\n';
-  std::cout << "SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
-  std::cout << "FSI_outer_sweeps= " << FSI_outer_sweeps << '\n';
-  std::cout << "num_FSI_outer_sweeps= " << num_FSI_outer_sweeps << '\n';
-  std::cout << "NFSI_LIMIT= " << NFSI_LIMIT << '\n';
-  int n_input;
-  std::cin >> n_input;
- }
-
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
       dir_absolute_direct_split++) {
@@ -842,11 +819,11 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
     advect_time_slab=cur_time_slab;
 
-    interface_touch_flag=1; //nonlinear_advection
+    interface_touch_flag=1; //sub_nonlinear_advection
 
      //output::SLOPE_RECON_MF
     VOF_Recon_ALL(
-      local_caller_string, //nonlinear_advection
+      local_caller_string, //sub_nonlinear_advection
       advect_time_slab,
       RECON_UPDATE_STATE_CENTROID,
      init_vof_prev_time);
@@ -856,7 +833,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
    split_scalar_advectionALL(im_extension);
 
-   interface_touch_flag=1; //nonlinear_advection
+   interface_touch_flag=1; //sub_nonlinear_advection
 
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
