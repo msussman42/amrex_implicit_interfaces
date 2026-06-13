@@ -677,6 +677,8 @@ AmrCore::InitAmr () {
 
 AmrCore::~AmrCore () {
 
+    std::string local_caller_string="~AmrCore";
+
     if (level_steps[0] > last_checkpoint)
         checkPoint();
 
@@ -687,6 +689,7 @@ AmrCore::~AmrCore () {
      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,
@@ -768,10 +771,14 @@ AmrCore::okToContinue () noexcept
 
 void
 AmrCore::writeDEBUG_PlotFile(
+  const std::string& caller_string,
   int num,
   int SDC_outer_sweeps,
   int slab_step,
   int divu_outer_sweeps) {
+
+ std::string local_caller_string="writeDEBUG_PlotFile";
+ local_caller_string=caller_string+local_caller_string;
 
  if (num>=0) {
   //do nothing
@@ -781,6 +788,7 @@ AmrCore::writeDEBUG_PlotFile(
  int do_plot=1;
  int do_slice=((slice_int>0) ? 1 : 0);
  writePlotFile(
+   local_caller_string,
    do_plot,do_slice,
    SDC_outer_sweeps,
    slab_step,
@@ -790,26 +798,41 @@ AmrCore::writeDEBUG_PlotFile(
 
 void
 AmrCore::writePlotFile (
+  const std::string& caller_string,
   int do_plot,int do_slice,
   int SDC_outer_sweeps,
   int slab_step,
   int divu_outer_sweeps) {
 
- if ((do_plot==1)||
-     ((do_plot==0)&&(do_slice==1))) {
+ std::size_t local_found=caller_string.find("writePlotFile");
+  //npos is a static member constant value with the greatest possible value
+  //for an element of type size_t.
+ if (local_found<std::string::npos) {
+  //do nothing
+ } else if (local_found>=std::string::npos) {
+
+  std::string local_caller_string="writePlotFile";
+  local_caller_string=caller_string+local_caller_string;
+
+  if ((do_plot==1)||
+      ((do_plot==0)&&(do_slice==1))) {
 
    for (int k(0); k <= finest_level; ++k) {
     amr_level[k]->writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,
       divu_outer_sweeps);
    }
 
- } else if ((do_plot==0)&&(do_slice==0)) {
-  // do nothing
+  } else if ((do_plot==0)&&(do_slice==0)) {
+   // do nothing
+  } else
+   amrex::Error("do_plot or do_slice invalid");
+
  } else
-  amrex::Error("do_plot or do_slice invalid");
+  amrex::Error("local_found invalid");
   
 }  // subroutine writePlotFile
 
@@ -968,6 +991,8 @@ AmrCore::AMR_checkInput ()
 void
 AmrCore::init (Real strt_time, Real stop_time) {
 
+ std::string local_caller_string="AmrCore::init";
+
  if (!restart_file.empty() && restart_file != "init") {
   restart(restart_file);
  } else {
@@ -980,6 +1005,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
    int slab_step=Time_blockingFactor()-1+LSA_plot_index;
    int divu_outer_sweeps=0;
    writePlotFile(
+    local_caller_string,
     do_plot,do_slice,
     SDC_outer_sweeps,
     slab_step,
@@ -1534,6 +1560,8 @@ AmrCore::timeStep (Real time,
                Real stop_time)
 {
 
+ std::string local_caller_string="timeStep";
+
  if (std::abs(time-cumtime)>CPP_EPS_13_6)
   amrex::Error("time<>cumtime");
 
@@ -1601,6 +1629,7 @@ AmrCore::timeStep (Real time,
   int slab_step=Time_blockingFactor()-1+LSA_plot_index;
   int divu_outer_sweeps=0;
   writePlotFile(
+   local_caller_string,
    do_plot,do_slice,
    SDC_outer_sweeps,
    slab_step,
@@ -1684,6 +1713,8 @@ void
 AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
   int LSA_initial_levelSteps_in)
 {
+
+    std::string local_caller_string="coarseTimeStep";
 
     LSA_current_step=LSA_current_step_in;
     LSA_initial_levelSteps=LSA_initial_levelSteps_in;
@@ -1877,6 +1908,7 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,

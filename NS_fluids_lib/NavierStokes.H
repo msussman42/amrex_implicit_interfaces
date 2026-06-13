@@ -217,6 +217,7 @@ public:
 	int nsteps_actual); 
 
     virtual void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,
@@ -1035,12 +1036,14 @@ protected:
 
     void prescribe_solid_geometryALL(
       Real time,
+      int output_slab,
       int renormalize_flag,
       int local_truncate,
       const std::string& caller_string);
 
     void prescribe_solid_geometry(
       Real time,
+      int output_slab,
       int renormalize_flag);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
@@ -1536,6 +1539,7 @@ protected:
     static int slab_step; 
     static int project_slab_step; 
     static int velocity_slab_step; 
+    static int advect_slab_step; 
     static int SDC_outer_sweeps;
     static int divu_outer_sweeps;
     static int very_last_sweep;

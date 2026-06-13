@@ -6691,59 +6691,115 @@ void NavierStokes::metrics_data_min_max(const std::string& caller_string) {
 //
 void NavierStokes::prescribe_solid_geometryALL(
   Real time,
+  int output_slab,
   int renormalize_flag,
   int local_truncate,
   const std::string& caller_string) {
 
- if (level!=0)
-  amrex::Error("level should be 0 in prescribe_solid_geometryALL");
+ if (pattern_test(caller_string,"prescribe_solid_geometryALL")==1) {
+  //do nothing
+ } else if 
+    (pattern_test(caller_string,"prescribe_solid_geometryALL")==0) {
+ 
+  if ((output_slab==project_slab_step)||
+      (output_slab==project_slab_step+1)) {
+   //do nothing
+  } else
+   amrex::Error("output_slab invalid");
 
- int finest_level=parent->finestLevel();
+  if (level!=0)
+   amrex::Error("level should be 0 in prescribe_solid_geometryALL");
 
- std::string local_caller_string="prescribe_solid_geometryALL";
- local_caller_string=caller_string+local_caller_string;
+  int finest_level=parent->finestLevel();
 
- if ((step_through_data==1)||(1==0)) {
-  int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     project_slab_step,
-     divu_outer_sweeps);
-  std::cout << "time= " << time << '\n';
-  std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
+  std::string local_caller_string="prescribe_solid_geometryALL";
+  local_caller_string=caller_string+local_caller_string;
+
+  if ((step_through_data==1)||(1==0)) {
+   int basestep_debug=nStep();
+   parent->writeDEBUG_PlotFile(
+      local_caller_string,
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
+   std::cout << "time= " << time << '\n';
+   std::cout << "output_slab= " << output_slab << '\n';
+   std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
-  std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-  std::cout << "local_truncate= " << local_truncate << '\n';
-  std::cout << "caller_string= " << caller_string << '\n';
-  std::cout << 
-   "press any number then enter:begin prescribe_solid_geometryALL\n";
+   std::cout << "renormalize_flag= " << renormalize_flag << '\n';
+   std::cout << "local_truncate= " << local_truncate << '\n';
+   std::cout << "caller_string= " << caller_string << '\n';
+   std::cout << 
+    "press any number then enter:begin prescribe_solid_geometryALL\n";
 
-  int n_input;
-  std::cin >> n_input;
- }
+   int n_input;
+   std::cin >> n_input;
+  }
 
-  // piecewise constant interpolation.
-  // deletes localMF[LEVELPC_MF] if it exists.
- allocate_levelset_ALL(1,LEVELPC_MF);
+   // piecewise constant interpolation.
+   // deletes localMF[LEVELPC_MF] if it exists.
+  allocate_levelset_ALL(1,LEVELPC_MF);
 
- if (renormalize_flag==RENORMALIZE_ONLY) {
-  //do nothing
- } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
-  //do nothing
- } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
+  if (renormalize_flag==RENORMALIZE_ONLY) {
+   //do nothing
+  } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
+   //do nothing
+  } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
 
-  makeStateCurvALL(cur_time_slab,local_caller_string);
+   makeStateCurvALL(cur_time_slab,local_caller_string);
 
- } else {
-  std::cout << "renormalize_flag " << renormalize_flag << '\n';
-  amrex::Error("renormalize_flag invalid");
- }
+  } else {
+   std::cout << "renormalize_flag " << renormalize_flag << '\n';
+   amrex::Error("renormalize_flag invalid");
+  }
 
- if (local_truncate==1) {
-  Vector<Real> delta_mass_all;
-  delta_mass_all.resize(num_materials);
+  if (local_truncate==1) {
+   Vector<Real> delta_mass_all;
+   delta_mass_all.resize(num_materials);
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    if (ilev<finest_level) {
+     ns_level.avgDown(LS_Type,0,num_materials,0);
+     ns_level.MOFavgDown();
+    }
+    ns_level.truncate_VOF(delta_mass_all);
+    if (verbose>0) {
+     if (ParallelDescriptor::IOProcessor()) {
+      for (int im=0;im<num_materials;im++) {
+       std::cout << "truncate statistics: im,delta_mass " << im << ' ' <<
+        delta_mass_all[im] << '\n';
+      } // im
+     } // IOProc?
+    } // verbose>0?
+
+   } // ilev
+
+  } else if (local_truncate==0) {
+   // do nothing
+  } else
+   amrex::Error("local_truncate invalid");
+
+  if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
+
+   if (std::abs(time-cur_time_slab)>CPP_EPS_8_5)
+    amrex::Error("prescribe solid at the new time");
+
+    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
+   init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
+  
+   interface_touch_flag=1; //prescribe_solid_geometryALL
+			  
+  } else if (renormalize_flag==RENORMALIZE_ONLY) {
+   // do nothing
+  } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
+   //do nothing
+  } else {
+   std::cout << "renormalize_flag " << renormalize_flag << '\n';
+   amrex::Error("renormalize_flag invalid");
+  }
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -6751,76 +6807,40 @@ void NavierStokes::prescribe_solid_geometryALL(
     ns_level.avgDown(LS_Type,0,num_materials,0);
     ns_level.MOFavgDown();
    }
-   ns_level.truncate_VOF(delta_mass_all);
-   if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     for (int im=0;im<num_materials;im++) {
-      std::cout << "truncate statistics: im,delta_mass " << im << ' ' <<
-       delta_mass_all[im] << '\n';
-     } // im
-    } // IOProc?
-   } // verbose>0?
+   ns_level.prescribe_solid_geometry(time,output_slab,renormalize_flag);
+  } //ilev=finest_level downto level
 
-  } // ilev
-
- } else if (local_truncate==0) {
-  // do nothing
- } else
-  amrex::Error("local_truncate invalid");
-
- if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
-
-  if (std::abs(time-cur_time_slab)>CPP_EPS_8_5)
-   amrex::Error("prescribe solid at the new time");
-
-   //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
-  init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
- 
-  interface_touch_flag=1; //prescribe_solid_geometryALL
-			  
- } else if (renormalize_flag==RENORMALIZE_ONLY) {
-  // do nothing
- } else if (renormalize_flag==RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE) {
-  //do nothing
- } else {
-  std::cout << "renormalize_flag " << renormalize_flag << '\n';
-  amrex::Error("renormalize_flag invalid");
- }
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  if (ilev<finest_level) {
-   ns_level.avgDown(LS_Type,0,num_materials,0);
-   ns_level.MOFavgDown();
-  }
-  ns_level.prescribe_solid_geometry(time,renormalize_flag);
- } //ilev=finest_level downto level
-
- if ((step_through_data==1)||(1==0)) {
-  int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     project_slab_step,
-     divu_outer_sweeps);
-  std::cout << "time= " << time << '\n';
-  std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
+  if ((step_through_data==1)||(1==0)) {
+   int basestep_debug=nStep();
+   parent->writeDEBUG_PlotFile(
+      local_caller_string,
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
+   std::cout << "time= " << time << '\n';
+   std::cout << "output_slab= " << output_slab << '\n';
+   std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE " << 
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
-  std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-  std::cout << "local_truncate= " << local_truncate << '\n';
-  std::cout << "caller_string= " << caller_string << '\n';
-  std::cout << 
-   "press any number then enter:at the end prescribe_solid_geometryALL\n";
-  int n_input;
-  std::cin >> n_input;
- }
+   std::cout << "renormalize_flag= " << renormalize_flag << '\n';
+   std::cout << "local_truncate= " << local_truncate << '\n';
+   std::cout << "caller_string= " << caller_string << '\n';
+   std::cout << 
+    "press any number then enter:at the end prescribe_solid_geometryALL\n";
+   int n_input;
+   std::cin >> n_input;
+  }
+
+ } else
+  amrex::Error("pattern_test invalid");
  
 } // end subroutine prescribe_solid_geometryALL
 
 // NavierStokes::prescribe_solid_geometry is called by
 // NavierStokes::prescribe_solid_geometryALL
-void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_flag) {
+void NavierStokes::prescribe_solid_geometry(Real time,int output_slab,
+  int renormalize_flag) {
  
  std::string local_caller_string="prescribe_solid_geometry";
 
@@ -6838,8 +6858,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_flag) {
 
  int finest_level = parent->finestLevel();
 
- MultiFab &S_new = get_new_data(State_Type,project_slab_step+1);
- MultiFab &LS_new = get_new_data(LS_Type,project_slab_step+1);
+ MultiFab &S_new = get_new_data(State_Type,output_slab);
+ MultiFab &LS_new = get_new_data(LS_Type,output_slab);
 
  if (NUM_CELL_REFINE_DENSITY==
      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
@@ -6857,7 +6877,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_flag) {
   amrex::Error("num_materials_compressble invalid");
 
  MultiFab& Refine_Density_new=
-    get_new_data(Refine_Density_Type_local,project_slab_step+1);
+    get_new_data(Refine_Density_Type_local,output_slab);
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
