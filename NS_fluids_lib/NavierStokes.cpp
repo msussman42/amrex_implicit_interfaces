@@ -10698,18 +10698,21 @@ void NavierStokes::swap_time_slab(int slab1,int slab2) {
 
  ns_time_order=parent->Time_blockingFactor();
 
- if ((slab1>=0)&&
-     (slab1<ns_time_order+parent->LSA_plot_index)) {
+ if ((slab1+1>=0)&&
+     (slab1+1<ns_time_order+parent->LSA_plot_index+1)) {
   //do nothing
- } else
+ } else {
+  std::cout << "slab1= " <<slab1 <<'\n';
   amrex::Error("slab1 invalid");
+ }
 
- if ((slab2>=0)&&
-     (slab2<ns_time_order+parent->LSA_plot_index)) {
+ if ((slab2+1>=0)&&
+     (slab2+1<ns_time_order+parent->LSA_plot_index+1)) {
   //do nothing
- } else
+ } else {
+  std::cout << "slab2= " <<slab2 <<'\n';
   amrex::Error("slab2 invalid");
-
+ }
  int nstate=state.size();
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
@@ -23643,11 +23646,13 @@ NavierStokes::writePlotFile (
 
  ns_time_order=parent->Time_blockingFactor();
 
- if ((slab_step_in>=0)&&
-     (slab_step_in<ns_time_order+parent->LSA_plot_index)) {
+ if ((slab_step_in+1>=0)&&
+     (slab_step_in+1<ns_time_order+parent->LSA_plot_index+1)) {
   //do nothing
- } else
+ } else {
+  std::cout << "slab_step_in= " << slab_step_in << '\n';
   amrex::Error("slab_step_in invalid");
+ }
 
  int save_SDC_outer_sweeps=SDC_outer_sweeps;
 
@@ -23669,6 +23674,9 @@ NavierStokes::writePlotFile (
  Real save_prev_time_slab=prev_time_slab;
  Real save_cur_time_slab=cur_time_slab;
  Real save_vel_time_slab=vel_time_slab;
+ Real save_advect_time_slab=advect_time_slab;
+ int save_advect_slab_step=advect_slab_step;
+ int save_velocity_slab_step=velocity_slab_step;
  Real save_prescribed_vel_time_slab=prescribed_vel_time_slab;
  Real save_dt_slab=dt_slab;
  Real save_upper_slab_time=upper_slab_time;
@@ -23679,17 +23687,23 @@ NavierStokes::writePlotFile (
 
  SDC_outer_sweeps=SDC_outer_sweeps_in;
 
+  //0<=slab_step_in+1<ns_time_order+LSA_plot_index+1
+  //slab_step_in-ns_time_order<LSA_plot_index
+  //LSA_code<LSA_plot_index
  int LSA_code=slab_step_in-ns_time_order;
  int swap_flag=0;
+ int swap_slab=-9999;
 
  if (LSA_code<0) {
   //do nothing
  } else if (LSA_code==LSA_N_EXTRA) {
   if (parent->LSA_current_step>0) {
    swap_flag=1;
+   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    if (parent->levelSteps(0)>parent->LSA_initial_levelSteps) {
     swap_flag=1;
+    swap_slab=ns_time_order-1;
    } else if (parent->levelSteps(0)==parent->LSA_initial_levelSteps) {
     //do nothing
    } else
@@ -23699,6 +23713,7 @@ NavierStokes::writePlotFile (
  } else if (LSA_code==LSA_NP1_EXTRA) {
   if (parent->LSA_current_step>0) {
    swap_flag=1;
+   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    //do nothing
   } else
@@ -23706,6 +23721,7 @@ NavierStokes::writePlotFile (
  } else if (LSA_code==LSA_EVEC_EXTRA) {
   if (parent->LSA_current_step>0) {
    swap_flag=1;
+   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    //do nothing
   } else
@@ -23713,6 +23729,7 @@ NavierStokes::writePlotFile (
  } else
   amrex::Error("LSA_code invalid in writePlotFile");
 
+ FIX ME
  if (level==0) {
 
   if (LSA_code>=0) {
@@ -23720,7 +23737,7 @@ NavierStokes::writePlotFile (
    if (swap_flag==1) {
     for (int ilev=finest_level;ilev>=0;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+     ns_level.swap_time_slab(swap_slab,slab_step_in);
     }
    } else if (swap_flag==0) {
     //do nothing
