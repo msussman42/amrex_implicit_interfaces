@@ -6721,7 +6721,7 @@ void NavierStokes::prescribe_solid_geometryALL(
       local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
-      project_slab_step,
+      output_slab-1,
       divu_outer_sweeps);
    std::cout << "time= " << time << '\n';
    std::cout << "output_slab= " << output_slab << '\n';
@@ -6816,7 +6816,7 @@ void NavierStokes::prescribe_solid_geometryALL(
       local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
-      project_slab_step,
+      output_slab-1,
       divu_outer_sweeps);
    std::cout << "time= " << time << '\n';
    std::cout << "output_slab= " << output_slab << '\n';
