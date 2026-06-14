@@ -23629,6 +23629,7 @@ NavierStokes::writePlotFile (
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "NavierStokes::writePlotFile level==0\n";
    std::cout << "caller_string= " << caller_string << '\n';
+   std::cout << "slab_step_in= " << slab_step_in << '\n';
   }
  }
 
@@ -23673,10 +23674,12 @@ NavierStokes::writePlotFile (
  int save_divu_outer_sweeps=divu_outer_sweeps;
  Real save_prev_time_slab=prev_time_slab;
  Real save_cur_time_slab=cur_time_slab;
+
  Real save_vel_time_slab=vel_time_slab;
  Real save_advect_time_slab=advect_time_slab;
  int save_advect_slab_step=advect_slab_step;
  int save_velocity_slab_step=velocity_slab_step;
+
  Real save_prescribed_vel_time_slab=prescribed_vel_time_slab;
  Real save_dt_slab=dt_slab;
  Real save_upper_slab_time=upper_slab_time;
@@ -23692,67 +23695,71 @@ NavierStokes::writePlotFile (
   //LSA_code<LSA_plot_index
  int LSA_code=slab_step_in-ns_time_order;
  int swap_flag=0;
- int swap_slab=-9999;
 
  if (LSA_code<0) {
-  //do nothing
+
+  if (slab_step_in+1==ns_time_order) {
+   //do nothing
+  } else if ((slab_step_in+1>=0)&&(slab_step_in+1<ns_time_order)) {
+   swap_flag=1;
+  } else
+   amrex::Error("slab_step_in+1 invalid");
+
  } else if (LSA_code==LSA_N_EXTRA) {
+
   if (parent->LSA_current_step>0) {
    swap_flag=1;
-   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    if (parent->levelSteps(0)>parent->LSA_initial_levelSteps) {
     swap_flag=1;
-    swap_slab=ns_time_order-1;
    } else if (parent->levelSteps(0)==parent->LSA_initial_levelSteps) {
     //do nothing
    } else
     amrex::Error("parent->levelSteps(0) invalid");
   } else
    amrex::Error("parent->LSA_current_step invalid");
+
  } else if (LSA_code==LSA_NP1_EXTRA) {
+
   if (parent->LSA_current_step>0) {
    swap_flag=1;
-   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    //do nothing
   } else
    amrex::Error("parent->LSA_current_step invalid");
+
  } else if (LSA_code==LSA_EVEC_EXTRA) {
+
   if (parent->LSA_current_step>0) {
    swap_flag=1;
-   swap_slab=ns_time_order-1;
   } else if (parent->LSA_current_step==0) {
    //do nothing
   } else
    amrex::Error("parent->LSA_current_step invalid");
+
  } else
   amrex::Error("LSA_code invalid in writePlotFile");
 
- FIX ME
  if (level==0) {
 
-  if (LSA_code>=0) {
-
-   if (swap_flag==1) {
-    for (int ilev=finest_level;ilev>=0;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.swap_time_slab(swap_slab,slab_step_in);
-    }
-   } else if (swap_flag==0) {
-    //do nothing
-   } else
-    amrex::Error("swap_flag invalid");
-
+  if (swap_flag==1) {
+   for (int ilev=finest_level;ilev>=0;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+   }
    slab_step=ns_time_order-1;
-  } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
-   slab_step=slab_step_in; 
+  } else if (swap_flag==0) {
+   if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
+    slab_step=slab_step_in; 
+   } else
+    amrex::Error("slab_step_in invalid");
   } else
-   amrex::Error("slab_step_in invalid");
+   amrex::Error("swap_flag invalid");
 
   project_slab_step=slab_step;
 
   SDC_setup_step();
+
  } else if ((level>0)&&(level<=finest_level)) {
   //do nothing
  } else
@@ -23933,22 +23940,17 @@ NavierStokes::writePlotFile (
  UtilCreateDirectoryDestructive(util_path);
 
  if (level==0) {
-  if (LSA_code>=0) {
 
-   if (swap_flag==1) {
-    for (int ilev=finest_level;ilev>=0;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
-    }
-   } else if (swap_flag==0) {
-    //do nothing
-   } else
-    amrex::Error("swap_flag invalid");
-
-  } else if ((slab_step_in>=0)&&(slab_step_in<=ns_time_order-1)) {
+  if (swap_flag==1) {
+   for (int ilev=finest_level;ilev>=0;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.swap_time_slab(ns_time_order-1,slab_step_in);
+   }
+  } else if (swap_flag==0) {
    //do nothing
   } else
-   amrex::Error("slab_step_in incorrect");
+   amrex::Error("swap_flag invalid");
+
  } else if ((level>0)&&(level<=finest_level)) {
   //do nothing
  } else
@@ -23963,7 +23965,13 @@ NavierStokes::writePlotFile (
 
  prev_time_slab=save_prev_time_slab;
  cur_time_slab=save_cur_time_slab;
+
  vel_time_slab=save_vel_time_slab;
+ advect_time_slab=save_advect_time_slab;
+
+ advect_slab_step=save_advect_slab_step;
+ velocity_slab_step=save_velocity_slab_step;
+
  prescribed_vel_time_slab=save_prescribed_vel_time_slab;
  dt_slab=save_dt_slab;
  upper_slab_time=save_upper_slab_time;
