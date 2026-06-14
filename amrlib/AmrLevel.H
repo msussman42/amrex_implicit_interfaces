@@ -561,6 +561,7 @@ AmrLevel::get_state_data (int state_indx)
     return state[state_indx];
 }
 
+//0<=slab_index<bfact_time_order+LSA_extra_data+1
 inline
 MultiFab&
 AmrLevel::get_new_data (int state_indx,int slab_index)

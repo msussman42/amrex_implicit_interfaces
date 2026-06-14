@@ -489,6 +489,7 @@ StateData::slabTime (int slab_index) const
 }
 
 
+//0<=slab_index<bfact_time_order+LSA_extra_data+1
 MultiFab&
 StateData::newData (int slab_index)
 {
