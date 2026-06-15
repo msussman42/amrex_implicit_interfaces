@@ -1,0 +1,9 @@
+# comment line
+i*.o
+c*.o
+d*.o
+s*.o
+z*.o
+x*.o
+l*.o
+liblinear.a

@@ -7797,8 +7797,6 @@ stop
       integer local_Tanasawa_or_Schrage_or_Kassemi
       integer local_force_Y_probe_zero
       integer distribute_from_targ
-      integer vofcomp_source,vofcomp_dest
-      real(amrex_real) Fsource,Fdest ! used for the hydrate model
       real(amrex_real) LSSIGN,SIGNVEL
       integer found_path
       integer, target :: debugrate
@@ -8441,11 +8439,6 @@ stop
                  endif
              
                  if (found_path.eq.1) then  
-
-                  vofcomp_source=(im_source-1)*ngeom_recon+1
-                  vofcomp_dest=(im_dest-1)*ngeom_recon+1
-                  Fsource=recon(D_DECL(i,j,k),vofcomp_source)
-                  Fdest=recon(D_DECL(i,j,k),vofcomp_dest)
 
                   C_w0=fort_denconst(1)  ! density of water
                   POUT%pres_I_interp(1)=2.0D+19 ! source
@@ -9477,7 +9470,8 @@ stop
                       POUT%Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
                       C_w0, &
                       POUT%pres_I_interp(1), & ! PHYDWATER
-                      Fsource,Fdest)
+                      dx, &
+                      LShere(im_source),LShere(im_dest))
 
                     if (VEL_correct.ge.zero) then
                      ! do nothing

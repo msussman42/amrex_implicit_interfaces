@@ -24160,7 +24160,10 @@ void NavierStokes::MaxAdvectSpeed(
   }
  }
 
- MultiFab* distmf=getStateDist(2,cur_time_slab,local_caller_string);
+ MultiFab* distmf=getStateDist(ngrow_distance,
+    cur_time_slab,local_caller_string);
+ build_elastic_fluid_levelset(distmf);
+
   // num_materials*num_state_material
  MultiFab* denmf=getStateDen(1,cur_time_slab);  
  MultiFab* vofmf=
@@ -27899,10 +27902,6 @@ NavierStokes::build_elastic_fluid_moment() {
  new_localMF(ELASTIC_FLUID_MOMENT_MF,num_materials*ngeom_recon,
    ngrow_distance,-1); 
 
- resize_mask_nbr(ngrow_distance);
- debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
- if (localMF[MASK_NBR_MF]->nComp()!=4)
-  amrex::Error("invalid ncomp for mask nbr");
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
 
@@ -27927,7 +27926,6 @@ NavierStokes::build_elastic_fluid_moment() {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
    FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& old_vof_fab=(*localMF[ELASTIC_FLUID_MOMENT_MF])[mfi];
 
@@ -27941,8 +27939,6 @@ NavierStokes::build_elastic_fluid_moment() {
     &tid_current,
     &level,
     &finest_level,
-    maskfab.dataPtr(),
-    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     voffab.dataPtr(),
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     old_vof_fab.dataPtr(),
@@ -27987,11 +27983,6 @@ NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
 
  const Real* dx = geom.CellSize();
 
- resize_mask_nbr(ngrow_distance);
- debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
- if (localMF[MASK_NBR_MF]->nComp()!=4)
-  amrex::Error("invalid ncomp for mask nbr");
-
  if (mf->nGrow()==ngrow_distance) {
   //do nothing
  } else 
@@ -28023,7 +28014,6 @@ NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
    FArrayBox& lsfab=(*mf)[mfi];
 
    int tid_current=ns_thread();
@@ -28036,8 +28026,6 @@ NavierStokes::build_elastic_fluid_levelset(MultiFab* mf) {
     &tid_current,
     &level,
     &finest_level,
-    maskfab.dataPtr(),
-    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     tilelo,tilehi,
