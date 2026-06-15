@@ -2562,7 +2562,7 @@ stop
       real(amrex_real) denmax
       real(amrex_real) USTEFAN,USTEFAN_hold
       real(amrex_real) LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
-      real(amrex_real) VOFsrc,VOFdst
+      real(amrex_real) LSsrc,LSdst
       real(amrex_real) LL
       integer, parameter :: interp_valid_flag=1
       integer velcomp
@@ -2575,7 +2575,6 @@ stop
       integer local_freezing_model
       integer local_Tanasawa_or_Schrage_or_Kassemi
       integer distribute_from_targ
-      integer vofcompsrc,vofcompdst
       real(amrex_real) TSAT,Tsrcalt,Tdstalt
       real(amrex_real) uleftcell,urightcell,udiffcell,umaxcell
       real(amrex_real) velsum
@@ -2610,6 +2609,20 @@ stop
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
        print *,"tid invalid in fort_estdt"
+       stop
+      endif
+
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.4) then
+       ! do nothing
+      else
+       print *,"require ns.ngrow_distance>=4(fort_estdt) ", &
+          ngrow_distance
        stop
       endif
 
@@ -2917,7 +2930,7 @@ stop
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
       call checkbound_array(fablo,fabhi,vof_ptr,1,-1)
        ! need enough ghost cells for the calls to derive_dist.
-      call checkbound_array(fablo,fabhi,dist_ptr,2,-1)
+      call checkbound_array(fablo,fabhi,dist_ptr,ngrow_distance,-1)
 
       if (rzflag.ne.levelrz) then
        print *,"rzflag invalid fort_estdt: ",rzflag
@@ -3325,7 +3338,7 @@ stop
          else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
           ! do nothing
          else
-          print *,"local_freezing_model invalid"
+          print *,"local_freezing_model invalid: ",local_freezing_model
           stop
          endif 
 
@@ -3341,10 +3354,8 @@ stop
          endif
          dcompsrc=(im_source-1)*num_state_material+1+ENUM_DENVAR
          tcompsrc=(im_source-1)*num_state_material+1+ENUM_TEMPERATUREVAR
-         vofcompsrc=(im_source-1)*ngeom_raw+1 
          dcompdst=(im_dest-1)*num_state_material+1+ENUM_DENVAR
          tcompdst=(im_dest-1)*num_state_material+1+ENUM_TEMPERATUREVAR
-         vofcompdst=(im_dest-1)*ngeom_raw+1 
 
          ispec=mass_fraction_id(iten+ireverse*num_interfaces)
 
@@ -3394,8 +3405,8 @@ stop
             stop
            endif
 
-           VOFsrc=vof(D_DECL(icell,jcell,kcell),vofcompsrc)
-           VOFdst=vof(D_DECL(icell,jcell,kcell),vofcompdst)
+           LSsrc=dist(D_DECL(icell,jcell,kcell),im_source)
+           LSdst=dist(D_DECL(icell,jcell,kcell),im_dest)
 
            call gridsten_level(xsten,icell,jcell,kcell,level,nhalf)
 
@@ -3561,7 +3572,8 @@ stop
               Cmethane_in_hydrate, &
               C_w0, &
               PHYDWATER, &
-              VOFsrc,VOFdst)
+              dx, &
+              LSsrc,LSdst)
 
              if (USTEFAN_hold.ge.zero) then
               ! do nothing
@@ -4692,7 +4704,7 @@ stop
       if (ngrow_distance.ge.6) then
        ! do nothing
       else
-       print *,"require ns.ngrow_distance>=6(fort_initjumpterm)) ", &
+       print *,"require ns.ngrow_distance>=6(fort_initjumpterm) ", &
           ngrow_distance
        stop
       endif

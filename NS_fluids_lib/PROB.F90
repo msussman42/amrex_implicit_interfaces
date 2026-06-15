@@ -19645,7 +19645,8 @@ end subroutine RatePhaseChange
        Cmethane_in_hydrate, &
        C_w0, &
        PHYDWATER, &
-       VOFsrc,VOFdst) ! VOFsrc,VOFdst used for the hydrate model.
+       dx, &
+       LSsrc,LSdst) ! LSsrc,LSdst used for the hydrate model.
       use hydrateReactor_module
       use global_utility_module
 
@@ -19653,6 +19654,7 @@ end subroutine RatePhaseChange
 
       integer, INTENT(in) :: interface_mass_transfer_model
       integer, INTENT(in) :: for_estdt
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xI(SDIM)
       integer, INTENT(in) :: local_freezing_model
 !1=Tanasawa 2=Schrage 3=Kassemi 
@@ -19692,7 +19694,7 @@ end subroutine RatePhaseChange
       real(amrex_real), INTENT(in) :: Tsrc_INT,Tdst_INT
       real(amrex_real), INTENT(in) :: K_f
       real(amrex_real), INTENT(in) :: Cmethane_in_hydrate,C_w0,PHYDWATER
-      real(amrex_real), INTENT(in) :: VOFsrc,VOFdst
+      real(amrex_real), INTENT(in) :: LSsrc,LSdst
 
       real(amrex_real) DTsrc,DTdst
       real(amrex_real) velsrc,veldst,velsum
@@ -19768,13 +19770,11 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((VOFsrc.ge.-EPS1).and. &
-          (VOFdst.ge.-EPS1).and. &
-          (VOFsrc.le.one+EPS1).and. &
-          (VOFdst.le.one+EPS1)) then
+      if ((abs(LSsrc).ge.zero).and. &
+          (abs(LSdst).ge.zero)) then
        ! do nothing
       else
-       print *,"VOFsrc or VOFdst invalid: ",VOFsrc,VOFdst
+       print *,"LSsrc or LSdst invalid: ",LSsrc,LSdst
        stop
       endif
 
@@ -20089,7 +20089,8 @@ end subroutine RatePhaseChange
         endif
 
         verb_hydrate=0
-        if (((VOFsrc.ge.VOFTOL_MATERIAL).and.(VOFdst.ge.VOFTOL_MATERIAL)).or. &
+        if (((LSsrc.ge.-dx(1)).and. &
+             (LSdst.ge.-dx(1))).or. &
             (for_estdt.eq.0)) then
          call HYDRATE_FORMATION_RATE(time,Cmethane_in_hydrate, &
           C_w0,Tsrc_probe,PHYDWATER,vel,Tsat,K_f,verb_hydrate)
@@ -20103,11 +20104,15 @@ end subroutine RatePhaseChange
           stop
          endif
 
-        else if (((VOFsrc.le.VOFTOL_MATERIAL).or.(VOFdst.le.VOFTOL_MATERIAL)).and. &
+        else if (((LSsrc.le.-dx(1)).or. &
+                  (LSdst.le.-dx(1))).and. &
                  (for_estdt.eq.1)) then
          vel=zero
         else
-         print *,"VOFsrc, VOFdst, or for_estdt invalid"
+         print *,"LSsrc, LSdst, or for_estdt invalid"
+         print *,"LSsrc ",LSsrc
+         print *,"LSdst ",LSdst
+         print *,"dx= ",dx
          stop
         endif
 

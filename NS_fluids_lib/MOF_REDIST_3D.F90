@@ -366,12 +366,16 @@ stop
        ! do nothing
       else
        print *,"ngrow_make_distance invalid fort_fd_normal"
+       print *,"ngrow_distance ",ngrow_distance
+       print *,"ngrow_make_distance ",ngrow_make_distance
        stop
       endif
       if (ngrow_make_distance.eq.ngrow_distance-1) then
        ! do nothing
       else
        print *,"ngrow_make_distance invalid fort_fd_normal"
+       print *,"ngrow_distance ",ngrow_distance
+       print *,"ngrow_make_distance ",ngrow_make_distance
        stop
       endif
 
@@ -603,6 +607,8 @@ stop
       endif
       if (ngrow_distance.ne.ngrow_make_distance+1) then
        print *,"ngrow_distance.ne.ngrow_make_distance+1 fort_fd_node_normal"
+       print *,"ngrow_distance ",ngrow_distance
+       print *,"ngrow_make_distance ",ngrow_make_distance
        stop
       endif
       n_normal_test=(SDIM+1)*(num_interfaces+num_materials)
@@ -744,12 +750,14 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      integer, parameter :: ngrow_tower=4
+
       integer, INTENT(in) :: stenlo(3)
       integer, INTENT(in) :: stenhi(3)
       real(amrex_real), INTENT(in), &
-              dimension(-ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance) :: vofsten
+              dimension(-ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower, &
+                -ngrow_tower:ngrow_tower) :: vofsten
       real(amrex_real), INTENT(out) :: localsum
       integer, INTENT(in) :: sign_change_dir
       integer, INTENT(out) :: num_sign_changes_plus
@@ -777,7 +785,7 @@ stop
          itop(dir)=ibase(dir)
         enddo
         itop(sign_change_dir)=itop(sign_change_dir)+1
-        if (itop(sign_change_dir).le.ngrow_distance) then
+        if (itop(sign_change_dir).le.ngrow_tower) then
          LS_base=vofsten(i1,j1,k1)-half
          LS_top=vofsten(itop(1),itop(2),itop(3))-half
          if ((LS_base.lt.zero).and. &
@@ -800,12 +808,17 @@ stop
           ! do nothing
          else
           print *,"LS_base or LS_top invalid"
+          print *,"LS_base ",LS_base
+          print *,"LS_top ",LS_top
+          print *,"vofsten ",vofsten
           stop
          endif
-        else if (itop(sign_change_dir).eq.ngrow_distance+1) then
+        else if (itop(sign_change_dir).eq.ngrow_tower+1) then
          ! do nothing
         else
          print *,"itop(sign_change_dir) invalid"
+         print *,"sign_change_dir=",sign_change_dir
+         print *,"itop=",itop
          stop
         endif
        else
@@ -1338,7 +1351,9 @@ stop
             HTstenlo(dir)=side
             HTstenhi(dir)=side
             sign_change_dir=0
-            call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
+            call simple_htfunc_sum( &
+              HTstenlo,HTstenhi, &
+              vofsten, &
               slopesum(dir,side),sign_change_dir, &
               num_sign_changes_plus, &
               num_sign_changes_minus)
@@ -1860,10 +1875,14 @@ stop
 
       if (ngrow_distance.lt.4) then
        print *,"ngrow_distance<4 error in levelstrip"
+       print *,"ngrow_distance ",ngrow_distance
+       print *,"ngrow_make_distance ",ngrow_make_distance
        stop
       endif
       if (ngrow_make_distance.ne.ngrow_distance-1) then
        print *,"ngrow_make_distance.ne.ngrow_distance-1  error in levelstrip"
+       print *,"ngrow_distance ",ngrow_distance
+       print *,"ngrow_make_distance ",ngrow_make_distance
        stop
       endif
 
@@ -1873,7 +1892,8 @@ stop
       if (ngrow_make_distance_accept.ge.3) then
        ! do nothing
       else
-       print *,"ngrow_make_distance_accept<3 in fort_levelstrip"
+       print *,"ngrow_make_distance_accept<3 in fort_levelstrip: ", &
+         ngrow_make_distance_accept
        stop
       endif
 
@@ -3296,7 +3316,6 @@ stop
        tid, &
        level, &
        finest_level, &
-       maskfab,DIMS(maskfab), &
        vofrecon,DIMS(vofrecon), &
        old_vof,DIMS(old_vof), &
        tilelo,tilehi, &
@@ -3317,12 +3336,9 @@ stop
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: DIMDEC(maskfab)
       integer, INTENT(in) :: DIMDEC(vofrecon)
       integer, INTENT(in) :: DIMDEC(old_vof)
 
-      real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),2)
-      real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
         vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
@@ -3345,7 +3361,6 @@ stop
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
-      integer mask1,mask2
       integer im
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       integer nmax
@@ -3372,8 +3387,6 @@ stop
        stop
       endif
 
-      maskfab_ptr=>maskfab
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
       vofrecon_ptr=>vofrecon
       call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1)
       old_vof_ptr=>old_vof
@@ -3397,14 +3410,6 @@ stop
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
-       ! mask1=1 at interior cells or fine/fine ghost cells
-       ! mask1=0 at coarse/fine ghost cells or outside domain.
-       ! mask2=1 at interior cells
-       mask1=NINT(maskfab(D_DECL(i,j,k),1))
-       mask2=NINT(maskfab(D_DECL(i,j,k),2))
-
-       if ((mask2.eq.1).or.(mask1.eq.0).or.(1.eq.1)) then
-
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
         do im=1,num_materials*ngeom_recon
@@ -3427,13 +3432,6 @@ stop
          old_vof(D_DECL(i,j,k),im)=mofdata(im)
         enddo
 
-       else if ((mask2.eq.0).and.(mask1.eq.1).and.(1.eq.0)) then
-        ! do nothing
-       else
-        print *,"mask invalid"
-        stop
-       endif
-
       enddo
       enddo
       enddo  !i,j,k 
@@ -3445,7 +3443,6 @@ stop
        tid, &
        level, &
        finest_level, &
-       maskfab,DIMS(maskfab), &
        old_ls,DIMS(old_ls), &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -3465,11 +3462,8 @@ stop
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: DIMDEC(maskfab)
       integer, INTENT(in) :: DIMDEC(old_ls)
 
-      real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),2)
-      real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
         old_ls(DIMV(old_ls),num_materials*(1+SDIM))
       real(amrex_real), pointer :: old_ls_ptr(D_DECL(:,:,:),:)
@@ -3492,7 +3486,6 @@ stop
       integer :: dir
       integer :: im_primary
 
-      integer mask1,mask2
       integer im
       integer im_opp
       integer im_crit
@@ -3504,6 +3497,8 @@ stop
 
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid in fort_build_old_ls"
+       print *,"level= ",level
+       print *,"finest_level= ",finest_level
        stop
       endif
 
@@ -3513,8 +3508,6 @@ stop
        stop
       endif
 
-      maskfab_ptr=>maskfab
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
       old_ls_ptr=>old_ls
       call checkbound_array(fablo,fabhi,old_ls_ptr,ngrow_distance,-1)
       
@@ -3525,20 +3518,14 @@ stop
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
-       ! mask1=1 at interior cells or fine/fine ghost cells
-       ! mask1=0 at coarse/fine ghost cells or outside domain.
-       ! mask2=1 at interior cells
-       mask1=NINT(maskfab(D_DECL(i,j,k),1))
-       mask2=NINT(maskfab(D_DECL(i,j,k),2))
-
-       if ((mask2.eq.1).or.(mask1.eq.0).or.(1.eq.1)) then
-
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
         do im=1,num_materials*(1+SDIM)
          ls_local(im)=old_ls(D_DECL(i,j,k),im)
         enddo
+
         call get_primary_material(dx,ls_local,im_primary)
+        ls_local(im_primary)=max(ls_local(im_primary),zero)
  
         do im=1,num_materials
          if (is_rigid(im).eq.1) then
@@ -3547,39 +3534,59 @@ stop
           !do nothing
          else if ((is_rigid(im).eq.0).and. &
                   (is_elastic(im).eq.0)) then
+
           if (im.eq.im_primary) then
-           ls_local(im)=max(ls_local(im),zero)
+
+           do im_opp=1,num_materials
+            if (im_opp.ne.im) then
+             ls_local(im_opp)=min(ls_local(im_opp),zero)
+            endif
+           enddo
 
            LS_max=zero
            im_crit=0
            do im_opp=1,num_materials
-            if (im_opp.ne.im) then
-             LS_test=min(ls_local(im_opp),zero)
-             if (im_crit.eq.0) then
-              im_crit=im_opp
-              LS_max=LS_test
-             else if ((im_crit.ge.1).and. &
-                      (im_crit.le.num_materials)) then
-              if (LS_max.lt.LS_test) then
-               LS_max=LS_test
+
+            if (is_rigid(im_opp).eq.0) then
+
+             if (im_opp.ne.im) then
+              LS_test=min(ls_local(im_opp),zero)
+              ls_local(im_opp)=LS_test
+
+              if (im_crit.eq.0) then
                im_crit=im_opp
-              else if (LS_max.ge.LS_test) then
-               !do nothing
+               LS_max=LS_test
+              else if ((im_crit.ge.1).and. &
+                       (im_crit.le.num_materials)) then
+               if (LS_max.lt.LS_test) then
+                LS_max=LS_test
+                im_crit=im_opp
+               else if (LS_max.ge.LS_test) then
+                !do nothing
+               else
+                print *,"LS_test invalid ",LS_test
+                stop
+               endif
               else
-               print *,"LS_test invalid ",LS_test
+               print *,"im_crit invalid ",im_crit
                stop
               endif
+             else if (im_opp.eq.im) then
+              !do nothing
              else
-              print *,"im_crit invalid"
+              print *,"im_opp or im invalid ",im,im_opp
               stop
              endif
-            else if (im_opp.eq.im) then
+
+            else if (is_rigid(im_opp).eq.1) then
              !do nothing
             else
-             print *,"im_opp or im invalid ",im,im_opp
+             print *,"is_rigid(im_opp) invalid ",im_opp,is_rigid(im_opp)
              stop
             endif
+
            enddo !im_opp=1,num_materials
+
            if (im_crit.eq.0) then
             !do nothing
            else if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
@@ -3596,13 +3603,16 @@ stop
              stop
             endif
            else
-            print *,"im_crit invalid"
+            print *,"im_crit invalid ",im_crit
             stop
            endif
+
           else if (im.ne.im_primary) then
+
            if (is_rigid(im_primary).eq.1) then
             !do nothing
            else if (is_rigid(im_primary).eq.0) then
+
             if (ls_local(im).gt.-ls_local(im_primary)) then
              ls_local(im)=min(-ls_local(im_primary),zero)
              do dir=1,SDIM
@@ -3615,13 +3625,16 @@ stop
              print *,"ls_local invalid ",ls_local
              stop
             endif
+
            else 
             print *,"is_rigid(im_primary) invalid ",im_primary, &
               is_rigid(im_primary)
             stop
-           endif      
+           endif
+ 
           else
-           print *,"im invalid"
+           print *,"im invalid ",im
+           print *,"im_primary ",im_primary
            stop
           endif
 
@@ -3634,13 +3647,6 @@ stop
         do im=1,num_materials*(1+SDIM)
          old_ls(D_DECL(i,j,k),im)=ls_local(im)
         enddo
-
-       else if ((mask2.eq.0).and.(mask1.eq.1).and.(1.eq.0)) then
-        ! do nothing
-       else
-        print *,"mask invalid"
-        stop
-       endif
 
       enddo
       enddo
