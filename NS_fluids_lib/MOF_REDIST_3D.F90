@@ -1188,7 +1188,7 @@ stop
             else if (local_mag.eq.zero) then
              local_status=0
             else
-             print *,"local_mag invalid"
+             print *,"local_mag invalid ",local_mag
              stop
             endif
 
