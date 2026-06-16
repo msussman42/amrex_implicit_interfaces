@@ -1520,8 +1520,8 @@ stop
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xtarget(SDIM)
       integer, INTENT(in) :: lo(SDIM),hi(SDIM)
-       ! first num_materials+num_interfaces components are curvatures
-       ! second num_materials+num_interfaces components are status (0=bad 1=good)
+      !first num_materials+num_interfaces components are curvatures
+      !second num_materials+num_interfaces components are status (0=bad 1=good)
       real(amrex_real), pointer, INTENT(in) :: data_in(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out) :: CURV_OUT
 
@@ -8507,8 +8507,8 @@ stop
                    dx,xlo, &
                    xI, &
                    fablo,fabhi, &
-                   curvfab_ptr, &
-                   CURV_OUT_I)
+                   curvfab_ptr, & !intent(in)
+                   CURV_OUT_I)    !intent(out)
 
                   use_tsatfab=0
 
