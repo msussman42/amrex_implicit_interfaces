@@ -83,9 +83,7 @@ ns.change_max     = 1.01
 ns.visc_coef      = 7.25     # Prandtl=CPL muL/kL
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     # Bo/We=0.025/5E-5=500.0
-# even ice/water interface should have surface tension in order
-# to prescribe contact angle .
-ns.tension        = 1.0  # 12 - liquid/solid
+ns.tension        = 0.0  # 12 - liquid/solid
 # material 1=liquid 2=ice 
 # default is 4.1855e+7
 ns.stiffCP = 1.0 1.0
@@ -141,6 +139,7 @@ ns.tempconst=272.0 273.0  # water is supercooled, ice is not.
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0
+# domain size is 2x2
 ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0
