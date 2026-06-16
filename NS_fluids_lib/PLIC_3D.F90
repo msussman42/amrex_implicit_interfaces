@@ -139,8 +139,6 @@ stop
       real(amrex_real) mofsten_array(D_DECL(-1:1,-1:1,-1:1), &
         num_materials*ngeom_recon)
       integer istenlo(3),istenhi(3)
-      integer stencil_primary_count(num_materials)
-      integer fluid_stencil_count
 
       real(amrex_real) multi_centroidA(num_materials,SDIM)
 
@@ -168,7 +166,6 @@ stop
       real(amrex_real) xstencil_point(SDIM)
 
       real(amrex_real) xstenbox(-1:1,SDIM)
-      integer num_fluid_materials_in_cell
       real(amrex_real) volume_super
       real(amrex_real) volsten
       real(amrex_real) volmat
@@ -187,7 +184,6 @@ stop
 
       real(amrex_real) vfrac_fluid_sum
       real(amrex_real) vfrac_solid_sum
-      real(amrex_real) vfrac_elastic_sum
       real(amrex_real) vfrac_local(num_materials)
 
       real(amrex_real) :: xtet(SDIM+1,SDIM)
@@ -444,7 +440,6 @@ stop
 
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
-       vfrac_elastic_sum=zero
 
        do im=1,num_materials
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -454,7 +449,7 @@ stop
         if (is_rigid(im).eq.1) then
          vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
         else if (is_elastic(im).eq.1) then
-         vfrac_elastic_sum=vfrac_elastic_sum+voflist_center(im)
+         !do nothing
         else if ((is_rigid(im).eq.0).and. &
                  (is_elastic(im).eq.0)) then
          vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
@@ -478,6 +473,7 @@ stop
         !do nothing
        else
         print *,"level invalid ",level
+        print *,"finest_level= ",finest_level
         stop
        endif
 
@@ -510,37 +506,19 @@ stop
        enddo
        enddo  ! i1,j1,k1  = -1,1
 
-       num_fluid_materials_in_cell=0
-       do im=1,num_materials
-        if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
-         if (voflist_center(im).gt.VOFTOL_MATERIAL) then
-          num_fluid_materials_in_cell=num_fluid_materials_in_cell+1
-         endif
-        else if ((is_rigid(im).eq.1).or. &
-                 (is_elastic(im).eq.1)) then
-         ! do nothing
-        else
-         print *,"is_rigid invalid PLIC_3D.F90: ",im,is_rigid(im)
-         print *,"or is_elastic invalid PLIC_3D.F90: ",im,is_elastic(im)
-         stop
-        endif
-       enddo ! im=1..num_materials
- 
        call SUB_clamped_LS(xstencil_point,time,LS_clamped, &
          VEL_clamped,temperature_clamped,prescribed_flag,dx)
 
        call SUB_verification_flag(verification_flag)
 
        fluid_obscured=0
-       if ((vfrac_solid_sum.ge.half).or. &
-           (vfrac_elastic_sum.ge.half)) then
+
+       if (vfrac_solid_sum.ge.half) then
         fluid_obscured=1
-       else if ((vfrac_solid_sum.le.half).and. &
-                (vfrac_elastic_sum.le.half)) then
+       else if (vfrac_solid_sum.le.half) then
         !do nothing
        else
         print *,"vfrac_solid_sum invalid:",vfrac_solid_sum
-        print *,"or vfrac_elastic_sum invalid:",vfrac_elastic_sum
         stop
        endif
 
@@ -573,18 +551,7 @@ stop
        else if ((level.ge.finest_level).and. &
                  (fluid_obscured.eq.0)) then
 
-        if (num_fluid_materials_in_cell.eq.1) then
-         continuous_mof_parm=STANDARD_MOF
-        else if (num_fluid_materials_in_cell.eq.2) then
-         continuous_mof_parm=continuous_mof
-        else if ((num_fluid_materials_in_cell.ge.3).and. &
-                 (num_fluid_materials_in_cell.le.num_materials)) then
-         continuous_mof_parm=continuous_mof
-        else
-         print *,"num_fluid_materials_in_cell invalid: ", &
-          num_fluid_materials_in_cell
-         stop
-        endif
+        continuous_mof_parm=continuous_mof
 
        else
         print *,"level or fluid_obscured invalid"
@@ -598,10 +565,6 @@ stop
         ! center cell for volume constraint.
        if (continuous_mof_parm.eq.CMOF_X) then
  
-        do im=1,num_materials
-         stencil_primary_count(im)=0
-        enddo
-
         do k1=klostenLS,khistenLS
         do j1=-1,1
         do i1=-1,1
@@ -643,14 +606,6 @@ stop
            mofsten, &
            SDIM)
 
-         do im=1,num_materials
-          vofcomprecon=(im-1)*ngeom_recon+1
-          vfrac_local(im)=mofsten(vofcomprecon)
-         enddo ! im=1..num_materials
-
-         call get_primary_material_VFRAC(vfrac_local,im)
-         stencil_primary_count(im)=stencil_primary_count(im)+1
-
          do im=1,num_materials*ngeom_recon
           mofsten_array(D_DECL(i1,j1,k1),im)=mofsten(im)
          enddo
@@ -659,141 +614,105 @@ stop
         enddo
         enddo ! i1,j1,k1
 
-        fluid_stencil_count=0
+        volume_super=zero ! volume of the extended region
+
+        do dir=1,SDIM
+         cen_super(dir)=zero
+        enddo
 
         do im=1,num_materials
-         if ((is_rigid(im).eq.1).or. &
-             (is_elastic(im).eq.1)) then
-          !do nothing
-         else if ((is_rigid(im).eq.0).and. &
-                  (is_elastic(im).eq.0)) then
 
-          if (stencil_primary_count(im).ge.1) then
-           fluid_stencil_count=fluid_stencil_count+1
-          else if (stencil_primary_count(im).eq.0) then
-           !do nothing
-          else
-           print *,"stencil_primary_count invalid"
-           stop
-          endif 
+         vofcomprecon=(im-1)*ngeom_recon+1
 
-         else
-          print *,"is_rigid(im) invalid ",im,is_rigid(im)
-          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
-          stop
-         endif
+         do dir=0,SDIM
+          mofdata_extended(vofcomprecon+dir)=zero
+         enddo
+
+         vof_extended(im)=zero
+
         enddo ! im=1..num_materials
 
+        istenlo(3)=0
+        istenhi(3)=0
+        do dir=1,SDIM
+         istenlo(dir)=-1
+         istenhi(dir)=1
+        enddo
+        
+        ! i1,j1,k1=-1..1
+        do k1=istenlo(3),istenhi(3)
+        do j1=istenlo(2),istenhi(2)
+        do i1=istenlo(1),istenhi(1)
 
-        if ((fluid_stencil_count.ge.2).and. &
-            (fluid_stencil_count.le.num_materials)) then
-         
-         volume_super=zero ! volume of the extended region
+         call CISBOX( &
+           xstenbox, &
+           nhalfbox_sten, & ! =1
+           xlo,dx,i+i1,j+j1,k+k1, &
+           bfact,level, &
+           volsten,censten,SDIM)
 
-         do dir=1,SDIM
-          cen_super(dir)=zero
+         do im=1,num_materials*ngeom_recon
+          mofsten(im)=mofsten_array(D_DECL(i1,j1,k1),im)
          enddo
 
          do im=1,num_materials
-
           vofcomprecon=(im-1)*ngeom_recon+1
+          vfrac_local(im)=mofsten(vofcomprecon)
+          volmat=volsten*vfrac_local(im)
+          do dir=1,SDIM
+           mofdata_extended(vofcomprecon+dir)= &
+               mofdata_extended(vofcomprecon+dir)+ &
+               volmat*(censten(dir)+mofsten(vofcomprecon+dir))
+          enddo ! dir
+          mofdata_extended(vofcomprecon)= &
+            mofdata_extended(vofcomprecon)+volmat
+          vof_extended(im)=vof_extended(im)+volmat
+         enddo ! im=1..num_materials
 
+         volume_super=volume_super+volsten
+         do dir=1,SDIM
+          cen_super(dir)=cen_super(dir)+volsten*censten(dir)
+         enddo
+
+        enddo
+        enddo
+        enddo ! i1,j1,k1
+
+        if (volume_super.gt.zero) then
+         ! do nothing
+        else
+         print *,"volume_super invalid: ",volume_super
+         stop
+        endif
+
+        do dir=1,SDIM
+         cen_super(dir)=cen_super(dir)/volume_super
+        enddo
+
+        do im=1,num_materials
+         vofcomprecon=(im-1)*ngeom_recon+1
+
+         if (vof_extended(im).gt.zero) then
+          do dir=1,SDIM
+           mofdata_extended(vofcomprecon+dir)= &
+             mofdata_extended(vofcomprecon+dir)/ &
+             vof_extended(im)- &
+             cen_super(dir)
+          enddo
+          vof_extended(im)=vof_extended(im)/volume_super
+          mofdata_extended(vofcomprecon)= &
+             mofdata_extended(vofcomprecon)/volume_super
+         else if (vof_extended(im).eq.zero) then
           do dir=0,SDIM
            mofdata_extended(vofcomprecon+dir)=zero
           enddo
-
           vof_extended(im)=zero
-
-         enddo ! im=1..num_materials
-
-         istenlo(3)=0
-         istenhi(3)=0
-         do dir=1,SDIM
-          istenlo(dir)=-1
-          istenhi(dir)=1
-         enddo
-         
-         ! i1,j1,k1=-1..1
-         do k1=istenlo(3),istenhi(3)
-         do j1=istenlo(2),istenhi(2)
-         do i1=istenlo(1),istenhi(1)
-
-          call CISBOX( &
-            xstenbox, &
-            nhalfbox_sten, & ! =1
-            xlo,dx,i+i1,j+j1,k+k1, &
-            bfact,level, &
-            volsten,censten,SDIM)
-
-          do im=1,num_materials*ngeom_recon
-           mofsten(im)=mofsten_array(D_DECL(i1,j1,k1),im)
-          enddo
-
-          do im=1,num_materials
-           vofcomprecon=(im-1)*ngeom_recon+1
-           vfrac_local(im)=mofsten(vofcomprecon)
-           volmat=volsten*vfrac_local(im)
-           do dir=1,SDIM
-            mofdata_extended(vofcomprecon+dir)= &
-                mofdata_extended(vofcomprecon+dir)+ &
-                volmat*(censten(dir)+mofsten(vofcomprecon+dir))
-           enddo ! dir
-           mofdata_extended(vofcomprecon)= &
-             mofdata_extended(vofcomprecon)+volmat
-           vof_extended(im)=vof_extended(im)+volmat
-          enddo ! im=1..num_materials
-
-          volume_super=volume_super+volsten
-          do dir=1,SDIM
-           cen_super(dir)=cen_super(dir)+volsten*censten(dir)
-          enddo
-
-         enddo
-         enddo
-         enddo ! i1,j1,k1
-
-         if (volume_super.gt.zero) then
-          ! do nothing
          else
-          print *,"volume_super invalid: ",volume_super
+          print *,"vof_extended invalid ",vof_extended
           stop
          endif
 
-         do dir=1,SDIM
-          cen_super(dir)=cen_super(dir)/volume_super
-         enddo
-
-         do im=1,num_materials
-          vofcomprecon=(im-1)*ngeom_recon+1
-
-          if (vof_extended(im).gt.zero) then
-           do dir=1,SDIM
-            mofdata_extended(vofcomprecon+dir)= &
-              mofdata_extended(vofcomprecon+dir)/ &
-              vof_extended(im)- &
-              cen_super(dir)
-           enddo
-           vof_extended(im)=vof_extended(im)/volume_super
-           mofdata_extended(vofcomprecon)= &
-              mofdata_extended(vofcomprecon)/volume_super
-          else if (vof_extended(im).eq.zero) then
-           do dir=0,SDIM
-            mofdata_extended(vofcomprecon+dir)=zero
-           enddo
-           vof_extended(im)=zero
-          else
-           print *,"vof_extended invalid ",vof_extended
-           stop
-          endif
-
-         enddo ! im=1..num_materials
-        else if ((fluid_stencil_count.eq.0).or. &
-                 (fluid_stencil_count.eq.1)) then
-         continuous_mof_parm=STANDARD_MOF
-        else
-         print *,"fluid_stencil_count invalid"
-         stop
-        endif
+        enddo ! im=1..num_materials
 
        else if (continuous_mof_parm.eq.STANDARD_MOF) then
         ! do nothing

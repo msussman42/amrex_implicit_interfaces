@@ -7287,6 +7287,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         im_ice_materialdist=2
         if (is_ice(im_ice_materialdist).eq.1) then
+         dist(im_ice_materialdist)=-dist(1) 
          dist(1)=99999.0
         else if (is_ice(im_ice_materialdist).eq.0) then
          !do nothing
