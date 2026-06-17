@@ -16535,7 +16535,7 @@ contains
       else if (vfrac_sum_local(FLUID_LAYER_INDEX).le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
        print *,"put breakpoint here to see the caller"
-       print *,"break MOF.F90:16201 (compile -g option)"
+       print *,"break MOF.F90:16538 (compile -g option)"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"vfrac_sum_local= ",vfrac_sum_local

@@ -3581,8 +3581,8 @@ stop
        nodevel,DIMS(nodevel), &
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
-       LSold,DIMS(LSold), &
-       LSold_alt,DIMS(LSold_alt), &
+       LSold,DIMS(LSold), & !fluids tessellate
+       LSold_alt,DIMS(LSold_alt), & !elastics and fluids tessellate
          ! in fort_ratemasschange
          ! LSnew=LSnew - dt USTEFAN dot n, USTEFAN=|U|n  
          ! LSnew=LSnew - dt * |U|
