@@ -15770,10 +15770,8 @@ NavierStokes::level_phase_change_convertALL() {
 
 } // end subroutine level_phase_change_convertALL
 
-// 1. initialize node velocity from BURNING_VELOCITY_MF
-// 2. unsplit advection of materials changing phase
-// 3. update volume fractions, jump strength, temperature,
-//    species
+//this routine is called by:
+//NavierStokes::level_phase_change_convertALL()
 void
 NavierStokes::level_phase_change_convert(
   int im_outer,int im_opp_outer,
@@ -16012,6 +16010,13 @@ NavierStokes::level_phase_change_convert(
  } else
   amrex::Error("i_phase_change invalid");
   
+ int slope_index=SLOPE_RECON_MF;
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+  slope_index=ELASTIC_FLUID_MOMENT_MF;
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
 
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
 
@@ -16059,14 +16064,6 @@ NavierStokes::level_phase_change_convert(
    FArrayBox& snewfab=S_new[mfi];
 
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
-
-   int slope_index=SLOPE_RECON_MF;
-   if (material_extend_velocity_flag==0) {
-    //do nothing
-   } else if (material_extend_velocity_flag>0) {
-    slope_index=ELASTIC_FLUID_MOMENT_MF;
-   } else
-    amrex::Error("material_extend_velocity_flag invalid");
 
    FArrayBox& recon_alt_fab=(*localMF[slope_index])[mfi]; 
    if (recon_alt_fab.nComp()==num_materials*ngeom_recon) {
@@ -16146,6 +16143,100 @@ NavierStokes::level_phase_change_convert(
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_CONVERTMATERIAL,"level_phase_change_convert");
+
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=(*localMF[HOLD_LS_DATA_MF])[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=0;
+  int ncomp=num_materials*(1+AMREX_SPACEDIM);
+  int dirplot=-1;
+  int id=0;
+  std::cout << "HOLD_LS_DATA_MF \n";
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
+
+
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=(*localMF[HOLD_LS_DATA_ALT_MF])[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=0;
+  int ncomp=num_materials*(1+AMREX_SPACEDIM);
+  int dirplot=-1;
+  int id=0;
+  std::cout << "HOLD_LS_DATA_ALT_MF \n";
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
+
+
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=(*localMF[SLOPE_RECON_MF])[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=0;
+  int ncomp=num_materials*ngeom_recon;
+  int dirplot=-1;
+  int id=0;
+  std::cout << "SLOPE_RECON_MF \n";
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=(*localMF[slope_index])[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=0;
+  int ncomp=num_materials*ngeom_recon;
+  int dirplot=-1;
+  int id=0;
+  std::cout << "slope_index \n";
+  std::cout << "ELASTIC_FLUID_MOMENT_MF= " << ELASTIC_FLUID_MOMENT_MF << '\n';
+  std::cout << "SLOPE_RECON_MF= " << SLOPE_RECON_MF << '\n';
+  std::cout << "slope_index= " << slope_index << '\n';
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
+
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=S_new[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=STATECOMP_MOF;
+  int ncomp=num_materials*ngeom_raw;
+  int dirplot=-1;
+  int id=0;
+  std::cout << "S_new STATECOMP_MOF  \n";
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<2*num_materials;im++) {
