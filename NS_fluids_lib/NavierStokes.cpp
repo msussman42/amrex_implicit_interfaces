@@ -16020,6 +16020,24 @@ NavierStokes::level_phase_change_convert(
 
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
 
+ if (1==0) {
+  int gridno=0;
+  const Box& fabgrid = grids[gridno];
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+  int interior_only=0;
+  FArrayBox& plotfab=S_new[0];
+  const Real* dxplot = geom.CellSize();
+  int scomp=STATECOMP_MOF;
+  int ncomp=num_materials*ngeom_raw;
+  int dirplot=-1;
+  int id=0;
+  std::cout << "S_new (before) STATECOMP_MOF  \n";
+  tecplot_debug(plotfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+      scomp,ncomp,interior_only);
+ }
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(S_new.boxArray().d_numPts());

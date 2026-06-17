@@ -3935,23 +3935,32 @@ stop
        print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance invalid"
+       print *,"ngrow_make_distance=",ngrow_make_distance
+       print *,"ngrow_distance=",ngrow_distance
+       stop
+      endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid in convert_material"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid ",num_state_base
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small ",bfact
        stop
       endif
       if (min_stefan_velocity_for_dt.ge.zero) then
        ! do nothing
       else
-       print *,"min_stefan_velocity_for_dt invalid"
+       print *,"min_stefan_velocity_for_dt invalid ", &
+         min_stefan_velocity_for_dt
        stop
       endif
 
@@ -3960,14 +3969,14 @@ stop
            (im_outer.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_outer invalid"
+        print *,"im_outer invalid ",im_outer
         stop
        endif
        if ((im_opp_outer.ge.1).and. &
            (im_opp_outer.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_opp_outer invalid"
+        print *,"im_opp_outer invalid ",im_opp_outer
         stop
        endif
       else
@@ -4002,7 +4011,7 @@ stop
        stop
       endif
       if (nstate.ne.STATE_NCOMP) then
-       print *,"nstate invalid"
+       print *,"nstate invalid ",nstate
        stop
       endif
       if (dt.gt.zero) then
@@ -4079,7 +4088,7 @@ stop
        klosten=0
        khisten=0
       else
-       print *,"dimension bust"
+       print *,"dimension bust ",SDIM
        stop
       endif
 
@@ -4160,7 +4169,7 @@ stop
               im_source=im_opp
               im_dest=im
              else
-              print *,"ireverse invalid"
+              print *,"ireverse invalid ",ireverse
               stop
              endif
 
@@ -4734,7 +4743,7 @@ stop
            else if (Tsat_flag.eq.0) then
              ! do nothing
            else
-             print *,"Tsat_flag invalid"
+             print *,"Tsat_flag invalid ",Tsat_flag
              stop
            endif
 
@@ -4892,6 +4901,8 @@ stop
               endif
              else
               print *,"im_primary_new or im_primary_old invalid"
+              print *,"im_primary_new ",im_primary_new
+              print *,"im_primary_old ",im_primary_old
               stop
              endif
 
@@ -4936,16 +4947,16 @@ stop
                stop
               endif
              else
-              print *,"im_primary_new invalid"
+              print *,"im_primary_new invalid ",im_primary_new
               stop
              endif
             else
-             print *,"im_primary_old invalid"
+             print *,"im_primary_old invalid ",im_primary_old
              stop
             endif
 
            else
-            print *,"away_from_interface invalid"
+            print *,"away_from_interface invalid ",away_from_interface
             stop
            endif
 
@@ -6321,38 +6332,29 @@ stop
               stop
              endif
 
-             do iprobe=1,2
-
-              if (iprobe.eq.1) then ! source
-               im_probe=im_source
-              else if (iprobe.eq.2) then ! dest
-               im_probe=im_dest
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
               else
-               print *,"iprobe invalid"
+               print *,"expecting is_elastic(im_source)==0"
                stop
               endif
-              if ((is_elastic(im_source).eq.1).and. &
-                  (im_probe.eq.im_dest)) then
-               if (is_elastic(im_dest).eq.0) then
-                !do nothing
-               else 
-                print *,"expecting is_elastic(im_dest)=0"
-                stop
-               endif
-              else if ((is_elastic(im_dest).eq.1).and. &
-                       (im_probe.eq.im_source)) then
-               if (is_elastic(im_source).eq.0) then
-                !do nothing
-               else 
-                print *,"expecting is_elastic(im_source)=0"
-                stop
-               endif
-              else
-               snew(D_DECL(i,j,k),STATECOMP_MOF+(im_probe-1)*ngeom_raw+1)= &
-                      newvfrac(im_probe)
-              endif
+             else
+              snew(D_DECL(i,j,k),STATECOMP_MOF+(im_source-1)*ngeom_raw+1)= &
+                   newvfrac(im_source)
+             endif
 
-             enddo ! iprobe=1,2
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              snew(D_DECL(i,j,k),STATECOMP_MOF+(im_dest-1)*ngeom_raw+1)= &
+                   newvfrac(im_dest)
+             endif
 
              do u_im=1,num_materials*ngeom_recon
               mofdata(u_im)=zero
@@ -6369,6 +6371,7 @@ stop
 
              ! sum of F_fluid=1
              ! sum of F_rigid<=1
+             tessellate_source=TESSELLATE_FLUIDS
              call make_vfrac_sum_ok_base( &
                u_xsten_updatecell,nhalf, &
                bfact,dx, &
@@ -6431,7 +6434,8 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                                    room_temperature,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -6689,6 +6693,7 @@ stop
       endif
       if (ngrow_make_distance.ne.ngrow-1) then
        print *,"expecting ngrow_make_distance==ngrow-1 fort_extend_burning_vel"
+       print *,"ngrow_make_distance=",ngrow_make_distance
        stop
       endif
       if (nburning.eq.num_interfaces*(ncomp_per+1)) then

@@ -23722,7 +23722,9 @@ contains
         xsten0,nhalf0, &
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISELASTIC|IGNORE_ISRIGID
-        mofdata,mofdatavalid,sdim)
+        mofdata, &
+        mofdatavalid, &
+        sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -23817,7 +23819,7 @@ contains
             im_crit=im
            endif
           else
-           print *,"vfrac_checked invalid"
+           print *,"vfrac_checked invalid ",vfrac_checked
            stop
           endif
          else if ((is_rigid_local(im).eq.1).or. &
