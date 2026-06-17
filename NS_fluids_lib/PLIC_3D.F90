@@ -72,8 +72,6 @@ stop
         total_calls, &
         total_iterations, &
         total_errors, &
-        ngrow_slope_recon, &
-        ngrow_recon, &
         continuous_mof) &
       bind(c,name='fort_sloperecon')
 
@@ -96,8 +94,6 @@ stop
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: ngrow_slope_recon
-      integer, INTENT(in) :: ngrow_recon
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(masknbr)
       integer, INTENT(in) :: DIMDEC(snew)
@@ -136,8 +132,6 @@ stop
       real(amrex_real) vof_extended(num_materials)
 
       real(amrex_real) mofsten(num_materials*ngeom_recon)
-      real(amrex_real) mofsten_array(D_DECL(-1:1,-1:1,-1:1), &
-        num_materials*ngeom_recon)
       integer istenlo(3),istenhi(3)
 
       real(amrex_real) multi_centroidA(num_materials,SDIM)
@@ -158,7 +152,6 @@ stop
 
       integer continuous_mof_parm
      
-      integer klostenLS,khistenLS
       integer, parameter :: nhalf=3
 
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -260,27 +253,10 @@ stop
        stop
       endif
 
-      if (ngrow_slope_recon.ne.1) then
-       print *,"ngrow_slope_recon invalid in fort_sloperecon: ", &
-          ngrow_slope_recon
-       stop
-      endif
-
       if (continuous_mof.eq.STANDARD_MOF) then
-       if (ngrow_recon.ge.ngrow_slope_recon) then
-        !do nothing
-       else
-        print *,"ngrow_recon invalid ",ngrow_recon
-        stop
-       endif
+       !do nothing
       else if (continuous_mof.eq.CMOF_X) then !CMOF
-       if (ngrow_recon.ge.ngrow_slope_recon+1) then
-        !do nothing
-       else
-        print *,"ngrow_recon invalid ",ngrow_recon
-        print *,"ngrow_slope_recon ",ngrow_slope_recon
-        stop
-       endif
+       !do nothing
       else
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
        stop
@@ -320,18 +296,25 @@ stop
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,vof_ptr,ngrow_recon,-1)
+      call checkbound_array(fablo,fabhi,vof_ptr,2,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,slopes_ptr,ngrow_slope_recon,-1)
+      call checkbound_array(fablo,fabhi,slopes_ptr,1,-1)
 
       call get_dxmax(dx,bfact,dxmax)
+
+      istenlo(3)=0
+      istenhi(3)=0
+      do dir=1,SDIM
+       istenlo(dir)=-1
+       istenhi(dir)=1
+      enddo
 
       call growntilebox(tilelo,tilehi, &
         fablo,fabhi,igridlo,igridhi,0)
 
-      do k = igridlo(3),igridhi(3)
-      do j = igridlo(2),igridhi(2)
-      do i = igridlo(1),igridhi(1)
+      do k=igridlo(3),igridhi(3)
+      do j=igridlo(2),igridhi(2)
+      do i=igridlo(1),igridhi(1)
 
         ! we must visit all of the covered cells too since
         ! the AMR error indicator is needed on the coarse levels.
@@ -383,17 +366,6 @@ stop
         xsten_extended(2,dir)=xsten_extended(1,dir)+half*dx_extended(dir)
         xsten_extended(-2,dir)=xsten_extended(-1,dir)-half*dx_extended(dir)
        enddo !dir=1,sdim
-
-       if (SDIM.eq.3) then
-        klostenLS=-1
-        khistenLS=1
-       else if (SDIM.eq.2) then
-        klostenLS=0
-        khistenLS=0
-       else
-        print *,"dimension bust"
-        stop
-       endif
 
        do im=1,num_materials
 
@@ -477,9 +449,10 @@ stop
         stop
        endif
 
-       do k1=klostenLS,khistenLS
-       do j1=-1,1
-       do i1=-1,1
+       ! i1,j1,k1=-1..1
+       do k1=istenlo(3),istenhi(3)
+       do j1=istenlo(2),istenhi(2)
+       do i1=istenlo(1),istenhi(1)
         do im=1,num_materials
          LS_stencil(D_DECL(i1,j1,k1),im)= &
            LS(D_DECL(i+i1,j+j1,k+k1),im)
@@ -564,55 +537,6 @@ stop
         ! supercell for centroid cost function.
         ! center cell for volume constraint.
        if (continuous_mof_parm.eq.CMOF_X) then
- 
-        do k1=klostenLS,khistenLS
-        do j1=-1,1
-        do i1=-1,1
-
-         call CISBOX( &
-           xstenbox, &
-           nhalfbox_sten, & ! =1
-           xlo,dx,i+i1,j+j1,k+k1, &
-           bfact,level, &
-           volsten,censten,SDIM)
-
-         do im=1,num_materials
-          vofcomprecon=(im-1)*ngeom_recon+1
-          vofcompraw=(im-1)*ngeom_raw+1
-          do dir=0,SDIM
-           mofsten(vofcomprecon+dir)= &
-            vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
-          enddo
-
-          !vof,cenref,order,slope,intercept
-          do dir=1,SDIM
-           mofsten(vofcomprecon+SDIM+1+dir)=zero
-          enddo
-
-          mofsten(vofcomprecon+SDIM+1)=zero !order
-
-          !initialize the intercept to be zero
-          mofsten(vofcomprecon+ngeom_recon-1)=zero
-
-         enddo  ! im=1..num_materials
-
-          ! sum of F_fluid=1
-          ! sum of F_rigid<=1
-         call make_vfrac_sum_ok_base( &
-           xstenbox, &
-           nhalfbox_sten, & ! =1
-           bfact,dx, &
-           tessellate, & ! =TESSELLATE_FLUIDS
-           mofsten, &
-           SDIM)
-
-         do im=1,num_materials*ngeom_recon
-          mofsten_array(D_DECL(i1,j1,k1),im)=mofsten(im)
-         enddo
-
-        enddo
-        enddo
-        enddo ! i1,j1,k1
 
         volume_super=zero ! volume of the extended region
 
@@ -632,13 +556,6 @@ stop
 
         enddo ! im=1..num_materials
 
-        istenlo(3)=0
-        istenhi(3)=0
-        do dir=1,SDIM
-         istenlo(dir)=-1
-         istenhi(dir)=1
-        enddo
-        
         ! i1,j1,k1=-1..1
         do k1=istenlo(3),istenhi(3)
         do j1=istenlo(2),istenhi(2)
@@ -651,9 +568,37 @@ stop
            bfact,level, &
            volsten,censten,SDIM)
 
-         do im=1,num_materials*ngeom_recon
-          mofsten(im)=mofsten_array(D_DECL(i1,j1,k1),im)
-         enddo
+         do im=1,num_materials
+          vofcomprecon=(im-1)*ngeom_recon+1
+          vofcompraw=(im-1)*ngeom_raw+1
+          do dir=0,SDIM
+           mofsten(vofcomprecon+dir)= &
+            vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
+          enddo
+
+          !vof,cenref,order,slope,intercept
+          !zap out: slope
+          do dir=1,SDIM
+           mofsten(vofcomprecon+SDIM+1+dir)=zero
+          enddo
+
+          !zap out: order
+          mofsten(vofcomprecon+SDIM+1)=zero
+
+          !initialize the intercept to be zero
+          mofsten(vofcomprecon+ngeom_recon-1)=zero
+
+         enddo  ! im=1..num_materials
+
+          ! sum of F_fluid=1
+          ! sum of F_rigid<=1
+         call make_vfrac_sum_ok_base( &
+           xstenbox, &
+           nhalfbox_sten, & ! =1
+           bfact,dx, &
+           tessellate, & ! =TESSELLATE_FLUIDS
+           mofsten, &
+           SDIM)
 
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
@@ -918,9 +863,10 @@ stop
 
         if ((level.ge.0).and.(level.le.finest_level)) then
 
-         do k1=klostenLS,khistenLS
-         do j1=-1,1
-         do i1=-1,1
+         ! i1,j1,k1=-1..1
+         do k1=istenlo(3),istenhi(3)
+         do j1=istenlo(2),istenhi(2)
+         do i1=istenlo(1),istenhi(1)
           local_mask=NINT(masknbr(D_DECL(i+i1,j+j1,k+k1),1))
           if (local_mask.eq.1) then ! fine-fine ghost in domain or interior.
            ! do nothing
