@@ -36,8 +36,6 @@ extern "C"
         int* total_calls,
         int* total_iterations,
         Real* total_errors,
-        int* ngrow_slope_recon, 
-        int* ngrow_recon, 
         int* continuous_mof);
 
 }
