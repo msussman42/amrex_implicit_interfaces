@@ -10081,6 +10081,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
   FArrayBox& volumefab=(*localMF[VOLUME_MF])[mfi];
 
    // tessellating volume fractions.
+   // TESSELLATE_ALL_RASTER
   FArrayBox& voffab=(*localMF[CELL_VOF_MF])[mfi];
   FArrayBox& csoundfab=(*localMF[CELL_SOUND_MF])[mfi];
   FArrayBox& mdotfab=(*localMF[DIFFUSIONRHS_MF])[mfi];
@@ -10110,7 +10111,8 @@ void NavierStokes::init_advective_pressure(int project_option) {
    ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
    csoundfab.dataPtr(),
    ARLIM(csoundfab.loVect()),ARLIM(csoundfab.hiVect()),
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+   voffab.dataPtr(), //TESSELLATE_ALL_RASTER
+   ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),

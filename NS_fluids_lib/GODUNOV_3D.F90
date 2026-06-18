@@ -23308,6 +23308,8 @@ stop
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
+      ! fort_build_masksem is called from:
+      ! NavierStokes2.cpp: build_masksem(int mask_sweep)
       subroutine fort_build_masksem( &
        dx, &
        spectral_cells_level, &
@@ -23395,17 +23397,19 @@ stop
       if (cur_time.ge.zero) then
        ! do nothing
       else
-       print *,"cur_time invalid"
+       print *,"cur_time invalid ",cur_time
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid build masksem"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
        stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid43"
+       print *,"bfact invalid43 ",bfact
        stop
       endif
       if ((bfact_fine.gt.bfact).or.(bfact_fine.lt.1)) then
@@ -23593,6 +23597,7 @@ stop
           print *,"vfrac_sum_solid=",vfrac_sum_solid
           print *,"vfrac_sum_elastic=",vfrac_sum_elastic
           print *,"vfrac_sum_fluid=",vfrac_sum_fluid
+          print *,"vfractest= ",vfractest
           print *,"i,j,k ",i,j,k
           print *,"iofs,jofs,kofs ",iofs,jofs,kofs
           print *,"level,finest_level ",level,finest_level

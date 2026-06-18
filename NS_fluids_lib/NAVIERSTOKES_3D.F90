@@ -1421,7 +1421,7 @@ END SUBROUTINE SIMP
          else if (is_rigid(im).eq.0) then
           vfrac_fluid_sum=vfrac_fluid_sum+vfrac(im)
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
           stop
          endif
          if (imcrit.eq.0) then
@@ -1542,7 +1542,7 @@ END SUBROUTINE SIMP
            one_over_c2(im)=zero
 
           else
-           print *,"is_rigid bust"
+           print *,"is_rigid bust ",im,is_rigid(im)
            stop
           endif
 
@@ -1605,14 +1605,14 @@ END SUBROUTINE SIMP
               stop
              endif
             else
-             print *,"is_rigid(im) invalid: ",is_rigid(im)
+             print *,"is_rigid(im) invalid: ",im,is_rigid(im)
              stop
             endif
 
            enddo ! im=1,num_materials
 
           else
-           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
+           print *,"is_rigid(imcrit) invalid: ",imcrit,is_rigid(imcrit)
            stop
           endif
 
@@ -1640,14 +1640,14 @@ END SUBROUTINE SIMP
           if (is_rigid(imcrit).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
+           print *,"is_rigid(imcrit) invalid: ",imcrit,is_rigid(imcrit)
            stop
           endif
 
           if (is_rigid(im_weight).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im_weight).ne.0: ",is_rigid(im_weight)
+           print *,"is_rigid(im_weight).ne.0: ",im_weight,is_rigid(im_weight)
            stop
           endif
 
@@ -13969,7 +13969,7 @@ END SUBROUTINE SIMP
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid ",time
        stop
       endif
       if (bfact_f.lt.1) then
@@ -13978,7 +13978,7 @@ END SUBROUTINE SIMP
       endif
       if ((bfact_c.ne.bfact_f).and. &
           (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
+       print *,"bfact_c invalid ",bfact_c
        stop
       endif
 
@@ -14074,10 +14074,12 @@ END SUBROUTINE SIMP
                xstengrid(1,dir)=min(xstencoarse(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
 
-               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL_MATERIAL*dxf(dir)) then
+               if (xstengrid(-1,dir).gt. &
+                   xstenfine(-1,dir)+VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
-               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL_MATERIAL*dxf(dir)) then
+               if (xstengrid(1,dir).lt. &
+                   xstenfine(1,dir)-VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
 
@@ -14173,16 +14175,17 @@ END SUBROUTINE SIMP
                  mofdatacoarse(vofcomp_recon+dir)+ &
                  multi_cen(dir,im)*multi_volume(im)
                enddo
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcoarse=volcoarse+multi_volume(im)
                 do dir=1,SDIM
                  cencoarse(dir)=cencoarse(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or, is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
@@ -14745,7 +14748,7 @@ END SUBROUTINE SIMP
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 
