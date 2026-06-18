@@ -24271,7 +24271,13 @@ void NavierStokes::MaxAdvectSpeed(
 
  MultiFab* distmf=getStateDist(ngrow_distance,
     cur_time_slab,local_caller_string);
- build_elastic_fluid_levelset(distmf);
+
+ if (material_extend_velocity_flag>0) {
+  build_elastic_fluid_levelset(distmf);
+ } else if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
 
   // num_materials*num_state_material
  MultiFab* denmf=getStateDen(1,cur_time_slab);  
