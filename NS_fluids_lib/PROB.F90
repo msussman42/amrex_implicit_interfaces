@@ -7234,7 +7234,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call jetting_plate_dist(x,y,z,dist(backing_id),solid_id, &
                  for_clamped,clamp_width)
          dist(backing_id)=-dist(backing_id) !now:dist(backing_id)>0 in plate.
-         dist(1)=min(dist(1),-dist(backing_id))
+
+         if (is_elastic(backing_id).eq.1) then
+          !do nothing
+         else if (is_elastic(backing_id).eq.0) then
+          print *,"must have is_elastic=1"
+          print *,"probtype ",probtype
+          print *,"axis_dir ",axis_dir
+          print *,"backing_id ",backing_id
+          stop
+          dist(1)=min(dist(1),-dist(backing_id))
+         else
+          print *,"is_elastic invalid"
+          print *,"backing_id ",backing_id
+          print *,"is_elastic(backing_id) ",is_elastic(backing_id)
+          stop
+         endif
+
          if (num_materials.eq.3) then
           !do nothing
          else if (num_materials.eq.4) then
@@ -7244,7 +7260,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             dist(biofilm_id),solid_id, &
             for_clamped,clamp_width)
           dist(biofilm_id)=-dist(biofilm_id)
-          dist(1)=min(dist(1),-dist(biofilm_id))
+
+          if (is_elastic(biofilm_id).eq.1) then
+           !do nothing
+          else if (is_elastic(biofilm_id).eq.0) then
+           print *,"must have is_elastic=1"
+           print *,"probtype ",probtype
+           print *,"axis_dir ",axis_dir
+           print *,"biofilm_id ",biofilm_id
+           stop
+           dist(1)=min(dist(1),-dist(biofilm_id))
+          else
+           print *,"is_elastic invalid"
+           print *,"biofilm_id ",biofilm_id
+           print *,"is_elastic(biofilm_id) ",is_elastic(biofilm_id)
+           stop
+          endif
+
          else
           print *,"num_materials invalid: ",num_materials
           stop
