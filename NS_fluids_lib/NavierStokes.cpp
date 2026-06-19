@@ -6958,7 +6958,7 @@ NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
   amrex::Error("level corrupt");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid in zero_independent_vel line 6961");
 
  if (project_option_momeqn(project_option)==1) {
 
@@ -6988,7 +6988,7 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
 
  if ((nsolve!=1)&&
      (nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid zero_independent_variable line 6991");
 
  if (project_option_momeqn(project_option)==1) {
   // do nothing
@@ -7015,7 +7015,7 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
    ncomp_check);
 
  if (ncomp_check!=nsolve)
-  amrex::Error("nsolve invalid 2732");
+  amrex::Error("nsolve invalid zero_independent_variable line 7018");
 
  MultiFab& S_new = get_new_data(state_index,project_slab_step+1);
  for (int icomp=0;icomp<scomp.size();icomp++) {
@@ -13333,7 +13333,7 @@ void NavierStokes::update_SEM_delta_force(
  }
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid37");
+  amrex::Error("nsolve invalid update_SEM_forces line 13336");
 
  if (project_option==SOLVETYPE_PRES) { 
   //do nothing
@@ -13548,7 +13548,7 @@ void NavierStokes::update_SEM_delta_force(
   if (nsolve==1) {
    // do nothing
   } else 
-   amrex::Error("nsolve invalid");
+   amrex::Error("nsolve invalid update_SEM_delta_force line 13551");
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -21145,7 +21145,7 @@ NavierStokes::dotSum(int project_option,
  bool use_tiling=ns_tiling;
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid dotSum 21148");
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -21703,7 +21703,7 @@ void NavierStokes::levelCombine(
  bool use_tiling=ns_tiling;
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid levelCombine line 21706");
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing

@@ -485,8 +485,11 @@ real(amrex_real), INTENT(out) :: temperature
 integer, INTENT(out) :: prescribed_flag
 real(amrex_real) :: mag
 integer :: dir
+integer :: im_elastic
 
  if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+
+  im_elastic=3
 
   if (num_materials.eq.4) then
    !do nothing
@@ -502,8 +505,7 @@ integer :: dir
   temperature=room_temperature
   prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
 
-  if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-      (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+  if (FSI_flag(im_elastic).eq.FSI_EULERIAN_ELASTIC) then
    LS=-99999.0d0
    temperature=293.0d0
 
@@ -534,7 +536,7 @@ integer :: dir
    endif
 
   else
-   print *,"FSI_flag(3) invalid: ",FSI_flag(3)
+   print *,"FSI_flag(im_elastic) invalid: ",im_elastic,FSI_flag(im_elastic)
    print *,"probtype (STUB_clamped_hydrobulge) = ",probtype
    stop
   endif
@@ -1414,6 +1416,8 @@ real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
 real(amrex_real) massfrac_parm(num_species_var+1)
 integer im
 integer im_primary
+integer im_elastic
+
 integer dir
 integer dencomp,local_ispec
 real(amrex_real) den,temperature,internal_energy,pressure
@@ -1442,6 +1446,8 @@ endif
 
 if ((num_materials.eq.4).and.(probtype.eq.36).and. &
     (axis_dir.eq.310)) then
+
+ im_elastic=3
 
  if ((nsum1.eq.1).and.(nsum2.eq.1)) then
 
@@ -1480,7 +1486,7 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
    !liquid,jwl,aluminum side walls,gas
   if (im_primary.eq.1) then
    if ((abs(LS(im_primary)).le.dx_this_level).and. &
-       (abs(LS(3)).le.dx_this_level)) then
+       (abs(LS(im_elastic)).le.dx_this_level)) then
   
     support_r=0.0d0
     do dir=1,SDIM
@@ -1517,7 +1523,7 @@ if ((num_materials.eq.4).and.(probtype.eq.36).and. &
      stop
     endif
    else if ((abs(LS(im_primary)).ge.dx_this_level).or. &
-            (abs(LS(3)).ge.dx_this_level)) then
+            (abs(LS(im_elastic)).ge.dx_this_level)) then
     !do nothing
    else
     print *,"LS(im_primary) invalid"
