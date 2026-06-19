@@ -22210,7 +22210,12 @@ NavierStokes::github_repo_ver() {
 
  if (ParallelDescriptor::IOProcessor()) {
 
-  fort_github_repo_version();
+  if (amrex::ParallelDescriptor::NProcs()>1) {
+   //do nothing
+  } else if (amrex::ParallelDescriptor::NProcs()==1) {
+   fort_github_repo_version();
+  } else
+   amrex::Error("NProcs invalid");
 
  }
 

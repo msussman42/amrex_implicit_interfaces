@@ -4373,28 +4373,34 @@ END SUBROUTINE SIMP
       git_rm_cmd_b='rm git_b'
       git_cat_cmd_a='cat git_a'
       git_cat_cmd_b='cat git_b'
-      print *,"issuing command ",git_rm_cmd_a
-      print *,"issuing command ",git_rm_cmd_b
-      print *,"issuing command ",git_cmd_a
-      print *,"issuing command ",git_cmd_b
-      print *,"issuing command ",git_cat_cmd_a
-      print *,"issuing command ",git_cat_cmd_b
 
       sysret=0
 
 #ifdef PGIFORTRAN
+      print *,"issuing command ",git_rm_cmd_a
       call system(git_rm_cmd_a)
+      print *,"issuing command ",git_rm_cmd_b
       call system(git_rm_cmd_b)
+      print *,"issuing command ",git_cmd_a
       call system(git_cmd_a)
+      print *,"issuing command ",git_cmd_b
       call system(git_cmd_b)
+      print *,"issuing command ",git_cat_cmd_a
       call system(git_cat_cmd_a)
+      print *,"issuing command ",git_cat_cmd_b
       call system(git_cat_cmd_b)
 #else
+      print *,"issuing command ",git_rm_cmd_a
       call execute_command_line(git_rm_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_rm_cmd_b
       call execute_command_line(git_rm_cmd_b,exitstat=sysret)
+      print *,"issuing command ",git_cmd_a
       call execute_command_line(git_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_cmd_b
       call execute_command_line(git_cmd_b,exitstat=sysret)
+      print *,"issuing command ",git_cat_cmd_a
       call execute_command_line(git_cat_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_cat_cmd_b
       call execute_command_line(git_cat_cmd_b,exitstat=sysret)
 #endif
 
