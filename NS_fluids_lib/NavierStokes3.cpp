@@ -8530,7 +8530,7 @@ void NavierStokes::allocate_MAC_velocityALL(int nsolve,int idx) {
   amrex::Error("level invalid allocate_MAC_velocity_ALL");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid allocate_MAC_velocityALL line 8533");
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -9182,7 +9182,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
   amrex::Error("project_option invalid34");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid allocate_pressure_work_vars line 9185");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(UMACSTAR_MF+dir,nsolve,0,dir);
@@ -9444,7 +9444,7 @@ void NavierStokes::residual_correction_form(
  } else if (project_option_momeqn(project_option)==0) {
   //do nothing
  } else
-  amrex::Error("project_option_momeqn invalid36");
+  amrex::Error("project_option_momeqn invalid in residual_correction_form");
 
  if (project_option==SOLVETYPE_INITPROJ) { 
 
@@ -9877,7 +9877,7 @@ void NavierStokes::jacobi_cycles(
  error_after_all_jacobi_sweeps=0.0;
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid33");
+  amrex::Error("nsolve invalid check_outer_solver_convergence line 9880");
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -10059,7 +10059,7 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   amrex::Error("dt_slab invalid:Prepare_UMAC_for_solver");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid Prepare_UMAC_for_solver line 10062");
 
  int finest_level=parent->finestLevel();
 
@@ -10195,7 +10195,7 @@ void NavierStokes::multiphase_preconditioner(
   before_cycle=ParallelDescriptor::second();
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid multiphase_preconditioner line 10198");
  
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -10386,7 +10386,7 @@ void NavierStokes::Krylov_checkpoint(
   } else
    amrex::Error("update_best invalid");
  } else
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid Krylov_checkpoint line 10389");
     
 } // end subroutine NavierStokes::Krylov_checkpoint
 
@@ -10872,7 +10872,7 @@ void NavierStokes::multiphase_project(int project_option) {
        (project_option==SOLVETYPE_INITPROJ)) {
 
     if (nsolve!=1)
-     amrex::Error("nsolve invalid");
+     amrex::Error("nsolve invalid multiphase_project line 10875");
 
     if (project_option==SOLVETYPE_PRES) {
      operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
@@ -11157,7 +11157,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option_singular_possible(project_option)==1) {
 
    if (nsolve!=1)
-    amrex::Error("nsolve invalid34");
+    amrex::Error("nsolve invalid multiphase_project line 11160");
 
   } else if (project_option_singular_possible(project_option)==0) {
 
@@ -14512,7 +14512,7 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
   *localMF[REGISTER_CURRENT_MF],
   *localMF[source_mf],0,0,nsolve,1);
 
-} // INCREMENT_REGISTERS
+} // end subroutine INCREMENT_REGISTERS
 
 
 void NavierStokes::push_back_state_register(int idx_MF,Real time) {
@@ -14534,7 +14534,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
   ncomp,
   ncomp_check);
  if (ncomp_check!=nsolve)
-  amrex::Error("nsolve invalid 6613");
+  amrex::Error("nsolve invalid push_back_state_register line 14537");
 
  if (state_index!=State_Type)
   amrex::Error("state_index invalid");
@@ -14557,7 +14557,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
  MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolve,1);
  delete snew_mf;
 
-} // subroutine push_back_state_register
+} // end subroutine push_back_state_register
 
 // stores the current velocity in localMF[idx_MF]
 void NavierStokes::SET_STOKES_MARK(int idx_MF) {
@@ -14571,7 +14571,7 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
   ns_level.push_back_state_register(idx_MF,cur_time_slab);  
  }
 
-}  // SET_STOKES_MARK
+}  // end subroutine SET_STOKES_MARK
 
 
 //allocates, saves, and extends FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and

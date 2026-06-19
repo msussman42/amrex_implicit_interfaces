@@ -70,6 +70,10 @@ ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
 # liquid,jwl,aluminum side walls,gas
 ns.mof_ordering=2 3 1 4
+ns.mof_renormalize_ordering=2 3 1 4 #EULERIAN FSI
+ns.material_extend_velocity=0 0 1 0 #EULERIAN FSI
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
 ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
@@ -173,7 +177,7 @@ ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 #ns.material_type=35 3 0 14
 ns.material_type=35 3 36 0  #Mie Gruneison
 #ns.material_type=35 37 0 0
-ns.material_conservation_form=1 1 0 0 #Mie Gruneison
+ns.material_conservation_form=1 1 1 0 #Mie Gruneison
 
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)

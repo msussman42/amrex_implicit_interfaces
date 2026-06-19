@@ -4471,7 +4471,7 @@ void NavierStokes::apply_pressure_grad(
   print_project_option(project_option);
   std::cout << "pboth ngrow= " << localMF[pboth_mf]->nGrow() << '\n';
   std::cout << "pboth ncomp= " << localMF[pboth_mf]->nComp() << '\n';
-  amrex::Error("nsolve invalid28");
+  amrex::Error("nsolve invalid apply_pressure_grad line 4474");
  }
 
  int nparts=im_solid_map.size();
@@ -4724,7 +4724,7 @@ void NavierStokes::apply_pressure_grad(
   } // spectral_loop
 
   if (nsolve!=AMREX_SPACEDIM)
-   amrex::Error("nsolve invalid31");
+   amrex::Error("nsolve invalid apply_pressure_grad line 4727");
 
   delete_localMF(LOCAL_FACETENSOR_MF,1);
   delete_localMF(LOCAL_CELLTENSOR_MF,1);
@@ -4773,7 +4773,7 @@ void NavierStokes::apply_pressure_grad(
   int operation_flag=OP_PRESGRAD_MAC;
 
   if (nsolve!=1)
-   amrex::Error("nsolve invalid32");
+   amrex::Error("nsolve invalid apply_pressure_grad line 4776");
 
   Vector<int> scomp;
   Vector<int> ncomp;
@@ -8727,7 +8727,7 @@ void NavierStokes::allocate_array(int ngrow,int ncomp,int grid_type,
 void NavierStokes::allocate_independent_var(int nsolve,int idx) {
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid allocate_independent_var line 8730");
 
  int finest_level = parent->finestLevel();
 
@@ -8744,7 +8744,7 @@ void NavierStokes::allocate_independent_var(int nsolve,int idx) {
 void NavierStokes::allocate_rhs_var(int nsolve,int idx) {
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid36");
+  amrex::Error("nsolve invalid allocate_rhs_var line 8747");
 
  int finest_level = parent->finestLevel();
 

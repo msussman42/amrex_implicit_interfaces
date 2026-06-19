@@ -6902,6 +6902,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) drat,veltop,velbot,ytop,ybot
       integer im_solid_materialdist
       integer im_ice_materialdist
+      integer im_elastic
       integer dir
       real(amrex_real) x_in(SDIM)
       real(amrex_real) maxdx
@@ -7145,12 +7146,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !inside of: subroutine materialdist_batch
        !hydrobulge
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+       im_elastic=3
         !vapordist is declared in PROB.F90
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        dist(2)=-dist(1)
        if (num_materials.eq.4) then
-        if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-            (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+        if (FSI_flag(im_elastic).eq.FSI_EULERIAN_ELASTIC) then
+         if (is_elastic(im_elastic).eq.1) then
+          !do nothing
+         else
+          print *,"expecting is_elastic=1; im_elastic= ",im_elastic
+          print *,"is_elastic(im_elastic) ",is_elastic(im_elastic)
+          stop
+         endif
          outer_radius=half*radblob3
          inner_radius=outer_radius-radblob2
          if (SDIM.eq.2) then
@@ -7162,24 +7170,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
          if (raddist.le.inner_radius) then
-          dist(3)=raddist-inner_radius
+          dist(im_elastic)=raddist-inner_radius
          else if (raddist.ge.outer_radius) then
-          dist(3)=outer_radius-raddist
+          dist(im_elastic)=outer_radius-raddist
          else if ((raddist.ge.inner_radius).and. &
                   (raddist.le.outer_radius)) then
-          dist(3)=half*radblob2-abs(raddist-half*(inner_radius+outer_radius))
+          dist(im_elastic)=half*radblob2- &
+            abs(raddist-half*(inner_radius+outer_radius))
          else
           print *,"raddist invalid: ",raddist
           stop
          endif
-         dist(1)=min(dist(1),-dist(3))
-         if (raddist.ge.inner_radius) then
-          dist(1)=inner_radius-raddist
-         endif
-         dist(4)=raddist-outer_radius
+         dist(4)=raddist-half*(outer_radius+inner_radius)
+         dist(1)=min(dist(1),-dist(4))
         else
          print *,"probtype.eq.36(310) invalid FSI_flag: ", &
-           FSI_flag(3),probtype,axis_dir
+           FSI_flag(im_elastic),probtype,axis_dir
+         print *,"im_elastic= "im_elastic
          stop
         endif
 
