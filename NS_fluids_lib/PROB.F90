@@ -7208,7 +7208,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          !inside of: subroutine materialdist_batch
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (probtype.eq.42) then
-        ball_id=2
+        ball_id=2 !JWL
         backing_id=3
        else if (probtype.eq.46) then
         ball_id=num_materials
@@ -7220,6 +7220,21 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        biofilm_id=backing_id+1
 
        dist(ball_id)=-dist(1)
+
+       if ((probtype.eq.46).and.(axis_dir.eq.11)) then
+        dist(1)=9999.0d0 !gas
+        if ((FSI_flag(ball_id).eq.FSI_EULERIAN_ELASTIC).and. &
+            (FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC)) then
+         !do nothing
+        else
+         print *,"FSI_flag invalid"
+         print *,"FSI_flag ",FSI_flag
+         print *,"probtype=",probtype
+         print *,"axis_dir=",axis_dir
+         stop
+        endif
+       endif
+
        if (num_materials.ge.3) then
         if ((FSI_flag(backing_id).eq.FSI_PRESCRIBED_NODES).or. &
             (FSI_flag(backing_id).eq.FSI_SHOELE_CTML).or. &
@@ -9218,6 +9233,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        else if (probtype.eq.46) then
         print *,"vapordist 3D: this problem not ready in 3d"
+        print *,"probtype= ",probtype
+        print *,"axis_dir ",axis_dir
         stop
        else if (probtype.eq.37) then
         dist=radblob-sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )

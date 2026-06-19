@@ -10797,8 +10797,12 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option_needs_scaling(project_option)==0) {
   // do nothing
- } else
-  amrex::Error("project_option_needs_scaling invalid46");
+ } else {
+  std::cout << "project_option= " << project_option << '\n';
+  std::cout << "project_option_needs_scaling= " << 
+    project_option_needs_scaling(project_option) << '\n';
+  amrex::Error("project_option_needs_scaling invalid line 10804");
+ }
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)) {
