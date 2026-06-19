@@ -7186,7 +7186,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else
          print *,"probtype.eq.36(310) invalid FSI_flag: ", &
            FSI_flag(im_elastic),probtype,axis_dir
-         print *,"im_elastic= "im_elastic
+         print *,"im_elastic= ",im_elastic
          stop
         endif
 
@@ -29221,8 +29221,8 @@ end subroutine initialize2d
       real(amrex_real) uwall(num_materials*ngeom_raw)
       real(amrex_real) uboundary(num_materials*ngeom_raw)
       integer vofcomp
-      real(amrex_real) voffluid_wall,vofsolid_wall
-      real(amrex_real) voffluid_bound,vofsolid_bound
+      real(amrex_real) voffluid_wall,vofsolid_wall,vofelastic_wall
+      real(amrex_real) voffluid_bound,vofsolid_bound,vofelastic_bound
       real(amrex_real) voftest_wall,voftest_bound
 
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
@@ -29370,20 +29370,26 @@ end subroutine initialize2d
 
          voffluid_wall=zero
          vofsolid_wall=zero
+         vofelastic_wall=zero
          voffluid_bound=zero
          vofsolid_bound=zero
+         vofelastic_bound=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_raw+1
           voftest_wall=uwall(vofcomp)
           voftest_bound=uboundary(vofcomp)
-          if (is_rigid(im).eq.0) then
+          if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
            voffluid_wall=voffluid_wall+voftest_wall
            voffluid_bound=voffluid_bound+voftest_bound
           else if (is_rigid(im).eq.1) then
            vofsolid_wall=vofsolid_wall+voftest_wall
            vofsolid_bound=vofsolid_bound+voftest_bound
+          else if (is_elastic(im).eq.1) then
+           vofelastic_wall=vofelastic_wall+voftest_wall
+           vofelastic_bound=vofelastic_bound+voftest_bound
           else
-           print *,"is_rigid invalid PROB.F90"
+           print *,"is_rigid invalid PROB.F90 ",im,is_rigid(im)
+           print *,"or is_elastic invalid PROB.F90 ",im,is_elastic(im)
            stop
           endif
          enddo ! im=1..num_materials
@@ -29392,14 +29398,22 @@ end subroutine initialize2d
           print *,"fluid disappeared in GROUP_EXTMOFFILL"
           print *,"i,j,k ",i,j,k
           print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
-          print *,"voffluid_wall,vofsolid_wall ",voffluid_wall,vofsolid_wall
-          print *,"voffluid_bound,vofsolid_bound ",voffluid_bound, &
-            vofsolid_bound
+          print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
+             voffluid_wall,vofsolid_wall,vofelastic_wall
+          print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
+             voffluid_bound,vofsolid_bound,vofelastic_bound
           stop
          else if ((voffluid_wall.le.two).and.(voffluid_bound.le.two)) then
           ! do nothing
          else
-          print *,"voffluid_wall or voffluid_bound invalid"
+          print *,"i,j,k ",i,j,k
+          print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
+          print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
+             voffluid_wall,vofsolid_wall,vofelastic_wall
+          print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
+             voffluid_bound,vofsolid_bound,vofelastic_bound
+          print *,"voffluid_wall or voffluid_bound invalid ", &
+               voffluid_wall,voffluid_bound
           stop
          endif
 

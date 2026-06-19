@@ -177,7 +177,7 @@ ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 #ns.material_type=35 3 0 14
 ns.material_type=35 3 36 0  #Mie Gruneison
 #ns.material_type=35 37 0 0
-ns.material_conservation_form=1 1 1 0 #Mie Gruneison
+ns.material_conservation_form=1 1 0 0 #Mie Gruneison
 
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
