@@ -10974,10 +10974,8 @@ stop
       real(amrex_real) DXMAX,cutoff
       real(amrex_real) Eforce_conservative
       real(amrex_real) Eforce_non_conservative
-      real(amrex_real) Eforce_non_conservative_EOS
       real(amrex_real) divu_cell_center
       real(amrex_real) pres_cell_center
-      real(amrex_real) pres_cell_center_EOS
 
       real(amrex_real) KE_diff
 
@@ -12217,10 +12215,8 @@ stop
 
         Eforce_conservative=zero
         Eforce_non_conservative=zero
-        Eforce_non_conservative_EOS=zero
         divu_cell_center=zero
         pres_cell_center=zero
-        pres_cell_center_EOS=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -12391,7 +12387,9 @@ stop
          ! do nothing
         else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then
 
+          !SANITY CHECKS
          if (is_compressible_mat(im_majority).eq.1) then
+                 
           imattype=fort_material_type(im_majority)
           ibase=(im_majority-1)*num_state_material
           rho=dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
@@ -12427,22 +12425,31 @@ stop
            TEMPERATURE, & !intent(in)
            internal_e, & !intent(out)
            imattype,im_majority) !intent(in)
-          call EOS_material(rho,massfrac_parm, &
-           internal_e, &
-           pres_cell_center_EOS, &
-           imattype,im_majority)
 
-          if (pres_cell_center_EOS.gt.zero) then
-           !do nothing
+          if (internal_e.gt.zero) then
+           call TEMPERATURE_material( &
+             rho, &
+             massfrac_parm, &
+             NEW_TEMPERATURE, & !intent(out)
+             internal_e, & !intent(in)
+             imattype,im_majority)
+           if (abs(TEMPERATURE-NEW_TEMPERATURE).le.EPS3*TEMPERATURE) then
+            ! do nothing 
+           else
+            print *,"T(rho,e) and e(rho,T) are not inverses: ", &
+               TEMPERATURE,NEW_TEMPERATURE
+            stop
+           endif
           else
-           print *,"pres_cell_center_EOS invalid: ",pres_cell_center_EOS
+           print *,"internal_e must be positive: ",internal_e
            stop
           endif
 
          else if (is_compressible_mat(im_majority).eq.0) then
           !do nothing
          else
-          print *,"is_compressible_mat(im_majority) invalid"
+          print *,"is_compressible_mat(im_majority) invalid ", &
+             im_majority,is_compressible_mat(im_majority)
           stop
          endif
 
@@ -12469,10 +12476,8 @@ stop
 
           Eforce_conservative=zero
           Eforce_non_conservative=zero
-          Eforce_non_conservative_EOS=zero
           divu_cell_center=zero
           pres_cell_center=zero
-          pres_cell_center_EOS=zero
 
           rhs(D_DECL(i,j,k),1)=zero
 
@@ -12494,48 +12499,47 @@ stop
            stop
           endif
 
-          Eforce_non_conservative=-divu_cell_center*pres_cell_center/dencell
-          Eforce_non_conservative_EOS= &
-            -divu_cell_center*pres_cell_center_EOS/dencell
+          Eforce_non_conservative= &
+            -divu_cell_center*pres_cell_center/dencell
 
 ! -dt div(up)/rho
           if (is_compressible_mat(im_majority).eq.0) then
            rhs(D_DECL(i,j,k),1)=zero
           else if (is_compressible_mat(im_majority).eq.1) then
+
            if (material_conservation_form(im_majority).eq.0) then
-            if (is_rigid_CL(im_majority).eq.0) then
+
+            if (is_rigid(im_majority).eq.0) then
              rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
-            else if (is_rigid_CL(im_majority).eq.1) then
-
-             if (is_FSI_elastic(im_majority).eq.1) then
-              rhs(D_DECL(i,j,k),1)=Eforce_non_conservative_EOS
-             else if (is_FSI_elastic(im_majority).eq.0) then
-              rhs(D_DECL(i,j,k),1)=zero
-             else
-              print *,"is_FSI_elastic(im_majority) invalid"
-              stop
-             endif
-
-            else
-             print *,"is_rigid_CL invalid: ", &
-               im_majority,is_rigid_CL(im_majority)
-             stop
-            endif
-           else if (material_conservation_form(im_majority).eq.1) then
-
-            if (is_rigid_CL(im_majority).eq.0) then
-             rhs(D_DECL(i,j,k),1)=Eforce_conservative
-            else if (is_rigid_CL(im_majority).eq.1) then
+            else if (is_rigid(im_majority).eq.1) then
              print *,"im_majority=",im_majority
-             print *,"is_rigid_CL(im_majority) invalid: ", &
-               is_rigid_CL(im_majority)
+             print *,"cannot be both compressible and is_rigid"
+             print *,"is_compressible_mat(im_majority) ", &
+                is_compressible_mat(im_majority)
+             print *,"is_rigid(im_majority) ",is_rigid(im_majority)
              print *,"material_conservation_form(im_majority)=", &
                material_conservation_form(im_majority)
              stop
-             rhs(D_DECL(i,j,k),1)=Eforce_conservative
             else
+             print *,"is_rigid invalid: ",im_majority,is_rigid(im_majority)
+             stop
+            endif
+
+           else if (material_conservation_form(im_majority).eq.1) then
+
+            if (is_rigid(im_majority).eq.0) then
+             rhs(D_DECL(i,j,k),1)=Eforce_conservative
+            else if (is_rigid(im_majority).eq.1) then
              print *,"im_majority=",im_majority
-             print *,"is_rigid_CL invalid: ",is_rigid_CL(im_majority)
+             print *,"cannot be both compressible and is_rigid"
+             print *,"is_compressible_mat(im_majority) ", &
+                is_compressible_mat(im_majority)
+             print *,"is_rigid(im_majority) ",is_rigid(im_majority)
+             print *,"material_conservation_form(im_majority)=", &
+               material_conservation_form(im_majority)
+             stop
+            else
+             print *,"is_rigid invalid: ",im_majority,is_rigid(im_majority)
              stop
             endif
 
@@ -12546,6 +12550,7 @@ stop
             print *,"material_conservation_form(im_majority): ", &
               material_conservation_form(im_majority)
             stop
+
            endif
 
           else 
@@ -12644,18 +12649,17 @@ stop
               if (material_conservation_form(im).eq.1) then
 
                ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
-               if (is_rigid_CL(im).eq.0) then
+               if (is_rigid(im).eq.0) then
                 internal_e=internal_e+KE_diff+Eforce_conservative
-               else if (is_rigid_CL(im).eq.1) then
+               else if (is_rigid(im).eq.1) then
                 print *,"im=",im
-                print *,"is_rigid_CL(im) invalid: ",is_rigid_CL(im)
+                print *,"is_rigid(im) invalid: ",is_rigid(im)
                 print *,"material_conservation_form(im)=", &
                   material_conservation_form(im)
                 stop
-                internal_e=internal_e+KE_diff+Eforce_conservative
                else
                 print *,"im=",im
-                print *,"is_rigid_CL(im) invalid: ",is_rigid_CL(im)
+                print *,"is_rigid(im) invalid: ",is_rigid(im)
                 stop
                endif
 
@@ -12678,7 +12682,7 @@ stop
                 stop
                endif
  
-               if (is_rigid_CL(im).eq.0) then
+               if (is_rigid(im).eq.0) then
 
                 if (Eforce_non_conservative.ge.zero) then
                  ! e=e^*-dt div(up)/rho
@@ -12692,33 +12696,15 @@ stop
                  stop
                 endif
          
-               else if (is_rigid_CL(im).eq.1) then
+               else if (is_rigid(im).eq.1) then
 
-                if ((im.eq.im_majority).and. &
-                    (is_FSI_elastic(im_majority).eq.1)) then
-
-                 if (Eforce_non_conservative_EOS.ge.zero) then
-                  ! e=e^*-dt div(up)/rho
-                  internal_e=internal_e+Eforce_non_conservative_EOS
-                 else if (Eforce_non_conservative_EOS.lt.zero) then
-                  internal_e=internal_e/ &
-                   (one-Eforce_non_conservative_EOS/internal_e)
-                 else
-                  print *,"Eforce_non_conservative_EOS invalid: ", &
-                   Eforce_non_conservative_EOS
-                  stop
-                 endif
-
-                else if ((im.ne.im_majority).or. &
-                         (is_FSI_elastic(im_majority).eq.0)) then
-                 !do nothing
-                else
-                 print *,"im or is_FSI_elastic(im_majority) invalid"
-                 stop
-                endif
+                print *,"cannot be rigid and compressible"
+                print *,"im, is_rigid(im) ",im,is_rigid(im)
+                print *,"im,is_compressible_mat(im) ",im, &
+                        is_compressible_mat(im)
 
                else
-                print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
+                print *,"is_rigid(im) invalid: ",im,is_rigid(im)
                 stop
                endif
 
