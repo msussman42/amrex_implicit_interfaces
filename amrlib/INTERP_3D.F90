@@ -470,16 +470,17 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
@@ -487,13 +488,13 @@ stop
               print *,"testwt should not be 0"
               stop
              else
-              print *,"testwt invalid"
+              print *,"testwt invalid ",testwt
               stop
              endif
             else if (wt(SDIM).eq.zero) then
              ! do nothing
             else 
-             print *,"wt(SDIM) invalid"
+             print *,"wt(SDIM) invalid ",wt(SDIM)
              stop
             endif
            enddo ! kc
@@ -1011,29 +1012,30 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
              else if (testwt.eq.zero) then
               ! do nothing
              else
-              print *,"testwt invalid"
+              print *,"testwt invalid ",testwt
               stop
              endif
             else if (wt(SDIM).eq.zero) then
              ! do nothing
             else 
-             print *,"wt(SDIM) invalid"
+             print *,"wt(SDIM) invalid ",wt(SDIM)
              stop
             endif
 
