@@ -25762,7 +25762,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(out) :: temperature
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid71"
+       print *,"im invalid in TEMPERATURE_material_CORE line 25765 ",im
        stop
       endif
       if (rho.le.zero) then

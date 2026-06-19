@@ -3181,7 +3181,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       internal_energy=internal_energy_in*global_pressure_scale
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid71"
+       print *,"im invalid TEMPERATURE_material line 3184 ",im
        stop
       endif
       if (rho.gt.zero) then
