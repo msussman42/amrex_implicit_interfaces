@@ -19624,11 +19624,25 @@ stop
           stop
          endif
 
+         if ((F_TESSELLATE_ALL(im).ge.-VOFTOL_MATERIAL).and. &
+             (F_TESSELLATE_ALL(im).le.VOFTOL_MATERIAL)) then
+          F_TESSELLATE_ALL(im)=zero
+         else if ((F_TESSELLATE_ALL(im).ge.VOFTOL_MATERIAL).and. &
+                  (F_TESSELLATE_ALL(im).le.one-VOFTOL_MATERIAL)) then
+          !do nothing
+         else if ((F_TESSELLATE_ALL(im).ge.one-VOFTOL_MATERIAL).and. &
+                  (F_TESSELLATE_ALL(im).le.one+VOFTOL_MATERIAL)) then
+          F_TESSELLATE_ALL(im)=one
+         else
+          print *,"F_TESSELLATE_ALL(im) invalid: ",im,F_TESSELLATE_ALL(im)
+          stop
+         endif
+
          F_TESSELLATE_SUM=F_TESSELLATE_SUM+F_TESSELLATE_ALL(im) 
 
         enddo !im=1,num_materials
         
-        if (abs(one-F_TESSELLATE_SUM).le.VOFTOL_MATERIAL) then
+        if (abs(one-F_TESSELLATE_SUM).le.two*VOFTOL_MATERIAL) then
          !do nothing
         else
          print *,"F_TESSELLATE_SUM invalid ",F_TESSELLATE_SUM
@@ -19751,7 +19765,7 @@ stop
           stop
          endif
 
-         if (abs(one-(F_INCOMP_SUM+F_COMP_SUM)).le.VOFTOL_MATERIAL) then
+         if (abs(one-(F_INCOMP_SUM+F_COMP_SUM)).le.two*VOFTOL_MATERIAL) then
           temperature_combine= &
             (F_INCOMP_SUM*temperature_combine_incomp+ &
              F_COMP_SUM*temperature_combine_comp)/ &
