@@ -6715,7 +6715,7 @@ void NavierStokes::prescribe_solid_geometryALL(
   std::string local_caller_string="prescribe_solid_geometryALL";
   local_caller_string=caller_string+local_caller_string;
 
-  if ((step_through_data==1)||(1==0)) {
+  if ((step_through_data==1)&&(1==1)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
@@ -6810,7 +6810,7 @@ void NavierStokes::prescribe_solid_geometryALL(
    ns_level.prescribe_solid_geometry(time,output_slab,renormalize_flag);
   } //ilev=finest_level downto level
 
-  if ((step_through_data==1)||(1==0)) {
+  if ((step_through_data==1)&&(1==1)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
