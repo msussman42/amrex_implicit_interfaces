@@ -19248,6 +19248,26 @@ stop
       real(amrex_real) :: LS_extrap_fixed(num_materials*(1+SDIM))
       real(amrex_real) :: LS_extrap(num_materials*(1+SDIM))
 
+      real(amrex_real) :: massfrac_parm(num_species_var+1)
+      real(amrex_real) :: vfrac_solid_sum
+      real(amrex_real) :: vfrac_elastic_sum
+      real(amrex_real) :: vfrac_fluid_sum
+      real(amrex_real) :: F_center(num_materials)
+      real(amrex_real) :: F_TESSELLATE_ALL(num_materials)
+      real(amrex_real) :: F_TESSELLATE_SUM
+      real(amrex_real) :: temperature_combine
+      real(amrex_real) :: temperature_combine_comp
+      real(amrex_real) :: temperature_weight_comp
+      real(amrex_real) :: temperature_combine_incomp
+      real(amrex_real) :: temperature_weight_incomp
+      real(amrex_real) :: F_COMP_SUM
+      real(amrex_real) :: F_INCOMP_SUM
+      real(amrex_real) :: test_density
+      real(amrex_real) :: test_temperature
+      real(amrex_real) :: DeDT
+      integer :: imattype
+      integer :: ispec
+
       if (renormalize_flag.eq.RENORMALIZE_ONLY) then
        if (LS_extrap_iter.eq.0) then
         ! do nothing
@@ -19504,6 +19524,117 @@ stop
         enddo
         enddo
 
+        vfrac_solid_sum=zero
+        vfrac_elastic_sum=zero
+        vfrac_fluid_sum=zero
+
+        do im=1,num_materials
+
+         F_center(im)=F_stencil_array(D_DECL(0,0,0),im)
+         if ((F_center(im).ge.-EPS1).and. &
+             (F_center(im).le.VOFTOL_MATERIAL)) then
+          F_center(im)=zero
+         else if ((F_center(im).ge.VOFTOL_MATERIAL).and. &
+                  (F_center(im).le.one-VOFTOL_MATERIAL)) then
+          !do nothing
+         else if ((F_center(im).ge.one-VOFTOL_MATERIAL).and. &
+                  (F_center(im).le.one+EPS1)) then
+          F_center(im)=one
+         else
+          print *,"F_center(im) invalid: ",im,F_center(im)
+          stop
+         endif
+
+         if (is_rigid(im).eq.1) then
+          vfrac_solid_sum=vfrac_solid_sum+F_center(im)
+         else if (is_elastic(im).eq.1) then
+          vfrac_elastic_sum=vfrac_elastic_sum+F_center(im)
+         else if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
+          vfrac_fluid_sum=vfrac_fluid_sum+F_center(im)
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+          stop
+         endif
+
+        enddo !im=1,num_materials
+
+        do im=1,num_materials
+
+         if ((is_rigid(im).eq.0).and. &
+             (is_elastic(im).eq.0)) then
+          if ((vfrac_fluid_sum.gt.zero).and. &
+              (vfrac_fluid_sum.le.one+EPS1)) then
+           F_center(im)=F_center(im)/vfrac_fluid_sum
+          else
+           print *,"vfrac_fluid_sum invalid ",vfrac_fluid_sum
+           stop
+          endif
+         else if (is_rigid(im).eq.1) then
+          if (vfrac_solid_sum.gt.one) then
+           F_center(im)=F_center(im)/vfrac_solid_sum
+          else if ((vfrac_solid_sum.ge.zero).and. &
+                   (vfrac_solid_sum.le.one)) then
+           !do nothing
+          else
+           print *,"vfrac_solid_sum invalid ",vfrac_solid_sum
+           stop
+          endif
+         else if (is_elastic(im).eq.1) then
+          if (vfrac_elastic_sum.gt.one) then
+           F_center(im)=F_center(im)/vfrac_elastic_sum
+          else if ((vfrac_elastic_sum.ge.zero).and. &
+                   (vfrac_elastic_sum.le.one)) then
+           !do nothing
+          else
+           print *,"vfrac_elastic_sum invalid ",vfrac_elastic_sum
+           stop
+          endif
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+          stop
+         endif
+          
+        enddo !im=1,num_materials
+
+         ! (1-solid_sum)(1-elastic_sum)+(1-solid_sum)*elastic_sum+solid_sum=
+         ! 1-solid_sum-elastic_sum+solid_sum*elastic_sum+elastic_sum-
+         ! solid_sum*elastic_sum+solid_sum=1
+
+        F_TESSELLATE_SUM=zero
+
+        do im=1,num_materials
+
+         if ((is_rigid(im).eq.0).and. &
+             (is_elastic(im).eq.0)) then
+          F_TESSELLATE_ALL(im)= &
+            (one-vfrac_solid_sum)* &
+            (one-vfrac_elastic_sum)* &
+            F_center(im)
+         else if (is_rigid(im).eq.1) then
+          F_TESSELLATE_ALL(im)=F_center(im)
+         else if (is_elastic(im).eq.1) then
+          F_TESSELLATE_ALL(im)= &
+            (one-vfrac_solid_sum)* &
+            F_center(im)
+         else
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+          stop
+         endif
+
+         F_TESSELLATE_SUM=F_TESSELLATE_SUM+F_TESSELLATE_ALL(im) 
+
+        enddo !im=1,num_materials
+        
+        if (abs(one-F_TESSELLATE_SUM).le.VOFTOL_MATERIAL) then
+         !do nothing
+        else
+         print *,"F_TESSELLATE_SUM invalid ",F_TESSELLATE_SUM
+         stop
+        endif 
+
         ! --------------------------------------------------------- 
         ! first: fluid state variable extrapolation into empty cells.
         ! ----------------------------------------------------------
@@ -19512,11 +19643,135 @@ stop
 
          im_refine_density=0
 
+         temperature_combine_comp=zero
+         temperature_weight_comp=zero
+         temperature_combine_incomp=zero
+         temperature_weight_incomp=zero
+         F_COMP_SUM=zero
+         F_INCOMP_SUM=zero
+
+         do im=1,num_materials
+
+          statecomp=(im-1)*num_state_material+ENUM_DENVAR+1
+          test_density=dennew(D_DECL(i,j,k),statecomp)
+          if (test_density.gt.zero) then
+           ! do nothing
+          else
+           print *,"test_density invalid: ",test_density
+           stop
+          endif
+
+          test_temperature=dennew(D_DECL(i,j,k),statecomp+1)
+          if (test_temperature.gt.zero) then
+           ! do nothing
+          else
+           print *,"test_temperature invalid: ",test_temperature
+           stop
+          endif
+
+          if (is_compressible_mat(im).eq.0) then
+
+           temperature_combine_incomp=temperature_combine_incomp+ &
+             test_temperature*F_TESSELLATE_ALL(im)*test_density 
+           temperature_weight_incomp=temperature_weight_incomp+ &
+             F_TESSELLATE_ALL(im)*test_density 
+           F_INCOMP_SUM=F_INCOMP_SUM+F_TESSELLATE_ALL(im)
+
+          else if (is_compressible_mat(im).eq.1) then
+
+           imattype=fort_material_type(im)
+           call init_massfrac_parm(test_density,massfrac_parm,im)
+           do ispec=1,num_species_var
+            massfrac_parm(ispec)=dennew(D_DECL(i,j,k),dencomp+1+ispec)
+            if (massfrac_parm(ispec).ge.zero) then
+             ! do nothing
+            else
+             print *,"massfrac_parm(ispec) invalid: ",massfrac_parm(ispec)
+             stop
+            endif
+           enddo ! ispec=1,num_species_var
+
+           !DeDT=cv
+           !DeDT_material is declared in GLOBALUTIL.F90
+           call DeDT_material(test_density, & !intent(in)
+             massfrac_parm, & !intent(in)
+             test_temperature, & !intent(in)
+             DeDT, & !intent(out)
+             imattype,im) !intent(in)
+           if (DeDT.gt.zero) then
+            ! do nothing
+           else
+            print *,"DeDT must be positive: ",DeDT
+            stop
+           endif
+
+           temperature_combine_comp=temperature_combine_comp+ &
+             test_temperature*F_TESSELLATE_ALL(im)*test_density*DeDT 
+           temperature_weight_comp=temperature_weight_comp+ &
+             F_TESSELLATE_ALL(im)*test_density*DeDT 
+           F_COMP_SUM=F_COMP_SUM+F_TESSELLATE_ALL(im)
+ 
+          else
+           print *,"is_compressible_mat(im) bad ",im,is_compressible_mat(im)
+           stop
+          endif
+
+         enddo ! im=1,num_materials
+
+         if ((F_COMP_SUM.gt.zero).and. &
+             (F_COMP_SUM.le.one+VOFTOL_MATERIAL)) then
+          if (temperature_weight_comp.gt.zero) then
+           temperature_combine_comp= &
+              temperature_combine_comp/temperature_weight_comp
+          else
+           print *,"temperature_weight_comp invalid ",temperature_weight_comp
+           stop
+          endif
+         else if (F_COMP_SUM.eq.zero) then
+          !do nothing
+         else
+          print *,"F_COMP_SUM invalid ",F_COMP_SUM
+          stop
+         endif
+
+         if ((F_INCOMP_SUM.gt.zero).and. &
+             (F_INCOMP_SUM.le.one+VOFTOL_MATERIAL)) then
+          if (temperature_weight_incomp.gt.zero) then
+           temperature_combine_incomp= &
+              temperature_combine_incomp/temperature_weight_incomp
+          else
+           print *,"temperature_weight_incomp invalid ", &
+            temperature_weight_incomp
+           stop
+          endif
+         else if (F_INCOMP_SUM.eq.zero) then
+          !do nothing
+         else
+          print *,"F_INCOMP_SUM invalid ",F_INCOMP_SUM
+          stop
+         endif
+
+         if (abs(one-(F_INCOMP_SUM+F_COMP_SUM)).le.VOFTOL_MATERIAL) then
+          temperature_combine= &
+            (F_INCOMP_SUM*temperature_combine_incomp+ &
+             F_COMP_SUM*temperature_combine_comp)/ &
+            (F_INCOMP_SUM+F_COMP_SUM)
+         else
+          print *,"F_INCOMP_SUM or F_COMP_SUM invalid ", &
+            F_INCOMP_SUM,F_COMP_SUM, &
+            F_INCOMP_SUM+F_COMP_SUM
+          stop
+         endif
+        
          do im=1,num_materials
 
           if (is_compressible_mat(im).eq.0) then
            !do nothing
           else if (is_compressible_mat(im).eq.1) then
+
+           statecomp=(im-1)*num_state_material+ENUM_DENVAR+1
+           dennew(D_DECL(i,j,k),statecomp+1)=temperature_combine
+
            im_refine_density=im_refine_density+1
            if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
             !do nothing
@@ -19536,7 +19791,7 @@ stop
           endif
 
           vofcompraw=(im-1)*ngeom_raw+1
-          F_stencil=F_stencil_array(D_DECL(0,0,0),im)
+          F_stencil=F_center(im)
 
           if (is_rigid(im).eq.1) then
            if (constant_density_all_time(im).eq.1) then
@@ -19656,18 +19911,27 @@ stop
              print *,"density_stencil_sum invalid ",density_stencil_sum
              stop
             endif
+             !density
             statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
             dennew(D_DECL(i,j,k),statecomp)=density_stencil_sum/F_stencil_sum
 
-            do istate=num_state_base,num_state_base+num_species_var
+             !compressible temperature is updated above.
+            do istate=num_state_base+1,num_state_base+num_species_var
              tempcomp=(im-1)*num_state_material+istate
              dennew(D_DECL(i,j,k),tempcomp)=local_species_sum(istate)/ &
                      density_stencil_sum
-            enddo ! istate=num_state_base,num_state_base+num_species_var
+            enddo ! istate=num_state_base+1,num_state_base+num_species_var
 
             if (is_compressible_mat(im).eq.0) then
-             !do nothing
+
+              !incompressible temperature
+             istate=num_state_base
+             tempcomp=(im-1)*num_state_material+istate
+             dennew(D_DECL(i,j,k),tempcomp)=local_species_sum(istate)/ &
+                     density_stencil_sum
+
             else if (is_compressible_mat(im).eq.1) then
+
              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
               !do nothing
              else
@@ -19689,18 +19953,19 @@ stop
 
             statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
             dennew(D_DECL(i,j,k),statecomp)=fort_denconst(im)
-            do istate=num_state_base,num_state_base+num_species_var
+
+             !compressible temperature already done at all (i,j,k)
+            do istate=num_state_base+1,num_state_base+num_species_var
              tempcomp=(im-1)*num_state_material+istate
-             if (istate.eq.num_state_base) then
-              dennew(D_DECL(i,j,k),tempcomp)=fort_tempconst(im)
-             else
-              dennew(D_DECL(i,j,k),tempcomp)= &
+             dennew(D_DECL(i,j,k),tempcomp)= &
                 fort_speciesconst(im+(istate-num_state_base-1)*num_materials)
-             endif
             enddo ! istate=num_state_base,num_state_base+num_species_var
 
             if (is_compressible_mat(im).eq.0) then
-             !do nothing
+             !incompressible temperature done here
+             istate=num_state_base
+             tempcomp=(im-1)*num_state_material+istate
+             dennew(D_DECL(i,j,k),tempcomp)=fort_tempconst(im)
             else if (is_compressible_mat(im).eq.1) then
              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
               !do nothing
@@ -19714,7 +19979,8 @@ stop
                   fort_denconst(im)
              enddo
             else
-             print *,"is_compressible(im) invalid"
+             print *,"is_compressible_mat(im) invalid ", &
+               im,is_compressible_mat(im)
              stop
             endif
 
