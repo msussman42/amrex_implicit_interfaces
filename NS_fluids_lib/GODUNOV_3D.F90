@@ -17528,9 +17528,9 @@ stop
 
 
 
-      ! combine_flag==0 (FVM -> GFM)
-      ! combine_flag==1 (GFM -> FVM)
-      ! combine_flag==2 (combine if vfrac<VOFTOL_MATERIAL)
+      ! combine_flag==FVM_TO_GFM (FVM -> GFM)
+      ! combine_flag==GFM_TO_FVM (GFM -> FVM)
+      ! combine_flag==FILL_EMPTY_CELL (combine if vfrac<VOFTOL_MATERIAL)
       ! project_option==SOLVETYPE_VISC (cell centered velocity)
       ! project_option==SOLVETYPE_PRES (MAC velocity - COMBINEVELFACE is called)
       subroutine fort_combinevel( &
@@ -17659,15 +17659,15 @@ stop
         vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
        ! output if,
-       ! (1) project_option==SOLVETYPE_VISC and combine_flag==2
+       ! (1) project_option==SOLVETYPE_VISC and combine_flag==FILL_EMPTY_CELL
        ! (2) project_option==SOLVETYPE_HEAT, SOLVETYPE_SPEC, and 
-       !     combine_flag==2
+       !     combine_flag==FILL_EMPTY_CELL
       real(amrex_real), INTENT(inout),target :: &
        cellfab(DIMV(cellfab),ncomp_cell)
       real(amrex_real), pointer :: cellfab_ptr(D_DECL(:,:,:),:)
        ! output if,
        !  project_option==SOLVETYPE_HEAT, SOLVETYPE_SPEC, and 
-       !     combine_flag==0 or combine_flag==1
+       !     combine_flag==FVM_TO_GFM or combine_flag==GFM_TO_FVM
       real(amrex_real), INTENT(out),target :: newcell(DIMV(newcell), &
               nsolve*num_materials_combine)
       real(amrex_real), pointer :: newcell_ptr(D_DECL(:,:,:),:)
@@ -18305,7 +18305,7 @@ stop
 
         if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
-         if (combine_flag.eq.2) then !combine if vfrac<VOFTOL_MATERIAL
+         if (combine_flag.eq.FILL_EMPTY_CELL) then !vfrac<VOFTOL_MATERIAL
 
           if (nsolve.ne.STATE_NCOMP_VEL) then
            print *,"nsolve invalid: ",nsolve
@@ -18412,7 +18412,7 @@ stop
           enddo ! cellcomp
 
          else
-          print *,"combine_flag!=2: ",combine_flag
+          print *,"combine_flag!=FILL_EMPTY_CELL: ",combine_flag
           print *,"project_option: ",project_option
           stop
          endif
@@ -18432,11 +18432,12 @@ stop
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
            weight_sum=weight_sum+cell_species_mfrac(im_crit)
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid ",project_option
            stop
           endif
 
-          if (combine_idx.eq.-1) then !State_Type (combine_flag=0,1)
+          !State_Type (combine_flag=FVM_TO_GFM,GFM_TO_FVM)
+          if (combine_idx.eq.-1) then 
            cellcomp=scomp(im_crit)+1
           else if (combine_idx.ge.0) then !localMF[combine_idx] input
            cellcomp=im_crit
@@ -18471,7 +18472,7 @@ stop
            stop
           endif
 
-          if (combine_flag.eq.1) then !center->centroid
+          if (combine_flag.eq.GFM_TO_FVM) then !center->centroid
 
            new_temperature(im_crit)=newcell(D_DECL(i,j,k),im_crit)
 
@@ -18516,8 +18517,8 @@ stop
             stop
            endif
 
-          else if ((combine_flag.eq.0).or. & !centroid -> center
-                   (combine_flag.eq.2)) then !VOF=0 cells updated.
+          else if ((combine_flag.eq.FVM_TO_GFM).or. & !centroid -> center
+                   (combine_flag.eq.FILL_EMPTY_CELL)) then !VOF=0 cells updated.
            ! do nothing
           else
            print *,"combine_flag invalid: ",combine_flag
@@ -18575,9 +18576,9 @@ stop
            vofcomp=(im-1)*ngeom_recon+1
           
            if (((im_primary.eq.im).and. &
-               (combine_flag.eq.0)).or. &  ! FVM -> GFM
+               (combine_flag.eq.FVM_TO_GFM)).or. &  ! FVM -> GFM
               ((cell_vfrac(im).ge.VOFTOL_MATERIAL).and. &
-               (combine_flag.eq.1))) then  ! GFM -> FVM
+               (combine_flag.eq.GFM_TO_FVM))) then  ! GFM -> FVM
 
             if (combine_idx.eq.-1) then
              ! do nothing
@@ -18620,11 +18621,11 @@ stop
             enddo
             enddo ! i1,j1,k1
 
-            if (combine_flag.eq.0) then ! centroid -> center
+            if (combine_flag.eq.FVM_TO_GFM) then ! centroid -> center
              do dir=1,SDIM
               xtarget(dir)=xsten(0,dir)
              enddo
-            else if (combine_flag.eq.1) then ! center -> centroid
+            else if (combine_flag.eq.GFM_TO_FVM) then ! center -> centroid
              do dir=1,SDIM
               xtarget(dir)=XC_sten(D_DECL(0,0,0),dir)
              enddo
@@ -18737,7 +18738,7 @@ stop
                      else if (ireverse.eq.1) then
                       Tgamma_STATUS=-Tgamma_STATUS
                      else
-                      print *,"ireverse invalid"
+                      print *,"ireverse invalid ",ireverse
                       stop
                      endif
 
@@ -18795,7 +18796,7 @@ stop
                         if (Tgamma.gt.zero) then
                          ! do nothing
                         else
-                         print *,"Tgamma must be positive1"
+                         print *,"Tgamma must be positive1 ",Tgamma
                          stop
                         endif
                        else
@@ -18814,7 +18815,7 @@ stop
                         if (Tgamma.gt.zero) then
                          ! do nothing
                         else
-                         print *,"Tgamma must be positive22"
+                         print *,"Tgamma must be positive22 ",Tgamma
                          stop
                         endif
                         if ((TorYgamma_BC.ge.zero).and. &
@@ -18892,7 +18893,7 @@ stop
                 else if (LL.eq.zero) then
                  ! do nothing
                 else
-                 print *,"LL invalid"
+                 print *,"LL invalid ",LL
                  stop
                 endif
 
@@ -18913,8 +18914,8 @@ stop
              enddo ! im_opp
             enddo ! ireverse
 
-             ! combine_flag==0 (FVM->GFM) or
-             ! combine_flag==1 (GFM->FVM) 
+             ! combine_flag==FVM_TO_GFM (FVM->GFM) or
+             ! combine_flag==GFM_TO_FVM (GFM->FVM) 
             do k1=k1lo,k1hi
             do j1=-1,1
             do i1=-1,1
@@ -19048,7 +19049,8 @@ stop
             call center_centroid_interchange( &
              DATA_FLOOR, &
              nsolve, &
-             combine_flag,  & ! 0=>centroid -> center   1=>center->centroid
+             !FVM_TO_GFM(centroid->center) or GFM_TO_FVM(center->centroid)
+             combine_flag, & 
              tsat_flag, & !-1=>use all cells in stencil;=0=>no tsat;=1=>tsat
              bfact, &
              level, &
@@ -19066,7 +19068,7 @@ stop
              TSAT_master, &
              T_out)
 
-            if (combine_flag.eq.0) then !centroid -> center (FVM->GFM)
+            if (combine_flag.eq.FVM_TO_GFM) then !centroid -> center (FVM->GFM)
 
              if (im_primary.eq.im) then
               !do nothing
@@ -19096,7 +19098,7 @@ stop
              else if (tsat_flag.eq.1) then
               ! do nothing
              else
-              print *,"tsat_flag invalid"
+              print *,"tsat_flag invalid ",tsat_flag
               stop
              endif
 
@@ -19104,7 +19106,7 @@ stop
               newcell(D_DECL(i,j,k),im_opp)=T_out(1)
              enddo
 
-            else if (combine_flag.eq.1) then  !center -> centroid (GFM->FVM)
+            else if (combine_flag.eq.GFM_TO_FVM) then!center->centroid
 
              if (tsat_flag.eq.0) then
 
@@ -19125,7 +19127,7 @@ stop
              stop
             endif
 
-           else if (combine_flag.eq.0) then !centroid->center (FVM->GFM)
+           else if (combine_flag.eq.FVM_TO_GFM) then !centroid->center(FVM->GFM)
 
             if (im_primary.ne.im) then
              ! do nothing
@@ -19135,8 +19137,8 @@ stop
              stop
             endif
 
-           else if ((combine_flag.eq.1).or. & ! GFM->FVM
-                    (combine_flag.eq.2)) then ! combine if F==0
+           else if ((combine_flag.eq.GFM_TO_FVM).or. & ! GFM->FVM
+                    (combine_flag.eq.FILL_EMPTY_CELL)) then ! combine if F==0
 
             if (abs(cell_vfrac(im)).le.VOFTOL_MATERIAL) then
 
@@ -19159,9 +19161,9 @@ stop
               stop
              endif
 
-             if (combine_flag.eq.1) then ! GFM -> FVM (after diffusion)
+             if (combine_flag.eq.GFM_TO_FVM) then ! GFM -> FVM (after diffusion)
               newcell(D_DECL(i,j,k),im)=state_mass_average
-             else if (combine_flag.eq.2) then !combine if F==0
+             else if (combine_flag.eq.FILL_EMPTY_CELL) then !combine if F==0
               cellfab(D_DECL(i,j,k),cellcomp)=state_mass_average
              else
               print *,"combine_flag invalid:",combine_flag
@@ -19170,7 +19172,7 @@ stop
  
             else if ((cell_vfrac(im).ge.VOFTOL_MATERIAL).and. &
                      (cell_vfrac(im).le.one+EPS1).and. &
-                     (combine_flag.eq.2)) then !combine if vfrac<VOFTOL_MATERIAL
+                     (combine_flag.eq.FILL_EMPTY_CELL)) then
              ! do nothing
             else
              print *,"cell_vfrac or combine_flag bust"
@@ -19194,7 +19196,7 @@ stop
             stop
            endif
 
-           if (combine_flag.eq.0) then ! centroid -> center
+           if (combine_flag.eq.FVM_TO_GFM) then ! centroid -> center
 
             T_out(1)=cellfab(D_DECL(i,j,k),scomp(im)+1)
 
@@ -19225,9 +19227,9 @@ stop
              newcell(D_DECL(i,j,k),im_opp)=T_out(1)
             enddo
 
-           else if (combine_flag.eq.1) then ! center->centroid
+           else if (combine_flag.eq.GFM_TO_FVM) then ! center->centroid
             ! do nothing
-           else if (combine_flag.eq.2) then ! extrap where vfrac=0
+           else if (combine_flag.eq.FILL_EMPTY_CELL) then ! extrap where vfrac=0
             ! do nothing
            else
             print *,"combine_flag invalid: ",combine_flag
@@ -19262,7 +19264,7 @@ stop
       return
       end subroutine fort_combinevel
 
-       ! combine_flag==2 (only overwrite if F=0)
+       ! combine_flag==FILL_EMPTY_CELL (only overwrite if F=0)
       subroutine fort_combinevelface( &
        tid, &
        hflag, &
