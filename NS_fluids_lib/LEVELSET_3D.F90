@@ -5376,6 +5376,8 @@ stop
                 endif
                 call get_iten(im_mdot,im_opp_mdot,iten)
                 iten_shift=ireverse*num_interfaces+iten
+                 ! default_flag=1 => only the sign is needed
+                 ! default_flag=0 => the value is important too.
                 LL=get_user_latent_heat(iten_shift,room_temperature,1)
                 if (LL.eq.zero) then
                  ! do nothing
@@ -19170,7 +19172,9 @@ stop
       integer im_opp
       integer im3
       integer iten
+      integer iten_shift
       integer icurv
+      integer ireverse
       integer nfine
       integer im_refine_density
       integer im_solid_max
@@ -19265,6 +19269,8 @@ stop
       real(amrex_real) :: test_density
       real(amrex_real) :: test_temperature
       real(amrex_real) :: DeDT
+      real(amrex_real) :: LL
+      integer :: phase_change_material(num_materials)
       integer :: imattype
       integer :: ispec
 
@@ -19474,6 +19480,34 @@ stop
 
       lsnew_ptr=>lsnew
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+
+      do im=1,num_materials
+       phase_change_material(im)=0
+       do im_opp=1,num_materials
+        if (im.eq.im_opp) then
+         !do nothing
+        else if (im.ne.im_opp) then
+         do ireverse=0,1
+          call get_iten(im,im_opp,iten)
+          iten_shift=ireverse*num_interfaces+iten
+           ! default_flag=1 => only the sign is needed
+           ! default_flag=0 => the value is important too.
+          LL=get_user_latent_heat(iten_shift,room_temperature,1)
+          if (LL.eq.zero) then
+           !do nothing
+          else if (LL.ne.zero) then
+           phase_change_material(im)=1
+          else
+           print *,"LL invalid ",LL
+           stop
+          endif
+         enddo !ireverse=0,1
+        else
+         print *,"im or im_opp invalid ",im,im_opp
+         stop
+        endif
+       enddo !im_opp=1,num_materials
+      enddo !im=1,num_materials
 
       istenlo(3)=0
       istenhi(3)=0
@@ -19779,12 +19813,25 @@ stop
         
          do im=1,num_materials
 
-          if (is_compressible_mat(im).eq.0) then
-           !do nothing
-          else if (is_compressible_mat(im).eq.1) then
+          statecomp=(im-1)*num_state_material+ENUM_DENVAR+1
 
-           statecomp=(im-1)*num_state_material+ENUM_DENVAR+1
+          if ((F_TESSELLATE_ALL(im).lt.half).or. &
+              (phase_change_material(im).eq.0)) then
            dennew(D_DECL(i,j,k),statecomp+1)=temperature_combine
+          else if ((F_TESSELLATE_ALL(im).ge.half).and. &
+                   (phase_change_material(im).eq.1)) then
+           !do nothing
+          else
+           print *,"F_TESSELLATE_ALL invalid ",F_TESSELLATE_ALL
+           print *,"or phase_change_material invalid ",phase_change_material
+           stop
+          endif
+
+          if (is_compressible_mat(im).eq.0) then
+
+           !do nothing
+
+          else if (is_compressible_mat(im).eq.1) then
 
            im_refine_density=im_refine_density+1
            if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
@@ -19799,8 +19846,10 @@ stop
             print *,"expecting constant_density_all_time=0"
             stop
            endif
+
           else
-           print *,"is_compressible(im) invalid"
+           print *,"is_compressible_mat(im) invalid ", &
+              im,is_compressible_mat(im)
            stop
           endif
 
@@ -19938,11 +19987,7 @@ stop
 
             if (is_compressible_mat(im).eq.0) then
 
-              !incompressible temperature
-             istate=num_state_base
-             tempcomp=(im-1)*num_state_material+istate
-             dennew(D_DECL(i,j,k),tempcomp)=local_species_sum(istate)/ &
-                     density_stencil_sum
+             !incompressible temperature is updated above.
 
             else if (is_compressible_mat(im).eq.1) then
 
@@ -19976,11 +20021,11 @@ stop
             enddo ! istate=num_state_base,num_state_base+num_species_var
 
             if (is_compressible_mat(im).eq.0) then
-             !incompressible temperature done here
-             istate=num_state_base
-             tempcomp=(im-1)*num_state_material+istate
-             dennew(D_DECL(i,j,k),tempcomp)=fort_tempconst(im)
+
+             !incompressible temperature already done at all (i,j,k)
+
             else if (is_compressible_mat(im).eq.1) then
+
              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
               !do nothing
              else
@@ -19992,6 +20037,7 @@ stop
                 (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
                   fort_denconst(im)
              enddo
+
             else
              print *,"is_compressible_mat(im) invalid ", &
                im,is_compressible_mat(im)
