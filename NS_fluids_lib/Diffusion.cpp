@@ -637,9 +637,9 @@ void NavierStokes::viscous_boundary_fluxes(
 // project_option = SOLVETYPE_HEAT (temp)
 // project_option = SOLVETYPE_VISC (cell centered velocity) 
 // project_option = SOLVETYPE_SPEC+ns ns=0..num_species_var-1 (species)
-// combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..num_materials)
-// combine_flag==1 (GFM -> FVM)
-// combine_flag==2 (combine if vfrac<VOFTOL)
+// combine_flag==FVM_TO_GFM (T[im]=T_interp im=1..num_materials)
+// combine_flag==GFM_TO_FVM
+// combine_flag==FILL_EMPTY_CELL (combine if vfrac<VOFTOL)
 // interface_cond_avail==1 if interface temperature and mass fraction are
 //   available.
 void NavierStokes::combine_state_variable(
@@ -697,10 +697,10 @@ void NavierStokes::combine_state_variable(
  } else if (project_option==SOLVETYPE_PRES) {    // regular projection
   nsolve=1;
 
-  if (combine_flag==2) { //combine if vfrac<VOFTOL
+  if (combine_flag==FILL_EMPTY_CELL) { //combine if vfrac<VOFTOL
    // do nothing
   } else
-   amrex::Error("expecting combine_flag=2 (combine if vfrac<VOFTOL)");
+   amrex::Error("expect combine_flag==FILL_EMPTY_CELL(comb. if vfrac<VOFTOL)");
 
   num_materials_combine=1;
   if (update_flux!=1)
@@ -711,10 +711,10 @@ void NavierStokes::combine_state_variable(
  } else if (project_option==SOLVETYPE_VISC) { 
   nsolve=AMREX_SPACEDIM;
 
-  if (combine_flag==2) { //combine if vfrac<VOFTOL
+  if (combine_flag==FILL_EMPTY_CELL) { //combine if vfrac<VOFTOL
    // do nothing
   } else
-   amrex::Error("expecting combine_flag=2 (combine if vfrac<VOFTOL)");
+   amrex::Error("expect combine_flag=FILL_EMPTY_CELL(combine if vfrac<VOFTOL)");
 
   num_materials_combine=1;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
@@ -791,8 +791,8 @@ void NavierStokes::combine_state_variable(
 
  MultiFab* STATE_INTERFACE=nullptr;
 
- if ((combine_flag==0)||  // FVM -> GFM
-     (combine_flag==1)) { // GFM -> FVM
+ if ((combine_flag==FVM_TO_GFM)||  // FVM -> GFM
+     (combine_flag==GFM_TO_FVM)) { // GFM -> FVM
 
   if (interface_cond_avail==1) {
    if (is_phasechange==1) {
@@ -809,7 +809,7 @@ void NavierStokes::combine_state_variable(
   } else
    amrex::Error("interface_cond_avail invalid");
 
- } else if (combine_flag==2) { // combine if vfrac<VOFTOL
+ } else if (combine_flag==FILL_EMPTY_CELL) { // combine if vfrac<VOFTOL
 
   STATE_INTERFACE=&LS_new; // placeholder
 
@@ -841,14 +841,14 @@ void NavierStokes::combine_state_variable(
 
  MultiFab* signed_distance=nullptr;
 
- if ((combine_flag==0)||  // FVM -> GFM
-     (combine_flag==1)) { // GFM -> FVM
+ if ((combine_flag==FVM_TO_GFM)||  // FVM -> GFM
+     (combine_flag==GFM_TO_FVM)) { // GFM -> FVM
 
   signed_distance=LEVEL_COMBINE;
   if (signed_distance->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("signed_distance->nComp() invalid");
 
- } else if (combine_flag==2) { // combine if F==0
+ } else if (combine_flag==FILL_EMPTY_CELL) { // combine if F==0
 
   signed_distance=localMF[SLOPE_RECON_MF];
   if (signed_distance->nComp()!=num_materials*ngeom_recon)
@@ -870,9 +870,10 @@ void NavierStokes::combine_state_variable(
  if (update_flux==0) {
 
   if (combine_idx==-1) {
-   if ((combine_flag==0)||(combine_flag==1)) {
+   if ((combine_flag==FVM_TO_GFM)||
+       (combine_flag==GFM_TO_FVM)) {
     init_boundary_list(scomp,ncomp);
-   } else if (combine_flag==2) {
+   } else if (combine_flag==FILL_EMPTY_CELL) {
     //do nothing
    } else
     amrex::Error("combine_flag invalid");
@@ -889,7 +890,7 @@ void NavierStokes::combine_state_variable(
 
  if (update_flux==1) {
 
-  if (combine_flag==2) {
+  if (combine_flag==FILL_EMPTY_CELL) {
    // do nothing
   } else
    amrex::Error("combine_flag invalid");
@@ -1003,7 +1004,7 @@ void NavierStokes::combine_state_variable(
 
   int ncomp_cell=cell_mf->nComp();
 
-  if (combine_flag==1) {  // center -> centroid
+  if (combine_flag==GFM_TO_FVM) {  // center -> centroid
 
    if (combine_idx!=-1)
     amrex::Error("combine_idx invalid");
@@ -1012,16 +1013,16 @@ void NavierStokes::combine_state_variable(
    for (int im=1;im<num_materials;im++) 
     MultiFab::Copy(*cell_mf,*cell_mf,scomp[0],scomp[im],1,0);
 
-  } else if (combine_flag==0) { // centroid -> center
+  } else if (combine_flag==FVM_TO_GFM) { // centroid -> center
    // do nothing
-  } else if (combine_flag==2) { // init zero VFRAC areas.
+  } else if (combine_flag==FILL_EMPTY_CELL) { // init zero VFRAC areas.
    // do nothing
   } else
    amrex::Error("combine_flag invalid");
 
   MultiFab* new_combined;
-  if ((combine_flag==0)||  // FVM -> GFM
-      (combine_flag==1)) { // GFM -> FVM
+  if ((combine_flag==FVM_TO_GFM)||  // FVM -> GFM
+      (combine_flag==GFM_TO_FVM)) { // GFM -> FVM
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
    new_combined=new MultiFab(grids,dmap,nsolve*num_materials,0,
@@ -1033,7 +1034,7 @@ void NavierStokes::combine_state_variable(
     MultiFab::Copy(*new_combined,*cell_mf,0,0,num_materials,0);
    } else
     amrex::Error("combine_idx invalid");
-  } else if (combine_flag==2) {
+  } else if (combine_flag==FILL_EMPTY_CELL) {
    new_combined=cell_mf;
   } else
    amrex::Error("combine_flag invalid");
@@ -1080,8 +1081,8 @@ void NavierStokes::combine_state_variable(
    //  repeats ....
    FArrayBox& Tsatfab=(*STATE_INTERFACE)[mfi];
 
-   if ((combine_flag==0)||
-       (combine_flag==1)) {
+   if ((combine_flag==FVM_TO_GFM)||
+       (combine_flag==GFM_TO_FVM)) {
     if ((is_phasechange==1)&&(interface_cond_avail==1)) {
      if (Tsatfab.nComp()==ntsat) {
       //do nothing
@@ -1095,7 +1096,7 @@ void NavierStokes::combine_state_variable(
      // do nothing
     } else
      amrex::Error("is_phasechange or interface_cond_avail invalid");
-   } else if (combine_flag==2) {
+   } else if (combine_flag==FILL_EMPTY_CELL) {
     // do nothing
    } else
     amrex::Error("combine_flag invalid");
@@ -1174,8 +1175,8 @@ void NavierStokes::combine_state_variable(
 } // omp
   ns_reconcile_d_num(LOOP_COMBINEVEL,"combine_state_variable");
 
-  if ((combine_flag==0)||  // FVM->GFM
-      (combine_flag==1)) { // GFM->FVM
+  if ((combine_flag==FVM_TO_GFM)||  // FVM->GFM
+      (combine_flag==GFM_TO_FVM)) { // GFM->FVM
    if (combine_idx==-1) {
     for (int im=0;im<num_materials;im++)
      MultiFab::Copy(*cell_mf,*new_combined,im,scomp[im],1,0);
@@ -1186,7 +1187,7 @@ void NavierStokes::combine_state_variable(
 
    delete new_combined;
 
-  } else if (combine_flag==2) {
+  } else if (combine_flag==FILL_EMPTY_CELL) {
    // do nothing
   } else
    amrex::Error("combine_flag invalid");

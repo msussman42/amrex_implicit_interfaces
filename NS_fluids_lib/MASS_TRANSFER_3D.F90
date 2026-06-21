@@ -5666,7 +5666,7 @@ stop
                         (oldvfrac(im_probe).le.one+EPS1)) then
 
                 DATA_FLOOR=zero
-                combine_flag=0
+                combine_flag=FVM_TO_GFM !centroid to center
                 nsolve_interp=1
                 do udir=1,SDIM
                  xtarget_interp(udir)=new_centroid(im_probe,udir)
@@ -5675,7 +5675,7 @@ stop
                 call center_centroid_interchange( &
                  DATA_FLOOR, &
                  nsolve_interp, &
-                 combine_flag, & !0=>centroid -> center   1=>center->centroid
+                 combine_flag, & 
                  interp_to_new_supermesh, &!interp_to_new_supermesh(tsatflag)=1
                  bfact, &
                  level, &

@@ -20558,7 +20558,7 @@ NavierStokes::GetDrag(int isweep) {
 
  const Real* dx = geom.CellSize();
 
- int combine_flag=2;
+ int combine_flag=FILL_EMPTY_CELL;
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
@@ -20780,7 +20780,7 @@ NavierStokes::GetDrag(int isweep) {
    amrex::Error("isweep or drag isweep error");
  } // iq
 
- combine_flag=2;
+ combine_flag=FILL_EMPTY_CELL;
  hflag=0;
  combine_idx=-1; 
  update_flux=0;
@@ -21808,7 +21808,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
 	MFInfo().SetTag("error_heat_map_mf"),FArrayBoxFactory());
  error_heat_map_mf -> setVal(0.0);
 
- int combine_flag=2;
+ int combine_flag=FILL_EMPTY_CELL;
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
@@ -25684,7 +25684,7 @@ NavierStokes::post_init_state () {
 
  Number_CellsALL(real_number_of_cells);
 
- int combine_flag=2;  
+ int combine_flag=FILL_EMPTY_CELL;  
  int hflag=0;
  int combine_idx=-1;
  int update_flux=0;
@@ -25707,7 +25707,7 @@ NavierStokes::post_init_state () {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  combine_flag=2; //combine if vfrac<VOFTOL 
+  combine_flag=FILL_EMPTY_CELL; //combine if vfrac<VOFTOL 
   hflag=0;
   combine_idx=-1;
   update_flux=0;
@@ -25822,7 +25822,7 @@ NavierStokes::post_init_state () {
    // and  ice velocity (MAC)
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   combine_flag=2;
+   combine_flag=FILL_EMPTY_CELL;
    hflag=0;
    combine_idx=-1;
    update_flux=0;
@@ -25854,7 +25854,7 @@ NavierStokes::post_init_state () {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
 
-   combine_flag=2;
+   combine_flag=FILL_EMPTY_CELL;
    hflag=0;
    combine_idx=-1;
    update_flux=0;
