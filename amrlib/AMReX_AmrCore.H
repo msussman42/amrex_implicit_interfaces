@@ -70,10 +70,10 @@ public:
     int LSA_extra_data;  // =0 or 3
     int LSA_plot_index; // 0,1,2, or 3
 
-    int LSA_nsteps_power_method;
+    int LSA_nsteps_krylov_subspace_method;
 
      //LSA_current_step=0 => define q_np1
-     //1<=LSA_current_step<=LSA_nsteps_power_method => power method
+     //1<=LSA_current_step<=LSA_nsteps_krylov_subspace_method => krylov_subspace method
     int LSA_current_step; 
 
     int LSA_initial_levelSteps; 

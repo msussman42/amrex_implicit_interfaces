@@ -1630,13 +1630,14 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    int null_perturbation=1;
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+     parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
 
     LSA_perturbations_switch=false; 
 
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
      //parent->LSA_initial_levelSteps=amrptr->levelSteps(0) at the
      //very beginning (main.cpp)
@@ -1649,7 +1650,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-     //initialize non perturbed state (the first power method iteration 
+     //initialize non perturbed state 
+     //(the first krylov_subspace method iteration 
      //establishes the base state).
     if (parent->LSA_current_step==0) { 
 
@@ -1668,7 +1670,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (NS_LSA_step_count==0) {
       null_perturbation=0;
@@ -1694,15 +1697,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-        parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+        parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else {
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    if ((perturbation_on_restart==1)&&
@@ -1766,11 +1769,12 @@ Real NavierStokes::advance(Real time,Real dt) {
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+      parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
     NS_LSA_step_count=parent->levelSteps(0)-
                       parent->LSA_initial_levelSteps;
@@ -1783,7 +1787,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-     //initialize non perturbed state (first power series method iteration
+     //initialize non perturbed state 
+     //(first krylov_subspace series method iteration
      //used to establish a base state)
     if (parent->LSA_current_step==0) { 
 
@@ -1807,7 +1812,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (NS_LSA_step_count==0) {
 
@@ -1830,15 +1836,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-        parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+        parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else {
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    interface_touch_flag=1; //advance
@@ -1874,18 +1880,18 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    } else if (advance_status==0) { // failure
 
-    if (parent->LSA_nsteps_power_method==0) {
+    if (parent->LSA_nsteps_krylov_subspace_method==0) {
      //do nothing
-    } else if (parent->LSA_nsteps_power_method>=1) {
+    } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("advance_status==0 invalid for LSA: reduce fixed_dt");
     } else {
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-     amrex::Error("parent->LSA_nsteps_power_method invalid");
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+     amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
     }
 
     dt_new=0.5*dt_new;
@@ -1905,16 +1911,18 @@ Real NavierStokes::advance(Real time,Real dt) {
     amrex::Error("advance_status invalid");
    }
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+     parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing (no LSA)
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
     NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
 
-     //initialize non perturbed state (first power series method iteration
+     //initialize non perturbed state 
+     //(first krylov_subspace series method iteration
      //used to establish a base state)
     if (parent->LSA_current_step==0) {
 
@@ -1925,8 +1933,7 @@ Real NavierStokes::advance(Real time,Real dt) {
       LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
-      LSA_default_eigenvectorALL(
-        LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
+      LSA_default_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 
@@ -1939,13 +1946,17 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
+      //LSA_NP1_EXTRA is the t^{n+1} data resulting from unperturbed
+      //initial conditions.
+      //LSA_EVEC_EXTRA is the t^{n+1} data resulting from perturbed
+      //initial conditions.
       LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
-      LSA_eigenvectorALL(
-	LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
+      LSA_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 
@@ -1960,15 +1971,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
       parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else { 
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    delete_array(MASKCOEF_MF);

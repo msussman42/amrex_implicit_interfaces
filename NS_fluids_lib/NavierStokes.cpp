@@ -1055,7 +1055,7 @@ Real NavierStokes::visc_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::thermal_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::total_advance_time=0.0;
 
-int NavierStokes::NS_LSA_nsteps_power_method=0;
+int NavierStokes::NS_LSA_nsteps_krylov_subspace_method=0;
 int NavierStokes::NS_LSA_max_step_count=0;
 int NavierStokes::NS_LSA_step_count=0;
 
@@ -6596,14 +6596,14 @@ NavierStokes::NavierStokes (AmrCore&        papa,
     AmrLevel(papa,lev,level_geom,bl,dmap_in,time)
 {
     Geometry_setup();
-    NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+    NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
 }
 
 NavierStokes::~NavierStokes () {
 
-   if (NS_LSA_nsteps_power_method==0) {
+   if (NS_LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
-   } else if (NS_LSA_nsteps_power_method>=1) {
+   } else if (NS_LSA_nsteps_krylov_subspace_method>=1) {
 
     std::cout << "deleting NavierStokes() level= " << level << '\n';
     std::cout << "deleting NavierStokes() NS_LSA_step_count= " << 
@@ -6621,7 +6621,7 @@ NavierStokes::~NavierStokes () {
      amrex::Error("NS_LSA_step_count invalid when deleting NavierStokes()");
 
    } else
-    amrex::Error("NS_LSA_nsteps_power_method invalid");
+    amrex::Error("NS_LSA_nsteps_krylov_subspace_method invalid");
 
    Geometry_cleanup();
 
@@ -10267,7 +10267,7 @@ void NavierStokes::post_restart() {
 void
 NavierStokes::initData () {
 
- NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+ NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
 
  interface_touch_flag=1; //initData()
 
@@ -10984,7 +10984,7 @@ NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
 
- NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+ NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
 
  interface_touch_flag=1; //init(old,ba_in,dmap_in)
  
@@ -11300,13 +11300,13 @@ void NavierStokes::LSA_levelset_norminf(
    xlo,dx,
    &dt_slab,
    &cur_time_slab,
-   &local_max_local[tid_current],
+   &local_max_local[tid_current], //intent(inout)
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
    old_state.dataPtr(im_critical),
    ARLIM(old_state.loVect()),
    ARLIM(old_state.hiVect()),
-   cell_evec.dataPtr(im_critical),
+   cell_evec.dataPtr(im_critical), //intent(inout) (=0 if |LS|>3 dx)
    ARLIM(cell_evec.loVect()),
    ARLIM(cell_evec.hiVect()) );
  } // mfi
@@ -11473,7 +11473,7 @@ void NavierStokes::LSA_eigenvector(
  if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("extra_comp invalid");
+  amrex::Error("expecting extra_comp!=unperturb_extra_comp");
 
  if ((extra_comp==LSA_N_EXTRA)||
      (extra_comp==LSA_NP1_EXTRA)||
@@ -11541,7 +11541,8 @@ void NavierStokes::LSA_normalize_eigenvector(
   int unperturb_extra_comp,int extra_comp,
   Vector<Real>& cell_max,
   Vector<Real>& LS_cell_max,
-  int isweep) {
+  int isweep,
+  int caller_id) {
 
  int finest_level=parent->finestLevel();
  NavierStokes& ns_finest=getLevel(finest_level);
@@ -11569,7 +11570,7 @@ void NavierStokes::LSA_normalize_eigenvector(
  if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("extra_comp invalid");
+  amrex::Error("expecting extra_comp!=unperturb_extra_comp");
 
  if ((extra_comp==LSA_N_EXTRA)||
      (extra_comp==LSA_NP1_EXTRA)||
@@ -11675,36 +11676,64 @@ void NavierStokes::LSA_normalize_eigenvector(
      is_temperature=1;
    }
 
-   if (((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM))||
-       (is_temperature==1)) {
-    Real floating_zero=scale_parm[scomp_loop]*1.0e-10;
-    if (cell_max[scomp_loop]>floating_zero) {
-     //mult(Real val,int comp,int num_comp,int nghost=0)
-     S_extra_comp.mult(scale_parm[scomp_loop]/cell_max[scomp_loop],
-        scomp_loop,1);
-    } else if ((cell_max[scomp_loop]>=0.0)&&
-               (cell_max[scomp_loop]<=floating_zero)) {
-     //mult(Real val,int comp,int num_comp,int nghost=0)
-     S_extra_comp.mult(0.0,scomp_loop,1);
-    } else
-     amrex::Error("cell_max invalid");
-   }
+   if (caller_id==FROM_default_eigenvectorALL) {
+
+    if (((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM))||
+        (is_temperature==1)) {
+
+     Real floating_zero=scale_parm[scomp_loop]*1.0e-10;
+     if (cell_max[scomp_loop]>floating_zero) {
+      Real local_scale=scale_parm[scomp_loop]/cell_max[scomp_loop];
+
+      if (is_temperature==1) {
+       local_scale*=LSA_temperature_scale;
+      } else if (is_temperature==0) {
+       local_scale*=LSA_velocity_scale;
+      } else
+       amrex::Error("is_temperature invalid");
+
+      //mult(Real val,int comp,int num_comp,int nghost=0)
+      S_extra_comp.mult(local_scale,scomp_loop,1);
+     } else if ((cell_max[scomp_loop]>=0.0)&&
+                (cell_max[scomp_loop]<=floating_zero)) {
+      //mult(Real val,int comp,int num_comp,int nghost=0)
+      S_extra_comp.mult(0.0,scomp_loop,1);
+     } else
+      amrex::Error("cell_max invalid");
+    }
+
+   } else if (caller_id==FROM_LSA_eigenvectorALL) {
+
+    //do nothing
+
+   } else
+    amrex::Error("caller_id invalid");
 
   } //for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++)
 
   for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
 
    Real floating_zero=LS_scale_parm[scomp_loop]*1.0e-10;
-   if (LS_cell_max[scomp_loop]>floating_zero) {
-    //mult(Real val,int comp,int num_comp,int nghost=0)
-    LS_extra_comp.mult(LS_scale_parm[scomp_loop]/LS_cell_max[scomp_loop],
-        scomp_loop,1);
-   } else if ((LS_cell_max[scomp_loop]>=0.0)&&
-              (LS_cell_max[scomp_loop]<=floating_zero)) {
+
+   if (caller_id==FROM_default_eigenvectorALL) {
+
+    if (LS_cell_max[scomp_loop]>floating_zero) {
      //mult(Real val,int comp,int num_comp,int nghost=0)
-    LS_extra_comp.mult(0.0,scomp_loop,1);
+     LS_extra_comp.mult(LS_scale_parm[scomp_loop]/LS_cell_max[scomp_loop],
+        scomp_loop,1);
+    } else if ((LS_cell_max[scomp_loop]>=0.0)&&
+               (LS_cell_max[scomp_loop]<=floating_zero)) {
+     //mult(Real val,int comp,int num_comp,int nghost=0)
+     LS_extra_comp.mult(0.0,scomp_loop,1);
+    } else
+     amrex::Error("LS_cell_max invalid");
+
+   } else if (caller_id==FROM_LSA_eigenvectorALL) {
+
+    //do nothing
+
    } else
-    amrex::Error("LS_cell_max invalid");
+    amrex::Error("caller_id invalid");
 
   } //for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++)
 
@@ -11731,15 +11760,24 @@ void NavierStokes::LSA_normalize_eigenvector(
 
 } //end subroutine LSA_normalize_eigenvector
 
+//LSA_normalize_eigenvectorALL is called from:
+//  LSA_eigenvectorALL
+//  LSA_default_eigenvectorALL
+//in NavierStokes::advance ->
+// LSA_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
+//in NavierStokes::advance ->
+// LSA_default_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 void NavierStokes::LSA_normalize_eigenvectorALL(
-  int unperturb_extra_comp,int extra_comp) {
+  int unperturb_extra_comp,
+  int extra_comp,
+  int caller_id) {
 
  int finest_level=parent->finestLevel();
 
  if (extra_comp!=unperturb_extra_comp) {
   //do nothing
  } else
-  amrex::Error("extra_comp invalid");
+  amrex::Error("expecting extra_comp!=unperturb_extra_comp");
 
  if ((extra_comp==LSA_N_EXTRA)||
      (extra_comp==LSA_NP1_EXTRA)||
@@ -11772,7 +11810,8 @@ void NavierStokes::LSA_normalize_eigenvectorALL(
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.LSA_normalize_eigenvector(
      unperturb_extra_comp,extra_comp,
-     cell_max,LS_cell_max,isweep);
+     cell_max,LS_cell_max,isweep,
+     caller_id);
   } //ilev
   if (1==1) { 
    std::cout << "LSA_normalize_eigenvectorALL\n";
@@ -11799,7 +11838,7 @@ NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
 
- NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+ NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
 
  interface_touch_flag=1; //init(ba_in,dmap_in)
 
@@ -13090,7 +13129,8 @@ void NavierStokes::make_heat_source() {
 
   NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
   NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
-  NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+  NS_LSA_nsteps_krylov_subspace_method=
+    parent->LSA_nsteps_krylov_subspace_method;
 
   if ((NS_LSA_step_count>=0)&&
       (NS_LSA_step_count<=NS_LSA_max_step_count)) {
@@ -13101,13 +13141,14 @@ void NavierStokes::make_heat_source() {
   if (parent->LSA_current_step==0) { //initialize non perturbed state.
    //do nothing
   } else if ((parent->LSA_current_step>=1)&&
-             (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+             (parent->LSA_current_step<=
+              parent->LSA_nsteps_krylov_subspace_method)) {
    null_perturbation=0;
   } else {
    std::cout << "parent->LSA_current_step=" <<
       parent->LSA_current_step << '\n';
-   std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
+   std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
    amrex::Error("parent->LSA_current_step invalid");
   }
 
@@ -13133,7 +13174,8 @@ void NavierStokes::make_heat_source() {
     //dst+=a*src
     //dst,a,src,srccomp,dstcomp,numcomp,nghost
     int dstcomp=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
-    MultiFab::Saxpy(S_new,LSA_temperature_scale,
+    Real local_LSA_temperature_scale=1.0;
+    MultiFab::Saxpy(S_new,local_LSA_temperature_scale,
        S_extra_comp,dstcomp,dstcomp,1,0);
    } //im=0 ... nmat-1 
 
@@ -22889,7 +22931,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    //0=tecplot nodes
   if (visual_nddata_format==0) {
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
    } else 
     amrex::Error("expecting visual_nddata_format==1");
@@ -22975,9 +23017,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::string plotfilename_MOF="MOF_PLT"; 
    plotfilename_MOF+=steps_string;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
     plotfilename_MOF+="LSA";
 
     std::stringstream LSA_steps_string_stream(std::stringstream::in |
@@ -22987,7 +23029,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     std::string LSA_steps_string=LSA_steps_string_stream.str();
     plotfilename_MOF+=LSA_steps_string;
    } else
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
 
    int icomp_MOF=0;
 
@@ -23067,9 +23109,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::string plotfilename="nddataPLT"; 
    plotfilename+=steps_string;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
     plotfilename+="LSA";
 
     std::stringstream LSA_steps_string_stream(std::stringstream::in |
@@ -23079,7 +23121,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     std::string LSA_steps_string=LSA_steps_string_stream.str();
     plotfilename+=LSA_steps_string;
    } else
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
 
 
 
@@ -23385,7 +23427,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    //2=tecplot cells (piecewise constant reconstruction).
   } else if (visual_nddata_format==2) {
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
    } else 
     amrex::Error("expecting visual_nddata_format==1");
@@ -24690,14 +24732,14 @@ void NavierStokes::computeNewDt (int finest_level,
    amrex::Error("nsteps invalid computeNewDt");
   }
 
-  if (parent->LSA_nsteps_power_method==0) {
+  if (parent->LSA_nsteps_krylov_subspace_method==0) {
    if (nsteps>0) {
     //do nothing
    } else {
     std::cout << "nsteps= " << nsteps << '\n';
     amrex::Error("nsteps invalid (not LSA) computeNewDt");
    }
-  } else if (parent->LSA_nsteps_power_method>=1) {
+  } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
    if ((fixed_dt==fixed_dt_init)&&(fixed_dt>0.0)) {
     //do nothing
    } else {
@@ -24706,9 +24748,9 @@ void NavierStokes::computeNewDt (int finest_level,
     amrex::Error("expecting fixed_dt > 0.0 (LSA) computeNewDt");
    }
   } else {
-   std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
-   amrex::Error("parent->LSA_nsteps_power_method invalid");
+   std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
+   amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
   }
    
   if (verbose>0) {

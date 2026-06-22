@@ -288,8 +288,8 @@ stop
       return
       end subroutine adjust_du
 
-       ! cc_flag=0  centroid -> center or some other target "xtarget"
-       ! cc_flag=1  center -> centroid
+       ! cc_flag=FVM_TO_GFM or
+       ! cc_flag=GFM_TO_FVM
        ! tsat_flag=-1 use all cells in the stencil
        ! tsat_flag=0 no tsat
        ! tsat_flag=1 tsat
@@ -369,29 +369,31 @@ stop
       real(amrex_real) wt_local
 
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
-       print *,"nsolve invalid"
+       print *,"nsolve invalid center_centroid_interchange ",nsolve
        stop
       endif
-      if ((cc_flag.ne.0).and.(cc_flag.ne.1)) then
-       print *,"cc_flag invalid"
+      if ((cc_flag.ne.FVM_TO_GFM).and. &
+          (cc_flag.ne.GFM_TO_FVM)) then
+       print *,"cc_flag invalid center_centroid_interchange ",cc_flag
        stop
       endif
       if ((tsat_flag.ne.-1).and. &
           (tsat_flag.ne.0).and. &
           (tsat_flag.ne.1)) then
-       print *,"tsat_flag invalid"
+       print *,"tsat_flag invalid center_centroid_interchange ",tsat_flag
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid112"
+       print *,"bfact invalid center_centroid_interchange ",bfact
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid center_centroid_interchange"
+       print *,"level invalid center_centroid_interchange ", &
+         level,finest_level
        stop
       endif
       if (nhalf.ne.3) then
-       print *,"nhalf invalid"
+       print *,"nhalf invalid center_centroid_interchange ",nhalf
        stop
       endif
        ! was TEMPERATURE_FLOOR
@@ -419,7 +421,7 @@ stop
        if (dx(dir).gt.zero) then 
         ! do nothing
        else
-        print *,"dx(dir) invalid"
+        print *,"dx(dir) invalid ",dx
         stop
        endif
        if (tsat_flag.eq.1) then
@@ -466,12 +468,12 @@ stop
          xtemp(SDIM)=xsten(2*k,SDIM)
         endif
         do dir=1,SDIM
-         if (cc_flag.eq.0) then ! centroid-> center or centroid to probe.
+         if (cc_flag.eq.FVM_TO_GFM) then 
           xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
-         else if (cc_flag.eq.1) then ! center-> centroid
+         else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
           xlive(dir)=xtemp(dir)  ! cell center
          else
-          print *,"cc_flag invalid"
+          print *,"cc_flag invalid ",cc_flag
           stop
          endif
         enddo ! dir=1..sdim
@@ -504,27 +506,27 @@ stop
 
         if (tsat_flag.eq.-1) then
          own_flag=1
-        else if (cc_flag.eq.0) then ! centroid->center
+        else if (cc_flag.eq.FVM_TO_GFM) then ! centroid->center
          if ((VF.ge.-EPS1).and. &
-             (VF.le.VOFTOL_MATERIAL)) then
+             (VF.le.EPS1)) then
           own_flag=0
-         else if ((VF.ge.VOFTOL_MATERIAL).and.(VF.le.one+EPS1)) then
+         else if ((VF.ge.EPS1).and.(VF.le.one+EPS1)) then
           own_flag=1
          else
-          print *,"VF invalid"
+          print *,"VF invalid ",VF
           stop
          endif
-        else if (cc_flag.eq.1) then ! center->centroid
+        else if (cc_flag.eq.GFM_TO_FVM) then ! center->centroid
          if ((LS.le.zero).or.(abs(VF).le.VOFTOL_MATERIAL)) then
           own_flag=0
          else if ((LS.ge.zero).and.(VF.ge.VOFTOL_MATERIAL)) then
           own_flag=1
          else
-          print *,"LS or VF invalid"
+          print *,"LS or VF invalid ",LS,VF
           stop
          endif
         else
-         print *,"cc_flag invalid"
+         print *,"cc_flag invalid ",cc_flag
          stop
         endif
  
@@ -568,19 +570,19 @@ stop
           endif
           wt_local=wt_local*(VF**2)
          else
-          print *,"tsat_flag invalid"
+          print *,"tsat_flag invalid ",tsat_flag
           stop
          endif
 
         else
-         print *,"own_flag invalid"
+         print *,"own_flag invalid ",own_flag
          stop
         endif
 
         if (wt_local.gt.zero) then
          ! do nothing
         else
-         print *,"wt_local invalid"
+         print *,"wt_local invalid ",wt_local
          stop
         endif
 
@@ -603,7 +605,7 @@ stop
            TMIN=T_Test
           endif
          else 
-          print *,"TBOUNDS_INIT invalid"
+          print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
           stop
          endif
 
@@ -614,7 +616,7 @@ stop
          ! do nothing
 
         else
-         print *,"im_primary invalid"
+         print *,"im_primary invalid ",im_primary
          stop
         endif
 
@@ -636,7 +638,7 @@ stop
        if (wt_sum.gt.zero) then
         ! do nothing
        else
-        print *,"wt_sum invalid"
+        print *,"wt_sum invalid ",wt_sum
         stop
        endif
 
@@ -661,7 +663,7 @@ stop
        else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
         T_avg=T_avg/wt_sum
        else
-        print *,"tsat_flag invalid"
+        print *,"tsat_flag invalid ",tsat_flag
         stop
        endif 
 
@@ -671,7 +673,7 @@ stop
        else if (TBOUNDS_INIT.eq.1) then
         ! do nothing
        else
-        print *,"TBOUNDS_INIT invalid"
+        print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
         stop
        endif
 
@@ -680,7 +682,7 @@ stop
        else if (tsat_flag.eq.1) then
         mat_ncomp=SDIM
        else
-        print *,"tsat_flag invalid"
+        print *,"tsat_flag invalid ",tsat_flag
         stop
        endif
 
@@ -707,12 +709,12 @@ stop
           xtemp(SDIM)=xsten(2*k1,SDIM)
          endif
          do dir=1,SDIM
-          if (cc_flag.eq.0) then ! centroid-> center or probe
+          if (cc_flag.eq.FVM_TO_GFM) then ! centroid-> center or probe
            xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
-          else if (cc_flag.eq.1) then ! center-> centroid
+          else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
            xlive(dir)=xtemp(dir) ! center
           else
-           print *,"cc_flag invalid"
+           print *,"cc_flag invalid ",cc_flag
            stop
           endif
          enddo ! dir
@@ -780,7 +782,7 @@ stop
         else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
          ! do nothing
         else
-         print *,"tsat_flag invalid"
+         print *,"tsat_flag invalid ",tsat_flag
          stop
         endif
        else if (matstatus.eq.0) then
@@ -809,7 +811,7 @@ stop
         
         T_hold=T_avg
        else
-        print *,"matstatus has an invalid value"
+        print *,"matstatus has an invalid value ",matstatus
         stop
        endif
  
@@ -964,7 +966,7 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfabFWEIGHT
-      cc_flag=0  ! centroid -> target
+      cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=0 ! do not use TSAT
       nsolve=1
       Tsat=room_temperature ! 293.0d0 if double prec.
@@ -1141,7 +1143,7 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfab
-      cc_flag=1  ! center -> target
+      cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
       !unused if tsat_flag==-1 
@@ -1262,7 +1264,7 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfab
-      cc_flag=1  ! center -> target
+      cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
       !unused if tsat_flag==-1 
@@ -1831,7 +1833,7 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfabTEMP
-      cc_flag=0  ! centroid -> target
+      cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=1 ! use TSAT
       nsolve=1
        ! YANG LIUs routine
@@ -1979,7 +1981,7 @@ stop
         stop
        endif
 
-       ! centroid -> target (cc_flag==0)
+       ! centroid -> target (cc_flag==FVM_TO_GFM)
        ! tsat_flag==1
        ! call center_centroid_interchange
        call interpfabTEMP( &
@@ -2011,7 +2013,7 @@ stop
 
         ! the least squares interpolant is limited by the stencil values.
         ! interpfabFWEIGHT calls center_centroid_interchange with
-        ! cc_flag=0 (centroid->target), tsat_flag=0,nsolve=1,Tsat=293
+        ! cc_flag=FVM_TO_GFM (centroid->target), tsat_flag=0,nsolve=1,Tsat=293
         ! (placeholder).
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
@@ -2053,7 +2055,7 @@ stop
 
        if (Ycomp_probe(iprobe).ge.1) then
 
-        ! centroid -> target (cc_flag==0)
+        ! centroid -> target (cc_flag==FVM_TO_GFM)
         ! tsat_flag==1
         ! call center_centroid_interchange
         call interpfabTEMP( &
@@ -2129,7 +2131,7 @@ stop
          stop
         endif
 
-         ! cc_flag=0 centroid->target
+         ! cc_flag=FVM_TO_GFM  centroid->target
          ! tsat_flag=0 do not use TSAT
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
@@ -2154,7 +2156,7 @@ stop
        endif
 
        do imls=1,num_materials
-         ! center -> target (cc_flag==1)
+         ! center -> target (cc_flag==GFM_TO_FVM)
          ! tsat_flag==-1
          ! call center_centroid_interchange
         call interpfab( &
@@ -2216,7 +2218,7 @@ stop
         Y_I, &
         PROBE_PARMS%LL)
 
-       ! centroid -> target (cc_flag==0)
+       ! centroid -> target (cc_flag==FVM_TO_GFM)
        ! tsat_flag==0 do not use TSAT
        ! call center_centroid_interchange
        ! distance and volume fraction weighted linear least

@@ -270,13 +270,13 @@ AmrCore::InitAmr () {
   std::cout << "Amr.verbose= " << verbose << '\n';
  }
 
- LSA_nsteps_power_method=0;
- pp.queryAdd("LSA_nsteps_power_method",LSA_nsteps_power_method);
+ LSA_nsteps_krylov_subspace_method=0;
+ pp.queryAdd("LSA_nsteps_krylov_subspace_method",LSA_nsteps_krylov_subspace_method);
 
- if (LSA_nsteps_power_method>=0) {
+ if (LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
  } else
-  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  amrex::Error("expecting LSA_nsteps_krylov_subspace_method>=0");
 
  LSA_activate=0;
  pp.queryAdd("LSA_activate",LSA_activate);
@@ -291,12 +291,12 @@ AmrCore::InitAmr () {
  pp.queryAdd("LSA_plot_index",LSA_plot_index);
 
  LSA_extra_data=0;
- if (LSA_nsteps_power_method==0) {
+ if (LSA_nsteps_krylov_subspace_method==0) {
   //do nothing
- } else if (LSA_nsteps_power_method>0) {
+ } else if (LSA_nsteps_krylov_subspace_method>0) {
   LSA_extra_data=3;
  } else
-  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  amrex::Error("expecting LSA_nsteps_krylov_subspace_method>=0");
  
  if ((LSA_plot_index>=0)&&(LSA_plot_index<=LSA_extra_data)) {
   //do nothing
@@ -306,8 +306,8 @@ AmrCore::InitAmr () {
  LSA_current_step=0;
 
  if (ParallelDescriptor::IOProcessor()) {
-  std::cout << "Amr.LSA_nsteps_power_method= " << 
-    LSA_nsteps_power_method  << '\n';
+  std::cout << "Amr.LSA_nsteps_krylov_subspace_method= " << 
+    LSA_nsteps_krylov_subspace_method  << '\n';
  }
 
   //AmrCore::Initialize ()
@@ -531,17 +531,17 @@ AmrCore::InitAmr () {
 
  }
 
- if ((LSA_nsteps_power_method==0)||
+ if ((LSA_nsteps_krylov_subspace_method==0)||
      (LSA_activate==0)) {
 
   LSA_max_step=0;
 
-  if (LSA_nsteps_power_method==0) {
+  if (LSA_nsteps_krylov_subspace_method==0) {
    //do nothing
-  } else if (LSA_nsteps_power_method>0) {
+  } else if (LSA_nsteps_krylov_subspace_method>0) {
    ppmain.queryAdd("max_step",LSA_max_step);
   } else
-   amrex::Error("LSA_nsteps_power_method invalid");
+   amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
 
   if (max_level==0) {
 
@@ -553,7 +553,7 @@ AmrCore::InitAmr () {
 
   } else if (max_level>0) {
 
-   if (LSA_nsteps_power_method==0) {
+   if (LSA_nsteps_krylov_subspace_method==0) {
 
     if (regrid_int>=1) {
      //do nothing
@@ -561,20 +561,20 @@ AmrCore::InitAmr () {
      amrex::Error("expecting regrid_int>=1 if max_level>0");
     }
 
-   } else if (LSA_nsteps_power_method>0) {
+   } else if (LSA_nsteps_krylov_subspace_method>0) {
 
     if (regrid_int>LSA_max_step) {
      //do nothing
     } else {
-     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_power_method>0");
+     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_krylov_subspace_method>0");
     }
    } else
-    amrex::Error("LSA_nsteps_power_method invalid");
+    amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
 
   } else
    amrex::Error("max_level invalid");
 
- } else if ((LSA_nsteps_power_method>=1)&&
+ } else if ((LSA_nsteps_krylov_subspace_method>=1)&&
             (LSA_activate==1)) {
 
   LSA_max_step=-1;
@@ -598,7 +598,7 @@ AmrCore::InitAmr () {
    amrex::Error("max_level invalid");
 
  } else
-  amrex::Error("LSA_nsteps_power_method or LSA_activate invalid");
+  amrex::Error("LSA_nsteps_krylov_subspace_method or LSA_activate invalid");
 
  Vector<int> n_cell(AMREX_SPACEDIM);
  pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
@@ -1355,15 +1355,15 @@ AmrCore::checkPoint ()
 
  std::string ckfileLSA;
  if ((LSA_activate==0)&&
-     (LSA_nsteps_power_method==0)) {
+     (LSA_nsteps_krylov_subspace_method==0)) {
   ckfileLSA=ckfile_temp;
  } else if ((LSA_activate==1)||
-            (LSA_nsteps_power_method>0)) {
+            (LSA_nsteps_krylov_subspace_method>0)) {
   std::stringstream result;
   result << ckfile_temp << "LSA";
   ckfileLSA=amrex::Concatenate(result.str(),LSA_current_step,file_name_digits);
  } else
-  amrex::Error("LSA_activate or LSA_nsteps_power_method invalid");
+  amrex::Error("LSA_activate or LSA_nsteps_krylov_subspace_method invalid");
 
  const std::string ckfile=ckfileLSA;
 
@@ -1679,13 +1679,13 @@ void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   Real initial_cumTime,int LSA_initial_levelSteps_in) {
 
- if ((LSA_nsteps_power_method>=1)&&
+ if ((LSA_nsteps_krylov_subspace_method>=1)&&
      (LSA_activate==1)&&
      (LSA_current_step+1==LSA_current_step_in)&&
      (LSA_current_step_in>=1)) {
   //do nothing
  } else
-  amrex::Error("LSA_nsteps_power_method/LSA_current_step(_in) bad");
+  amrex::Error("LSA_nsteps_krylov_subspace_method/LSA_current_step(_in) bad");
 
  for (int ilev=0;ilev<=finest_level;ilev++) {
   level_steps[ilev]=LSA_initial_levelSteps_in;
@@ -1720,7 +1720,7 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
     LSA_initial_levelSteps=LSA_initial_levelSteps_in;
 
     if ((LSA_current_step>=0)&&
-        (LSA_current_step<=LSA_nsteps_power_method)) {
+        (LSA_current_step<=LSA_nsteps_krylov_subspace_method)) {
      //do nothing
     } else {
      std::cout << "LSA_current_step=" << LSA_current_step << '\n';
