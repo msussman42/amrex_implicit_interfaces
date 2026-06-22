@@ -17718,7 +17718,6 @@ stop
       real(amrex_real) cell_vfrac(num_materials)
       real(amrex_real) cell_species_mfrac(num_materials)
       real(amrex_real) cell_DeDT_mfrac(num_materials)
-      real(amrex_real) local_diffusion_coeff
 
       integer imattype
 
@@ -17808,11 +17807,11 @@ stop
        stop
       endif 
       if (combine_idx.lt.-1) then
-       print *,"combine_idx invalid"
+       print *,"combine_idx invalid ",combine_idx
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid75"
+       print *,"bfact invalid fort_combinevel ",bfact
        stop
       endif
 
@@ -17820,42 +17819,42 @@ stop
       if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
-       print *,"nstat invalid"
+       print *,"nstat invalid fort_combinevel ",ntsat
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid combine vel"
+       print *,"level invalid fort_combinevel ",level,finest_level
        stop
       endif
       if ((hydrate_flag.ne.0).and.(hydrate_flag.ne.1)) then
-       print *,"hydrate_flag invalid"
+       print *,"hydrate_flag invalid fort_combinevel ",hydrate_flag
        stop
       endif
       if ((nsolve.ne.1).and. &
           (nsolve.ne.STATE_NCOMP_VEL)) then
-       print *,"nsolve invalid"
+       print *,"nsolve invalid fort_combinevel ",nsolve
        stop
       endif
 
       if (nstate_main.ne.STATECOMP_STATES+ &
           num_materials*(num_state_material+ngeom_raw)+1) then
-       print *,"nstate_main invalid (1): ",nstate_main
+       print *,"nstate_main invalid fort_combinevel (1): ",nstate_main
        stop
       endif
       if (nstate_main.ne.STATE_NCOMP) then
-       print *,"nstate_main invalid (2): ",nstate_main
+       print *,"nstate_main invalid fort_combinevel (2): ",nstate_main
        stop
       endif
 
       if ((ncomp_cell.ne.num_materials_combine).and. &
           (ncomp_cell.ne.nstate_main)) then
-       print *,"ncomp_cell invalid"
+       print *,"ncomp_cell invalid fort_combinevel ",ncomp_cell
        stop
       endif
    
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_combinevel ",num_state_base
        stop
       endif
 
@@ -17871,54 +17870,54 @@ stop
       if (combine_idx.eq.-1) then
 
        if (project_option.eq.SOLVETYPE_PRES) then
-        print *,"project_option==SOLVETYPE_PRES not allowed here"
+        print *,"project_option==SOLVETYPE_PRES not allowed fort_combinevel"
         print *,"combine_idx= ",combine_idx
         stop
        else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
         if (scomp_size.ne.num_materials) then
-         print *,"scomp_size invalid: ",scomp_size
+         print *,"scomp_size invalid fort_combinevel: ",scomp_size
          stop
         endif
         do im=1,num_materials
          if (ncomp(im).ne.1) then
-          print *,"ncomp(im) invalid37: ",im,ncomp(im)
+          print *,"ncomp(im) invalid fort_combinevel : ",im,ncomp(im)
           stop
          endif
          if (scomp(im).ne.STATECOMP_STATES+ &
              (im-1)*num_state_material+ENUM_TEMPERATUREVAR) then
-          print *,"scomp(im) invalid(1): ",im,scomp(im)
+          print *,"scomp(im) invalid fort_combinevel(1): ",im,scomp(im)
           stop
          endif
         enddo ! im=1..num_materials
        else if (project_option.eq.SOLVETYPE_VISC) then  ! viscosity
         if (scomp(1).ne.STATECOMP_VEL) then
-         print *,"scomp(1) invalid: ",scomp(1)
+         print *,"scomp(1) invalid fort_combinevel: ",scomp(1)
          stop
         endif
         if (ncomp(1).ne.STATE_NCOMP_VEL) then
-         print *,"ncomp(1) invalid38: ",ncomp(1)
+         print *,"ncomp(1) invalid fort_combinevel: ",ncomp(1)
          stop
         endif
         if (scomp_size.ne.1) then
-         print *,"scomp_size invalid(1): ",scomp_size
+         print *,"scomp_size invalid fort_combinevel (1): ",scomp_size
          stop
         endif
        else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                 (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
         if (scomp_size.ne.num_materials) then
-         print *,"scomp_size invalid(2): ",scomp_size
+         print *,"scomp_size invalid fort_combinevel (2): ",scomp_size
          stop
         endif
         do im=1,num_materials
          if (ncomp(im).ne.1) then
-          print *,"ncomp(im) invalid39: ",im,ncomp(im)
+          print *,"ncomp(im) invalid fort_combinevel: ",im,ncomp(im)
           stop
          endif
          if (scomp(im).ne.STATECOMP_STATES+ &
              (im-1)*num_state_material+ &
              ENUM_SPECIESVAR+ &
              project_option-SOLVETYPE_SPEC) then
-          print *,"scomp(im) invalid(2): ",im,scomp(im)
+          print *,"scomp(im) invalid fort_combinevel (2): ",im,scomp(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -17930,7 +17929,7 @@ stop
       else if (combine_idx.ge.0) then
        ! do nothing (data in localMF[combine_idx])
       else
-       print *,"combine_idx invalid"
+       print *,"combine_idx invalid fort_combinevel ",combine_idx
        stop
       endif
 
@@ -17968,6 +17967,34 @@ stop
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1)
 
       call get_dxmax(dx,bfact,dxmax)
+
+      do im=1,num_materials
+       phase_change_material(im)=0
+       do im_opp=1,num_materials
+        if (im.eq.im_opp) then
+         !do nothing
+        else if (im.ne.im_opp) then
+         do ireverse=0,1
+          call get_iten(im,im_opp,iten)
+          iten_shift=ireverse*num_interfaces+iten
+           ! default_flag=1 => only the sign is needed
+           ! default_flag=0 => the value is important too.
+          LL=get_user_latent_heat(iten_shift,room_temperature,1)
+          if (LL.eq.zero) then
+           !do nothing
+          else if (LL.ne.zero) then
+           phase_change_material(im)=1
+          else
+           print *,"LL invalid ",LL
+           stop
+          endif
+         enddo !ireverse=0,1
+        else
+         print *,"im or im_opp invalid ",im,im_opp
+         stop
+        endif
+       enddo !im_opp=1,num_materials
+      enddo !im=1,num_materials
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -18021,6 +18048,8 @@ stop
         mass_sum=zero
         total_vol_cell=zero
         DeDT_total=zero
+        state_mass_average=zero
+        weight_sum=zero
 
         do im=1,num_materials
 
@@ -18036,45 +18065,17 @@ stop
            local_volume=one
           endif
          else
-          print *,"local_volume invalid: ",local_volume
+          print *,"local_volume invalid fort_combinevel: ",local_volume
           stop
          endif
          cell_vfrac(im)=local_volume
-
-         if (project_option.eq.SOLVETYPE_HEAT) then
-          local_diffusion_coeff=fort_heatviscconst(im)
-         else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-          local_diffusion_coeff= &
-           fort_speciesviscconst((project_option-SOLVETYPE_SPEC)* &
-              num_materials+im)
-         else if (project_option.eq.SOLVETYPE_VISC) then
-          local_diffusion_coeff=one
-         else
-          print *,"project_option invalid: ",project_option
-          stop
-         endif
-
-         if (local_diffusion_coeff.ge.zero) then 
-          if (local_diffusion_coeff.eq.zero) then
-           local_diffusion_coeff=EPS5
-          else if (local_diffusion_coeff.gt.zero) then
-           local_diffusion_coeff=one
-          else
-           print *,"local_diffusion_coeff invalidA: ",local_diffusion_coeff
-           stop
-          endif
-         else
-          print *,"local_diffusion_coeff invalidB: ",local_diffusion_coeff
-          stop
-         endif
 
          dencomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
          test_density=state(D_DECL(i,j,k),dencomp)
          if (test_density.gt.zero) then
           ! do nothing
          else
-          print *,"test_density invalid: ",test_density
+          print *,"test_density invalid fort_combinevel: ",test_density
           stop
          endif
          local_mass=test_density*local_volume ! local_volume is a volume frac.
@@ -18082,7 +18083,7 @@ stop
 
          mass_sum=mass_sum+local_mass
 
-         cell_species_mfrac(im)=local_mass*local_diffusion_coeff
+         cell_species_mfrac(im)=local_mass
 
          imattype=fort_material_type(im)
 
@@ -18090,7 +18091,7 @@ stop
          if (test_temperature.gt.zero) then
           ! do nothing
          else
-          print *,"test_temperature invalid: ",test_temperature
+          print *,"test_temperature invalid fort_combinevel: ",test_temperature
           stop
          endif
 
@@ -18100,13 +18101,16 @@ stop
           if (massfrac_parm(ispec).ge.zero) then
            ! do nothing
           else
-           print *,"massfrac_parm(ispec) invalid: ",massfrac_parm(ispec)
+           print *,"massfrac_parm(ispec) invalid fort_combinevel: ", &
+              massfrac_parm(ispec)
            stop
           endif
          enddo ! ispec=1,num_species_var
 
           !DeDT=cv
           !DeDT_material is declared in GLOBALUTIL.F90
+          !if imattype=0 or 999, then
+          ! cv=get_user_stiffCP(im)
          call DeDT_material(test_density, & !intent(in)
            massfrac_parm, & !intent(in)
            test_temperature, & !intent(in)
@@ -18115,26 +18119,85 @@ stop
          if (DeDT.gt.zero) then
           ! do nothing
          else
-          print *,"DeDT must be positive: ",DeDT
+          print *,"DeDT must be positive fort_combinevel: ",DeDT
           stop
          endif
 
-         cell_DeDT_mfrac(im)=local_mass*DeDT*local_diffusion_coeff
+         cell_DeDT_mfrac(im)=local_mass*DeDT
          DeDT_total=DeDT_total+local_mass*DeDT
+
+         if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+          cell_temperature(im)=zero
+         else if ((project_option.eq.SOLVETYPE_HEAT).or. &   ! temperature
+                  ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
+          !State_Type (combine_flag=FVM_TO_GFM,GFM_TO_FVM)
+          if (combine_idx.eq.-1) then 
+           cellcomp=scomp(im)+1
+          else if (combine_idx.ge.0) then !localMF[combine_idx] input
+           cellcomp=im
+          else
+           print *,"combine_idx invalid fort_velcombine: ",combine_idx
+           stop
+          endif
+          cell_temperature(im)=cellfab(D_DECL(i,j,k),cellcomp)
+
+          if (hflag.eq.0) then !inhomogeneous solid velocity
+           if (cell_temperature(im).ge.zero) then
+            ! do nothing
+           else
+            print *,"cell_temperature(im) must be positive: combinevel"
+            print *,"cell_temperature(im)=",cell_temperature(im)
+            print *,"im=",im
+            print *,"cellcomp=",cellcomp
+            stop
+           endif
+          else if (hflag.eq.1) then !homogeneous solid velocity
+           if ((cell_temperature(im).ge.zero).or. &
+               (cell_temperature(im).le.zero)) then
+            ! do nothing
+           else
+            print *,"cell_temperature(im) is NaN: ", &
+               cell_temperature(im)
+            stop
+           endif
+          else
+           print *,"hflag invalid3 fort_combinevel hflag=",hflag
+           stop
+          endif
+
+         else
+          print *,"project_option invalid fort_combinevel: ",project_option
+          stop
+         endif
+
+         if (project_option.eq.SOLVETYPE_HEAT) then
+          state_mass_average=state_mass_average+ &
+             local_mass*DeDT*cell_temperature(im)
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+          state_mass_average=state_mass_average+ &
+             local_mass*cell_temperature(im)
+         else if (project_option.eq.SOLVETYPE_VISC) then
+          !do nothing
+         else
+          print *,"project_option invalid fort_combinevel: ",project_option
+          stop
+         endif
 
         enddo ! im=1,num_materials
 
         if (total_vol_cell.gt.zero) then
          ! do nothing
         else
-         print *,"total_vol_cell invalid: ",total_vol_cell
+         print *,"total_vol_cell invalid fort_combinevel: ",total_vol_cell
          stop
         endif
 
         if (mass_sum.gt.zero) then
          ! do nothing
         else
-         print *,"mass_sum invalid: ",mass_sum
+         print *,"mass_sum invalid fort_combinevel: ",mass_sum
          stop
         endif
 
@@ -18142,6 +18205,21 @@ stop
          ! do nothing
         else
          print *,"DeDT_total invalid: ",DeDT_total
+         stop
+        endif
+
+        if (project_option.eq.SOLVETYPE_HEAT) then
+         weight_sum=DeDT_total
+         state_mass_average=state_mass_average/weight_sum
+        else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                 (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+         weight_sum=mass_sum
+         state_mass_average=state_mass_average/weight_sum
+        else if (project_option.eq.SOLVETYPE_VISC) then
+         weight_sum=mass_sum
+         state_mass_average=zero
+        else
+         print *,"project_option invalid fort_combinevel: ",project_option
          stop
         endif
 
@@ -18308,19 +18386,19 @@ stop
          if (combine_flag.eq.FILL_EMPTY_CELL) then !vfrac<VOFTOL_MATERIAL
 
           if (nsolve.ne.STATE_NCOMP_VEL) then
-           print *,"nsolve invalid: ",nsolve
+           print *,"nsolve invalid fort_combinevel: ",nsolve
            stop
           endif
           if (scomp_size.ne.1) then
-           print *,"scomp_size invalid: ",scomp_size
+           print *,"scomp_size invalid fort_combinevel: ",scomp_size
            stop
           endif
           if (scomp(1).ne.STATECOMP_VEL) then
-           print *,"scomp invalid: ",scomp(1)
+           print *,"scomp invalid fort_combinevel: ",scomp(1)
            stop
           endif
           if (ncomp(1).ne.nsolve) then
-           print *,"ncomp(1) invalid: ",ncomp(1)
+           print *,"ncomp(1) invalid fort_combine_vel: ",ncomp(1)
            print *,"nsolve=",nsolve
            stop
           endif
@@ -18348,18 +18426,18 @@ stop
                 (solzfab(D_DECL(i,j,k),partid_vel*SDIM+cellcomp)+ &
                  solzfab(D_DECL(i,j,k+1),partid_vel*SDIM+cellcomp))
              else
-              print *,"cellcomp invalid"
+              print *,"cellcomp invalid fort_combinevel ",cellcomp
               stop
              endif
 
             else
-             print *,"im_solid_vel invalid"
+             print *,"im_solid_vel invalid fort_combinevel ",im_solid_vel
              stop
             endif
            else if (hflag.eq.1) then !homogeneous solid velocity
             vsol(cellcomp)=zero
            else
-            print *,"hflag invalid2 hflag=",hflag
+            print *,"hflag invalid2 fort_combinevel hflag=",hflag
             stop
            endif
           enddo ! cellcomp=1..sdim
@@ -18379,13 +18457,13 @@ stop
              vsol(dir)=zero
             enddo
            else
-            print *,"hflag invalid3 hflag=",hflag
+            print *,"hflag invalid3 fort_combinevel hflag=",hflag
             stop
            endif
           else if (LS_clamped.lt.zero) then
            ! do nothing
           else
-           print *,"LS_clamped is NaN"
+           print *,"LS_clamped is NaN fort_combinevel ",LS_clamped
            stop
           endif
 
@@ -18403,7 +18481,7 @@ stop
            enddo ! cellcomp
 
           else
-           print *,"is_solid_cell invalid: ",is_solid_cell
+           print *,"is_solid_cell invalid fort_combinevel: ",is_solid_cell
            stop
           endif
 
@@ -18421,56 +18499,8 @@ stop
                  ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
-         state_mass_average=zero
-         weight_sum=zero
 
          do im_crit=1,num_materials
-
-          if (project_option.eq.SOLVETYPE_HEAT) then
-           weight_sum=weight_sum+cell_DeDT_mfrac(im_crit)
-          else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-           weight_sum=weight_sum+cell_species_mfrac(im_crit)
-          else
-           print *,"project_option invalid ",project_option
-           stop
-          endif
-
-          !State_Type (combine_flag=FVM_TO_GFM,GFM_TO_FVM)
-          if (combine_idx.eq.-1) then 
-           cellcomp=scomp(im_crit)+1
-          else if (combine_idx.ge.0) then !localMF[combine_idx] input
-           cellcomp=im_crit
-          else
-           print *,"combine_idx invalid: ",combine_idx
-           stop
-          endif
-
-          cell_temperature(im_crit)=cellfab(D_DECL(i,j,k),cellcomp)
-
-          if (hflag.eq.0) then !inhomogeneous solid velocity
-           if (cell_temperature(im_crit).ge.zero) then
-            ! do nothing
-           else
-            print *,"cell_temperature(im_crit) must be positive: combinevel"
-            print *,"cell_temperature(im_crit)=",cell_temperature(im_crit)
-            print *,"im_crit=",im_crit
-            print *,"cellcomp=",cellcomp
-            stop
-           endif
-          else if (hflag.eq.1) then !homogeneous solid velocity
-           if ((cell_temperature(im_crit).ge.zero).or. &
-               (cell_temperature(im_crit).le.zero)) then
-            ! do nothing
-           else
-            print *,"cell_temperature(im_crit) is NaN: ", &
-               cell_temperature(im_crit)
-            stop
-           endif
-          else
-           print *,"hflag invalid3 hflag=",hflag
-           stop
-          endif
 
           if (combine_flag.eq.GFM_TO_FVM) then !center->centroid
 
@@ -18525,24 +18555,12 @@ stop
            stop
           endif
  
-          if (project_option.eq.SOLVETYPE_HEAT) then
-           state_mass_average=state_mass_average+ &
-             cell_DeDT_mfrac(im_crit)*cell_temperature(im_crit)
-          else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-           state_mass_average=state_mass_average+ &
-             cell_species_mfrac(im_crit)*cell_temperature(im_crit)
-          else
-           print *,"project_option invalid: ",project_option
-           stop
-          endif
-
          enddo ! im_crit=1 .. num_materials
 
          if (weight_sum.gt.zero) then
-          state_mass_average=state_mass_average/weight_sum
+          !do nothing
          else
-          print *,"weight_sum invalid line 16060: ",weight_sum
+          print *,"weight_sum invalid fort_combinevel: ",weight_sum
           stop
          endif 
 
@@ -18568,6 +18586,7 @@ stop
           stop
          endif
 
+         FIX ME
          do im=1,num_materials
 
           if ((cell_vfrac(im).le.one-VOFTOL_MATERIAL).and. &

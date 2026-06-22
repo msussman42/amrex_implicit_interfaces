@@ -19682,13 +19682,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid INTERNAL_default ",rho
        stop
       endif
       if (temperature.gt.zero) then
        ! do nothing
       else
-       print *,"T invalid"
+       print *,"temperature invalid INTERNAL_default ",temperature
        stop
       endif
 
@@ -19707,7 +19707,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.0) then
        internal_energy=cv*temperature
       else
-       print *,"imattype invalid in internal default"
+       print *,"imattype invalid in internal default ",imattype
        stop
       endif
 
@@ -25663,19 +25663,19 @@ end subroutine print_visual_descriptor
       if ((im.ge.1).and.(im.le.num_materials)) then
        !do nothing
       else
-       print *,"im invalid: ",im
+       print *,"im invalid INTERNAL_material_CORE: ",im
        stop
       endif
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid INTERNAL_material_CORE ",rho
        stop
       endif
       if (temperature.gt.zero) then
        ! do nothing
       else
-       print *,"T invalid"
+       print *,"temperature invalid INTERNAL_material_CORE ",temperature
        stop
       endif
 
