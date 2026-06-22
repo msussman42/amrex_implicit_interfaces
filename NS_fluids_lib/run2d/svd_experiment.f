@@ -1,6 +1,10 @@
       program main
       IMPLICIT NONE
+* cd amrex_implicit_interfaces/NS_fluids_lib/BLASLAPACK/LINEAR
+* make
+* copy "liblinear.a" into the same director as svd_experiment.f
 * gfortran svd_experiment.f -L. -llinear
+* ./a.out
       integer M,N
       parameter (M=6,N=5)
       integer LDA
@@ -16,6 +20,8 @@
      $                 WORK( LWMAX )
       DOUBLE PRECISION USIGMA(LDA,N)
       DOUBLE PRECISION ATEST(LDA,N)
+      DOUBLE PRECISION ACOPY(LDA,N)
+      DOUBLE PRECISION frobenius_norm
       DATA             A/
      $  8.79, 6.11,-9.15, 9.57,-3.49, 9.84,
      $  9.93, 6.91,-7.93, 1.64, 4.02, 0.15,
@@ -36,6 +42,12 @@
 
       CALL PRINT_MATRIX( 'A',
      $                   M, N, A, LDA )
+
+      do i=1,M
+       do j=1,N
+        ACOPY(i,j)=A(i,j)
+       enddo
+      enddo
 *
 *     Query the optimal workspace.
 *
@@ -91,6 +103,14 @@
       CALL PRINT_MATRIX( 'ATEST',
      $                   M, N, ATEST, LDA )
 
+      frobenius_norm=0.0d0
+      do i=1,M
+       do j=1,N
+        frobenius_norm=frobenius_norm+(ACOPY(i,j)-ATEST(i,j))**2
+       enddo
+      enddo
+      frobenius_norm=sqrt(frobenius_norm)
+      print *,"frobenius_norm= ",frobenius_norm
       STOP
       END
 *

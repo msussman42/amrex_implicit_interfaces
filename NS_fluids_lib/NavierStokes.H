@@ -307,10 +307,12 @@ public:
       int extra_comp,
       Vector<Real>& cell_max,
       Vector<Real>& LS_cell_max,
-      int isweep);
+      int isweep,
+      int caller_id);
     void LSA_normalize_eigenvectorALL(
       int unperturb_extra_comp,
-      int extra_comp);
+      int extra_comp,
+      int caller_id);
 
     void allocate_maccoefALL(int project_option,int nsolve,
 	int create_hierarchy,Real dt_maccoef); //-1,0,1
@@ -1527,7 +1529,7 @@ protected:
 
     static int interface_touch_flag;
 
-    static int NS_LSA_nsteps_power_method;
+    static int NS_LSA_nsteps_krylov_subspace_method;
     static int NS_LSA_max_step_count;
     static int NS_LSA_step_count;
 

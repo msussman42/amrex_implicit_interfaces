@@ -457,13 +457,13 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
   if (parent->LSA_current_step==0) { //initialize non perturbed state.
    //do nothing
   } else if ((parent->LSA_current_step>=1)&&
-             (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+             (parent->LSA_current_step<=parent->LSA_nsteps_krylov_subspace_method)) {
    null_perturbation=0;
   } else {
    std::cout << "parent->LSA_current_step=" <<
       parent->LSA_current_step << '\n';
-   std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
+   std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
    amrex::Error("parent->LSA_current_step invalid");
   }
 
@@ -488,7 +488,8 @@ void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
    //dst+=a*src
    //dst,a,src,srccomp,dstcomp,numcomp,nghost
    int dstcomp=STATECOMP_VEL;
-   MultiFab::Saxpy(U_new,LSA_velocity_scale,S_extra_comp,dstcomp,dstcomp,
+   Real local_LSA_velocity_scale=1.0;
+   MultiFab::Saxpy(U_new,local_LSA_velocity_scale,S_extra_comp,dstcomp,dstcomp,
      AMREX_SPACEDIM,0);
 
   } else

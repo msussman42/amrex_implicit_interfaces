@@ -115,13 +115,13 @@ fork_job(int fork_id) {
 
   // LSA = Linear Stability Analysis
   // ABEL OKOJUNU
-  // LSA_nsteps_power_method=number of power method iterations.
- int local_LSA_nsteps_power_method=0;
- ppamr.queryAdd("LSA_nsteps_power_method",local_LSA_nsteps_power_method);
- if (local_LSA_nsteps_power_method>=0) {
+  // LSA_nsteps_krylov_subspace_method=number of krylov_subspace method iterations.
+ int local_LSA_nsteps_krylov_subspace_method=0;
+ ppamr.queryAdd("LSA_nsteps_krylov_subspace_method",local_LSA_nsteps_krylov_subspace_method);
+ if (local_LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
  } else
-  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
 
  int local_LSA_activate=0;
  ppamr.queryAdd("LSA_activate",local_LSA_activate);
@@ -145,31 +145,31 @@ fork_job(int fork_id) {
  Real local_fixed_dt=0.0;
  ppns.queryAdd("fixed_dt",local_fixed_dt);
 
- if (local_LSA_nsteps_power_method>0) {
+ if (local_LSA_nsteps_krylov_subspace_method>0) {
    //time step must be fixed if LSA.
   if (local_fixed_dt>0.0) {
    //do nothing
   } else
    amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
- } else if (local_LSA_nsteps_power_method==0) {
+ } else if (local_LSA_nsteps_krylov_subspace_method==0) {
   //do nothing
  } else
-  amrex::Error("local_LSA_nsteps_power_method invalid");
+  amrex::Error("local_LSA_nsteps_krylov_subspace_method invalid");
 
- if ((local_LSA_nsteps_power_method==0)||
+ if ((local_LSA_nsteps_krylov_subspace_method==0)||
      (local_LSA_activate==0)) {
 
-  if (local_LSA_nsteps_power_method>0) {
+  if (local_LSA_nsteps_krylov_subspace_method>0) {
    if (max_step>=1) {
     //do nothing
    } else
     amrex::Error("expecting 1<=max_step");
-  } else if (local_LSA_nsteps_power_method==0) {
+  } else if (local_LSA_nsteps_krylov_subspace_method==0) {
    //do nothing
   } else
-   amrex::Error("local_LSA_nsteps_power_method invalid");
+   amrex::Error("local_LSA_nsteps_krylov_subspace_method invalid");
 
- } else if ((local_LSA_nsteps_power_method>0)&&
+ } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
             (local_LSA_activate==1)) {
 
    //ABEL OKOJUNO
@@ -193,11 +193,11 @@ fork_job(int fork_id) {
    amrex::Error("Power method LSA requires restart from base state");
 
  } else {
-  std::cout << "local_LSA_nsteps_power_method= " << 
-    local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
+    local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
   amrex::Error("expecting local_LSA_activate==0,1");
  }
 
@@ -244,7 +244,7 @@ fork_job(int fork_id) {
 
  amrex::ParallelDescriptor::Barrier();
 
- if (local_LSA_nsteps_power_method>0) {
+ if (local_LSA_nsteps_krylov_subspace_method>0) {
 
   Real test_cumTime=local_fixed_dt*amrptr->levelSteps(0);
   if (std::abs(test_cumTime-amrptr->cumTime())<=1.0e-2*local_fixed_dt) {
@@ -281,7 +281,7 @@ fork_job(int fork_id) {
 
  int initial_LSA_current_step=amrptr->LSA_current_step;
 
- if ((local_LSA_nsteps_power_method==0)||
+ if ((local_LSA_nsteps_krylov_subspace_method==0)||
      (local_LSA_activate==0)) {
 
   if (initial_LSA_current_step==0) {
@@ -289,7 +289,7 @@ fork_job(int fork_id) {
   } else
    amrex::Error("initial_LSA_current_step invalid");
 
- } else if ((local_LSA_nsteps_power_method>0)&&
+ } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
             (local_LSA_activate==1)) {
 
   if (initial_LSA_current_step>=0) {
@@ -315,11 +315,11 @@ fork_job(int fork_id) {
   }
 
  } else {
-  std::cout << "local_LSA_nsteps_power_method= " << 
-    local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
+    local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
   amrex::Error("expecting local_LSA_activate==0,1");
  }
 
@@ -334,18 +334,18 @@ fork_job(int fork_id) {
 //8. go back to step 5.
 
  int end_loop=0;
- if ((local_LSA_nsteps_power_method==0)||
+ if ((local_LSA_nsteps_krylov_subspace_method==0)||
      (local_LSA_activate==0)) {
   end_loop=0;
- } else if ((local_LSA_nsteps_power_method>0)&&
+ } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
             (local_LSA_activate==1)) {
-  end_loop=local_LSA_nsteps_power_method;
+  end_loop=local_LSA_nsteps_krylov_subspace_method;
  } else {
-  std::cout << "local_LSA_nsteps_power_method= " << 
-    local_LSA_nsteps_power_method <<'\n';
+  std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
+    local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_power_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
   amrex::Error("expecting local_LSA_activate==0,1");
  }
 

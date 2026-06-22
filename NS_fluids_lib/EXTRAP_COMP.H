@@ -636,4 +636,7 @@ ENUM_NUM_TENSOR_TYPE=((ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA))
 #define GFM_TO_FVM 1
 #define FILL_EMPTY_CELL 2
 
+#define FROM_LSA_eigenvectorALL 0
+#define FROM_default_eigenvectorALL 1
+
 #endif 
