@@ -3471,15 +3471,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        NavierStokes& ns_level=getLevel(ilev);
        int combine_flag=FILL_EMPTY_CELL; // only update if vfrac<VOFTOL
        int hflag=0;
-       // combine_idx==-1 => update S_new  
-       // combine_idx>=0  => update localMF[combine_idx]
-       int combine_idx=-1;  
        int update_flux=0;
        int interface_cond_avail=0;
 
        ns_level.combine_state_variable(
         SOLVETYPE_HEAT,
-        combine_idx,
         combine_flag,
         hflag,
         update_flux,
@@ -3490,7 +3486,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
-         combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -3687,15 +3682,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        NavierStokes& ns_level=getLevel(ilev);
        int combine_flag=FILL_EMPTY_CELL; // update F_m=0 cells only.
        int hflag=0;
-       // combine_idx==-1 => update S_new  
-       // combine_idx>=0  => update localMF[combine_idx]
-       int combine_idx=-1;  
        int update_flux=0;
        int interface_cond_avail=0;
 
        ns_level.combine_state_variable(
         SOLVETYPE_HEAT,
-        combine_idx,
         combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
         hflag,
         update_flux,
@@ -3706,7 +3697,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
-         combine_idx,
          combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
          hflag,
          update_flux,
@@ -3715,16 +3705,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        ns_level.combine_state_variable(
         SOLVETYPE_VISC, //cell centered velocity
-        combine_idx,
         combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
         hflag,
         update_flux,
         interface_cond_avail);
 
        update_flux=1;
+
        ns_level.combine_state_variable(
         SOLVETYPE_PRES, //flux var=mac velocity
-        combine_idx,
         combine_flag,
         hflag,
         update_flux,
@@ -3828,23 +3817,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         NavierStokes& ns_level=getLevel(ilev);
         int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
         int hflag=0; // inhomogeneous option
-        int combine_idx=-1;  // update state variables
         int update_flux=0;
         int interface_cond_avail=0;
 
 	  // declared in: Diffusion.cpp
         ns_level.combine_state_variable(
          SOLVETYPE_VISC,  //cell centered velocity
-         combine_idx,
          combine_flag, //FILL_EMPTY_CELL
          hflag,
          update_flux, 
          interface_cond_avail);
 
         update_flux=1;
+
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //mac velocity
-         combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -4060,23 +4047,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          NavierStokes& ns_level=getLevel(ilev);
          int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
          int hflag=0; // inhomogeneous option
-         int combine_idx=-1;  // update state variables
          int update_flux=0;
          int interface_cond_avail=0;
 
 	  // declared in: Diffusion.cpp
          ns_level.combine_state_variable(
           SOLVETYPE_VISC,  //cell centered velocity
-          combine_idx,
           combine_flag, //FILL_EMPTY_CELL (combine if vfrac<VOFTOL)
           hflag,
           update_flux, 
           interface_cond_avail);
 
          update_flux=1;
+
          ns_level.combine_state_variable(
           SOLVETYPE_PRES, //mac velocity
-          combine_idx,
           combine_flag,
           hflag,
           update_flux,
@@ -4273,21 +4258,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         NavierStokes& ns_level=getLevel(ilev);
         int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
         int hflag=0;
-        int combine_idx=-1;  // update state variables
         int update_flux=0;
         int interface_cond_avail=0;
         ns_level.combine_state_variable(
          SOLVETYPE_VISC, // cell centered velocity
-         combine_idx,
          combine_flag, // FILL_EMPTY_CELL (combine if vfrac<VOFTOL)
          hflag,
          update_flux,
          interface_cond_avail);
 
         update_flux=1;
+
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //flux var = mac velocity
-	 combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -12640,15 +12623,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
     int combine_flag=FILL_EMPTY_CELL; //combine if vfrac<VOFTOL
     int hflag=0;
-     // combine_idx==-1 => update S_new  
-     // combine_idx>=0  => update localMF[combine_idx]
-    int combine_idx=-1;  
     int update_flux=0;
     int interface_cond_avail=0;
 
     ns_level.combine_state_variable(
      SOLVETYPE_HEAT,
-     combine_idx,
      combine_flag, //FILL_EMPTY_CELL
      hflag,
      update_flux,
@@ -12659,7 +12638,6 @@ void NavierStokes::multiphase_project(int project_option) {
     for (int ns=0;ns<num_species_var;ns++) {
      ns_level.combine_state_variable(
       SOLVETYPE_SPEC+ns,
-      combine_idx,
       combine_flag, //FILL_EMPTY_CELL
       hflag,
       update_flux,
@@ -13294,9 +13272,6 @@ void NavierStokes::veldiffuseALL() {
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
    int combine_flag=FVM_TO_GFM;  
-   // combine_idx==-1 => update S_new  
-   // combine_idx>=0  => update localMF[combine_idx]
-   int combine_idx=-1; 
    int update_flux=0;
    int interface_cond_avail=1;
  
@@ -13306,7 +13281,6 @@ void NavierStokes::veldiffuseALL() {
 
    ns_level.combine_state_variable(
     SOLVETYPE_HEAT,
-    combine_idx,
     combine_flag, //FVM_TO_GFM
     hflag,
     update_flux,
@@ -13322,7 +13296,6 @@ void NavierStokes::veldiffuseALL() {
 
     ns_level.combine_state_variable(
      SOLVETYPE_SPEC+ns,
-     combine_idx,
      combine_flag, //FVM_TO_GFM
      hflag,
      update_flux,
@@ -13924,7 +13897,6 @@ void NavierStokes::veldiffuseALL() {
    ns_level.solid_temperature();
 
    int combine_flag=GFM_TO_FVM;  // GFM -> FVM
-   int combine_idx=-1;  // update state variables
    int update_flux=0;
    int interface_cond_avail=1;
 
@@ -13934,7 +13906,6 @@ void NavierStokes::veldiffuseALL() {
 
    ns_level.combine_state_variable(
     SOLVETYPE_HEAT,
-    combine_idx,
     combine_flag, //GFM_TO_FVM
     hflag,
     update_flux,
@@ -13950,7 +13921,6 @@ void NavierStokes::veldiffuseALL() {
 
     ns_level.combine_state_variable(
      SOLVETYPE_SPEC+ns,
-     combine_idx,
      combine_flag, //GFM_TO_FVM
      hflag,
      update_flux,

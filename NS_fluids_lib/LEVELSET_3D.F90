@@ -17598,6 +17598,9 @@ stop
       real(amrex_real) local_xstenMAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenMAC_center(SDIM)
       real(amrex_real) local_xstenMAC_center(SDIM)
+      real(amrex_real) local_dist
+      real(amrex_real) min_dist !init to -one
+      real(amrex_real) vel_at_min_dist !init to zero
       integer at_RZ_face
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
@@ -17938,6 +17941,8 @@ stop
 
             vel_sum=zero
             wtsum=zero
+            vel_at_min_dist=zero
+            min_dist=-one
 
             do k1=k1low,k1high
             do j1=-ngrow_make_distance,ngrow_make_distance
@@ -18055,13 +18060,34 @@ stop
 
              if (local_wt.eq.one) then
               local_wt=dxmax**2
+              local_dist=zero
               do dir2=1,SDIM
-               local_wt=local_wt+(local_xstenMAC_center(dir2)- &
+               local_dist=local_dist+(local_xstenMAC_center(dir2)- &
                  xstenMAC_center(dir2))**2
               enddo
+              local_dist=sqrt(local_dist)
+              local_wt=local_wt+local_dist**2
               local_wt=one/local_wt
               wtsum=wtsum+local_wt
               vel_sum=vel_sum+local_wt*local_vel
+              if (min_dist.eq.-one) then
+               min_dist=local_dist
+               vel_at_min_dist=local_vel
+              else if (min_dist.ge.zero) then
+               if (local_dist.le.min_dist) then
+                min_dist=local_dist
+                vel_at_min_dist=local_vel
+               else if (local_dist.ge.min_dist) then
+                !do nothing
+               else
+                print *,"local_dist or min_dist invalid ",local_dist, &
+                        min_dist
+                stop
+               endif
+              else
+               print *,"min_dist invalid ",min_dist
+               stop
+              endif
              else if (local_wt.eq.zero) then
               !do nothing
              else
@@ -18073,9 +18099,21 @@ stop
             enddo !j1
             enddo !k1
 
-            if (wtsum.gt.zero) then
-             vel_sum=vel_sum/wtsum
-            else if (wtsum.eq.zero) then
+            if (min_dist.ge.zero) then
+             vel_sum=vel_at_min_dist
+             if (wtsum.gt.zero) then
+              !do nothing
+             else
+              print *,"expecting wtsum>0 ",wtsum
+              stop
+             endif
+            else if (min_dist.eq.-one) then
+             if (wtsum.eq.zero) then
+              !do nothing
+             else
+              print *,"expecting wtsum=0 ",wtsum
+              stop
+             endif
              if (vel_sum.eq.zero) then
               !do nothing
              else
@@ -18083,7 +18121,7 @@ stop
               stop
              endif
             else
-             print *,"wtsum invalid: ",wtsum
+             print *,"min_dist invalid ",min_dist
              stop
             endif
             if (abs(vel_sum).ge.zero) then

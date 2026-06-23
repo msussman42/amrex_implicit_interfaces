@@ -11449,7 +11449,7 @@ void NavierStokes::LSA_default_eigenvectorALL(
  } //ilev
  
  LSA_normalize_eigenvectorALL(
-   unperturb_extra_comp,extra_comp);
+   unperturb_extra_comp,extra_comp,FROM_default_eigenvectorALL);
 
 } //end subroutine LSA_default_eigenvectorALL
 
@@ -11533,7 +11533,7 @@ void NavierStokes::LSA_eigenvectorALL(
  } //ilev
  
  LSA_normalize_eigenvectorALL(
-    unperturb_extra_comp,extra_comp);
+    unperturb_extra_comp,extra_comp,FROM_LSA_eigenvectorALL);
 
 } //end subroutine LSA_eigenvectorALL
 
@@ -20602,21 +20602,20 @@ NavierStokes::GetDrag(int isweep) {
 
  int combine_flag=FILL_EMPTY_CELL;
  int hflag=0;
- int combine_idx=-1;  // update state variables
  int update_flux=0;
  int interface_cond_avail=0;
 
  combine_state_variable(
   SOLVETYPE_VISC,
-  combine_idx,
   combine_flag,
   hflag,
   update_flux,
   interface_cond_avail);
+
  update_flux=1;
+
  combine_state_variable(
   SOLVETYPE_PRES,
-  combine_idx,
   combine_flag,
   hflag,
   update_flux,
@@ -20824,21 +20823,19 @@ NavierStokes::GetDrag(int isweep) {
 
  combine_flag=FILL_EMPTY_CELL;
  hflag=0;
- combine_idx=-1; 
  update_flux=0;
 
  combine_state_variable(
   SOLVETYPE_VISC,
-  combine_idx,
   combine_flag,
   hflag,
   update_flux,
   interface_cond_avail);
 
  update_flux=1;
+
  combine_state_variable(
   SOLVETYPE_PRES,
-  combine_idx,
   combine_flag,
   hflag,
   update_flux,
@@ -21852,13 +21849,11 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
 
  int combine_flag=FILL_EMPTY_CELL;
  int hflag=0;
- int combine_idx=-1;  // update state variables
  int update_flux=0;
  int interface_cond_avail=0; // T_I,Y_I not available.
 
  combine_state_variable(
   SOLVETYPE_VISC,
-  combine_idx,
   combine_flag,
   hflag,
   update_flux,
@@ -21867,9 +21862,9 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  if (fast_mode==0) {
 
   update_flux=1;
+
   combine_state_variable(
    SOLVETYPE_PRES,
-   combine_idx,
    combine_flag,
    hflag,
    update_flux,
@@ -25728,7 +25723,6 @@ NavierStokes::post_init_state () {
 
  int combine_flag=FILL_EMPTY_CELL;  
  int hflag=0;
- int combine_idx=-1;
  int update_flux=0;
  int interface_cond_avail=0;
 
@@ -25751,13 +25745,11 @@ NavierStokes::post_init_state () {
 
   combine_flag=FILL_EMPTY_CELL; //combine if vfrac<VOFTOL 
   hflag=0;
-  combine_idx=-1;
   update_flux=0;
   interface_cond_avail=0;
 
   ns_level.combine_state_variable(
     SOLVETYPE_HEAT,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux,
@@ -25768,7 +25760,6 @@ NavierStokes::post_init_state () {
   for (int ns=0;ns<num_species_var;ns++) {
    ns_level.combine_state_variable(
     SOLVETYPE_SPEC+ns,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux,
@@ -25866,22 +25857,20 @@ NavierStokes::post_init_state () {
    NavierStokes& ns_level=getLevel(ilev);
    combine_flag=FILL_EMPTY_CELL;
    hflag=0;
-   combine_idx=-1;
    update_flux=0;
    interface_cond_avail=0;
 
    ns_level.combine_state_variable(
     SOLVETYPE_VISC,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux, 
     interface_cond_avail);
 
    update_flux=1;
+
    ns_level.combine_state_variable(
     SOLVETYPE_PRES,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux,
@@ -25898,20 +25887,19 @@ NavierStokes::post_init_state () {
 
    combine_flag=FILL_EMPTY_CELL;
    hflag=0;
-   combine_idx=-1;
    update_flux=0;
    interface_cond_avail=0;
    ns_level.combine_state_variable(
     SOLVETYPE_VISC,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux,
     interface_cond_avail);
+
    update_flux=1;
+
    ns_level.combine_state_variable(
     SOLVETYPE_PRES,
-    combine_idx,
     combine_flag,
     hflag,
     update_flux,
