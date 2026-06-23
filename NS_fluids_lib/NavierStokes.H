@@ -648,7 +648,6 @@ protected:
 
     void combine_state_variable(
      int project_option,
-     int idx,
      int combine_flag,
      int hflag,
      int update_flux,
