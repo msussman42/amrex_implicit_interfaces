@@ -1,0 +1,163 @@
+
+-------------
+README
+
+QCMPIv1.1 F. Tabakin and B. Julia Diaz (2009)
+-------------
+
+Version  1.1 of QCMPI differs from version 1.0 in
+the following ways:
+(1)  The message passing has been changed throughout
+to a more efficient form that involves  first a receive
+(MPI_IRECV),  then a send (MPI_SEND), and then a wait
+command (MPI_WAIT) structure,
+(2)  The Entropy and EntropyP subroutines were revised
+to have a similar structure with improved procedures for
+construction and distributing the density matrix and for
+calculating its eigenvalues.  Additional improvements
+in evaluating the entropy are underway.
+
+
+FILES:
+-------
+
+The package is composed of the following files:
+
+qcmpisubs.f90  
+mpi_vars.f90
+
+Guniv.f90  
+Suniv.f90
+
+
+The first one contains the implementation of the building blocks 
+necessary to simulate the quantum algorithms. These subroutines 
+can be used to construct in principle any quantum algorithm 
+involving n-body operators acting on wave functions. 
+
+As important examples we include both an implementation 
+using the tools in qcmpisubs.f90 of the Shor factoring 
+algorithm and of the Grover search algorithm. In both 
+cases we permit to split the processors in different groups 
+which will act as independent multiverses, as explained 
+in the manual. We include a test case, described below, of 
+a 16 processors, 2 groups run of the Shor factoring 
+algorithm. The techniques used to split the simulation into 
+groups can be readily seen on the codes, Suniv.f90 and Guniv.f90. 
+
+The subroutines subgrover.f90 and subshor.f90 contain the 
+actual implementation of the algorithms. 
+
+
+
+COMPILING:
+----------
+
+In order to use QCMPI, one needs to have several packages 
+available.  The prime need is to have MPI available.  If 
+one wishes to evaluate the entropy using the Ientropy=1 mode, 
+then LAPACK is also needed.  Finally to calculate Entropy 
+in the Ientropy=2 mode, one needs SCALAPACK and BLACS packages.  
+In this later mode the density matrix is distributed over 
+processors to ease memory demands.
+
+The makefile for QCMPI is setup for the Pittsburgh Supercomputer 
+pople and bigben computers.
+These two supercomputers are described in 
+http://www.psc.edu/machines/sgi/altix/pople.php
+http://www.psc.edu/machines/cray/xt3/
+
+You will need to revise the makefile to include your 
+compilation/link setup.
+
+You can compile on pople using:
+
+make shorpople
+
+or for grover
+
+make groverpople
+
+and submit with s.job and g.job.
+
+and on bigben using:
+
+make shor
+
+or for grover
+
+make grover
+
+and submit with s2.job and g2.job.
+
+These job cards refer to $HOME/QCMPI/.
+Grover Output is sent to  $HOME/QCMPI/outputG.
+Shor Output is sent to  $HOME/QCMPI/outputS.
+You need to create a directory QCMPI
+in your $HOME location and put
+QCMPI into the $HOME/QCMPI/ directory
+and run tar xvf QCMPI.tar to extract the
+needed files.
+
+
+TEST RUN DESCRIPTION:
+---------------------
+
+
+We enclose a test run of the code which has fixed parameters 
+inside the code. It corresponds to a Shor factoring algorithm 
+done with 16 processors, 14 qubits and 2 different 
+universes. The Ientropy is set to zero, therefore no 
+computation of the entropy is carried out.
+
+The code was compiled with 
+make shorpole
+
+For Shor’s algoritm the requisite codes are: 
+Sunv.f90
+subshor.f90 
+qcmpisubs.f90. 
+
+The code as it is provides one output file per processor, 
+fort.10-fort.25 inside the output directory. 
+
+Inside each of these files you can find information 
+about the role played by the processor and also about 
+his piece of calculation. For instance, fort.10, contains 
+first information on the number of qubits, of processors, 
+groups, also writes that this processor, number 0 is the 
+master of all groups. 
+
+Then the file contains information about the Shor factoring
+process and the part of the wave function actually 
+manipulated by this processor. Finaly it writes the 
+possible factors found by this processor, in this case 3 and 
+7 as the number to be factorzied, which is fixed inside 
+Suniv.f90 is set to 21.
+
+The last numbers given in the file correspond to the 
+local probability of factoring the number (found in processor 0) 
+and the group probability of finding it which is 
+obtained by adding up the probabilities of the different 
+components in the group. 
+
+The description of the remaining files is essentialy similar. 
+
+Processors 0-7 correspond to the first group, whose master is 
+processor 0. The master of the other group is processor 8, thus 
+fort.18 is similar to fort.10.
+
+Would the number of groups or processors be different, the output 
+would still be organized in a similar fashion. One fort.* file 
+per processor. The first one, fort.10, is always the master of 
+the first group. The next nprocs/ngroups-1 files are the 
+processors involved in the first group, etc.
+
+
+
+
+
+
+
+
+
