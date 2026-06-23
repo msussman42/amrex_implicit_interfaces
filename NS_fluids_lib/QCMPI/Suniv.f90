@@ -33,7 +33,8 @@ INTEGER masterU,commU
 INTEGER masterM,commM
 INTEGER rankM
 INTEGER  NGROUP
-INTEGER nq,NBITS,IR
+INTEGER nq,NBITS
+INTEGER IR
 
 INTEGER Q,N1,N2,OUTFILE
 
@@ -51,6 +52,11 @@ commU=MPI_comm_world
 !get size (total number of processors) within MPI Universe
 
   call MPI_comm_size(commU,nprocU,ierr)
+
+  if (1.eq.1) then
+   print *,"nprocU=",nprocU
+  endif
+
   if (ierr/=MPI_success) stop 'Error in MPI_comm_size'
 
 !get my myidU on each different processor
@@ -73,10 +79,10 @@ OUTFILE=10
 !  Number to be factorized by all groups
 !-----------------------------------------|
 
-!  IR=77
-  IR=91 !OK
-  IR=119 !OK
-  IR=7*19 !133
+!  IR=7*11
+  IR=7*13 !OK
+!  IR=7*17 !OK
+!  IR=7*19 !133
 
 !---------------------------------------------------------
 !  We need the minimum number of qubits for 
@@ -107,6 +113,10 @@ OUTFILE=10
  n2=Ceiling(Log(Real(IR))/Log(2.))
  nq=n1+n2
  NBITS = 2**nq 
+
+ if (1.eq.1) then
+  print *,"nq=",nq
+ endif
 
 if (myidU.eq.masterU) then 
 write(OUTFILE,*) '-----------------------------------------------' 
@@ -326,7 +336,9 @@ endif
 
    M = MP
 
-
+   if (1.eq.1) then
+    print *,"will try to factor ",MP
+   endif
 
 
 !

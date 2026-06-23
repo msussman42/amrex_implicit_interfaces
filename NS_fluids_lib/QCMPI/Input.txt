@@ -1,4 +1,3 @@
-10   !  nq:  Number of qubits
-16   !  NP:Number of Processors--2^p, where p=even
-4  !  NG:Number of groups  2^g --g=0,1,2,..p
-2   !  Ientropy
+6   !  nq:  Number of qubits
+4   !  NP:Number of Processors--2^p, where p=even
+1  !  NG:Number of groups  2^g --g=0,1,2,..p

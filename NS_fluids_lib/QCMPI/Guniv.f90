@@ -33,7 +33,7 @@ DOUBLE PRECISION RAND(2)
 INTEGER masterU,commU
 INTEGER masterM,commM
 INTEGER rankM
-INTEGER NGROUP,Ientropy
+INTEGER NGROUP
 INTEGER nq,NBITS,NP,NG,IR,I,IC
 
 masterU=0
@@ -67,26 +67,15 @@ commU=MPI_comm_world
      read(1,*)nq
      read(1,*)NP
      read(1,*)NG
-     read(1,*)Ientropy
-
-!  Ientropy=0 (no entropy/rho calculation)
-!  Ientropy=1 (entropy/rho calculation with full Rho)
-!  Ientropy=2 (no entropy/rho calculation with distrubuted Rho)
 
      close(1)
 
-!   Test that NprocU=NP =2^p, with p even for Distributed Rho case
+     if (1.eq.1) then
+       print *,"nq=",nq
+       print *,"NP=",NP
+       print *,"NP=",NG
+     endif
 
-    if (Ientropy.eq.2) then
-    ic=0
-    Do i=1,200
-    If(nprocU.eq.2**i)ic=1
-     enddo
-     If(ic.eq.0) then
-  print *,"Value for NP should be an even power of 2 for Rho treatment"
-       stop 
-     endif
-     endif
      if (NP.ne.nprocU.or.NG.gt.NP ) then
         print *,"Values for NP and/or NG not selected correctly"
         print *,"Need to fix mpirun -np NP  setting"
@@ -146,7 +135,7 @@ call MPI_COMM_SPLIT(commU,rankM,myidU,commM,ierr)
 if (ierr/=MPI_success) stop 'Error in MPI_COMM_split'
 
 
-call Grover(commM,nq,rankM,Ientropy,IR)
+call Grover(commM,nq,rankM,IR)
   
 ! finalize MPI
 
@@ -174,7 +163,7 @@ contains
 !                                                                 |
 !------------------------------------------------------------------
 
-Subroutine Grover(commM,nq,rankM,Ientropy,IR)
+Subroutine Grover(commM,nq,rankM,IR)
 
 Use MPI
 Use MPI_VARS
@@ -200,7 +189,7 @@ INTEGER i, j,x, js, ntry,section,seat,seatn
 INTEGER eloc
 INTEGER n, np, npl, NPART,NPRHO
 INTEGER RESULT
-INTEGER OUTFILE,Ientropy
+INTEGER OUTFILE
 !
 ! Multiuniverse variables
 !
@@ -496,19 +485,6 @@ call Noise(nq,rankM,psi1,NPART,commM)
 endif
 
 
-!-------------------------|
-! Evaluate Entropy and Rho|
-!-------------------------|
-!
-!  Ientropy=0 (no entropy/rho calculation)
-!  Ientropy=1 (entropy/rho calculation with full Rho)
-!  Ientropy=2 (no entropy/rho calculation with distributed Rho)
-!
-If(Ientropy.eq.1) call Entropy(nq,commM,rankM,NPART,PSI1)  
-!  Following Distributes RHO over NPRHO processors
-!  and uses scalapack routine PCHEEVX
-If(Ientropy.eq.2) call EntropyP(nq,commM,rankM,NPART,PSI1)  
-!
 !
 !----------------------
 ! Look at final state |
