@@ -316,6 +316,7 @@ stop
       call get_dxmax(dx,bfact,dxmax)
 
        !get_elasticmask_and_elasticmaskpart
+       !get_primary_material_group declared in GLOBALUTIL.F90
       vof_flag=0
       call get_primary_material_group(dx,LS_ptr, &
         im_primary,im_secondary,im_tertiary, &
@@ -504,6 +505,8 @@ stop
               is_FSI_rigid(im_tertiary)
              stop
             endif
+           else if (is_rigid(im_tertiary).eq.1) then
+            !do nothing
            else
             print *,"is_rigid(im_tertiary) invalid"
             print *,"im_tertiary ",im_tertiary

@@ -145,7 +145,7 @@ if (probtype.eq.55) then
   uu=max(abs(uu),abs(utest))
  endif
 else
- print *,"unexpected probtype"
+ print *,"unexpected probtype ",probtype
  stop
 endif
 
@@ -177,6 +177,13 @@ endif
 if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
  ! do nothing
 else if (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED) then
+ if (is_elastic(im).eq.1) then
+  !do nothing
+ else
+  print *,"expecting is_elastic(im).eq.1"
+  stop
+ endif
+
  if ((im.eq.3).and. &
      (axis_dir.eq.0).and. &
      (num_materials.eq.3)) then
@@ -321,7 +328,10 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
-real(amrex_real) :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
+real(amrex_real) :: dist_gas
+real(amrex_real) :: dist_liquid
+real(amrex_real) :: dist_liquid_subtract_ice
+real(amrex_real) :: dist_ice,dist_liq2,distsolid
 real(amrex_real) :: ht_ice_lo,ht_ice_hi,ht_water_hi
 integer :: im
 integer :: im_solid_materialdist
@@ -378,12 +388,13 @@ real(amrex_real) :: diameter_blob
      ! this routine: GENERAL_PHASE_CHANGE_LS (initial angle=static angle)
      ! maxtall==two*radblob > radnew+vert => no ice in this call.
      ! (the purpose of this first call to drop_slope_dist is to get the
-     ! LS function for gas)
+     ! LS function for gas and the LS function of liquid when ignoring the 
+     ! ice.)
 
     if (fort_tension_init(1).gt.zero) then
        ! uses fort_tension_init(1), fort_tension_init(2), and
        ! fort_tension_init( im_solid_primary() )
-     diameter_blob=two*radblob
+     diameter_blob=two*radblob !disables ice
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       diameter_blob,dist_ice,dist_liquid)
     else if (fort_tension_init(1).eq.zero) then
@@ -664,7 +675,7 @@ real(amrex_real) :: diameter_blob
 
     if (fort_tension_init(1).gt.zero) then
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
-       seed_thickness,dist_ice,dist_liquid)
+       seed_thickness,dist_ice,dist_liquid_subtract_ice)
     else if (fort_tension_init(1).eq.zero) then
 
      if (SDIM.eq.2) then
@@ -684,31 +695,36 @@ real(amrex_real) :: diameter_blob
       dist_ice=ht_ice_hi-x(SDIM)
      endif
      if (x(SDIM).lt.half*(ht_water_hi+ht_ice_hi)) then
-      dist_liquid=x(SDIM)-ht_ice_hi
+      dist_liquid_subtract_ice=x(SDIM)-ht_ice_hi
      else
-      dist_liquid=ht_water_hi-x(SDIM)
+      dist_liquid_subtract_ice=ht_water_hi-x(SDIM)
      endif
     else 
-     print *,"fort_tension_init(1) invalid"
+     print *,"fort_tension_init(1) invalid ",fort_tension_init
      stop
     endif
 
-    if (is_rigid(3).ne.0) then
+    if (is_rigid(3).eq.0) then
+     !do nothing
+    else
      print *,"expecting material 3 to be ice"
+     stop
+    endif
+    if (is_elastic(3).eq.1) then
+     !do nothing
+    else
+     print *,"expecting material 3 to be ice (is_elastic(3).eq.1)"
      stop
     endif
     LS(1)=dist_liquid
     LS(3)=dist_ice
-    if (LS(2).gt.-distsolid) then
-     LS(2)=-distsolid
-    endif
+    LS(2)=-dist_liquid
     if ((LS(3).le.zero).and.(distsolid.ge.zero)) then
      LS(3)=distsolid
     endif
 
     if ((LS(1).lt.zero).and. &
-        (LS(2).lt.zero).and. &
-        (LS(3).lt.zero)) then
+        (LS(2).lt.zero)) then
      print *,"fluids should tessellate"
      print *,"probtype,axis_dir ",probtype,axis_dir
      print *,"x,y,z ",x(1),x(2),x(SDIM)
@@ -912,7 +928,7 @@ if (probtype.eq.55) then
    endif
   endif ! drop collision (radblob6 or radblob7 > 0)
  else
-  print *,"axis_dir invalid"
+  print *,"axis_dir invalid ",axis_dir
   stop
  endif
 else

@@ -52,7 +52,7 @@ geometry.prob_lo=0.0 0.0    # RZ
 geometry.prob_hi=1.0 1.0  # cm RZ
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
-ns.EILE_flag=-1
+ns.EILE_flag=1
 
 ns.minimum_relative_error=1.0e-22
 
@@ -73,8 +73,9 @@ ns.post_init_pressure_solve=1
 ns.MOFITERMAX=30
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
-# water,air,ice,substrate
+# water,air,ice,substrate (substrate is heated)
 ns.mof_ordering=3 4 2 1 
+ns.mof_renormalize_ordering=2 3 1 0
 
 # multigrid class
 mg.verbose = 0
@@ -92,10 +93,17 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
+# =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
+# or 4 (TESSELLATE_FLUIDS_ELASTIC)
+ns.visual_tessellate_vfrac=0
+ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
+
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
 
 #amr.n_cell=64 64 48  # XYZ
-amr.n_cell=16 16  # RZ
-amr.max_level = 1
+amr.n_cell=32 32  # RZ
+amr.max_level = 0
 # water, gas, ice, substrate
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -244,6 +252,7 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 0 999
+ns.material_extend_velocity=0 0 1 0
 # Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
@@ -286,7 +295,8 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-ns.explicit_viscosity_dt=1
+ns.explicit_viscosity_dt=1.0
+ns.ngrow_distance=6
 #Artificial viscosity should be enough so that the explicity_viscosity_dt
 #constraint makes a difference.
 #dx=1/32

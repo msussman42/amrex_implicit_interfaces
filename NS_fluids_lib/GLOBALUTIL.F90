@@ -6863,7 +6863,7 @@ end subroutine print_visual_descriptor
       else if (vof_flag.eq.1) then
        call get_primary_material_VFRAC(LS,im_primary)
       else
-       print *,"vof_flag invalid"
+       print *,"vof_flag invalid ",vof_flag
        stop
       endif
 
@@ -6887,7 +6887,7 @@ end subroutine print_visual_descriptor
           vofcomp=(im-1)*ngeom_recon+1
           LS(im)=LS_ptr(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          else
-          print *,"vof_flag invalid"
+          print *,"vof_flag invalid ",vof_flag
           stop
          endif
         enddo !im=1..num_materials
@@ -6896,7 +6896,7 @@ end subroutine print_visual_descriptor
         else if (vof_flag.eq.1) then
          call get_primary_material_VFRAC(LS,im_primary_local)
         else
-         print *,"vof_flag invalid"
+         print *,"vof_flag invalid ",vof_flag
          stop
         endif
         if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
@@ -26141,7 +26141,7 @@ if (probtype.eq.55) then
  if (maxtall.gt.zero) then
   ! do nothing
  else
-  print *,"maxtall invalid"
+  print *,"maxtall invalid ",maxtall
   stop
  endif
 
@@ -26303,6 +26303,9 @@ if (probtype.eq.55) then
      ! do nothing
     else
      print *,"maxtall, vert, or radnew invalid"
+     print *,"maxtall ",maxtall
+     print *,"vert ",vert
+     print *,"radnew ",radnew
      stop
     endif 
      
