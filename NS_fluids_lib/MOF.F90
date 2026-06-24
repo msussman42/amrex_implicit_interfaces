@@ -18034,10 +18034,19 @@ contains
         endif
        enddo !im=1,num_materials
 
-       if (abs(uncaptured_volume_START-volcell_compare).le. &
-           EPS2*uncaptured_volume_START) then
+       if ( (abs(uncaptured_volume_START-volcell_compare).le. &
+             EPS1*uncaptured_volume_START).and. &
+            (abs(uncaptured_volume_START-volcell_compare).le. &
+             EPS2*volcell) ) then
         !do nothing
        else
+        print *,"TESSELLATE_FLUIDS=",TESSELLATE_FLUIDS
+        print *,"TESSELLATE_IGNORE_ISRIGID=",TESSELLATE_IGNORE_ISRIGID
+        print *,"TESSELLATE_IGNORE_ISELASTIC=",TESSELLATE_IGNORE_ISELASTIC
+        print *,"TESSELLATE_FLUIDS_ELASTIC=",TESSELLATE_FLUIDS_ELASTIC
+        print *,"TESSELLATE_ALL=",TESSELLATE_ALL
+        print *,"TESSELLATE_ALL_RASTER=",TESSELLATE_ALL_RASTER
+
         print *,"tessellate_source ",tessellate_source
         print *,"tessellate_dest ",tessellate_dest
         print *,"uncaptured_volume_fraction ", &
