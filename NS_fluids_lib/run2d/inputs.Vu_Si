@@ -38,7 +38,7 @@ ns.xslice=0.0 0.0
 
 # 1: liquid 2: air 3: ice 4: solid
 ns.mof_ordering=3 4 2 1
-ns.mof_renormalize_ordering=3 4 2 1
+ns.mof_renormalize_ordering=2 3 1 0
 
 ns.EILE_flag=1
 ns.continuous_mof=1
@@ -82,7 +82,8 @@ ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=128 128
+#amr.n_cell=128 128
+amr.n_cell=32 32
 amr.max_level = 0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
@@ -96,7 +97,7 @@ ns.secondary_flotsam_tol=0.1
 amr.blocking_factor = 2 2 2 2  # block factor in grid generation
 amr.check_int       = 500
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 500
+amr.plot_int        = 1
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
