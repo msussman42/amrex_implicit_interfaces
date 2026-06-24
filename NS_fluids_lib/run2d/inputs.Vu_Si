@@ -35,7 +35,13 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi=1.2 1.2 #NONDIM
 ns.slice_dir=1
 ns.xslice=0.0 0.0
-ns.EILE_flag=-1
+
+# 1: liquid 2: air 3: ice 4: solid
+ns.mof_ordering=3 4 2 1
+ns.mof_renormalize_ordering=3 4 2 1
+
+ns.EILE_flag=1
+ns.continuous_mof=1
 
 ns.minimum_relative_error=1.0e-22
 #number of iterations to get the initial guess. 
@@ -51,12 +57,7 @@ ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=1
 ns.vof_height_function=1
-# 0 - centroid furthest from uncaptured centroid
-# 1 - use MOF error
-# water,air,ice,solid
-ns.mof_ordering=3 4 2 1
 
 # multigrid class
 mg.verbose = 0
@@ -73,6 +74,11 @@ mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 Lp.v = 0
 
+# =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
+# or 4 (TESSELLATE_FLUIDS_ELASTIC)
+ns.visual_tessellate_vfrac=0
+ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
+
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
@@ -83,6 +89,10 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
 ns.ns_tiling=false
+
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
+
 amr.blocking_factor = 2 2 2 2  # block factor in grid generation
 amr.check_int       = 500
 amr.check_file      = chk     # root name of checkpoint file
@@ -108,7 +118,7 @@ ns.visc_coef      = 0.013  #(1/Re) (NONDIM)
 ns.heatvisc_coef  = 1.0  #(1/(Pr Re)) (NONDIM)  Pr * Re=0.013 * 76.74=1.0
 ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=6
-ns.visc_coef_boundary_layer_factor=10.0
+ns.visc_coef_boundary_layer_factor=1.0
 mac.visc_abs_tol  = 1.0e-10
 ns.gravity        = -0.1317  #Bo/We Bo=1.317  We=10.0
 ns.incremental_gravity_flag=0
@@ -185,6 +195,7 @@ ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # material 1=liquid 2=gas  3=ice 4=solid
 ns.material_type=0 0 0 999
+ns.material_extend_velocity=0 0 1 0
 # Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
