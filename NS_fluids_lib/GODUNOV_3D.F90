@@ -17002,9 +17002,13 @@ stop
        LSNEW,DIMS(LSNEW), &
        LS,DIMS(LS), &
        vof,DIMS(vof), &
-       cellfab,DIMS(cellfab), &
-       newcell,DIMS(newcell), &
-       state,DIMS(state), &  !Snew
+        !cellfab \equiv S_new
+       cellfab,DIMS(cellfab), & 
+        !newcell is initialized with S_new if FVM_TO_GFM or GFM_TO_FVM
+        !newcell \equiv S_new if FILL_EMPTY_CELL
+        !newcell copied to S_new after the call.
+       newcell,DIMS(newcell), & 
+       state,DIMS(state), &  !S_new
        velbc, &
        listbc, &
        xlo,dx, &
@@ -17746,7 +17750,7 @@ stop
            stop
           endif
          else
-          print *,"im_solid_vel_max invalid"
+          print *,"im_solid_vel_max invalid ",im_solid_vel_max
           stop
          endif
         else if (solid_dist.lt.zero) then
@@ -17890,6 +17894,8 @@ stop
 
          do im_crit=1,num_materials
 
+          !newcell is initialized with S_new if FVM_TO_GFM or GFM_TO_FVM
+          !newcell \equiv S_new if FILL_EMPTY_CELL
           if (combine_flag.eq.GFM_TO_FVM) then !center->centroid
 
            new_temperature(im_crit)=newcell(D_DECL(i,j,k),im_crit)
@@ -18537,7 +18543,7 @@ stop
 
               if (tsat_flag.eq.0) then
 
-               !  T_out(1)=T_sten(D_DECL(0,0,0))
+               !T_out(1)=T_sten(D_DECL(0,0,0))
                T_out(1)=state_mass_average
 
               else if (tsat_flag.eq.1) then
@@ -18547,6 +18553,7 @@ stop
                stop
               endif
 
+              !newcell copied to S_new after the call.
               do im_opp=1,num_materials
                newcell(D_DECL(i,j,k),im_opp)=T_out(1)
               enddo
@@ -18565,6 +18572,7 @@ stop
                stop
               endif
 
+              !newcell copied to S_new after the call.
               newcell(D_DECL(i,j,k),im)=T_out(1)
 
              else
@@ -18642,6 +18650,7 @@ stop
 
            if (combine_flag.eq.FVM_TO_GFM) then ! centroid -> center
 
+             !cellfab\equiv S_new
             T_out(1)=cellfab(D_DECL(i,j,k),scomp(im)+1)
 
             if (abs(state_mass_average).le.VOFTOL_MATERIAL) then
@@ -18666,15 +18675,18 @@ stop
              stop
             endif
                             
-            ! since cell_vfrac(im)==1 => cell_vfrac(im_opp)==0.0 (im_opp!=im)
+            !since cell_vfrac(im)==1 => cell_vfrac(im_opp)==0.0 (im_opp!=im)
+            !newcell copied to S_new after the call.
             do im_opp=1,num_materials
              newcell(D_DECL(i,j,k),im_opp)=T_out(1)
             enddo
 
            else if (combine_flag.eq.GFM_TO_FVM) then ! center->centroid
-            ! do nothing
+            !do nothing
+            !newcell is initialized with S_new if FVM_TO_GFM or GFM_TO_FVM
            else if (combine_flag.eq.FILL_EMPTY_CELL) then!extrap where vfrac=0
-            ! do nothing
+            !do nothing
+            !newcell \equiv S_new if FILL_EMPTY_CELL
            else
             print *,"combine_flag invalid: ",combine_flag
             stop
@@ -18683,6 +18695,7 @@ stop
           else
            print *,"cell_vfrac or combine_flag bust"
            print *,"im,cell_vfrac=",im,cell_vfrac(im)
+           print *,"cell_vfrac=",cell_vfrac
            print *,"combine_flag " ,combine_flag
            stop
           endif
