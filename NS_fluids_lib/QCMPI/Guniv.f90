@@ -23,7 +23,9 @@
 !----------------------------------------------------------------------------
 
 Program main
+#ifdef USE_MPI
 Use mpi
+#endif
 Use mpi_vars
 Use qcmpisubs
 Implicit None
@@ -37,10 +39,14 @@ INTEGER NGROUP
 INTEGER nq,NBITS,NP,NG,IR,I,IC
 
 masterU=0
+commU=0
+#ifdef USE_MPI
 commU=MPI_comm_world
+#endif
 !
 !initialise MPI universe
 !
+#ifdef USE_MPI
   call MPI_init(ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_init'
 
@@ -54,6 +60,7 @@ commU=MPI_comm_world
 
   call MPI_comm_rank(commU,myidU,ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_comm_rank' 
+#endif
 
 !-------------------------------------------------------
 !  Use INPUT.txt for nq, NPROCU, NGROUP test if set OK |
@@ -69,7 +76,17 @@ commU=MPI_comm_world
      read(1,*)NG
 
      close(1)
-
+#ifndef USE_MPI
+     NP=1
+     NG=1
+     nprocU=1
+     myidU=0
+     ierr=0
+     nprocs=1
+     myid=0
+     nprocM=1
+     myidM=0
+#endif
      if (1.eq.1) then
        print *,"nq=",nq
        print *,"NP=",NP
@@ -101,8 +118,10 @@ endif
 !Broadcast "IR"  the marked item to all processes 
 !
 
+#ifdef USE_MPI
 call MPI_Bcast(IR, 1, MPI_INTEGER, 0, commU,ierr)
 if (ierr/=0) stop 'Error in MPI_Bcast of IR'
+#endif
 
 !--------------------------------------|
 ! Stipulate Number groups              |
@@ -131,16 +150,20 @@ rankM=Int(myidU/NPROCM)
 ! creates group(MULTIUNIVERSE) communicators commM
 !
 
+#ifdef USE_MPI
 call MPI_COMM_SPLIT(commU,rankM,myidU,commM,ierr)
 if (ierr/=MPI_success) stop 'Error in MPI_COMM_split'
-
+#endif
 
 call Grover(commM,nq,rankM,IR)
   
 ! finalize MPI
 
+#ifdef USE_MPI
   call MPI_finalize(ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_finalize'
+#endif
+
 contains
 !  subgrover.f90                                                  |
 !                                                                 |
@@ -165,7 +188,9 @@ contains
 
 Subroutine Grover(commM,nq,rankM,IR)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -204,7 +229,10 @@ COMPLEX temp,getsum,getsum2,getsum3
 !
 INTEGER dest
 
-INTEGER n1tag,MPISTAT(mpi_status_size)
+INTEGER n1tag
+#ifdef USE_MPI
+INTEGER MPISTAT(mpi_status_size)
+#endif
 COMPLEX tracerho,tracerho2,tracerho3
 NBITS=2**nq
 
@@ -212,6 +240,7 @@ NBITS=2**nq
 ! MPI initialization
 !
 
+#ifdef USE_MPI
 commU=MPI_comm_world
 
 call MPI_COMM_SIZE(commU,nprocU,ierr)
@@ -223,6 +252,8 @@ call MPI_comm_rank(commU,myidU,ierr)
 !
 call MPI_COMM_SIZE( commM, nprocM, ierr) 
 call MPI_COMM_RANK( commM, myidM, ierr)
+#endif
+
 !
 !  masterU=master of all universe
 !  masterM is master of one Multiuniverse within Universe.
@@ -232,7 +263,11 @@ masterM=0
 !
 !start timing
 !
+starttime=0.0d0
+
+#ifdef USE_MPI
 if (myidM.eq.masterM) starttime = MPI_WTIME()
+#endif
 
 !
 ! Outfile
@@ -331,9 +366,13 @@ Do 18 i=1,NPART
 Norm=abs(Psi1(i)*conjg(Psi1(i))) + Norm
 18 continue
 
+#ifdef USE_MPI
 call MPI_Reduce(NORM,FNORM,1,MPI_REAL,MPI_SUM,0, commM ,ierr)
 NORM=FNORM
-
+#endif
+#ifndef USE_MPI
+FNORM=NORM
+#endif
 If(myidM.eq.masterM)Write(OUTFILE,9005) Norm
 9005 format('     Normalization    :',F8.3)
 
@@ -464,7 +503,10 @@ R(i)= abs(psi1(i)*conjg(psi1(i)))
 !
 
 if (myidM.eq.masterM)then 
+midtime=0.0d0
+#ifdef USE_MPI
 midtime = MPI_WTIME()
+#endif
 Write(OUTFILE,9411)j, midtime-starttime
 9411 Format('ntry number',1I4,' Time .........',F9.4, ' seconds')
 endif
@@ -507,8 +549,14 @@ write(OUTFILE,9007)  maxval(R)
 ! Finds maximum probability of all registers              |
 !---------------------------------------------------------|
 
+#ifdef USE_MPI
 CALL MPI_REDUCE(ISEND,IRECV,1,MPI_2REAL,MPI_MAXLOC,masterM,commM,IERR)
 if (ierr.ne.0) write(OUTFILE,*) 'Error in reducing the maximum prob, myidM=',myidM
+#endif
+#ifndef USE_MPI
+irecv(2)=isend(2)
+irecv(1)=isend(1)
+#endif
 
 !---------------------------|
 ! Final output from master  |
@@ -534,7 +582,10 @@ Write(OUTFILE,*)
 !
 ! Each group master writes its timing record
 !
+endtime=0.0d0
+#ifdef USE_MPI
 endtime = MPI_WTIME()
+#endif
 
 write(OUTFILE,9011) endtime-starttime
 9011 Format('      Time .........',F9.4, ' seconds')
