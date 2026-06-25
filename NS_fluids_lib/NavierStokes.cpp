@@ -765,7 +765,10 @@ Vector<int> NavierStokes::mass_fraction_id;
 //both input AND derived.
 Vector<int> NavierStokes::spec_material_id_LIQUID; 
 Vector<int> NavierStokes::spec_material_id_AMBIENT; 
+
 Vector<int> NavierStokes::sato_model_spec_id; 
+Real NavierStokes::sato_cslope=0.0;
+
 // 0 - distribute to the destination material 
 //     V=mdot/den_src
 //     source term= dF * Vcell/dt^2 * (-1+ den_src/den_dst)
@@ -3885,8 +3888,10 @@ NavierStokes::read_params ()
      pp.queryAdd("spec_material_id_AMBIENT",spec_material_id_AMBIENT,
        num_species_var);
     }
+
     pp.queryAdd("sato_model_spec_id",sato_model_spec_id,
        num_materials);
+    pp.queryAdd("sato_cslope",sato_cslope);
 
     for (int i=0;i<num_materials;i++) {
      if ((sato_model_spec_id[i]>0)&&
@@ -6115,6 +6120,7 @@ NavierStokes::read_params ()
       std::cout << "sato_model_spec_id i= " << i << " " <<
        sato_model_spec_id[i] << '\n';
      } // i=0..num_materials-1
+     std::cout << "sato_cslope= " << sato_cslope << '\n';
 
      for (int i=0;i<num_species_var;i++) {
       std::cout << "spec_material_id_LIQUID i= " << i << " " <<
@@ -16638,6 +16644,7 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
    freezing_model.dataPtr(),
    saturation_temp.dataPtr(),
    sato_model_spec_id.dataPtr(),
+   &sato_cslope,
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,

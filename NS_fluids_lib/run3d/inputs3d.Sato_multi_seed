@@ -50,7 +50,8 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
-amr.n_cell    = 32 32 64
+amr.n_cell    = 16 16 32
+#amr.n_cell    = 32 32 64
 amr.max_level =  0  # 3 levels for finest
 amr.max_grid_size   = 16
 cg.min_max_grid_size=64
@@ -219,7 +220,7 @@ ns.probtype=710
 
 #sato_model_inputs: Sato & Niceno IJHMT 2017
 ns.sato_model_spec_id=1 1 1 0 0
-#ns.sato_cslope=4.46e-3 #for water
+ns.sato_cslope=4.46e-3 #for water
 
 
 #ns.mem_debug = 1

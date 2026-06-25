@@ -115,6 +115,7 @@ namespace amrex{
        int* freezing_model,
        Real* saturation_temp,
        int* sato_model_spec_id,
+       Real* sato_cslope,
        const int* tilelo, const int* tilehi,
        const int* fablo, const int* fabhi, 
        int* bfact,

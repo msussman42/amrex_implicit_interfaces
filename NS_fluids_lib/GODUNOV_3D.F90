@@ -17741,6 +17741,8 @@ stop
            ! do nothing
           else
            print *,"is_rigid(im_solid_vel_max) invalid"
+           print *,"im_solid_vel_max= ",im_solid_vel_max
+           print *,"is_rigid(im_solid_vel_max)= ",is_rigid(im_solid_vel_max)
            stop
           endif
          else

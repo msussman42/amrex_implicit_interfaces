@@ -94,14 +94,14 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
-real(amrex_real) :: ice_vertical
+real(amrex_real) :: icewater_vert_center
 real(amrex_real) :: substrate_height
 real(amrex_real) :: box_xlo,box_xhi,box_ylo,box_yhi,box_zlo,box_zhi
 
   if (nmat.eq.num_materials) then
    ! do nothing
   else
-   print *,"nmat invalid"
+   print *,"nmat invalid ",nmat
    stop
   endif
 
@@ -109,38 +109,39 @@ if (SDIM.eq.2) then
  if (abs(zblob2-yblob2).le.EPS14) then
   substrate_height=zblob2  ! substrate thickness
  else
-  print *,"zblob2 or yblob2 invalid"
+  print *,"zblob2 or yblob2 invalid ",yblob2,zblob2
   stop
  endif
 else if (SDIM.eq.3) then
  substrate_height=zblob2  ! substrate thickness
 else
- print *,"dimension bust"
+ print *,"dimension bust ",SDIM
  stop
 endif
 
 if ((num_materials.eq.4).and.(probtype.eq.414)) then
 
  if (SDIM.eq.2) then
-  ice_vertical=yblob
+  icewater_vert_center=yblob
  else if (SDIM.eq.3) then
-  ice_vertical=zblob
+  icewater_vert_center=zblob
  else
-  print *,"dimension bust"
+  print *,"dimension bust ",SDIM
   stop
  endif
- if (abs(substrate_height-(ice_vertical-half*radblob)).gt.EPS2) then
+ if (abs(substrate_height-(icewater_vert_center-half*radblob)).gt.EPS2) then
   print *,"bottom of original water+ice block must coincide w/substrate"
   print *,"probtype=",probtype
   print *,"sdim= ",SDIM
   print *,"yblob=",yblob
   print *,"zblob=",zblob
-  print *,"ice_vertical (yblob if 2d, zblob if 3d)=",ice_vertical
+  print *,"icewater_vert_center (yblob if 2d, zblob if 3d)=", &
+    icewater_vert_center
   print *,"substrate_height (zblob2) =",substrate_height
   print *,"radblob=",radblob
   print *,"radblob/2=",half*radblob
   print *,"radblob4=",radblob4
-  print *,"ice_vertical-radblob/2 ",ice_vertical-half*radblob
+  print *,"icewater_vert_center-radblob/2 ",icewater_vert_center-half*radblob
   stop
  endif
 
@@ -155,13 +156,15 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
  else
   print *,"radblob4 invalid: ",radblob4
   print *,"probtype ",probtype
+  print *,"axis_dir ",axis_dir
   print *,"MITSUHIRO_MELTING.F90"
   stop
  endif
 
  if (SDIM.eq.2) then
   box_ylo=-substrate_height-radblob
-  box_yhi=substrate_height+radblob3
+! box_yhi=substrate_height+radblob3 !gas/water/ice tessellate
+  box_yhi=substrate_height+radblob !gas/water tessellate
   call squaredist(x(1),x(2),box_xlo,box_xhi, &
      box_ylo,box_yhi,LS(1))
   LS(1)=-LS(1) ! water
@@ -196,13 +199,14 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   !dist<0 inside the square
   !water below the ice
   box_zlo=-substrate_height-radblob
-  box_zhi=substrate_height+radblob3
+! box_zhi=substrate_height+radblob3 !gas/water/ice tessellate
+  box_zhi=substrate_height+radblob  !gas/water tessellate
   call cubedist(box_xlo,box_xhi, &
      box_ylo,box_yhi, &
      box_zlo,box_zhi, &
      x(1),x(2),x(SDIM),LS(1))
-  LS(1)=-LS(1)
-  !ice
+  LS(1)=-LS(1) !water
+  !ice (is above water)
   box_zlo=substrate_height+radblob3
   box_zhi=substrate_height+radblob
   call cubedist(box_xlo,box_xhi, &
@@ -230,6 +234,8 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
  call MITSUHIRO_substrateLS(x,LS(4))
 else
  print *,"num_materials or probtype invalid"
+ print *,"probtype= ",probtype
+ print *,"num_materials= ",num_materials
  stop
 endif
 
@@ -339,7 +345,7 @@ if ((num_materials.eq.4).and. &
     (probtype.eq.414)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im)!density prescribed in inputs file
   if (t.eq.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
   else if (t.gt.zero) then
