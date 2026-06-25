@@ -60,7 +60,9 @@ End Subroutine bintodec
 !Subroutine OneOpA(nq,is,Op,psi,NPART)
 SUBROUTINE OneOpA(nq,is,Op,psi,NPART,comm)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -71,7 +73,9 @@ Complex :: Op(2,2),psi(NPART),chi(NPART)
 Complex  :: tmp01,tmp10
 Complex, Parameter :: Zero =( 0.0, 0.0 )
 Integer :: comm
+#ifdef USE_MPI
 Integer :: mpistat(MPI_STATUS_SIZE)
+#endif
 Integer :: req(1)
 
 !
@@ -130,9 +134,11 @@ ntag1=19
 ntag2=19
 tmp10=zero
 tmp01=psi(nvseat+1)
+#ifdef USE_MPI
 Call MPI_IRECV(tmp10,1,MPI_COMPLEX,nvpsection,ntag2,COMM,req(1),ierr)
 Call MPI_SEND(tmp01,1,MPI_COMPLEX,nvpsection,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
+#endif
 
 !Following does 2 X 2 Multiplication
 chi(n+1) =Op(1,1)*psi(nvseat+1) + Op(1,2)*tmp10
@@ -141,9 +147,11 @@ ntag1=19
 ntag2=19
 tmp01=zero
 tmp10=psi(n+1)
+#ifdef USE_MPI
 Call MPI_IRECV(tmp01,1,MPI_COMPLEX,nvpsection,ntag1,COMM,req(1),ierr)
 Call MPI_SEND(tmp10,1,MPI_COMPLEX,nvpsection,ntag2,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
+#endif
 
 !Following does 2 X 2 Multiplication
 chi(n+1) =Op(2,1)*tmp01 + Op(2,2)*psi(n+1)
@@ -159,7 +167,9 @@ End Subroutine OneOpA
 
 SUBROUTINE TwoOpA(nq,is1,is2,Op12,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -173,11 +183,19 @@ INTEGER nvp3,nvp3section,nvp3seat
 COMPLEX Op12(4,4),psi(NPART),chi(NPART)
 COMPLEX  tmp11,tmp12,tmp13,tmp14
 COMPLEX, PARAMETER :: Zero =( 0.0, 0.0 )
-INTEGER mpistat(mpi_status_size),COMM
-integer status(MPI_STATUS_SIZE,1), req(1)
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
+#ifdef USE_MPI
+integer status(MPI_STATUS_SIZE,1)
+#endif
+integer  req(1)
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
 !  acting on qubits "is1" and "is2" out of nq qubits.
@@ -258,6 +276,7 @@ If(qmark1.eq.0.and.qmark2.eq.0) then
 ntag1=nv+nvp1+nvp2+nvp3
 tmp11=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
+#ifdef USE_MPI
 If(nvp1section.ne.nvsection) then
 call MPI_IRECV(tmp12,1,MPI_COMPLEX,nvp1section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp11,1,MPI_COMPLEX,nvp1section,ntag1,COMM,ierr)
@@ -273,6 +292,7 @@ call MPI_IRECV(tmp14,1,MPI_COMPLEX,nvp3section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp11,1,MPI_COMPLEX,nvp3section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
+#endif
 !
 !  Check if nvp1 is on current processor nvsection==myid.
 !
@@ -301,6 +321,7 @@ else if (qmark1.eq.0.and.qmark2.eq.1) then
 ntag1=nv+nvp1+nvp2+nvp3
 tmp12=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
+#ifdef USE_MPI
 If(nvp1section.ne.nvsection) then
 call MPI_IRECV(tmp11,1,MPI_COMPLEX,nvp1section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp12,1,MPI_COMPLEX,nvp1section,ntag1,COMM,ierr)
@@ -316,7 +337,7 @@ call MPI_IRECV(tmp13,1,MPI_COMPLEX,nvp3section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp12,1,MPI_COMPLEX,nvp3section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
-
+#endif
 If(nvp1section.eq.nvsection) then
 tmp11= psi(nvp1seat+1)
 endif
@@ -336,6 +357,7 @@ else if (qmark1.eq.1.and.qmark2.eq.0) then
 ntag1=nv+nvp1+nvp2+nvp3
 tmp13=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
+#ifdef USE_MPI
 If(nvp1section.ne.nvsection) then
 call MPI_IRECV(tmp14,1,MPI_COMPLEX,nvp1section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp13,1,MPI_COMPLEX,nvp1section,ntag1,COMM,ierr)
@@ -351,7 +373,7 @@ call MPI_IRECV(tmp12,1,MPI_COMPLEX,nvp3section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp13,1,MPI_COMPLEX,nvp3section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
-
+#endif
 
 If(nvp1section.eq.nvsection) then
 tmp14= psi(nvp1seat+1)
@@ -372,6 +394,7 @@ else if (qmark1.eq.1.and.qmark2.eq.1) then
 ntag1=nv+nvp1+nvp2+nvp3
 tmp14=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
+#ifdef USE_MPI
 If(nvp1section.ne.nvsection) then
 call MPI_IRECV(tmp13,1,MPI_COMPLEX,nvp1section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp14,1,MPI_COMPLEX,nvp1section,ntag1,COMM,ierr)
@@ -387,7 +410,7 @@ call MPI_IRECV(tmp11,1,MPI_COMPLEX,nvp3section,ntag1,COMM,req(1),ierr)
 call MPI_SEND(tmp14,1,MPI_COMPLEX,nvp3section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
-
+#endif
 
 If(nvp1section.eq.nvsection) then
 tmp13= psi(nvp1seat+1)
@@ -410,7 +433,9 @@ END SUBROUTINE
 !------------------------------------------------
 Subroutine CNOTA(nq,is1,is2,psi,NPART)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 Implicit None
 
@@ -425,8 +450,9 @@ Complex psi(NPART),chi(NPART)
 Complex  tmp1,tmp2,tmp3,tmp4
 Complex, Parameter :: One =( 1.0, 0.0 )
 Complex, Parameter :: Zero =( 0.0, 0.0 )
+#ifdef USE_MPI
 Integer ::mpistat(MPI_STATUS_SIZE)
-
+#endif
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
 !  acting on qubits "is1" and "is2" out of nq qubits.
@@ -504,7 +530,9 @@ If(nvsection.Eq.nvp1section) chi(n+1)=psi(nvp1seat+1)
 !  Need to Transfer 10 and 11 components
 If(nvsection.Ne.nvp1section) Then
 tmp3=psi(n+1)
+#ifdef USE_MPI
 Call MPI_SENDRECV(tmp3,1,MPI_COMPLEX,nvp1section,ntag,tmp4,1,MPI_COMPLEX,nvp1section,ntag,MPI_COMM_WORLD,mpistat,ierr)
+#endif
 chi(n+1) = tmp4 
 End If
 
@@ -518,7 +546,9 @@ If(nvsection.Eq.nvp1section) chi(n+1)=psi(nvp1seat+1)
 !  Need to Transfer 10 and 11 components
 If(nvsection.Ne.nvp1section) Then
 tmp4=psi(n+1)
+#ifdef USE_MPI
 Call MPI_SENDRECV(tmp4,1,MPI_COMPLEX,nvp1section,ntag,tmp3,1,MPI_COMPLEX,nvp1section,ntag,MPI_COMM_WORLD,mpistat,ierr)
+#endif
 chi(n+1) = tmp3 
 End If
 
@@ -573,7 +603,9 @@ END SUBROUTINE  SPLITN
 
 SUBROUTINE ProjA(nq,nproj,PArray,Psi,PsiO,NPART,NPARTA,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -586,11 +618,16 @@ COMPLEX  Psi(NPART),PsiO(NPARTA),chi(NPARTA)
 INTEGER  overlap,rank,ic,icc
 INTEGER  B(nq),B1(nq-nproj),B2(nproj),PArray(nproj,2),BA(nq)
 REAL  NORM, NORMF
-INTEGER mpistat(MPI_STATUS_SIZE),ntag,COMM
+#ifdef USE_MPI
+INTEGER mpistat(MPI_STATUS_SIZE)
+#endif
+integer ntag,COMM
 
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 
    Do n=0,NPARTA-1
    PsiO(n+1)= Zero
@@ -650,9 +687,13 @@ Do 50 i=1, NPARTA
 Norm=PsiO(i)*conjg(PsiO(i)) + Norm
 50 continue
 
+#ifdef USE_MPI
 call MPI_Reduce(NORM,NORMF,1,MPI_REAL,MPI_SUM,0,COMM,ierr)
 call MPI_BCAST(NORMF,1,MPI_REAL,0,COMM,ierr)
-
+#endif
+#ifndef USE_MPI
+NORMF=NORM
+#endif
 Do 60 i=1, NPARTA
 PsiO(i)= PsiO(i)/sqrt(NormF)
 60 continue
@@ -701,18 +742,25 @@ end SUBROUTINE RANDX
 
 SUBROUTINE QFT(nq,n1,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
 
 INTEGER nq,n1,NPART,i,ic,k
 COMPLEX had(2,2),psi(NPART)
-INTEGER mpistat(mpi_status_size),COMM
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
 COMPLEX, PARAMETER :: One  =( 1.0, 0.0 )
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !=================================
 ! Apply QFT to First register n1
 ! Define Hadamard
@@ -802,7 +850,9 @@ end subroutine CF
 
 SUBROUTINE SWAP(nq,is1,is2,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -816,11 +866,16 @@ INTEGER nvp3,nvp3section,nvp3seat
 COMPLEX psi(NPART),chi(NPART)
 COMPLEX  tmp1,tmp2,tmp3,tmp4
 COMPLEX, PARAMETER :: Zero =( 0.0, 0.0 )
-INTEGER mpistat(mpi_status_size),COMM
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
 
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
 !  acting on qubits "is1" and "is2" out of nq qubits.
@@ -894,7 +949,9 @@ If(nvsection.eq.nvp3section) chi(n+1)=psi(nvp3seat+1)
 !  Need to Transfer 01 and 10 components
 If(nvsection.ne.nvp3section) then
 tmp3=psi(n+1)
+#ifdef USE_MPI
 call MPI_SENDRECV(tmp3,1,MPI_COMPLEX,nvp3section,ntag,tmp4,1,MPI_COMPLEX,nvp3section,ntag,COMM,mpistat,ierr)
+#endif
 chi(n+1) = tmp4 
 end if
 
@@ -908,7 +965,9 @@ If(nvsection.eq.nvp3section) chi(n+1)=psi(nvp3seat+1)
 !  Need to Transfer 10 and 01 components
 If(nvsection.ne.nvp3section) then
 tmp4=psi(n+1)
+#ifdef USE_MPI
 call MPI_SENDRECV(tmp4,1,MPI_COMPLEX,nvp3section,ntag,tmp3,1,MPI_COMPLEX, nvp3section,ntag,COMM,mpistat,ierr)
+#endif
 chi(n+1) = tmp3 
 
 else if (qmark1.eq.1.and.qmark2.eq.1) then 
@@ -928,7 +987,9 @@ END SUBROUTINE SWAP
 
 SUBROUTINE CPHASEK(nq,is1,is2,k,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -945,11 +1006,16 @@ COMPLEX, PARAMETER :: One =( 1.0, 0.0 )
 COMPLEX, PARAMETER :: Zero =( 0.0, 0.0 )
 COMPLEX, PARAMETER :: Eye =( 0.0, 1.0 )
 REAL*8 pi, th
-INTEGER mpistat(mpi_status_size),COMM
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
 
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
 !  acting on qubits "is1" and "is2" out of nq qubits.
@@ -1050,7 +1116,9 @@ END SUBROUTINE CPHASEK
 
 SUBROUTINE Noise(nq,rankM,psi1,NPART,commM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
@@ -1063,8 +1131,10 @@ INTEGER commM,OUTFILE
 REAL*8 pi
 Double Precision RAND(1:2,1:2)  !random number
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(commM, nprocM, ierr)
 call MPI_COMM_RANK(commM, myidM, ierr)
+#endif
 OUTFILE=10+rankM*nprocM+myidM
 write(OUTFILE,*)
 write(OUTFILE,*) '--------------------------------'
@@ -1275,17 +1345,24 @@ END SUBROUTINE PROJN
 
 SUBROUTINE HALL(nq,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
 INTEGER nq,NPART,ic
 COMPLEX had(2,2),psi(NPART)
-INTEGER mpistat(mpi_status_size),COMM
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
 COMPLEX, PARAMETER :: One  =( 1.0, 0.0 )
 
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !=================================
 ! Define Hadamard
 had(1,1)= One/sqrt(2.)
@@ -1301,17 +1378,24 @@ END SUBROUTINE HALL
 
 SUBROUTINE HALL2(nq,psi,NPART,COMM)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None
 INTEGER nq,NPART,n,np,npl,dest,seatn,OUTFILE
 !integer SH
 COMPLEX psi(NPART), psi2(NPART),temp,getsum
-INTEGER mpistat(mpi_status_size),COMM
+#ifdef USE_MPI
+INTEGER mpistat(mpi_status_size)
+#endif
+integer COMM
 COMPLEX, PARAMETER :: ZERO  =( 0.0, 0.0 )
+#ifdef USE_MPI
 call MPI_COMM_SIZE(COMM, nprocs, ierr)
 call MPI_COMM_RANK(COMM, myid, ierr)
+#endif
 !------------------------------------------------------
 ! Do Hall on psi                                      !
 ! This version is for MPI distribution of Psi1 case   !
@@ -1335,10 +1419,16 @@ dest= Int(n/NPART)
 seatn= Mod(n,NPART)
 
 
+#ifdef USE_MPI
 CALL MPI_REDUCE(TEMP,GETSUM,1,MPI_COMPLEX,MPI_SUM,0,comm,IERR)
     if (ierr.ne.0) write(OUTFILE,*) 'Error in mpi_reduce, myid=',myid
 CALL MPI_BCAST(GETSUM, 1, MPI_COMPLEX, 0, comm, IERR)
      if (ierr.ne.0) write(OUTFILE,*) 'Error in mpi_bcast, myid=',myid
+#endif
+#ifndef USE_MPI
+     GETSUM=TEMP
+#endif
+
 !
 !  Put the getsum into the right place
 !
@@ -1413,7 +1503,9 @@ FUNCTION GCD(NA, NB)
 
 FUNCTION SH(nq,n,np)
 
+#ifdef USE_MPI
 Use MPI
+#endif
 Use MPI_VARS
 
 Implicit None

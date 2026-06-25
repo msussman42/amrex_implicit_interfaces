@@ -22,7 +22,9 @@
 !   The communicator for each Multiuniverse is commM
 !
 Program main
+#ifdef USE_MPI
 Use mpi
+#endif
 Use mpi_vars
 Use qcmpisubs
 Implicit None
@@ -39,31 +41,37 @@ INTEGER IR
 INTEGER Q,N1,N2,OUTFILE
 
 masterU=0
+#ifdef USE_MPI
 commU=MPI_comm_world
-
+#endif
 
 !
 !initialise MPI universe
 !
 
+  nprocU=1
+#ifdef USE_MPI
   call MPI_init(ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_init'
 
 !get size (total number of processors) within MPI Universe
 
   call MPI_comm_size(commU,nprocU,ierr)
-
+  if (ierr/=MPI_success) stop 'Error in MPI_comm_size'
+#endif
   if (1.eq.1) then
    print *,"nprocU=",nprocU
   endif
 
-  if (ierr/=MPI_success) stop 'Error in MPI_comm_size'
-
 !get my myidU on each different processor
 !within MPI universe (myidU=0 to nprocU-1)
 
+  myidU=0
+
+#ifdef USE_MPI
   call MPI_comm_rank(commU,myidU,ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_comm_rank' 
+#endif
 
 
 OUTFILE=10
@@ -79,8 +87,8 @@ OUTFILE=10
 !  Number to be factorized by all groups
 !-----------------------------------------|
 
-!  IR=7*11
-  IR=7*13 !OK
+   IR=7*11
+!  IR=7*13 !OK
 !  IR=7*17 !OK
 !  IR=7*19 !133
 
@@ -136,7 +144,10 @@ endif
 ! Stipulate Number groups              |
 !--------------------------------------|
 
+   NGROUP=1
+#ifdef USE_MPI
    NGROUP=4
+#endif
 
    nprocM=nprocU/NGROUP
 
@@ -160,15 +171,18 @@ rankM=Int(myidU/NPROCM)
 ! creates group(MULTIUNIVERSE) communicators commM
 !
 !call MPI_COMM_SPLIT(commU,rankM,nprocU,commM,ierr)
+#ifdef USE_MPI
 call MPI_COMM_SPLIT(commU,rankM,myidU,commM,ierr)
 if (ierr/=MPI_success) stop 'Error in MPI_COMM_split'
-
+#endif
 
 call Shor(commM,n1,n2,rankM,IR)
   
 ! finalize MPI
+#ifdef USE_MPI
   call MPI_finalize(ierr)
   if (ierr/=MPI_success) stop 'Error in MPI_finalize'
+#endif
 
 end program main
 !contains
@@ -188,7 +202,9 @@ end program main
 
 
 SUBROUTINE Shor(commM,n1,n2,rankM,MP)
+#ifdef USE_MPI
 Use mpi
+#endif
 Use mpi_vars
 Use qcmpisubs
 Implicit None
@@ -235,6 +251,7 @@ INTEGER TGROUPS
 ! MPI initialization
 !
 
+#ifdef USE_MPI
 commU=MPI_comm_world
 
 call MPI_COMM_SIZE(commU,nprocU,ierr)
@@ -246,6 +263,7 @@ call MPI_comm_rank(commU,myidU,ierr)
 !
 call MPI_COMM_SIZE( commM, nprocM, ierr) 
 call MPI_COMM_RANK( commM, myidM, ierr)
+#endif
 
 !
 !  masterU=master of all universe
@@ -396,8 +414,9 @@ endif
 !
 ! BCAST  xguess to all processors
 !
+#ifdef USE_MPI
 call MPI_BCAST(xguess,1,MPI_INTEGER,masterM,commM,ierr)
-
+#endif
 
 ! evaluate NPART1,NPART2,NPART
 
@@ -589,7 +608,9 @@ endif
 !
 ! Broadcasts the value measured in Reg 2
 !
+#ifdef USE_MPI
 call MPI_Bcast(reg2M, 1, MPI_INTEGER, masterM, commM, ierr)
+#endif
 
 ALLOCATE( PsiO(NPARTA) )
 ALLOCATE( PArray(nproj,2) )
@@ -747,7 +768,12 @@ endif
 endif 
 
 
+#ifdef USE_MPI
 CALL MPI_REDUCE(tmp,tprob,1,MPI_REAL,MPI_SUM,masterM,commM,ierr)
+#endif
+#ifndef USE_MPI
+tprob=tmp
+#endif
 
   if (myidM.eq.masterM) write(OUTFILE,*)' Total (group) probability:',tprob, ' in group:',rankM
   if (myidM.eq.masterM) write(*,*)' Total (group) probability:',tprob, ' in group:',rankM
