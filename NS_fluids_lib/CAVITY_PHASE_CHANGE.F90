@@ -510,7 +510,8 @@ real(amrex_real), INTENT(out) :: radsite
 real(amrex_real), INTENT(out) :: temperature
 integer dir
 
- n_sites_out=sitesnum+sitesnum2+sitesnum3
+!n_sites_out=sitesnum+sitesnum2+sitesnum3
+ n_sites_out=sitesnum
 
  if (isite.eq.0) then
   !do nothing
@@ -606,8 +607,10 @@ real(amrex_real)       :: tempdist
         if(tempdist.le.radblob3)then
          print *,"make seed","temp","ls_sol","site"
          print *,"make seed",tempt,ls_sol,sites(1:2,ii),tempvec1(SDIM)
-           make_seed=1
+         make_seed=1
          active_flag(ii)=1
+         subscale_spec_id=1
+         subscale_vfrac = 0.5d0
         elseif(tempdist.gt.radblob3)then
                 ! do nothing
         else

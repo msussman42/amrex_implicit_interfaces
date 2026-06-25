@@ -5801,22 +5801,30 @@ stop
       return
       end subroutine fort_getcolorsum
 
-      subroutine get_delta_ml_init(delta_ml,xpoint)
+      subroutine get_delta_ml_init(delta_ml,xpoint,cslope)
       use probcommon_module
+      use CAVITY_PHASE_CHANGE_module
 
       IMPLICIT NONE
 
       real(amrex_real), INTENT(out) :: delta_ml
       real(amrex_real), INTENT(in) :: xpoint(SDIM)
-      real(amrex_real) :: x_site(SDIM)
+      real(amrex_real), INTENT(in) :: cslope
       real(amrex_real) :: dist_closest,cur_dist
+#if (1==0)
+      real(amrex_real) :: x_site(SDIM)
       integer :: i_closest,i,dir
       integer :: local_n_sites
       real(amrex_real) :: radsite
       real(amrex_real) :: temperature
+#endif
+      integer :: ii
+      logical :: active_site_found
 
+#if (1==0)
       i=0
-      call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite,temperature,i)
+      call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite, &
+       temperature,i)
 
       i_closest=0
       dist_closest=-1.0d0
@@ -5824,7 +5832,8 @@ stop
        cur_dist=zero
         !if radsite<=0.0 then 
         !site "i" is not activated.
-       call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite,temperature,i)
+       call SUB_NUCLEATION_SITES(local_n_sites,x_site,radsite, &
+         temperature,i)
        do dir=1,SDIM
         cur_dist=cur_dist+(xpoint(dir)-x_site(dir))**2
        enddo
@@ -5841,6 +5850,29 @@ stop
       enddo !i=1,n_sites
 
       delta_ml=zero !meters (for example)
+#endif
+
+      active_site_found=.false.
+      dist_closest=999999.d0
+      do ii=1,sitesnum
+       if (active_flag(ii).eq.1) then
+        active_site_found=.true.
+
+        cur_dist = sqrt((xpoint(1)-sites(1,ii))**2 + &
+                (xpoint(2)-sites(2,ii))**2)
+
+        if (cur_dist.lt.dist_closest) then
+         dist_closest = cur_dist
+        endif
+       endif
+               
+      enddo !ii=1,sitesnum
+
+      if(active_site_found) then
+       delta_ml=cslope*dist_closest !meters (for example)
+      else
+       delta_ml = zero
+      endif       
          
       return
       end subroutine get_delta_ml_init
@@ -5872,6 +5904,7 @@ stop
        freezing_model, &
        saturation_temp, &
        sato_model_spec_id, &
+       sato_cslope, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -5899,8 +5932,8 @@ stop
       integer, INTENT(in) :: levelbc(SDIM,2)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: sato_cslope
       integer, INTENT(in) :: sato_model_spec_id(num_materials)
-
       integer :: i,j,k
       integer :: ii,jj,kk
       integer :: iside,jside,kside,side
@@ -5985,12 +6018,14 @@ stop
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) :: xpoint(SDIM)
 
-      ! minimum thickness of microlayer below which it is considered
+      ! minimum thickness of microlayer below 
+      ! which it is considered
       ! dryout zone, this can be a input
       real(amrex_real), parameter :: delta_ml_min=1.0d-10
 
 
-      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+      if ((tid_current.lt.0).or. &
+          (tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
        stop
       endif
@@ -6086,7 +6121,8 @@ stop
       if (is_rigid(im_solid).eq.1) then
        !do nothing
       else
-       print *,"expecting is_rigid(im_solid)=1: ",im_solid,is_rigid(im_solid)
+       print *,"expecting is_rigid(im_solid)=1: ", &
+         im_solid,is_rigid(im_solid)
        stop
       endif
       call get_iten(im_liquid,im_vapor,iten_boiling)
@@ -6131,7 +6167,8 @@ stop
        area_new=VOF_local(im_vapor)*dx(1)*dx(2)
        area_old=VOF_local_old(im_vapor)*dx(1)*dx(2)
        call get_primary_material(dx,LS_local,im_primary)
-       if ((im_primary.eq.im_liquid).or.(im_primary.eq.im_vapor)) then
+       if ((im_primary.eq.im_liquid).or. &
+           (im_primary.eq.im_vapor)) then
         if (VOF_local(im_vapor).ge.EPS2) then
          do dir=1,SDIM
           ii=0
@@ -6161,7 +6198,8 @@ stop
             do dir_local=1,SDIM
              nsolid(dir_local)=LS(D_DECL(iside,jside,kside), &
               num_materials+(im_solid-1)*SDIM+dir_local)
-             if (abs(nsolid(dir_local)).gt.abs(nsolid(dir_max))) then
+             if (abs(nsolid(dir_local)).gt. &
+                 abs(nsolid(dir_max))) then
               dir_max=dir_local
              endif
             enddo
@@ -6174,13 +6212,17 @@ stop
              VOF_liquid=VOF_liquid/(VOF_liquid+VOF_vapor)
              VOF_vapor=one-VOF_liquid
              solid_temperature=DEN(D_DECL(iside,jside,kside), &
-              (im_solid-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
+              (im_solid-1)* &
+              num_state_material+ENUM_TEMPERATUREVAR+1)
+              !microscale_vfrac is unitless
              microscale_vfrac=DEN(D_DECL(i,j,k), &
-              (im_vapor-1)*num_state_material+ENUM_SPECIESVAR+spec_id)
+              (im_vapor-1)* &
+              num_state_material+ENUM_SPECIESVAR+spec_id)
              local_volume=vol(D_DECL(i,j,k)) !volume of the cell
              k_liquid=conductstate(D_DECL(i,j,k),im_liquid)
              k_vapor=conductstate(D_DECL(i,j,k),im_vapor)
-             k_solid=conductstate(D_DECL(iside,jside,kside),im_solid)
+             k_solid= &
+              conductstate(D_DECL(iside,jside,kside),im_solid)
              TSAT=saturation_temp(iten_boiling)
 
              den_liquid=fort_denconst(im_liquid)
@@ -6189,14 +6231,14 @@ stop
              if (fort_material_type(im_liquid).eq.0) then
               !do nothing
              else
-              print *,"expecting incompressible liquid: ",im_liquid, &
-                 fort_material_type
+              print *,"expecting incompressible liquid: ", &
+                im_liquid,fort_material_type
               stop
              endif
 
              !check if microscale_vfrac is greater than
              !delta_ml_min otherwise, its a dry out zone
-             if (microscale_vfrac.gt.delta_ml_min) then
+             if (microscale_vfrac*dx(SDIM).gt.delta_ml_min) then
 
                !k units=Watts/(meter Kelvin)
                !qdot units=Watts/Meter
@@ -6240,7 +6282,8 @@ stop
                 !cell to the nucleation site.
                 !get_delta_ml_init calls "SUB_NUCLEATION_SITES"
                 !ASHWANI II
-                call get_delta_ml_init(delta_ml_init,xpoint)
+                call get_delta_ml_init(delta_ml_init,xpoint, &
+                 sato_cslope)
 
                 delta_ml_temp=(area_new-area_old)*delta_ml_init 
                 delta_ml_temp=delta_ml_temp + &
@@ -6278,7 +6321,7 @@ stop
               if ((microscale_vfrac.ge.zero).and. &
                   (microscale_vfrac.le.one)) then
                !do nothing
-              else if (microscale_vfrac.lt.zero) then
+              else if (microscale_vfrac.lt.-delta_ml_min) then
                microscale_vfrac=microscale_vfrac+delta_ml_temp
                local_mdot=microscale_vfrac*dx(SDIM)*den_liquid/dt
                local_qdot=LL*local_mdot
@@ -6309,8 +6352,9 @@ stop
               qdot(D_DECL(i,j,k))=qdot(D_DECL(i,j,k))+ &
                 dt*local_qdot/(dx(1)*den_liquid*CP_liquid)
              
-             else if (microscale_vfrac.le.delta_ml_min .and. &
-                      microscale_vfrac.gt.zero) then
+             else if ((microscale_vfrac*dx(SDIM).le.delta_ml_min) &
+                       .and. &
+                      (microscale_vfrac.gt.zero)) then
               !mdot and qdot are not calculated for dry out zone 
               !do nothing
              else

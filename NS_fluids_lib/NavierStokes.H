@@ -1899,6 +1899,7 @@ protected:
      // value: 1..num_materials
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
+
      // index: 0..num_materials-1
      // value: 1..num_species_var
      // if the Sato model is to be used for a given vapor id "im_vapor,"
@@ -1906,6 +1907,8 @@ protected:
      // The species variable will store the liquid fraction.
      // "im_vapor" must be wholly contained on the finest AMR level.
     static Vector<int> sato_model_spec_id; 
+    static Real sato_cslope; //default 0.0
+
      // 0 - distribute to the destination material 
      //     V=u_src dot n + mdot/rho_src
      // 1 - distribute to the source material
