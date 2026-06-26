@@ -38,6 +38,7 @@ Subroutine dectobin(nq,D,B)
    Integer :: i, nq
    Integer :: B(nq),D  
    Logical :: bool
+!BTEST(I,POS)=TRUE if the bit at POS in I is set.  POS>=0
    Do i=0,nq-1
       bool = Btest(D, i)
       B(nq-i)=0
@@ -88,7 +89,9 @@ Integer :: req(1)
 !
 
 !
-!  stride gives the increase in number when q=0 <--->  q=1 for qubit "is"
+! stride gives the increase in number when q=0 <--->  q=1 for qubit "is"
+! in dectobin: B(nq-i)=BTEST(D,i)
+! in bintodec: D=sum B(i)2^(nq-i)
 !
 stride=2**(nq-is)
 !write(9+myid,*)'nq,is,stride', nq,is,stride
@@ -175,12 +178,13 @@ Use MPI_VARS
 Implicit None
 INTEGER nq, is1,is2,n,B(nq),qmark1,qmark2,stride1,stride2,NPART
 INTEGER iv1,iv2,iv3,iv4
-INTEGER ntag1,ntag2, ntag3,ntag4 
+INTEGER ntag1,ntag2,ntag3,ntag4 
 INTEGER nv,nvsection,nvseat 
 INTEGER nvp1,nvp1section,nvp1seat
 INTEGER nvp2,nvp2section,nvp2seat
 INTEGER nvp3,nvp3section,nvp3seat
-COMPLEX Op12(4,4),psi(NPART),chi(NPART)
+COMPLEX Op12(4,4)
+COMPLEX psi(NPART),chi(NPART)
 COMPLEX  tmp11,tmp12,tmp13,tmp14
 COMPLEX, PARAMETER :: Zero =( 0.0, 0.0 )
 #ifdef USE_MPI
@@ -205,26 +209,37 @@ call MPI_COMM_RANK(COMM, myid, ierr)
 !  stride1 gives the increase in number when q=0 <--->  q=1 for qubit "is1"
 !  stride2 gives the increase in number when q=0 <--->  q=1 for qubit "is2"
 !
+! stride gives the increase in number when q=0 <--->  q=1 for qubit "is"
+! in dectobin: B(nq-i)=BTEST(D,i)
+! in bintodec: D=sum B(i)2^(nq-i)
+!
 stride1=2**(nq-is1)
 stride2=2**(nq-is2)
 
 ! For stride1+stride2 < NPART,   the needed psi components
 ! are on the same processor
+! in dectobin: B(nq-i)=BTEST(D,i)
+! in bintodec: D=sum B(i)2^(nq-i)
 !
 If(stride1+stride2.lt.NPART) then
 Do 10 n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
 If(B(is1).eq.0.and.B(is2).eq.0) then
-!  Following does 4 X 4 Multiplication
-iv1=n+1
-iv2=n+stride1+1
-iv3=n+stride2+1
-iv4=n+stride1+stride2+1
 
-chi(iv1)=Op12(1,1)*psi(iv1) + Op12(1,2)*psi(iv2)+ Op12(1,3)*psi(iv3) + Op12(1,4)*psi(iv4) 
-chi(iv2)=Op12(2,1)*psi(iv1) + Op12(2,2)*psi(iv2)+ Op12(2,3)*psi(iv3) + Op12(2,4)*psi(iv4) 
-chi(iv3)=Op12(3,1)*psi(iv1) + Op12(3,2)*psi(iv2)+ Op12(3,3)*psi(iv3) + Op12(3,4)*psi(iv4) 
-chi(iv4)=Op12(4,1)*psi(iv1) + Op12(4,2)*psi(iv2)+ Op12(4,3)*psi(iv3) + Op12(4,4)*psi(iv4) 
+!  Following does 4 X 4 Multiplication
+iv1=n+1  !B=dectobin(iv1-1)  B(is1)=0 B(is2)=0 00 PART
+iv2=n+stride2+1 !B2=dectobin(iv2-1) B2(is1)=0  B2(is2)=1  01 PART 
+iv3=n+stride1+1 !B3=dectobin(iv3-1) B3(is1)=1  B3(is2)=0  10 PART
+iv4=n+stride1+stride2+1!B4=dectobin(iv4-1)  B4(is1)=1 B4(is2)=1 11 PART
+
+chi(iv1)=Op12(1,1)*psi(iv1)+Op12(1,2)*psi(iv2)+ &
+         Op12(1,3)*psi(iv3)+Op12(1,4)*psi(iv4) 
+chi(iv2)=Op12(2,1)*psi(iv1)+Op12(2,2)*psi(iv2)+ &
+         Op12(2,3)*psi(iv3)+Op12(2,4)*psi(iv4) 
+chi(iv3)=Op12(3,1)*psi(iv1)+Op12(3,2)*psi(iv2)+ &
+         Op12(3,3)*psi(iv3)+Op12(3,4)*psi(iv4) 
+chi(iv4)=Op12(4,1)*psi(iv1)+Op12(4,2)*psi(iv2)+ &
+         Op12(4,3)*psi(iv3)+Op12(4,4)*psi(iv4) 
 endif
 10 Continue
 psi=chi
@@ -431,6 +446,7 @@ END SUBROUTINE
 !bottom of TwoOpA =============================
 !
 !------------------------------------------------
+!Controlled NOT gate  is1 is the control bit.
 Subroutine CNOTA(nq,is1,is2,psi,NPART)
 
 #ifdef USE_MPI
@@ -456,6 +472,7 @@ Integer ::mpistat(MPI_STATUS_SIZE)
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
 !  acting on qubits "is1" and "is2" out of nq qubits.
+!  OP12=CNOTA
 !
 !  Put Vector in Partner Form for each "is1" "is2" case
 !  Partner Form means that the operator act on wfs in each processor
@@ -467,16 +484,22 @@ stride2=2**(nq-is2)
 
 ! For stride1+stride2 < NPART,   the needed psi components
 ! are on the same processor
+! stride gives the increase in number when q=0 <--->  q=1 for qubit "is"
+! in dectobin: B(nq-i)=BTEST(D,i)
+! in bintodec: D=sum B(i)2^(nq-i)
+!
 If(stride1+stride2.Lt.NPART) Then
 Do n=0,NPART-1
    Call dectobin(nq,n+myid*NPART,B)
    If(B(is1).Eq.0.And.B(is2).Eq.0) Then
 
-      iv1=n+1  !  00 PART
-      iv2=n+stride2+1  !  01 PART
-      iv3=n+stride1+1  !  10 PART
-      iv4=n+stride1+stride2+1  !  11 PART
+!  Following does 4 X 4 Multiplication
+      iv1=n+1         !B=dectobin(iv1-1)  B(is1)=0 B(is2)=0 00 PART
+      iv2=n+stride2+1 !B2=dectobin(iv2-1) B2(is1)=0  B2(is2)=1  01 PART 
+      iv3=n+stride1+1 !B3=dectobin(iv3-1) B3(is1)=1  B3(is2)=0  10 PART
+      iv4=n+stride1+stride2+1!B4=dectobin(iv4-1)  B4(is1)=1 B4(is2)=1 11 PART
 
+       !is1 is the control
       chi(iv1)= ONE*psi(iv1)  
       chi(iv2)= One*psi(iv2) 
       chi(iv3)= One*psi(iv4) 
@@ -895,10 +918,10 @@ Do 10 n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
 If(B(is1).eq.0.and.B(is2).eq.0) then
 
-iv1=n+1  !  00 PART
-iv2=n+stride2+1  !  01 PART
-iv3=n+stride1+1  !  10 PART
-iv4=n+stride1+stride2+1  !  11 PART
+iv1=n+1         !B=dectobin(iv1-1)  B(is1)=0 B(is2)=0 00 PART
+iv2=n+stride2+1 !B2=dectobin(iv2-1) B2(is1)=0  B2(is2)=1  01 PART 
+iv3=n+stride1+1 !B3=dectobin(iv3-1) B3(is1)=1  B3(is2)=0  10 PART
+iv4=n+stride1+stride2+1!B4=dectobin(iv4-1)  B4(is1)=1 B4(is2)=1 11 PART
 
 chi(iv1)=psi(iv1)  
 chi(iv2)=psi(iv3) 
@@ -1035,15 +1058,19 @@ phi =  cos(th)*One + sin(th)*Eye
 !write(9+myid,*) 'k,pi,phi', k,pi,phi
 ! For stride1+stride2 < NPART,   the needed psi components
 ! are on the same processor
+! stride gives the increase in number when q=0 <--->  q=1 for qubit "is"
+! in dectobin: B(nq-i)=BTEST(D,i)
+! in bintodec: D=sum B(i)2^(nq-i)
+
 If(stride1+stride2.lt.NPART) then
 Do 10 n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
 If(B(is1).eq.0.and.B(is2).eq.0) then
 
-iv1=n+1  !  00 PART
-iv2=n+stride2+1  !  01 PART
-iv3=n+stride1+1  !  10 PART
-iv4=n+stride1+stride2+1  !  11 PART
+iv1=n+1         !B=dectobin(iv1-1)  B(is1)=0 B(is2)=0 00 PART
+iv2=n+stride2+1 !B2=dectobin(iv2-1) B2(is1)=0  B2(is2)=1  01 PART 
+iv3=n+stride1+1 !B3=dectobin(iv3-1) B3(is1)=1  B3(is2)=0  10 PART
+iv4=n+stride1+stride2+1!B4=dectobin(iv4-1)  B4(is1)=1 B4(is2)=1 11 PART
 
 chi(iv1)= psi(iv1)  
 chi(iv2)= psi(iv2) 
