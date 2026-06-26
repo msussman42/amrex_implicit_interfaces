@@ -96,6 +96,8 @@ Integer :: req(1)
 stride=2**(nq-is)
 !write(9+myid,*)'nq,is,stride', nq,is,stride
 
+!NPART=2^nq/2^x=2^{nq-x}
+!stride<NPART => 2^{nq-is}<2^{nq-x} => 2^{-is}<2^{-x} => is>x
 ! For is > x,  where nprocs=2^x,  the needed psi components
 ! are on the same processor
 If(2**is.Gt.nprocs) Then
@@ -221,6 +223,12 @@ stride2=2**(nq-is2)
 ! in dectobin: B(nq-i)=BTEST(D,i)
 ! in bintodec: D=sum B(i)2^(nq-i)
 !
+!NPART=2^nq/2^x=2^{nq-x}
+!2^{nq-is1}+2^{nq-is2}<2^{nq-x}
+!2^{-is1}+2^{-is2}<2^{-x}
+!2^{x}<(2^{-is1}+2^{-is2})^{-1}
+!x<log_{2} (2^{-is1}+2^{-is2})^{-1}
+!x< -log_{2} (2^{-is1}+2^{-is2})
 If(stride1+stride2.lt.NPART) then
 Do 10 n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
