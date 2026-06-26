@@ -14,6 +14,7 @@
 !       dectobin
 !       OneOpA
 !       TwoOpA
+!       CNOTA
 !       EulerPhi
 !       splitn
 !       ProjA
@@ -190,7 +191,7 @@ COMPLEX psi(NPART),chi(NPART)
 COMPLEX  tmp11,tmp12,tmp13,tmp14
 COMPLEX, PARAMETER :: Zero =( 0.0, 0.0 )
 #ifdef USE_MPI
-INTEGER mpistat(mpi_status_size)
+INTEGER :: mpistat(mpi_status_size)
 #endif
 integer COMM
 #ifdef USE_MPI
@@ -230,7 +231,7 @@ stride2=2**(nq-is2)
 !x<log_{2} (2^{-is1}+2^{-is2})^{-1}
 !x< -log_{2} (2^{-is1}+2^{-is2})
 If(stride1+stride2.lt.NPART) then
-Do 10 n=0,NPART-1
+Do n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
 If(B(is1).eq.0.and.B(is2).eq.0) then
 
@@ -249,7 +250,7 @@ chi(iv3)=Op12(3,1)*psi(iv1)+Op12(3,2)*psi(iv2)+ &
 chi(iv4)=Op12(4,1)*psi(iv1)+Op12(4,2)*psi(iv2)+ &
          Op12(4,3)*psi(iv3)+Op12(4,4)*psi(iv4) 
 endif
-10 Continue
+enddo
 psi=chi
 return
 endif
@@ -266,52 +267,64 @@ endif
 !  For example we have 4th    set as  11,10,01,00
 !   Each denoted as                nv,nvp1,nvp2,nvp3
 Do 20 n=0,NPART-1
+
 nv = n+myid*NPART
 nvsection=Int(nv/NPART)
 nvseat=Mod(nv,NPART)
+
 call dectobin(nq,nv,B)
+
 qmark1=1
 If(B(is1).eq.0) qmark1=0
 qmark2=1
 If(B(is2).eq.0) qmark2=0
+
 ! nvp1,nvp2,nvp3  are the three partners to nv
 ! nv is on current myid processor,  nvp1  nvp2  nvp3 are on processors above or below  myid
-nvp1 = nv + ((-1)**qmark2)*stride2 
-nvp2 = nv + ((-1)**qmark1)*stride1
-nvp3 = nv + ((-1)**qmark1)*stride1+ ((-1)**qmark2)*stride2
+nvp1 = nv + ((-1)**qmark2)*stride2  !01 PART?
+nvp2 = nv + ((-1)**qmark1)*stride1  !10 PART?
+nvp3 = nv + ((-1)**qmark1)*stride1+ ((-1)**qmark2)*stride2 !11 PART
 !
 !  determine the associated processors
 !
-nvp1section=Int(nvp1/NPART)
-nvp2section=Int(nvp2/NPART)
-nvp3section=Int(nvp3/NPART)
+nvp1section=Int(nvp1/NPART) !01
+nvp2section=Int(nvp2/NPART) !10
+nvp3section=Int(nvp3/NPART) !11
 !
 !  determine the location within associated processors
 !
-nvp1seat=Mod(nvp1,NPART)
-nvp2seat=Mod(nvp2,NPART)
-nvp3seat=Mod(nvp3,NPART)
+nvp1seat=Mod(nvp1,NPART) !01
+nvp2seat=Mod(nvp2,NPART) !10
+nvp3seat=Mod(nvp3,NPART) !11
 !  Following Sends/Receives  the non-myid psi components
 !========================
-!   case of 00,01,10,11
+!   case of 00,01,10,11 (00 is local)
 !
+
 If(qmark1.eq.0.and.qmark2.eq.0) then
+
 ntag1=nv+nvp1+nvp2+nvp3
-tmp11=psi(nvseat+1)
+tmp11=psi(nvseat+1) !00
 !=============RECEIVES/SENDS==========
 #ifdef USE_MPI
 If(nvp1section.ne.nvsection) then
+!01
 call MPI_IRECV(tmp12,1,MPI_COMPLEX,nvp1section,ntag1,COMM,req(1),ierr)
+!00   
 call MPI_SEND(tmp11,1,MPI_COMPLEX,nvp1section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
 If(nvp2section.ne.nvsection) then
+!10
 call MPI_IRECV(tmp13,1,MPI_COMPLEX,nvp2section,ntag1,COMM,req(1),ierr)
+!00
 call MPI_SEND(tmp11,1,MPI_COMPLEX,nvp2section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
 If(nvp3section.ne.nvsection) then
+!11
 call MPI_IRECV(tmp14,1,MPI_COMPLEX,nvp3section,ntag1,COMM,req(1),ierr)
+!00
 call MPI_SEND(tmp11,1,MPI_COMPLEX,nvp3section,ntag1,COMM,ierr)
 call MPI_Wait(req(1),mpistat,ierr)
 endif
@@ -320,27 +333,31 @@ endif
 !  Check if nvp1 is on current processor nvsection==myid.
 !
 If(nvp1section.eq.nvsection) then
+!01
 tmp12= psi(nvp1seat+1)
 endif
 
 !  Check if nvp2 is on current processor nvsection==myid.
 !
 If(nvp2section.eq.nvsection) then
+!10
 tmp13= psi(nvp2seat+1)
 endif
 !
 !  Check if nvp3 is on current processor nvsection==myid.
 !
 If(nvp3section.eq.nvsection) then
+!11
 tmp14= psi(nvp3seat+1)
 endif
 !Following does 4 X 4 Multiplication
 chi(n+1) =Op12(1,1)*tmp11 + Op12(1,2)*tmp12+ Op12(1,3)*tmp13 + Op12(1,4)*tmp14 
 
 !========================
-!   case of 01,00,11,10
+!   case of 01,00,11,10 (01 is local)
 !
 else if (qmark1.eq.0.and.qmark2.eq.1) then 
+
 ntag1=nv+nvp1+nvp2+nvp3
 tmp12=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
@@ -377,6 +394,7 @@ chi(n+1) =Op12(2,1)*tmp11 + Op12(2,2)*tmp12+ Op12(2,3)*tmp13 + Op12(2,4)*tmp14
 !   case of 10,11,00,01
 !
 else if (qmark1.eq.1.and.qmark2.eq.0) then
+
 ntag1=nv+nvp1+nvp2+nvp3
 tmp13=psi(nvseat+1)
 !=============RECEIVES/SENDS==========
@@ -475,7 +493,13 @@ Complex  tmp1,tmp2,tmp3,tmp4
 Complex, Parameter :: One =( 1.0, 0.0 )
 Complex, Parameter :: Zero =( 0.0, 0.0 )
 #ifdef USE_MPI
-Integer ::mpistat(MPI_STATUS_SIZE)
+Integer :: mpistat(MPI_STATUS_SIZE)
+#endif
+integer COMM
+
+#ifdef USE_MPI
+call MPI_COMM_SIZE(COMM, nprocs, ierr)
+call MPI_COMM_RANK(COMM, myid, ierr)
 #endif
 !
 !  Modify wavefunction amplitudes due to a 4x4 operator OP12 
@@ -521,36 +545,44 @@ Endif
 ! are on  different  processors and labelled sends and receives are invoked
 !
 Do 20 n=0,NPART-1
+
 nv = n+myid*NPART
 nvsection=Int(nv/NPART)
 nvseat=Mod(nv,NPART)
+
 Call dectobin(nq,nv,B)
+
 qmark1=1
 If(B(is1).Eq.0) qmark1=0
 qmark2=1
 If(B(is2).Eq.0) qmark2=0
+
 ! nvp1,nvp2,nvp3  are the three partners to nv
 ! nv is on current myid processor,
 ! nvp1  nvp2  nvp3 are on processors above or below myid
 !  
-nvp1 = nv + ((-1)**qmark2)*stride2 
-nvp2 = nv + ((-1)**qmark1)*stride1
-nvp3 = nv + ((-1)**qmark1)*stride1+ ((-1)**qmark2)*stride2
-nvp1section=Int(nvp1/NPART)
-nvp2section=Int(nvp2/NPART)
-nvp3section=Int(nvp3/NPART)
-nvp1seat=Mod(nvp1,NPART)
-nvp2seat=Mod(nvp2,NPART)
-nvp3seat=Mod(nvp3,NPART)
+nvp1 = nv + ((-1)**qmark2)*stride2  !01 PART
+nvp2 = nv + ((-1)**qmark1)*stride1  !10 PART
+nvp3 = nv + ((-1)**qmark1)*stride1+ ((-1)**qmark2)*stride2 !11 PART
+
+nvp1section=Int(nvp1/NPART) !01
+nvp2section=Int(nvp2/NPART) !10
+nvp3section=Int(nvp3/NPART) !11
+nvp1seat=Mod(nvp1,NPART) !01
+nvp2seat=Mod(nvp2,NPART) !10
+nvp3seat=Mod(nvp3,NPART) !11
 !  Following Sends/Receives  the non-myid psi components
 
 If(qmark1.Eq.0.And.qmark2.Eq.0) Then
-chi(n+1) = psi(n+1)  
+
+chi(n+1) = psi(n+1)  !00 is local
 
 Else If (qmark1.Eq.0.And.qmark2.Eq.1) Then 
-chi(n+1) = psi(n+1)  
 
-Else If (qmark1.Eq.1.And.qmark2.Eq.0) Then
+chi(n+1) = psi(n+1)  !01 is local
+
+Else If (qmark1.Eq.1.And.qmark2.Eq.0) Then !10 is local
+
 ntag=nv+nvp1+nvp2+nvp3
 
 ! Components 11 and 10 are on same processor
@@ -1015,7 +1047,7 @@ END SUBROUTINE SWAP
 !---------------------------------------------
 !  CPHASEK
 !---------------------------------------------
-
+!controlled phase gate is1 is the control bit
 SUBROUTINE CPHASEK(nq,is1,is2,k,psi,NPART,COMM)
 
 #ifdef USE_MPI
@@ -1071,7 +1103,7 @@ phi =  cos(th)*One + sin(th)*Eye
 ! in bintodec: D=sum B(i)2^(nq-i)
 
 If(stride1+stride2.lt.NPART) then
-Do 10 n=0,NPART-1
+Do n=0,NPART-1
 call dectobin(nq,n+myid*NPART,B)
 If(B(is1).eq.0.and.B(is2).eq.0) then
 
@@ -1080,12 +1112,13 @@ iv2=n+stride2+1 !B2=dectobin(iv2-1) B2(is1)=0  B2(is2)=1  01 PART
 iv3=n+stride1+1 !B3=dectobin(iv3-1) B3(is1)=1  B3(is2)=0  10 PART
 iv4=n+stride1+stride2+1!B4=dectobin(iv4-1)  B4(is1)=1 B4(is2)=1 11 PART
 
+!is1 is the control
 chi(iv1)= psi(iv1)  
 chi(iv2)= psi(iv2) 
 chi(iv3)= psi(iv3) 
 chi(iv4)=psi(iv4)*phi
 endif
-10 Continue
+enddo
 psi=chi
 return
 endif
