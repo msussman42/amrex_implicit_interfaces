@@ -4216,16 +4216,18 @@ end subroutine dynamic_contact_angle
       else if (probtype.eq.710) then
 
        if (im_solid_temperature.ne.3) then
-        print *,"im_solid_temperature invalid"
+        print *,"im_solid_temperature invalid ",im_solid_temperature
         stop
        endif
 
        temperature=get_user_temperature(time,bcflag,1)
           ! thermal layer thickness
+          ! this sanity check will not be triggered if periodic or symmetric
+          ! (reflecting) boundary conditions.
        if (yblob3.gt.zero) then
         ! do nothing
        else
-        print *,"yblob3 invalid"
+        print *,"yblob3 invalid ",yblob3
         stop
        endif
        if (z_shift.le.yblob3) then
