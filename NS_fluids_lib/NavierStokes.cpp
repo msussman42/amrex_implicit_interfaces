@@ -766,6 +766,8 @@ Vector<int> NavierStokes::mass_fraction_id;
 Vector<int> NavierStokes::spec_material_id_LIQUID; 
 Vector<int> NavierStokes::spec_material_id_AMBIENT; 
 
+//if sato_model_spec_id[im_vapor]==1 then we activate
+//the Sato model.
 Vector<int> NavierStokes::sato_model_spec_id; 
 Real NavierStokes::sato_cslope=0.0;
 

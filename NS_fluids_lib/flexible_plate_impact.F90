@@ -144,11 +144,11 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
   !do nothing
  else
-  print *,"FSI_flag(im_solid) invalid"
+  print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag
   stop
  endif
 else
- print *,"num_materials or probtype invalid"
+ print *,"num_materials or probtype invalid ",num_materials,probtype
  stop
 endif
 
@@ -317,7 +317,7 @@ do dir=1,SDIM
  if (dx(dir).gt.zero) then
   ! do nothing
  else
-  print *,"dx invalid"
+  print *,"dx invalid ",dx
   stop
  endif
 enddo

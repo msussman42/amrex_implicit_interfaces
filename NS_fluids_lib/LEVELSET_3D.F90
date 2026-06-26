@@ -5813,11 +5813,12 @@ stop
       real(amrex_real) :: dist_closest,cur_dist
 #if (1==0)
       real(amrex_real) :: x_site(SDIM)
-      integer :: i_closest,i,dir
+      integer :: i_closest,i
       integer :: local_n_sites
       real(amrex_real) :: radsite
       real(amrex_real) :: temperature
 #endif
+      integer :: dir
       integer :: ii
       logical :: active_site_found
 
@@ -5858,8 +5859,11 @@ stop
        if (active_flag(ii).eq.1) then
         active_site_found=.true.
 
-        cur_dist = sqrt((xpoint(1)-sites(1,ii))**2 + &
-                (xpoint(2)-sites(2,ii))**2)
+        cur_dist=zero
+        do dir=1,SDIM-1
+         cur_dist=cur_dist+(xpoint(dir)-sites(dir,ii))**2
+        enddo
+        cur_dist=sqrt(cur_dist)
 
         if (cur_dist.lt.dist_closest) then
          dist_closest = cur_dist
@@ -6012,7 +6016,9 @@ stop
       real(amrex_real) :: TSAT
       real(amrex_real) :: k_liquid,k_vapor,k_solid,den_liquid,CP_liquid
       real(amrex_real) :: local_qdot,local_mdot
-      real(amrex_real) :: delta_ml_temp,area_new,area_old
+      real(amrex_real) :: delta_ml_temp
+      real(amrex_real) :: area_new,area_old
+      real(amrex_real) :: cell_area
       real(amrex_real) :: delta_ml_init
       integer, parameter :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
@@ -6164,8 +6170,19 @@ stop
         vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
         VOF_local_old(im)=sold(D_DECL(i,j,k),vofcomp)
        enddo
-       area_new=VOF_local(im_vapor)*dx(1)*dx(2)
-       area_old=VOF_local_old(im_vapor)*dx(1)*dx(2)
+
+       if (SDIM.eq.3) then
+        cell_area=dx(1)*dx(2)
+       else if (SDIM.eq.2) then
+        cell_area=dx(1)
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       area_new=VOF_local(im_vapor)*cell_area
+       area_old=VOF_local_old(im_vapor)*cell_area
+
        call get_primary_material(dx,LS_local,im_primary)
        if ((im_primary.eq.im_liquid).or. &
            (im_primary.eq.im_vapor)) then

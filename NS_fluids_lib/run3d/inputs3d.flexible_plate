@@ -51,7 +51,7 @@ ns.projection_pressure_scale=1.0e+10
 ns.MOFITERMAX=30
 amr.n_cell=32 32 64 
 amr.max_level=1 
-ns.ngrow_distance=5
+ns.ngrow_distance=6
 
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
 ns.mof_renormalize_ordering=2 3 1 #EULERIAN FSI
@@ -78,11 +78,14 @@ amr.blocking_factor = 8 8 8       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50     # 200 for production runs
+ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 ns.step_through_data=0
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
+cg.min_max_grid_size=1024
+ns.tiling=false
 #amr.restart         = chk00400
 #amr.trace   =1
 
@@ -157,7 +160,7 @@ ns.material_conservation_form=0 0 0
 ns.FSI_flag=0 0 8 #Eulerian FSI
 ns.heatviscconst=0.0 0.0 0.0
 #ns.elastic_viscosity=0.0 0.0 4.0e+6
-ns.elastic_viscosity=0.0 0.0 4.0e+5
+ns.elastic_viscosity=0.0 0.0 4.0e+4
 ns.elastic_time=0.0 0.0 1.0e+31
 ns.polymer_factor=0.0 0.0 0.0 #1/L
 #0=FENE-CR

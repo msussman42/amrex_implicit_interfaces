@@ -80,16 +80,21 @@ real(amrex_real),intent(in) :: samp(2,8)
 real(amrex_real),intent(in) :: pp(2)
 real(amrex_real)            :: dist(8)
 integer                 :: i
+integer                 :: dir
 integer,intent(out)     :: vflag
 real(amrex_real),parameter  :: eps=0.01d0
 
 vflag=0
 
 do i=1,8
- dist(i)=sqrt((samp(1,i)-pp(1))**2.0+(samp(2,i)-pp(2))**2.0)
-  if(dist(i).lt.eps)then
-    vflag=i
-  endif
+ dist(i)=zero
+ do dir=1,SDIM-1
+  dist(i)=dist(i)+(samp(dir,i)-pp(dir))**2
+ enddo
+ dist(i)=sqrt(dist(i))
+ if(dist(i).lt.eps)then
+  vflag=i
+ endif
 enddo
 
 
@@ -1025,6 +1030,9 @@ real(amrex_real)         :: x2temp(SDIM)
 real(amrex_real)         :: x3temp(SDIM)
 integer      :: dir
 
+print *,"find_p_plane_dist_wb should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
  stop
@@ -1131,6 +1139,9 @@ real(amrex_real), INTENT(in) :: d
 real(amrex_real),INTENT(out)  :: dist
 real(amrex_real)             :: nn
 
+print *,"find_p_plane_dist should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
  stop
@@ -1160,6 +1171,9 @@ real(amrex_real), INTENT(in) :: d
 
 real(amrex_real)             :: val
 
+print *,"plane_distf should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
  stop
@@ -1179,6 +1193,9 @@ real(amrex_real)              :: pp(SDIM)
 
 integer                   :: i
 real(amrex_real)              :: s
+
+print *,"find_pp_plane should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1213,6 +1230,9 @@ real(amrex_real)             :: d
 
 integer                  :: i
 real(amrex_real)             :: val
+
+print *,"adjust_plane_sign should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1257,6 +1277,9 @@ real(amrex_real), INTENT(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
 real(amrex_real)                 :: normal(SDIM)
 real(amrex_real)                 :: d
 
+print *,"make_3points_plane should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid call make_3points_plane"
  stop
@@ -1293,6 +1316,8 @@ real(amrex_real)                 :: x10(SDIM), x21(SDIM)
 integer              :: i
 real(amrex_real)                 :: s
 
+print *,"dist_point_to_line should not be called"
+stop
 
 dist = 0.0d0
 
@@ -1346,6 +1371,9 @@ real(amrex_real),INTENT(out)      :: oter(SDIM)
 
 integer                      :: i
 real(amrex_real)                 :: p1p2(SDIM),p1p3(SDIM)
+
+print *,"crossproduct  should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid call outerproduct"
@@ -1688,6 +1716,7 @@ integer dir
 
 integer,parameter :: debugflag = 0
 real(amrex_real),   parameter :: scale_factor=1.0d0
+
 dist_sign = 1.0d0
 dist = 0.0d0
 dist1 = 0.0d0
@@ -1716,7 +1745,7 @@ endif
   print *,"coord_type", coord_type
  endif
 
-
+!coord_type=levelrz+1
 !  dimension sanity check
 if(coord_type .eq. 1.and.cavity_type.ne.8.and.cavity_type.ne.12) then   ! 3D cartisian
  if(SDIM .ne. 3)then
@@ -2636,6 +2665,9 @@ real(amrex_real)            :: center(SDIM)
 real(amrex_real)            :: film_thickness     ! thickness of the film
 real(amrex_real), parameter :: scale_factor=1.0d0
 integer i
+
+print *,"cavity_distf_12 should not be called"
+stop
 
 film_thickness=radblob4
 
