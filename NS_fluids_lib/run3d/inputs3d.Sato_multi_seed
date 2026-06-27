@@ -53,11 +53,11 @@ ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 # or 4 (TESSELLATE_FLUIDS_ELASTIC)
 ns.visual_tessellate_vfrac=0
 
-amr.n_cell    = 16 16 32
-#amr.n_cell    = 32 32 64
+#amr.n_cell    = 16 16 32
+amr.n_cell    = 32 32 64
 amr.max_level =  0  # 3 levels for finest
 amr.max_grid_size   = 16
-cg.min_max_grid_size=64
+cg.min_max_grid_size=256
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=4 4 4
 #amr.max_level =  0
@@ -70,9 +70,9 @@ amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 500    # number of timesteps between checkpoints
+amr.check_int       = 100    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
-amr.plot_int        = 1
+amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 #amr.restart         = chk25500
@@ -113,7 +113,8 @@ ns.override_density=2 0 0
 #ns.tension=58.8e-3 58.8e-3 72.9e-3  # 70 degrees contact angle
 #ns.tension=58.8e-3 58.8e-3 58.8e-3  # 140 degrees contact angle
 # ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
-ns.tension=8.94e-3 8.94e-3 11.9796e-3
+#ns.tension=8.94e-3 8.94e-3 11.9796e-3
+ns.tension=8.94e-3 8.94e-3 8.94e-3
 # Joule/(kg Kelvin)
 #ns.stiffCP=4217.0 2029.0 4217.0
 #ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
@@ -135,7 +136,7 @@ ns.output_drop_distribution = 1  # output droplet
 # cavity type 1-7
 # make axis_dir=7 for bubble below substrate (substrate on top)
 ns.axis_dir=8
-ns.xblob3=0.14148      # 7272.0  
+ns.xblob3=0.14148      # 7272.0  energy flux watts=J/s
 #ns.yblob3=1.0e-10  # initial thermal layer (meters)
 # see subroutine get_internal_heat_source in PROB.F90
 # see subroutine microcell_heat_model in PROB.F90
@@ -152,7 +153,7 @@ ns.xblob3=0.14148      # 7272.0
 # rho cp DT/dt=-div q + Q
 
 # for Tryggvason problem: T=383 degrees at the wall.
-ns.zblob3=0.0
+ns.zblob3=0.0 !not used
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57 # not used
 ns.vinletgas=0.0
@@ -209,9 +210,10 @@ ns.xblob2=10.0e-3
 ns.yblob2=0.0
 ns.zblob2=9.0e-3   # heater position (zlob2,xblob2)
 
-ns.xblob4=77.25  # tref   tmax=tref+zblob4
-ns.yblob4=78.25  # tinit   first site temperature 
+ns.xblob4=77.25  #tref   tmax=tref+zblob4
+ns.yblob4=78.25  #tinit first site temperature(no sites until temperature>tinit 
 ns.zblob4=20.0   # superheat condition
+#make radblob3 larger to see if seeded bubbles will grow
 ns.radblob3=0.375e-3  # seed raw radius
 ns.xblob5=0.5e-3    # temp buff region , in the liquid next to solid
 ns.zblob5=2.3
@@ -222,7 +224,9 @@ ns.velfact=0.0
 ns.probtype=710
 
 #sato_model_inputs: Sato & Niceno IJHMT 2017
-ns.sato_model_spec_id=1 1 1 0 0
+#if sato_model_spec_id[im_vapor]==1 then we activate
+#the Sato model.
+ns.sato_model_spec_id=0 1 0 0 0
 ns.sato_cslope=4.46e-3 #for water
 
 

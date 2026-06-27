@@ -49,6 +49,9 @@ mg.bot_atol = 1.0e-12
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_nddata_format=0 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
+# =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
+# or 4 (TESSELLATE_FLUIDS_ELASTIC)
+ns.visual_tessellate_vfrac=0
 
 #amr.n_cell    = 16 16 32
 amr.n_cell    = 32 64
@@ -110,7 +113,8 @@ ns.override_density=2 0 0
 #ns.tension=58.8e-3 58.8e-3 72.9e-3  # 70 degrees contact angle
 #ns.tension=58.8e-3 58.8e-3 58.8e-3  # 140 degrees contact angle
 # ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
-ns.tension=8.94e-3 8.94e-3 11.9796e-3
+#ns.tension=8.94e-3 8.94e-3 11.9796e-3
+ns.tension=8.94e-3 8.94e-3 8.94e-3
 # Joule/(kg Kelvin)
 #ns.stiffCP=4217.0 2029.0 4217.0
 #ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
