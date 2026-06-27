@@ -229,7 +229,7 @@ ns.Zerilli_beta0=0.0 0.0 0.00371 0.0 # 1/Kelvin
 ns.Zerilli_beta1=0.0 0.0 0.000153 0.0 # 1/Kelvin
 
 ns.rest_fraction=0.0 #prevent CPU overheating?
-ns.tiling=false
+ns.ns_tiling=false
 
 #specific heat aluminum=0.897 J/(g K)=.897e+7 erg/(g K)
 ns.stiffCP= 4.1855e+7  4.1855e+7 0.9e+7 4.1855e+7  # erg/(g K)
