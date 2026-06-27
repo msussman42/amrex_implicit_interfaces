@@ -460,7 +460,7 @@ ns.continuous_mof   = 1 # 0=MOF 1=CMOF (=1 if particle)
 ns.EILE_flag        = 1
 
 ns.MOFITERMAX=30
-ns.tiling=false
+ns.ns_tiling=false
 
 
 # ----------------------------------------------------------

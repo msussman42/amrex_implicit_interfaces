@@ -85,7 +85,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
 cg.min_max_grid_size=1024
-ns.tiling=false
+ns.ns_tiling=false
 #amr.restart         = chk00400
 #amr.trace   =1
 

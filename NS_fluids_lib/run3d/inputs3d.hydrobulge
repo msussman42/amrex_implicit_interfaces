@@ -175,7 +175,7 @@ ns.viscoelastic_model=0 0 3 0
 #4.0e+9?
 ns.yield_stress=0.0 0.0 4.0e+9 0.0
 ns.rest_fraction=0.0 #prevent CPU overheating?
-ns.tiling=false
+ns.ns_tiling=false
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
