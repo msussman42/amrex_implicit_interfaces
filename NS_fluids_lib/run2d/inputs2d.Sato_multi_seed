@@ -48,7 +48,7 @@ mg.bot_atol = 1.0e-12
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
+ns.visual_nddata_format=0 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
 
 #amr.n_cell    = 16 16 32
 amr.n_cell    = 32 64
@@ -132,7 +132,7 @@ ns.output_drop_distribution = 1  # output droplet
 # cavity type 1-7
 # make axis_dir=7 for bubble below substrate (substrate on top)
 ns.axis_dir=8
-ns.xblob3=0.14148      # 7272.0  
+ns.xblob3=0.14148      # 7272.0  energy flux Watts=J/s
 #ns.yblob3=1.0e-10  # initial thermal layer (meters)
 # see subroutine get_internal_heat_source in PROB.F90
 # see subroutine microcell_heat_model in PROB.F90
@@ -149,7 +149,7 @@ ns.xblob3=0.14148      # 7272.0
 # rho cp DT/dt=-div q + Q
 
 # for Tryggvason problem: T=383 degrees at the wall.
-ns.zblob3=0.0
+ns.zblob3=0.0 !not used
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57 # not used
 ns.vinletgas=0.0
@@ -196,7 +196,7 @@ ns.tempcutoffmax=100.0 100.0 100.0
 #(xblob,yblob)=center of vapor bubble
 ns.xblob=0.0 
 ns.yblob=12.0e-3
-ns.zblob=12.0e-3    # 11.9375 solid-liquid interface
+ns.zblob=12.0e-3    # before: 11.9375 solid-liquid interface, now 12.0e-3
 ns.radblob=0.1  # radius
 ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
                    # pi/6=0.5236  pi/3=1.047  80degree/180*pi=1.396

@@ -199,7 +199,7 @@ ns.tempcutoffmax=100.0 100.0 100.0
 #(xblob,yblob)=center of vapor bubble
 ns.xblob=0.0 
 ns.yblob=0.0
-ns.zblob=12.0e-3    # 11.9375 solid-liquid interface
+ns.zblob=12.0e-3    # previous: 11.9375 solid-liquid interface, now 12.0e-3
 ns.radblob=0.1  # radius
 ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
                    # pi/6=0.5236  pi/3=1.047  80degree/180*pi=1.396
