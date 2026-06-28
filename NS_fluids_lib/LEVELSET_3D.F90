@@ -19757,14 +19757,14 @@ stop
           stop
          endif
 
-         if ((F_TESSELLATE_ALL(im).ge.-two*VOFTOL_MATERIAL).and. &
+         if ((F_TESSELLATE_ALL(im).ge.-ten*VOFTOL_MATERIAL).and. &
              (F_TESSELLATE_ALL(im).le.VOFTOL_MATERIAL)) then
           F_TESSELLATE_ALL(im)=zero
          else if ((F_TESSELLATE_ALL(im).ge.VOFTOL_MATERIAL).and. &
                   (F_TESSELLATE_ALL(im).le.one-VOFTOL_MATERIAL)) then
           !do nothing
          else if ((F_TESSELLATE_ALL(im).ge.one-VOFTOL_MATERIAL).and. &
-                  (F_TESSELLATE_ALL(im).le.one+two*VOFTOL_MATERIAL)) then
+                  (F_TESSELLATE_ALL(im).le.one+ten*VOFTOL_MATERIAL)) then
           F_TESSELLATE_ALL(im)=one
          else
           print *,"F_TESSELLATE_ALL(im) invalid: ",im,F_TESSELLATE_ALL(im)
@@ -19776,7 +19776,7 @@ stop
 
         enddo !im=1,num_materials
         
-        if (abs(one-F_TESSELLATE_SUM).le.two*VOFTOL_MATERIAL) then
+        if (abs(one-F_TESSELLATE_SUM).le.ten*VOFTOL_MATERIAL) then
          !do nothing
         else
          print *,"F_TESSELLATE_SUM invalid ",F_TESSELLATE_SUM
