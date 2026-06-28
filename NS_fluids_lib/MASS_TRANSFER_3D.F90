@@ -298,9 +298,8 @@ stop
        ! if center to centroid: xtarget = xcentroid
       subroutine center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
-       tsat_flag, &
+       tsat_flag, & !intent(in)
        bfact, &
        level, &
        finest_level, &
@@ -320,8 +319,6 @@ stop
       implicit none
 
       real(amrex_real), INTENT(in) :: DATA_FLOOR
-      integer, INTENT(in) :: nsolve
-      integer :: nc
       integer, INTENT(in) :: cc_flag
       integer, INTENT(in) :: tsat_flag
       integer, INTENT(in) :: bfact
@@ -333,7 +330,7 @@ stop
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: TSAT
-      real(amrex_real), INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
+      real(amrex_real), INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real), INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer, INTENT(in) :: im_critical
       integer :: im_primary
@@ -341,7 +338,7 @@ stop
       real(amrex_real), INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real), INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) :: wt_sten(D_DECL(-1:1,-1:1,-1:1))
-      real(amrex_real), INTENT(out) :: T_out(nsolve)
+      real(amrex_real), INTENT(out) :: T_out
 
       integer i,j,k
       integer klosten,khisten
@@ -368,10 +365,6 @@ stop
       integer own_flag
       real(amrex_real) wt_local
 
-      if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
-       print *,"nsolve invalid center_centroid_interchange ",nsolve
-       stop
-      endif
       if ((cc_flag.ne.FVM_TO_GFM).and. &
           (cc_flag.ne.GFM_TO_FVM)) then
        print *,"cc_flag invalid center_centroid_interchange ",cc_flag
@@ -436,391 +429,385 @@ stop
        endif
       enddo ! dir=1..sdim
 
-      do nc=1,nsolve
+      TMAX=-1.0D+20
+      TMIN=1.0D+20
+      TBOUNDS_INIT=0
 
-       TMAX=-1.0D+20
-       TMIN=1.0D+20
-       TBOUNDS_INIT=0
+      if (tsat_flag.eq.0) then
+       ! do nothing
+      else if (tsat_flag.eq.1) then
+       TMAX=TSAT
+       TMIN=TSAT
+       TBOUNDS_INIT=1
+      else if (tsat_flag.eq.-1) then
+       ! do nothing
+      else
+       print *,"tsat_flag invalid"
+       stop
+      endif
 
-       if (tsat_flag.eq.0) then
-        ! do nothing
-       else if (tsat_flag.eq.1) then
-        TMAX=TSAT
-        TMIN=TSAT
-        TBOUNDS_INIT=1
-       else if (tsat_flag.eq.-1) then
-        ! do nothing
+      T_avg=zero
+      wt_sum=zero
+      
+      do k=klosten,khisten
+      do j=-1,1
+      do i=-1,1
+
+       xtemp(1)=xsten(2*i,1)
+       xtemp(2)=xsten(2*j,2)
+       if (SDIM.eq.3) then
+        xtemp(SDIM)=xsten(2*k,SDIM)
+       endif
+       do dir=1,SDIM
+        if (cc_flag.eq.FVM_TO_GFM) then 
+         xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
+        else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
+         xlive(dir)=xtemp(dir)  ! cell center
+        else
+         print *,"cc_flag invalid ",cc_flag
+         stop
+        endif
+       enddo ! dir=1..sdim
+
+       if ((tsat_flag.eq.0).or. & ! no tsat
+           (tsat_flag.eq.1)) then ! tsat
+        im_primary=im_primary_sten(D_DECL(i,j,k))
+
+        if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+         ! do nothing
+        else if (im_primary.eq.-1) then
+         ! do nothing
+        else
+         print *,"im_primary invalid"
+         stop
+        endif
+
+        VF=VF_sten(D_DECL(i,j,k))
+        LS=LS_sten(D_DECL(i,j,k))
+       else if (tsat_flag.eq.-1) then ! use all cells in the stencil
+        im_primary=-1
+        VF=zero
+        LS=zero
        else
         print *,"tsat_flag invalid"
         stop
        endif
 
-       T_avg=zero
-       wt_sum=zero
-       
-       do k=klosten,khisten
-       do j=-1,1
-       do i=-1,1
+       own_flag=0
 
-        xtemp(1)=xsten(2*i,1)
-        xtemp(2)=xsten(2*j,2)
-        if (SDIM.eq.3) then
-         xtemp(SDIM)=xsten(2*k,SDIM)
-        endif
-        do dir=1,SDIM
-         if (cc_flag.eq.FVM_TO_GFM) then 
-          xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
-         else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
-          xlive(dir)=xtemp(dir)  ! cell center
-         else
-          print *,"cc_flag invalid ",cc_flag
-          stop
-         endif
-        enddo ! dir=1..sdim
-
-        if ((tsat_flag.eq.0).or. & ! no tsat
-            (tsat_flag.eq.1)) then ! tsat
-         im_primary=im_primary_sten(D_DECL(i,j,k))
-
-         if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
-          ! do nothing
-         else if (im_primary.eq.-1) then
-          ! do nothing
-         else
-          print *,"im_primary invalid"
-          stop
-         endif
-
-         VF=VF_sten(D_DECL(i,j,k))
-         LS=LS_sten(D_DECL(i,j,k))
-        else if (tsat_flag.eq.-1) then ! use all cells in the stencil
-         im_primary=-1
-         VF=zero
-         LS=zero
-        else
-         print *,"tsat_flag invalid"
-         stop
-        endif
-
-        own_flag=0
-
-        if (tsat_flag.eq.-1) then
+       if (tsat_flag.eq.-1) then
+        own_flag=1
+       else if (cc_flag.eq.FVM_TO_GFM) then ! centroid->center
+        if ((VF.ge.-EPS1).and. &
+            (VF.le.EPS1)) then
+         own_flag=0
+        else if ((VF.ge.EPS1).and.(VF.le.one+EPS1)) then
          own_flag=1
-        else if (cc_flag.eq.FVM_TO_GFM) then ! centroid->center
-         if ((VF.ge.-EPS1).and. &
-             (VF.le.EPS1)) then
-          own_flag=0
-         else if ((VF.ge.EPS1).and.(VF.le.one+EPS1)) then
-          own_flag=1
-         else
-          print *,"VF invalid ",VF
-          stop
-         endif
-        else if (cc_flag.eq.GFM_TO_FVM) then ! center->centroid
-         if ((LS.le.zero).or.(abs(VF).le.VOFTOL_MATERIAL)) then
-          own_flag=0
-         else if ((LS.ge.zero).and.(VF.ge.VOFTOL_MATERIAL)) then
-          own_flag=1
-         else
-          print *,"LS or VF invalid ",LS,VF
-          stop
-         endif
         else
-         print *,"cc_flag invalid ",cc_flag
+         print *,"VF invalid ",VF
          stop
         endif
- 
-        wt_local=zero
- 
-        if (own_flag.eq.0) then
-         if (tsat_flag.eq.1) then
-          T_sten(D_DECL(i,j,k),nc)=TSAT
-         else if (tsat_flag.eq.0) then
-          ! do nothing
-         else
-          print *,"tsat_flag invalid:",tsat_flag
-          stop
-         endif
-         wt_local=EPS_8_4
-        else if (own_flag.eq.1) then
-          ! if normal probe is target: xtarget = xprobe
-          ! if new supermesh centroid is target: xtarget = x_new_centroid
-          ! if centroid to center: xtarget = xcenter
-          ! if center to centroid: xtarget = xcentroid
-         dist=EPS_8_4
-         do dir=1,SDIM
-          dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
-         enddo ! dir
-         if (dist.gt.zero) then
-          ! do nothing
-         else
-          print *,"dist invalid"
-          stop
-         endif
-         wt_local=one/dist
-         if (tsat_flag.eq.-1) then ! use all cells in the stencil
-          ! do nothing
-         else if ((tsat_flag.eq.1).or. &
-                  (tsat_flag.eq.0)) then
-          if (VF.gt.zero) then
-           ! do nothing
-          else
-           print *,"VF invalid"
-           stop
-          endif
-          wt_local=wt_local*(VF**2)
-         else
-          print *,"tsat_flag invalid ",tsat_flag
-          stop
-         endif
-
+       else if (cc_flag.eq.GFM_TO_FVM) then ! center->centroid
+        if ((LS.le.zero).or.(abs(VF).le.VOFTOL_MATERIAL)) then
+         own_flag=0
+        else if ((LS.ge.zero).and.(VF.ge.VOFTOL_MATERIAL)) then
+         own_flag=1
         else
-         print *,"own_flag invalid ",own_flag
+         print *,"LS or VF invalid ",LS,VF
          stop
         endif
-
-        if (wt_local.gt.zero) then
-         ! do nothing
-        else
-         print *,"wt_local invalid ",wt_local
-         stop
-        endif
-
-        wt_sten(D_DECL(i,j,k))=wt_local
-
-        T_test=T_sten(D_DECL(i,j,k),nc)
-
-        if ((im_primary.eq.im_critical).or. &
-            (im_primary.eq.-1)) then
-
-         if (TBOUNDS_INIT.eq.0) then
-          TBOUNDS_INIT=1
-          TMAX=T_test
-          TMIN=T_test
-         else if (TBOUNDS_INIT.eq.1) then
-          if (T_test.gt.TMAX) then
-           TMAX=T_test
-          endif
-          if (T_test.lt.TMIN) then
-           TMIN=T_Test
-          endif
-         else 
-          print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
-          stop
-         endif
-
-        else if ((im_primary.ne.im_critical).and. &
-                 (im_primary.ge.1).and. &
-                 (im_primary.le.num_materials)) then
-
-         ! do nothing
-
-        else
-         print *,"im_primary invalid ",im_primary
-         stop
-        endif
-
-        if (abs(T_test).lt.1.0D+30) then
-         ! do nothing
-        else
-         print *,"T_test bust"
-         print *,"i,j,k,nc,T_test,TMIN,TMAX ",i,j,k,nc,T_test,TMIN,TMAX
-         stop
-        endif
-
-        wt_sum=wt_sum+wt_local
-        T_avg=T_avg+wt_local*T_test 
-
-       enddo
-       enddo
-       enddo  ! i,j,k
-
-       if (wt_sum.gt.zero) then
-        ! do nothing
        else
-        print *,"wt_sum invalid ",wt_sum
+        print *,"cc_flag invalid ",cc_flag
         stop
        endif
-
-       do k=klosten,khisten
-       do j=-1,1
-       do i=-1,1
-        wt_sten(D_DECL(i,j,k))=wt_sten(D_DECL(i,j,k))/wt_sum
-       enddo
-       enddo
-       enddo
-
-       if (tsat_flag.eq.1) then
-        T_avg=T_avg/wt_sum
-        if (T_avg.ge.DATA_FLOOR) then
-         ! do nothing
-        else
-         print *,"T_avg invalid"
-         print *,"T_avg=",T_avg
-         stop
-        endif
-        T_avg=TSAT
-       else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
-        T_avg=T_avg/wt_sum
-       else
-        print *,"tsat_flag invalid ",tsat_flag
-        stop
-       endif 
-
-       if (TBOUNDS_INIT.eq.0) then
-        TMIN=T_avg
-        TMAX=T_avg
-       else if (TBOUNDS_INIT.eq.1) then
-        ! do nothing
-       else
-        print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
-        stop
-       endif
-
-       if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
-        mat_ncomp=SDIM+1
-       else if (tsat_flag.eq.1) then
-        mat_ncomp=SDIM
-       else
-        print *,"tsat_flag invalid ",tsat_flag
-        stop
-       endif
-
-       allocate(AA(mat_ncomp,mat_ncomp))
-       allocate(AAcopy(mat_ncomp,mat_ncomp))
-
-       do i=1,mat_ncomp
-       do j=1,mat_ncomp
-        AA(i,j)=zero
-       enddo
-       enddo
-       do i=1,SDIM+1
-        BB(i)=zero
-       enddo
-
-       do i=1,mat_ncomp
-       do j=1,mat_ncomp
-        do i1=-1,1
-        do j1=-1,1
-        do k1=klosten,khisten 
-         xtemp(1)=xsten(2*i1,1)
-         xtemp(2)=xsten(2*j1,2)
-         if (SDIM.eq.3) then
-          xtemp(SDIM)=xsten(2*k1,SDIM)
-         endif
-         do dir=1,SDIM
-          if (cc_flag.eq.FVM_TO_GFM) then ! centroid-> center or probe
-           xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
-          else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
-           xlive(dir)=xtemp(dir) ! center
-          else
-           print *,"cc_flag invalid ",cc_flag
-           stop
-          endif
-         enddo ! dir
-
-         do dir=1,SDIM
-          delx(dir)=(xlive(dir)-xbase(dir))/dx(dir)
-         enddo ! dir
-         delx(SDIM+1)=one
-
-         AA(i,j)=AA(i,j)+wt_sten(D_DECL(i1,j1,k1))*delx(i)*delx(j)
-         if (j.eq.1) then
-          BB(i)=BB(i)+wt_sten(D_DECL(i1,j1,k1))*delx(i)* &
-           (T_sten(D_DECL(i1,j1,k1),nc)-T_avg)
-         endif
-        enddo ! k1
-        enddo ! j1
-        enddo ! i1
-        AAcopy(i,j)=AA(i,j)
-        if (j.eq.1) then
-         BBcopy(i)=BB(i)
-        endif
-       enddo   ! j
-       enddo   ! i
  
-       call matrix_solve(AA,GRADTEMP,BB,matstatus,mat_ncomp)
-
-       if (matstatus.eq.1) then
-        T_hold=T_avg
-
-        do dir=1,SDIM
-         delx(dir)=(xtarget(dir)-xbase(dir))/dx(dir)
-        enddo ! dir
-        delx(SDIM+1)=one
-
-        do dir=1,mat_ncomp
-         T_hold=T_hold+GRADTEMP(dir)*delx(dir)
-        enddo
-        if (T_hold.lt.TMIN) then
-         T_hold=TMIN
-        endif
-        if (T_hold.gt.TMAX) then
-         T_hold=TMAX
-        endif
+       wt_local=zero
+ 
+       if (own_flag.eq.0) then
         if (tsat_flag.eq.1) then
-         if (T_hold.ge.zero) then
+         T_sten(D_DECL(i,j,k))=TSAT
+        else if (tsat_flag.eq.0) then
+         ! do nothing
+        else
+         print *,"tsat_flag invalid:",tsat_flag
+         stop
+        endif
+        wt_local=EPS_8_4
+       else if (own_flag.eq.1) then
+         ! if normal probe is target: xtarget = xprobe
+         ! if new supermesh centroid is target: xtarget = x_new_centroid
+         ! if centroid to center: xtarget = xcenter
+         ! if center to centroid: xtarget = xcentroid
+        dist=EPS_8_4
+        do dir=1,SDIM
+         dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
+        enddo ! dir
+        if (dist.gt.zero) then
+         ! do nothing
+        else
+         print *,"dist invalid"
+         stop
+        endif
+        wt_local=one/dist
+        if (tsat_flag.eq.-1) then ! use all cells in the stencil
+         ! do nothing
+        else if ((tsat_flag.eq.1).or. &
+                 (tsat_flag.eq.0)) then
+         if (VF.gt.zero) then
           ! do nothing
          else
-          print *,"temperature underflow in center_centroid_interchange"
-          print *,"xI ",xI(1),xI(2),xI(SDIM)
-          print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
-          print *,"nsolve=",nsolve
-          print *,"cc_flag=",cc_flag
-          print *,"tsat_flag=",tsat_flag
-          print *,"bfact=",bfact
-          print *,"level=",level
-          print *,"finest_level=",finest_level
-          print *,"TSAT = ",TSAT
-          print *,"TMIN = ",TMIN
-          print *,"TMAX = ",TMAX
-          print *,"T_avg = ",T_avg
-          print *,"DATA_FLOOR= ",DATA_FLOOR
-          print *,"T_hold=",T_hold
+          print *,"VF invalid"
           stop
          endif
-        else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
-         ! do nothing
+         wt_local=wt_local*(VF**2)
         else
          print *,"tsat_flag invalid ",tsat_flag
          stop
         endif
-       else if (matstatus.eq.0) then
-        print *,"WARNING: subroutine center_centroid_interchange"
-        print *,"WARNING: linear least squares failed"
-        print *,"WARNING: doing piecewise constant interpolation instead"
-        print *,"nsolve=",nsolve
-        print *,"cc_flag=",cc_flag
-        print *,"tsat_flag=",tsat_flag
-        print *,"TSAT=",TSAT
-        print *,"T_avg=",T_avg
-        print *,"wt_sum=",wt_sum
-        print *,"mat_ncomp=",mat_ncomp
-        print *,"xsten(0,dir) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-        print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
-        print *,"dx ",dx(1),dx(2),dx(SDIM)
-        print *,"xI ",xI(1),xI(2),xI(SDIM)
-        do i=1,mat_ncomp
-        do j=1,mat_ncomp
-         print *,"i,j,AAcopy,AA ",i,j,AAcopy(i,j),AA(i,j)
-        enddo
-        enddo
-        do i=1,mat_ncomp
-         print *,"i,BBcopy,BB ",i,BBcopy(i),BB(i)
-        enddo
-        
-        T_hold=T_avg
+
        else
-        print *,"matstatus has an invalid value ",matstatus
+        print *,"own_flag invalid ",own_flag
         stop
        endif
+
+       if (wt_local.gt.zero) then
+        ! do nothing
+       else
+        print *,"wt_local invalid ",wt_local
+        stop
+       endif
+
+       wt_sten(D_DECL(i,j,k))=wt_local
+
+       T_test=T_sten(D_DECL(i,j,k))
+
+       if ((im_primary.eq.im_critical).or. &
+           (im_primary.eq.-1)) then
+
+        if (TBOUNDS_INIT.eq.0) then
+         TBOUNDS_INIT=1
+         TMAX=T_test
+         TMIN=T_test
+        else if (TBOUNDS_INIT.eq.1) then
+         if (T_test.gt.TMAX) then
+          TMAX=T_test
+         endif
+         if (T_test.lt.TMIN) then
+          TMIN=T_Test
+         endif
+        else 
+         print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
+         stop
+        endif
+
+       else if ((im_primary.ne.im_critical).and. &
+                (im_primary.ge.1).and. &
+                (im_primary.le.num_materials)) then
+
+        ! do nothing
+
+       else
+        print *,"im_primary invalid ",im_primary
+        stop
+       endif
+
+       if (abs(T_test).lt.1.0D+30) then
+        ! do nothing
+       else
+        print *,"T_test bust"
+        print *,"i,j,k,T_test,TMIN,TMAX ",i,j,k,T_test,TMIN,TMAX
+        stop
+       endif
+
+       wt_sum=wt_sum+wt_local
+       T_avg=T_avg+wt_local*T_test 
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      if (wt_sum.gt.zero) then
+       ! do nothing
+      else
+       print *,"wt_sum invalid ",wt_sum
+       stop
+      endif
+
+      do k=klosten,khisten
+      do j=-1,1
+      do i=-1,1
+       wt_sten(D_DECL(i,j,k))=wt_sten(D_DECL(i,j,k))/wt_sum
+      enddo
+      enddo
+      enddo
+
+      if (tsat_flag.eq.1) then
+       T_avg=T_avg/wt_sum
+       if (T_avg.ge.DATA_FLOOR) then
+        ! do nothing
+       else
+        print *,"T_avg invalid"
+        print *,"T_avg=",T_avg
+        stop
+       endif
+       T_avg=TSAT
+      else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+       T_avg=T_avg/wt_sum
+      else
+       print *,"tsat_flag invalid ",tsat_flag
+       stop
+      endif 
+
+      if (TBOUNDS_INIT.eq.0) then
+       TMIN=T_avg
+       TMAX=T_avg
+      else if (TBOUNDS_INIT.eq.1) then
+       ! do nothing
+      else
+       print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
+       stop
+      endif
+
+      if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+       mat_ncomp=SDIM+1
+      else if (tsat_flag.eq.1) then
+       mat_ncomp=SDIM
+      else
+       print *,"tsat_flag invalid ",tsat_flag
+       stop
+      endif
+
+      allocate(AA(mat_ncomp,mat_ncomp))
+      allocate(AAcopy(mat_ncomp,mat_ncomp))
+
+      do i=1,mat_ncomp
+      do j=1,mat_ncomp
+       AA(i,j)=zero
+      enddo
+      enddo
+      do i=1,SDIM+1
+       BB(i)=zero
+      enddo
+
+      do i=1,mat_ncomp
+      do j=1,mat_ncomp
+       do i1=-1,1
+       do j1=-1,1
+       do k1=klosten,khisten 
+        xtemp(1)=xsten(2*i1,1)
+        xtemp(2)=xsten(2*j1,2)
+        if (SDIM.eq.3) then
+         xtemp(SDIM)=xsten(2*k1,SDIM)
+        endif
+        do dir=1,SDIM
+         if (cc_flag.eq.FVM_TO_GFM) then ! centroid-> center or probe
+          xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
+         else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
+          xlive(dir)=xtemp(dir) ! center
+         else
+          print *,"cc_flag invalid ",cc_flag
+          stop
+         endif
+        enddo ! dir
+
+        do dir=1,SDIM
+         delx(dir)=(xlive(dir)-xbase(dir))/dx(dir)
+        enddo ! dir
+        delx(SDIM+1)=one
+
+        AA(i,j)=AA(i,j)+wt_sten(D_DECL(i1,j1,k1))*delx(i)*delx(j)
+        if (j.eq.1) then
+         BB(i)=BB(i)+wt_sten(D_DECL(i1,j1,k1))*delx(i)* &
+          (T_sten(D_DECL(i1,j1,k1))-T_avg)
+        endif
+       enddo ! k1
+       enddo ! j1
+       enddo ! i1
+       AAcopy(i,j)=AA(i,j)
+       if (j.eq.1) then
+        BBcopy(i)=BB(i)
+       endif
+      enddo   ! j
+      enddo   ! i
  
-       T_out(nc)=T_hold
+      call matrix_solve(AA,GRADTEMP,BB,matstatus,mat_ncomp)
 
-       deallocate(AA)
-       deallocate(AAcopy)
+      if (matstatus.eq.1) then
+       T_hold=T_avg
 
-      enddo ! do nc=1,nsolve
+       do dir=1,SDIM
+        delx(dir)=(xtarget(dir)-xbase(dir))/dx(dir)
+       enddo ! dir
+       delx(SDIM+1)=one
+
+       do dir=1,mat_ncomp
+        T_hold=T_hold+GRADTEMP(dir)*delx(dir)
+       enddo
+       if (T_hold.lt.TMIN) then
+        T_hold=TMIN
+       endif
+       if (T_hold.gt.TMAX) then
+        T_hold=TMAX
+       endif
+       if (tsat_flag.eq.1) then
+        if (T_hold.ge.zero) then
+         ! do nothing
+        else
+         print *,"temperature underflow in center_centroid_interchange"
+         print *,"xI ",xI(1),xI(2),xI(SDIM)
+         print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+         print *,"cc_flag=",cc_flag
+         print *,"tsat_flag=",tsat_flag
+         print *,"bfact=",bfact
+         print *,"level=",level
+         print *,"finest_level=",finest_level
+         print *,"TSAT = ",TSAT
+         print *,"TMIN = ",TMIN
+         print *,"TMAX = ",TMAX
+         print *,"T_avg = ",T_avg
+         print *,"DATA_FLOOR= ",DATA_FLOOR
+         print *,"T_hold=",T_hold
+         stop
+        endif
+       else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+        ! do nothing
+       else
+        print *,"tsat_flag invalid ",tsat_flag
+        stop
+       endif
+      else if (matstatus.eq.0) then
+       print *,"WARNING: subroutine center_centroid_interchange"
+       print *,"WARNING: linear least squares failed"
+       print *,"WARNING: doing piecewise constant interpolation instead"
+       print *,"cc_flag=",cc_flag
+       print *,"tsat_flag=",tsat_flag
+       print *,"TSAT=",TSAT
+       print *,"T_avg=",T_avg
+       print *,"wt_sum=",wt_sum
+       print *,"mat_ncomp=",mat_ncomp
+       print *,"xsten(0,dir) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+       print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+       print *,"dx ",dx(1),dx(2),dx(SDIM)
+       print *,"xI ",xI(1),xI(2),xI(SDIM)
+       do i=1,mat_ncomp
+       do j=1,mat_ncomp
+        print *,"i,j,AAcopy,AA ",i,j,AAcopy(i,j),AA(i,j)
+       enddo
+       enddo
+       do i=1,mat_ncomp
+        print *,"i,BBcopy,BB ",i,BBcopy(i),BB(i)
+       enddo
+       
+       T_hold=T_avg
+      else
+       print *,"matstatus has an invalid value ",matstatus
+       stop
+      endif
+ 
+      T_out=T_hold
+
+      deallocate(AA)
+      deallocate(AAcopy)
 
       return
       end subroutine center_centroid_interchange
@@ -860,7 +847,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer dir
       integer ic,jc,kc
@@ -883,7 +870,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
       real(amrex_real) Tsat
       real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
       real(amrex_real) local_data_out
@@ -968,11 +954,9 @@ stop
        ! in: interpfabFWEIGHT
       cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=0 ! do not use TSAT
-      nsolve=1
       Tsat=room_temperature ! 293.0d0 if double prec.
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -991,7 +975,7 @@ stop
        Tsat, & ! unused if tsat_flag==0
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfabFWEIGHT
@@ -1079,7 +1063,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer ic,jc,kc
       integer i1,j1,k1
@@ -1095,7 +1079,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
       real(amrex_real) Tsat
 
       DATA_FLOOR=zero
@@ -1145,13 +1128,11 @@ stop
        ! in: interpfab
       cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
-      nsolve=1
       !unused if tsat_flag==-1 
       !(but set to room_temperature=293.0d0 for sanity check)
       Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1170,7 +1151,7 @@ stop
        Tsat, & ! unused if tsat_flag==-1
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfab
@@ -1203,7 +1184,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer ic,jc,kc
       integer i1,j1,k1
@@ -1219,7 +1200,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
       real(amrex_real) Tsat
 
       DATA_FLOOR=zero
@@ -1266,13 +1246,11 @@ stop
        ! in: interpfab
       cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
-      nsolve=1
       !unused if tsat_flag==-1 
       !(but set to room_temperature=293.0d0 for sanity check)
       Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1291,7 +1269,7 @@ stop
        Tsat, & ! unused if tsat_flag==-1
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine single_interpfab
@@ -1719,7 +1697,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer dir
       integer ic,jc,kc
@@ -1743,7 +1721,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
 
       DATA_FLOOR=zero
 
@@ -1835,11 +1812,9 @@ stop
        ! in: interpfabTEMP
       cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=1 ! use TSAT
-      nsolve=1
        ! YANG LIUs routine
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1858,7 +1833,7 @@ stop
        Tsat, &
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfabTEMP
@@ -2013,7 +1988,7 @@ stop
 
         ! the least squares interpolant is limited by the stencil values.
         ! interpfabFWEIGHT calls center_centroid_interchange with
-        ! cc_flag=FVM_TO_GFM (centroid->target), tsat_flag=0,nsolve=1,Tsat=293
+        ! cc_flag=FVM_TO_GFM (centroid->target), tsat_flag=0,Tsat=293
         ! (placeholder).
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
@@ -3855,7 +3830,6 @@ stop
       integer im_new_crit
       real(amrex_real) DATA_FLOOR
       integer combine_flag
-      integer nsolve_interp
       real(amrex_real) xtarget_interp(SDIM)
       real(amrex_real) old_xI(SDIM)
       real(amrex_real) old_nrm(SDIM)
@@ -5669,14 +5643,12 @@ stop
 
                 DATA_FLOOR=zero
                 combine_flag=FVM_TO_GFM !centroid to center
-                nsolve_interp=1
                 do udir=1,SDIM
                  xtarget_interp(udir)=new_centroid(im_probe,udir)
                 enddo
 
                 call center_centroid_interchange( &
                  DATA_FLOOR, &
-                 nsolve_interp, &
                  combine_flag, & 
                  interp_to_new_supermesh, &!interp_to_new_supermesh(tsatflag)=1
                  bfact, &
@@ -5706,7 +5678,6 @@ stop
 
                 call center_centroid_interchange( &
                  DATA_FLOOR, &
-                 nsolve_interp, &
                  combine_flag, & !0=>centroid -> center   1=>center->centroid
                  interp_to_new_supermesh, &
                  bfact, &
