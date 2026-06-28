@@ -16239,7 +16239,7 @@ contains
       real(amrex_real) xtarget(sdim)
       real(amrex_real) boxlo,boxhi
       integer layer_iter
-      real(amrex_real) vfrac_sum(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      real(amrex_real) vfrac_sum_goal(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_truncate(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       integer num_materials_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -16302,7 +16302,7 @@ contains
         sdim)
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
-       vfrac_sum(layer_iter)=zero
+       vfrac_sum_goal(layer_iter)=zero
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
@@ -16338,16 +16338,17 @@ contains
           stop
          endif
 
-         vfrac_sum(layer_iter)= &
-            vfrac_sum(layer_iter)+mofdata(vofcomp)
-        endif
+         vfrac_sum_goal(layer_iter)= &
+            vfrac_sum_goal(layer_iter)+mofdata(vofcomp)
+        endif ! if (is_proper_layer(im,layer_iter).eq.1) then ...
        enddo !im=1,num_materials
 
        if (layer_iter.eq.RIGID_LAYER_INDEX) then
 
-        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
-            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
-         vfrac_sum(layer_iter)=zero
+        if ((vfrac_sum_goal(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum_goal(layer_iter).le.VOFTOL_LAYER)) then
+
+         vfrac_sum_goal(layer_iter)=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16357,22 +16358,34 @@ contains
            enddo
           endif
          enddo
-        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-                 (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
-         vfrac_sum(layer_iter)=one 
-        else if ((vfrac_sum(layer_iter).ge.VOFTOL_LAYER).and. &
-                 (vfrac_sum(layer_iter).le.one-VOFTOL_LAYER)) then
+
+        else if ((vfrac_sum_goal(layer_iter).le.one+half).and. &
+                 (vfrac_sum_goal(layer_iter).ge.one-VOFTOL_LAYER)) then
+
+         vfrac_sum_goal(layer_iter)=one 
+
+        else if ((vfrac_sum_goal(layer_iter).ge.VOFTOL_LAYER).and. &
+                 (vfrac_sum_goal(layer_iter).le.one-VOFTOL_LAYER)) then
          !do nothing
         else
-         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         print *,"RIGID_LAYER_INDEX= ",RIGID_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",ELASTIC_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",FLUID_LAYER_INDEX
+         print *,"make_vfrac_sum_ok_base tessellate= ",tessellate
+         print *,"layer_iter= ",layer_iter
+         print *,"vfrac_sum_goal= ",vfrac_sum_goal
+         print *,"vfrac_sum_goal(layer_iter) invalid ", &
+               vfrac_sum_goal(layer_iter)
+         print *,"mofdata= ",mofdata
          stop
         endif
 
        else if (layer_iter.eq.ELASTIC_LAYER_INDEX) then
 
-        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
-            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
-         vfrac_sum(layer_iter)=zero
+        if ((vfrac_sum_goal(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum_goal(layer_iter).le.VOFTOL_LAYER)) then
+
+         vfrac_sum_goal(layer_iter)=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16382,34 +16395,48 @@ contains
            enddo
           endif
          enddo
-        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-                 (vfrac_sum(layer_iter).ge.one-VOFTOL_LAYER)) then
-         if (vfrac_sum(RIGID_LAYER_INDEX).eq.zero) then
-          vfrac_sum(layer_iter)=one 
+
+        else if ((vfrac_sum_goal(layer_iter).le.one+half).and. &
+                 (vfrac_sum_goal(layer_iter).ge.one-VOFTOL_LAYER)) then
+
+         if (vfrac_sum_goal(RIGID_LAYER_INDEX).eq.zero) then
+          vfrac_sum_goal(layer_iter)=one 
          else if (tessellate.eq.TESSELLATE_FLUIDS) then
-          vfrac_sum(layer_iter)=one 
-         else if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).or. &
-                  (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
-                  (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
+          vfrac_sum_goal(layer_iter)=one 
+         else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+          !do nothing
+         else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
           !do nothing
          else
           print *,"tessellate invalid ",tessellate
-          print *,"or vfrac_sum invalid ",vfrac_sum
+          print *,"or vfrac_sum_goal invalid ",vfrac_sum_goal
           stop
          endif
-        else if ((vfrac_sum(layer_iter).ge.VOFTOL_LAYER).and. &
-                 (vfrac_sum(layer_iter).le.one-VOFTOL_LAYER)) then
+
+        else if ((vfrac_sum_goal(layer_iter).ge.VOFTOL_LAYER).and. &
+                 (vfrac_sum_goal(layer_iter).le.one-VOFTOL_LAYER)) then
+
          !do nothing
+
         else
-         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         print *,"RIGID_LAYER_INDEX= ",RIGID_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",ELASTIC_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",FLUID_LAYER_INDEX
+         print *,"make_vfrac_sum_ok_base tessellate= ",tessellate
+         print *,"layer_iter= ",layer_iter
+         print *,"vfrac_sum_goal= ",vfrac_sum_goal
+         print *,"vfrac_sum_goal(layer_iter) invalid ", &
+                 vfrac_sum_goal(layer_iter)
+         print *,"mofdata= ",mofdata
          stop
         endif
 
        else if (layer_iter.eq.FLUID_LAYER_INDEX) then
 
-        if ((vfrac_sum(layer_iter).ge.-EPS1).and. &
-            (vfrac_sum(layer_iter).le.VOFTOL_LAYER)) then
-         vfrac_sum(layer_iter)=zero
+        if ((vfrac_sum_goal(layer_iter).ge.-EPS1).and. &
+            (vfrac_sum_goal(layer_iter).le.VOFTOL_LAYER)) then
+
+         vfrac_sum_goal(layer_iter)=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16419,30 +16446,39 @@ contains
            enddo
           endif
          enddo
-        else if ((vfrac_sum(layer_iter).le.one+EPS1).and. &
-                 (vfrac_sum(layer_iter).ge.VOFTOL_LAYER)) then
 
-         if ((vfrac_sum(RIGID_LAYER_INDEX).eq.zero).and. &
-             (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
-          vfrac_sum(layer_iter)=one 
+        else if ((vfrac_sum_goal(layer_iter).le.one+half).and. &
+                 (vfrac_sum_goal(layer_iter).ge.VOFTOL_LAYER)) then
+
+         if ((vfrac_sum_goal(RIGID_LAYER_INDEX).eq.zero).and. &
+             (vfrac_sum_goal(ELASTIC_LAYER_INDEX).eq.zero)) then
+          vfrac_sum_goal(layer_iter)=one 
          else if (tessellate.eq.TESSELLATE_FLUIDS) then
-          vfrac_sum(layer_iter)=one 
+          vfrac_sum_goal(layer_iter)=one 
          else if ((tessellate.eq.TESSELLATE_IGNORE_ISELASTIC).and. &
-                  (vfrac_sum(ELASTIC_LAYER_INDEX).eq.zero)) then
-          vfrac_sum(layer_iter)=one 
-         else if ((vfrac_sum(RIGID_LAYER_INDEX).gt.zero).or. &
-                  (vfrac_sum(ELASTIC_LAYER_INDEX).gt.zero).or. &
+                  (vfrac_sum_goal(ELASTIC_LAYER_INDEX).eq.zero)) then
+          vfrac_sum_goal(layer_iter)=one 
+         else if ((vfrac_sum_goal(RIGID_LAYER_INDEX).gt.zero).or. &
+                  (vfrac_sum_goal(ELASTIC_LAYER_INDEX).gt.zero).or. &
                   (tessellate.eq.TESSELLATE_IGNORE_ISRIGID).or. &
                   (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
           !do nothing
          else
           print *,"tessellate invalid ",tessellate
-          print *,"or vfrac_sum invalid ",vfrac_sum
+          print *,"or vfrac_sum_goal invalid ",vfrac_sum_goal
           stop
          endif
 
         else
-         print *,"vfrac_sum(layer_iter) invalid ",vfrac_sum(layer_iter)
+         print *,"RIGID_LAYER_INDEX= ",RIGID_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",ELASTIC_LAYER_INDEX
+         print *,"ELASTIC_LAYER_INDEX= ",FLUID_LAYER_INDEX
+         print *,"make_vfrac_sum_ok_base tessellate= ",tessellate
+         print *,"layer_iter= ",layer_iter
+         print *,"vfrac_sum_goal= ",vfrac_sum_goal
+         print *,"vfrac_sum_goal(layer_iter) invalid ", &
+                vfrac_sum_goal(layer_iter)
+         print *,"mofdata= ",mofdata
          stop
         endif
 
@@ -16501,7 +16537,7 @@ contains
         if (is_proper_layer(im,layer_iter).eq.1) then
          if (vfrac_sum_truncate(layer_iter).gt.zero) then
           mofdata(vofcomp)=mofdata(vofcomp)* &
-           (vfrac_sum(layer_iter)/vfrac_sum_truncate(layer_iter))
+           (vfrac_sum_goal(layer_iter)/vfrac_sum_truncate(layer_iter))
          else if (vfrac_sum_truncate(layer_iter).eq.zero) then
           !do nothing
          else
@@ -16808,7 +16844,8 @@ contains
         xsten,nhalf, &
         bfact,dx, &
         tessellate, & !TESSELLATE_FLUIDS|IGNORE_ISRIGID|IGNORE_ISELASTIC
-        mofdata,mofdatavalid, &
+        mofdata, &
+        mofdatavalid, &
         sdim)
       use probcommon_module
       use geometry_intersect_module
