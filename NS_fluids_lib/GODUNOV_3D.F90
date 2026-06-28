@@ -17121,7 +17121,9 @@ stop
       integer im_crit
       integer im_primary
       integer im_secondary
-      integer ireverse,iten
+      integer ireverse
+      integer iten
+      integer iten_shift
 
       integer im_source
       integer im_source_master
@@ -17176,12 +17178,14 @@ stop
       real(amrex_real) LS_source,LS_dest
 
       real(amrex_real) LL
+      integer phase_change_material(num_materials)
+
       integer local_freezing_model
       integer distribute_from_targ
       real(amrex_real) TSAT_master
       real(amrex_real) TDIFF
       real(amrex_real) TDIFF_master
-      real(amrex_real) T_out(1)
+      real(amrex_real) T_out
       real(amrex_real) Tcenter(num_materials)
       real(amrex_real) thermal_state(num_materials)
 
@@ -17396,6 +17400,34 @@ stop
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1)
 
       call get_dxmax(dx,bfact,dxmax)
+
+      do im=1,num_materials
+       phase_change_material(im)=0
+       do im_opp=1,num_materials
+        if (im.eq.im_opp) then
+         !do nothing
+        else if (im.ne.im_opp) then
+         do ireverse=0,1
+          call get_iten(im,im_opp,iten)
+          iten_shift=ireverse*num_interfaces+iten
+           ! default_flag=1 => only the sign is needed
+           ! default_flag=0 => the value is important too.
+          LL=get_user_latent_heat(iten_shift,room_temperature,1)
+          if (LL.eq.zero) then
+           !do nothing
+          else if (LL.ne.zero) then
+           phase_change_material(im)=1
+          else
+           print *,"LL invalid ",LL
+           stop
+          endif
+         enddo !ireverse=0,1
+        else
+         print *,"im or im_opp invalid ",im,im_opp
+         stop
+        endif
+       enddo !im_opp=1,num_materials
+      enddo !im=1,num_materials
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -18493,30 +18525,41 @@ stop
               stop
              endif
 
-             ! this subroutine: fort_combinevel
-             ! subroutine center_centroid_interchange is declared in:
-             ! MASS_TRANSFER_3D.F90
-             call center_centroid_interchange( &
-              DATA_FLOOR, &
-              nsolve, &
-              !FVM_TO_GFM(centroid->center) or GFM_TO_FVM(center->centroid)
-              combine_flag, & 
-              tsat_flag, & !-1=>use all cells in stencil;=0=>no tsat;=1=>tsat
-              bfact, &
-              level, &
-              finest_level, &
-              dx,xlo, &
-              xsten,nhalf, &
-              T_sten, &  
-              XC_sten, &  
-              xI, &
-              xtarget, &
-              im, &
-              im_primary_sten, &
-              VF_sten, &
-              LS_sten, &
-              TSAT_master, &
-              T_out)
+             if (tsat_flag.eq.0) then
+
+              T_out=state_mass_average
+
+             else if (tsat_flag.eq.1) then
+
+              ! this subroutine: fort_combinevel
+              ! subroutine center_centroid_interchange is declared in:
+              ! MASS_TRANSFER_3D.F90
+              call center_centroid_interchange( &
+               DATA_FLOOR, &
+               !FVM_TO_GFM(centroid->center) or GFM_TO_FVM(center->centroid)
+               combine_flag, & 
+               !-1=>use all cells in stencil;=0=>no tsat;=1=>tsat
+               tsat_flag, &  !intent(in)
+               bfact, &
+               level, &
+               finest_level, &
+               dx,xlo, &
+               xsten,nhalf, &
+               T_sten, &  
+               XC_sten, &  
+               xI, &
+               xtarget, &
+               im, &
+               im_primary_sten, &
+               VF_sten, &
+               LS_sten, &
+               TSAT_master, &
+               T_out)
+
+             else
+              print *,"tsat_flag invalid: ",tsat_flag
+              stop
+             endif
 
              if (combine_flag.eq.FVM_TO_GFM) then !centroid -> center (FVM->GFM)
 
@@ -18543,11 +18586,19 @@ stop
 
               if (tsat_flag.eq.0) then
 
-               !T_out(1)=T_sten(D_DECL(0,0,0))
-               T_out(1)=state_mass_average
+               !T_out=T_sten(D_DECL(0,0,0))
+               T_out=state_mass_average
 
               else if (tsat_flag.eq.1) then
-               ! do nothing
+
+               if (phase_change_material(im).eq.1) then
+                !do nothing
+               else
+                print *,"expecting phase_change_material(im)=1 ", &
+                   im,phase_change_material(im)
+                stop
+               endif
+
               else
                print *,"tsat_flag invalid ",tsat_flag
                stop
@@ -18555,25 +18606,33 @@ stop
 
               !newcell copied to S_new after the call.
               do im_opp=1,num_materials
-               newcell(D_DECL(i,j,k),im_opp)=T_out(1)
+               newcell(D_DECL(i,j,k),im_opp)=T_out
               enddo
 
              else if (combine_flag.eq.GFM_TO_FVM) then!center->centroid
 
               if (tsat_flag.eq.0) then
 
-               ! T_out(1)=cellfab(D_DECL(i,j,k),scomp(im_primary)+1)
-               T_out(1)=state_mass_average
+               ! T_out=cellfab(D_DECL(i,j,k),scomp(im_primary)+1)
+               T_out=state_mass_average
 
               else if (tsat_flag.eq.1) then
-               ! do nothing
+
+               if (phase_change_material(im).eq.1) then
+                !do nothing
+               else
+                print *,"expecting phase_change_material(im)=1 ", &
+                   im,phase_change_material(im)
+                stop
+               endif
+
               else
                print *,"tsat_flag invalid ",tsat_flag
                stop
               endif
 
               !newcell copied to S_new after the call.
-              newcell(D_DECL(i,j,k),im)=T_out(1)
+              newcell(D_DECL(i,j,k),im)=T_out
 
              else
               print *,"combine_flag invalid: ",combine_flag
@@ -18651,23 +18710,23 @@ stop
            if (combine_flag.eq.FVM_TO_GFM) then ! centroid -> center
 
              !cellfab\equiv S_new
-            T_out(1)=cellfab(D_DECL(i,j,k),scomp(im)+1)
+            T_out=cellfab(D_DECL(i,j,k),scomp(im)+1)
 
             if (abs(state_mass_average).le.VOFTOL_MATERIAL) then
-             if (abs(state_mass_average-T_out(1)).le.VOFTOL_MATERIAL) then
+             if (abs(state_mass_average-T_out).le.VOFTOL_MATERIAL) then
               !do nothing
              else
-              print *,"T_out(1),state_mass_average invalid:", &
-                T_out(1),state_mass_average
+              print *,"T_out,state_mass_average invalid:", &
+                T_out,state_mass_average
               stop
              endif
             else if (abs(state_mass_average).ge.VOFTOL_MATERIAL) then
-             if (abs(state_mass_average-T_out(1)).le. &
+             if (abs(state_mass_average-T_out).le. &
                  VOFTOL_MATERIAL*abs(state_mass_average)) then
               !do nothing
              else
-              print *,"T_out(1),state_mass_average invalid:", &
-                T_out(1),state_mass_average
+              print *,"T_out,state_mass_average invalid:", &
+                T_out,state_mass_average
               stop
              endif
             else
@@ -18678,7 +18737,7 @@ stop
             !since cell_vfrac(im)==1 => cell_vfrac(im_opp)==0.0 (im_opp!=im)
             !newcell copied to S_new after the call.
             do im_opp=1,num_materials
-             newcell(D_DECL(i,j,k),im_opp)=T_out(1)
+             newcell(D_DECL(i,j,k),im_opp)=T_out
             enddo
 
            else if (combine_flag.eq.GFM_TO_FVM) then ! center->centroid
