@@ -18035,7 +18035,7 @@ contains
        enddo !im=1,num_materials
 
        if ( (abs(uncaptured_volume_START-volcell_compare).le. &
-             EPS1*uncaptured_volume_START).and. &
+             uncaptured_volume_START).and. &
             (abs(uncaptured_volume_START-volcell_compare).le. &
              EPS2*volcell) ) then
         !do nothing
