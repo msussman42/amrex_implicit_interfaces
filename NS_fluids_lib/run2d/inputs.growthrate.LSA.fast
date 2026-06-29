@@ -105,7 +105,7 @@ ns.fixed_dt	  = 0.002   # hardwire dt non-intrusive LSA
 
 amr.LSA_initial_levelSteps=0
 amr.LSA_activate=1
-amr.LSA_nsteps_power_method=2 # non-intrusive LSA
+amr.LSA_nsteps_krylov_subspace_method=2 # non-intrusive LSA
 
 ns.sum_interval   = 1        # timesteps between computing mass 
 
