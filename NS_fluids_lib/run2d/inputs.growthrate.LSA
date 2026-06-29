@@ -2,11 +2,11 @@
 #expected most dangerous mode: space frequency=.7
 #wave length=2 pi/.7=9.0
 #see Popinet 2009, see rayleigh_capillary_growth.F90
-#max_step  = 500   # maximum timestep non-intrusive LSA
+max_step  = 500   # maximum timestep non-intrusive LSA
 #max_step  = 999999   # maximum timestep perturbation
-max_step  =  2    # maximum timestep non-intrusive LSA
-stop_time = 0.0012 # maximum problem time non-intrusive LSA
-#stop_time = 0.3 # maximum problem time non-intrusive LSA
+#max_step  =  2    # maximum timestep non-intrusive LSA
+#stop_time = 0.0012 # maximum problem time non-intrusive LSA
+stop_time = 0.3 # maximum problem time non-intrusive LSA
 #stop_time =  10.25  # maximum problem time perturbation
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -17,7 +17,9 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  9.0 72.0
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
 
-ns.EILE_flag=-1
+#Eulerian Implicit Lagrangian Explicit cell integrated semi lagrangian method
+#(Weymouth-Yue algorithm corresponds to EILE_flag=-1)
+ns.EILE_flag=1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 ns.vof_height_function=1
@@ -68,10 +70,12 @@ amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 #amr.plot_int        = 100  # non-intrusive LSA
 amr.plot_int        = 1  # non-intrusive LSA
-# 1=LSA_N_EXTRA
-# 2=LSA_NP1_EXTRA
-# 3=LSA_EVEC_EXTRA
-amr.LSA_plot_index=3
+# 1=LSA_N_EXTRA  => the base state, unperturbed
+# 2=LSA_NP1_EXTRA => the result for advancing the base state 
+# "max_step-LSA_initial_levelSteps" times.
+# 3=LSA_EVEC_EXTRA => a member of the Krylov subspace
+# 0="regular" plot data.
+amr.LSA_plot_index=0
 #amr.plot_int       = 100 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -98,11 +102,24 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-6
 ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 1.0
+#must have u dt < dx where u=max(u_flow_velocity,u_surface_tension)
+#e.g.stop_time=0.3
+#max_step=0.3/.0006=3/.006=30/.06=300/.6=3000/6=500
 ns.fixed_dt	  = 0.0006   # hardwire dt
 
+#LSA_initial_levelSteps=number of time steps in order to establish the base
+#state (i.e. the steady state solution)
 amr.LSA_initial_levelSteps=0
+#LSA_activate=0 => determine base state (steady-state)
+#LSA_activate=1 => build the Krylov subspace
+#LSA_activate=2 => read the Krylov subspace data from the checkpoints files
+#  that were generated when LSA_activate=1, then determine the most dangerous
+#  mode, then apply the most dangerous mode to the base state (the steady
+#  state)
+#  see: Peter Schmid
+#  "Dynamic mode decomposition of numerical and experimental data"
 amr.LSA_activate=0
-amr.LSA_nsteps_power_method=2 # non-intrusive LSA
+amr.LSA_nsteps_krylov_subspace_method=2 # non-intrusive LSA
 
 ns.sum_interval   = 1        # timesteps between computing mass 
 

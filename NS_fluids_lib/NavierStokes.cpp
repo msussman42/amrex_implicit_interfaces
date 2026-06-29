@@ -11684,6 +11684,9 @@ void NavierStokes::LSA_normalize_eigenvector(
      is_temperature=1;
    }
 
+    //Peter Schmid
+    //"Dynamic mode decomposition of numerical and experimental data"
+    //create "v_{1}" in the Krylov Subspace
    if (caller_id==FROM_default_eigenvectorALL) {
 
     if (((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM))||
@@ -11710,6 +11713,7 @@ void NavierStokes::LSA_normalize_eigenvector(
       amrex::Error("cell_max invalid");
     }
 
+    //we do not scale A v_{1}, A*A*v_{1}, etc.
    } else if (caller_id==FROM_LSA_eigenvectorALL) {
 
     //do nothing
