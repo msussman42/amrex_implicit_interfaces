@@ -83,7 +83,8 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 #amr.n_cell=128 128
-amr.n_cell=32 32
+#amr.n_cell=32 32
+amr.n_cell=64 64
 amr.max_level = 0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
@@ -117,7 +118,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 0.013  #(1/Re) (NONDIM)
 ns.heatvisc_coef  = 1.0  #(1/(Pr Re)) (NONDIM)  Pr * Re=0.013 * 76.74=1.0
-ns.explicit_viscosity_dt=1.0
+#ns.explicit_viscosity_dt=1.0
+ns.explicit_viscosity_dt=0.0
 ns.ngrow_distance=6
 ns.visc_coef_boundary_layer_factor=1.0
 mac.visc_abs_tol  = 1.0e-10
@@ -150,6 +152,7 @@ ns.radblob9=0.0 # transition time from the wetting initial
 #  We=10.0
 # 18 degrees growth angle:
 # sigma_LI=sigma_LG(1-cos(18 deg))=sigma_LG * .049
+# sigma_LI=sigma_LG(1-cos(33 deg))=sigma_LG * .161
 # sigma_LI=sigma_LG(1-cos(45 deg))=sigma_LG * .293
 # sigma_GI=sigma_LG
 # actual Weber number: 0.0042;numerical Weber: 10.0
