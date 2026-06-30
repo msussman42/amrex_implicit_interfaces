@@ -13,6 +13,8 @@ stop_time =  3.0  # maximum problem time
 # if L=0.06348 cm U=1 cm/s then
 # Re=rho L U/mu=(1)(0.06348)/0.01=6.348  (1/Re)=0.16
 # We=rho U^2 L/sigma = 0.06348/70.9=8.95e-4  (1/We)=1117
+# material im= 1---------------------
+# im= 1 imnbr= 3 perimnbr=
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0  0.0

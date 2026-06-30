@@ -19649,8 +19649,19 @@ NavierStokes::split_scalar_advection(int im_extension) {
     amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
 
    Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
+
   } else if (num_materials_viscoelastic==0) {
-   // do nothing
+
+   if (NUM_CELL_ELASTIC==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   if (NUM_CELL_ELASTIC_REFINE==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
   } else
    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
 
@@ -19670,7 +19681,12 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
    Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
   } else if (num_materials_compressible==0) {
-   // do nothing
+
+   if (NUM_CELL_REFINE_DENSITY==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
   } else
    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
 
