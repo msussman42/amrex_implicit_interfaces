@@ -13838,7 +13838,8 @@ stop
           else if (constant_density_all_time(im).eq.0) then 
            ! do nothing
           else
-           print *,"constant_density_all_time invalid"
+           print *,"constant_density_all_time invalid ", &
+            constant_density_all_time
            stop
           endif
          else if (is_compressible_mat(im).eq.1) then
@@ -13847,7 +13848,8 @@ stop
           if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
            !do nothing
           else
-           print *,"fort_im_refine_density_map invalid"
+           print *,"fort_im_refine_density_map invalid ", &
+            fort_im_refine_density_map
            stop
           endif
 
@@ -13858,7 +13860,8 @@ stop
           if (constant_density_all_time(im).eq.0) then
            !do nothing
           else
-           print *,"expecting constant_density_all_time=0"
+           print *,"expecting constant_density_all_time=0 ", &
+            constant_density_all_time
            stop
           endif
 
@@ -13962,11 +13965,59 @@ stop
          if (dencore(im).gt.zero) then 
           ! do nothing
          else
-          print *,"dencore must be positive"
+          print *,"dencore must be positive ",dencore
           stop
          endif
 
         enddo ! im=1..num_materials
+
+        if ((num_materials_viscoelastic.ge.1).and. &
+            (num_materials_viscoelastic.le.num_materials)) then
+
+         do im=1,num_materials
+
+          if (fort_store_elastic_data(im).eq.1) then
+           imap=1
+           do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
+                     (imap.le.num_materials_viscoelastic))
+            imap=imap+1
+           enddo
+           if ((imap.ge.1).and. &
+               (imap.le.num_materials_viscoelastic)) then
+            do istate=1,ENUM_NUM_TENSOR_TYPE
+             statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+               (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+             donate_data= &
+               tensor(D_DECL(icrse,jcrse,kcrse), &
+                  statecomp_data+nfine)
+             conserve(D_DECL(icrse,jcrse,kcrse), &
+              fine_offset+ &
+              CISLCOMP_STATES+ &
+              num_materials*num_state_material+ &
+              (imap-1)*ENUM_NUM_TENSOR_TYPE+istate)= &
+              dencore(im)*donate_data
+            enddo ! do istate=1,ENUM_NUM_TENSOR_TYPE
+
+           else 
+            print *,"imap invalid: ",imap
+            stop
+           endif
+          else if (fort_store_elastic_data(im).eq.0) then
+           ! do nothing
+          else
+           print *,"fort_store_elastic_data(im) invalid"
+           stop
+          endif
+
+         enddo !im=1,num_materials
+
+        else if (num_materials_viscoelastic.eq.0) then
+         ! do nothing
+        else
+         print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+         stop
+        endif
+
        enddo !ifine
        enddo !jfine
 #if (AMREX_SPACEDIM==3)
