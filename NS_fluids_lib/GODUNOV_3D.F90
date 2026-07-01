@@ -13104,7 +13104,7 @@ stop
       integer ibucket
 
       real(amrex_real) refine_den_bucket(num_materials_compressible)
-      real(amrex_real) refine_vol_bucket(num_materials_compressible)
+      real(amrex_real) refine_vol_bucket(num_materials)
 
       real(amrex_real) xsten_crse(-nhalf:nhalf,SDIM)
       integer dir2
@@ -13309,7 +13309,8 @@ stop
        tennew_ptr=>snew
        tensor_ptr=>den
       else
-       print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+       print *,"num_materials_viscoelastic invalid:fort_vfrac_split ", &
+          num_materials_viscoelastic
        stop
       endif
 
@@ -13322,7 +13323,8 @@ stop
        refinedennew_ptr=>snew
        refineden_ptr=>den
       else
-       print *,"num_materials_compressible invalid:fort_vfrac_split"
+       print *,"num_materials_compressible invalid:fort_vfrac_split ", &
+           num_materials_compressible
        stop
       endif
 
@@ -13448,28 +13450,34 @@ stop
           num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
        ! do nothing
       else
-       print *,"NUM_CELL_ELASTIC invalid"
+       print *,"NUM_CELL_ELASTIC invalid ",NUM_CELL_ELASTIC
+       print *,"num_materials_viscoelastic ",num_materials_viscoelastic
+       print *,"ENUM_NUM_TENSOR_TYPE ",ENUM_NUM_TENSOR_TYPE
        stop
       endif
       if (NUM_CELL_ELASTIC_REFINE.eq. &
           num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) then
        ! do nothing
       else
-       print *,"NUM_CELL_ELASTIC_REFINE invalid"
+       print *,"NUM_CELL_ELASTIC_REFINE invalid ",NUM_CELL_ELASTIC_REFINE
+       print *,"NUM_CELL_ELASTIC ",NUM_CELL_ELASTIC
+       print *,"num_materials_viscoelastic ",num_materials_viscoelastic
+       print *,"ENUM_NUM_TENSOR_TYPE ",ENUM_NUM_TENSOR_TYPE
+       print *,"ENUM_NUM_TENSOR_TYPE_REFINE ",ENUM_NUM_TENSOR_TYPE_REFINE
        stop
       endif
 
       if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE_BASE invalid ",ENUM_NUM_TENSOR_TYPE_BASE
        stop
       endif 
       if (ENUM_NUM_TENSOR_TYPE.eq. &
           ENUM_NUM_TENSOR_TYPE_BASE+ENUM_NUM_TENSOR_EXTRA) then
        ! do nothing
       else
-       print *,"ENUM_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid ",ENUM_NUM_TENSOR_TYPE
        stop
       endif 
 
@@ -13478,6 +13486,7 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+       print *,"num_materials_viscoelastic ",num_materials_viscoelastic
        stop
       endif
 
@@ -13485,13 +13494,14 @@ stop
           num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
        ! do nothing
       else
-       print *,"NUM_CELL_REFINE_DENSITY invalid"
+       print *,"NUM_CELL_REFINE_DENSITY invalid ",NUM_CELL_REFINE_DENSITY
        stop
       endif
       if (ENUM_NUM_REFINE_DENSITY_TYPE.eq.4*(SDIM-1)) then
        ! do nothing
       else
-       print *,"ENUM_NUM_REFINE_DENSITY_TYPE invalid"
+       print *,"ENUM_NUM_REFINE_DENSITY_TYPE invalid ", &
+           ENUM_NUM_REFINE_DENSIY_TYPE
        stop
       endif 
 
@@ -13499,7 +13509,8 @@ stop
           (num_materials_compressible.le.num_materials)) then
        ! do nothing
       else
-       print *,"num_materials_compressible invalid:fort_vfrac_split"
+       print *,"num_materials_compressible invalid:fort_vfrac_split ", &
+         num_materials_compressible
        stop
       endif
 
@@ -14069,9 +14080,12 @@ stop
        do jfine=0,1
        do ifine=0,1
 
+        do im=1,num_materials
+         refine_vol_bucket(im)=zero
+        enddo
+
         do im_comp=1,num_materials_compressible
          refine_den_bucket(im_comp)=zero
-         refine_vol_bucket(im_comp)=zero
         enddo
 
         nfine=4*kfine+2*jfine+ifine+1
@@ -14463,6 +14477,7 @@ stop
              im_refine_density=0
 
              do im=1,num_materials
+
               ! density
               dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
                ! conserve is initialized in the beginning of this routine.
@@ -14543,7 +14558,9 @@ stop
                mom2(veldir)=multi_volume_grid(im)*massdepart_mom*donate_data
               enddo  ! veldir=1..sdim (velocity)
 
+               !TESSELLATE_FLUIDS
               massdepart=massdepart*multi_volume_grid_fluid(im)
+               !TESSELLATE_FLUIDS_ELASTIC
               massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
               veldata(CISLCOMP_DEN_MOM+im)= &
@@ -14577,7 +14594,8 @@ stop
                donate_data= &
                 conserve(D_DECL(idonate,jdonate,kdonate), &
                   fine_offset+CISLCOMP_STATES+statecomp_data) 
-               
+              
+                !TESSELLATE_FLUIDS 
                veldata(CISLCOMP_STATES+statecomp_data)= &
                 veldata(CISLCOMP_STATES+statecomp_data)+ & 
                 multi_volume_grid_fluid(im)*donate_data
@@ -14617,15 +14635,17 @@ stop
 
                  do istate=1,ENUM_NUM_TENSOR_TYPE
                   statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
-                     (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
-                  ! configuration tensor is stored at the cell centers, not the
-                  ! corresponding material centroid.
+                    (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
                   donate_data= &
-                   tensor(D_DECL(idonate,jdonate,kdonate), &
-                     statecomp_data+nfine_stencil)
+                   conserve(D_DECL(idonate,jdonate,kdonate), &
+                     fine_offset+ &
+                     CISLCOMP_STATES+ &
+                     num_materials*num_state_material+ &
+                     (imap-1)*ENUM_NUM_TENSOR_TYPE+istate)
+                   !TESSELLATE_FLUIDS
                   veldata(CISLCOMP_TENSOR+statecomp_data+nfine)= &
                    veldata(CISLCOMP_TENSOR+statecomp_data+nfine)+ &
-                   LS_voltotal_depart*donate_data 
+                   multi_volume_grid_fluid(im)*donate_data 
                  enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
                 else 
@@ -14655,24 +14675,31 @@ stop
 
               vofcomp=(im-1)*ngeom_raw+1
               ! material volume from departure (donating) region
+              ! TESSELLATE_FLUIDS
               veldata(CISLCOMP_MOF+vofcomp)= &
                veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid_fluid(im)
               ! material volume from target (accepting) region
+              ! TESSELLATE_FLUIDS
               veldata(CISLCOMP_FTARGET+im)= &
                veldata(CISLCOMP_FTARGET+im)+multi_volume_fluid(im)
+
+              ! TESSELLATE_FLUIDS
+              refine_vol_bucket(im)= &
+               refine_vol_bucket(im)+multi_volume_fluid(im)
 
               if (is_compressible_mat(im).eq.0) then
                !do nothing
               else if (is_compressible_mat(im).eq.1) then
-               refine_vol_bucket(im_refine_density)= &
-                refine_vol_bucket(im_refine_density)+multi_volume_fluid(im)
+               !do nothing
               else
-               print *,"is_compressible_mat(im) invalid"
+               print *,"is_compressible_mat(im) invalid ", &
+                  im,is_compressible_mat(im)
                stop
               endif
 
 
               ! material centroid from target (accepting) region
+              ! TESSELLATE_FLUIDS
               do dir2=1,SDIM
                veldata(CISLCOMP_MOF+vofcomp+dir2)= &
                 veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
@@ -14758,25 +14785,29 @@ stop
           if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
            !do nothing
           else
-           print *,"fort_im_refine_density_map invalid"
+           print *,"fort_im_refine_density_map invalid ", &
+               fort_im_refine_density_map
            stop
           endif
-          if (refine_vol_bucket(im_refine_density).gt.zero) then
+          if (refine_vol_bucket(im).gt.zero) then
            refinedennew(D_DECL(icrse,jcrse,kcrse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              refine_den_bucket(im_refine_density)/ &
-             refine_vol_bucket(im_refine_density)
-          else if (refine_vol_bucket(im_refine_density).eq.zero) then
+             refine_vol_bucket(im)
+          else if (refine_vol_bucket(im).eq.zero) then
            refinedennew(D_DECL(icrse,jcrse,kcrse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              fort_denconst(im) 
           else
-           print *,"refine_vol_bucket invalid: ",im_refine_density, &
-             refine_vol_bucket(im_refine_density)
+           print *,"refine_vol_bucket invalid: "
+           print *,"im_refine_density = ",im_refine_density
+           print *,"im = ",im
+           print *,"refine_vol_bucket(im) ",refine_vol_bucket(im)
            stop
           endif
          else
-          print *,"is_compressible_mat(im) invalid"
+          print *,"is_compressible_mat(im) invalid ",im, &
+                  is_compressible_mat(im)
           stop
          endif
         enddo ! im=1..num_materials (updating refine density vars)
