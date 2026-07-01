@@ -8482,6 +8482,7 @@ stop
 
          call stress_index(dir_local,ii,jj)
 
+!FIX ME
          if (remove_checkerboard.eq.1) then
 
           told_average=zero
@@ -12924,6 +12925,8 @@ stop
        xmac_old,DIMS(xmac_old), &
        ymac_old,DIMS(ymac_old), &
        zmac_old,DIMS(zmac_old), &
+       tensorstate,DIMS(tensorstate), &
+       tensormass,DIMS(tensormass), &
        stokes_flow, &
        nc_conserve, &
        map_forward, &
@@ -13017,6 +13020,8 @@ stop
       integer, INTENT(in) :: DIMDEC(xmac_old) 
       integer, INTENT(in) :: DIMDEC(ymac_old) 
       integer, INTENT(in) :: DIMDEC(zmac_old) 
+      integer, INTENT(in) :: DIMDEC(tensorstate) 
+      integer, INTENT(in) :: DIMDEC(tensormass) 
 
        ! FABS
        ! original data
@@ -13097,13 +13102,20 @@ stop
       real(amrex_real), INTENT(in) :: density_floor(num_materials)
       real(amrex_real), INTENT(in) :: density_ceiling(num_materials)
 
+      real(amrex_real), INTENT(inout), target :: &
+         tensorstate(DIMV(tensorstate),NUM_CELL_ELASTIC+1)
+      real(amrex_real), pointer :: tensorstate_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+         tensormass(DIMV(tensormass),NUM_CELL_ELASTIC+1)
+      real(amrex_real), pointer :: tensormass_ptr(D_DECL(:,:,:),:)
+
       integer, INTENT(in) :: velbc(SDIM,2)
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       integer ibucket
 
-      real(amrex_real) refine_den_bucket(num_materials_compressible)
+      real(amrex_real) refine_den_bucket(num_materials)
       real(amrex_real) refine_vol_bucket(num_materials)
 
       real(amrex_real) xsten_crse(-nhalf:nhalf,SDIM)
@@ -13127,6 +13139,7 @@ stop
       real(amrex_real) coeff(2)
       integer nmax
       integer ii,jj,kk
+      integer ii_ten,jj_ten
      
       integer veldir
 
@@ -13140,8 +13153,12 @@ stop
 
       integer no_material_flag
 
-      integer dencomp_data,statecomp_data,tempcomp_data,speccomp_data
+      integer statecomp_data
+      integer statecomp_data_local
+      integer dencomp_data,tempcomp_data,speccomp_data
       integer imap
+
+      real(amrex_real) top_sum,bottom_sum
 
       real(amrex_real) volcell_recon
       real(amrex_real) cencell_recon(SDIM)
@@ -13165,6 +13182,7 @@ stop
       real(amrex_real) donate_mom_density
       real(amrex_real) ETcore
 
+      integer ibase,jbase,kbase
       integer icrse,jcrse,kcrse
       integer ifine,jfine,kfine
       integer nfine
@@ -13173,7 +13191,7 @@ stop
       integer ifine_stencil_hi,jfine_stencil_hi,kfine_stencil_hi
       integer nfine_stencil
       integer fine_offset
-      integer im_comp,im_refine_density
+      integer im_refine_density
 
       integer idonatelow
       integer idonatehigh
@@ -13275,6 +13293,9 @@ stop
 
       snew_ptr=>snew
       LSnew_ptr=>LSnew
+
+      tensorstate_ptr=>tensorstate
+      tensormass_ptr=>tensormass
 
       xmomside_ptr=>xmomside
       ymomside_ptr=>ymomside
@@ -13501,7 +13522,7 @@ stop
        ! do nothing
       else
        print *,"ENUM_NUM_REFINE_DENSITY_TYPE invalid ", &
-           ENUM_NUM_REFINE_DENSIY_TYPE
+           ENUM_NUM_REFINE_DENSITY_TYPE
        stop
       endif 
 
@@ -13631,6 +13652,9 @@ stop
       growlo(3)=0
       growhi(3)=0
 
+      call checkbound_array(fablo,fabhi,tensorstate_ptr,2,-1)
+      call checkbound_array(fablo,fabhi,tensormass_ptr,2,-1)
+
       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,zmomside_ptr,1,-1)
@@ -13649,6 +13673,8 @@ stop
 
       if (nc_conserve.ne.CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE) then
        print *,"nc_conserve invalid: ",nc_conserve
+       print *,"CISLCOMP_CONS_NCOMP: ",CISLCOMP_CONS_NCOMP
+       print *,"ENUM_NUM_REFINE_DENSITY_TYPE: ",ENUM_NUM_REFINE_DENSITY_TYPE
        stop
       endif
 
@@ -13877,7 +13903,8 @@ stop
           endif
 
          else
-          print *,"is_compressible(im) invalid"
+          print *,"is_compressible_mat(im) invalid ", &
+            im,is_compressible_mat(im)
           stop
          endif
          if (dencore(im).gt.zero) then
@@ -14082,10 +14109,7 @@ stop
 
         do im=1,num_materials
          refine_vol_bucket(im)=zero
-        enddo
-
-        do im_comp=1,num_materials_compressible
-         refine_den_bucket(im_comp)=zero
+         refine_den_bucket(im)=zero
         enddo
 
         nfine=4*kfine+2*jfine+ifine+1
@@ -14486,6 +14510,7 @@ stop
               donate_density= &
                conserve(D_DECL(idonate,jdonate,kdonate), &
                  fine_offset+CISLCOMP_STATES+dencomp_data) 
+
               if (is_compressible_mat(im).eq.0) then
                donate_mom_density= &
                 mom_den(D_DECL(idonate,jdonate,kdonate),im) 
@@ -14494,14 +14519,16 @@ stop
                if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
                 !do nothing
                else
-                print *,"fort_im_refine_density_map invalid"
+                print *,"fort_im_refine_density_map invalid ", &
+                  fort_im_refine_density_map
                 stop
                endif
                donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
                  (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+ &
                  nfine_stencil)
               else
-               print *,"is_compressible_mat(im) invalid"
+               print *,"is_compressible_mat(im) invalid ", &
+                im,is_compressible_mat(im)
                stop
               endif
 
@@ -14568,13 +14595,15 @@ stop
               veldata(CISLCOMP_STATES+dencomp_data)= &
                veldata(CISLCOMP_STATES+dencomp_data)+massdepart
 
+              refine_den_bucket(im)=refine_den_bucket(im)+massdepart
+
               if (is_compressible_mat(im).eq.0) then
                !do nothing
               else if (is_compressible_mat(im).eq.1) then
-               refine_den_bucket(im_refine_density)= &
-                refine_den_bucket(im_refine_density)+massdepart
+               !do nothing
               else
-               print *,"is_compressible_mat(im) invalid"
+               print *,"is_compressible_mat(im) invalid ", &
+                 im,is_compressible_mat(im)
                stop
               endif
 
@@ -14792,7 +14821,7 @@ stop
           if (refine_vol_bucket(im).gt.zero) then
            refinedennew(D_DECL(icrse,jcrse,kcrse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
-             refine_den_bucket(im_refine_density)/ &
+             refine_den_bucket(im)/ &
              refine_vol_bucket(im)
           else if (refine_vol_bucket(im).eq.zero) then
            refinedennew(D_DECL(icrse,jcrse,kcrse), &
@@ -14828,12 +14857,119 @@ stop
                (imap.le.num_materials_viscoelastic)) then
 
             do istate=1,ENUM_NUM_TENSOR_TYPE
+
+             if ((istate.ge.ENUM_NUM_TENSOR_TYPE_BASE+1).and. &
+                 (istate.le.ENUM_NUM_TENSOR_TYPE)) then
+              ii_ten=1
+              jj_ten=1
+             else if ((istate.ge.1).and. &
+                      (istate.le.ENUM_NUM_TENSOR_TYPE_BASE)) then
+              call stress_index(istate,ii_ten,jj_ten)
+             else
+              print *,"istate invalid ",istate
+              stop
+             endif
+             ibase=icrse
+             jbase=jcrse
+             kbase=kcrse
+             if (ii_ten.eq.jj_ten) then
+              !do nothing
+             else if (((ii_ten.eq.1).and.(jj_ten.eq.2)).or. &
+                      ((ii_ten.eq.2).and.(jj_ten.eq.1))) then
+              if (ifine.eq.0) then
+               !do nothing
+              else if (ifine.eq.1) then
+               ibase=ibase+1
+              else
+               print *,"ifine invalid: ",ifine
+               stop
+              endif
+              if (jfine.eq.0) then
+               !do nothing
+              else if (jfine.eq.1) then
+               jbase=jbase+1
+              else
+               print *,"jfine invalid: ",jfine
+               stop
+              endif
+             else if (((ii_ten.eq.1).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                      ((ii_ten.eq.3).and.(jj_ten.eq.1).and.(SDIM.eq.3))) then
+              if (ifine.eq.0) then
+               !do nothing
+              else if (ifine.eq.1) then
+               ibase=ibase+1
+              else
+               print *,"ifine invalid: ",ifine
+               stop
+              endif
+              if (kfine.eq.0) then
+               !do nothing
+              else if (kfine.eq.1) then
+               kbase=kbase+1
+              else
+               print *,"kfine invalid: ",kfine
+               stop
+              endif
+             else if (((ii_ten.eq.2).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                      ((ii_ten.eq.3).and.(jj_ten.eq.2).and.(SDIM.eq.3))) then
+              if (jfine.eq.0) then
+               !do nothing
+              else if (jfine.eq.1) then
+               jbase=jbase+1
+              else
+               print *,"jfine invalid: ",jfine
+               stop
+              endif
+              if (kfine.eq.0) then
+               !do nothing
+              else if (kfine.eq.1) then
+               kbase=kbase+1
+              else
+               print *,"kfine invalid: ",kfine
+               stop
+              endif
+             else
+              print *,"ii_ten,jj_ten invalid: ",ii_ten,jj_ten
+              stop
+             endif
+
              statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
                (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
-             if (voltotal_depart_refine(nfine).gt.zero) then
+
+             if (refine_den_bucket(im).gt.zero) then
               tennew_hold(statecomp_data+nfine)= &
                veldata(CISLCOMP_TENSOR+statecomp_data+nfine)/ &
-               voltotal_depart_refine(nfine)
+               refine_den_bucket(im)
+
+              statecomp_data_local=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
+              if ((statecomp_data_local.ge.1).and. &
+                  (statecomp_data_local.le.NUM_CELL_ELASTIC)) then
+               tensorstate(D_DECL(ibase,jbase,kbase), &
+                           statecomp_data_local)= &
+                tensorstate(D_DECL(ibase,jbase,kbase), &
+                            statecomp_data_local)+ &
+                veldata(CISLCOMP_TENSOR+statecomp_data+nfine)
+               tensormass(D_DECL(ibase,jbase,kbase), &
+                          statecomp_data_local)= &
+                tensormass(D_DECL(ibase,jbase,kbase), &
+                           statecomp_data_local)+ &
+                refine_den_bucket(im)
+              else
+               print *,"statecomp_data_local invalid ", &
+                statecomp_data_local
+               stop
+              endif
+
+             else if (refine_den_bucket(im).eq.zero) then
+              tennew_hold(statecomp_data+nfine)=zero
+             else
+              print *,"refine_den_bucket(im) invalid ", &
+               im,refine_den_bucket(im)
+              stop
+             endif
+
+             if (voltotal_depart_refine(nfine).gt.zero) then
+              !do nothing
              else
               print *,"voltotal_depart_refine invalid: ",nfine, &
                       voltotal_depart_refine(nfine)
@@ -15097,7 +15233,7 @@ stop
         else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid GODUNOV_3D.F90"
+         print *,"is_rigid invalid GODUNOV_3D.F90 ",im,is_rigid(im)
          stop
         endif
        enddo ! im=1..num_materials
@@ -15188,11 +15324,11 @@ stop
               snew_hold(STATECOMP_STATES+speccomp_data)= &
                veldata(CISLCOMP_STATES+speccomp_data)/massdepart
              else
-              print *,"massdepart invalid"
+              print *,"massdepart invalid ",massdepart
               stop
              endif 
             else
-             print *,"is_rigid invalid GODUNOV_3D.F90"
+             print *,"is_rigid invalid GODUNOV_3D.F90 ",im,is_rigid(im)
              stop
             endif
            else 
@@ -15341,7 +15477,7 @@ stop
 
           istate=istate+1+num_species_var
          else
-          print *,"istate invalid"
+          print *,"istate invalid ",istate
           stop
          endif
 
@@ -15466,6 +15602,185 @@ stop
       enddo
       enddo
       enddo ! icrse,jcrse,kcrse -> growntilebox(0 ghost cells)
+
+      do im=1,num_materials
+
+       if ((num_materials_viscoelastic.ge.1).and. &
+           (num_materials_viscoelastic.le.num_materials)) then
+
+        if (fort_store_elastic_data(im).eq.1) then
+         imap=1
+         do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
+                   (imap.le.num_materials_viscoelastic))
+          imap=imap+1
+         enddo
+         if ((imap.ge.1).and. &
+             (imap.le.num_materials_viscoelastic)) then
+
+          call growntilebox(tilelo,tilehi,fablo,fabhi, &
+           growlo,growhi,0)
+          do kcrse=growlo(3),growhi(3)
+          do jcrse=growlo(2),growhi(2)
+          do icrse=growlo(1),growhi(1)
+           kfine=0
+#if (AMREX_SPACEDIM==3)
+           do kfine=0,1
+#endif
+           do jfine=0,1
+           do ifine=0,1
+            nfine=4*kfine+2*jfine+ifine+1
+
+            do istate=1,ENUM_NUM_TENSOR_TYPE
+
+             if ((istate.ge.ENUM_NUM_TENSOR_TYPE_BASE+1).and. &
+                 (istate.le.ENUM_NUM_TENSOR_TYPE)) then
+              ii_ten=1
+              jj_ten=1
+             else if ((istate.ge.1).and. &
+                      (istate.le.ENUM_NUM_TENSOR_TYPE_BASE)) then
+              call stress_index(istate,ii_ten,jj_ten)
+             else
+              print *,"istate invalid ",istate
+              stop
+             endif
+             ibase=icrse
+             jbase=jcrse
+             kbase=kcrse
+             if (ii_ten.eq.jj_ten) then
+              !do nothing
+             else if (((ii_ten.eq.1).and.(jj_ten.eq.2)).or. &
+                      ((ii_ten.eq.2).and.(jj_ten.eq.1))) then
+              if (ifine.eq.0) then
+               !do nothing
+              else if (ifine.eq.1) then
+               ibase=ibase+1
+              else
+               print *,"ifine invalid: ",ifine
+               stop
+              endif
+              if (jfine.eq.0) then
+               !do nothing
+              else if (jfine.eq.1) then
+               jbase=jbase+1
+              else
+               print *,"jfine invalid: ",jfine
+               stop
+              endif
+             else if (((ii_ten.eq.1).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                      ((ii_ten.eq.3).and.(jj_ten.eq.1).and.(SDIM.eq.3))) then
+              if (ifine.eq.0) then
+               !do nothing
+              else if (ifine.eq.1) then
+               ibase=ibase+1
+              else
+               print *,"ifine invalid: ",ifine
+               stop
+              endif
+              if (kfine.eq.0) then
+               !do nothing
+              else if (kfine.eq.1) then
+               kbase=kbase+1
+              else
+               print *,"kfine invalid: ",kfine
+               stop
+              endif
+             else if (((ii_ten.eq.2).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                      ((ii_ten.eq.3).and.(jj_ten.eq.2).and.(SDIM.eq.3))) then
+              if (jfine.eq.0) then
+               !do nothing
+              else if (jfine.eq.1) then
+               jbase=jbase+1
+              else
+               print *,"jfine invalid: ",jfine
+               stop
+              endif
+              if (kfine.eq.0) then
+               !do nothing
+              else if (kfine.eq.1) then
+               kbase=kbase+1
+              else
+               print *,"kfine invalid: ",kfine
+               stop
+              endif
+             else
+              print *,"ii_ten,jj_ten invalid: ",ii_ten,jj_ten
+              stop
+             endif
+
+             statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
+               (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+             statecomp_data_local=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
+
+             top_sum= &
+              tensorstate(D_DECL(ibase,jbase,kbase),statecomp_data_local)
+             bottom_sum= &
+              tensormass(D_DECL(ibase,jbase,kbase),statecomp_data_local)
+
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
+              ! do nothing
+             else if (levelrz.eq.COORDSYS_RZ) then
+              if (ii_ten.ne.jj_ten) then
+               if ((ibase.eq.0).and.(ifine.eq.0)) then
+                top_sum=zero
+               else if ((ibase.gt.0).or.(ifine.eq.1)) then
+                !do nothing
+               else
+                print *,"ibase or ifine invalid"
+                stop
+               endif
+              else if (ii_ten.eq.jj_ten) then
+               !do nothing
+              else
+               print *,"ii_ten or jj_ten invalid"
+               stop
+              endif
+             else
+              print *,"levelrz invalid"
+              stop
+             endif
+
+             if (bottom_sum.gt.zero) then
+              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)= &
+               top_sum/bottom_sum
+             else if (bottom_sum.eq.zero) then 
+              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)=zero
+             else
+              print *,"bottom_sum invalid"
+              stop
+             endif
+
+            enddo !istate=1..ENUM_NUM_TENSOR_TYPE
+
+           enddo !ifine=0,1
+           enddo !jfine=0,1
+#if (AMREX_SPACEDIM==3)
+           enddo !kfine=0,1
+#endif
+
+          enddo !icrse=growlo(1),growhi(1)
+          enddo !jcrse=growlo(2),growhi(2)
+          enddo !kcrse=growlo(3),growhi(3)
+         else 
+          print *,"imap invalid: ",imap
+          stop
+         endif
+
+        else if (fort_store_elastic_data(im).eq.0) then
+         ! do nothing
+        else
+         print *,"fort_store_elastic_data(im) invalid"
+         stop
+        endif
+
+       else if (num_materials_viscoelastic.eq.0) then
+        ! do nothing
+       else
+        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+        stop
+       endif
+
+      enddo ! im=1..num_materials
+
 
       do veldir=1,SDIM
 

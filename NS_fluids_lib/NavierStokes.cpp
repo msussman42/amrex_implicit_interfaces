@@ -19492,6 +19492,25 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
  MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
  MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
+
+ MultiFab* tensor_bucket_state;
+ MultiFab* tensor_bucket_mass;
+
+ //ngrow=2
+ tensor_bucket_state=new MultiFab(grids,dmap,
+    NUM_CELL_ELASTIC+1,
+    2,
+    MFInfo().SetTag("tensor_bucket_state"),FArrayBoxFactory());
+ //scomp=0 ncomp=2 ngrow=2
+ tensor_bucket_state->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
+
+  //ngrow=2
+ tensor_bucket_mass=new MultiFab(grids,dmap,
+    NUM_CELL_ELASTIC+1,
+    2,
+    MFInfo().SetTag("tensor_bucket_mass"),FArrayBoxFactory());
+ //scomp=0 ncomp=2 ngrow=2
+ tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
  
  Vector< int > grids_per_proc;
  grids_per_proc.resize(amrex::ParallelDescriptor::NProcs());
@@ -19766,6 +19785,9 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
    FArrayBox& consfab=(*conserve)[mfi];
 
+   FArrayBox& tensorstate=(*tensor_bucket_state)[mfi];
+   FArrayBox& tensormass=(*tensor_bucket_mass)[mfi];
+
    FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
    FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
    FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
@@ -19871,6 +19893,10 @@ NavierStokes::split_scalar_advection(int im_extension) {
     xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
     ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
     zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
+    tensorstate.dataPtr(),
+    ARLIM(tensorstate.loVect()),ARLIM(tensorstate.hiVect()),
+    tensormass.dataPtr(),
+    ARLIM(tensormass.loVect()),ARLIM(tensormass.hiVect()),
     &stokes_flow,
     &nc_conserve,
     &map_forward_direct_split[normdir_here],
@@ -20053,6 +20079,8 @@ NavierStokes::split_scalar_advection(int im_extension) {
    delete side_bucket_mom[dir];
    delete side_bucket_mass[dir];
   }
+  delete tensor_bucket_state;
+  delete tensor_bucket_mass;
 
   delete_localMF(VELADVECT_MF,1);
   delete_localMF(DEN_RECON_MF,1);
