@@ -8174,10 +8174,7 @@ stop
       real(amrex_real) :: cell_temperature
 
       integer :: i,j,k
-      integer :: ibase,jbase,kbase
       integer :: irefine,jrefine,krefine,nrefine
-      integer :: irefine2,jrefine2,krefine2,nrefine2
-      integer :: iofs,jofs,kofs
       real(amrex_real), INTENT(in) :: dt,cur_time_slab,elastic_time
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
@@ -8204,12 +8201,8 @@ stop
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
-      integer :: ii,jj
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) told_average,told_weight,local_weight
-      real(amrex_real) rval
-      integer, parameter :: remove_checkerboard=1
       real(amrex_real) dxmax
       real(amrex_real) heating_buffer
       real(amrex_real) LS_clamped
@@ -8429,196 +8422,14 @@ stop
        do jrefine=0,1
        do irefine=0,1
         nrefine=4*krefine+2*jrefine+irefine+1
-
-         ! plastic_strain
-        dir_local=ENUM_NUM_TENSOR_TYPE_BASE+1
-
-        told_average=zero
-        told_weight=zero
-        kofs=0
-#if (AMREX_SPACEDIM==3)
-        do kofs=0,1
-#endif
-        do jofs=0,1
-        do iofs=0,1
-         ibase=i
-         jbase=j
-         kbase=k
-         irefine2=iofs
-         jrefine2=jofs
-         krefine2=kofs
-         rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
-
-         nrefine2=4*krefine2+2*jrefine2+irefine2+1
-
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          local_weight=one
-         else if (levelrz.eq.COORDSYS_RZ) then
-          local_weight=abs(rval)
-         else
-          print *,"levelrz invalid: ",levelrz
-          stop
-         endif
-         told_average=told_average+local_weight* &
-           told(D_DECL(ibase,jbase,kbase), &
-              (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
-         told_weight=told_weight+local_weight
-        enddo !iofs=0,1
-        enddo !jofs=0,1
-#if (AMREX_SPACEDIM==3)
-        enddo !kofs=0,1
-#endif
-        if (told_weight.gt.zero) then
-         told_average=told_average/told_weight
-        else
-         print *,"told_weight invalid: ",told_weight
-         stop
-        endif
-
-         ! plastic_strain
-        point_told(dir_local)=told_average
-
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
-
-         call stress_index(dir_local,ii,jj)
-
 !FIX ME
-         if (remove_checkerboard.eq.1) then
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE+1
 
-          told_average=zero
-          told_weight=zero
-          kofs=0
-#if (AMREX_SPACEDIM==3)
-          do kofs=0,1
-#endif
-          do jofs=0,1
-          do iofs=0,1
-           ibase=i
-           jbase=j
-           kbase=k
-           irefine2=iofs
-           jrefine2=jofs
-           krefine2=kofs
-           if (ii.eq.jj) then
-            rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
-           else if (((ii.eq.1).and.(jj.eq.2)).or. &
-                    ((ii.eq.2).and.(jj.eq.1))) then
-            if (irefine.eq.0) then
-             ibase=i-1+iofs
-             irefine2=1-iofs
-             rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
-            else if (irefine.eq.1) then
-             ibase=i+iofs
-             irefine2=1-iofs
-             rval=half*(xsten(2*iofs,1)+xsten(1,1))
-            else
-             print *,"irefine invalid: ",irefine
-             stop
-            endif
-            if (jrefine.eq.0) then
-             jbase=j-1+jofs
-             jrefine2=1-jofs
-            else if (jrefine.eq.1) then
-             jbase=j+jofs
-             jrefine2=1-jofs
-            else
-             print *,"jrefine invalid: ",jrefine
-             stop
-            endif
-           else if (((ii.eq.1).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
-                    ((ii.eq.3).and.(jj.eq.1).and.(SDIM.eq.3))) then
-            if (irefine.eq.0) then
-             ibase=i-1+iofs
-             irefine2=1-iofs
-             rval=half*(xsten(-2+2*iofs,1)+xsten(-1,1))
-            else if (irefine.eq.1) then
-             ibase=i+iofs
-             irefine2=1-iofs
-             rval=half*(xsten(2*iofs,1)+xsten(1,1))
-            else
-             print *,"irefine invalid: ",irefine
-             stop
-            endif
-            if (krefine.eq.0) then
-             kbase=k-1+kofs
-             krefine2=1-kofs
-            else if (krefine.eq.1) then
-             kbase=k+kofs
-             krefine2=1-kofs
-            else
-             print *,"krefine invalid: ",krefine
-             stop
-            endif
+         point_told(dir_local)= &
+          told(D_DECL(i,j,k), &
+            (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
 
-           else if (((ii.eq.2).and.(jj.eq.3).and.(SDIM.eq.3)).or. &
-                    ((ii.eq.3).and.(jj.eq.2).and.(SDIM.eq.3))) then
-
-            if (jrefine.eq.0) then
-             jbase=j-1+jofs
-             jrefine2=1-jofs
-            else if (jrefine.eq.1) then
-             jbase=j+jofs
-             jrefine2=1-jofs
-            else
-             print *,"jrefine invalid: ",jrefine
-             stop
-            endif
-            if (krefine.eq.0) then
-             kbase=k-1+kofs
-             krefine2=1-kofs
-            else if (krefine.eq.1) then
-             kbase=k+kofs
-             krefine2=1-kofs
-            else
-             print *,"krefine invalid: ",krefine
-             stop
-            endif
-            rval=half*(xsten(0,1)+xsten(2*iofs-1,1))
-
-           else
-            print *,"ii,jj invalid: ",ii,jj
-            stop
-           endif
-
-           nrefine2=4*krefine2+2*jrefine2+irefine2+1
-
-           if (levelrz.eq.COORDSYS_CARTESIAN) then
-            local_weight=one
-           else if (levelrz.eq.COORDSYS_RZ) then
-            local_weight=abs(rval)
-           else
-            print *,"levelrz invalid: ",levelrz
-            stop
-           endif
-           told_average=told_average+local_weight* &
-             told(D_DECL(ibase,jbase,kbase), &
-                (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
-           told_weight=told_weight+local_weight
-          enddo !iofs=0,1
-          enddo !jofs=0,1
-#if (AMREX_SPACEDIM==3)
-          enddo !kofs=0,1
-#endif
-          if (told_weight.gt.zero) then
-           told_average=told_average/told_weight
-          else
-           print *,"told_weight invalid: ",told_weight
-           stop
-          endif
-
-         else if (remove_checkerboard.eq.0) then
-
-          told_average= &
-            told(D_DECL(i,j,k), &
-              (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
-
-         else
-          print *,"remove_checkerboard invalid: ",remove_checkerboard
-          stop
-         endif
-                 
-         point_told(dir_local)=told_average
-        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
+        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE+1
 
         cell_temperature=eosdata(D_DECL(i,j,k), &
          im_critical*num_state_material+1+ENUM_TEMPERATUREVAR) 
@@ -13124,6 +12935,8 @@ stop
       integer vofcomp
       integer im
       real(amrex_real) dxmax
+      real(amrex_real) projected_tennew
+      real(amrex_real) minA,maxA,current_A
 
       real(amrex_real) mom2(SDIM)
       real(amrex_real) xsten_MAC(-nhalf:nhalf,SDIM)
@@ -13185,6 +12998,8 @@ stop
       integer ibase,jbase,kbase
       integer icrse,jcrse,kcrse
       integer ifine,jfine,kfine
+      integer irefine2,jrefine2,krefine2,nrefine2
+      integer iofs,jofs,kofs
       integer nfine
       integer ifine_stencil,jfine_stencil,kfine_stencil
       integer ifine_stencil_lo,jfine_stencil_lo,kfine_stencil_lo
@@ -13198,7 +13013,6 @@ stop
 
       real(amrex_real) voltotal_target
       real(amrex_real) voltotal_depart
-      real(amrex_real) voltotal_depart_refine(ENUM_NUM_REFINE_DENSITY_TYPE)
       real(amrex_real) LS_voltotal_depart
 
       real(amrex_real) mofdata_grid(recon_ncomp)
@@ -13550,12 +13364,12 @@ stop
           (EILE_flag.eq.3)) then  ! always LE
        ! do nothing
       else 
-       print *,"EILE flag invalid"
+       print *,"EILE flag invalid ",EILE_flag
        stop
       endif
 
       if ((dir_counter.lt.0).or.(dir_counter.ge.SDIM)) then
-       print *,"dir_counter invalid"
+       print *,"dir_counter invalid ",dir_counter
        stop
       endif
 
@@ -13570,12 +13384,12 @@ stop
       endif
 
       if (recon_ncomp.ne.num_materials*ngeom_recon) then
-       print *,"recon_ncomp invalid"
+       print *,"recon_ncomp invalid ",recon_ncomp
        stop
       endif
 
       if ((map_forward.ne.0).and.(map_forward.ne.1)) then
-       print *,"map_forward invalid"
+       print *,"map_forward invalid ",map_forward
        stop
       endif
 
@@ -13583,7 +13397,7 @@ stop
        ! do nothing
       else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
-        print *,"dimension crash"
+        print *,"dimension crash ",SDIM
         stop
        endif
       else
@@ -14114,8 +13928,6 @@ stop
 
         nfine=4*kfine+2*jfine+ifine+1
 
-        voltotal_depart_refine(nfine)=zero
-
         call CISBOXFINE(xsten_accept,nhalf, &
          xlo,dx, &
          icrse,jcrse,kcrse, &
@@ -14495,8 +14307,6 @@ stop
             if (volint.gt.zero) then
 
              voltotal_depart=voltotal_depart+LS_voltotal_depart
-             voltotal_depart_refine(nfine)= &
-                voltotal_depart_refine(nfine)+LS_voltotal_depart
 
              im_refine_density=0
 
@@ -14665,6 +14475,7 @@ stop
                  do istate=1,ENUM_NUM_TENSOR_TYPE
                   statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE_REFINE+ &
                     (istate-1)*ENUM_NUM_REFINE_DENSITY_TYPE
+                   !donate_data=density(im) * A
                   donate_data= &
                    conserve(D_DECL(idonate,jdonate,kdonate), &
                      fine_offset+ &
@@ -14713,6 +14524,7 @@ stop
                veldata(CISLCOMP_FTARGET+im)+multi_volume_fluid(im)
 
               ! TESSELLATE_FLUIDS
+              ! material volume from target (accepting) region
               refine_vol_bucket(im)= &
                refine_vol_bucket(im)+multi_volume_fluid(im)
 
@@ -14860,6 +14672,16 @@ stop
 
              if ((istate.ge.ENUM_NUM_TENSOR_TYPE_BASE+1).and. &
                  (istate.le.ENUM_NUM_TENSOR_TYPE)) then
+
+              if ((istate-ENUM_NUM_TENSOR_TYPE_BASE.ge.1).and. &
+                  (istate-ENUM_NUM_TENSOR_TYPE_BASE.le. &
+                   ENUM_NUM_TENSOR_EXTRA)) then
+               !do nothing
+              else
+               print *,"istate invalid ",istate
+               stop
+              endif
+
               ii_ten=1
               jj_ten=1
              else if ((istate.ge.1).and. &
@@ -14968,14 +14790,6 @@ stop
               stop
              endif
 
-             if (voltotal_depart_refine(nfine).gt.zero) then
-              !do nothing
-             else
-              print *,"voltotal_depart_refine invalid: ",nfine, &
-                      voltotal_depart_refine(nfine)
-              stop
-             endif 
- 
             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
            else 
@@ -14993,7 +14807,8 @@ stop
          else if (num_materials_viscoelastic.eq.0) then
           ! do nothing
          else
-          print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+          print *,"num_materials_viscoelastic invalid:fort_vfrac_split ", &
+            num_materials_viscoelastic
           stop
          endif
  
@@ -15398,7 +15213,7 @@ stop
                 (fort_material_type(im).le.MAX_NUM_EOS)) then
              ! do nothing
             else
-             print *,"fort_material_type invalid"
+             print *,"fort_material_type invalid ",fort_material_type
              stop
             endif
             massdepart=veldata(CISLCOMP_STATES+dencomp_data)
@@ -15573,14 +15388,16 @@ stop
          else if (fort_store_elastic_data(im).eq.0) then
           ! do nothing
          else
-          print *,"fort_store_elastic_data(im) invalid"
+          print *,"fort_store_elastic_data(im) invalid ", &
+            fort_store_elastic_data
           stop
          endif
 
         else if (num_materials_viscoelastic.eq.0) then
          ! do nothing
         else
-         print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+         print *,"num_materials_viscoelastic invalid:fort_vfrac_split ", &
+           num_materials_viscoelastic
          stop
         endif
 
@@ -15601,7 +15418,7 @@ stop
 
       enddo
       enddo
-      enddo ! icrse,jcrse,kcrse -> growntilebox(0 ghost cells)
+      enddo ! icrse,jcrse,kcrse -> growntilebox(1 ghost cells)
 
       do im=1,num_materials
 
@@ -15739,15 +15556,139 @@ stop
               stop
              endif
 
+             kofs=0
+#if (AMREX_SPACEDIM==3)
+             do kofs=0,1
+#endif
+             do jofs=0,1
+             do iofs=0,1
+
+              ibase=icrse
+              jbase=jcrse
+              kbase=kcrse
+              irefine2=iofs
+              jrefine2=jofs
+              krefine2=kofs
+              if (ii_ten.eq.jj_ten) then
+               !do nothing
+              else if (((ii_ten.eq.1).and.(jj_ten.eq.2)).or. &
+                       ((ii_ten.eq.2).and.(jj_ten.eq.1))) then
+               if (ifine.eq.0) then
+                ibase=icrse-1+iofs
+                irefine2=1-iofs
+               else if (ifine.eq.1) then
+                ibase=icrse+iofs
+                irefine2=1-iofs
+               else
+                print *,"ifine invalid: ",ifine
+                stop
+               endif
+               if (jfine.eq.0) then
+                jbase=jcrse-1+jofs
+                jrefine2=1-jofs
+               else if (jfine.eq.1) then
+                jbase=jcrse+jofs
+                jrefine2=1-jofs
+               else
+                print *,"jfine invalid: ",jfine
+                stop
+               endif
+              else if (((ii_ten.eq.1).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                       ((ii_ten.eq.3).and.(jj_ten.eq.1).and.(SDIM.eq.3))) then
+               if (ifine.eq.0) then
+                ibase=icrse-1+iofs
+                irefine2=1-iofs
+               else if (ifine.eq.1) then
+                ibase=icrse+iofs
+                irefine2=1-iofs
+               else
+                print *,"ifine invalid: ",ifine
+                stop
+               endif
+               if (kfine.eq.0) then
+                kbase=kcrse-1+kofs
+                krefine2=1-kofs
+               else if (kfine.eq.1) then
+                kbase=kcrse+kofs
+                krefine2=1-kofs
+               else
+                print *,"kfine invalid: ",kfine
+                stop
+               endif
+
+              else if (((ii_ten.eq.2).and.(jj_ten.eq.3).and.(SDIM.eq.3)).or. &
+                       ((ii_ten.eq.3).and.(jj_ten.eq.2).and.(SDIM.eq.3))) then
+
+               if (jfine.eq.0) then
+                jbase=jcrse-1+jofs
+                jrefine2=1-jofs
+               else if (jfine.eq.1) then
+                jbase=jcrse+jofs
+                jrefine2=1-jofs
+               else
+                print *,"jfine invalid: ",jfine
+                stop
+               endif
+               if (kfine.eq.0) then
+                kbase=kcrse-1+kofs
+                krefine2=1-kofs
+               else if (kfine.eq.1) then
+                kbase=kcrse+kofs
+                krefine2=1-kofs
+               else
+                print *,"kfine invalid: ",kfine
+                stop
+               endif
+
+              else
+               print *,"ii_ten,jj_ten invalid: ",ii_ten,jj_ten
+               stop
+              endif
+
+              nrefine2=4*krefine2+2*jrefine2+irefine2+1
+
+              current_A= &
+                tennew(D_DECL(ibase,jbase,kbase),statecomp_data+nrefine2)
+
+              if ((iofs.eq.0).and.(jofs.eq.0).and.(kofs.eq.0)) then
+               maxA=current_A
+               minA=current_A
+              else if ((iofs.eq.1).or.(jofs.eq.1).or.(kofs.eq.1)) then
+               if (current_A.gt.maxA) then
+                maxA=current_A
+               endif
+               if (current_A.lt.minA) then
+                minA=current_A
+               endif
+              else
+               print *,"iofs,jofs, or kofs invalid"
+               stop
+              endif
+                
+             enddo !iofs=0,1
+             enddo !jofs=0,1
+#if (AMREX_SPACEDIM==3)
+             enddo !kofs=0,1
+#endif
+
              if (bottom_sum.gt.zero) then
-              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)= &
-               top_sum/bottom_sum
+              projected_tennew=top_sum/bottom_sum
              else if (bottom_sum.eq.zero) then 
-              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)=zero
+              projected_tennew=zero
              else
               print *,"bottom_sum invalid"
               stop
              endif
+             if ((projected_tennew.le.(one+EPS10)*maxA).and. &
+                 (projected_tennew.ge.(one-EPS10)*minA)) then
+              !do nothing
+             else
+              print *,"projected_tennew invalid"
+              stop
+             endif
+
+             tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data+nfine)= &
+                projected_tennew
 
             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
@@ -15768,14 +15709,16 @@ stop
         else if (fort_store_elastic_data(im).eq.0) then
          ! do nothing
         else
-         print *,"fort_store_elastic_data(im) invalid"
+         print *,"fort_store_elastic_data(im) invalid ", &
+           fort_store_elastic_data
          stop
         endif
 
        else if (num_materials_viscoelastic.eq.0) then
         ! do nothing
        else
-        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+        print *,"num_materials_viscoelastic invalid:fort_vfrac_split ", &
+         num_materials_viscoelastic
         stop
        endif
 
@@ -16153,7 +16096,6 @@ stop
 
       real(amrex_real) voltotal_target
       real(amrex_real) voltotal_depart
-      real(amrex_real) voltotal_depart_refine(ENUM_NUM_REFINE_DENSITY_TYPE)
       real(amrex_real) LS_voltotal_depart
 
       real(amrex_real) mofdata_grid(recon_ncomp)
@@ -16455,8 +16397,6 @@ stop
        do ifine=0,1
 
         nfine=4*kfine+2*jfine+ifine+1
-
-        voltotal_depart_refine(nfine)=zero
 
         call CISBOXFINE(xsten_accept,nhalf, &
          xlo,dx, &
@@ -16819,8 +16759,6 @@ stop
             if (volint.gt.zero) then
 
              voltotal_depart=voltotal_depart+LS_voltotal_depart
-             voltotal_depart_refine(nfine)= &
-                voltotal_depart_refine(nfine)+LS_voltotal_depart
 
              do im=1,num_materials
 
