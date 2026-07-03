@@ -1039,15 +1039,12 @@ protected:
       Real time,
       int output_slab,
       int renormalize_flag,
-      int local_truncate,
       const std::string& caller_string);
 
     void prescribe_solid_geometry(
       Real time,
       int output_slab,
       int renormalize_flag);
-
-    void truncate_VOF(Vector<Real>& delta_mass_all);
 
     void getState_tracemag_ALL(int idx);
     void getState_tracemag(int idx);
