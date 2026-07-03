@@ -13955,6 +13955,10 @@ void NavierStokes::tensor_advection_update(int im) {
 
 // called from:
 //  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
+// 
+// NavierStokes::tensor_advection_updateALL() is
+// called before veldiffuseALL() from NavierStokes::do_the_advance
+// Second half of D^{upside down triangle}/Dt
 void NavierStokes::tensor_extrapolation() {
 
  std::string local_caller_string="tensor_extrapolation";

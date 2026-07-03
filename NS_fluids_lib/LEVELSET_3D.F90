@@ -114,6 +114,8 @@ stop
       integer :: im3_present_node
       integer, INTENT(in) :: iten
       integer :: iten_test
+      integer :: ireverse
+      real(amrex_real) :: LL
       real(amrex_real), INTENT(in) :: visc_coef
       real(amrex_real), INTENT(in) :: unscaled_min_curvature_radius
       real(amrex_real) user_tension(num_interfaces)
@@ -1214,6 +1216,47 @@ stop
        do dir2=1,SDIM
         normal_im3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        enddo !dir2=1..sdim
+
+       if (is_ice(im3).eq.1) then
+
+         !master_normal points from im_opp into im
+        do ireverse=0,1
+         call get_iten(im,im3,iten_test)
+         iten_test=iten_test+ireverse*num_interfaces
+          ! default_flag=1 => only the sign is needed
+          ! default_flag=0 => the value is important too.
+         LL=get_user_latent_heat(iten_test,room_temperature,1)
+         if (LL.lt.zero) then
+          do dir2=1,SDIM
+           normal_im3(dir2)=master_normal(dir2)
+          enddo !dir2=1..sdim
+         else if (LL.ge.zero) then
+          !do nothing
+         else
+          print *,"LL invalid ",LL
+          stop
+         endif
+         call get_iten(im_opp,im3,iten_test)
+         iten_test=iten_test+ireverse*num_interfaces
+         LL=get_user_latent_heat(iten_test,room_temperature,1)
+         if (LL.lt.zero) then
+          do dir2=1,SDIM
+           normal_im3(dir2)=-master_normal(dir2)
+          enddo !dir2=1..sdim
+         else if (LL.ge.zero) then
+          !do nothing
+         else
+          print *,"LL invalid ",LL
+          stop
+         endif
+        enddo !ireverse=0,1
+       
+       else if (is_ice(im3).eq.0) then
+        !do nothing
+       else
+        print *,"is_ice(im3) invalid ",im3,is_ice(im3)
+        stop
+       endif
 
       else
        print *,"im3 invalid: ",im3

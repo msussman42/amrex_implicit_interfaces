@@ -1409,7 +1409,7 @@ stop
        else if (ireverse.eq.1) then
         TSAT_FLAG=-TSAT_FLAG
        else
-        print *,"ireverse invalid"
+        print *,"ireverse invalid ",ireverse
         stop
        endif
        if ((TSAT_FLAG.eq.1).or.(TSAT_FLAG.eq.2)) then
@@ -3168,7 +3168,7 @@ stop
         else if (ireverse.eq.1) then
          sign_reverse=-1
         else
-         print *,"ireverse invalid"
+         print *,"ireverse invalid ",ireverse
          stop
         endif
 
