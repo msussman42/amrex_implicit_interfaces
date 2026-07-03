@@ -6693,7 +6693,6 @@ void NavierStokes::prescribe_solid_geometryALL(
   Real time,
   int output_slab,
   int renormalize_flag,
-  int local_truncate,
   const std::string& caller_string) {
 
  if (pattern_test(caller_string,"prescribe_solid_geometryALL")==1) {
@@ -6729,7 +6728,6 @@ void NavierStokes::prescribe_solid_geometryALL(
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-   std::cout << "local_truncate= " << local_truncate << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 
     "press any number then enter:begin prescribe_solid_geometryALL\n";
@@ -6754,33 +6752,6 @@ void NavierStokes::prescribe_solid_geometryALL(
    std::cout << "renormalize_flag " << renormalize_flag << '\n';
    amrex::Error("renormalize_flag invalid");
   }
-
-  if (local_truncate==1) {
-   Vector<Real> delta_mass_all;
-   delta_mass_all.resize(num_materials);
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    if (ilev<finest_level) {
-     ns_level.avgDown(LS_Type,0,num_materials,0);
-     ns_level.MOFavgDown();
-    }
-    ns_level.truncate_VOF(delta_mass_all);
-    if (verbose>0) {
-     if (ParallelDescriptor::IOProcessor()) {
-      for (int im=0;im<num_materials;im++) {
-       std::cout << "truncate statistics: im,delta_mass " << im << ' ' <<
-        delta_mass_all[im] << '\n';
-      } // im
-     } // IOProc?
-    } // verbose>0?
-
-   } // ilev
-
-  } else if (local_truncate==0) {
-   // do nothing
-  } else
-   amrex::Error("local_truncate invalid");
 
   if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
 
@@ -6824,7 +6795,6 @@ void NavierStokes::prescribe_solid_geometryALL(
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-   std::cout << "local_truncate= " << local_truncate << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 
     "press any number then enter:at the end prescribe_solid_geometryALL\n";
@@ -7082,105 +7052,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int output_slab,
 
 }  // end subroutine prescribe_solid_geometry()
 
-
-// called from NavierStokes::prescribe_solid_geometryALL
-void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
-
- std::string local_caller_string="truncate_VOF";
- 
- bool use_tiling=ns_tiling;
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- int finest_level = parent->finestLevel();
-
- MultiFab &S_new = get_new_data(State_Type,project_slab_step+1);
- int nc=STATE_NCOMP;
- if (nc!=S_new.nComp())
-  amrex::Error("nc invalid in truncate_VOF");
-
- if (delta_mass_all.size()!=num_materials)
-  amrex::Error("delta_mass_all has invalid size");
-
- Vector< Vector<Real> > local_delta_mass;
- local_delta_mass.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  local_delta_mass[tid].resize(num_materials); 
-  for (int im=0;im<num_materials;im++)
-   local_delta_mass[tid][im]=0.0;
- } // tid
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string);
-
- const Real* dx = geom.CellSize();
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   FArrayBox& vofnew=S_new[mfi];
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-// F<VOFTOL => F=0.0
-// F>1-VOFTOL => F=1.0
-// sum F_fluid=1  sum F_solid <=1
-// fort_purgeflotsam is declared in: LEVELSET_3D.F90
-   fort_purgeflotsam(
-     local_delta_mass[tid_current].dataPtr(),
-     &level,&finest_level,
-     &cur_time_slab,
-     tilelo,tilehi,
-     fablo,fabhi,&bfact,
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     vofnew.dataPtr(STATECOMP_MOF),
-     ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
-     xlo,dx);
-
- }  // mfi
-} // omp
- ns_reconcile_d_num(LOOP_PURGEFLOTSAM,"truncate_VOF");
-
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int im=0;im<num_materials;im++) {
-   local_delta_mass[0][im]+=local_delta_mass[tid][im];
-  }
- } // tid
-
- ParallelDescriptor::Barrier();
- for (int im=0;im<num_materials;im++) {
-  ParallelDescriptor::ReduceRealSum(local_delta_mass[0][im]);
- }
- for (int im=0;im<num_materials;im++) {
-  delta_mass_all[im]+=local_delta_mass[0][im];
- }
-
-}  // truncate_VOF()
 
 void NavierStokes::output_triangles() {
 

@@ -25702,7 +25702,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  int error_update_flag=0;
    // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE; 
- int local_truncate=0; // do not force removal of flotsam.
 
  if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile, do not update S_new
@@ -25734,9 +25733,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   prescribe_solid_geometryALL(
     cur_time_slab,
     project_slab_step+1,
-    renormalize_flag,
-    local_truncate,
-    local_caller_string);
+    renormalize_flag, //RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE
+    local_caller_string); //post_init_state -> prepare_post_process
 
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile

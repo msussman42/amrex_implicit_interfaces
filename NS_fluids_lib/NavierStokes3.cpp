@@ -678,7 +678,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  init_rest_fraction(local_caller_string);
 
  int renormalize_flag=RENORMALIZE_ONLY;
- int local_truncate=0;
 
  if (level!=0)
   amrex::Error("level invalid sub_nonlinear_advection");
@@ -793,12 +792,11 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  interface_touch_flag=1; //sub_nonlinear_advection
 
- renormalize_flag=RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE;
+ renormalize_flag=RENORMALIZE_ONLY;
  prescribe_solid_geometryALL(
   advect_time_slab,
   advect_slab_step,
   renormalize_flag,
-  local_truncate,
   local_caller_string);
 
  //output:SLOPE_RECON_MF
@@ -857,7 +855,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
       cur_time_slab,
       project_slab_step+1,
       renormalize_flag,
-      local_truncate,
       local_caller_string);
 
      // velocity and pressure
@@ -1031,12 +1028,10 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
  renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
- local_truncate=1;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
    renormalize_flag,
-   local_truncate,
    local_caller_string);
 
  interface_touch_flag=1; //sub_nonlinear_advection
@@ -1748,12 +1743,10 @@ Real NavierStokes::advance(Real time,Real dt) {
     // calls MOFavgDown, LS_Type avgDown
     // projects volume fractions so that sum F_m_fluid=1.
    int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
-   int local_truncate=0;
    prescribe_solid_geometryALL(
      upper_slab_time,
      project_slab_step+1,
      renormalize_flag,
-     local_truncate,
      local_caller_string);
 
    if (verbose>0) {
@@ -2820,12 +2813,10 @@ void NavierStokes::phase_change_code_segment(
   //    appropriate.
   // 2. extend level set functions into the solid.
  int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
- int local_truncate=0;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
    renormalize_flag,
-   local_truncate,
    local_caller_string);
 
  int local_redistribute_main=0;
@@ -4247,12 +4238,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    appropriate.
         // 2. extend level set functions into the solid.
        renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
-       int local_truncate=0;
        prescribe_solid_geometryALL(
         cur_time_slab,
         project_slab_step+1,
         renormalize_flag,
-        local_truncate,local_caller_string);
+        local_caller_string);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
