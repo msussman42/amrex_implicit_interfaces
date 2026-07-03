@@ -8415,6 +8415,20 @@ stop
        gamma_not_min=yield_stress
        gamma_not_max=yield_stress
 
+       if (ENUM_NUM_TENSOR_EXTRA.eq.1) then
+        !do nothing
+       else
+        print *,"expecting ENUM_NUM_TENSOR_EXTRA==1 ",ENUM_NUM_TENSOR_EXTRA
+        stop
+       endif
+       if (ENUM_NUM_TENSOR_TYPE.eq.ENUM_NUM_TENSOR_TYPE_BASE+ &
+               ENUM_NUM_TENSOR_EXTRA) then
+        !do nothing
+       else
+        print *,"ENUM_NUM_TENSOR_TYPE invalid ",ENUM_NUM_TENSOR_TYPE
+        stop
+       endif
+
        krefine=0
 #if (AMREX_SPACEDIM==3)
        do krefine=0,1
@@ -8422,14 +8436,14 @@ stop
        do jrefine=0,1
        do irefine=0,1
         nrefine=4*krefine+2*jrefine+irefine+1
-!FIX ME
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE+1
+
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
 
          point_told(dir_local)= &
           told(D_DECL(i,j,k), &
             (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)
 
-        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE+1
+        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
 
         cell_temperature=eosdata(D_DECL(i,j,k), &
          im_critical*num_state_material+1+ENUM_TEMPERATUREVAR) 
@@ -8495,10 +8509,12 @@ stop
         plastic_work_weight=plastic_work_weight+one
 
         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+
          tnew(D_DECL(i,j,k), &
           (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)= &
           point_tnew(dir_local)
-        enddo
+
+        enddo !dir_local=1,ENUM_NUM_TENSOR_TYPE
 
        enddo !irefine
        enddo !jrefine
@@ -13882,6 +13898,7 @@ stop
 
        ! xmomside,ymomside,zmomside already init to 0 
        ! xmassside,ymassside,zmassside already init to 0 
+       ! tensorstate,tensormass already init to 0 
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,1)
@@ -15416,9 +15433,10 @@ stop
         endif
        enddo ! im=1..num_materials
 
-      enddo
-      enddo
-      enddo ! icrse,jcrse,kcrse -> growntilebox(1 ghost cells)
+      enddo !do icrse=growlo(1),growhi(1)
+      enddo !do jcrse=growlo(2),growhi(2)
+      enddo !do kcrse=growlo(3),growhi(3) 
+            !icrse,jcrse,kcrse -> growntilebox(1 ghost cells)
 
       do im=1,num_materials
 
@@ -15436,6 +15454,7 @@ stop
 
           call growntilebox(tilelo,tilehi,fablo,fabhi, &
            growlo,growhi,0)
+
           do kcrse=growlo(3),growhi(3)
           do jcrse=growlo(2),growhi(2)
           do icrse=growlo(1),growhi(1)
@@ -15679,11 +15698,13 @@ stop
               print *,"bottom_sum invalid"
               stop
              endif
-             if ((projected_tennew.le.(one+EPS10)*maxA).and. &
-                 (projected_tennew.ge.(one-EPS10)*minA)) then
+             if ((projected_tennew.le.maxA+EPS10*abs(maxA)).and. &
+                 (projected_tennew.ge.minA-EPS10*abs(minA))) then
               !do nothing
              else
-              print *,"projected_tennew invalid"
+              print *,"projected_tennew invalid ",projected_tennew
+              print *,"maxA=",maxA
+              print *,"minA=",minA
               stop
              endif
 
