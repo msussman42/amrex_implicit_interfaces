@@ -14021,7 +14021,7 @@ void NavierStokes::tensor_extrapolation() {
       //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
       //called from "make_physics_varsALL" which was called after
       //the phase change update and before this routine was called.
-      resize_levelset(ngrow_distance,LEVELPC_MF);
+      resize_levelset(ngrow_distance+1,LEVELPC_MF);
 
       if (thread_class::nthreads<1)
        amrex::Error("thread_class::nthreads invalid");

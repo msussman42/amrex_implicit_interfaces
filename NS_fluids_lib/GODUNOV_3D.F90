@@ -8619,6 +8619,22 @@ stop
       return
       end subroutine fort_updatetensor
 
+      subroutine get_primary_material_subcell( &
+        dx, &
+        LS_sten, &
+        im_sten)
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) ::  &
+        LS_sten(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      integer, INTENT(out) :: im_sten(D_DECL(0:1,0:1,0:1))
+
+      return
+      end subroutine get_primary_material_subcell
+
         ! called from tensor_extrapolation() in NavierStokes.cpp which is
         ! called from tensor_advecton_update() in NavierStokes.cpp
         ! tensor_advection_update() is called from
@@ -8683,13 +8699,26 @@ stop
       integer im_local_inner(D_DECL(0:1,0:1,0:1))
       integer im_local
 
-      real(amrex_real) LS_sten(num_materials)
       real(amrex_real) Q_extrap(ENUM_NUM_TENSOR_TYPE)
       real(amrex_real) wtsum
       real(amrex_real) wt_local
       real(amrex_real) xcorner(SDIM)
       real(amrex_real) xcorner2(SDIM)
       real(amrex_real) dxmax
+
+      if (ngrow_distance.ge.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid fort_extrapolate_tensor: ", &
+        ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
 
       k1low=0
       k1high=0
@@ -8736,12 +8765,12 @@ stop
       endif
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,4,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance+1,-1)
 
       call checkbound_array(fablo,fabhi,tnew_ptr,0,-1)
 
       told_ptr=>told
-      call checkbound_array(fablo,fabhi,told_ptr,4,-1)
+      call checkbound_array(fablo,fabhi,told_ptr,ngrow_distance,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -8788,10 +8817,6 @@ stop
 
          nrefine=4*krefine+2*jrefine+irefine+1
 
-         do dir_local=1,ENUM_NUM_TENSOR_TYPE
-          Q_extrap(dir_local)=zero
-         enddo
-         
          dir_local=1 
          xcorner(dir_local)= &
           half*(x_sten(0,dir_local)+x_sten(2*irefine-1,dir_local))
@@ -8803,26 +8828,53 @@ stop
           xcorner(dir_local)= &
            half*(x_sten(0,dir_local)+x_sten(2*krefine-1,dir_local))
          endif
-FIX ME
+
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          Q_extrap(dir_local)=zero
+         enddo
          wtsum=zero
 
          do k1=k1low,k1high
          do j1=-ngrow_distance,ngrow_distance
          do i1=-ngrow_distance,ngrow_distance
-          do im=1,num_materials
-           LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
-          enddo
-          call get_primary_material(dx,LS_sten,im_sten)
-          if ((im_sten.eq.im_critical+1).and. &
-              (LS_sten(im_critical+1).ge.band_offset)) then
-           call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
 
-           krefine2=0
+          call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
+
+          krefine2=0
 #if (AMREX_SPACEDIM==3)
-           do krefine2=0,1
+          do krefine2=-1,1
 #endif
-           do jrefine2=0,1
-           do irefine2=0,1
+          do jrefine2=-1,1
+          do irefine2=-1,1
+           do im=1,num_materials
+            call safe_data(i+i1+irefine2,j+j1+jrefine2,k+k1+krefine2,im, &
+              LS_ptr, &
+              LS_local_inner(D_DECL(irefine2,jrefine2,krefine2),im))
+           enddo
+          enddo !irefine2
+          enddo !jrefine2
+#if (AMREX_SPACEDIM==3)
+          enddo !krefine2
+#endif
+          call get_primary_material_subcell(dx,LS_local_inner,im_local_inner)
+
+          krefine2=0
+#if (AMREX_SPACEDIM==3)
+          do krefine2=0,1
+#endif
+          do jrefine2=0,1
+          do irefine2=0,1
+
+           im_sten=im_local_inner(D_DECL(irefine2,jrefine2,krefine2))
+           if ((im_sten.ge.1).and.(im_sten.le.num_materials)) then
+            !do nothing
+           else
+            print *,"im_sten invalid"
+            stop
+           endif
+
+           if (im_sten.eq.im_critical+1) then
+
             nrefine2=4*krefine2+2*jrefine2+irefine2+1
 
             dir_local=1 
@@ -8853,23 +8905,18 @@ FIX ME
                wt_local*Told(D_DECL(i+i1,j+j1,k+k1), &
                 (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
             enddo
-
-           enddo !irefine2
-           enddo !jrefine2
+           else if (im_sten.ne.im_critical+1) then
+            ! do nothing
+           else
+            print *,"im_sten invalid"
+            stop
+           endif
+          enddo !irefine2
+          enddo !jrefine2
 #if (AMREX_SPACEDIM==3)
-           enddo !krefine2
+          enddo !krefine2
 #endif
-          else if ((im_sten.ne.im_critical+1).or. &
-                   (LS_sten(im_critical+1).lt.band_offset)) then
-           ! do nothing
-          else
-           print *,"im_sten or LS_sten invalid"
-           print *,"im_sten: ",im_sten
-           print *,"im_critical: ",im_critical
-           print *,"band_offset: ",band_offset
-           print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
-           stop
-          endif
+
          enddo !i1=-ngrow_distance,ngrow_distance
          enddo !j1=-ngrow_distance,ngrow_distance
          enddo !k1=k1low,k1high
