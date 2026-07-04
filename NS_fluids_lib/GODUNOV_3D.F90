@@ -8619,6 +8619,37 @@ stop
       return
       end subroutine fort_updatetensor
 
+      subroutine update_weight(wt_local,icell,ifine)
+      IMPLICIT NONE
+      real(amrex_real), INTENT(inout) :: wt_local
+      integer, intent(in) :: icell
+      integer, intent(in) :: ifine
+
+      if ((wt_local.ge.zero).and.(wt_local.le.one)) then
+       !do nothing
+      else
+       print *,"wt_local invalid ",wt_local
+       stop
+      endif
+
+      if (icell.eq.0) then
+       wt_local=wt_local*0.75d0
+      else if ((icell.eq.-1).and.(ifine.eq.0)) then
+       wt_local=wt_local*0.25d0
+      else if ((icell.eq.1).and.(ifine.eq.1)) then
+       wt_local=wt_local*0.25d0
+      else if ((icell.eq.-1).and.(ifine.eq.1)) then
+       wt_local=zero 
+      else if ((icell.eq.1).and.(ifine.eq.0)) then
+       wt_local=zero 
+      else
+       print *,"icell or ifine invalid ",icell,ifine
+       stop
+      endif
+
+      return
+      end subroutine update_weight
+
       subroutine get_primary_material_subcell( &
         dx, &
         LS_sten, &
@@ -8631,6 +8662,62 @@ stop
       real(amrex_real), INTENT(in) ::  &
         LS_sten(D_DECL(-1:1,-1:1,-1:1),num_materials)
       integer, INTENT(out) :: im_sten(D_DECL(0:1,0:1,0:1))
+      real(amrex_real) :: LS_avg(num_materials)
+      real(amrex_real) :: wt_sum
+      real(amrex_real) :: wt_local
+      integer ifine,jfine,kfine
+      integer icell,jcell,kcell
+      integer im
+
+      kfine=0
+#if (AMREX_SPACEDIM==3)
+      do kfine=0,1
+#endif
+      do jfine=0,1
+      do ifine=0,1
+
+       do im=1,num_materials
+        LS_avg(im)=zero
+       enddo
+       wt_sum=zero
+
+       kcell=0
+#if (AMREX_SPACEDIM==3)
+       do kcell=-1,1
+#endif
+       do jcell=-1,1
+       do icell=-1,1
+        wt_local=one
+        call update_weight(wt_local,icell,ifine)
+        call update_weight(wt_local,jcell,jfine)
+        call update_weight(wt_local,kcell,kfine)
+        do im=1,num_materials
+         LS_avg(im)=LS_avg(im)+ &
+          wt_local*LS_sten(D_DECL(icell,jcell,kcell),im)
+        enddo
+        wt_sum=wt_sum+wt_local 
+       enddo !icell
+       enddo !jcell
+#if (AMREX_SPACEDIM==3)
+       enddo !kcell
+#endif
+       if (wt_sum.gt.zero) then
+        !do nothing
+       else
+        print *,"wt_sum invalid ",wt_sum
+        stop
+       endif
+       do im=1,num_materials
+        LS_avg(im)=LS_avg(im)/wt_sum
+       enddo
+       call get_primary_material(dx,LS_avg, &
+        im_sten(D_DECL(ifine,jfine,kfine)) )
+
+      enddo !ifine
+      enddo !jfine
+#if (AMREX_SPACEDIM==3)
+      enddo !kfine
+#endif
 
       return
       end subroutine get_primary_material_subcell
@@ -8807,7 +8894,7 @@ stop
         if ((im_local.ge.1).and.(im_local.le.num_materials)) then
          !do nothing
         else
-         print *,"im_local invalid"
+         print *,"im_local invalid ",im_local
          stop
         endif
 
@@ -8869,7 +8956,7 @@ stop
            if ((im_sten.ge.1).and.(im_sten.le.num_materials)) then
             !do nothing
            else
-            print *,"im_sten invalid"
+            print *,"im_sten invalid ",im_sten
             stop
            endif
 
@@ -8908,7 +8995,7 @@ stop
            else if (im_sten.ne.im_critical+1) then
             ! do nothing
            else
-            print *,"im_sten invalid"
+            print *,"im_sten invalid ",im_sten
             stop
            endif
           enddo !irefine2
