@@ -1023,6 +1023,7 @@ Vector<int> NavierStokes::FSI_refine_factor;
 Vector<int> NavierStokes::FSI_bounding_box_ngrow; 
 
 Vector<int> NavierStokes::ns_max_grid_size; 
+int NavierStokes::coarsest_level_CISL = 0;
 
 int NavierStokes::CTML_FSI_numsolids = 0;
 
@@ -2729,6 +2730,13 @@ NavierStokes::read_params ()
     max_level_for_use=ns_max_level;
     pp.queryAdd("tecplot_max_level",tecplot_max_level);
     pp.queryAdd("max_level_for_use",max_level_for_use);
+
+    pp.queryAdd("coarsest_level_CISL",coarsest_level_CISL);
+    if ((coarsest_level_CISL==0)||
+        (coarsest_level_CISL==1)) {
+     //do nothing
+    } else
+     amrex::Error("expecting coarsest_level_CISL = 0 or 1");
 
     int max_level_two_materials=999;
     pp.queryAdd("max_level_two_materials",max_level_two_materials);
@@ -5499,6 +5507,17 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
 
+    int local_min_max_grid_size=32;
+    ppcg.queryAdd("min_max_grid_size", local_min_max_grid_size);
+    if (ns_max_grid_size[0]>=local_min_max_grid_size) {
+     //do nothing
+    } else {
+     std::cout << "amr.max_grid_size[0] = " << ns_max_grid_size[0]  << '\n';
+     std::cout << "cg.min_max_grid_size = "<<local_min_max_grid_size << '\n';
+     std::cout << "consider making ns.coarsest_level_CISL=1\n";
+     amrex::Error("require amr.max_grid_size[0]>=cg.min_max_grid_size");
+    }
+
     int cg_restart_period=ABecLaplacian::CG_def_restart_period;
     ppcg.queryAdd("restart_period",cg_restart_period);
     int cg_maxiter=ABecLaplacian::CG_def_maxiter;
@@ -6495,6 +6514,8 @@ NavierStokes::read_params ()
       std::cout << "ilev, max_grid_size " << ilev << ' ' <<
        ns_max_grid_size[ilev] << '\n';
      }
+     std::cout << "coarsest_level_CISL= " << coarsest_level_CISL << '\n';
+
      for (int ilev=0;ilev<ns_max_level;ilev++) {
       std::cout << "ilev, ns_n_error_buf " << ilev << ' ' <<
        ns_n_error_buf[ilev] << '\n';
@@ -20384,6 +20405,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     dx, xlo, prob_lo, 
     &upper_slab_time, 
     &level,
+    &coarsest_level_CISL,
     &max_level,
     &max_level_for_use,
     &nblocks,

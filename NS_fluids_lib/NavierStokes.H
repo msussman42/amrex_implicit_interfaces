@@ -1681,6 +1681,8 @@ protected:
      // given lagrangian element.
     static Vector<int> FSI_bounding_box_ngrow; //def: ngrow_make_distance
 
+    static int coarsest_level_CISL;  //default=0
+
     static Vector<int> ns_max_grid_size;
 
     //
