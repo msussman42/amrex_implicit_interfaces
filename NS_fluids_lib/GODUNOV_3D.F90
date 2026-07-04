@@ -8621,6 +8621,8 @@ stop
 
         ! called from tensor_extrapolation() in NavierStokes.cpp which is
         ! called from tensor_advecton_update() in NavierStokes.cpp
+        ! tensor_advection_update() is called from
+        ! NavierStokes::tensor_advection_updateALL() in NavierStokes3.cpp
       subroutine fort_extrapolate_tensor( &
        level, &
        finest_level, &
@@ -8671,22 +8673,23 @@ stop
       integer :: dir_local
       integer, PARAMETER :: nhalf=3
       integer :: im
-      integer :: im_local
       integer :: im_sten
 
       real(amrex_real) x_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) x_extrap(-nhalf:nhalf,SDIM)
-      real(amrex_real) LS_local(num_materials)
+      real(amrex_real) LS_local_outer(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real) LS_local_inner(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      integer im_local_outer(D_DECL(0:1,0:1,0:1))
+      integer im_local_inner(D_DECL(0:1,0:1,0:1))
+      integer im_local
+
       real(amrex_real) LS_sten(num_materials)
       real(amrex_real) Q_extrap(ENUM_NUM_TENSOR_TYPE)
       real(amrex_real) wtsum
       real(amrex_real) wt_local
       real(amrex_real) xcorner(SDIM)
       real(amrex_real) xcorner2(SDIM)
-      real(amrex_real) band_offset
       real(amrex_real) dxmax
-
-      real(amrex_real), parameter :: FSI_band_cells=0.0d0
 
       k1low=0
       k1high=0
@@ -8703,10 +8706,6 @@ stop
       tnew_ptr=>tnew
 
       call get_dxmax(dx,bfact,dxmax)
-       ! see also:
-       ! H_radius in subroutine fort_elastic_force
-       ! FSI_extend_cells in subroutine fort_manage_elastic_velocity
-      band_offset=FSI_band_cells*dxmax
 
       if (ENUM_NUM_TENSOR_TYPE_BASE.eq.2*SDIM) then
        ! do nothing
@@ -8752,148 +8751,156 @@ stop
 
        call gridsten_level(x_sten,i,j,k,level,nhalf)
 
-       do im=1,num_materials
-        LS_local(im)=LS(D_DECL(i,j,k),im)
-       enddo
-       call get_primary_material(dx,LS_local,im_local)
-
-       if ((im_local.eq.im_critical+1).and. &
-           (LS_local(im_critical+1).ge.band_offset)) then
-        ! do nothing
-       else if ((im_local.ne.im_critical+1).or. &
-                (LS_local(im_critical+1).lt.band_offset)) then
-
-        if ((im_local.ge.1).and. &
-            (im_local.le.num_materials)) then
-
-         krefine=0
+       krefine=0
 #if (AMREX_SPACEDIM==3)
-         do krefine=0,1
+       do krefine=-1,1
 #endif
-         do jrefine=0,1
-         do irefine=0,1
-          nrefine=4*krefine+2*jrefine+irefine+1
+       do jrefine=-1,1
+       do irefine=-1,1
+        do im=1,num_materials
+         LS_local_outer(D_DECL(irefine,jrefine,krefine),im)= &
+            LS(D_DECL(i+irefine,j+jrefine,k+krefine),im)
+        enddo
+       enddo !irefine
+       enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+       enddo !krefine
+#endif
+       call get_primary_material_subcell(dx,LS_local_outer,im_local_outer)
 
-          do dir_local=1,ENUM_NUM_TENSOR_TYPE
-           Q_extrap(dir_local)=zero
-          enddo
+       krefine=0
+#if (AMREX_SPACEDIM==3)
+       do krefine=0,1
+#endif
+       do jrefine=0,1
+       do irefine=0,1
+        im_local=im_local_outer(D_DECL(irefine,jrefine,krefine))
+        if ((im_local.ge.1).and.(im_local.le.num_materials)) then
+         !do nothing
+        else
+         print *,"im_local invalid"
+         stop
+        endif
+
+        if (im_local.eq.im_critical+1) then
+         ! do nothing
+        else if (im_local.ne.im_critical+1) then
+
+         nrefine=4*krefine+2*jrefine+irefine+1
+
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          Q_extrap(dir_local)=zero
+         enddo
          
-          dir_local=1 
+         dir_local=1 
+         xcorner(dir_local)= &
+          half*(x_sten(0,dir_local)+x_sten(2*irefine-1,dir_local))
+         dir_local=2 
+         xcorner(dir_local)= &
+          half*(x_sten(0,dir_local)+x_sten(2*jrefine-1,dir_local))
+         if (SDIM.eq.3) then
+          dir_local=SDIM
           xcorner(dir_local)= &
-           half*(x_sten(0,dir_local)+x_sten(2*irefine-1,dir_local))
-          dir_local=2 
-          xcorner(dir_local)= &
-           half*(x_sten(0,dir_local)+x_sten(2*jrefine-1,dir_local))
-          if (SDIM.eq.3) then
-           dir_local=SDIM
-           xcorner(dir_local)= &
-            half*(x_sten(0,dir_local)+x_sten(2*krefine-1,dir_local))
-          endif
+           half*(x_sten(0,dir_local)+x_sten(2*krefine-1,dir_local))
+         endif
+FIX ME
+         wtsum=zero
 
-          wtsum=zero
+         do k1=k1low,k1high
+         do j1=-ngrow_distance,ngrow_distance
+         do i1=-ngrow_distance,ngrow_distance
+          do im=1,num_materials
+           LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
+          enddo
+          call get_primary_material(dx,LS_sten,im_sten)
+          if ((im_sten.eq.im_critical+1).and. &
+              (LS_sten(im_critical+1).ge.band_offset)) then
+           call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
 
-          do k1=k1low,k1high
-          do j1=-ngrow_distance,ngrow_distance
-          do i1=-ngrow_distance,ngrow_distance
-           do im=1,num_materials
-            LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
-           enddo
-           call get_primary_material(dx,LS_sten,im_sten)
-           if ((im_sten.eq.im_critical+1).and. &
-               (LS_sten(im_critical+1).ge.band_offset)) then
-            call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
-
-            krefine2=0
+           krefine2=0
 #if (AMREX_SPACEDIM==3)
-            do krefine2=0,1
+           do krefine2=0,1
 #endif
-            do jrefine2=0,1
-            do irefine2=0,1
-             nrefine2=4*krefine2+2*jrefine2+irefine2+1
+           do jrefine2=0,1
+           do irefine2=0,1
+            nrefine2=4*krefine2+2*jrefine2+irefine2+1
 
-             dir_local=1 
+            dir_local=1 
+            xcorner2(dir_local)= &
+             half*(x_extrap(0,dir_local)+x_extrap(2*irefine2-1,dir_local))
+            dir_local=2 
+            xcorner2(dir_local)= &
+             half*(x_extrap(0,dir_local)+x_extrap(2*jrefine2-1,dir_local))
+            if (SDIM.eq.3) then
+             dir_local=SDIM
              xcorner2(dir_local)= &
-              half*(x_extrap(0,dir_local)+x_extrap(2*irefine2-1,dir_local))
-             dir_local=2 
-             xcorner2(dir_local)= &
-              half*(x_extrap(0,dir_local)+x_extrap(2*jrefine2-1,dir_local))
-             if (SDIM.eq.3) then
-              dir_local=SDIM
-              xcorner2(dir_local)= &
-               half*(x_extrap(0,dir_local)+x_extrap(2*krefine2-1,dir_local))
-             endif
+              half*(x_extrap(0,dir_local)+x_extrap(2*krefine2-1,dir_local))
+            endif
 
-             wt_local=zero
-             do dir_local=1,SDIM
-              wt_local=wt_local+(xcorner(dir_local)-xcorner2(dir_local))**2
-             enddo
-             if (wt_local.gt.zero) then
-              wt_local=one/wt_local
-             else
-              print *,"wt_local invalid: ",wt_local
-              stop
-             endif
-             wtsum=wtsum+wt_local
-             do dir_local=1,ENUM_NUM_TENSOR_TYPE
-              Q_extrap(dir_local)=Q_extrap(dir_local)+ &
-                wt_local*Told(D_DECL(i+i1,j+j1,k+k1), &
-                 (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
-             enddo
+            wt_local=zero
+            do dir_local=1,SDIM
+             wt_local=wt_local+(xcorner(dir_local)-xcorner2(dir_local))**2
+            enddo
+            if (wt_local.gt.zero) then
+             wt_local=one/wt_local
+            else
+             print *,"wt_local invalid: ",wt_local
+             stop
+            endif
+            wtsum=wtsum+wt_local
+            do dir_local=1,ENUM_NUM_TENSOR_TYPE
+             Q_extrap(dir_local)=Q_extrap(dir_local)+ &
+               wt_local*Told(D_DECL(i+i1,j+j1,k+k1), &
+                (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine2)
+            enddo
 
-            enddo !irefine2
-            enddo !jrefine2
+           enddo !irefine2
+           enddo !jrefine2
 #if (AMREX_SPACEDIM==3)
-            enddo !krefine2
+           enddo !krefine2
 #endif
-           else if ((im_sten.ne.im_critical+1).or. &
-                    (LS_sten(im_critical+1).lt.band_offset)) then
-            ! do nothing
-           else
-            print *,"im_sten or LS_sten invalid"
-            print *,"im_sten: ",im_sten
-            print *,"im_critical: ",im_critical
-            print *,"band_offset: ",band_offset
-            print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
-            stop
-           endif
-          enddo !i1=-ngrow_distance,ngrow_distance
-          enddo !j1=-ngrow_distance,ngrow_distance
-          enddo !k1=k1low,k1high
-           
-          if (wtsum.eq.zero) then
+          else if ((im_sten.ne.im_critical+1).or. &
+                   (LS_sten(im_critical+1).lt.band_offset)) then
            ! do nothing
-          else if (wtsum.gt.zero) then
-           do dir_local=1,ENUM_NUM_TENSOR_TYPE
-            Q_extrap(dir_local)=Q_extrap(dir_local)/wtsum
-           enddo
           else
-           print *,"wtsum invalid: ",wtsum
+           print *,"im_sten or LS_sten invalid"
+           print *,"im_sten: ",im_sten
+           print *,"im_critical: ",im_critical
+           print *,"band_offset: ",band_offset
+           print *,"LS_sten(im_critical+1): ",LS_sten(im_critical+1)
            stop
           endif
-
+         enddo !i1=-ngrow_distance,ngrow_distance
+         enddo !j1=-ngrow_distance,ngrow_distance
+         enddo !k1=k1low,k1high
+           
+         if (wtsum.eq.zero) then
+          ! do nothing
+         else if (wtsum.gt.zero) then
           do dir_local=1,ENUM_NUM_TENSOR_TYPE
-           tnew(D_DECL(i,j,k), &
-            (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)= &
-            Q_extrap(dir_local)
+           Q_extrap(dir_local)=Q_extrap(dir_local)/wtsum
           enddo
+         else
+          print *,"wtsum invalid: ",wtsum
+          stop
+         endif
 
-         enddo !irefine
-         enddo !jrefine
-#if (AMREX_SPACEDIM==3)
-         enddo !krefine
-#endif
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          tnew(D_DECL(i,j,k), &
+           (dir_local-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nrefine)= &
+           Q_extrap(dir_local)
+         enddo
+
         else
          print *,"im_local invalid: ",im_local
          stop
         endif
-       else
-        print *,"im_local or LS_local invalid"
-        print *,"im_critical: ",im_critical
-        print *,"im_local: ",im_local
-        print *,"LS_local: ",LS_local(im_critical+1)
-        stop
-       endif
 
+       enddo !irefine
+       enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+       enddo !krefine
+#endif
       enddo !i
       enddo !j
       enddo !k
