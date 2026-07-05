@@ -22317,6 +22317,13 @@ end subroutine initialize2d
        print *,"max_level_for_use invalid: ",max_level_for_use
        stop
       endif
+      if ((coarsest_level_CISL.ge.0).and. &
+          (coarsest_level_CISL.le.max_level_for_use)) then
+       !do nothing
+      else
+       print *,"coarsest_level_CISL invalid ",coarsest_level_CISL
+       stop
+      endif
       if ((nblocks.lt.0).or.(ncoarseblocks.lt.0).or. &
           (nblocks.ge.10).or.(ncoarseblocks.ge.10)) then
        print *,"nblocks or ncoarseblocks out of range"
@@ -22373,10 +22380,10 @@ end subroutine initialize2d
        rflag=errfab(D_DECL(i,j,k))
        tagflag=0
 
-       if ((coarsest_level_CISL.eq.1).and.(level.eq.0)) then
+       if ((level.ge.0).and.(level.lt.coarsest_level_CISL)) then
         rflag=one
         tagflag=1
-       else if ((coarsest_level_CISL.eq.0).or.(level.gt.0)) then
+       else if (level.ge.coarsest_level_CISL) then
  
         if (level.lt.max_level_for_use) then
 
