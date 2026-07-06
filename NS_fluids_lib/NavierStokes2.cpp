@@ -7601,7 +7601,8 @@ void NavierStokes::output_zones(
 
  int bfact=parent->Space_blockingFactor(level);
 
- if (level<=tecplot_finest_level) {
+ if ((level>=coarsest_level_CISL)&&
+     (level<=tecplot_finest_level)) {
 
    //plot_grid_type==0 data interpolated to nodes.
   if (plot_grid_type==0) {
@@ -8258,7 +8259,7 @@ void NavierStokes::output_zones(
   } else
    amrex::Error("plot_grid_type invalid");
 
- } else if (level<=finest_level) {
+ } else if ((level>tecplot_finest_level)&&(level<=finest_level)) {
 
   // do nothing
 
@@ -8307,7 +8308,8 @@ void NavierStokes::Sanity_output_zones(
  if (tecplot_max_level<tecplot_finest_level)
   tecplot_finest_level=tecplot_max_level;
 
- if (level<=tecplot_finest_level) {
+ if ((level>=coarsest_level_CISL)&&
+     (level<=tecplot_finest_level)) {
 
   BoxArray cgrids(grids);
   BoxList cgrids_list(cgrids);
@@ -8444,7 +8446,7 @@ void NavierStokes::Sanity_output_zones(
   } else 
    amrex::Error("grids_per_level is corrupt");
 
- } else if (level<=finest_level) {
+ } else if ((level>tecplot_finest_level)&&(level<=finest_level)) {
 
   // do nothing
 

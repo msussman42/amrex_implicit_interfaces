@@ -30,7 +30,11 @@ namespace amrex{
 
 int ABecLaplacian::mglib_blocking_factor = 2;
 
-int ABecLaplacian::min_max_grid_size = 32;
+#if (AMREX_SPACEDIM==3)
+int ABecLaplacian::min_max_grid_size = 64;
+#else
+int ABecLaplacian::min_max_grid_size = 128;
+#endif
 
 int ABecLaplacian::nghostRHS=0;
 int ABecLaplacian::nghostSOLN=1;
@@ -978,11 +982,18 @@ ABecLaplacian::ABecLaplacian (
  } else
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
+ int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 64 : 128);
+
  ppcg.queryAdd("min_max_grid_size", min_max_grid_size);
- if (min_max_grid_size>=32) {
+ if (min_max_grid_size>=default_min_max_grid_size) {
   // do nothing
- } else
-  amrex::Error("expecting cg.min_max_grid_size>=32");
+ } else {
+  std::cout << "default_min_max_grid_size= " << 
+    default_min_max_grid_size << '\n';
+  std::cout << "cg.min_max_grid_size= " << 
+    min_max_grid_size << '\n';
+  amrex::Error("expecting cg.min_max_grid_size>=default_min_max_grid_size");
+ }
 
  ppcg.queryAdd("maxiter", CG_def_maxiter);
  ppcg.queryAdd("restart_period", CG_def_restart_period);
@@ -1150,11 +1161,11 @@ ABecLaplacian::ABecLaplacian (
 
      //the larger local_max_grid_size, the more effective the
      //IC precondiioner
-    if (local_max_grid_size>=32) {
+    if (local_max_grid_size>=default_min_max_grid_size) {
      gbox[level]=one_cgrid;
      gbox[level].maxSize(local_max_grid_size);
     } else
-     amrex::Error("local_max_grid_size>=32 required");
+     amrex::Error("local_max_grid_size>=default_min_max_grid_size required");
    } else
     amrex::Error("cfd_max_grid_size.size() invalid");
 

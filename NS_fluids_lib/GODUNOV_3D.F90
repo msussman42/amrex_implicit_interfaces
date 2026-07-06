@@ -13841,6 +13841,9 @@ stop
             print *,"fort_denconst(im) ",fort_denconst(im)
             print *,"dencomp_data=",dencomp_data
             print *,"normdir=",normdir
+            print *,"level=",level
+            print *,"finest_level=",finest_level
+            print *,"dx=",dx
             stop
            endif
           else if (constant_density_all_time(im).eq.0) then 
