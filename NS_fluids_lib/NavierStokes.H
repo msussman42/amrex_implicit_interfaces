@@ -791,6 +791,7 @@ protected:
 
     void correct_flotsam();
 
+    void clear_interface_vars(); 
     void split_scalar_advection(int im_extension); 
     void split_scalar_advectionALL(int im_extension);
  

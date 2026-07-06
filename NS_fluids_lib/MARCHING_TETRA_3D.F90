@@ -1298,8 +1298,8 @@ stop
          endif
          close(4)
          close(5)
-       enddo
-       enddo
+       enddo ! igrid=0,grids_per_level(ilev+1)-1
+       enddo ! ilev=0,finest_level
       enddo
 ! ipass
       if (SDIM.eq.3) then

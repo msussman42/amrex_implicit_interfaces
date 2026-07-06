@@ -5507,8 +5507,20 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
 
-    int local_min_max_grid_size=32;
+    int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 64 : 128);
+    int local_min_max_grid_size=default_min_max_grid_size;
+
     ppcg.queryAdd("min_max_grid_size", local_min_max_grid_size);
+    if (local_min_max_grid_size>=default_min_max_grid_size) {
+     //do nothing
+    } else {
+     std::cout << "default_min_max_grid_size= " <<
+      default_min_max_grid_size << '\n';
+     std::cout << "cg.min_max_grid_size= " <<
+      local_min_max_grid_size << '\n';
+     amrex::Error("expecting cg.min_max_grid_size>=default_min_max_grid_size");
+    }
+
     if (ns_max_grid_size[0]>=local_min_max_grid_size) {
      //do nothing
     } else {
@@ -19352,7 +19364,33 @@ NavierStokes::split_scalar_advectionALL(int im_extension) {
 #endif
 
 } //end subroutine split_scalar_advectionALL
- 
+
+void
+NavierStokes::clear_interface_vars() {
+
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ int ncomp_state=S_new.nComp();
+ if (ncomp_state!=STATECOMP_STATES+
+     num_materials*(num_state_material+ngeom_raw)+1)
+  amrex::Error("ncomp_state invalid");
+
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
+ for (int im=0;im<num_materials;im++) {
+  if (ns_is_rigid(im)==0) {
+   S_new.setVal(0.0,
+      STATECOMP_MOF+im*ngeom_raw,
+      ngeom_raw,1);
+   LS_new.setVal(0.0,im,1,1);
+  } else if (ns_is_rigid(im)==1) {
+   //do nothing
+  } else
+   amrex::Error("ns_is_rigid(im) invalid");
+ } // im=0..num_materials-1
+
+} //end subroutine clear_interface_vars() 
 
 // Lagrangian solid info lives at t=t^n 
 // order_direct_split=base_step mod 2
@@ -19488,18 +19526,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
   profile_time_start=ParallelDescriptor::second();
  }
 
- for (int im=0;im<num_materials;im++) {
-  if (ns_is_rigid(im)==0) {
-   S_new.setVal(0.0,
-      STATECOMP_MOF+im*ngeom_raw,
-      ngeom_raw,1);
-   LS_new.setVal(0.0,im,1,1);
-  } else if (ns_is_rigid(im)==1) {
-   //do nothing
-  } else
-   amrex::Error("ns_is_rigid(im) invalid");
- } // im=0..num_materials-1
-
  Vector< int > grids_per_proc;
  grids_per_proc.resize(amrex::ParallelDescriptor::NProcs());
  for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
@@ -19519,117 +19545,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
   // do nothing
  } else
   amrex::Error("dir_absolute_direct_split invalid");
-
- if (im_extension==-1) {
-
-  S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
-
-  if (divu_outer_sweeps==0) {
-   S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
-  } else if ((divu_outer_sweeps>=1)&&
-            (divu_outer_sweeps<num_divu_outer_sweeps)) {
-   //do nothing
-  } else
-   amrex::Error("divu_outer_sweeps invalid");
-
-  for (int im=0;im<num_materials;im++) {
-   if (ns_is_rigid(im)==0) {
-    S_new.setVal(0.0,
-      STATECOMP_STATES+im*num_state_material,
-      num_state_material,1);
-   } else if (ns_is_rigid(im)==1) {
-    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-     S_new.setVal(0.0,
-      STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
-    } else if (solidheat_flag==2) { // Neumann
-     // do nothing
-    } else if (solidheat_flag==1) { // dirichlet
-     // do nothing
-    } else
-     amrex::Error("solidheat_flag invalid");
-   } else
-    amrex::Error("ns_is_rigid(im) invalid");
-  } // im=0..num_materials-1
-
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=num_materials)) {
-
-   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC invalid");
-
-   if (NUM_CELL_ELASTIC_REFINE==
-       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
-
-   if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
-    // do nothing
-   } else
-    amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
-
-   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
-
-  } else if (num_materials_viscoelastic==0) {
-
-   if (NUM_CELL_ELASTIC==0) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC invalid");
-
-   if (NUM_CELL_ELASTIC_REFINE==0) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
-
-  } else
-   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
-
-  if ((num_materials_compressible>=1)&&
-      (num_materials_compressible<=num_materials)) {
-
-   if (NUM_CELL_REFINE_DENSITY==
-       num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
- 
-   if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
-    // do nothing
-   } else
-    amrex::Error("(Refine_Density_new.nComp()!=NUM_CELL_REFINE_DENSITY)");
-
-   Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
-  } else if (num_materials_compressible==0) {
-
-   if (NUM_CELL_REFINE_DENSITY==0) {
-    // do nothing
-   } else
-    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
-
-  } else
-   amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
-  if (dir_absolute_direct_split==0) {
-
-   // initialize the error indicator to be 0.0
-   S_new.setVal(0.0,ncomp_state-1,1,1);
-
-  } else if ((dir_absolute_direct_split==1)||
-             (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
-   // do nothing
-  } else {
-   amrex::Error("dir_absolute_direct_split invalid");
-  }
-
- } else if (im_extension==0) {
-
-  //do nothing
-
- } else
-  amrex::Error("im_extension invalid");
 
  if (level>=coarsest_level_CISL) {
 
@@ -19669,6 +19584,7 @@ NavierStokes::split_scalar_advection(int im_extension) {
    tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
 
    // in: split_scalar_advection
+   // ngrow=2
    getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
    //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
@@ -19747,6 +19663,111 @@ NavierStokes::split_scalar_advection(int im_extension) {
     side_bucket_mass[dir]->setVal(0.0,0,2,1);
    }  // dir = 0..sdim-1
 
+   S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+
+   if (divu_outer_sweeps==0) {
+    S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+   } else if ((divu_outer_sweeps>=1)&&
+              (divu_outer_sweeps<num_divu_outer_sweeps)) {
+    //do nothing
+   } else
+    amrex::Error("divu_outer_sweeps invalid");
+
+   for (int im=0;im<num_materials;im++) {
+    if (ns_is_rigid(im)==0) {
+     S_new.setVal(0.0,
+      STATECOMP_STATES+im*num_state_material,
+      num_state_material,1);
+    } else if (ns_is_rigid(im)==1) {
+     if (solidheat_flag==0) {  // thermal diffuse in solid (default)
+      S_new.setVal(0.0,
+       STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
+     } else if (solidheat_flag==2) { // Neumann
+      // do nothing
+     } else if (solidheat_flag==1) { // dirichlet
+      // do nothing
+     } else
+      amrex::Error("solidheat_flag invalid");
+    } else
+     amrex::Error("ns_is_rigid(im) invalid");
+   } // im=0..num_materials-1
+
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=num_materials)) {
+
+    if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC invalid");
+
+    if (NUM_CELL_ELASTIC_REFINE==
+        num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+ 
+    if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+     // do nothing
+    } else
+     amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
+ 
+    Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
+
+   } else if (num_materials_viscoelastic==0) {
+
+    if (NUM_CELL_ELASTIC==0) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC invalid");
+
+    if (NUM_CELL_ELASTIC_REFINE==0) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
+   } else
+    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+   if ((num_materials_compressible>=1)&&
+       (num_materials_compressible<=num_materials)) {
+
+    if (NUM_CELL_REFINE_DENSITY==
+        num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+ 
+    if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
+     // do nothing
+    } else
+     amrex::Error("(Refine_Density_new.nComp()!=NUM_CELL_REFINE_DENSITY)");
+
+    Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
+
+   } else if (num_materials_compressible==0) {
+
+    if (NUM_CELL_REFINE_DENSITY==0) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+   } else
+    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+
+   if (dir_absolute_direct_split==0) {
+
+    // initialize the error indicator to be 0.0
+    S_new.setVal(0.0,ncomp_state-1,1,1);
+
+   } else if ((dir_absolute_direct_split==1)||
+              (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
+    // do nothing
+   } else {
+    amrex::Error("dir_absolute_direct_split invalid");
+   }
+
+   clear_interface_vars();
+
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
@@ -19787,6 +19808,13 @@ NavierStokes::split_scalar_advection(int im_extension) {
       // this is the original data
     FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
     FArrayBox& denfab=(*localMF[DEN_RECON_MF])[mfi];
+
+    if (1==0) {
+     int interior_only=0;
+     tecplot_debug(denfab,xlo,fablo,fabhi,dx,-1,0,0,
+       num_materials*num_state_material,interior_only);
+    }
+
     FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
     FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF_local])[mfi];
@@ -19943,6 +19971,8 @@ NavierStokes::split_scalar_advection(int im_extension) {
    ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
   } else if (im_extension==0) {
+
+   clear_interface_vars();
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -22375,6 +22405,9 @@ void NavierStokes::writeInterfaceReconstruction() {
  Vector<int> grids_per_level;
  grids_per_level.resize(finest_level+1);
  for (int ilev=finest_level;ilev>=0;ilev--) {
+  grids_per_level[ilev]=0;
+ }
+ for (int ilev=finest_level;ilev>=coarsest_level_CISL;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   grids_per_level[ilev]=ns_level.grids.size();
    // NavierStokes2.cpp: num_materials materials at once
@@ -22389,7 +22422,8 @@ void NavierStokes::writeInterfaceReconstruction() {
 
   for (int im=1;im<=num_materials;im++) {
     // in: MARCHING_TETRA_3D.F90
-   fort_combinetriangles(grids_per_level.dataPtr(),
+   fort_combinetriangles(
+    grids_per_level.dataPtr(),
     &finest_level,
     &nsteps,
     &im,
@@ -22575,6 +22609,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  Vector<int> grids_per_level_array;
  grids_per_level_array.resize(finest_level+1);
+ for (int ilev=finest_level;ilev>=0;ilev--) {
+  grids_per_level_array[ilev]=0;
+ }
  Vector<BoxArray> cgrids_minusBA_array;
  cgrids_minusBA_array.resize(finest_level+1);
 
@@ -22815,7 +22852,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  UtilCreateDirectoryDestructive(util_path);
 
- for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
+ for (int ilev=tecplot_finest_level;ilev>=coarsest_level_CISL;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
   ns_level.debug_ngrow(MACDIV_MF,1,local_caller_string);
@@ -22946,7 +22983,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   delete presmf;
   delete lsdist;
   ns_level.delete_localMF(MOM_DEN_MF,1);
- }  // ilev=tecplot_finest_level ... 0
+ }  // ilev=tecplot_finest_level ... coarsest_level_CISL
 
  ParallelDescriptor::Barrier();
 
@@ -22965,7 +23002,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } // n 
 
  int total_number_grids=0;
- for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+ for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
   total_number_grids+=grids_per_level_array[ilev];
  }
 
@@ -22976,7 +23013,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
 
  int temp_number_grids=0;
- for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+ for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
   BoxArray cgrids_minusBA;
   cgrids_minusBA=cgrids_minusBA_array[ilev];
   int bfact=parent->Space_blockingFactor(ilev);
@@ -22993,7 +23030,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    }
    temp_number_grids++;
   } // igrid
- } // ilev
+ } // for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++)
 
  if (temp_number_grids!=total_number_grids)
   amrex::Error("temp_number_grids invalid");
@@ -23079,26 +23116,33 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
    Vector<const MultiFab*> mf_tower_MOF;
-   mf_tower_MOF.resize(tecplot_finest_level+1);
+   mf_tower_MOF.resize(tecplot_finest_level+1-coarsest_level_CISL);
    Vector<std::string> varnames_MOF;
    varnames_MOF.resize(ncomp_plot_MOF);
 
    const Vector<Geometry>& ns_geom=parent->Geom();
-   Vector<IntVect> ref_ratio;
-   ref_ratio.resize(tecplot_finest_level+1);
-   Vector<int> level_steps;
-   level_steps.resize(tecplot_finest_level+1);
 
-   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+   Vector<Geometry> ns_geom_shift;
+   ns_geom_shift.resize(tecplot_finest_level+1-coarsest_level_CISL);
+   for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
+    ns_geom_shift[ilev-coarsest_level_CISL]=ns_geom[ilev];
+   }
+   
+   Vector<IntVect> ref_ratio;
+   ref_ratio.resize(tecplot_finest_level+1-coarsest_level_CISL);
+   Vector<int> level_steps;
+   level_steps.resize(tecplot_finest_level+1-coarsest_level_CISL);
+
+   for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
-    mf_tower_MOF[ilev]=ns_level.localMF[SLOPE_RECON_MF];
+    mf_tower_MOF[ilev-coarsest_level_CISL]=ns_level.localMF[SLOPE_RECON_MF];
    }
 
-   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+   for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     ref_ratio[ilev][dir]=2;
+     ref_ratio[ilev-coarsest_level_CISL][dir]=2;
     }
-    level_steps[ilev]=nsteps;
+    level_steps[ilev-coarsest_level_CISL]=nsteps;
    } 
 
    std::stringstream steps_string_stream(std::stringstream::in |
@@ -23162,20 +23206,22 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     amrex::Error("icomp_MOF!=ncomp_plot_MOF");
 
 #ifdef AMREX_USE_HDF5
-   WriteMultiLevelPlotfileHDF5(plotfilename_MOF,
-     tecplot_finest_level+1, //nlevels
+   WriteMultiLevelPlotfileHDF5(
+     plotfilename_MOF,
+     tecplot_finest_level+1-coarsest_level_CISL, //nlevels
      mf_tower_MOF,
      varnames_MOF,
-     ns_geom,   
+     ns_geom_shift, 
      cur_time_slab,
      level_steps,
      ref_ratio);
 #else
-   WriteMultiLevelPlotfile(plotfilename_MOF,
-     tecplot_finest_level+1, //nlevels
+   WriteMultiLevelPlotfile(
+     plotfilename_MOF,
+     tecplot_finest_level+1-coarsest_level_CISL, //nlevels
      mf_tower_MOF,
      varnames_MOF,
-     ns_geom,   
+     ns_geom_shift, 
      cur_time_slab,
      level_steps,
      ref_ratio);
@@ -23190,13 +23236,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
 
    Vector<const MultiFab*> mf_tower;
-   mf_tower.resize(tecplot_finest_level+1);
+   mf_tower.resize(tecplot_finest_level+1-coarsest_level_CISL);
    Vector<std::string> varnames;
    varnames.resize(ncomp_plot);
 
-   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+   for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
-    mf_tower[ilev]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
+    mf_tower[ilev-coarsest_level_CISL]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
    }
 
    std::string plotfilename="nddataPLT"; 
@@ -23496,20 +23542,22 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     amrex::Error("icomp+1!=PLOTCOMP_NCOMP");
 
 #ifdef AMREX_USE_HDF5
-   WriteMultiLevelPlotfileHDF5(plotfilename,
-     tecplot_finest_level+1, //nlevels
+   WriteMultiLevelPlotfileHDF5(
+     plotfilename,
+     tecplot_finest_level+1-coarsest_level_CISL, //nlevels
      mf_tower,
      varnames,
-     ns_geom,   
+     ns_geom_shift,   
      cur_time_slab,
      level_steps,
      ref_ratio);
 #else
-   WriteMultiLevelPlotfile(plotfilename,
-     tecplot_finest_level+1, //nlevels
+   WriteMultiLevelPlotfile(
+     plotfilename,
+     tecplot_finest_level+1-coarsest_level_CISL, //nlevels
      mf_tower,
      varnames,
-     ns_geom,   
+     ns_geom_shift,
      cur_time_slab,
      level_steps,
      ref_ratio);
@@ -23679,6 +23727,10 @@ void NavierStokes::writeSanityCheckData(
 
  Vector<int> grids_per_level_array;
  grids_per_level_array.resize(finest_level+1);
+ for (int ilev=finest_level;ilev>=0;ilev--) {
+  grids_per_level_array[ilev]=0;
+ }
+
  Vector<BoxArray> cgrids_minusBA_array;
  cgrids_minusBA_array.resize(finest_level+1);
 
@@ -23724,7 +23776,7 @@ void NavierStokes::writeSanityCheckData(
  } else
   amrex::Error("tecplot_max_level invalid");
 
- for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
+ for (int ilev=tecplot_finest_level;ilev>=coarsest_level_CISL;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
   MultiFab* raw_data_mf=nullptr;
@@ -23774,12 +23826,12 @@ void NavierStokes::writeSanityCheckData(
    grids_per_level_array[ilev],
    cgrids_minusBA_array[ilev]);
 
- }  // ilev=tecplot_finest_level ... 0
+ }  // ilev=tecplot_finest_level ... coarsest_level_CISL
 
  ParallelDescriptor::Barrier();
 
  int total_number_grids=0;
- for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+ for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
   total_number_grids+=grids_per_level_array[ilev];
  }
 
@@ -23790,7 +23842,7 @@ void NavierStokes::writeSanityCheckData(
  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
 
  int temp_number_grids=0;
- for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+ for (int ilev=coarsest_level_CISL;ilev<=tecplot_finest_level;ilev++) {
   BoxArray cgrids_minusBA;
   cgrids_minusBA=cgrids_minusBA_array[ilev];
   int bfact=parent->Space_blockingFactor(ilev);

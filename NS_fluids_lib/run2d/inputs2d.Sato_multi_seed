@@ -16,10 +16,12 @@ stop_time = 99999.0
 
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   = 0.0 8.0e-3
-geometry.prob_hi   = 6.0e-3 20.0e-3   # MKS
+#dxcoarsest=12.8e-3/32=0.4e-3
+#zblob=12.8e-3 4.8e-3/0.4e-3=12 cells
+#geometry.prob_hi   = 6.0e-3 20.0e-3   #MKS units
+geometry.prob_hi   = 6.4e-3 20.8e-3   #SUBSTRATE GRID ALIGNED MKS units
 geometry.is_periodic= 1 0
 ns.ngrow_distance=6
-
 
 ns.EILE_flag=-1 # weymouth and Yue
 # 0=MOF  2=CMOF
@@ -48,15 +50,19 @@ mg.bot_atol = 1.0e-12
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_nddata_format=0 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
+#ns.visual_nddata_format=0 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
+ns.visual_nddata_format=2 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
 # =0 (TESSELLATE_FLUIDS), 1 (TESSELLATE_ALL), 3 (TESSELLATE_ALL_RASTER),
 # or 4 (TESSELLATE_FLUIDS_ELASTIC)
 ns.visual_tessellate_vfrac=0
+#ns.step_through_data=1
 
 #amr.n_cell    = 16 16 32
-amr.n_cell    = 32 64
-amr.max_level =  0  # 3 levels for finest
-amr.max_grid_size   = 16
+#amr.n_cell    = 32 64
+amr.n_cell    = 16 32
+amr.max_level =  1  # 4 levels for finest
+amr.max_grid_size   = 256 16
+ns.coarsest_level_CISL=1
 cg.min_max_grid_size=256
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=4 4 4
@@ -70,9 +76,11 @@ amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 500    # number of timesteps between checkpoints
+#amr.check_int       = 500    # number of timesteps between checkpoints
+amr.check_int       = 50    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
-amr.plot_int        = 20
+#amr.plot_int        = 20
+amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 #amr.restart         = chk25500
@@ -199,8 +207,8 @@ ns.tempcutoffmax=100.0 100.0 100.0
 
 #(xblob,yblob)=center of vapor bubble
 ns.xblob=0.0 
-ns.yblob=12.0e-3
-ns.zblob=12.0e-3    # before: 11.9375 solid-liquid interface, now 12.0e-3
+ns.yblob=12.8e-3 #history: 11.9376, 12.0e-3, 12.8e-3
+ns.zblob=12.8e-3 #solid-liquid interface
 ns.radblob=0.1  # radius
 ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
                    # pi/6=0.5236  pi/3=1.047  80degree/180*pi=1.396
@@ -212,7 +220,8 @@ ns.zblob2=9.0e-3   # heater position (zlob2,xblob2)
 
 ns.xblob4=77.25  # tref   tmax=tref+zblob4
 ns.yblob4=78.25  #tinit first site temperature(no sites until temperature>tinit
-ns.zblob4=20.0   # superheat condition
+#ns.zblob4=20.0   # superheat condition
+ns.zblob4=5.0   # superheat condition
 #make radblob3 larger to see if seeded bubbles will grow.
 ns.radblob3=0.375e-3  # seed raw radius
 ns.xblob5=0.5e-3    #temp buff region , in the liquid next to solid
@@ -226,7 +235,8 @@ ns.probtype=710
 #sato_model_inputs: Sato & Niceno IJHMT 2017
 #if sato_model_spec_id[im_vapor]==1 then we activate
 #the Sato model.
-ns.sato_model_spec_id=0 1 0 0 0
+#ns.sato_model_spec_id=0 1 0 0 0
+ns.sato_model_spec_id=0 0 0 0 0
 ns.sato_cslope=4.46e-3 #for water
 
 
