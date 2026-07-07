@@ -22635,6 +22635,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   // in: NavierStokes::writeTECPLOT_File
   // (plot_sdim_macro declared up above)
+  // localMF[MULTIFAB_TOWER_PLT_MF] is initialized in:
+  // fort_cellgrid (which is declared in NAVIERSTOKES_3D.F90)
+  // fort_cellgrid is called from:
+  // NavierStokes::output_zones
  allocate_array(1,PLOTCOMP_NCOMP,-1,MULTIFAB_TOWER_PLT_MF);
 
  allocate_levelset_ALL(1,LEVELPC_MF);
@@ -22926,6 +22930,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    //plot_grid_type==0 data interpolated to nodes.
    //plot_grid_type==1 data lives at the cells.
+   //NavierStokes::output_zones is declared in NavierStokes2.cpp
    ns_level.output_zones(
     plot_grid_type,
     visual_fab_output,
@@ -22945,7 +22950,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     ns_level.localMF[MAGTRACE_MF],
     ns_level.localMF[CELL_ELASTIC_FORCE_MF],
     ns_level.localMF[CELLTENSOR_MF],
-    grids_per_level_array[ilev],
+    grids_per_level_array[ilev], //intent(out)
     cgrids_minusBA_array[ilev],
     slice_data.dataPtr(), 
     do_plot,do_slice);
@@ -23070,6 +23075,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    if (ParallelDescriptor::IOProcessor()) {
 
+     //fort_combinezones is declared in NAVIERSTOKES_3D.F90
     fort_combinezones(
      &total_number_grids,
      grids_per_level_array.dataPtr(),
@@ -23582,6 +23588,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    } else
     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
 
+   // localMF[MULTIFAB_TOWER_PLT_MF] is initialized in:
+   // fort_cellgrid (which is declared in NAVIERSTOKES_3D.F90)
+   // fort_cellgrid is called from:
+   // NavierStokes::output_zones
    int data_dir=-1;
    writeSanityCheckData(
     "nddata_piecewise_const",
@@ -23686,8 +23696,10 @@ void NavierStokes::writeSanityCheckData(
   //do nothing
  } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
    //do nothing
- } else
+ } else {
+  std::cout << "tower_mf_id= " << tower_mf_id << '\n';
   amrex::Error("tower_mf_id out of range");
+ }
 
  std::string util_path="./temptecplot";
  UtilCreateDirectoryDestructive(util_path);
@@ -23817,13 +23829,14 @@ void NavierStokes::writeSanityCheckData(
    // data_dir=3  X,Y node
    // data_dir=4  X,Z node
    // data_dir=5  Y,Z node
+   // NavierStokes::Sanity_output_zones is declared in: NavierStokes2.cpp
   ns_level.Sanity_output_zones(
    information_string, 
    tower_mf_id,
    data_dir,
    raw_data_mf,
    ncomp,
-   grids_per_level_array[ilev],
+   grids_per_level_array[ilev], //intent(out)
    cgrids_minusBA_array[ilev]);
 
  }  // ilev=tecplot_finest_level ... coarsest_level_CISL
@@ -23859,7 +23872,7 @@ void NavierStokes::writeSanityCheckData(
    }
    temp_number_grids++;
   } // igrid
- } // ilev=0...tecplot_finest_level
+ } // ilev=coarsest_level_CISL...tecplot_finest_level
 
  int n_root=root_string.length();
  Vector<char> root_char_array;

@@ -1244,11 +1244,15 @@ stop
         endif
 
         if (igrid.ne.gridno_array(iz_gb)) then
-         print *,"igrid invalid"
+         print *,"igrid invalid ",igrid
+         print *,"iz_gb=",iz_gb
+         print *,"gridno_array(iz_gb) ",gridno_array(iz_gb)
          stop
         endif
         if (ilev.ne.levels_array(iz_gb)) then
-         print *,"ilev invalid"
+         print *,"ilev invalid ",ilev
+         print *,"iz_gb=",iz_gb
+         print *,"levels_array(iz_gb) ",levels_array(iz_gb)
          stop
         endif
 
