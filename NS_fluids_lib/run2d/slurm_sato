@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="sato1proc"
+#SBATCH --job-name="sato8proc"
 #SBATCH --cpus-per-task=1
 #SBATCH -N 1
 #SBATCH -n 8
