@@ -129,7 +129,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   amrex::Error("localMF_grow invalid");
  }
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid new_localMF");
 
  BoxArray edge_boxes(grids);
 
@@ -260,7 +260,7 @@ void NavierStokes::getStateMAC_localMF(
   amrex::Error("localMF_grow invalid getstateMAC_localMF");
  }
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getstateMAC_localMF");
 
    // NavierStokes::getStateMAC declared in NavierStokes.cpp
  localMF[idx_MF]=getStateMAC(ngrow,dir,time);
@@ -275,7 +275,7 @@ void NavierStokes::getStateDen_localMF(int idx_MF,int ngrow,Real time) {
   amrex::Error("localMF_grow invalid getStateDen_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateDen_localMF");
 
  localMF[idx_MF]=getStateDen(ngrow,time);
  localMF_grow[idx_MF]=ngrow;
@@ -286,8 +286,11 @@ void NavierStokes::getStateDist_localMF(int idx_MF,int ngrow,
   Real time,
   const std::string& caller_string) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid getStateDist_localMF");
+ }
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -306,10 +309,13 @@ void NavierStokes::getState_localMF_list(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow>=0)&&(ngrow<=8)) {
+ if ((ngrow>=0)&&(ngrow<=ngrow_distance+8)) {
   // do nothing
- } else
+ } else {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
   amrex::Error("ngrow invalid in getState_localMF_list");
+ }
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -331,12 +337,14 @@ void NavierStokes::getState_localMF_listALL(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow>=0)&&(ngrow<=8)) {
+ if ((ngrow>=0)&&(ngrow<=ngrow_distance+8)) {
   // do nothing
  } else {
   std::cout << "idx_MF=" << idx_MF << " ngrow= " << ngrow <<
    " state_index= " << state_index << " scomp.size()=" <<
    scomp.size() << '\n';
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
   amrex::Error("ngrow invalid getState_localMF_listALL");
  }
  if (localMF_grow[idx_MF]==-1) {
@@ -420,7 +428,7 @@ void NavierStokes::getState_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getState_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getState_localMF");
 
  localMF[idx_MF]=getState(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -437,7 +445,7 @@ void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getStateTensor_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateTensor_localMF");
 
  localMF[idx_MF]=getStateTensor(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -454,7 +462,7 @@ void NavierStokes::getStateRefineDensity_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getStateRefineDensity_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateRefineDensity_localMF");
 
  localMF[idx_MF]=getStateRefineDensity(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -465,8 +473,11 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
   Real tag,int clearbdry) {
 
  delete_localMF_if_exist(idx_MF,1);
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid maskfiner_localMF");
+ }
 
  localMF[idx_MF]=maskfiner(ngrow,tag,clearbdry);
  localMF_grow[idx_MF]=ngrow;
@@ -596,8 +607,11 @@ void NavierStokes::delete_localMF_if_exist(int idx_MF,int ncomp) {
 //  mask=tag at fine-fine ghost cell
 MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid maskfiner");
+ }
  
  int finest_level = parent->finestLevel();
  MultiFab* mask=new MultiFab(grids,dmap,1,ngrow,
@@ -5249,8 +5263,11 @@ void NavierStokes::allocate_levelset_ALL(int ngrow,int idx) {
  if (level!=0)
   amrex::Error("level invalid allocate_levelsetALL");
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow = " << ngrow << '\n';
+  std::cout << "ngrow_distance = " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid allocate_levelset_ALL");
+ }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5263,8 +5280,11 @@ void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
  std::string local_caller_string="allocate_levelset";
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid allocate_levelset");
+ }
 
  delete_localMF_if_exist(idx,1);
  getStateDist_localMF(idx,ngrow,cur_time_slab,local_caller_string);
@@ -5277,8 +5297,11 @@ void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
 void NavierStokes::resize_levelset(int ngrow,int idx) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid resize_levelset");
+ }
 
  if (localMF_grow[idx]>=0) {
   // do nothing
@@ -6714,7 +6737,7 @@ void NavierStokes::prescribe_solid_geometryALL(
   std::string local_caller_string="prescribe_solid_geometryALL";
   local_caller_string=caller_string+local_caller_string;
 
-  if ((step_through_data==1)&&(1==1)) {
+  if ((step_through_data==1)&&(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
@@ -6781,7 +6804,7 @@ void NavierStokes::prescribe_solid_geometryALL(
    ns_level.prescribe_solid_geometry(time,output_slab,renormalize_flag);
   } //ilev=finest_level downto level
 
-  if ((step_through_data==1)&&(1==1)) {
+  if ((step_through_data==1)&&(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
@@ -7288,8 +7311,9 @@ void NavierStokes::check_for_NAN_TENSOR_base(
  int ngrid=mfBA.size();
  const Box& domain = geom.Domain();
 
- if (ngrow!=1)
-  amrex::Error("ngrow invalid");
+ if (ngrow!=1) {
+  amrex::Error("ngrow invalid check_for_NAN_TENSOR_base");
+ }
 
  std::fflush(NULL);
 
@@ -7346,7 +7370,7 @@ void NavierStokes::check_for_NAN_TENSOR(
  if (ncomp!=AMREX_SPACEDIM_SQR)
   amrex::Error("ncomp invalid in check_for_NAN_TENSOR");
  if (ngrow!=1)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid in check_for_NAN_TENSOR");
 
  std::fflush(NULL);
 
@@ -9010,8 +9034,11 @@ void NavierStokes::VOF_Recon_ALL(
 
 void NavierStokes::VOF_Recon_resize(int ngrow) {
 
- if ((ngrow<1)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<1)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid VOF_Recon_resize");
+ }
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon");
 
@@ -9627,7 +9654,7 @@ void NavierStokes::level_getshear(
  if ((ngrow==0)||(ngrow==1)) {
   // do nothing
  } else
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid level_getshear");
 
  bool use_tiling=ns_tiling;
 
