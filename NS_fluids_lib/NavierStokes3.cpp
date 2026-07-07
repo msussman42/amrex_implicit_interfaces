@@ -1364,11 +1364,71 @@ void NavierStokes::tensor_advection_updateALL() {
 
   avgDownALL_TENSOR();
 
+  if (step_through_data==1) {
+   int basestep_debug=nStep();
+   parent->writeDEBUG_PlotFile(
+    local_caller_string,
+    basestep_debug,
+    SDC_outer_sweeps,
+    project_slab_step,
+    divu_outer_sweeps);
+   std::cout << "press any number then enter: before tensor_extrapolation \n";
+   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+   std::cout << "dt_slab= " << dt_slab << '\n';
+   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+   std::cout << "num_divu_outer_sweeps= " << 
+     num_divu_outer_sweeps << '\n';
+   std::cout << "slab_step= " << 
+     slab_step << '\n';
+   std::cout << "project_slab_step= " << 
+     project_slab_step << '\n';
+   std::cout << "SDC_outer_sweeps= " << 
+     SDC_outer_sweeps << '\n';
+   std::cout << "FSI_outer_sweeps= " << 
+     FSI_outer_sweeps << '\n';
+   std::cout << "num_FSI_outer_sweeps= " << 
+      num_FSI_outer_sweeps << '\n';
+   std::cout << "NFSI_LIMIT= " << 
+      NFSI_LIMIT << '\n';
+   int n_input;
+   std::cin >> n_input;
+  }
+
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.tensor_extrapolation();
   }
   avgDownALL_TENSOR();
+
+  if (step_through_data==1) {
+   int basestep_debug=nStep();
+   parent->writeDEBUG_PlotFile(
+    local_caller_string,
+    basestep_debug,
+    SDC_outer_sweeps,
+    project_slab_step,
+    divu_outer_sweeps);
+   std::cout << "press any number then enter: after tensor_extrapolation \n";
+   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
+   std::cout << "dt_slab= " << dt_slab << '\n';
+   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+   std::cout << "num_divu_outer_sweeps= " << 
+     num_divu_outer_sweeps << '\n';
+   std::cout << "slab_step= " << 
+     slab_step << '\n';
+   std::cout << "project_slab_step= " << 
+     project_slab_step << '\n';
+   std::cout << "SDC_outer_sweeps= " << 
+     SDC_outer_sweeps << '\n';
+   std::cout << "FSI_outer_sweeps= " << 
+     FSI_outer_sweeps << '\n';
+   std::cout << "num_FSI_outer_sweeps= " << 
+      num_FSI_outer_sweeps << '\n';
+   std::cout << "NFSI_LIMIT= " << 
+      NFSI_LIMIT << '\n';
+   int n_input;
+   std::cin >> n_input;
+  }
 
  } else if (num_materials_viscoelastic==0) {
   // do nothing
