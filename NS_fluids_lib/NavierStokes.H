@@ -658,6 +658,7 @@ protected:
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
 
+    void tensor_extrapolationALL();
     void tensor_extrapolation();
     void tensor_advection_update(int im);
     void tensor_advection_updateALL();

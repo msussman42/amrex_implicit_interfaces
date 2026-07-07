@@ -14373,8 +14373,11 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
  } else
   amrex::Error("ngrow_distance invalid");
 
- if ((ngrow<1)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<1)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid prepare_mask_nbr");
+ }
 
  delete_localMF_if_exist(MASK_NBR_MF,1);
 
@@ -25994,7 +25997,7 @@ NavierStokes::post_init_state () {
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
 
- if (step_through_data==1) {
+ if ((step_through_data==1)&&(1==0)) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
     local_caller_string,
@@ -26094,7 +26097,7 @@ NavierStokes::post_init_state () {
 
  CopyNewToOldALL();
 
- if (step_through_data==1) {
+ if ((step_through_data==1)&&(1==0)) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
     local_caller_string,
@@ -27581,8 +27584,11 @@ MultiFab* NavierStokes::getStateDist (int ngrow,Real time,
    std::cout << "getStateDist: time,caller_string " << time << ' ' << 
      caller_string <<'\n';
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow = " << ngrow << '\n';
+  std::cout << "ngrow_distance = " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid getStateDist");
+ }
 
  
  MultiFab& S_new=get_new_data(LS_Type,project_slab_step+1);
