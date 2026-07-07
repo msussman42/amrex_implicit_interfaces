@@ -8290,8 +8290,10 @@ void NavierStokes::Sanity_output_zones(
   //do nothing
  } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
    //do nothing
- } else
+ } else {
+  std::cout << "tower_mf_id= " << tower_mf_id << '\n';
   amrex::Error("tower_mf_id out of range");
+ }
 
  const Real* dx = geom.CellSize();
  const Real* prob_lo = geom.ProbLo();
