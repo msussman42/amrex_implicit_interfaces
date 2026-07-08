@@ -14204,14 +14204,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       if (num_divu_outer_sweeps.lt.1) then
-       print *,"num_divu_outer_sweeps invalid SEM_MAC_TO_CELL"
+       print *,"num_divu_outer_sweeps invalid SEM_MAC_TO_CELL ", &
+               num_divu_outer_sweeps
        stop
       endif
       if ((divu_outer_sweeps.ge.0).and. &
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
       else
-       print *,"divu_outer_sweeps invalid SEM_MAC_TO_CELL"
+       print *,"divu_outer_sweeps invalid SEM_MAC_TO_CELL ", &
+               divu_outer_sweeps
        stop
       endif
 
@@ -15010,6 +15012,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                 ! do nothing
                else
                 print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+                print *,"ns_time_order=",ns_time_order
+                print *,"advect_iter=",advect_iter
+                print *,"SDC_outer_sweeps =",SDC_outer_sweeps
+                print *,"divu_outer_sweeps =",divu_outer_sweeps
+                print *,"num_divu_outer_sweeps =",num_divu_outer_sweeps
                 stop
                endif
 
@@ -15034,6 +15041,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ! do nothing
               else
                print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+               print *,"ns_time_order=",ns_time_order
+               print *,"advect_iter=",advect_iter
+               print *,"SDC_outer_sweeps =",SDC_outer_sweeps
+               print *,"divu_outer_sweeps =",divu_outer_sweeps
+               print *,"num_divu_outer_sweeps =",num_divu_outer_sweeps
                stop
               endif
 
