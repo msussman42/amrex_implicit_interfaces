@@ -119,8 +119,8 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100 # 500  (plot_int=10 for testing)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
-cg.min_max_grid_size=64
+amr.max_grid_size   = 128 16
+cg.min_max_grid_size=128
 amr.file_name_digits=7
 #amr.restart         = chk0001500
 #amr.trace   =1
@@ -156,7 +156,7 @@ ns.gravity        = -980.0   # cgs
 # theta_L=45 degrees growth rate: sigma_LI=sigma_LG (1-cos(45 deg))
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
 ns.radblob9=0.0 # transition time from tension_init to tension.
-ns.tension     =72.8 21.3  21.3 72.8 72.8 72.8
+ns.tension     =72.8 72.8 72.8 72.8 72.8 72.8
 #ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
 #ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
