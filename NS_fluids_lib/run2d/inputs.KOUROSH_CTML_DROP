@@ -28,15 +28,11 @@ ns.num_materials=4 # 1:liquid 2:air 3: ice 4:substrate axis_dir=1
 ns.num_species_var=1 
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=0
-ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=0 # 0=MOF 1=CMOF 
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=0 # 100x100
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
-ns.mof_error_ordering=0
 # water,air,ice,substrate axis_dir=3
 #ns.mof_ordering=0 0 0 1 
 # water,air,lubricant,substrate axis_dir=0 or 2
@@ -243,7 +239,6 @@ ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1 or
 ns.heatviscconst=58000.0 2400.0 2.2e+5 2.2e+5 # axis_dir=1
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #(rho C)_t + div(rho C) = div (rho D grad C)
 ns.speciesviscconst=0.1 0.1 0.1 0.1

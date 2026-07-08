@@ -25,11 +25,18 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 ns.num_materials=2  # 1: liquid (outer)  2: ice (inner)
 ns.num_species_var=0
-ns.continuous_mof=1
-ns.EILE_flag=-1 # weymouth and Yue
+ns.continuous_mof=1 #CMOF
+ns.EILE_flag=1 
+#ns.EILE_flag=-1 # weymouth and Yue
 ns.ns_tiling=false
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
+ns.mof_ordering=2 1 #liquid, ice
+ns.mof_renormalize_ordering=2 1 #EULERIAN FSI
+ns.material_extend_velocity=0 1 #EULERIAN FSI
+ns.primary_flotsam_tol=1.0e-8  
+ns.secondary_flotsam_tol=0.1
+
 
 # multigrid class
 mg.verbose = 0
@@ -45,8 +52,9 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
+ns.ngrow_distance=6
 amr.n_cell    = 64 64
-amr.max_level = 2
+amr.max_level = 0 # 2 for high resolution
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
@@ -55,7 +63,9 @@ amr.grid_eff        = 0.7   # what constitutes an efficient grid
 amr.blocking_factor = 4       # block factor in grid generation
 amr.check_int       = 100      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50
+ns.visual_phase_change_plot_int=1
+ns.visual_tessellate_vfrac=4 #TESSELLATE_FLUIDS_ELASTIC
+amr.plot_int        = 1
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
@@ -73,9 +83,7 @@ ns.change_max     = 1.01
 ns.visc_coef      = 7.25     # Prandtl=CPL muL/kL
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.0     # Bo/We=0.025/5E-5=500.0
-# even ice/water interface should have surface tension in order
-# to prescribe contact angle .
-ns.tension        = 1.0  # 12 - liquid/solid
+ns.tension        = 0.0  # 12 - liquid/solid
 # material 1=liquid 2=ice 
 # default is 4.1855e+7
 ns.stiffCP = 1.0 1.0
@@ -119,6 +127,7 @@ ns.viscconst=1.0 1.0
 #ns.denconst=1.0 0.934  #  FREEZING
 #ns.denconst=1.0 0.9  #  FREEZING
 ns.denconst=1.0 1.0  #  FREEZING
+# 3=ice
 ns.FSI_flag=0 3
 # 0=distribute to destination  1=distribute to source
 ns.distribute_target=0 0 
@@ -130,6 +139,7 @@ ns.tempconst=272.0 273.0  # water is supercooled, ice is not.
 ns.xblob=0.0
 ns.yblob=0.0
 ns.zblob=0.0
+# domain size is 2x2
 ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0

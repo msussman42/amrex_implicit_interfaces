@@ -50,14 +50,15 @@ Lp.v = 0
 
 ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.mof_ordering=4 1 2 3 #BIOFILM
-ns.mof_ordering=4 1 2 
+ns.mof_ordering=3 1 2 
+ns.mof_renormalize_ordering=3 1 2 #EULERIAN FSI
+ns.material_extend_velocity=0 1 2 #EULERIAN FSI
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
+ns.ngrow_distance=5
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
-#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
-ns.mof_decision_tree_learning=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # force AMR tagging within these specified boxes.
 ns.nblocks=0
@@ -111,9 +112,9 @@ amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8 8 8 8 8   # block factor in grid generation
-amr.check_int       = 200      # number of timesteps between checkpoints
+amr.check_int       = 100      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 200     # 5 for movies. 
+amr.plot_int        = 100     # 5 for movies. 
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -133,7 +134,7 @@ mac.mac_abs_tol    = 1.0e-12
 # 0=take sound speed into account at t=0 only if compressible material
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.shock_timestep=2 2 2 2 #INCOMPRESSIBLE
-ns.shock_timestep=2 1 1 1 #COMPRESSIBLE
+ns.shock_timestep=2 1 1 #COMPRESSIBLE
 ns.cfl            = 0.5    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
 ns.change_max=1.01    # scale back initial timestep
@@ -159,7 +160,6 @@ ns.gravityangle = 0.0
 #ns.nucleation_pmg=221.0 0.0 0.0 0.0 0.0 0.0 
 #ns.nucleation_mach=0.1 0.0 0.0 0.0 0.0 0.0 
 ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
-ns.density_ratio_relaxation_factor=1000.0
 
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
@@ -200,7 +200,7 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # material_type=1 EOS_tait
 #ns.material_type=0 0 0 0 #INCOMPRESSIBLE
 ns.material_type=0 36 36 36 #COMPRESSIBLE
-ns.material_conservation_form=0 0 0 0
+ns.material_conservation_form=0 1 1
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)
@@ -271,7 +271,7 @@ ns.hardening_coefficient=0.0 0.569e+10 0.177e+10 0.0 #"softening"
 #ns.hardening_coefficient=0.0 0.0 0.0 0.0 #no "softening"
 
 ns.rest_fraction=0.0 #prevent CPU overheating?
-ns.tiling=false
+ns.ns_tiling=false
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

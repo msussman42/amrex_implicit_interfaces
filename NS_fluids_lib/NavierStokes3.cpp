@@ -318,129 +318,9 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 
 } //end subroutine finalize_rest_fraction
 
-// 1. advection
-// 2. smoothing
-// 3. phase change
-// 4. viscosity
-// 5. projection (surface tension turned off)
-//
-// smoothing:
-// for k=1,2,3,...
-//  a) compute curvature
-//  b) physical grid variable (clamp ice, elastic, rigid)
-//     (density=1)
-//  c) save MAC velocity
-//  d) smooth project (surface tension turned on)
-//  e) save MAC velocity to UMAC_STATIC_MF
-//  f) restore original MAC velocity
-//  g) directionally split advection using UMAC_STATIC_MF (particles,F,X,LS)
-// 
-
-void NavierStokes::smoothing_advection() {
-
- std::string local_caller_string="smoothing_advection";
-
- int finest_level=parent->finestLevel();
-
- int local_num_steps=surface_tension_smoothing;
-
- if ((divu_outer_sweeps>=0)&&
-     (divu_outer_sweeps<num_divu_outer_sweeps-1)) {
-  local_num_steps=1;
- } else if (divu_outer_sweeps==num_divu_outer_sweeps-1) {
-  //do nothing
- } else
-  amrex::Error("divu_outer_sweeps invalid smoothing_advection");
- 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   int mac_grow=2;
-   ns_level.new_localMF(UMAC_STATIC_MF+dir,1,mac_grow,dir);
-  }
- }
-  
- for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) {
-
-  if (verbose>0)
-   if (ParallelDescriptor::IOProcessor())
-    std::cout << "SOLVETYPE_SMOOTH n_smooth= " << n_smooth << '\n';
-
-   //VOF_Recon_ALL
-   //makeStateDistALL
-  no_mass_transfer_code_segment(local_caller_string);
-  int renormalize_only=1;
-  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
-   //USTAR=0
-   //density=1
-  make_physics_varsALL(SOLVETYPE_SMOOTH,local_caller_string); 
-  delete_array(CELLTENSOR_MF);
-  delete_array(FACETENSOR_MF);
-  multiphase_project(SOLVETYPE_SMOOTH);
-  nonlinear_advection(local_caller_string,n_smooth);
-
-  if (1==0) {
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     //ngrow,dir,time
-     //Umac_Type
-     ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
-        dir,cur_time_slab);
-     MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,project_slab_step+1);
-     MultiFab::Copy(Umac_new,*ns_level.localMF[UMAC_STATIC_MF],0,0,1,0);
-    }
-   } //for (int ilev=finest_level;ilev>=level;ilev--)
-
-
-   int basestep_debug=n_smooth;
-   parent->writeDEBUG_PlotFile(
-    basestep_debug,
-    SDC_outer_sweeps,
-    project_slab_step,
-    divu_outer_sweeps);
-   std::cout << "press any number then enter: n_smooth= " << n_smooth << '\n';
-   std::cout << "local_num_steps= " << local_num_steps << '\n';
-   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
-   std::cout << "dt_slab= " << dt_slab << '\n';
-   std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
-   std::cout << "num_divu_outer_sweeps= " << 
-      num_divu_outer_sweeps << '\n';
-   std::cout << "slab_step= " << 
-      slab_step << '\n';
-   std::cout << "project_slab_step= " << 
-      project_slab_step << '\n';
-   std::cout << "SDC_outer_sweeps= " << 
-      SDC_outer_sweeps << '\n';
-   std::cout << "FSI_outer_sweeps= " << 
-      FSI_outer_sweeps << '\n';
-   std::cout << "num_FSI_outer_sweeps= " << 
-      num_FSI_outer_sweeps << '\n';
-   std::cout << "NFSI_LIMIT= " << 
-      NFSI_LIMIT << '\n';
-   int n_input;
-   std::cin >> n_input;
-
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,
-              HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,0,1,0);
-    delete_array(HOLD_VELOCITY_PROJECT_FACE_MF+dir);
-   }
-
-  } //if (1==1)
-
- } // for (int n_smooth=0;n_smooth<local_num_steps;n_smooth++) 
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.delete_localMF(UMAC_STATIC_MF,AMREX_SPACEDIM);
- }
-
-} //end subroutine smoothing_advection
-
 void NavierStokes::save_interface_data(
-  int control_flag,int local_smoothing_flag,int im_extension) {
+  int control_flag,
+  int im_extension) { //-1=main advection  0=just elastic interfaces
 
  std::string local_caller_string="save_interface_data";
 
@@ -453,45 +333,54 @@ void NavierStokes::save_interface_data(
 
  if (control_flag==SAVE_CONTROL) {
 
+  if (im_extension==-1) { //just prior to regular advection
+   //do nothing
+  } else
+   amrex::Error("expecting im_extension==-1");
+
+  if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==prev_time_slab");
+
+  if (advect_slab_step==project_slab_step) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_slab_step==project_slab_step");
+
   new_localMF(interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(improved_interface_hold_MF,ncomp_interface,1,-1);
   new_localMF(standard_interface_hold_MF,ncomp_interface,1,-1);
+
   MultiFab* vofmf=
-   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
+   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,advect_time_slab); 
+
   MultiFab::Copy(*localMF[interface_hold_MF],*vofmf,0,0,
     num_materials*ngeom_raw,1);
-  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
+
+  MultiFab* lsmf=getStateDist(1,advect_time_slab,local_caller_string);
+
   MultiFab::Copy(*localMF[interface_hold_MF],*lsmf,0,
     num_materials*ngeom_raw,num_materials,1);
+
   MultiFab::Copy(*localMF[improved_interface_hold_MF],
     *localMF[interface_hold_MF],0,0,ncomp_interface,1);
   MultiFab::Copy(*localMF[standard_interface_hold_MF],
     *localMF[interface_hold_MF],0,0,ncomp_interface,1);
 
+   //if divu_outer_sweeps>0 then vel_time_slab=t^{n+1}.
+   //during second pass, im_extension==0, need to restore this
+   //velocity for creating extended velocity.
+   //The updated velocity from first pass, im_extension==-1, needs to
+   //be saved too, then restored after the second pass.
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //ncomp=1 ngrow=0
    new_localMF(interface_velocity_hold_MF+dir,1,0,dir);
-   if (local_smoothing_flag==0) {
-    MultiFab* velmf=getStateMAC(0,dir,vel_time_slab);
-    MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],*velmf,0,0,1,0);
-    delete velmf;
-   } else if (local_smoothing_flag>0) {
-    int homflag=1;
-    int local_project_option=SOLVETYPE_VISC;
-    fort_overridepbc(&homflag,&local_project_option);
-    Vector<int> scompBC_map;
-    scompBC_map.resize(1);
-    scompBC_map[0]=0;
-    debug_ngrow(UMAC_STATIC_MF+dir,0,local_caller_string);
-      //grow=0,scomp=0,ncomp=1
-    GetStateFromLocalALL(UMAC_STATIC_MF+dir,0,0,1,
-      Umac_Type+dir,scompBC_map);
-    MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],
-      *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
-    homflag=0;
-    fort_overridepbc(&homflag,&local_project_option);
-   } else
-    amrex::Error("local_smoothing_flag invalid");
+
+   MultiFab* velmf=getStateMAC(0,dir,vel_time_slab);
+
+   MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],*velmf,0,0,1,0);
+   delete velmf;
   } //dir=0;dir<AMREX_SPACEDIM
 
   delete vofmf;
@@ -501,7 +390,8 @@ void NavierStokes::save_interface_data(
   //for (int ilev=level;ilev<=finest_level;ilev++) 
  } else if (control_flag==POST_PROCESS_CONTROL) {
 
-  if (im_extension==-1) {
+  if (im_extension==-1) { //after main advection
+
    MultiFab* vofmf=
     getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
    MultiFab::Copy(*localMF[standard_interface_hold_MF],*vofmf,0,0,
@@ -512,43 +402,41 @@ void NavierStokes::save_interface_data(
    delete vofmf;
    delete lsmf;
 
+    //this velocity must be saved since it will be overwritten
+    //when divu_outer_sweeps>0 in order to create an extended velocity.
+    //After the im_extension==0 sweep, standard_interface_velocity_hold
+    //is restored.
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     //ncomp=1 ngrow=0
     new_localMF(standard_interface_velocity_hold_MF+dir,1,0,dir);
-    if (local_smoothing_flag==0) {
-     MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
-     MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],*velmf,
+    MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
+    MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],*velmf,
         0,0,1,0);
-     delete velmf;
-    } else if (local_smoothing_flag>0) {
-     int homflag=1;
-     int local_project_option=SOLVETYPE_VISC;
-     fort_overridepbc(&homflag,&local_project_option);
-     Vector<int> scompBC_map;
-     scompBC_map.resize(1);
-     scompBC_map[0]=0;
-     debug_ngrow(UMAC_STATIC_MF+dir,0,local_caller_string);
-      //grow=0,scomp=0,ncomp=1
-     GetStateFromLocalALL(UMAC_STATIC_MF+dir,0,0,1,
-      Umac_Type+dir,scompBC_map);
-     MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],
-      *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
-     homflag=0;
-     fort_overridepbc(&homflag,&local_project_option);
-    } else
-     amrex::Error("local_smoothing_flag invalid");
+    delete velmf;
    } //dir=0;dir<AMREX_SPACEDIM
 
-  } else if (im_extension==0) {
+  } else if (im_extension==0) { // after elastic material advection
 
    MultiFab* vofmf=
     getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab); 
    MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string);
 
    for (int im=0;im<num_materials;im++) {
+
     if (material_extend_velocity[im]==0) {
      //do nothing
     } else if (material_extend_velocity[im]>0) {
+
+     if ((FSI_flag[im]==FSI_ICE_PROBF90)||
+         (FSI_flag[im]==FSI_ICE_STATIC)||
+         (FSI_flag[im]==FSI_ICE_NODES_INIT)||
+         (FSI_flag[im]==FSI_EULERIAN_ELASTIC)||
+         (FSI_flag[im]==FSI_ICE_EULERIAN_ELASTIC)||
+         (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)) {
+      //do nothing
+     } else
+      amrex::Error("expecting ice, elastic, or FSI rigid");
+
 
      MultiFab::Copy(*localMF[improved_interface_hold_MF],*vofmf,
       im*ngeom_raw,
@@ -564,12 +452,12 @@ void NavierStokes::save_interface_data(
    delete lsmf;
 
     //correct the volume fractions, centroids, and level set function(s)
+    //with corresponding values derived from the extended velocity 
+    //field.
    correct_flotsam();
-   correct_for_shear();
 
    //restore the velocity field
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    if (local_smoothing_flag==0) {
      MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
      MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
        0,0,1,0);
@@ -577,13 +465,6 @@ void NavierStokes::save_interface_data(
      MultiFab::Copy(Umac_new_new,
        *localMF[standard_interface_velocity_hold_MF+dir],
        0,0,1,0);
-    } else if (local_smoothing_flag>0) {
-     MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-      *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
-     MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-      *localMF[standard_interface_velocity_hold_MF+dir],0,0,1,0);
-    } else
-     amrex::Error("local_smoothing_flag invalid");
    } //dir=0;dir<AMREX_SPACEDIM
 
    //delete the hold data
@@ -599,36 +480,39 @@ void NavierStokes::save_interface_data(
  
  } else if (control_flag==RESTORE_CONTROL) {
 
-  if (im_extension==0) {
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+  if (im_extension==0) { //just prior to elastic advection
    //do nothing
   } else
    amrex::Error("im_extension invalid (RESTORE_CONTROL)");
 
   //restore F,X,LS
   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+
    //dest,source,scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(S_new,*localMF[interface_hold_MF],0,
     STATECOMP_MOF,num_materials*ngeom_raw,1);
+
   MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+
   MultiFab::Copy(LS_new,*localMF[interface_hold_MF],num_materials*ngeom_raw,
     0,num_materials,1);
 
   //restore the velocity field
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (local_smoothing_flag==0) {
     MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
     MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
       0,0,1,0);
-   } else if (local_smoothing_flag>0) {
-    MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-     *localMF[interface_velocity_hold_MF+dir],0,0,1,0);
-   } else
-    amrex::Error("local_smoothing_flag invalid");
   } //dir=0;dir<AMREX_SPACEDIM
 
   //extrapolate the velocity field here:
   int im_extend=num_materials+1;
-  extend_FSI_data(im_extend,local_smoothing_flag);
+  int local_tensor_extend=0;
+  extend_FSI_data(im_extend,local_tensor_extend);
 
  } else
   amrex::Error("control_flag invalid");
@@ -636,7 +520,7 @@ void NavierStokes::save_interface_data(
 }  //end subroutine save_interface_data
 
 void NavierStokes::save_interface_dataALL(
-  int control_flag,int local_smoothing_flag,int im_extension) {
+  int control_flag,int im_extension) {
 
  if (level==0) {
   //do nothing
@@ -648,44 +532,22 @@ void NavierStokes::save_interface_dataALL(
    //not initially declared on all the levels
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.save_interface_data(control_flag,local_smoothing_flag,
-     im_extension);
+  ns_level.save_interface_data(control_flag,im_extension);
  }
 
 }  //end subroutine save_interface_dataALL
 
-void NavierStokes::nonlinear_advection(const std::string& caller_string,
-  int smoothing_iter) {
+void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
- if (smoothing_iter>=0) {
-  //do nothing
- } else
-  amrex::Error("smoothing_iter invalid");
+ std::string local_caller_string="nonlinear_advection";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
- int local_smoothing_flag=0;
 
- if (pattern_test(caller_string,"smoothing_advection")==1) { 
-
-  local_smoothing_flag=surface_tension_smoothing;
-
-  advect_time_slab=cur_time_slab;
-  vel_time_slab=-1.0;
-  velocity_slab_step=-1;
-
-  if (surface_tension_smoothing>=1) {
-   //do nothing
-  } else
-   amrex::Error("surface_tension_smoothing invalid");
-
-  if (SDC_outer_sweeps==0) {
-   // do nothing
-  } else
-   amrex::Error("SDC_outer_sweeps invalid nonlinear_advection(smoothing)");
-
- } else if (pattern_test(caller_string,"do_the_advance")==1) {
+ if (pattern_test(local_caller_string,"do_the_advance")==1) {
 
   advect_time_slab=prev_time_slab;
+  advect_slab_step=project_slab_step;
 
   if (divu_outer_sweeps==0) {
    vel_time_slab=prev_time_slab;
@@ -699,10 +561,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
  } else
   amrex::Error("caller is invalid in nonlinear_advection");
 
- if (local_smoothing_flag==0) {
   // delete_advect_vars() called in NavierStokes::do_the_advance
   // right after increment_face_velocityALL. 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
+ for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF with
    // the velocity at prev_time_slab.
@@ -710,58 +571,61 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    //   (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
    //   (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
    ns_level.prepare_advect_vars(prev_time_slab);
-  }
- } else if (local_smoothing_flag>0) {
-  //do nothing
- } else
-  amrex::Error("local_smoothing_flag invalid");
+ }
 
- int im_extension=-1;
+ int im_extension=-1; //regular advection
 
  if (material_extend_velocity_flag==0) {
   //do nothing
  } else if (material_extend_velocity_flag>0) {
    //VFRAC,CEN,LS,UMAC (project_slab_step+1) copied to interface_hold_MF, 
    //interface_velocity_hold_MF
-  save_interface_dataALL(SAVE_CONTROL,local_smoothing_flag,im_extension);
+  save_interface_dataALL(SAVE_CONTROL,im_extension);
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
- sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
-    im_extension);
+ sub_nonlinear_advection(local_caller_string,im_extension); //regular advection
 
  if (material_extend_velocity_flag==0) {
   //do nothing
  } else if (material_extend_velocity_flag>0) {
    //copy VFRAC,CEN,LS to standard_interface_hold_MF
-  save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
-     im_extension);
+  save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
-  im_extension=0;
+  im_extension=0; //elastic material advection
 
    //copy interface_hold_MF, interface_velocity_hold_MF back to
    //state data. (project_slab_step+1)
    //extrapolate the velocity field.
    //FSI_MAC_VELOCITY_MF is allocated in extend_FSI_data.
-  save_interface_dataALL(RESTORE_CONTROL,local_smoothing_flag,im_extension);
+  save_interface_dataALL(RESTORE_CONTROL,im_extension);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    delete_array(FSI_MAC_VELOCITY_MF+dir);
   }
 
-  sub_nonlinear_advection(caller_string,smoothing_iter,local_smoothing_flag,
-      im_extension);
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+  if (advect_slab_step==project_slab_step+1) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_slab_step==project_slab_step+1");
+
+   //elastic material advection 
+  sub_nonlinear_advection(local_caller_string,im_extension);
 
   if ((step_through_data==1)||(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
+     local_caller_string,
      basestep_debug,
      SDC_outer_sweeps,
      project_slab_step,
      divu_outer_sweeps);
    std::cout << "press any number then enter:after sub_nonlinear_advection\n";
    std::cout << "im_extension= " << im_extension << '\n';
-   std::cout << "smoothing_iter= " << smoothing_iter << '\n';
-   std::cout << "local_smoothing_flag= " << local_smoothing_flag << '\n';
    std::cout << "advect_time_slab= " << advect_time_slab << '\n';
    std::cout << "vel_time_slab= " << vel_time_slab << '\n';
    std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
@@ -792,8 +656,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
    // d) delete interface_hold,improved_interface_hold,
    //    standard_interface_hold,interface_velocity_hold,
    //    standard_interface_velocity_hold
-  save_interface_dataALL(POST_PROCESS_CONTROL,local_smoothing_flag,
-     im_extension);
+  save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -807,22 +670,18 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string,
 }  // end subroutine nonlinear_advection
 
 void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
-  int smoothing_iter,int local_smoothing_flag,int im_extension) {
+  int im_extension) {
 
- std::string local_caller_string="nonlinear_advection";
+ std::string local_caller_string="sub_nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
-
- if (smoothing_iter>=0) {
-  //do nothing
- } else
-  amrex::Error("smoothing_iter invalid");
 
  init_rest_fraction(local_caller_string);
 
- int renormalize_only=1;
+ int renormalize_flag=RENORMALIZE_ONLY;
+ int local_truncate=0;
 
  if (level!=0)
-  amrex::Error("level invalid nonlinear_advection");
+  amrex::Error("level invalid sub_nonlinear_advection");
 
  if (cur_time_slab>0.0) {
   // do nothing
@@ -838,13 +697,13 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid nonlinear_advection");
+  amrex::Error("SDC_outer_sweeps invalid sub_nonlinear_advection");
 
  if ((divu_outer_sweeps>=0)&&
      (divu_outer_sweeps<num_divu_outer_sweeps)) {
   // do nothing
  } else
-  amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
+  amrex::Error("divu_outer_sweeps invalid sub_nonlinear_advection");
 
  int finest_level=parent->finestLevel();
 
@@ -864,7 +723,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 #endif
 
  NavierStokes& ns_fine=getLevel(finest_level);
- int basestep=ns_fine.nStep()+smoothing_iter;
+ int basestep=ns_fine.nStep();
 
  order_direct_split=basestep-2*(basestep/2);
 
@@ -932,89 +791,26 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
 
-#ifdef AMREX_PARTICLES
+ interface_touch_flag=1; //sub_nonlinear_advection
 
- if (parent->LSA_nsteps_power_method==0) {
-  //do nothing
- } else
-  amrex::Error("cannot do both particles and LSA");
-
- if (material_extend_velocity_flag==0) {
-  //do nothing
- } else
-  amrex::Error("expecting material_extend_velocity_flag==0 if particles");
-
- if (local_smoothing_flag!=0)
-  amrex::Error("expecting local_smoothing_flag==0 if particles");
- if (im_extension==-1) {
-  //do nothing
- } else
-  amrex::Error("cannot do free slip algorithm with particles");
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_redistribute_main=0; 
-  bool local_copy=true; //do not redistribute inside of copyParticles
-  bool remove_negative=true;
-
-    // level=0
-    // particles at t^{n} 
-  My_ParticleContainer& prevPC=newDataPC(project_slab_step);
-
-  prevPC.Redistribute(lev_min,lev_max,
-   nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-    // level=0
-  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
-  
-   // if num_divu_outer_sweeps>1 (e.g. for compressible flow) or spectral
-   // element method, then
-   // for sweeps after the initial sweep, we want to clear the particle
-   // data from the previous sweep.  This old t^{n+1} particle data used an
-   // old advective velocity, and we want to replace with t^{n+1} particle
-   // data using the new advective velocity.  For reference regarding
-   // num_divu_outer_sweeps, see
-   // Jemison, Sussman, Arienti.
-  if (num_particles_look_ahead>0) {
-   localPC.clearParticles();
-  } else if (num_particles_look_ahead==0) {
-   //do nothing
-  } else
-   amrex::Error("num_particles_look_ahead invalid");
-
-  localPC.Redistribute();  //Sussman superstition
-  localPC.copyParticles(prevPC,local_copy); //initialize t^{n+1} data w/t^{n}
-
-    //prior to advection
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string,
-    local_redistribute_main);
-
-  localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,
-    remove_negative);
-
- } else
-  amrex::Error("slab_step invalid");
-
-#endif
-
- interface_touch_flag=1; //nonlinear_advection
+ renormalize_flag=RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE;
+ prescribe_solid_geometryALL(
+  advect_time_slab,
+  advect_slab_step,
+  renormalize_flag,
+  local_truncate,
+  local_caller_string);
 
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL( 
-  local_caller_string, //nonlinear_advection
+  local_caller_string, //sub_nonlinear_advection
   advect_time_slab,
   RECON_UPDATE_NULL,
   init_vof_prev_time);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.prepare_displacement(local_smoothing_flag);
+  ns_level.prepare_displacement();
  } // ilev
 
  for (dir_absolute_direct_split=0;
@@ -1035,12 +831,13 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {
 
     advect_time_slab=cur_time_slab;
+    advect_slab_step=project_slab_step+1;
 
-    interface_touch_flag=1; //nonlinear_advection
+    interface_touch_flag=1; //sub_nonlinear_advection
 
      //output::SLOPE_RECON_MF
     VOF_Recon_ALL(
-      local_caller_string, //nonlinear_advection
+      local_caller_string, //sub_nonlinear_advection
       advect_time_slab,
       RECON_UPDATE_STATE_CENTROID,
      init_vof_prev_time);
@@ -1048,55 +845,20 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    } else
     amrex::Error("dir_absolute_direct_split invalid");
 
-   split_scalar_advectionALL(local_smoothing_flag,im_extension);
+   split_scalar_advectionALL(im_extension);
 
-   interface_touch_flag=1; //nonlinear_advection
-
-#ifdef AMREX_PARTICLES
-
-   if (local_smoothing_flag!=0)
-    amrex::Error("expecting local_smoothing_flag==0 if particles");
-   if (im_extension!=-1)
-    amrex::Error("expecting im_extension==-1 if particles");
-
-   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_redistribute_main=0; //local_redistribute=0 just in case periodic
-    bool remove_negative=true;
-
-      //level==0
-    My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-      //move_particles() declared in NavierStokes2.cpp
-     ns_level.move_particles(
-       normdir_here,
-       localPC,
-       local_caller_string);
-    }
-
-    localPC.Redistribute(lev_min,lev_max,
-      nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-   } else
-    amrex::Error("slab_step invalid");
-
-#endif
+   interface_touch_flag=1; //sub_nonlinear_advection
 
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
-     // in: nonlinear_advection
-     // calls MOFavgDown, LS_Type avgDown
-     // projects volume fractions so that sum F_m_fluid=1.
-    renormalize_only=1;
-    int local_truncate=0;
-    int update_particles=0;
-    prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-      local_truncate,local_caller_string,update_particles);
+
+    renormalize_flag=RENORMALIZE_ONLY;
+    prescribe_solid_geometryALL(
+      cur_time_slab,
+      project_slab_step+1,
+      renormalize_flag,
+      local_truncate,
+      local_caller_string);
 
      // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,
@@ -1149,20 +911,14 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 //   (b) update Lagrangian node positions
 //   (c) convert Lagrangian position, velocity, temperature, and
 //       force (if CTML) to Eulerian.
-// 1. renormalize variables
-// 2. extend from F>0 fluid regions into F=0 regions
-// 3. if renormalize_only==0, 
-//    a. init F,X,LS for the solid materials.
-//    b. init U,T in the solid regions.
-//    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if ((local_smoothing_flag==0)&&(im_extension==-1)) {
+ if (im_extension==-1) { //standard advection (both fluids and elastics)
 
   if (read_from_CAD()==1) {
 
     //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
-   renormalize_only=1;
-   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+   renormalize_flag=RENORMALIZE_ONLY;
+   init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
    int fast_mode=0;
    setup_integrated_quantities();
@@ -1265,22 +1021,25 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     parent->levelSteps(0)); 
   }
 
- } else if ((local_smoothing_flag>0)||(im_extension==0)) {
+ } else if (im_extension==0) { //just elastics
   //do nothing
  } else
-  amrex::Error("local_smoothing_flag or im_extension invalid");
+  amrex::Error("im_extension invalid");
 
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
- renormalize_only=0;
- int local_truncate=1;
- int update_particles=1;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-   local_truncate,local_caller_string,update_particles);
+ renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+ local_truncate=1;
+ prescribe_solid_geometryALL(
+   cur_time_slab,
+   project_slab_step+1,
+   renormalize_flag,
+   local_truncate,
+   local_caller_string);
 
- interface_touch_flag=1; //nonlinear_advection
+ interface_touch_flag=1; //sub_nonlinear_advection
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
@@ -1444,6 +1203,7 @@ void NavierStokes::tensor_advection_updateALL() {
        if (step_through_data==1) {
         int basestep_debug=nStep();
         parent->writeDEBUG_PlotFile(
+         local_caller_string,
          basestep_debug,
          SDC_outer_sweeps,
          project_slab_step,
@@ -1476,8 +1236,8 @@ void NavierStokes::tensor_advection_updateALL() {
         // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        int local_smoothing_flag=-1;
-        ns_level.extend_FSI_data(im+1,local_smoothing_flag);
+        int local_tensor_extend=1;
+        ns_level.extend_FSI_data(im+1,local_tensor_extend);
        }
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         delete_array(FSI_MAC_VELOCITY_MF+dir);
@@ -1486,6 +1246,7 @@ void NavierStokes::tensor_advection_updateALL() {
        if (step_through_data==1) {
         int basestep_debug=nStep();
         parent->writeDEBUG_PlotFile(
+         local_caller_string,
          basestep_debug,
          SDC_outer_sweeps,
          project_slab_step,
@@ -1869,13 +1630,14 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    int null_perturbation=1;
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+     parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
 
     LSA_perturbations_switch=false; 
 
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
      //parent->LSA_initial_levelSteps=amrptr->levelSteps(0) at the
      //very beginning (main.cpp)
@@ -1888,7 +1650,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-     //initialize non perturbed state (the first power method iteration 
+     //initialize non perturbed state 
+     //(the first krylov_subspace method iteration 
      //establishes the base state).
     if (parent->LSA_current_step==0) { 
 
@@ -1907,7 +1670,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (NS_LSA_step_count==0) {
       null_perturbation=0;
@@ -1915,7 +1679,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
       //restore t^n data into "get_new_data"
       //restore data prior to adding level set perturbations.
-      LSA_save_state_dataALL(LSA_N_EXTRA,RESTORE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,LSA_RESTORE_CONTROL);
       CopyNewToOldALL();
 
      } else if (NS_LSA_step_count>0) {
@@ -1933,15 +1697,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-        parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+        parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else {
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    if ((perturbation_on_restart==1)&&
@@ -1980,13 +1744,17 @@ Real NavierStokes::advance(Real time,Real dt) {
    avgDownALL(DIV_Type,0,1,1);
 
     // in: advance
+    // take care of AMR grid change.
     // calls MOFavgDown, LS_Type avgDown
     // projects volume fractions so that sum F_m_fluid=1.
-   int renormalize_only=0;
+   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
    int local_truncate=0;
-   int update_particles=0;
-   prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
-      local_truncate,local_caller_string,update_particles);
+   prescribe_solid_geometryALL(
+     upper_slab_time,
+     project_slab_step+1,
+     renormalize_flag,
+     local_truncate,
+     local_caller_string);
 
    if (verbose>0) {
     std::fflush(NULL);
@@ -1997,30 +1765,16 @@ Real NavierStokes::advance(Real time,Real dt) {
     ParallelDescriptor::Barrier();
    }
 
-#ifdef AMREX_PARTICLES
-
-   int lev_min=0;
-   int lev_max=-1;
-   int nGrow_Redistribute=0;
-   int local_redistribute_main=0;
-   bool remove_negative=true;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
-   old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_redistribute_main,remove_negative);
-
-#endif
-
    //copy bfact_time_order component to the
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+      parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
     NS_LSA_step_count=parent->levelSteps(0)-
                       parent->LSA_initial_levelSteps;
@@ -2033,7 +1787,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else
      amrex::Error("NS_LSA_step_count invalid");
 
-     //initialize non perturbed state (first power series method iteration
+     //initialize non perturbed state 
+     //(first krylov_subspace series method iteration
      //used to establish a base state)
     if (parent->LSA_current_step==0) { 
 
@@ -2042,7 +1797,7 @@ Real NavierStokes::advance(Real time,Real dt) {
       //save t^n data from "get_new_data"
       //LSA_save_state_data is declared in NavierStokes.cpp
       //LSA_save_state_data calls NavierStokes::init_boundary
-      LSA_save_state_dataALL(LSA_N_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_N_EXTRA,LSA_SAVE_CONTROL);
 
      } else if (NS_LSA_step_count>0) {
       //do nothing
@@ -2057,7 +1812,8 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (NS_LSA_step_count==0) {
 
@@ -2080,15 +1836,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-        parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+        parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else {
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    interface_touch_flag=1; //advance
@@ -2124,18 +1880,18 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    } else if (advance_status==0) { // failure
 
-    if (parent->LSA_nsteps_power_method==0) {
+    if (parent->LSA_nsteps_krylov_subspace_method==0) {
      //do nothing
-    } else if (parent->LSA_nsteps_power_method>=1) {
+    } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("advance_status==0 invalid for LSA: reduce fixed_dt");
     } else {
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-       parent->LSA_nsteps_power_method << '\n';
-     amrex::Error("parent->LSA_nsteps_power_method invalid");
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+       parent->LSA_nsteps_krylov_subspace_method << '\n';
+     amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
     }
 
     dt_new=0.5*dt_new;
@@ -2155,28 +1911,29 @@ Real NavierStokes::advance(Real time,Real dt) {
     amrex::Error("advance_status invalid");
    }
 
-   NS_LSA_nsteps_power_method=parent->LSA_nsteps_power_method;
+   NS_LSA_nsteps_krylov_subspace_method=
+     parent->LSA_nsteps_krylov_subspace_method;
 
-   if (parent->LSA_nsteps_power_method==0) {
+   if (parent->LSA_nsteps_krylov_subspace_method==0) {
     //do nothing (no LSA)
-   } else if (parent->LSA_nsteps_power_method>=1) {
+   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
 
     NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
 
-     //initialize non perturbed state (first power series method iteration
+     //initialize non perturbed state 
+     //(first krylov_subspace series method iteration
      //used to establish a base state)
     if (parent->LSA_current_step==0) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} unperturbed data
-      LSA_save_state_dataALL(LSA_NP1_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_NP1_EXTRA,LSA_SAVE_CONTROL);
       //save t^{n+1} data 
-      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
-      LSA_default_eigenvectorALL(
-        LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
+      LSA_default_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 
@@ -2189,13 +1946,17 @@ Real NavierStokes::advance(Real time,Real dt) {
      }
 
     } else if ((parent->LSA_current_step>=1)&&
-               (parent->LSA_current_step<=parent->LSA_nsteps_power_method)) {
+               (parent->LSA_current_step<=
+                parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
-      LSA_save_state_dataALL(LSA_EVEC_EXTRA,SAVE_CONTROL);
-      LSA_eigenvectorALL(
-	LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
+      //LSA_NP1_EXTRA is the t^{n+1} data resulting from unperturbed
+      //initial conditions.
+      //LSA_EVEC_EXTRA is the t^{n+1} data resulting from perturbed
+      //initial conditions.
+      LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
+      LSA_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
 
@@ -2210,15 +1971,15 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_current_step=" <<
       parent->LSA_current_step << '\n';
-     std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
+     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
      amrex::Error("parent->LSA_current_step invalid");
     }
 
    } else { 
-    std::cout << "parent->LSA_nsteps_power_method=" <<
-      parent->LSA_nsteps_power_method << '\n';
-    amrex::Error("parent->LSA_nsteps_power_method invalid");
+    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
+      parent->LSA_nsteps_krylov_subspace_method << '\n';
+    amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
    }
 
    delete_array(MASKCOEF_MF);
@@ -2242,9 +2003,6 @@ void NavierStokes::init_splitting_force_SDC() {
  
  bool use_tiling=ns_tiling;
 
- if (use_tiling) {
-  amrex::Error("clearParticles() will not work if tiling");
- }
  int finest_level=parent->finestLevel();
 
  if (divu_outer_sweeps==0) {
@@ -2505,11 +2263,14 @@ void NavierStokes::SEM_advectALL(int source_term) {
 
     if (source_term==SUB_OP_SDC_LOW_TIME) { 
      advect_time_slab=prev_time_slab;
+     advect_slab_step=project_slab_step;
     } else if (source_term==SUB_OP_SDC_ISCHEME) {
      if (advect_iter==SUB_OP_ISCHEME_PREDICT) {
       advect_time_slab=prev_time_slab;
+      advect_slab_step=project_slab_step;
      } else if (advect_iter==SUB_OP_ISCHEME_CORRECT) {
       advect_time_slab=cur_time_slab;
+      advect_slab_step=project_slab_step+1;
      } else
       amrex::Error("advect_iter invalid");
     } else
@@ -2681,10 +2442,11 @@ void NavierStokes::pressure_gradient_code_segment(
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
-  basestep_debug,
-  SDC_outer_sweeps,
-  project_slab_step,
-  divu_outer_sweeps);
+   local_caller_string,
+   basestep_debug,
+   SDC_outer_sweeps,
+   project_slab_step,
+   divu_outer_sweeps);
   std::cout << "press any number then enter: after SOLVETYPE_PRES \n";
   std::cout << "cur_time_slab= " << cur_time_slab << '\n';
   std::cout << "dt_slab= " << dt_slab << '\n';
@@ -2728,10 +2490,11 @@ void NavierStokes::pressure_gradient_code_segment(
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
-     basestep_debug,
-     SDC_outer_sweeps,
-     project_slab_step,
-     divu_outer_sweeps);
+      local_caller_string,
+      basestep_debug,
+      SDC_outer_sweeps,
+      project_slab_step,
+      divu_outer_sweeps);
      std::cout << "press any number then enter: after PRESEXTRAP\n";
      std::cout << "cur_time_slab= " << cur_time_slab << '\n';
      std::cout << "dt_slab= " << dt_slab << '\n';
@@ -2882,13 +2645,29 @@ void NavierStokes::phase_change_code_segment(
  zeroALL(ngrow_distance,2*num_interfaces,JUMP_STRENGTH_MF);
   //ngrow,scomp,ncomp,val,dest_mf
  setVal_array(0,0,num_materials,1.0,SWEPT_CROSSING_MF);
+
   // piecewise constant interpolation at coarse/fine borders.
   // fluid LS can be positive in the solid regions.
   // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
+  // HOLD_LS_DATA_ALT_MF is deleted in phase_change_redistributeALL()
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+ allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_ALT_MF);
+
+ if (material_extend_velocity_flag==0) {
+  //do nothing
+ } else if (material_extend_velocity_flag>0) {
+  Copy_array(HOLD_LS_DATA_ALT_MF,ELASTIC_FLUID_LEVELSET_MF,0,0,
+    num_materials*(AMREX_SPACEDIM+1),ngrow_distance);
+ } else
+  amrex::Error("material_extend_velocity_flag invalid");
+
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
-  amrex::Error("hold_LS_DATA_MF (nComp())!=num_materials*(AMREX_SPACEDIM+1)");
+  amrex::Error("hold_LS_DATA_MF->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
+
+ if (localMF[HOLD_LS_DATA_ALT_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("hold_LS_DATA_ALT_MF->nComp()!=num_materials*(SDIM+1)");
+ debug_ngrow(HOLD_LS_DATA_ALT_MF,ngrow_distance,local_caller_string);
 
   // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
   // e.g. u dot n = [k grad T dot n]/(rho L)
@@ -3023,47 +2802,6 @@ void NavierStokes::phase_change_code_segment(
   // in: phase_change_code_segment
  delete_array(DEN_RECON_MF);
 
-
-#ifdef AMREX_PARTICLES
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-  My_ParticleContainer& localPC=newDataPC(project_slab_step+1);
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_redistribute_main=0; //local_redistribute=0 due to periodic wrap
-  bool remove_negative=true;
-
-  localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,remove_negative);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int splitting_dir=-1;
-    //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(
-     splitting_dir,
-     localPC,
-     local_caller_string);
-  }
-
-  Long num_particles_look_ahead=localPC.TotalNumberOfParticles();
-
-  if (num_particles_look_ahead>0) {
-   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_redistribute_main,remove_negative);
-  } else if (num_particles_look_ahead==0) {
-   //do nothing
-  } else
-   amrex::Error("num_particles_look_ahead invalid");
-
- } else
-  amrex::Error("slab_step invalid");
-
-#endif
-
  delete_array(BURNING_VELOCITY_MF);
  delete_array(nodevel_MF);
 
@@ -3081,17 +2819,18 @@ void NavierStokes::phase_change_code_segment(
   // 1. prescribe solid temperature, velocity, and geometry where
   //    appropriate.
   // 2. extend level set functions into the solid.
- int renormalize_only=0;
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
  int local_truncate=0;
- int update_particles=1;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-  local_truncate,local_caller_string,update_particles);
+ prescribe_solid_geometryALL(
+   cur_time_slab,
+   project_slab_step+1,
+   renormalize_flag,
+   local_truncate,
+   local_caller_string);
 
  int local_redistribute_main=0;
 
- int tessellate=TESSELLATE_FLUIDS;
-
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+ makeStateDistALL(local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -3124,12 +2863,9 @@ void NavierStokes::no_mass_transfer_code_segment(
    RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
- int update_particles=1;
  int local_redistribute_main=0;
 
- int tessellate=TESSELLATE_FLUIDS;
-
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+ makeStateDistALL(local_redistribute_main);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -3163,6 +2899,7 @@ void NavierStokes::nucleation_code_segment(
  if (1==0) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     project_slab_step,
@@ -3247,11 +2984,10 @@ void NavierStokes::nucleation_code_segment(
    cur_time_slab,
    RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
 
- int update_particles=1;
  int local_redistribute_main=0;
- tessellate=TESSELLATE_FLUIDS;
 
- makeStateDistALL(update_particles,local_redistribute_main,tessellate);
+  //in: nucleation_code_segment
+ makeStateDistALL(local_redistribute_main);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
@@ -3260,6 +2996,7 @@ void NavierStokes::nucleation_code_segment(
  if (1==0) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+    local_caller_string,
     basestep_debug,
     SDC_outer_sweeps,
     project_slab_step,
@@ -3467,6 +3204,33 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          (advance_status==1));
         divu_outer_sweeps++) {
 
+    if (divu_outer_sweeps==local_num_divu_outer_sweeps-1) {
+
+     for (int im=0;im<num_materials;im++) {
+      material_conservation_form[im]=hold_material_conservation_form[im];
+     }
+
+    } else if ((divu_outer_sweeps>=0)&&
+               (divu_outer_sweeps<local_num_divu_outer_sweeps-1)) {
+
+     for (int im=0;im<num_materials;im++) {
+      if (hold_material_conservation_form[im]==0) {
+       material_conservation_form[im]=0;
+      } else if (hold_material_conservation_form[im]==1) {
+       if (positive_preserving_predictor==1) {
+        material_conservation_form[im]=0;
+       } else if (positive_preserving_predictor==0) {
+        material_conservation_form[im]=1;
+       } else
+        amrex::Error("positive_preserving_predictor invalid");
+      } else
+       amrex::Error("hold_material_conservation_form invalid");
+     } //im=0 ... num_materials-1
+
+    } else
+     amrex::Error("divu_outer_sweeps invalid");
+
+   
     very_last_sweep=0;
 
     if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&
@@ -3504,8 +3268,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //  or
       // initialize "GNBC" velocity.
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
-    int renormalize_only=1;
-    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+    int renormalize_flag=RENORMALIZE_ONLY;
+    init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
     int mass_transfer_active=0;
 
@@ -3516,12 +3280,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
      if (disable_advection==0) {
 
-      int smoothing_iter=0;
-      nonlinear_advection(local_caller_string,smoothing_iter);
+      nonlinear_advection(local_caller_string);
 
       if (step_through_data==1) {
        int basestep_debug=nStep();
        parent->writeDEBUG_PlotFile(
+         local_caller_string,
 	 basestep_debug,
 	 SDC_outer_sweeps,
 	 project_slab_step,
@@ -3684,15 +3448,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //    (a) slopes/redistance
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-      if (surface_tension_smoothing==0) {
-       //do nothing
-      } else if (surface_tension_smoothing>0) {
-     
-       smoothing_advection();
-
-      } else
-       amrex::Error("surface_tension_smoothing invalid");
-
       if (mass_transfer_active==1) {
 
        nucleation_code_segment(
@@ -3714,17 +3469,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
-       int combine_flag=2; // only update if vfrac<VOFTOL
+       int combine_flag=FILL_EMPTY_CELL; // only update if vfrac<VOFTOL
        int hflag=0;
-       // combine_idx==-1 => update S_new  
-       // combine_idx>=0  => update localMF[combine_idx]
-       int combine_idx=-1;  
        int update_flux=0;
        int interface_cond_avail=0;
 
        ns_level.combine_state_variable(
         SOLVETYPE_HEAT,
-        combine_idx,
         combine_flag,
         hflag,
         update_flux,
@@ -3735,7 +3486,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
-         combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -3782,6 +3532,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
+	//calls makeStateDistALL at the end.
        phase_change_code_segment(
 	local_caller_string,
 	color_count,
@@ -3800,6 +3551,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (1==0) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+        local_caller_string,
 	basestep_debug,
 	SDC_outer_sweeps,
 	project_slab_step,
@@ -3814,8 +3566,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      // initialize "GNBC" velocity.
      // in: NavierStokes::do_the_advance (prior to viscous force step, and
      //  after reinitialization)
-    renormalize_only=1;
-    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+    renormalize_flag=RENORMALIZE_ONLY;
+    init_FSI_GHOST_MAC_MF_ALL(
+      renormalize_flag,
+      local_caller_string);
 
 // At this stage, variables are not scaled, so FACECOMP_FACEVEL component (c++)
 // will have to be scaled later.
@@ -3831,6 +3585,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (1==0) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+       local_caller_string,
        basestep_debug,
        SDC_outer_sweeps,
        project_slab_step,
@@ -3884,6 +3639,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (step_through_data==1) {
        int basestep_debug=nStep();
        parent->writeDEBUG_PlotFile(
+         local_caller_string,
 	 basestep_debug,
 	 SDC_outer_sweeps,
 	 project_slab_step,
@@ -3924,18 +3680,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
-       int combine_flag=2; // update F_m=0 cells only.
+       int combine_flag=FILL_EMPTY_CELL; // update F_m=0 cells only.
        int hflag=0;
-       // combine_idx==-1 => update S_new  
-       // combine_idx>=0  => update localMF[combine_idx]
-       int combine_idx=-1;  
        int update_flux=0;
        int interface_cond_avail=0;
 
        ns_level.combine_state_variable(
         SOLVETYPE_HEAT,
-        combine_idx,
-        combine_flag, //combine_flag==2 (Fm=0 cells only)
+        combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
         hflag,
         update_flux,
         interface_cond_avail); 
@@ -3945,8 +3697,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        for (int ns=0;ns<num_species_var;ns++) {
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
-         combine_idx,
-         combine_flag, //combine_flag==2 (Fm=0 cells only)
+         combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
          hflag,
          update_flux,
          interface_cond_avail); 
@@ -3954,16 +3705,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        ns_level.combine_state_variable(
         SOLVETYPE_VISC, //cell centered velocity
-        combine_idx,
-        combine_flag, //combine_flag==2 (Fm=0 cells only)
+        combine_flag, //combine_flag==FILL_EMPTY_CELL (Fm=0 cells only)
         hflag,
         update_flux,
         interface_cond_avail);
 
        update_flux=1;
+
        ns_level.combine_state_variable(
         SOLVETYPE_PRES, //flux var=mac velocity
-        combine_idx,
         combine_flag,
         hflag,
         update_flux,
@@ -4065,25 +3815,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        int combine_flag=2; // combine if vfrac<VOFTOL
+        int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
         int hflag=0; // inhomogeneous option
-        int combine_idx=-1;  // update state variables
         int update_flux=0;
         int interface_cond_avail=0;
 
 	  // declared in: Diffusion.cpp
         ns_level.combine_state_variable(
          SOLVETYPE_VISC,  //cell centered velocity
-         combine_idx,
-         combine_flag,
+         combine_flag, //FILL_EMPTY_CELL
          hflag,
          update_flux, 
          interface_cond_avail);
 
         update_flux=1;
+
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //mac velocity
-         combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -4101,6 +3849,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4139,6 +3888,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4192,6 +3942,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          if (step_through_data==1) {
           int basestep_debug=nStep();
           parent->writeDEBUG_PlotFile(
+           local_caller_string,
 	   basestep_debug,
 	   SDC_outer_sweeps,
 	   project_slab_step,
@@ -4250,6 +4001,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (step_through_data==1) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4293,25 +4045,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //in these regions must be re-prescribed.
         for (int ilev=finest_level;ilev>=level;ilev--) {
          NavierStokes& ns_level=getLevel(ilev);
-         int combine_flag=2; // combine if vfrac<VOFTOL
+         int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
          int hflag=0; // inhomogeneous option
-         int combine_idx=-1;  // update state variables
          int update_flux=0;
          int interface_cond_avail=0;
 
 	  // declared in: Diffusion.cpp
          ns_level.combine_state_variable(
           SOLVETYPE_VISC,  //cell centered velocity
-          combine_idx,
-          combine_flag, //=2 (combine if vfrac<VOFTOL)
+          combine_flag, //FILL_EMPTY_CELL (combine if vfrac<VOFTOL)
           hflag,
           update_flux, 
           interface_cond_avail);
 
          update_flux=1;
+
          ns_level.combine_state_variable(
           SOLVETYPE_PRES, //mac velocity
-          combine_idx,
           combine_flag,
           hflag,
           update_flux,
@@ -4342,6 +4092,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (1==0) {
          int basestep_debug=nStep();
          parent->writeDEBUG_PlotFile(
+          local_caller_string,
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  project_slab_step,
@@ -4495,31 +4246,31 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-       renormalize_only=0;
+       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
        int local_truncate=0;
-       int update_particles=0;
-       prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate,local_caller_string,update_particles);
+       prescribe_solid_geometryALL(
+        cur_time_slab,
+        project_slab_step+1,
+        renormalize_flag,
+        local_truncate,local_caller_string);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        int combine_flag=2; // combine if vfrac<VOFTOL
+        int combine_flag=FILL_EMPTY_CELL; // combine if vfrac<VOFTOL
         int hflag=0;
-        int combine_idx=-1;  // update state variables
         int update_flux=0;
         int interface_cond_avail=0;
         ns_level.combine_state_variable(
          SOLVETYPE_VISC, // cell centered velocity
-         combine_idx,
-         combine_flag, // =2 (combine if vfrac<VOFTOL)
+         combine_flag, // FILL_EMPTY_CELL (combine if vfrac<VOFTOL)
          hflag,
          update_flux,
          interface_cond_avail);
 
         update_flux=1;
+
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //flux var = mac velocity
-	 combine_idx,
          combine_flag,
          hflag,
          update_flux,
@@ -4812,6 +4563,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+       local_caller_string,
        basestep_debug,
        SDC_outer_sweeps,
        project_slab_step,
@@ -6557,22 +6309,34 @@ NavierStokes::ColorSum(
   amrex::Error("expecting TESSELLATE_ALL|TESSELLATE_ALL_RASTER");
 
  if (sweep_num==0) {
-  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,local_caller_string);
+  getStateDist_localMF(LS_COLORSUM_MF,ngrow_distance,
+     cur_time_slab,local_caller_string);
+  if (material_extend_velocity_flag==0) {
+   //do nothing
+  } else if (material_extend_velocity_flag>0) {
+   build_elastic_fluid_levelset(localMF[LS_COLORSUM_MF]);
+  } else
+   amrex::Error("material_extend_velocity_flag invalid");
+
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
+   //TESSELLATE_ALL|ALL_RASTER
+   //makeFaceFrac declared in: NavierStokes.cpp
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
+   //ProcessFaceFrac declared in: NavierStokes.cpp
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
+   //makeCellFrac declared in: NavierStokes.cpp
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
   // do nothing
  } else
   amrex::Error("sweep_num invalid");
 
- if (localMF[LS_COLORSUM_MF]->nGrow()!=1)
-  amrex::Error("localMF[LS_COLORSUM_MF]->nGrow()!=1");
+ if (localMF[LS_COLORSUM_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[LS_COLORSUM_MF]->nGrow()!=ngrow_distance");
 
  if (localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*num_materials)
   amrex::Error("localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*num_materials");
@@ -7809,6 +7573,8 @@ NavierStokes::ColorSumALL(
   // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
   // updates one ghost cell of TYPE_MF
   // fluid(s) and solid(s) tessellate the domain.
+  // zero_diag_flag=0 => color by material
+  // zero_diag_flag=1 => color by masked cells
   int zero_diag_flag=0;
   TypeALL(idx_type,type_flag,zero_diag_flag);
 
@@ -8562,7 +8328,7 @@ NavierStokes::ColorSumALL(
 
 } // end subroutine ColorSumALL
 
-
+//called from: NavierStokes::TypeALL
 void
 NavierStokes::Type_level(
   MultiFab* typemf,Vector<int>& type_flag,
@@ -8648,7 +8414,7 @@ NavierStokes::Type_level(
    // updates one ghost cell.
    // declared in: LEVELSET_3D.F90
    //  for each cell,
-   //   if is_rigid(im)==1 and LS>=0 then type=im
+   //   calls "get_primary_material"
   fort_gettypefab(
    source_fab.dataPtr(),
    ARLIM(source_fab.loVect()),ARLIM(source_fab.hiVect()),
@@ -8689,6 +8455,9 @@ NavierStokes::Type_level(
 
 // zero_diag_flag=0 => color by material
 // zero_diag_flag=1 => color by masked cells
+// TypeALL called from:
+//   NavierStokes::multiphase_project
+//   NavierStokes::ColorSumALL
 void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
 		int zero_diag_flag) {
 
@@ -8726,7 +8495,7 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
      type_flag[im] << ' ' << '\n';
    std::cout << "TypeALL color_counter= " << color_counter << '\n'; 
   }
-} // subroutine TypeALL
+} // end subroutine TypeALL
 
 void NavierStokes::remove_pressure_work_vars() {
 
@@ -8755,7 +8524,7 @@ void NavierStokes::allocate_MAC_velocityALL(int nsolve,int idx) {
   amrex::Error("level invalid allocate_MAC_velocity_ALL");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid allocate_MAC_velocityALL line 8533");
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -9407,7 +9176,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
   amrex::Error("project_option invalid34");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid allocate_pressure_work_vars line 9185");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(UMACSTAR_MF+dir,nsolve,0,dir);
@@ -9669,7 +9438,7 @@ void NavierStokes::residual_correction_form(
  } else if (project_option_momeqn(project_option)==0) {
   //do nothing
  } else
-  amrex::Error("project_option_momeqn invalid36");
+  amrex::Error("project_option_momeqn invalid in residual_correction_form");
 
  if (project_option==SOLVETYPE_INITPROJ) { 
 
@@ -10102,7 +9871,7 @@ void NavierStokes::jacobi_cycles(
  error_after_all_jacobi_sweeps=0.0;
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid33");
+  amrex::Error("nsolve invalid check_outer_solver_convergence line 9880");
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -10284,7 +10053,7 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   amrex::Error("dt_slab invalid:Prepare_UMAC_for_solver");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid Prepare_UMAC_for_solver line 10062");
 
  int finest_level=parent->finestLevel();
 
@@ -10312,9 +10081,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
- } else if (project_option==SOLVETYPE_SMOOTH)  { 
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-  zero_independent_variable(project_option,nsolve);
  } else if (project_option==SOLVETYPE_INITPROJ) { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
@@ -10423,7 +10189,7 @@ void NavierStokes::multiphase_preconditioner(
   before_cycle=ParallelDescriptor::second();
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid multiphase_preconditioner line 10198");
  
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -10614,7 +10380,7 @@ void NavierStokes::Krylov_checkpoint(
   } else
    amrex::Error("update_best invalid");
  } else
-  amrex::Error("nsolve invalid");
+  amrex::Error("nsolve invalid Krylov_checkpoint line 10389");
     
 } // end subroutine NavierStokes::Krylov_checkpoint
 
@@ -10676,25 +10442,6 @@ void NavierStokes::multiphase_project(int project_option) {
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
 	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
 
- } else if (project_option==SOLVETYPE_SMOOTH) {
-
-  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
-  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
-	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     //ngrow,dir,time
-     //Umac_Type
-    ns_level.getStateMAC_localMF(HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,
-        dir,cur_time_slab);
-    MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,project_slab_step+1);
-     //value,scomp,ncomp,ngrow
-    Umac_new.setVal(0.0,0,1,0);
-   }
-  } //for (int ilev=finest_level;ilev>=level;ilev--)
-
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
@@ -10702,9 +10449,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int save_enable_spectral=enable_spectral;
 
- if (project_option==SOLVETYPE_SMOOTH) {
-  override_enable_spectral(0); // always low order
- } else if (project_option_projection(project_option)==1) {
+ if (project_option_projection(project_option)==1) {
   //do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
@@ -10729,14 +10474,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES
-  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
   } else if (project_option==SOLVETYPE_PRES) {
-   //do nothing
-  } else if (project_option==SOLVETYPE_SMOOTH) {
    //do nothing
   } else
    amrex::Error("project_option invalid 45"); 
@@ -10806,7 +10548,6 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_VISC 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_SPEC ...
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESEXTRAP 
-    // diffusionRHS=0.0 if project_option==SOLVETYPE_SMOOTH
    ns_level.Prepare_UMAC_for_solver(project_option,nsolve);
  }  // ilev=level ... finest_level
 
@@ -10869,57 +10610,33 @@ void NavierStokes::multiphase_project(int project_option) {
  } // tid
 
   // in multiphase_project
- if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_SMOOTH)) {
+ if (project_option==SOLVETYPE_PRES) {
 
   int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
 
-  if (project_option==SOLVETYPE_SMOOTH) {
+  if ((FSI_outer_sweeps>=0)&&
+      (FSI_outer_sweeps<
+       min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
 
-   potgrad_surface_tension_mask=POTGRAD_SURFTEN;
-
-  } else if (project_option==SOLVETYPE_PRES) {
-
-   if (surface_tension_smoothing>0) {
-
-    if (incremental_gravity_flag==1) {
-     potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
-    } else if (incremental_gravity_flag==0) {
-     potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
-    } else
-     amrex::Error("incremental_gravity_flag invalid");
-
-   } else if (surface_tension_smoothing==0) {
-
-    if ((FSI_outer_sweeps>=0)&&
-        (FSI_outer_sweeps<
-         min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
-
-     if (incremental_gravity_flag==1) {
-      potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
-     } else if (incremental_gravity_flag==0) {
-      potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
-     } else
-      amrex::Error("incremental_gravity_flag invalid");
-
-    } else if (FSI_outer_sweeps==
-               min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
-
-     if (incremental_gravity_flag==1) {
-      potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
-     } else if (incremental_gravity_flag==0) {
-      potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
-     } else
-      amrex::Error("incremental_gravity_flag invalid");
-
-    } else
-     amrex::Error("FSI_outer_sweeps invalid");
-
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
+   } else if (incremental_gravity_flag==0) {
+    potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
    } else
-    amrex::Error("surface_tension_smoothing invalid");
+    amrex::Error("incremental_gravity_flag invalid");
+
+  } else if (FSI_outer_sweeps==
+             min(num_FSI_outer_sweeps,NFSI_LIMIT)-1) {
+
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+   } else if (incremental_gravity_flag==0) {
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+   } else
+    amrex::Error("incremental_gravity_flag invalid");
 
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("FSI_outer_sweeps invalid");
 
    // 1. init_gravity_potential
    //      output: HYDROSTATIC_PRESDEN_MF
@@ -10937,17 +10654,10 @@ void NavierStokes::multiphase_project(int project_option) {
 // 2. must be called before adding gravity and surface tension.
 // 3. cannot be called after the project because the velocity
 //    will then fail to satisfy the discrete divergence condition.
-  if (project_option==SOLVETYPE_SMOOTH) {
-   // do nothing
-  } else if (project_option==SOLVETYPE_PRES) {
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.overwrite_outflow();  
-   }
-
-  } else
-   amrex::Error("project_option invalid");
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.overwrite_outflow();  
+  }
 
    // increment_potential_forceALL is declared in NavierStokes2.cpp
    // increment_potential_force is declared in NavierStokes2.cpp
@@ -10963,6 +10673,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (1==0) {
    int basestep_debug=nStep()+1;
    parent->writeDEBUG_PlotFile(
+     local_caller_string,
      basestep_debug,
      SDC_outer_sweeps,
      slab_step,
@@ -11059,8 +10770,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid multiphase prj");
 
- } else if (!((project_option==SOLVETYPE_PRES)||
-              (project_option==SOLVETYPE_SMOOTH))) {
+ } else if (project_option!=SOLVETYPE_PRES) {
   //do nothing
  } else
   amrex::Error("project_option bust");	 
@@ -11081,12 +10791,15 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option_needs_scaling(project_option)==0) {
   // do nothing
- } else
-  amrex::Error("project_option_needs_scaling invalid46");
+ } else {
+  std::cout << "project_option= " << project_option << '\n';
+  std::cout << "project_option_needs_scaling= " << 
+    project_option_needs_scaling(project_option) << '\n';
+  amrex::Error("project_option_needs_scaling invalid line 10804");
+ }
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_SMOOTH)) {
+     (project_option==SOLVETYPE_INITPROJ)) {
 
    //SOLVETYPE_PRES, 
    //SOLVETYPE_INITPROJ, 
@@ -11153,7 +10866,7 @@ void NavierStokes::multiphase_project(int project_option) {
        (project_option==SOLVETYPE_INITPROJ)) {
 
     if (nsolve!=1)
-     amrex::Error("nsolve invalid");
+     amrex::Error("nsolve invalid multiphase_project line 10875");
 
     if (project_option==SOLVETYPE_PRES) {
      operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
@@ -11165,6 +10878,7 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+      local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
       project_slab_step,
@@ -11203,6 +10917,7 @@ void NavierStokes::multiphase_project(int project_option) {
     if (step_through_data==1) {
      int basestep_debug=nStep();
      parent->writeDEBUG_PlotFile(
+      local_caller_string,
       basestep_debug,
       SDC_outer_sweeps,
       project_slab_step,
@@ -11229,9 +10944,6 @@ void NavierStokes::multiphase_project(int project_option) {
      int n_input;
      std::cin >> n_input;
     }
-   } else if (project_option==SOLVETYPE_SMOOTH) {
-
-    amrex::Error("SOLVETYPE_SMOOTH != FSI_rigid");
 
    } else
     amrex::Error("project_option invalid 10806");
@@ -11288,10 +11000,6 @@ void NavierStokes::multiphase_project(int project_option) {
     // 
     //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
     ns_level.init_advective_pressure(project_option); 
-
-   } else if (project_option==SOLVETYPE_SMOOTH) {
-
-    //do nothing
 
    } else
     amrex::Error("project_option invalid 10233");
@@ -11377,8 +11085,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option==SOLVETYPE_INITPROJ) {
   homflag_residual_correction_form=1; 
- } else if (project_option==SOLVETYPE_SMOOTH) {
-  homflag_residual_correction_form=1; //both pressure and velocity
  } else if (project_option_is_valid(project_option)==1) {
   homflag_residual_correction_form=0; 
  } else
@@ -11445,7 +11151,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option_singular_possible(project_option)==1) {
 
    if (nsolve!=1)
-    amrex::Error("nsolve invalid34");
+    amrex::Error("nsolve invalid multiphase_project line 11160");
 
   } else if (project_option_singular_possible(project_option)==0) {
 
@@ -11640,15 +11346,20 @@ void NavierStokes::multiphase_project(int project_option) {
 
     int jacobi_cycles_count=initial_project_cycles;
 
+    int local_initial_cg_cycles=initial_cg_cycles;
+
     if (project_option_singular_possible(project_option)==1) {
       // do nothing
     } else if (project_option==SOLVETYPE_HEAT) {
      jacobi_cycles_count=initial_thermal_cycles;
+     local_initial_cg_cycles=initial_thermal_cg_cycles;
     } else if ((project_option>=SOLVETYPE_SPEC)&&
                (project_option<SOLVETYPE_SPEC+num_species_var)) { 
      jacobi_cycles_count=initial_thermal_cycles;
+     local_initial_cg_cycles=initial_thermal_cg_cycles;
     } else if (project_option==SOLVETYPE_VISC) { 
      jacobi_cycles_count=initial_viscosity_cycles;
+     local_initial_cg_cycles=initial_viscosity_cg_cycles;
     } else
      amrex::Error("project_option invalid52");
 
@@ -11708,12 +11419,12 @@ void NavierStokes::multiphase_project(int project_option) {
     }
 
     int cg_loop_max=1;
-    if (initial_cg_cycles>0) {
+    if (local_initial_cg_cycles>0) {
      cg_loop_max=2;
-    } else if (initial_cg_cycles==0) {
+    } else if (local_initial_cg_cycles==0) {
      // do nothing
     } else
-     amrex::Error("initial_cg_cycles invalid");
+     amrex::Error("local_initial_cg_cycles invalid");
 
       // error_n,abs_tol
     Vector< Array<Real,2> > error_history;
@@ -11822,14 +11533,14 @@ void NavierStokes::multiphase_project(int project_option) {
      Real a2=0.0;
 
      int vcycle_max=multilevel_maxcycle;
-     if ((initial_cg_cycles==0)&&(cg_loop==0)) {
+     if ((local_initial_cg_cycles==0)&&(cg_loop==0)) {
       // do nothing
-     } else if ((initial_cg_cycles>0)&&(cg_loop==0)) {
-      vcycle_max=initial_cg_cycles;
-     } else if ((initial_cg_cycles>0)&&(cg_loop==1)) {
+     } else if ((local_initial_cg_cycles>0)&&(cg_loop==0)) {
+      vcycle_max=local_initial_cg_cycles;
+     } else if ((local_initial_cg_cycles>0)&&(cg_loop==1)) {
       // do nothing
      } else
-      amrex::Error("initial_cg_cycles or cg_loop invalid");
+      amrex::Error("local_initial_cg_cycles or cg_loop invalid");
 
      int restart_flag=0;
 
@@ -12820,8 +12531,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option==SOLVETYPE_INITPROJ) {
   homflag_dual_time=1;
- } else if (project_option==SOLVETYPE_SMOOTH) { 
-  homflag_dual_time=1;
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   homflag_dual_time=0;
  } else if ((project_option==SOLVETYPE_PRES)|| 
@@ -12854,7 +12563,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES
-  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
 
   getState_localMF_listALL(
@@ -12897,10 +12605,6 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("num_FSI_outer_sweeps invalid");
 
-   } else if (project_option==SOLVETYPE_SMOOTH) {
-
-    update_energy=SUB_OP_THERMAL_DIVUP_NULL;
-
    } else if (project_option==SOLVETYPE_INITPROJ) {
 
     update_energy=SUB_OP_THERMAL_DIVUP_NULL;
@@ -12917,18 +12621,14 @@ void NavierStokes::multiphase_project(int project_option) {
 
    if (project_option==SOLVETYPE_PRES) {
 
-    int combine_flag=2; //combine if vfrac<VOFTOL
+    int combine_flag=FILL_EMPTY_CELL; //combine if vfrac<VOFTOL
     int hflag=0;
-     // combine_idx==-1 => update S_new  
-     // combine_idx>=0  => update localMF[combine_idx]
-    int combine_idx=-1;  
     int update_flux=0;
     int interface_cond_avail=0;
 
     ns_level.combine_state_variable(
      SOLVETYPE_HEAT,
-     combine_idx,
-     combine_flag,
+     combine_flag, //FILL_EMPTY_CELL
      hflag,
      update_flux,
      interface_cond_avail); 
@@ -12938,8 +12638,7 @@ void NavierStokes::multiphase_project(int project_option) {
     for (int ns=0;ns<num_species_var;ns++) {
      ns_level.combine_state_variable(
       SOLVETYPE_SPEC+ns,
-      combine_idx,
-      combine_flag,
+      combine_flag, //FILL_EMPTY_CELL
       hflag,
       update_flux,
       interface_cond_avail); 
@@ -12955,10 +12654,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
     ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
 
-   } else if (project_option==SOLVETYPE_SMOOTH) {
-
-    //do nothing
-
    } else
     amrex::Error("project_option invalid 54");
 
@@ -12971,8 +12666,6 @@ void NavierStokes::multiphase_project(int project_option) {
    unscale_variablesALL();
 
   } else if (project_option==SOLVETYPE_INITPROJ) {
-   // do nothing
-  } else if (project_option==SOLVETYPE_SMOOTH) {
    // do nothing
   } else
    amrex::Error("project_option invalid 11886");
@@ -13014,8 +12707,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
   } else if (project_option==SOLVETYPE_INITPROJ) {
    // do nothing
-  } else if (project_option==SOLVETYPE_SMOOTH) {
-   // do nothing
   } else
    amrex::Error("project_option invalid 55");
 
@@ -13054,19 +12745,6 @@ void NavierStokes::multiphase_project(int project_option) {
   delete_array(PRESSURE_SAVE_MF);
 
  } else if (project_option==SOLVETYPE_INITPROJ) {
-
-  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
-	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
-  delete_array(PRESSURE_SAVE_MF);
-
- } else if (project_option==SOLVETYPE_SMOOTH) {
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   Copy_array(UMAC_STATIC_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
-   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,
-              HOLD_VELOCITY_PROJECT_FACE_MF+dir,0,0,1,0);
-   delete_array(HOLD_VELOCITY_PROJECT_FACE_MF+dir);
-  }
 
   Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
 	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
@@ -13147,8 +12825,6 @@ void NavierStokes::diffusion_heatingALL(
   if (AMREX_SPACEDIM!=2)
    amrex::Error("dimension bust");
  } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
-  // do nothing
- } else if (NS_geometry_coord==COORDSYS_CYLINDRICAL) {
   // do nothing
  } else
   amrex::Error("NS_geometry_coord bust 61");
@@ -13261,7 +12937,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
      (num_materials_viscoelastic<=num_materials)) {
 
   for (int im=0;im<num_materials;im++) {
+
     if (ns_is_rigid(im)==0) {
+
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
 
@@ -13301,19 +12979,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else
         amrex::Error("localMF[VISCOTEN_MF]->nGrow() invalid");
 
-       int is_rigid_CL_flag=0;
        int imp1=im+1;
-
-       if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
-        is_rigid_CL_flag=1;
-       } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
-        //do nothing
-       } else
-        amrex::Error("FSI_flag[im] invalid");
+       int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
 
        int im_cutoff=num_materials;
        if (FSI_outer_sweeps==0) {
@@ -13380,6 +13047,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
      // do nothing
     } else
      amrex::Error("ns_is_rigid invalid");
+
   } // im=0..num_materials-1
    
   // spectral_override==1 => order derived from "enable_spectral"
@@ -13564,7 +13232,7 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<num_materials*num_species_var;im++) {
    if (speciesviscconst[im]>0.0) {
     //do nothing
-   } else if (speciesviscconst[im]==0.0) { //speciesreactionrate
+   } else if (speciesviscconst[im]==0.0) { 
     //do nothing
    } else
     amrex::Error("speciesviscconst invalid");
@@ -13603,21 +13271,17 @@ void NavierStokes::veldiffuseALL() {
 
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
-   int combine_flag=0;  
-   // combine_idx==-1 => update S_new  
-   // combine_idx>=0  => update localMF[combine_idx]
-   int combine_idx=-1; 
+   int combine_flag=FVM_TO_GFM;  
    int update_flux=0;
    int interface_cond_avail=1;
  
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
-   combine_flag=0; 
+   combine_flag=FVM_TO_GFM; 
 
    ns_level.combine_state_variable(
     SOLVETYPE_HEAT,
-    combine_idx,
-    combine_flag,
+    combine_flag, //FVM_TO_GFM
     hflag,
     update_flux,
     interface_cond_avail); 
@@ -13628,12 +13292,11 @@ void NavierStokes::veldiffuseALL() {
 
     //FVM->GFM if phase change
     //FVM->mass weighted average if no phase change. 
-    combine_flag=0; 
+    combine_flag=FVM_TO_GFM; 
 
     ns_level.combine_state_variable(
      SOLVETYPE_SPEC+ns,
-     combine_idx,
-     combine_flag,
+     combine_flag, //FVM_TO_GFM
      hflag,
      update_flux,
      interface_cond_avail); 
@@ -13747,6 +13410,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13786,6 +13450,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13901,6 +13566,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13933,6 +13599,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -13986,6 +13653,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -14019,6 +13687,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -14061,6 +13730,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -14226,19 +13896,17 @@ void NavierStokes::veldiffuseALL() {
    int hflag=0;
    ns_level.solid_temperature();
 
-   int combine_flag=1;  // GFM -> FVM
-   int combine_idx=-1;  // update state variables
+   int combine_flag=GFM_TO_FVM;  // GFM -> FVM
    int update_flux=0;
    int interface_cond_avail=1;
 
     //GFM->FVM if phase change
     //GFM copied to FVM if no phase change.
-   combine_flag=1; 
+   combine_flag=GFM_TO_FVM; 
 
    ns_level.combine_state_variable(
     SOLVETYPE_HEAT,
-    combine_idx,
-    combine_flag,
+    combine_flag, //GFM_TO_FVM
     hflag,
     update_flux,
     interface_cond_avail); 
@@ -14249,12 +13917,11 @@ void NavierStokes::veldiffuseALL() {
 
     //GFM->FVM if phase change
     //GFM copied to FVM if no phase change.
-    combine_flag=1;
+    combine_flag=GFM_TO_FVM;
 
     ns_level.combine_state_variable(
      SOLVETYPE_SPEC+ns,
-     combine_idx,
-     combine_flag,
+     combine_flag, //GFM_TO_FVM
      hflag,
      update_flux,
      interface_cond_avail); 
@@ -14358,6 +14025,7 @@ void NavierStokes::veldiffuseALL() {
  if (step_through_data==1) {
   int basestep_debug=nStep();
   parent->writeDEBUG_PlotFile(
+   local_caller_string,
    basestep_debug,
    SDC_outer_sweeps,
    project_slab_step,
@@ -14825,7 +14493,7 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
   *localMF[REGISTER_CURRENT_MF],
   *localMF[source_mf],0,0,nsolve,1);
 
-} // INCREMENT_REGISTERS
+} // end subroutine INCREMENT_REGISTERS
 
 
 void NavierStokes::push_back_state_register(int idx_MF,Real time) {
@@ -14847,7 +14515,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
   ncomp,
   ncomp_check);
  if (ncomp_check!=nsolve)
-  amrex::Error("nsolve invalid 6613");
+  amrex::Error("nsolve invalid push_back_state_register line 14537");
 
  if (state_index!=State_Type)
   amrex::Error("state_index invalid");
@@ -14870,7 +14538,7 @@ void NavierStokes::push_back_state_register(int idx_MF,Real time) {
  MultiFab::Copy(*localMF[idx_MF],*snew_mf,0,0,nsolve,1);
  delete snew_mf;
 
-} // subroutine push_back_state_register
+} // end subroutine push_back_state_register
 
 // stores the current velocity in localMF[idx_MF]
 void NavierStokes::SET_STOKES_MARK(int idx_MF) {
@@ -14884,7 +14552,7 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
   ns_level.push_back_state_register(idx_MF,cur_time_slab);  
  }
 
-}  // SET_STOKES_MARK
+}  // end subroutine SET_STOKES_MARK
 
 
 //allocates, saves, and extends FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
@@ -15154,7 +14822,7 @@ void NavierStokes::manage_FSI_data() {
 } // end subroutine manage_FSI_data()
 
 //1<=im_critical<=nmat+1
-void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) { 
+void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) { 
 
  int finest_level=parent->finestLevel();
 
@@ -15172,18 +14840,15 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
 
  MultiFab* levelset_extend=nullptr;
 
- if (local_smoothing_flag==-1) {
+ if (tensor_extend==1) { //called from tensor_advection_update
   resize_levelset(ngrow_distance,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
   levelset_extend=localMF[LEVELPC_MF];
- } else if (local_smoothing_flag==0) {
+ } else if (tensor_extend==0) { //regular advection
   levelset_extend=getStateDist(ngrow_distance,vel_time_slab,
     local_caller_string);
- } else if (local_smoothing_flag>0) {
-  levelset_extend=getStateDist(ngrow_distance,cur_time_slab,
-    local_caller_string);
  } else
-  amrex::Error("local_smoothing_flag invalid");
+  amrex::Error("tensor_extend invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
@@ -15217,48 +14882,26 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
   Real local_time=cur_time_slab;
   int local_slab_step=project_slab_step+1;
 
-  if (local_smoothing_flag==-1) {
+  if (tensor_extend==1) {
    local_time=cur_time_slab;
    local_slab_step=project_slab_step+1;
-  } else if (local_smoothing_flag==0) {
+  } else if (tensor_extend==0) {
    local_time=vel_time_slab;
    local_slab_step=velocity_slab_step;
-  } else if (local_smoothing_flag>0) {
-   local_time=cur_time_slab;
-   local_slab_step=project_slab_step+1;
   } else
-   amrex::Error("local_smoothing_flag invalid");
+   amrex::Error("tensor_extend invalid");
    
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,local_slab_step);
 
    //FSI_MAC_VELOCITY_MF deleted by the caller.
   getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
      dir,local_time);
-  if (local_smoothing_flag==-1) {
+  if (tensor_extend==1) {
    //do nothing
-  } else if (local_smoothing_flag==0) {
+  } else if (tensor_extend==0) {
    //do nothing
-  } else if (local_smoothing_flag>0) {
-   int homflag=1;
-   int local_project_option=SOLVETYPE_VISC;
-   fort_overridepbc(&homflag,&local_project_option);
-   Vector<int> scompBC_map;
-   scompBC_map.resize(1);
-   scompBC_map[0]=0;
-
-   MultiFab::Copy(*localMF[FSI_MAC_VELOCITY_MF+dir],
-    *localMF[UMAC_STATIC_MF+dir],0,0,1,0);
-
-   debug_ngrow(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,local_caller_string);
-     //scomp=1 ncomp=1
-   GetStateFromLocal(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,0,1,
-      Umac_Type+dir,scompBC_map);
-   
-   homflag=0;
-   fort_overridepbc(&homflag,&local_project_option);
-
   } else
-   amrex::Error("local_smoothing_flag invalid");
+   amrex::Error("tensor_extend invalid");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -15318,7 +14961,7 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
     // 4. the material in question
    fort_extend_elastic_velocity(
       material_extend_velocity.dataPtr(),
-      &local_smoothing_flag,
+      &tensor_extend,
       &im_critical, //1<=im_critical<=num_materials+1
       &dir, //dir=0,1,2
       velbc.dataPtr(),  
@@ -15343,17 +14986,14 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
 } // omp
   ns_reconcile_d_num(LOOP_EXTEND_VEL,"fort_extend_elastic_velcity");
 
-  if (local_smoothing_flag==-1) {
+  if (tensor_extend==1) {
    MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
    MultiFab::Copy(S_new,*localMF[FSI_CELL_VELOCITY_MF],
      dir,STATECOMP_VEL+dir,1,1);
-  } else if (local_smoothing_flag==0) {
+  } else if (tensor_extend==0) {
    MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
-  } else if (local_smoothing_flag>0) {
-   MultiFab::Copy(*localMF[UMAC_STATIC_MF+dir],
-     *localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
   } else
-   amrex::Error("local_smoothing_flag invalid");
+   amrex::Error("tensor_extend invalid");
 
  } // dir=0..sdim-1
 
@@ -15362,12 +15002,12 @@ void NavierStokes::extend_FSI_data(int im_critical,int local_smoothing_flag) {
 
  delete_localMF(FSI_CELL_VELOCITY_MF,1);
 
- if (local_smoothing_flag==-1) {
+ if (tensor_extend==1) {
   //do nothing
- } else if (local_smoothing_flag>=0) {
+ } else if (tensor_extend==0) {
   delete levelset_extend;
  } else
-  amrex::Error("local_smoothing_flag invalid");
+  amrex::Error("tensor_extend invalid");
 
 } // end subroutine extend_FSI_data()
 

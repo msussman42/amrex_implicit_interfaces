@@ -525,6 +525,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: tid
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: visual_tessellate_vfrac
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
@@ -535,7 +536,8 @@ stop
       integer, INTENT(in) :: level,gridno
       integer :: im
        ! vof,refcen,order,slope,int
-      real(amrex_real), INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon) 
+      real(amrex_real), INTENT(in), target :: &
+              recon(DIMV(recon),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
@@ -583,12 +585,14 @@ stop
       integer kklo,kkhi,nodehi
       integer DIMDEC(plt)
 
-      real(amrex_real), dimension(D_DECL(:,:,:),:), target, allocatable :: reconlocal
+      real(amrex_real), dimension(D_DECL(:,:,:),:), target, allocatable :: &
+              reconlocal
       real(amrex_real), pointer :: reconlocal_ptr(D_DECL(:,:,:),:)
 
       integer nmax
       integer vofcomp
       real(amrex_real) vfrac_sum_solid
+      real(amrex_real) vfrac_sum_elastic
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       integer mask_local
       integer vcdeb,imdeb
@@ -629,30 +633,41 @@ stop
 
        if ((visual_tessellate_vfrac.eq.TESSELLATE_ALL).or. &
            (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS_ELASTIC).or. &
-           (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER)) then
+           (visual_tessellate_vfrac.eq.TESSELLATE_ALL_RASTER).or. &
+           (visual_tessellate_vfrac.eq.TESSELLATE_FLUIDS_ELASTIC)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
 
         vfrac_sum_solid=zero
+        vfrac_sum_elastic=zero
         do im=1,num_materials
+         vofcomp=(im-1)*ngeom_recon+1
          if (is_rigid(im).eq.1) then
-          vofcomp=(im-1)*ngeom_recon+1
           vfrac_sum_solid=vfrac_sum_solid+mofdata(vofcomp)
-         else if (is_rigid(im).eq.0) then
+         else if (is_elastic(im).eq.1) then
+          vfrac_sum_elastic=vfrac_sum_elastic+mofdata(vofcomp)
+         else if ((is_rigid(im).eq.0).and. &
+                  (is_elastic(im).eq.0)) then
           ! do nothing
          else
-          print *,"is_rigid invalid MARCHING_TETRA_3D.F90"
+          print *,"is_rigid invalid MARCHING_TETRA_3D.F90 ", &
+                  im,is_rigid(im)
+          print *,"or is_elastic invalid MARCHING_TETRA_3D.F90 ", &
+                  im,is_elastic(im)
           stop
          endif
         enddo ! im=1..num_materials
 
-        if ((vfrac_sum_solid.gt.VOFTOL).and. &
-            (vfrac_sum_solid.le.one+EPS1)) then
+        if (((vfrac_sum_solid.gt.VOFTOL_MATERIAL).and. &
+             (vfrac_sum_solid.le.one+EPS1)).or. &
+            ((vfrac_sum_elastic.gt.VOFTOL_MATERIAL).and. &
+             (vfrac_sum_elastic.le.one+EPS1))) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
          ! EPS2
          call multi_get_volume_tessellate( &
           tid, &
+          tessellate_source, & !TESSELLATE_FLUIDS
           visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
           bfact, &
           dx,xsten,nhalf, &
@@ -662,11 +677,14 @@ stop
           nmax, &
           SDIM)
 
-        else if ((vfrac_sum_solid.ge.-EPS1).and. &
-                 (vfrac_sum_solid.le.VOFTOL)) then
+        else if ((vfrac_sum_solid.le.VOFTOL_MATERIAL).and. &
+                 (vfrac_sum_solid.ge.-EPS1).and. &
+                 (vfrac_sum_elastic.le.VOFTOL_MATERIAL).and. &
+                 (vfrac_sum_elastic.ge.-EPS1)) then
          ! do nothing
         else
          print *,"vfrac_sum_solid invalid:",vfrac_sum_solid
+         print *,"or vfrac_sum_elastic invalid:",vfrac_sum_elastic
          stop
         endif
         
@@ -853,15 +871,15 @@ stop
            
            vfrac_side=reconlocal(D_DECL(iside,jside,kside),vofcomp)
 
-           if ((vfrac.ge.one-VOFTOL).and. &
-               (vfrac_side.le.VOFTOL)) then
-            lnode(ii,jj,kk)=-VOFTOL
-           else if ((vfrac.le.VOFTOL).and. &
-                    (vfrac_side.ge.one-VOFTOL)) then
-            lnode(ii,jj,kk)=VOFTOL
-           else if (vfrac.ge.one-VOFTOL) then
+           if ((vfrac.ge.one-VOFTOL_MATERIAL).and. &
+               (vfrac_side.le.VOFTOL_MATERIAL)) then
+            lnode(ii,jj,kk)=-VOFTOL_MATERIAL
+           else if ((vfrac.le.VOFTOL_MATERIAL).and. &
+                    (vfrac_side.ge.one-VOFTOL_MATERIAL)) then
+            lnode(ii,jj,kk)=VOFTOL_MATERIAL
+           else if (vfrac.ge.one-VOFTOL_MATERIAL) then
             lnode(ii,jj,kk)=one
-           else if (vfrac.le.VOFTOL) then
+           else if (vfrac.le.VOFTOL_MATERIAL) then
             lnode(ii,jj,kk)=-one
            else
              ! declared in GLOBALUTIL.F90

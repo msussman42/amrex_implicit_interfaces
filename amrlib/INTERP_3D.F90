@@ -161,8 +161,6 @@ stop
       integer :: grid_index(SDIM)
       integer :: data_needed
 
-      integer, parameter :: grid_level=-1
-
       integer i,j,k
       integer ifine,jfine,kfine
       integer ic,jc,kc
@@ -181,8 +179,6 @@ stop
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -283,6 +279,7 @@ stop
          vofcomp_old=(im-1)*ngeom_raw+1
          vofcomp_new=(im-1)*ngeom_recon+1
          mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
+
          do dir=1,SDIM
           mofdata(vofcomp_new+dir)=datamof(D_DECL(i,j,k),vofcomp_old+dir)
            !slope=0
@@ -299,9 +296,7 @@ stop
 
          ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
-          continuous_mof, &
           bfact_coarse,dxc, &
           tessellate, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
@@ -314,21 +309,18 @@ stop
         call multimaterial_MOF( &
           tessellate, & !=TESSELLATE_FLUIDS
           tid_in, &
-          bfact_coarse,dxc,xsten,nhalf, &
+          bfact_coarse,dxc, &
+          xsten, &
+          nhalf, &
           mof_verbose, &
           use_ls_data, & ! use_ls_data=0
           LS_stencil, &
           geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
-          mofdata, & !intent(inout)
+          mofdata, & !intent(inout) (override slope and order cleared)
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & ! continuous_mof=STANDARD_MOF
-          cmofsten, &
-          grid_index, &
-          grid_level, & !grid_level=-1
           SDIM)
 
         do dir=1,num_materials*ngeom_recon
@@ -442,10 +434,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -455,6 +449,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid_in, &
                EPS3, &
+               tessellate, &  !=TESSELLATE_FLUIDS
                tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
@@ -475,16 +470,17 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
@@ -492,13 +488,13 @@ stop
               print *,"testwt should not be 0"
               stop
              else
-              print *,"testwt invalid"
+              print *,"testwt invalid ",testwt
               stop
              endif
             else if (wt(SDIM).eq.zero) then
              ! do nothing
             else 
-             print *,"wt(SDIM) invalid"
+             print *,"wt(SDIM) invalid ",wt(SDIM)
              stop
             endif
            enddo ! kc
@@ -715,10 +711,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -843,9 +841,6 @@ stop
       integer ic,jc,kc
       real(amrex_real) testwt
 
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
       integer dir
       integer nmax,im,vofcomp_old,vofcomp_new
       real(amrex_real) mofdata(num_materials*ngeom_recon)
@@ -868,8 +863,6 @@ stop
 
       integer, PARAMETER :: use_ls_data=0
       integer, PARAMETER ::  mof_verbose=0
-      integer, PARAMETER :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) multi_centroidA(num_materials,SDIM)
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
@@ -983,10 +976,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -996,6 +991,7 @@ stop
               call multi_get_volume_grid_simple( &
                tid_in, &
                EPS3, &
+               tessellate, &  !=TESSELLATE_FLUIDS
                tessellate, &  !=TESSELLATE_FLUIDS
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
@@ -1016,29 +1012,30 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
              else if (testwt.eq.zero) then
               ! do nothing
              else
-              print *,"testwt invalid"
+              print *,"testwt invalid ",testwt
               stop
              endif
             else if (wt(SDIM).eq.zero) then
              ! do nothing
             else 
-             print *,"wt(SDIM) invalid"
+             print *,"wt(SDIM) invalid ",wt(SDIM)
              stop
             endif
 
@@ -1099,6 +1096,7 @@ stop
         vofcomp_new=(im-1)*ngeom_recon+1
         mofdata(vofcomp_new)= &
           fdatamof(D_DECL(ifine,jfine,kfine),vofcomp_old)
+
         do dir=1,SDIM
          mofdata(vofcomp_new+dir)= &
            fdatamof(D_DECL(ifine,jfine,kfine),vofcomp_old+dir)
@@ -1115,17 +1113,9 @@ stop
 !        domlo,bfact_fine,dxf,nhalf)
        call gridsten_level(xstenfine,ifine,jfine,kfine,levelf,nhalf)
 
-       grid_index(1)=ifine
-       grid_index(2)=jfine
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=kfine
-       endif
-
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
-         cmofsten, &
          xstenfine,nhalf, &
-         continuous_mof, &
          bfact_fine,dxf, &
          tessellate, & !=TESSELLATE_FLUIDS
          mofdata,SDIM)
@@ -1138,21 +1128,18 @@ stop
        call multimaterial_MOF( &
          tessellate, & !=TESSELLATE_FLUIDS
          tid_in, &
-         bfact_fine,dxf,xstenfine,nhalf, &
+         bfact_fine,dxf, &
+         xstenfine, &
+         nhalf, &
          mof_verbose, &
          use_ls_data, &
          LS_stencil, &
          geom_xtetlist(1,1,1,tid_in+1), &
-         geom_xtetlist(1,1,1,tid_in+1), &
          nmax, &
          nmax, &
-         mofdata, & !intent(inout)
+         mofdata, & !intent(inout) (override slope and order cleared)
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! continuous_mof=STANDARD_MOF
-         cmofsten, &
-         grid_index, &
-         grid_level, & !grid_level=-1
          SDIM)
 
        do dir=1,num_materials*ngeom_recon
@@ -1342,10 +1329,12 @@ stop
                xstengrid(1,dir)=min(xsten(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
                if ((bfact_fine.eq.1).and.(bfact_coarse.eq.1)) then
-                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
-                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir)).and. &
+                    (abs(xstengrid(1,dir)-xstenfine(1,dir)).le. &
+                     VOFTOL_LAYER*dxf(dir))) then
+                 !do nothing
+                else
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif

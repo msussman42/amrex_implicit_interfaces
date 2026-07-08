@@ -12,31 +12,6 @@ namespace amrex{
 extern "C"
 {
 
-      void fort_MOF_DT_training(
-       int* tid_in,
-       int* num_samples,
-       int* finest_level,
-       int* max_level,
-       int* bfact,
-       const int* domlo,const int* domhi,
-       const Real* dx);
-
-      void fort_MOF_training(
-       int* tid_in,
-       int* num_samples,
-       int* op_training,
-       int* cpp_training_lo,
-       int* cpp_training_hi,
-       int* i,
-       int* j,
-       int* k,
-       int* finest_level,
-       int* max_level,
-       int* bfact,
-       const int* domlo,const int* domhi,
-       const Real* dx, 
-       int* continuous_mof);
-
       void fort_sloperecon(
         int* tid_in,
         const int* gridno,
@@ -58,13 +33,10 @@ extern "C"
         int* nsteps,
         Real* time,
         int* update_flag,
-	int* number_centroid_per_core,
-	Real* delta_centroid_per_core,
         int* total_calls,
         int* total_iterations,
         Real* total_errors,
-        int* continuous_mof,
-        int* partial_cmof_stencil_at_walls);
+        int* continuous_mof);
 
 }
 }/* namespace amrex */

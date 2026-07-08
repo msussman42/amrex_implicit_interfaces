@@ -306,9 +306,7 @@ stop
        real(amrex_real) V_BASE(SDIM)
        real(amrex_real) cell_density_denom
        real(amrex_real) Fsolid
-       real(amrex_real) vt_over_r,ut_over_r
        real(amrex_real) param1,param2,hoop_force_coef
-       integer ut_comp
        integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
        integer im_rigid_CL
@@ -418,10 +416,8 @@ stop
          print *,"dimension bust"
          stop
         endif
-       else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else 
-        print *,"rzflag invalid"
+        print *,"rzflag invalid ",rzflag
         stop
        endif
        if (num_state_base.ne.2) then
@@ -636,9 +632,9 @@ stop
           vofcomp=(im-1)*ngeom_recon+1
           localF=recon(D_DECL(i,j,k),vofcomp)
           if ((localF.ge.-EPS1).and. &
-              (localF.le.VOFTOL)) then
+              (localF.le.VOFTOL_MATERIAL)) then
            localF=zero
-          else if ((localF.ge.one-VOFTOL).and. &
+          else if ((localF.ge.one-VOFTOL_MATERIAL).and. &
                    (localF.le.one+EPS1)) then
            localF=one
           else if ((localF.gt.zero).and.(localF.lt.one)) then
@@ -852,44 +848,7 @@ stop
           call crossprod(angular_velocity_vector_custom,Omega_cross_x, &
            F_centripetal)
 
-         if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-
-          if (RCEN.gt.zero) then
-           ! do nothing
-          else
-           print *,"RCEN invalid: ",RCEN
-           stop
-          endif
-
-          if ((angular_velocity_vector_custom(1).eq.zero).and. &
-              (angular_velocity_vector_custom(2).eq.zero).and. &
-              (angular_velocity_vector_custom(3).ge.zero)) then
-           !do nothing
-          else
-           print *,"only z component allowed angular_velocity_vector_custom"
-           stop
-          endif
-
-           ! Coriolis "force"
-           ! Lewis and Nagata 2004:
-           ! -2 Omega e_{z} \Times \vec{u}
-          unp1(1)=unp1(1)+ &
-           dt*(centrifugal_force_factor*(un(2)**2)/RCEN- &
-            two*F_coriolis(1)- &
-            F_omega_dot(1))*(one+DTEMP)
-          unp1(2)=unp1(2)- &
-           dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-            two*F_coriolis(2)+ &
-            F_omega_dot(2))*(one+DTEMP)
-
-           ! DTEMP has no units.
-           ! Lewis and Nagata 2004:
-           ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
-           ! DTEMP=beta*(T-T0)  beta<0
-          unp1(1)=unp1(1)- &
-           dt*DTEMP*centrifugal_force_factor*F_centripetal(1)
-
-         else if (rzflag.eq.COORDSYS_CARTESIAN) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
            
           do dir=1,SDIM
            unp1(dir)=unp1(dir)- &
@@ -957,22 +916,8 @@ stop
            print *,"dimension bust"
            stop
           endif
-         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-
-          ut_comp=SDIM+1 ! u_theta/r
-          ut_over_r=tensor(D_DECL(i,j,k),ut_comp)
-          vt_over_r=tensor(D_DECL(i,j,k),ut_comp+1)
-
-           ! units of viscosity: kg/(m s)
-           ! units of update:
-           ! s kg/(m s) m^3/kg (m/s) (1/m^2)=m/s
-          unp1(1)=unp1(1)-param1* &
-            dt*visc_coef*mu_cell*inverseden*vt_over_r/RCEN
-          unp1(2)=unp1(2)+param1* &
-            dt*visc_coef*mu_cell*inverseden*ut_over_r/RCEN
-
          else
-          print *,"rzflag invalid"
+          print *,"rzflag invalid ",rzflag
           stop
          endif
  
@@ -1008,34 +953,8 @@ stop
            stop
           endif
 
-         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-
-          if (RCEN.gt.zero) then
-           ! do nothing
-          else
-           print *,"RCEN invalid"
-           stop
-          endif
-
-          hoop_force_coef=dt*visc_coef*mu_cell*inverseden/(RCEN**2)
-          if (hoop_force_coef.lt.zero) then
-           print *,"hoop_force_coef invalid"
-           stop
-          endif
-
-          if (update_state.eq.OP_HOOP_BOUSSINESQ_IMPLICIT) then
-           unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
-           unp1(2)=unp1(2)/(one+hoop_force_coef)
-          else if (update_state.eq.OP_HOOP_BOUSSINESQ_EXPLICIT) then
-           unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
-           unp1(2)=unp1(2)-hoop_force_coef*un(2)
-          else
-           print *,"update_state invalid"
-           stop
-          endif
-
          else
-          print *,"rzflag invalid"
+          print *,"rzflag invalid ",rzflag
           stop
          endif
 
@@ -1190,10 +1109,8 @@ stop
          print *,"dimension bust"
          stop
         endif
-       else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else 
-        print *,"rzflag invalid"
+        print *,"rzflag invalid ",rzflag
         stop
        endif
        if (num_state_base.ne.2) then

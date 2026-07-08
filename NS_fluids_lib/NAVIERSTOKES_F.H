@@ -22,7 +22,6 @@ extern "C" {
      Real* dt,
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
-     Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
      Real* csound,AMREX_ARLIM_P(csoundlo),AMREX_ARLIM_P(csoundhi),
      Real* cvof,AMREX_ARLIM_P(cvoflo),AMREX_ARLIM_P(cvofhi),
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -148,6 +147,8 @@ extern "C" {
      int* visual_nddata_format);
  
     void fort_memstatus(int* procnum);
+
+    void fort_github_repo_version();
 
     void fort_combinezones(
      int* total_number_grids,
@@ -689,25 +690,6 @@ extern "C" {
       const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,int* bfact);
-
-    void fort_particle_grid(
-       int* tid,
-       const Real* xlo,const Real* dx,
-       const void* particles,
-       int Np, 
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       int* level,
-       const int* gridno);
-
-    void fort_combine_particles(
-     int* grids_per_level,
-     int* finest_level,
-     int* nsteps,
-     int* arrdim,
-     Real* time,
-     int* plotint);
 
 }
 }/* namespace amrex */

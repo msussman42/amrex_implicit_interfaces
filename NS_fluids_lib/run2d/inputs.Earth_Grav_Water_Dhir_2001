@@ -20,11 +20,7 @@ ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 #MOF or CMOF
-ns.MOFITERMAX_AFTER_PREDICT=30
 #MOF or CMOF with particles
-#ns.MOFITERMAX_AFTER_PREDICT=0
-#MOF or CMOF or CMOF w/particles; no machine learning
-ns.mof_decision_tree_learning=0
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=3
@@ -160,7 +156,6 @@ ns.material_type=0 0 999
 ns.heatviscconst=0.680 0.0248 0.680 # dimensional MKS
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 # ns.viscconst=7.4273E-04 3.1999E-05 7.4273E-04 # dimensionless
 ns.viscconst=279E-6 12.02e-6 279E-6 # dimensional MKS

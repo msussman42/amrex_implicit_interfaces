@@ -59,17 +59,17 @@ stop
         stop
        endif
        vofdark(im)=fluiddata(im,1)/volall
-       if (vofdark(im).le.VOFTOL) then
+       if (vofdark(im).le.VOFTOL_MATERIAL) then
         vofdark(im)=zero
        endif
-       if (vofdark(im).ge.one-VOFTOL) then
+       if (vofdark(im).ge.one-VOFTOL_MATERIAL) then
         vofdark(im)=one
        endif
        voflight(im)=one-vofdark(im)
-       if (voflight(im).le.VOFTOL) then
+       if (voflight(im).le.VOFTOL_MATERIAL) then
         voflight(im)=zero
        endif
-       if (voflight(im).ge.one-VOFTOL) then
+       if (voflight(im).ge.one-VOFTOL_MATERIAL) then
         voflight(im)=one
        endif
        do dir=1,SDIM
@@ -148,10 +148,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid get volume data batch"
+       print *,"levelrz invalid get volume data batch ",levelrz
        stop
       endif
 
@@ -290,10 +288,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid stack volume batch"
+       print *,"levelrz invalid stack volume batch ",levelrz
        stop
       endif
 

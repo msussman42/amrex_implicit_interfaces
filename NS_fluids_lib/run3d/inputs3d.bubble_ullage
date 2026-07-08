@@ -313,7 +313,6 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
-ns.density_ratio_relaxation_factor=2.0
 ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
@@ -454,9 +453,6 @@ ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof   = 1 # 0=MOF 1=CMOF (=1 if particle)
-ns.mof_decision_tree_learning=0
-ns.mof_machine_learning=0
-ns.MOFITERMAX_AFTER_PREDICT = 0
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
@@ -464,7 +460,7 @@ ns.MOFITERMAX_AFTER_PREDICT = 0
 ns.EILE_flag        = 1
 
 ns.MOFITERMAX=30
-ns.tiling=false
+ns.ns_tiling=false
 
 
 # ----------------------------------------------------------

@@ -761,10 +761,10 @@ integer :: i1,j1,k1,k1lo,k1hi
 real(amrex_real) :: xdata(SDIM)
 real(amrex_real) :: LS_normal_data(SDIM)
 real(amrex_real) :: vfrac_seed
-real(amrex_real) :: volcell
 real(amrex_real) :: facearea_seed
 real(amrex_real) :: centroid_seed(SDIM)
 real(amrex_real) :: cencell(SDIM)
+real(amrex_real) :: volcell
 
 nstate=assimilate_in%nstate
 
@@ -860,6 +860,7 @@ if ((num_materials.ge.3).and. &
        enddo
        enddo
        call getvolume( &
+         volcell, &
          assimilate_in%bfact, &
          assimilate_in%dx, &
          assimilate_in%xsten, &
@@ -868,7 +869,7 @@ if ((num_materials.ge.3).and. &
          vfrac_seed, &
          facearea_seed, &
          centroid_seed, &
-         VOFTOL, &
+         VOFTOL_MATERIAL, &
          SDIM)
        call CISBOX( &
          assimilate_in%xsten, &

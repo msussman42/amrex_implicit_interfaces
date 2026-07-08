@@ -20,11 +20,8 @@ geometry.is_periodic = 0 0 0
 
 ns.EILE_flag=-1
 ns.continuous_mof=1
-ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=30
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=0 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=0
 ns.FD_curv_interp=1
 
 # 0MGPCG 1PCG 2 MINV=I
@@ -97,7 +94,6 @@ ns.gravity        = -0.0429    # body force  (gravity in MKS units)
 # material 3 is solid
 # sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
 # 90 degree contact angle:
-ns.ice_normal_weight = 1.0 1.0 1.0
 ns.tension        = 0.3269 0.3269 0.3269 
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 

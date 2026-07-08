@@ -16,7 +16,6 @@ geometry.coord_sys_override = 3        # 0 => cart, 1 => RZ, 3=> RTHETA
 geometry.prob_lo   =  7.5 0.0
 geometry.prob_hi   =  50.0 6.283185306
 geometry.is_periodic= 0 1
-ns.MOF_TURN_OFF_LS=0
 # multigrid class
 mg.verbose = 0
 cg.verbose = 0

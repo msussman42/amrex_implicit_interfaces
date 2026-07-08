@@ -80,16 +80,21 @@ real(amrex_real),intent(in) :: samp(2,8)
 real(amrex_real),intent(in) :: pp(2)
 real(amrex_real)            :: dist(8)
 integer                 :: i
+integer                 :: dir
 integer,intent(out)     :: vflag
 real(amrex_real),parameter  :: eps=0.01d0
 
 vflag=0
 
 do i=1,8
- dist(i)=sqrt((samp(1,i)-pp(1))**2.0+(samp(2,i)-pp(2))**2.0)
-  if(dist(i).lt.eps)then
-    vflag=i
-  endif
+ dist(i)=zero
+ do dir=1,SDIM-1
+  dist(i)=dist(i)+(samp(dir,i)-pp(dir))**2
+ enddo
+ dist(i)=sqrt(dist(i))
+ if(dist(i).lt.eps)then
+  vflag=i
+ endif
 enddo
 
 
@@ -127,6 +132,9 @@ tref=xblob4
 tinit=yblob4
 tmax=tref+zblob4
 
+ open(1201,file='sites.dat')
+ open(1202,file='sites2.dat')
+ open(1203,file='sites3.dat')
 print *,"number_of_regions",number_of_source_regions
 
 allocate(sites(3,max_sitesnum)) !x,y,temperature
@@ -157,17 +165,20 @@ t=0.0d0
 do while(t.le.tmax)
  isite=isite+1
  if(isite.eq.1)then
-  call random_number(r)
+  call random_number(r) !r(1) and r(2) initialized
   if (SDIM.eq.3) then
    ! do nothing
   else if (SDIM.eq.2) then
-    if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     !r(2)=zblob
+     r(2)=zero
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
   else
-   print *,"dimension invalid"
+   print *,"dimension invalid ",SDIM
    stop
   endif
 !  print *,r
@@ -177,17 +188,20 @@ do while(t.le.tmax)
  elseif(isite.gt.1)then
   do i=1,8
 
-   call random_number(r)
+   call random_number(r) !r(1) and r(2) initialized
    if (SDIM.eq.3) then
     ! do nothing
    else if (SDIM.eq.2) then
-    if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     !r(2)=zblob
+     r(2)=zero
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
    else
-    print *,"dimension invalid"
+    print *,"dimension invalid ",SDIM
     stop
    endif
    samp(1,i)=r(1)
@@ -215,7 +229,7 @@ do while(t.le.tmax)
    sites(i,isite)=samp(i,maxi)
   enddo  
  else
-  print *,"isite invalid"
+  print *,"isite invalid ",isite
   stop
  endif
 
@@ -258,6 +272,7 @@ enddo
 print *,"sitesnum",sitesnum,"sites list:"
 do i=1,sitesnum
  print *, sites(:,i)
+ write(1201,*)sites(1,i),sites(2,i),sites(3,i)
 enddo
 
 active_flag=0
@@ -282,13 +297,16 @@ do while(t.le.tmax)
   if (SDIM.eq.3) then
    ! do nothing
   else if (SDIM.eq.2) then
-    if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     r(2)=zero
+     !r(2)=zblob
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
   else
-   print *,"dimension invalid"
+   print *,"dimension invalid ",SDIM
    stop
   endif
 !  print *,r
@@ -302,13 +320,16 @@ do while(t.le.tmax)
    if (SDIM.eq.3) then
     ! do nothing
    else if (SDIM.eq.2) then
-    if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     !r(2)=zblob
+     r(2)=zero
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
    else
-    print *,"dimension invalid"
+    print *,"dimension invalid ",SDIM
     stop
    endif
    samp(1,i)=r(1)
@@ -372,6 +393,7 @@ enddo
 
 print *,"sitesnum2",sitesnum2,"sites 2 list:"
 do i=1,sitesnum2
+ write(1202,*)sites2(1,i),sites2(2,i),sites2(3,i)
  print *, sites2(:,i)
 enddo
 
@@ -397,13 +419,16 @@ do while(t.le.tmax)
   if (SDIM.eq.3) then
    ! do nothing
   else if (SDIM.eq.2) then
-     if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     !r(2)=zblob
+     r(2)=zero
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
   else
-   print *,"dimension invalid"
+   print *,"dimension invalid ",SDIM
    stop
   endif
 !  print *,r
@@ -417,13 +442,16 @@ do while(t.le.tmax)
    if (SDIM.eq.3) then
     ! do nothing
    else if (SDIM.eq.2) then
-     if(axis_dir.ne.12)then
+    if (axis_dir.eq.8) then
+     !r(2)=zblob
+     r(2)=zero
+    else if(axis_dir.ne.12)then
      r(2)=zero
     else
      r(1)=zero
     endif
    else
-    print *,"dimension invalid"
+    print *,"dimension invalid ",SDIM
     stop
    endif
    samp(1,i)=r(1)
@@ -488,9 +516,14 @@ enddo
 print *,"sitesnum3",sitesnum3,"sites 3 list:"
 do i=1,sitesnum3
  print *, sites3(:,i)
+ write(1203,*)sites3(1,i),sites3(2,i),sites3(3,i)
 enddo
 
 active_flag3=0
+
+ close(1201)
+ close(1202)
+ close(1203) 
 
 
 return
@@ -510,7 +543,8 @@ real(amrex_real), INTENT(out) :: radsite
 real(amrex_real), INTENT(out) :: temperature
 integer dir
 
- n_sites_out=sitesnum+sitesnum2+sitesnum3
+!n_sites_out=sitesnum+sitesnum2+sitesnum3
+ n_sites_out=sitesnum
 
  if (isite.eq.0) then
   !do nothing
@@ -519,9 +553,13 @@ integer dir
    do dir=1,2
     xsite_out(dir)=sites(dir,isite)
    enddo
-   print *,"FIX ME"
-   stop
-   xsite_out(SDIM)=zero
+   if (axis_dir.eq.8) then
+    !xsite_out(SDIM)=zblob
+    xsite_out(SDIM)=zero
+   else
+    print *,"expecting axis_dir=8 ",axis_dir
+    stop
+   endif
    temperature=sites(3,isite)
    radsite=zero
   else
@@ -537,7 +575,7 @@ return
 end subroutine CAVITY_PHASE_CHANGE_NUCLEATION_SITES
 
 
-! this routine called from PROB.F90
+! this routine called from PROB.F90 => "SUB_nucleation"
 subroutine Satomodel_nucleation( &
      nucleate_in, & !in
      xsten, & !in
@@ -566,7 +604,8 @@ real(amrex_real)       :: tempdist
  subscale_spec_id=0
  subscale_vfrac=0.0
 
- if(axis_dir.eq.8.or.axis_dir.eq.9)then
+ if((axis_dir.eq.8).or.(axis_dir.eq.9))then
+
   i=nucleate_in%i
   j=nucleate_in%j
   k=nucleate_in%k
@@ -596,24 +635,38 @@ real(amrex_real)       :: tempdist
 
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
-     if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+     !if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+     if(tempt.ge.sites(3,ii).and.active_flag(ii).lt.12)then
 !      print *,"tempt satisfied"
-      if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-          tempvec2(1)=sites(1,ii)
-          tempvec2(2)=sites(2,ii)
-          tempvec2(SDIM)=zblob
-          call l2norm(tempvec1,tempvec2, tempdist)                               
+
+      if (ls_sol.lt.zero) then
+
+       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
+        tempvec2(1)=sites(1,ii)
+        tempvec2(2)=sites(2,ii)
+        tempvec2(SDIM)=zblob
+        call l2norm(tempvec1,tempvec2, tempdist) 
+
         if(tempdist.le.radblob3)then
          print *,"make seed","temp","ls_sol","site"
          print *,"make seed",tempt,ls_sol,sites(1:2,ii),tempvec1(SDIM)
-           make_seed=1
-         active_flag(ii)=1
+         make_seed=1
+         !active_flag(ii)=1
+         active_flag(ii)=active_flag(ii)+1
+         subscale_spec_id=1
+         subscale_vfrac = 0.5d0
         elseif(tempdist.gt.radblob3)then
-                ! do nothing
+         ! do nothing
         else
-          print *,"invalid tempdist",tempdist
-          stop
+         print *,"invalid tempdist",tempdist
+         stop
         endif
+       endif    
+      else if (ls_sol.ge.zero) then
+       !do nothing
+      else
+       print *,"ls_sol invalid ",ls_sol
+       stop
       endif    
      endif
     enddo ! do ii=1,sitesnum
@@ -636,106 +689,125 @@ real(amrex_real)       :: tempdist
   vf_sol=nucleate_in%Snew(D_DECL(i,j,k), &
       STATECOMP_MOF+(im_s-1)*ngeom_raw+1)
   ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im_s)
- if(1.eq.0)then
-  if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-!   print *,"i=",i,"j=",j
-   print *,"ls_sol=",ls_sol,"temperature",tempt,"dx",nucleate_in%dx(SDIM)
-   print *,"xsten", xsten(0,1),xsten(0,2)
-  endif
- endif
   ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
   tempvec1(1)=xsten(0,1)
   tempvec1(2)=xsten(0,2)
   tempvec1(SDIM)=xsten(0,SDIM)
-    do ii=1,sitesnum
-!     print *,"sitesnum=", ii
-     if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
-!       print *,"tempt satisfied"
-!       print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
-      if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
+  do ii=1,sitesnum
+!  print *,"sitesnum=", ii
+   if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+!   print *,"tempt satisfied"
+!   print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
+    if (ls_sol.lt.zero) then
+
+     if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
 !       print *,"ls_sol satisfied"
 !       print *,"tempt< ",sites(3,ii),"ls_sol< ",nucleate_in%dx(SDIM)," + ",radblob3
-          tempvec2(1)=sites(1,ii)
-          tempvec2(2)=sites(2,ii)
-          tempvec2(SDIM)=zblob
-          if(SDIM.eq.2)then
-          tempvec2(1)=sites(2,ii)
-          tempvec2(SDIM)=zblob 
-          endif
-          call l2norm(tempvec1,tempvec2, tempdist)
+      tempvec2(1)=sites(1,ii)
+      tempvec2(2)=sites(2,ii)
+      tempvec2(SDIM)=zblob
+      if(SDIM.eq.2)then
+       tempvec2(1)=sites(1,ii)
+       tempvec2(SDIM)=zblob 
+      endif
+      call l2norm(tempvec1,tempvec2, tempdist)
 !          print *,"pointin",tempvec1
 !          print *,"pointlist",tempvec2          
-        if(tempdist.le.radblob3)then
-         print *,"make seed ","temp ","ls_sol ","site "
-         print *,"make seed",tempt,ls_sol,sites(:,ii)
-           make_seed=1
-         active_flag(ii)=1
-        elseif(tempdist.gt.radblob3)then
-                ! do nothing
-        else
-          print *,"invalid tempdist",tempdist
-          stop
-        endif
-      endif    
-     endif
-    enddo ! do ii=1,sitesnum
-    if(1.eq.1)then
-    do ii=1,sitesnum2
-!     print *,"sitesnum=", ii
-     if(tempt.ge.sites2(3,ii).and.active_flag2(ii).eq.0)then
-!      print *,"tempt satisfied"
+      if(tempdist.le.radblob3)then
+       print *,"make seed ","temp ","ls_sol ","site "
+       print *,"make seed",tempt,ls_sol,sites(:,ii)
+       make_seed=1
+       active_flag(ii)=1
+      elseif(tempdist.gt.radblob3)then
+       ! do nothing
+      else
+       print *,"invalid tempdist",tempdist
+       stop
+      endif
+     endif    
+    else if (ls_sol.ge.zero) then
+     !do nothing
+    else
+     print *,"ls_sol invalid ",ls_sol
+     stop
+    endif    
+   endif
+  enddo ! do ii=1,sitesnum
+
+  if(1.eq.1)then
+   do ii=1,sitesnum2
+!   print *,"sitesnum=", ii
+    if(tempt.ge.sites2(3,ii).and.active_flag2(ii).eq.0)then
+!    print *,"tempt satisfied"
+     if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-          tempvec2(1)=sites2(1,ii)
-          tempvec2(2)=0.105d0
-          tempvec2(SDIM)=sites2(2,ii)
-          if(SDIM.eq.2)then
-          tempvec2(1)=0.105d0
-          tempvec2(SDIM)=sites2(2,ii) 
-          endif
-          call l2norm(tempvec1,tempvec2, tempdist)                               
-        if(tempdist.le.radblob3)then
-         print *,"make seed","temp","ls_sol","site"
-         print *,"make seed",tempt,ls_sol,sites2(:,ii)
-           make_seed=1
-         active_flag2(ii)=1
-        elseif(tempdist.gt.radblob3)then
-                ! do nothing
-        else
-          print *,"invalid tempdist",tempdist
-          stop
-        endif
+       tempvec2(1)=sites2(1,ii)
+       tempvec2(2)=sites2(2,ii)
+       tempvec2(SDIM)=zblob
+       if(SDIM.eq.2)then
+        tempvec2(1)=sites2(1,ii)
+        tempvec2(SDIM)=zblob
+       endif
+       call l2norm(tempvec1,tempvec2, tempdist)                               
+       if(tempdist.le.radblob3)then
+        print *,"make seed","temp","ls_sol","site"
+        print *,"make seed",tempt,ls_sol,sites2(:,ii)
+        make_seed=1
+        active_flag2(ii)=1
+       elseif(tempdist.gt.radblob3)then
+        ! do nothing
+       else
+        print *,"invalid tempdist",tempdist
+        stop
+       endif
       endif    
-     endif
-    enddo ! do ii=1,sitesnum2
-    do ii=1,sitesnum3
-     if(tempt.ge.sites3(3,ii).and.active_flag3(ii).eq.0)then
+     else if (ls_sol.ge.zero) then
+      !do nothing
+     else
+      print *,"ls_sol invalid ",ls_sol
+      stop
+     endif    
+    endif
+   enddo ! do ii=1,sitesnum2
+
+   do ii=1,sitesnum3
+    if(tempt.ge.sites3(3,ii).and.active_flag3(ii).eq.0)then
+     if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-          tempvec2(1)=sites3(1,ii)
-          tempvec2(2)=0.295d0
-          tempvec2(SDIM)=sites3(2,ii)
-          if(SDIM.eq.2)then
-          tempvec2(1)=0.295d0
-          tempvec2(SDIM)=sites3(2,ii) 
-          endif
-          call l2norm(tempvec1,tempvec2, tempdist)                               
-        if(tempdist.le.radblob3)then
-         print *,"make seed","temp","ls_sol","site"
-         print *,"make seed",tempt,ls_sol,sites3(:,ii)
-           make_seed=1
-         active_flag3(ii)=1
-        elseif(tempdist.gt.radblob3)then
-                ! do nothing
-        else
-          print *,"invalid tempdist",tempdist
-          stop
-        endif
+       tempvec2(1)=sites3(1,ii)
+       !tempvec2(2)=0.295d0
+       tempvec2(2)=sites3(2,ii)
+       !tempvec2(SDIM)=sites3(2,ii)
+       tempvec2(SDIM)=zblob
+       if(SDIM.eq.2)then
+        tempvec2(1)=sites3(1,ii)
+        tempvec2(SDIM)=zblob
+       endif
+       call l2norm(tempvec1,tempvec2, tempdist)                               
+       if(tempdist.le.radblob3)then
+        print *,"make seed","temp","ls_sol","site"
+        print *,"make seed",tempt,ls_sol,sites3(:,ii)
+        make_seed=1
+        active_flag3(ii)=1
+       elseif(tempdist.gt.radblob3)then
+        ! do nothing
+       else
+        print *,"invalid tempdist",tempdist
+        stop
+       endif
       endif    
-     endif
-    enddo ! do ii=1,sitesnum3
-   endif   ! 1=0
+     else if (ls_sol.ge.zero) then
+      !do nothing
+     else
+      print *,"ls_sol invalid ",ls_sol
+      stop
+     endif    
+    endif
+   enddo ! do ii=1,sitesnum3
+  endif   ! 1==1? 1==0
 
  else
-   make_seed=0 
+  make_seed=0 
  endif
 
 return
@@ -841,12 +913,15 @@ real(amrex_real), INTENT(out) :: charfn_out
 real(amrex_real)           :: rtemp
 
   if(axis_dir.eq.8)then 
+
    if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
     charfn_out=one
    else
     charfn_out=0.0d0
    endif
+
   elseif(axis_dir.eq.9)then
+
    if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2 .and.&
       x(1).le.5.0d0 .and. x(1).ge.1.0d0 .and. &     
       x(2).le.5.0d0 .and. x(2).ge.1.0d0)then
@@ -927,9 +1002,11 @@ integer :: local1
 real(amrex_real)   :: rtemp
 
 if(axis_dir.eq.8)then
+
   if(x(SDIM).lt.zblob2)then
    thermal_k=0.0d0
   endif
+
 elseif(axis_dir.eq.9)then
   local1=0   
    if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob2+0.2d0 .and. &
@@ -1021,6 +1098,9 @@ real(amrex_real)         :: x1temp(SDIM)
 real(amrex_real)         :: x2temp(SDIM)
 real(amrex_real)         :: x3temp(SDIM)
 integer      :: dir
+
+print *,"find_p_plane_dist_wb should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1128,6 +1208,9 @@ real(amrex_real), INTENT(in) :: d
 real(amrex_real),INTENT(out)  :: dist
 real(amrex_real)             :: nn
 
+print *,"find_p_plane_dist should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
  stop
@@ -1157,6 +1240,9 @@ real(amrex_real), INTENT(in) :: d
 
 real(amrex_real)             :: val
 
+print *,"plane_distf should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
  stop
@@ -1176,6 +1262,9 @@ real(amrex_real)              :: pp(SDIM)
 
 integer                   :: i
 real(amrex_real)              :: s
+
+print *,"find_pp_plane should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1210,6 +1299,9 @@ real(amrex_real)             :: d
 
 integer                  :: i
 real(amrex_real)             :: val
+
+print *,"adjust_plane_sign should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1254,6 +1346,9 @@ real(amrex_real), INTENT(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
 real(amrex_real)                 :: normal(SDIM)
 real(amrex_real)                 :: d
 
+print *,"make_3points_plane should not be called"
+stop
+
 if(SDIM .ne. 3)then
  print *,"invalid call make_3points_plane"
  stop
@@ -1290,6 +1385,8 @@ real(amrex_real)                 :: x10(SDIM), x21(SDIM)
 integer              :: i
 real(amrex_real)                 :: s
 
+print *,"dist_point_to_line should not be called"
+stop
 
 dist = 0.0d0
 
@@ -1343,6 +1440,9 @@ real(amrex_real),INTENT(out)      :: oter(SDIM)
 
 integer                      :: i
 real(amrex_real)                 :: p1p2(SDIM),p1p3(SDIM)
+
+print *,"crossproduct  should not be called"
+stop
 
 if(SDIM .ne. 3)then
  print *,"invalid call outerproduct"
@@ -1650,6 +1750,7 @@ end subroutine dist_rectangular
 !  4--> semicircle
 !  5--> spherical reentrant
 
+!cavity_type=axis_dir
 subroutine cavity_distf_13(cavity_type, coord_type, x_in, dist)
 use probcommon_module
 implicit none
@@ -1685,6 +1786,7 @@ integer dir
 
 integer,parameter :: debugflag = 0
 real(amrex_real),   parameter :: scale_factor=1.0d0
+
 dist_sign = 1.0d0
 dist = 0.0d0
 dist1 = 0.0d0
@@ -1713,7 +1815,7 @@ endif
   print *,"coord_type", coord_type
  endif
 
-
+!coord_type=levelrz+1
 !  dimension sanity check
 if(coord_type .eq. 1.and.cavity_type.ne.8.and.cavity_type.ne.12) then   ! 3D cartisian
  if(SDIM .ne. 3)then
@@ -2380,12 +2482,12 @@ else if (cavity_type.eq.7) then
  endif
 else if (cavity_type.eq.8) then
  if(coord_type .eq. 2)then   !  R-Z  axis symmetric (2D)
-!  if(SDIM.ne.2)then
-!   print *,"R-Z, SDIM should be 2"
-!   stop
-!  endif
+  if(SDIM.ne.2)then
+   print *,"R-Z, SDIM should be 2"
+   stop
+  endif
   dist=x(SDIM)-zblob  ! dist<0 in the solid (which is on bot for this case)
- elseif(coord_type.eq.1)then   ! 3-D cartesian
+ elseif(coord_type.eq.1)then   ! 2-D or 3-D cartesian
   dist1=x(SDIM)-(tan(radblob2)*x(1)+zblob)
   if (dist1.ge.zero) then
    dist=abs(dist1*cos(radblob2))
@@ -2633,6 +2735,9 @@ real(amrex_real)            :: center(SDIM)
 real(amrex_real)            :: film_thickness     ! thickness of the film
 real(amrex_real), parameter :: scale_factor=1.0d0
 integer i
+
+print *,"cavity_distf_12 should not be called"
+stop
 
 film_thickness=radblob4
 

@@ -43,7 +43,6 @@ Lp.v = 0
 
 ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.mof_ordering=4 1 2 3 #BIOFILM
 ns.mof_ordering=4 1 2 
@@ -147,7 +146,6 @@ ns.gravityangle = 0.0
 #ns.nucleation_pmg=221.0 0.0 0.0 0.0 0.0 0.0 
 #ns.nucleation_mach=0.1 0.0 0.0 0.0 0.0 0.0 
 ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
-ns.density_ratio_relaxation_factor=1000.0
 
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
@@ -208,7 +206,7 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L BIOFILM
 ns.viscoelastic_model=0 0 0 #INELASTIC BALL
 #ns.viscoelastic_model=0 0 7 #ELASTIC BALL
 ns.rest_fraction=0.0 #prevent CPU overheating?
-ns.tiling=false
+ns.ns_tiling=false
 
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

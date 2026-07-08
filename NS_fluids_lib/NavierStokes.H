@@ -217,6 +217,7 @@ public:
 	int nsteps_actual); 
 
     virtual void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,
@@ -226,6 +227,8 @@ public:
 
     void writeInterfaceReconstruction();
     void writeTECPLOT_File(int do_plot,int do_slice);
+
+      //tecplot_debug is declared in: NavierStokes2.cpp
     void tecplot_debug(FArrayBox& fabdata,
       const Real* xlo,const int* fablo,const int* fabhi,
       const Real* dx,int dir,int id,int comp,int ncomp,
@@ -274,6 +277,7 @@ public:
     //
 
     void debug_memory();
+    void github_repo_ver();
 
     void allocate_mdot(int zap_mdot_flag);
 
@@ -303,10 +307,12 @@ public:
       int extra_comp,
       Vector<Real>& cell_max,
       Vector<Real>& LS_cell_max,
-      int isweep);
+      int isweep,
+      int caller_id);
     void LSA_normalize_eigenvectorALL(
       int unperturb_extra_comp,
-      int extra_comp);
+      int extra_comp,
+      int caller_id);
 
     void allocate_maccoefALL(int project_option,int nsolve,
 	int create_hierarchy,Real dt_maccoef); //-1,0,1
@@ -318,7 +324,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement(int local_smoothing_flag);
+    void prepare_displacement();
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -334,7 +340,7 @@ public:
     void manage_FSI_data();
 
      //1<=im_critical<=num_materials
-    void extend_FSI_data(int im_critical,int local_smoothing_flag); 
+    void extend_FSI_data(int im_critical,int tensor_extend); 
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
@@ -357,7 +363,6 @@ public:
     static Real inflow_pressure;
     static Real outflow_pressure;
     static Real period_time;
-    static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
 
     static Real visc_coef_boundary_layer_factor; //def=1.0
@@ -385,13 +390,11 @@ public:
     static int incremental_gravity_flag;
 
     static Real nucleation_init_time; //def 0.0
-     // 0 - centroid furthest from uncaptured centroid
-     // 1 - use MOF error
-    static int mof_error_ordering;
 
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<int> store_refine_density_data; // refine density parameter
 
+    static int ncell_mdot_shift; // default=2
     static int ngrow_distance;  // should always be at least 4
     static int ngrow_make_distance;  // should always be at least 3
     static Real ngrow_elastic; //ngrow_elastic<=ngrow_make_distance
@@ -421,8 +424,9 @@ public:
     static int CTML_FSI_num_scalars;
 
     static Vector<int> material_type; // 0 incomp   
-    static Vector<int> material_type_interface; 
     static Vector<int> material_conservation_form; 
+    static Vector<int> hold_material_conservation_form; 
+    static int positive_preserving_predictor;  //def=1
     static Vector<int> material_extend_velocity; 
     static int material_extend_velocity_flag;
 
@@ -462,7 +466,7 @@ protected:
 		int TSAT_MF);
     void level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,int velflag);
 
-    void avgDownCURV_localMF(int idxMF);
+    void avgDownCURV_localMF();
     void level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine);
 
     void avgDown_and_Copy_localMF(
@@ -644,7 +648,6 @@ protected:
 
     void combine_state_variable(
      int project_option,
-     int idx,
      int combine_flag,
      int hflag,
      int update_flux,
@@ -787,10 +790,9 @@ protected:
      MultiFab* mf);
 
     void correct_flotsam();
-    void correct_for_shear();
 
-    void split_scalar_advection(int local_smoothing_flag,int im_extension); 
-    void split_scalar_advectionALL(int local_smoothing_flag,int im_extension);
+    void split_scalar_advection(int im_extension); 
+    void split_scalar_advectionALL(int im_extension);
  
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
@@ -832,17 +834,13 @@ protected:
     void build_masksemALL();
     void build_masksem(int mask_sweep);
 
-    void MOF_training();
-
      // update_flag=RECON_UPDATE_NULL
      // update_flag=RECON_UPDATE_STATE_ERR
      // update_flag=RECON_UPDATE_STATE_CENTROID
      // update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID
     void VOF_Recon(
       Real time,int update_flag,
-      int init_vof_prev_time,
-      Real& delta_centroid_level,
-      int& number_centroid_level); //output: SLOPE_RECON_MF
+      int init_vof_prev_time);
     void VOF_Recon_ALL(
       const std::string& caller_string,
       Real time,int update_flag,
@@ -858,18 +856,13 @@ protected:
 
     void solid_temperature();
 
-    void save_interface_data(int control_flag,int local_smoothing_flag,
-      int im_extension);
-    void save_interface_dataALL(int control_flag,int local_smoothing_flag,
-      int im_extension);
+    void save_interface_data(int control_flag,int im_extension);
+    void save_interface_dataALL(int control_flag,int im_extension);
 
-    void nonlinear_advection(const std::string& caller_string,
-      int smoothing_iter);
+    void nonlinear_advection(const std::string& caller_string);
 
     void sub_nonlinear_advection(const std::string& caller_string,
-      int smoothing_iter,int local_smoothing_flag,int im_extension);
-
-    void smoothing_advection();
+      int im_extension);
 
     void advance_MAC_velocity(int project_option);
 
@@ -1042,28 +1035,17 @@ protected:
     void avgDown_list(int stateidx,Vector<int> scomp,
       Vector<int> ncomp,int spectral_override); 
 
-    void prescribe_solid_geometryALL(Real time,
-      int renormalize_only,
+    void prescribe_solid_geometryALL(
+      Real time,
+      int output_slab,
+      int renormalize_flag,
       int local_truncate,
-      const std::string& caller_string,
-      int update_particles);
-
-    void prescribe_solid_geometry(Real time,int renormalize_only);
-#ifdef AMREX_PARTICLES
-    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-    void init_particle_containerALL(int append_flag,
-      const std::string& caller_string,
-      int local_redistribute_main);
-    void init_particle_container(int append_flag,
-      const std::string& caller_string,
-      Long& num_particles_sanity_check,
-      Long& misplaced_particles);
-    void move_particles(
-      int splitting_dir,
-      My_ParticleContainer& localPC,
       const std::string& caller_string);
-#endif
+
+    void prescribe_solid_geometry(
+      Real time,
+      int output_slab,
+      int renormalize_flag);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1398,14 +1380,24 @@ void apply_pressure_grad(
     void makeFaceFrac(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int update_particles,int local_redistribute_main,
-          int tessellate);
+
+    void makeStateDistALL(
+        int local_redistribute_main);
+
+    void sub_makeStateDistALL(
+        int local_redistribute_main,
+        int tessellate_source);
 
     void makeStateDist(int tessellate);
+    void build_elastic_fluid_moment();
+    void build_elastic_fluid_levelset(MultiFab* mf);
+    void save_elastic_LS();
 
-    void correct_dist_uninit();
+    void correct_dist_uninit(int tessellate);
 
-    void makeStateCurv(int project_option,
+    void makeStateCurvALL(Real cl_time,
+	  const std::string& caller_string);
+    void makeStateCurv(Real cl_time,
 	  const std::string& caller_string);
 
     void make_marangoni_and_disjoining_pressure_force();
@@ -1496,7 +1488,7 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_predict();
 
     void init_FSI_GHOST_MAC_MF_ALL(
-      int renormalize_only,
+      int renormalize_flag,
       const std::string& caller_string);
 
     void init_FSI_GHOST_MAC_MF(int dealloc_history);
@@ -1536,7 +1528,7 @@ protected:
 
     static int interface_touch_flag;
 
-    static int NS_LSA_nsteps_power_method;
+    static int NS_LSA_nsteps_krylov_subspace_method;
     static int NS_LSA_max_step_count;
     static int NS_LSA_step_count;
 
@@ -1548,6 +1540,7 @@ protected:
     static int slab_step; 
     static int project_slab_step; 
     static int velocity_slab_step; 
+    static int advect_slab_step; 
     static int SDC_outer_sweeps;
     static int divu_outer_sweeps;
     static int very_last_sweep;
@@ -1636,15 +1629,6 @@ protected:
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
-#ifdef AMREX_PARTICLES
-
-    using My_NBR_ParticleContainer =
-      NeighborParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-    My_NBR_ParticleContainer* NBR_Particle_Container;
-
-#endif
-
      // value_color = sum_{i in omega_color} 1
     static Vector<Real> ones_sum_global;
      // for each given color, singular_patch_flag=
@@ -1672,26 +1656,15 @@ protected:
     static Real cfl;         // desired maximum cfl
 
     static int  MOFITERMAX;
-    static int  MOFITERMAX_AFTER_PREDICT;
 
     static Vector<int> force_blob_symmetry;
 
-    static int particle_feedback;  //particle_feedback=1 is the default. 
-    static int particle_nsubdivide_dx; 
-    static int particle_nsubdivide;
-    static int particle_ngrow_slopes;
-
     static int  enable_spectral;
 
-     // continuous_mof = STANDARD_MOF => regular MOF
-     // continuous_mof = CMOF_X => CMOF ("continuous MOF ")
-    static int  continuous_mof; // default is CMOF_X
-    static int  update_centroid_after_recon; //default is 1
-    static int  mof_decision_tree_learning; // default is 10000
-    static int  mof_machine_learning; // default is 0
+    static int  continuous_mof; //default is 1
+    static int  update_centroid_after_recon;  //default is 1
     static Vector<Real> centroid_noise_factor; //default is 0.0
 
-    static int  partial_cmof_stencil_at_walls;  // default is 1
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
 
@@ -1770,13 +1743,10 @@ protected:
     static int Refine_Density_Type;
     static int NUM_STATE_TYPE;
 
-    static int surface_tension_smoothing;
-
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope; //should be non-positive
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Vector<Real> ice_normal_weight; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> tension_init; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 1.0
     static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
@@ -1827,7 +1797,6 @@ protected:
     static Vector<Real> nucleation_mach; 
     static Vector<Real> nucleation_temp; 
     static Real nucleation_period; 
-    static Real sato_cslope;
     static int pos_sites_random_flag; //default=1
     static int n_sites;
     static Vector<Real> pos_sites;
@@ -1930,6 +1899,7 @@ protected:
      // value: 1..num_materials
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
+
      // index: 0..num_materials-1
      // value: 1..num_species_var
      // if the Sato model is to be used for a given vapor id "im_vapor,"
@@ -1937,6 +1907,8 @@ protected:
      // The species variable will store the liquid fraction.
      // "im_vapor" must be wholly contained on the finest AMR level.
     static Vector<int> sato_model_spec_id; 
+    static Real sato_cslope; //default 0.0
+
      // 0 - distribute to the destination material 
      //     V=u_src dot n + mdot/rho_src
      // 1 - distribute to the source material
@@ -2260,13 +2232,10 @@ protected:
      // S corresponding to velocity, interface, or state variables.
     static int cancel_advection;  // def=0
 
-    static Vector<Real> denconst_interface;
-    static Vector<Real> denconst_interface_min;
-    static Vector<Real> viscconst_interface_min;
-    static Real density_ratio_relaxation_factor; //def=10.0
-    static Real viscosity_ratio_relaxation_factor; //def=0.0
-    static int lamb_capillary_wave_speed; //def=0 0=>min(rho_a,rho_w) 
-                                          //1=>(rho_a+rho_w)/2
+     //def=2.0 if surface tension
+     //def=1000.0 if no surface tension
+    static Vector<Real> density_ratio_relaxation_factor; 
+    static Vector<Real> denconst_interface_min; 
 
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
@@ -2323,7 +2292,6 @@ protected:
     static Vector<Real> heatviscconst_eddy_bulk;
     static Vector<Real> prerecalesce_viscconst;
 
-    static Vector<Real> viscconst_interface;
 
     static Vector<Real> heatflux_factor;
     static Vector<Real> heatviscconst;
@@ -2331,7 +2299,6 @@ protected:
     static Real heatviscconst_min;
     static Vector<Real> prerecalesce_heatviscconst;
 
-    static Vector<Real> heatviscconst_interface;
 
       // num_species * num_materials size.
     static Vector<Real> speciesreactionrate;
@@ -2339,9 +2306,6 @@ protected:
     static Vector<Real> speciesconst;
       // num_species * num_materials size.
     static Vector<Real> speciesviscconst;
-
-      // num_species * num_interfaces
-    static Vector<Real> speciesviscconst_interface;
 
       // num_species
     static Vector<Real> species_molar_mass;  // def=1
@@ -2371,6 +2335,9 @@ protected:
     static Real visc_abs_tol;
     static Real thermal_abs_tol;
 
+    static Real primary_flotsam_tol; //def=0.0
+    static Real secondary_flotsam_tol; //def=0.0
+
     static int  multilevel_maxcycle;
     static int  multilevel_restart_period;
     static int  initial_project_cycles;
@@ -2379,6 +2346,8 @@ protected:
      // 0 - MGPCG  1-PCG 2-MINV=I
     static int  project_solver_type;
     static int  initial_cg_cycles;
+    static int  initial_viscosity_cg_cycles;
+    static int  initial_thermal_cg_cycles;
     static int  num_divu_outer_sweeps;
 
     static int  debug_dot_product;

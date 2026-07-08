@@ -165,14 +165,12 @@ stop
         mof_renormalize_ordering_local, & !intent(out)
         denconst_local, & !intent(in)
         is_rigid_local, & !intent(in)
-        mof_error_ordering_local, & !intent(in)
         FSI_flag_temp) & !intent(in)
       bind(c,name='fort_mof_ordering_override')
 
       use probcommon_module
       IMPLICIT NONE
 
-      integer, INTENT(in) :: mof_error_ordering_local
       integer, INTENT(in) :: FSI_flag_temp(num_materials)
       integer, INTENT(out) :: mof_ordering_local(num_materials)
       integer, INTENT(out) :: mof_renormalize_ordering_local(num_materials)
@@ -231,10 +229,7 @@ stop
        endif
       enddo !im=1,num_materials
 
-      ! default: centroid farthest from uncaptured centroid.
-      if (mof_error_ordering_local.eq.0) then
-
-       do im=1,num_materials
+      do im=1,num_materials
 
         local_FSI_flag=FSI_flag_temp(im)
 
@@ -264,20 +259,20 @@ stop
          stop
         endif
 
-       enddo !im=1,num_materials
+      enddo !im=1,num_materials
 
-       ! impinge jets unlike material
-       if ((probtype.eq.530).and.(AMREX_SPACEDIM.eq.3)) then
+      ! impinge jets unlike material
+      if ((probtype.eq.530).and.(AMREX_SPACEDIM.eq.3)) then
         if (axis_dir.eq.1) then
          mof_ordering_local(2)=num_materials+1! make gas have low priority
         else if (axis_dir.ne.0) then
          print *,"axis_dir invalid probtype=530"
          stop
         endif
-       endif 
+      endif 
 
-       ! 2d colliding droplets, boiling, freezing problems
-       if ((probtype.eq.55).and.(AMREX_SPACEDIM.eq.2)) then
+      ! 2d colliding droplets, boiling, freezing problems
+      if ((probtype.eq.55).and.(AMREX_SPACEDIM.eq.2)) then
         if (radblob7.gt.zero) then
          mof_ordering_local(2)=num_materials+1! make gas have low priority
         else if (radblob7.le.zero) then
@@ -314,9 +309,9 @@ stop
          print *,"axis_dir invalid probtype.eq.55: ",axis_dir
          stop
         endif
-       endif
+      endif
 
-       if (probtype.eq.540) then
+      if (probtype.eq.540) then
         if ((radblob4.gt.zero).and.(radblob3.gt.zero)) then
          print *,"conflict of parametrs for 540"
          stop
@@ -325,25 +320,16 @@ stop
         else if (radblob4.gt.zero) then
          mof_ordering_local(3)=num_materials+1!make filament gas low priority
         endif
-       endif
+      endif
 
-       if (probtype.eq.202) then  ! liquidlens
+      if (probtype.eq.202) then  ! liquidlens
         mof_ordering_local(2)=1 ! make (circle) material 2 have high priority
-       endif 
+      endif 
 
-       if ((probtype.eq.17).and. &
+      if ((probtype.eq.17).and. &
            (num_materials.eq.3).and. &
            (1.eq.0)) then! droplet impact 3mat
         mof_ordering_local(2)=1 ! make gas material 2 have high priority
-       endif
-
-      else if (mof_error_ordering_local.eq.1) then
-
-       ! mof_ordering_local already init above.
-  
-      else
-       print *,"mof_error_ordering_local invalid"
-       stop
       endif
 
       do im=1,num_materials
@@ -444,8 +430,6 @@ stop
         ccnum_materials, &
         ccmaterial_extend_velocity, &
         ccmaterial_type, &
-        ccmaterial_type_interface, &
-        ccmaterial_conservation_form, &
         ccnten, &
         ccDrhoDT, &
         cctempconst, &
@@ -623,8 +607,6 @@ stop
       
       integer, INTENT(in) :: ccmaterial_extend_velocity(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
-      integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
-      integer, INTENT(in) :: ccmaterial_conservation_form(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
@@ -1607,7 +1589,6 @@ stop
        fort_material_extend_velocity(im)= &
               ccmaterial_extend_velocity(im)
        fort_material_type(im)=ccmaterial_type(im)
-       fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -1878,8 +1859,6 @@ stop
 
       do iten=1,num_interfaces
 
-       fort_material_type_interface(iten)=ccmaterial_type_interface(iten)
-
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
        fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
@@ -1949,8 +1928,6 @@ stop
                 fort_material_extend_velocity(im)
         print *,"im,material_type ",im, &
                 fort_material_type(im)
-        print *,"im,material_conservation_form ", &
-          im,fort_material_conservation_form(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
         print *,"im,DrhoDT ",im,fort_DrhoDT(im)
         print *,"im,temp ",im,fort_tempconst(im)
@@ -2055,9 +2032,6 @@ stop
        print *,"lever_arm= ",lever_arm
 
        do iten=1,num_interfaces
-
-        print *,"iten,fort_material_type_interface ",iten, &
-                fort_material_type_interface(iten)
 
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_init ",iten,fort_tension_init(iten)

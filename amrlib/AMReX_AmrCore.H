@@ -70,10 +70,10 @@ public:
     int LSA_extra_data;  // =0 or 3
     int LSA_plot_index; // 0,1,2, or 3
 
-    int LSA_nsteps_power_method;
+    int LSA_nsteps_krylov_subspace_method;
 
      //LSA_current_step=0 => define q_np1
-     //1<=LSA_current_step<=LSA_nsteps_power_method => power method
+     //1<=LSA_current_step<=LSA_nsteps_krylov_subspace_method => krylov_subspace method
     int LSA_current_step; 
 
     int LSA_initial_levelSteps; 
@@ -125,6 +125,7 @@ public:
     //
 
     void writeDEBUG_PlotFile(
+      const std::string& caller_string,
       int num,
       int SDC_outer_sweeps_in,
       int slab_step_in,
@@ -152,6 +153,7 @@ protected:
     // Write the plot file to be used for visualization.
     //
     void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,

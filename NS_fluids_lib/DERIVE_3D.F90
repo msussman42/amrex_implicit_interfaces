@@ -114,7 +114,6 @@ stop
       integer im_primary
       integer im_local
       real(amrex_real) VFRAC(num_materials)
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
      
       nhalf=1
 
@@ -195,7 +194,10 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary,tessellate)
+        !fort_derturbvisc
+       call get_primary_material_VFRAC( &
+          VFRAC, &
+          im_primary)
 
        do veldir=1,3
        do dir=1,3
@@ -228,12 +230,8 @@ stop
         endif
         rr=xsten(0,1)
         g(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=xsten(0,1)
-        g(2,2)=g(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
-        g(1,2)=g(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
-        print *,"levelrz invalid getturbvisc"
+        print *,"levelrz invalid getturbvisc ",levelrz
         stop
        endif
  
@@ -315,10 +313,10 @@ stop
            two*(visc(D_DECL(i,j,k),im)+fort_viscconst_eddy_bulk(im))/density)
 
          if (im_primary.eq.im) then
-          if (VFRAC(im).ge.one-VOFTOL) then
+          if (VFRAC(im).ge.one-VOFTOL_MATERIAL) then
            visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
           else if ((VFRAC(im).ge.-EPS1).and. &
-                   (VFRAC(im).le.one-VOFTOL)) then
+                   (VFRAC(im).le.one-VOFTOL_MATERIAL)) then
            ! do nothing
           else
            print *,"VFRAC invalid"
@@ -376,7 +374,10 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary,tessellate)
+          !fort_derturbvisc
+         call get_primary_material_VFRAC( &
+                 VFRAC, &
+                 im_primary)
          if (is_rigid(im_primary).eq.1) then
           near_solid=1
          else if (is_rigid(im_primary).eq.0) then
@@ -494,10 +495,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid getshear"
+       print *,"levelrz invalid getshear ",levelrz
        stop
       endif
 
@@ -549,18 +548,8 @@ stop
          print *,"rr invalid"
          stop
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=abs(xsten(0,1))
-        if (rr.gt.zero) then
-         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/rr
-           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
-         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/rr
-        else
-         print *,"rr invalid"
-         stop
-        endif
        else
-        print *,"levelrz invalid getshear 2"
+        print *,"levelrz invalid getshear 2 ",levelrz
         stop
        endif
 
@@ -736,7 +725,7 @@ stop
       integer dir_local
       real(amrex_real) Q(3,3)
       real(amrex_real) traceA,modtime,viscoelastic_coeff
-      real(amrex_real) DXMAXLS,cutoff
+      real(amrex_real) DXMAX,cutoff
       real(amrex_real) LS_local(num_materials)
       integer im_primary,im_local
 
@@ -964,8 +953,8 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=DXMAXLS*(ngrow_distance-one)
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=DXMAX*(ngrow_distance-one)
 
       if (is_rigid(im_parm).eq.1) then
 
@@ -1141,13 +1130,12 @@ stop
           if (SDIM.eq.3) then
            ! do nothing
           else if (SDIM.eq.2) then
-           if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
            else if (levelrz.eq.COORDSYS_RZ) then
             ! do nothing
            else
-            print *,"levelrz invalid"
+            print *,"levelrz invalid ",levelrz
             stop
            endif
           else
@@ -1367,7 +1355,6 @@ stop
       real(amrex_real) VFRAC(num_materials)
       integer near_interface
       real(amrex_real) nrm(SDIM)
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
       if (NS_sumdata_size.ne.IQ_TOTAL_SUM_COMP) then
@@ -1472,7 +1459,10 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary_center,tessellate)
+        !fort_derconductivity
+       call get_primary_material_VFRAC( &
+             VFRAC, &
+             im_primary_center)
 
        do dir=1,SDIM
         ii=0
@@ -1500,7 +1490,10 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary_side,tessellate)
+          !fort_derconductivity
+         call get_primary_material_VFRAC( &
+             VFRAC, &
+             im_primary_side)
 
          near_interface=0
          do dir_local=1,SDIM
@@ -1554,7 +1547,10 @@ stop
            vofcomp=(im_local-1)*ngeom_recon+1
            VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
           enddo
-          call get_primary_material_VFRAC(VFRAC,im_primary_probe,tessellate)
+           !fort_derconductivity
+          call get_primary_material_VFRAC( &
+                 VFRAC, &
+                 im_primary_probe)
           if ((is_rigid(im_primary_probe).eq.1).or. &
               (im_primary_probe.ne.im_parm)) then
            near_interface=0
@@ -1850,12 +1846,8 @@ stop
         endif
         rr=xsten(0,1)
         gradu(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=xsten(0,1)
-        gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
-        gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
-        print *,"levelrz invalid dermagtrace 2"
+        print *,"levelrz invalid dermagtrace 2 ",levelrz
         stop
        endif
 
@@ -2210,7 +2202,8 @@ stop
       integer ibase
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
-      integer, parameter :: local_tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer nmax
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -2332,10 +2325,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rzflag invalid"
+       print *,"rzflag invalid ",rzflag
        stop
       endif
 
@@ -2401,10 +2392,8 @@ stop
            stop
           endif
           global_centroid(1)=zero
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          ! do nothing
          else
-          print *,"levelrz invalid fort_getdrag"
+          print *,"levelrz invalid fort_getdrag ",levelrz
           stop
          endif
         else
@@ -2439,7 +2428,8 @@ stop
         ! "single material" tolerance is EPS2.
        call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, & !TESSELLATE_ALL
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &

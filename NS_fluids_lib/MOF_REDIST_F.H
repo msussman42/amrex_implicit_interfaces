@@ -26,7 +26,7 @@ namespace amrex{
      void fort_fd_node_normal(
        int* level,
        int* finest_level,
-       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+       Real* lsdata,AMREX_ARLIM_P(lsdatalo),AMREX_ARLIM_P(lsdatahi),
        Real* lsnrmFD,AMREX_ARLIM_P(lsnrmFDlo),AMREX_ARLIM_P(lsnrmFDhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
@@ -39,8 +39,8 @@ namespace amrex{
        int* level,
        int* finest_level,
        int* height_function_flag,
-       Real* F_new,AMREX_ARLIM_P(F_new_lo),AMREX_ARLIM_P(F_new_hi),
-       Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+       Real* F_data,AMREX_ARLIM_P(F_data_lo),AMREX_ARLIM_P(F_data_hi),
+       Real* ls_data,AMREX_ARLIM_P(ls_data_lo),AMREX_ARLIM_P(ls_data_hi),
        Real* lsnrmFD,AMREX_ARLIM_P(lsnrmFDlo),AMREX_ARLIM_P(lsnrmFDhi),
        Real* curvcell,AMREX_ARLIM_P(curvcelllo),AMREX_ARLIM_P(curvcellhi),
        const int* tilelo,const int* tilehi,
@@ -73,6 +73,7 @@ namespace amrex{
        Real* time);
 
      void fort_correct_uninit(
+       int* tessellate,
        Real* minLS,
        Real* maxLS,
        Real* max_problen,
@@ -80,17 +81,13 @@ namespace amrex{
        int* finest_level,
        Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
-       Real* statefab,AMREX_ARLIM_P(statefablo),AMREX_ARLIM_P(statefabhi),
-       Real* voffab,AMREX_ARLIM_P(voffablo),AMREX_ARLIM_P(voffabhi),
        Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
        Real* time, 
-       int* nstate, 
-       int* ncompLS,
-       int* ncomp_vof);
+       int* ncompLS);
 
      void fort_steninit(
        int* tessellate,
@@ -106,6 +103,31 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time);
 
+
+     void fort_build_old_vof(
+       int* tid,
+       int* level,
+       int* finest_level,
+       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
+       Real* old_vof,AMREX_ARLIM_P(old_voflo),AMREX_ARLIM_P(old_vofhi),
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,
+       int* bfact,
+       const Real* xlo,const Real* dx,
+       Real* time);
+
+
+     void fort_build_old_ls(
+       int* tid,
+       int* level,
+       int* finest_level,
+       Real* old_ls,
+       AMREX_ARLIM_P(old_lslo),AMREX_ARLIM_P(old_lshi),
+       const int* tilelo,const int* tilehi,
+       const int* fablo,const int* fabhi,
+       int* bfact,
+       const Real* xlo,const Real* dx,
+       Real* time);
 
      void fort_faceinit(
        int* tid,

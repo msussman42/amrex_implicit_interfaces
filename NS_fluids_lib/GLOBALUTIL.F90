@@ -1538,7 +1538,7 @@ contains
        x_np1=u_abs
        iter_diff=one
        iter=0
-       do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
+       do while ((iter_diff.gt.VOFTOL_MATERIAL).and.(iter.lt.iter_max))
         f = wallfunc(x_n,u_abs,y,K,B,rho_w,mu_w)
         fprime = wallfuncderiv(x_n,u_abs,y,K,B,rho_w,mu_w)
    
@@ -1567,7 +1567,7 @@ contains
          print *, "iter_diff = ",iter_diff
          stop
         endif
-       enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
+       enddo ! while (iter_diff>VOFTOL_MATERIAL .and. iter<iter_max)
     
        u_tau = x_np1
        tau_w = rho_w*(u_tau**2)
@@ -2360,7 +2360,7 @@ end subroutine dynamic_contact_angle
        if (is_rigid(im_solid).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid(im_solid) invalid"
+        print *,"is_rigid(im_solid) invalid: ",im_solid,is_rigid(im_solid)
         stop
        endif
        if (LOW%dt.gt.zero) then
@@ -2470,7 +2470,7 @@ end subroutine dynamic_contact_angle
               stop
              endif
             else 
-             print *,"is_rigid invalid GLOBALUTIL.F90"
+             print *,"is_rigid invalid GLOBALUTIL.F90: ",im,is_rigid(im)
              stop
             endif
            enddo ! im=1..num_materials
@@ -2897,11 +2897,12 @@ end subroutine dynamic_contact_angle
                else if (is_rigid(im_secondary_image).eq.0) then
                 ! do nothing
                else
-                print *,"is_rigid(im_secondary_image) invalid"
+                print *,"is_rigid(im_secondary_image) invalid: ", &
+                        im_secondary_image,is_rigid(im_secondary_image)
                 stop
                endif
               else
-               print *,"im_secondary_image invalid"
+               print *,"im_secondary_image invalid: ",im_secondary_image
                stop
               endif
 
@@ -3257,7 +3258,7 @@ end subroutine dynamic_contact_angle
              stop
             endif
            else if (dir.eq.data_dir+1) then
-            if (abs(nCL_raster(dir)).le.VOFTOL) then
+            if (abs(nCL_raster(dir)).le.VOFTOL_MATERIAL) then
              ! do nothing
             else
              print *,"nCL_raster(dir) invalid"
@@ -4215,16 +4216,18 @@ end subroutine dynamic_contact_angle
       else if (probtype.eq.710) then
 
        if (im_solid_temperature.ne.3) then
-        print *,"im_solid_temperature invalid"
+        print *,"im_solid_temperature invalid ",im_solid_temperature
         stop
        endif
 
        temperature=get_user_temperature(time,bcflag,1)
           ! thermal layer thickness
+          ! this sanity check will not be triggered if periodic or symmetric
+          ! (reflecting) boundary conditions.
        if (yblob3.gt.zero) then
         ! do nothing
        else
-        print *,"yblob3 invalid"
+        print *,"yblob3 invalid ",yblob3
         stop
        endif
        if (z_shift.le.yblob3) then
@@ -4455,13 +4458,8 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
 
       real(amrex_real) xtarget(SDIM)
-      real(amrex_real) xfoot(SDIM)
-      real(amrex_real) xtargetRT(SDIM)
-      real(amrex_real) xfootRT(SDIM)
       real(amrex_real) gradphi(SDIM) 
       real(amrex_real) phi,newphi
-      real(amrex_real) mag
-      integer dir
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        newphi=phi
@@ -4471,32 +4469,8 @@ end subroutine dynamic_contact_angle
         stop
        endif
        newphi=phi
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       mag=zero
-       do dir=1,SDIM
-        mag=mag+gradphi(dir)**2
-       enddo
-       mag=sqrt(mag)
-
-       if (mag.gt.zero) then
-        do dir=1,SDIM
-         xfoot(dir)=xtarget(dir)-phi*gradphi(dir)/mag
-        enddo
-        call RT_transform(xfoot,xfootRT)
-        call RT_transform(xtarget,xtargetRT)
-        newphi=zero
-        do dir=1,SDIM
-         newphi=newphi+(xtargetRT(dir)-xfootRT(dir))**2
-        enddo
-        newphi=sign_funct(phi)*sqrt(newphi)
-       else if (mag.eq.zero) then
-        newphi=phi
-       else
-        print *,"mag invalid in get_physical_dist"
-        stop
-       endif
       else
-       print *,"levelrz invalid"
+       print *,"levelrz invalid ",levelrz
        stop
       endif
 
@@ -4504,14 +4478,13 @@ end subroutine dynamic_contact_angle
       end subroutine get_physical_dist
 
        ! mag=|grad phi|
-      subroutine prepare_normal(gradphi,rval,mag,sdim_in)
+      subroutine prepare_normal(gradphi,mag,sdim_in)
       use probcommon_module
 
       IMPLICIT NONE
 
       integer, intent(in) :: sdim_in
       real(amrex_real), intent(inout) :: gradphi(sdim_in)
-      real(amrex_real), intent(in)    :: rval
       real(amrex_real), intent(out)   :: mag
       integer dir
 
@@ -4522,15 +4495,8 @@ end subroutine dynamic_contact_angle
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       if (rval.gt.zero) then
-        gradphi(2)=gradphi(2)/rval
-       else
-        print *,"rval invalid in prepare_normal; rval=",rval
-        stop
-       endif
       else
-       print *,"levelrz invalid"
+       print *,"levelrz invalid ",levelrz
        stop
       endif
 
@@ -4817,7 +4783,7 @@ real(amrex_real) :: sanity_tol
            (tx(2).le.one+tol).and. &
            (tx(1)+tx(2).le.one+tol)) then
 
-   sanity_tol=VOFTOL*max(1.0d0,1.0d0/det)
+   sanity_tol=VOFTOL_MATERIAL*max(1.0d0,1.0d0/det)
 
    if (abs(tx(3)).le.sanity_tol) then
     ! do nothing
@@ -4827,7 +4793,7 @@ real(amrex_real) :: sanity_tol
     print *,"tx(2)= ",tx(2)
     print *,"tx(3)= ",tx(3)
     print *,"tol= ",tol
-    print *,"VOFTOL= ",VOFTOL
+    print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
     print *,"det= ",det
     print *,"sanity_tol= ",sanity_tol
     stop
@@ -4879,7 +4845,7 @@ real(amrex_real) :: sanity_tol
      print *,"tx(i)= ",tx(i)
      print *,"tx_project(i)= ",tx_project(i)
      print *,"tol= ",tol
-     print *,"VOFTOL= ",VOFTOL
+     print *,"VOFTOL_MATERIAL= ",VOFTOL_MATERIAL
      print *,"det= ",det
      print *,"sanity_tol= ",sanity_tol
      stop
@@ -5868,8 +5834,6 @@ endif
 if (SDIM.eq.2) then
  if (levelrz.eq.COORDSYS_RZ) then
   A_dim=2
- else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  A_dim=3
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
   A_dim=2
  else
@@ -5877,9 +5841,7 @@ if (SDIM.eq.2) then
   stop
  endif
 else if (SDIM.eq.3) then
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  A_dim=3
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   A_dim=3
  else
   print *,"levelrz invalid: ",levelrz
@@ -6584,13 +6546,9 @@ end subroutine print_visual_descriptor
 
       integer, INTENT(in) :: i,j,k,im
       integer, INTENT(in) :: nhalf
-      integer :: dir
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(inout) :: LS
       real(amrex_real), INTENT(in), pointer :: dist(D_DECL(:,:,:),:)
-      real(amrex_real) n(SDIM)
-      real(amrex_real) nsave(SDIM)
-      real(amrex_real) RR,mag
 
       if (nhalf.ne.3) then
        print *,"nhalf invalid"
@@ -6605,46 +6563,8 @@ end subroutine print_visual_descriptor
 
       if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- 
-       dir=1
-       n(dir)=(dist(D_DECL(i+1,j,k),im)-dist(D_DECL(i-1,j,k),im))/ &
-              (xsten(2,dir)-xsten(-2,dir))
-       dir=2
-       n(dir)=(dist(D_DECL(i,j+1,k),im)-dist(D_DECL(i,j-1,k),im))/ &
-              (xsten(2,dir)-xsten(-2,dir))
-       if (SDIM.eq.3) then
-        dir=SDIM
-        n(dir)=(dist(D_DECL(i,j,k+1),im)-dist(D_DECL(i,j,k-1),im))/ &
-               (xsten(2,dir)-xsten(-2,dir))
-       endif
-
-       RR=one
-       call prepare_normal(n,RR,mag,SDIM)
-       if (mag.gt.zero) then
-        RR=xsten(0,1)
-        do dir=1,SDIM
-         nsave(dir)=n(dir)
-        enddo
-        call prepare_normal(nsave,RR,mag,SDIM)
-        if (mag.gt.zero) then
-         mag=zero
-         do dir=1,SDIM
-          mag=mag+n(dir)*nsave(dir)
-         enddo
-         if (abs(mag).le.one+EPS2) then
-          !do nothing
-         else
-          print *,"mag invalid in derive_dist"
-          stop
-         endif
-         if (abs(mag).gt.zero) then
-          LS=LS*abs(mag)
-         endif
-        endif
-       endif
       else
-       print *,"levelrz invalid"
+       print *,"levelrz invalid ",levelrz
        stop
       endif
       
@@ -6755,6 +6675,316 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine checkbound3D_array
+
+
+       ! called from: get_mach_number, 
+       !        fort_derturbvisc, fort_derconductivity,
+       !        fort_combinevel,interpfabFWEIGHT,
+       !        interpfabTEMP,fort_convertmaterial,
+       !        get_elasticmask_and_elasticmaskpart
+      subroutine get_primary_material_VFRAC( &
+          VFRAC, &
+          im_primary)
+      use probcommon_module
+ 
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: VFRAC(num_materials)
+      integer, INTENT(out) :: im_primary
+      integer im
+      integer im_crit_fluid,im_crit_solid,im_crit_elastic
+      real(amrex_real) sum_vfrac_fluid
+      real(amrex_real) sum_vfrac_solid
+      real(amrex_real) sum_vfrac_elastic
+      real(amrex_real) crit_vfrac_fluid
+      real(amrex_real) crit_vfrac_solid
+      real(amrex_real) crit_vfrac_elastic
+      real(amrex_real) VOFSUM
+      integer is_rigid_local(num_materials)
+      integer is_elastic_local(num_materials)
+
+      do im=1,num_materials
+       is_rigid_local(im)=is_rigid(im)
+       is_elastic_local(im)=is_elastic(im)
+      enddo ! im=1..num_materials
+
+      im_crit_fluid=0
+      im_crit_solid=0
+      im_crit_elastic=0
+
+      sum_vfrac_solid=zero
+      sum_vfrac_elastic=zero
+      sum_vfrac_fluid=zero
+
+      crit_vfrac_solid=zero
+      crit_vfrac_elastic=zero
+      crit_vfrac_fluid=zero
+
+      VOFSUM=zero
+
+      do im=1,num_materials
+
+       if ((VFRAC(im).ge.-EPS_8_4).and. &
+           (VFRAC(im).le.one+EPS_8_4)) then
+        ! do nothing
+       else
+        print *,"VFRAC out of range: ",im,VFRAC(im)
+        stop
+       endif
+
+       if (is_rigid_local(im).eq.1) then
+
+        if (im_crit_solid.eq.0) then
+         im_crit_solid=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_solid)) then
+          im_crit_solid=im
+         endif
+        endif
+        sum_vfrac_solid=sum_vfrac_solid+VFRAC(im)
+        crit_vfrac_solid=VFRAC(im_crit_solid)
+
+       else if (is_elastic_local(im).eq.1) then
+
+        if (im_crit_elastic.eq.0) then
+         im_crit_elastic=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_elastic)) then
+          im_crit_elastic=im
+         endif
+        endif
+        sum_vfrac_elastic=sum_vfrac_elastic+VFRAC(im)
+        crit_vfrac_elastic=VFRAC(im_crit_elastic)
+
+       else if ((is_rigid_local(im).eq.0).and. &
+                (is_elastic_local(im).eq.0)) then
+
+        if (im_crit_fluid.eq.0) then
+         im_crit_fluid=im
+        else
+         if (VFRAC(im).gt.VFRAC(im_crit_fluid)) then
+          im_crit_fluid=im
+         endif
+        endif
+        sum_vfrac_fluid=sum_vfrac_fluid+VFRAC(im)
+        crit_vfrac_fluid=VFRAC(im_crit_fluid)
+
+       else
+        print *,"is_rigid_local or is_elastic_local invalid MOF.F90"
+        print *,"is_rigid_local=",is_rigid_local
+        print *,"is_elastic_local=",is_elastic_local
+        stop
+       endif
+       VOFSUM=VOFSUM+VFRAC(im)
+      enddo ! im=1..num_materials
+
+      if (sum_vfrac_fluid.gt.one+EPS3) then
+       print *,"sum_vfrac_fluid invalid"
+       print *,"put breakpoint here to see caller"
+       print *,"sum_vfrac_fluid=",sum_vfrac_fluid
+       print *,"sum_vfrac_elastic=",sum_vfrac_elastic
+       print *,"sum_vfrac_solid=",sum_vfrac_solid
+       print *,"crit_vfrac_fluid=",crit_vfrac_fluid
+       print *,"crit_vfrac_elastic=",crit_vfrac_elastic
+       print *,"crit_vfrac_solid=",crit_vfrac_solid
+       print *,"im_crit_fluid=",im_crit_fluid
+       print *,"im_crit_elastic=",im_crit_elastic
+       print *,"im_crit_solid=",im_crit_solid
+       stop
+      endif
+      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid-sum_vfrac_elastic).gt. &
+          EPS3) then
+       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid,sum_vfrac_solid, &
+         sum_vfrac_elastic
+       stop
+      endif
+      if ((im_crit_fluid.lt.1).or. &
+          (im_crit_fluid.gt.num_materials)) then
+       print *,"im_crit_fluid invalid: ",im_crit_fluid
+       stop
+      endif
+
+      if (sum_vfrac_solid.ge.half) then
+       im_primary=im_crit_solid
+      else if (sum_vfrac_elastic.ge.half) then
+       im_primary=im_crit_elastic
+      else if (sum_vfrac_solid+sum_vfrac_elastic.ge.half) then
+       if (sum_vfrac_solid.ge.sum_vfrac_elastic) then
+        im_primary=im_crit_solid
+       else
+        im_primary=im_crit_elastic
+       endif
+      else
+       im_primary=im_crit_fluid
+      endif
+
+      end subroutine get_primary_material_VFRAC
+
+
+      subroutine get_primary_material_group(dx,LS_ptr, &
+         im_primary,im_secondary,im_tertiary,i,j,k,vof_flag)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: i,j,k,vof_flag
+      integer, INTENT(out) :: im_primary,im_secondary,im_tertiary
+      real(amrex_real) :: LS(num_materials)
+      real(amrex_real) :: max_second,max_third
+      integer i1,j1,k1,k1lo,k1hi,rank_loop
+      integer im,vofcomp,im_primary_local
+
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      endif
+      im_primary=0
+      im_secondary=0
+      im_tertiary=0
+      max_second=zero
+      max_third=zero
+
+      do im=1,num_materials
+       if (vof_flag.eq.0) then
+        LS(im)=LS_ptr(D_DECL(i,j,k),im)
+       else if (vof_flag.eq.1) then
+        vofcomp=(im-1)*ngeom_recon+1
+        LS(im)=LS_ptr(D_DECL(i,j,k),vofcomp)
+       else
+        print *,"vof_flag invalid"
+        stop
+       endif
+      enddo !im=1..num_materials
+
+      if (vof_flag.eq.0) then
+       call get_primary_material(dx,LS,im_primary)
+      else if (vof_flag.eq.1) then
+       call get_primary_material_VFRAC(LS,im_primary)
+      else
+       print *,"vof_flag invalid ",vof_flag
+       stop
+      endif
+
+      if ((im_primary.ge.1).and. &
+          (im_primary.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_primary invalid ",im_primary
+       stop
+      endif
+
+      do rank_loop=0,1
+
+       do i1=-1,1
+       do j1=-1,1
+       do k1=k1lo,k1hi
+        do im=1,num_materials
+         if (vof_flag.eq.0) then
+          LS(im)=LS_ptr(D_DECL(i+i1,j+j1,k+k1),im)
+         else if (vof_flag.eq.1) then
+          vofcomp=(im-1)*ngeom_recon+1
+          LS(im)=LS_ptr(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+         else
+          print *,"vof_flag invalid ",vof_flag
+          stop
+         endif
+        enddo !im=1..num_materials
+        if (vof_flag.eq.0) then
+         call get_primary_material(dx,LS,im_primary_local)
+        else if (vof_flag.eq.1) then
+         call get_primary_material_VFRAC(LS,im_primary_local)
+        else
+         print *,"vof_flag invalid ",vof_flag
+         stop
+        endif
+        if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+         !do nothing
+        else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
+         if (im_primary_local.ne.im_primary) then
+
+          if (rank_loop.eq.0) then
+
+           if (im_secondary.eq.0) then
+            im_secondary=im_primary_local
+            max_second=LS(im_secondary)
+           else if ((im_secondary.ge.1).and. &
+                    (im_secondary.le.num_materials)) then
+            if (LS(im_primary_local).ge.max_second) then
+             im_secondary=im_primary_local
+             max_second=LS(im_secondary)
+            else if (LS(im_primary_local).le.max_second) then
+             !do nothing
+            else
+             print *,"LS invalid: ",LS
+             stop
+            endif
+           else
+            print *,"im_secondary invalid ",im_secondary
+            stop
+           endif
+
+          else if (rank_loop.eq.1) then
+           
+           if (im_primary_local.ne.im_secondary) then 
+            if (im_tertiary.eq.0) then
+             im_tertiary=im_primary_local
+             max_third=LS(im_tertiary)
+            else if ((im_tertiary.ge.1).and. &
+                     (im_tertiary.le.num_materials)) then
+             if (LS(im_primary_local).ge.max_third) then
+              im_tertiary=im_primary_local
+              max_third=LS(im_tertiary)
+             else if (LS(im_primary_local).le.max_third) then
+              !do nothing
+             else
+              print *,"LS invalid: ",LS
+              stop
+             endif
+            else
+             print *,"im_tertiary invalid ",im_tertiary
+             stop
+            endif
+           else if (im_primary_local.eq.im_secondary) then
+            !do nothing
+           else
+            print *,"im_primary_local invalid ",im_primary_local
+            stop
+           endif
+
+          else
+           print *,"rank_loop invalid ",rank_loop
+           stop
+          endif
+
+         else if (im_primary_local.eq.im_primary) then
+          !do nothing
+         else
+          print *,"im_primary_local invalid ",im_primary_local
+          stop
+         endif
+        else
+         print *,"i1,j1,k1 invalid ",i1,j1,k1
+         stop
+        endif
+       enddo !k1
+       enddo !j1
+       enddo !i1
+
+      enddo !rank_loop=0,1 
+        
+      if (im_secondary.eq.0) then
+       im_secondary=num_materials+1
+      endif 
+      if (im_tertiary.eq.0) then
+       im_tertiary=num_materials+1
+      endif 
+
+      return
+      end subroutine get_primary_material_group
 
        ! grid_type=-1..5
       subroutine checkbound_array(lo,hi, &
@@ -7209,7 +7439,7 @@ end subroutine print_visual_descriptor
         htfunc_LS, & !intent(in)
         htfunc_VOF, & !intent(in)
         xsten, &
-        nhalf, &
+        nhalf_height, & !nhalf_height=9
         itan,jtan, &
         curvHT_LS, & !intent(out)
         curvHT_VOF, & !intent(out)
@@ -7227,8 +7457,8 @@ end subroutine print_visual_descriptor
       integer, INTENT(in) :: vof_height_function
       real(amrex_real), INTENT(in) :: htfunc_LS(-1:1,-1:1)
       real(amrex_real), INTENT(in) :: htfunc_VOF(-1:1,-1:1)
-      integer, INTENT(in) :: nhalf
-      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      integer, INTENT(in) :: nhalf_height !nhalf_height=9
+      real(amrex_real), INTENT(in) :: xsten(-nhalf_height:nhalf_height,SDIM)
       integer, INTENT(in) :: itan,jtan
       integer, INTENT(in) :: normal_dir
       real(amrex_real), INTENT(out) :: curvHT_LS
@@ -7240,7 +7470,7 @@ end subroutine print_visual_descriptor
       real(amrex_real) hxR,hxL,hx,hxx
       real(amrex_real) hyR,hyL,hy,hyy
       real(amrex_real) hxy
-      real(amrex_real) arclen,arclenx,arcleny,arclenr,g,gx,gy,gr
+      real(amrex_real) arclen,arclenx,arcleny,g,gx,gy
       real(amrex_real) RR
 
       integer rowx,rowy,rowxy
@@ -7265,10 +7495,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) hprime_of_r,hdprime_of_r
       integer dir2
 
-      if (nhalf.eq.2*ngrow_distance+1) then
+      if (ngrow_distance.lt.4) then
+       print *,"expecting ngrow_distance>=4(analyze_heights) ",ngrow_distance
+       stop
+      endif
+
+      if (nhalf_height.eq.9) then
        ! do nothing
       else
-       print *,"nhalf invalid"
+       print *,"expecting nhalf_height=9(analyze_heights) ",nhalf_height
        stop
       endif
       if ((n1d.eq.-one).or.(n1d.eq.one)) then
@@ -7355,79 +7590,8 @@ end subroutine print_visual_descriptor
         print *,"normal_dir invalid"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       if (normal_dir.eq.1) then
-         ! phi=h(y,z)-r
-         ! grad phi=(-1,hy/r,hz)
-         ! arclen=1+(hy/r)^2+hz^2
-         ! g(r,y,z)=arclen^(-1/2)
-         ! n=(-g,hy g/r,hz g)
-         ! div n=(-g r)_r/r+(hy g/r)_y/r+(hz g)_z=
-         ! -g_r-g/r+(hyy g + gy hy)/r^2+hzz g + hz gz
-         ! g_r=-1/2 arclen^(-3/2) arclen_r
-         ! arclen_r=hy^2 (-2/r^3)
-         ! g_y=-1/2 arclen^(-3/2) arclen_y
-         ! arclen_y=2hy hyy/r^2 +2hz hzy
-         ! g_z=-1/2 arclen^(-3/2) arclen_z
-         ! arclen_z=2hy hyz/r^2 +2hz hzz
-        RR=htfunc_LS(0,0)
-        arclen=one+(hx/RR)**2+hy**2
-        g=one/sqrt(arclen)
-        arclenr=-two*(hx**2)/(RR**3)
-        gr=-half*(arclen**(-1.5))*arclenr
-        arclenx=two*hx*hxx/(RR**2)+two*hy*hxy
-        arcleny=two*hx*hxy/(RR**2)+two*hy*hyy
-        gx=-half*(arclen**(-1.5))*arclenx
-        gy=-half*(arclen**(-1.5))*arcleny
-        curvHT_LS=-gr-g/RR+(hxx*g+hx*gx)/(RR**2)+hyy*g+hy*gy
-       else if (normal_dir.eq.2) then 
-         ! phi=h(r,z)-y
-         ! grad phi=(hr,-1/r,hz)
-         ! arclen=hr^2+(1/r)^2+hz^2
-         ! g(r,z)=arclen^(-1/2)
-         ! n=(g hr,-g/r,hz g)
-         ! div n=(g hr r)_r/r-(g/r)_y/r+(hz g)_z=
-         !  g_r hr + g hrr + g hr/r +hzz g + hz gz=
-         ! g_r=-1/2 arclen^(-3/2) arclen_r
-         ! arclen_r=2 hr hrr -2/r^3 + 2hz hzr
-         ! g_z=-1/2 arclen^(-3/2) arclen_z
-         ! arclen_z=2 hr hrz +2hz hzz
-        RR=xcenter(1) 
-        arclen=hx**2+hy**2+(one/RR)**2
-        g=one/sqrt(arclen)
-        arclenx=two*hx*hxx-two/(RR**3)+two*hy*hxy
-        arcleny=two*hx*hxy+two*hy*hyy
-        gx=-half*(arclen**(-1.5))*arclenx
-        gy=-half*(arclen**(-1.5))*arcleny
-        curvHT_LS=gx*hx+g*hxx+g*hx/RR+hyy*g+hy*gy
-       else if ((normal_dir.eq.3).and.(SDIM.eq.3)) then
-         ! phi=h(r,y)-z
-         ! grad phi=(hr,hy/r,-1)
-         ! arclen=hr^2+(hy/r)^2+1
-         ! g(r,y)=arclen^(-1/2)
-         ! n=(g hr,g hy/r,-g)
-         ! div n=(g hr r)_r/r+(g hy/r)_y/r=
-         !  g_r h_r + g h_rr + g hr/r +(gy hy+g hyy)/r^2
-         ! g_r=-1/2 arclen^(-3/2) arclen_r
-         ! arclen_r=2 hr hrr + 2(hy/r)(hry r-hy)/r^2 =
-         !          2 hr hrr + 2 hy hry/r^2 - 2 hy^2/r^3
-         ! g_y=-1/2 arclen^(-3/2) arclen_y
-         ! arclen_y=2 hr hry +2hy hyy/r^2
-        RR=xcenter(1) 
-        arclen=hx**2+(hy/RR)**2+one
-        g=one/sqrt(arclen)
-        arclenx=two*hx*hxx+two*hy*hxy/(RR**2)- &
-                two*(hy**2)/(RR**3)
-        arcleny=two*hx*hxy+two*hy*hyy/(RR**2)
-        gx=-half*(arclen**(-1.5))*arclenx
-        gy=-half*(arclen**(-1.5))*arcleny
-        curvHT_LS=gx*hx+g*hxx+g*hx/RR+(hyy*g+hy*gy)/(RR**2)
-       else
-        print *,"normal_dir invalid"
-        stop
-       endif
       else
-       print *,"levelrz invalid init height ls 5"
+       print *,"levelrz invalid init height ls 5: ",levelrz
        stop
       endif
 
@@ -7535,10 +7699,6 @@ end subroutine print_visual_descriptor
           print *,"matstatus corrupt for RZ curvature coeff"
           stop
          endif
-
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-
-         print *,"VFRAC height function invalid:levelrz=COORDSYS_CYLINDRICAL"
 
         else if (levelrz.eq.COORDSYS_CARTESIAN) then
 
@@ -7687,7 +7847,7 @@ end subroutine print_visual_descriptor
          endif
 
         else
-         print *,"levelrz invalid"
+         print *,"levelrz invalid ",levelrz
          stop
         endif
 
@@ -7696,7 +7856,7 @@ end subroutine print_visual_descriptor
        else if (vof_height_function.eq.0) then
         ! do nothing
        else
-        print *,"vof_height_function invalid"
+        print *,"vof_height_function invalid ",vof_height_function
         stop
        endif
    
@@ -8052,7 +8212,7 @@ end subroutine print_visual_descriptor
        print *,"vol1,vol2 invalid"
        stop
       else
-       if (vol/vol1.le.VOFTOL) then
+       if (vol/vol1.le.VOFTOL_MATERIAL) then
         vol=zero
        endif
       endif
@@ -8075,11 +8235,8 @@ end subroutine print_visual_descriptor
       enddo
       if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       xT(1)=x(1)*cos(x(2))
-       xT(2)=x(1)*sin(x(2))
       else
-       print *,"levelrz invalid RT transform"
+       print *,"levelrz invalid RT transform ",levelrz
        stop
       endif
 
@@ -8105,11 +8262,8 @@ end subroutine print_visual_descriptor
       enddo
       if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       xT(1)=x_ofs(1)*cos(x_ofs(2))
-       xT(2)=x_ofs(1)*sin(x_ofs(2))
       else
-       print *,"levelrz invalid RT transform offset"
+       print *,"levelrz invalid RT transform offset ",levelrz
        stop
       endif
 
@@ -8153,12 +8307,8 @@ end subroutine print_visual_descriptor
         ! do nothing
        else if (levelrz.eq.COORDSYS_RZ) then
         ! do nothing
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (dir.eq.2) then
-         RR=problox
-        endif
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop
        endif
        delta=delta*RR
@@ -8208,12 +8358,8 @@ end subroutine print_visual_descriptor
         ! do nothing
        else if (levelrz.eq.COORDSYS_RZ) then
         ! do nothing
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (dir.eq.2) then
-         RR=probhix
-        endif
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop
        endif
        delta=delta*RR
@@ -8221,7 +8367,7 @@ end subroutine print_visual_descriptor
        if (delta.gt.zero) then
         ! do nothing
        else
-        print *,"delta invalid in get_dxmax"
+        print *,"delta invalid in get_dxmax ",delta
         stop
        endif
 
@@ -8232,48 +8378,6 @@ end subroutine print_visual_descriptor
 
       end subroutine get_dxmax
 
-
-      subroutine get_dxmaxLS(dx,bfact,dxmax)
-      use probcommon_module
-      use LegendreNodes
-
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      integer, INTENT(in) :: bfact
-      integer dir
-      real(amrex_real), INTENT(out) :: dxmax
-      real(amrex_real) delta,xL,xR
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid18"
-       stop
-      endif
-
-      dxmax=zero
-      do dir=1,SDIM
-       if (bfact.eq.1) then
-        delta=dx(dir)
-       else if (bfact.gt.1) then
-        xL=cache_gauss(bfact,bfact/2-1,SPTYPE)
-        xR=cache_gauss(bfact,bfact/2,SPTYPE)
-        delta=bfact*(xR-xL)*dx(dir)/two
-       else
-        print *,"bfact invalid19"
-        stop
-       endif
-
-       if (delta.gt.zero) then
-        ! do nothing
-       else
-        print *,"delta invalid get_dxmaxLS"
-        stop
-       endif
-
-       if ((delta.gt.dxmax).or.(dir.eq.1)) then
-        dxmax=delta
-       endif
-      enddo ! dir=1..sdim
-
-      end subroutine get_dxmaxLS
 
       subroutine set_dimdec(DIMS(fabdim), &
                       fablo,fabhi,ngrow)
@@ -8329,11 +8433,8 @@ end subroutine print_visual_descriptor
       enddo
       if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       velT(1)=vel(1)*cos(x(2))+vel(2)*sin(x(2))
-       velT(2)=-vel(1)*sin(x(2))+vel(2)*cos(x(2))
       else
-       print *,"levelrz invalid rt transform vel"
+       print *,"levelrz invalid rt transform vel ",levelrz
        stop
       endif
 
@@ -8579,8 +8680,8 @@ end subroutine print_visual_descriptor
         inboxflag=1
         do dir=1,SDIM 
          dx=xsten(1,dir)-xsten(-1,dir)
-         if ((xx(dir).lt.xsten(-1,dir)-VOFTOL*dx).or. &
-             (xx(dir).gt.xsten(1,dir)+VOFTOL*dx)) then
+         if ((xx(dir).lt.xsten(-1,dir)-VOFTOL_MATERIAL*dx).or. &
+             (xx(dir).gt.xsten(1,dir)+VOFTOL_MATERIAL*dx)) then
           inboxflag=0
          endif
         enddo
@@ -8888,24 +8989,29 @@ end subroutine print_visual_descriptor
       voftotal=zero
 
       do imaterial=1,num_materials
-       if (vfrac(imaterial).le.VOFTOL) then
+       if (vfrac(imaterial).le.VOFTOL_MATERIAL) then
         vfrac(imaterial)=zero
         do dir=1,SDIM
          cen(dir,imaterial)=zero
         enddo
        endif
-       if (vfrac(imaterial).ge.one-VOFTOL) then
+       if (vfrac(imaterial).ge.one-VOFTOL_MATERIAL) then
         vfrac(imaterial)=one
         do dir=1,SDIM
          cen(dir,imaterial)=zero
         enddo
        endif
-       if (is_rigid(imaterial).eq.0) then
+       if ((is_rigid(imaterial).eq.0).and. &
+           (is_elastic(imaterial).eq.0)) then
         voftotal=voftotal+vfrac(imaterial)
-       else if (is_rigid(imaterial).eq.1) then
+       else if ((is_rigid(imaterial).eq.1).or. &
+                (is_elastic(imaterial).eq.1)) then
         ! do nothing
        else
-        print *,"is_rigid invalid GLOBALUTIL.F90"
+        print *,"is_rigid invalid GLOBALUTIL.F90: ", &
+                imaterial,is_rigid(imaterial)
+        print *,"or is_elastic invalid GLOBALUTIL.F90: ", &
+                imaterial,is_elastic(imaterial)
         stop
        endif
       enddo ! imaterial
@@ -9042,21 +9148,8 @@ end subroutine print_visual_descriptor
        RCENTER=half*abs(xsten(-1,1)+xsten(1,1))
        vol=two*Pi*RCENTER* &
          (xsten(1,1)-xsten(-1,1))*(xsten(1,2)-xsten(-1,2))
-      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-       RCENTER=half*abs(xsten(-1,1)+xsten(1,1))
-       if (SDIM.eq.3) then
-        vol=RCENTER* &
-         (xsten(1,1)-xsten(-1,1))*(xsten(1,2)-xsten(-1,2))* &
-         (xsten(1,SDIM)-xsten(-1,SDIM))
-       else if (SDIM.eq.2) then
-        vol=RCENTER* &
-         (xsten(1,1)-xsten(-1,1))*(xsten(1,2)-xsten(-1,2))
-       else
-        print *,"dimension bust"
-        stop
-       endif
       else 
-       print *,"rzflag invalid"
+       print *,"rzflag invalid ",rzflag
        stop
       endif
 
@@ -9126,30 +9219,8 @@ end subroutine print_visual_descriptor
        endif
        area=area*two*Pi*RR
 
-      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-
-       dir2=1
-       R1=xsten(-1,1)
-       R2=xsten(1,1)
-       if (R2+R1.eq.zero) then
-        print *,"R2+R1 invalid"
-        stop
-       endif
-
-       if (dir.eq.0) then ! R face
-        RR=abs(xsten(iside,1))
-       else if (dir.eq.1) then ! Theta face
-        RR=one
-       else if ((dir.eq.2).and.(SDIM.eq.3)) then ! Z face
-        RR=abs(xsten(0,1))
-       else
-        print *,"dir invalid gridarea 3"
-        stop
-       endif
-       area=area*RR
-
       else 
-       print *,"rzflag invalid"
+       print *,"rzflag invalid ",rzflag
        stop
       endif
 
@@ -9879,9 +9950,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xc(1)-xc(-1)) ! average down
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        ! do nothing
@@ -10011,9 +10082,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xchi-xclo) ! average down
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        !do nothing
@@ -10155,9 +10226,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xf(1)-xf(-1)) ! interpolate
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        if ((bfact_c.eq.1).and.(bfact_f.eq.1)) then
@@ -10296,9 +10367,9 @@ end subroutine print_visual_descriptor
       else
        wt=(inthi-intlo)/(xfhi-xflo) ! interpolate
       endif
-      if (abs(wt).le.VOFTOL) then
+      if (abs(wt).le.VOFTOL_MATERIAL) then
        wt=zero
-      else if (abs(wt-one).le.VOFTOL) then
+      else if (abs(wt-one).le.VOFTOL_MATERIAL) then
        wt=one
       else if ((wt.gt.zero).and.(wt.lt.one)) then
        if ((bfact_c.eq.1).and.(bfact_f.eq.1)) then
@@ -10472,9 +10543,9 @@ end subroutine print_visual_descriptor
         else
          wt=(inthi-intlo)/(xf(1)-xf(-1))  ! interpolate
         endif
-        if (abs(wt).le.VOFTOL) then
+        if (abs(wt).le.VOFTOL_MATERIAL) then
          wt=zero
-        else if (abs(wt-one).le.VOFTOL) then
+        else if (abs(wt-one).le.VOFTOL_MATERIAL) then
          wt=one
         else if ((wt.gt.zero).and.(wt.lt.one)) then
          if ((abs(intlo-xf(-1)).lt.EPS_8_4*dxf(1)).or. &
@@ -10922,9 +10993,9 @@ end subroutine print_visual_descriptor
         else
          wt=(inthi-intlo)/(xc(1)-xc(-1))  ! average down
         endif
-        if (abs(wt).le.VOFTOL) then
+        if (abs(wt).le.VOFTOL_MATERIAL) then
          wt=zero
-        else if (abs(wt-one).le.VOFTOL) then
+        else if (abs(wt-one).le.VOFTOL_MATERIAL) then
          wt=one
         else if ((wt.gt.zero).and.(wt.lt.one)) then
          ! do nothing
@@ -11990,36 +12061,8 @@ end subroutine print_visual_descriptor
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz_in.eq.COORDSYS_CYLINDRICAL) then
-
-       if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
-
-        if ((nc.lt.1).or. &
-            (nc.gt.SDIM)) then
-         print *,"nc invalid"
-         stop
-        endif
-
-       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
-        ! do nothing
-       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
-        ! do nothing
-       else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
-        ! do nothing
-       else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
-        ! do nothing
-       else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
-        ! do nothing
-       else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
-        ! do nothing
-       else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! coupling
-        ! do nothing
-       else
-        print *,"operation_flag invalid2"
-        stop
-       endif
       else
-       print *,"levelrz_in invalid"
+       print *,"levelrz_in invalid ",levelrz_in
        stop
       endif
 
@@ -12473,49 +12516,8 @@ end subroutine print_visual_descriptor
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz_in.eq.COORDSYS_CYLINDRICAL) then
-
-        if (operation_flag.eq.OP_UGRAD_MAC) then
-
-         if ((nc.lt.1).or.(nc.gt.SDIM)) then
-          print *,"nc invalid"
-          stop
-         endif
-         if (dir.eq.1) then ! r direction cylindrical coordinates
-          if (RRface(isten).le.zero) then
-           print *,"RRface invalid"
-           stop
-          endif
-         endif 
-
-        else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
-         ! do nothing
-        else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
-         ! do nothing
-        else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
-         ! do nothing
-        else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
-         ! do nothing
-        else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
-         ! do nothing
-        else if (operation_flag.eq.OP_ISCHEME_MAC) then
-         ! do nothing (advection)
-        else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then
-         ! do nothing (coupling)
-        else
-         print *,"operation_flag invalid4"
-         stop
-        endif
-
-        if (dir.eq.2) then ! theta direction cylindrical coordinates.
-         if (RRface(isten).le.zero) then
-          print *,"RRface invalid"
-          stop
-         endif
-         dest_grad(isten)=dest_grad(isten)/RRface(isten)
-        endif ! dir=2
        else
-        print *,"levelrz_in invalid"
+        print *,"levelrz_in invalid ",levelrz_in
         stop
        endif
 
@@ -13962,22 +13964,20 @@ end subroutine print_visual_descriptor
        stop
       endif 
       if (SDIM.eq.3) then
-       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop
        endif
        knlo=0
        knhi=1
       else if (SDIM.eq.2) then
        if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-           (levelrz.eq.COORDSYS_RZ).or. &
-           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+           (levelrz.eq.COORDSYS_RZ)) then
         ! do nothing
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop
        endif
        knlo=0
@@ -14079,22 +14079,14 @@ end subroutine print_visual_descriptor
         enddo ! dir
 
         if (levelrz.eq.COORDSYS_CARTESIAN) then
-         rc=one
+         !do nothing
         else if (levelrz.eq.COORDSYS_RZ) then
-         rc=one
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         rc=xsten(0,1)
-         if (rc.gt.zero) then
-          !do nothing
-         else
-          print *,"rc invalid: ",rc
-          stop
-         endif 
+         !do nothing
         else
-         print *,"levelrz invalid"
+         print *,"levelrz invalid ",levelrz
          stop
         endif 
-        call prepare_normal(nrm,rc,mag,SDIM)
+        call prepare_normal(nrm,mag,SDIM)
         do dir=1,SDIM
          nn(D_DECL(inode,jnode,knode),dir)=nrm(dir)
         enddo
@@ -14118,21 +14110,12 @@ end subroutine print_visual_descriptor
           rp=one
           rm=one
           rc=one
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           rp=half*(xsten(2,1)+xsten(0,1))
           rm=half*(xsten(-2,1)+xsten(0,1))
           rc=half*(rp+rm)
-          if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if (rc.gt.zero) then
-            !do nothing
-           else
-            print *,"rc invalid: ",rc
-            stop
-           endif
-          endif
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
          curv=curv+( &
@@ -14151,18 +14134,8 @@ end subroutine print_visual_descriptor
           rp=one
           rm=one
           rc=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          rp=half*(xsten(2,1)+xsten(0,1))
-          rm=half*(xsten(-2,1)+xsten(0,1))
-          rc=half*(rp+rm)
-          if (rc.gt.zero) then
-           !do nothing
-          else
-           print *,"rc invalid: ",rc
-           stop
-          endif
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
          curv=curv+( &
@@ -15875,7 +15848,7 @@ end subroutine print_visual_descriptor
       else if (material_extend_velocity_local.eq.0) then 
        fort_is_elastic_base=0
       else
-       print *,"material_extend_velocity_local  invalid in fort_is_elastic_base"
+       print *,"material_extend_velocity_local invalid in fort_is_elastic_base"
        print *,"material_extend_velocity_local=", &
         material_extend_velocity_local
        print *,"im=",im
@@ -16013,13 +15986,64 @@ end subroutine print_visual_descriptor
       return
       end function is_rigid
 
+      function fort_is_rigid_CL(FSI_flag_local,im) &
+      bind(c,name='fort_is_rigid_CL')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer fort_is_rigid_CL
+      integer, INTENT(in) :: FSI_flag_local
+      integer, INTENT(in) :: im ! 1<=im<=num_materials
+      integer dummy_input
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+
+       print *,"im invalid in fort_is_rigid_CL: im=",im
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:16040"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+
+      endif
+
+      fort_is_rigid_CL=0
+      if ((fort_is_rigid_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_FSI_elastic_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_ice_base(FSI_flag_local,im).eq.1).or. &
+          (fort_is_FSI_rigid_base(FSI_flag_local,im).eq.1)) then
+       fort_is_rigid_CL=1
+      else if ((fort_is_rigid_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_FSI_elastic_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_ice_base(FSI_flag_local,im).eq.0).and. &
+               (fort_is_FSI_rigid_base(FSI_flag_local,im).eq.0)) then
+       !do nothing
+      else
+       print *,"FSI_flag_local invalid in fort_is_rigid_CL"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
+       stop
+      endif
+
+      return
+      end function fort_is_rigid_CL
+
+
+
       function is_rigid_CL(im)
       use probcommon_module
       IMPLICIT NONE
 
       integer is_rigid_CL
       integer, INTENT(in) :: im
-      integer dummy_input
+      integer :: FSI_flag_local
+      integer :: dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid in is_rigid_CL: im=",im
@@ -16036,20 +16060,8 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if ((is_rigid(im).eq.1).or. &
-          (is_FSI_elastic(im).eq.1).or. &
-          (is_ice_or_FSI_rigid_material(im).eq.1)) then
-       is_rigid_CL=1
-      else if ((is_rigid(im).eq.0).and. &
-               (is_FSI_elastic(im).eq.0).and. &
-               (is_ice_or_FSI_rigid_material(im).eq.0)) then
-       is_rigid_CL=0
-      else
-       print *,"is_rigid, FSI_elastic,or is_ice_or_FSI_rigid_material invalid"
-       print *,"im,is_rigid,is_FSI_elastic,is_ice_or_FSI_rigid_material ", &
-        im,is_rigid(im),is_FSI_elastic(im),is_ice_or_FSI_rigid_material(im)
-       stop
-      endif
+      FSI_flag_local=FSI_flag(im)
+      is_rigid_CL=fort_is_rigid_CL(FSI_flag_local,im)
 
       return
       end function is_rigid_CL
@@ -16302,6 +16314,7 @@ end subroutine print_visual_descriptor
       endif
       if ((LS(im).gt.zero).and. &
           (LS(im_opp).gt.zero)) then
+       print *,"in: get_LS_extend (GLOBALUTIL.F90)"
        print *,"cannot have LS(im)>0 and LS(im_opp)>0"
        print *,"im,im_opp,LS(im),LS(im_opp) ", &
          im,im_opp,LS(im),LS(im_opp)
@@ -16387,7 +16400,7 @@ end subroutine print_visual_descriptor
         VOF_extend=one-VOF(im_opp)
        else if (VOF(im_opp).gt.VOF(im)) then
         VOF_extend=VOF(im)
-       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL)  then
+       else if (abs(VOF(im)-VOF(im_opp)).le.VOFTOL_MATERIAL)  then
         VOF_extend=half
        else
         print *,"VOF bust"
@@ -16503,7 +16516,7 @@ end subroutine print_visual_descriptor
       mag_I=sqrt(mag_I)
       mag_ntilde=sqrt(mag_ntilde)
 
-      if ((abs(mag_I-one).le.VOFTOL).and. &
+      if ((abs(mag_I-one).le.VOFTOL_MATERIAL).and. &
           (mag_ntilde.gt.zero)) then
 
        if ((dircrit_I.ge.1).and.(dircrit_I.le.3).and. &
@@ -16535,7 +16548,7 @@ end subroutine print_visual_descriptor
           mag_test=mag_test+(x2_I(dir)-x2_I_test(dir))**2
          enddo
          mag_test=sqrt(mag_test)
-         if (mag_test.le.VOFTOL*mag_ntilde) then
+         if (mag_test.le.VOFTOL_MATERIAL*mag_ntilde) then
           ! do nothing
          else
           print *,"mag_test too big: x2_I"
@@ -16555,8 +16568,8 @@ end subroutine print_visual_descriptor
 
           ! the magnitude of the cross product of two orthogonal unit
           ! vectors should be one.
-         if ((abs(mag2_I-one).le.VOFTOL).and. &
-             (abs(mag2_tilde-one).le.VOFTOL)) then
+         if ((abs(mag2_I-one).le.VOFTOL_MATERIAL).and. &
+             (abs(mag2_tilde-one).le.VOFTOL_MATERIAL)) then
 
           mag_test=zero
           do dir=1,3
@@ -16566,7 +16579,7 @@ end subroutine print_visual_descriptor
            mag_test=mag_test+(x3_I(dir)-x3_I_test(dir))**2
           enddo
           mag_test=sqrt(mag_test)
-          if (mag_test.le.VOFTOL*mag_ntilde) then
+          if (mag_test.le.VOFTOL_MATERIAL*mag_ntilde) then
            ! do nothing
           else
            print *,"mag_test too big: x3_I"
@@ -19279,7 +19292,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(out) :: coeff
 
       if ((wt_plus.ge.zero).and.(wt_minus.ge.zero).and. &
-          (abs(wt_plus+wt_minus-one).le.VOFTOL)) then
+          (abs(wt_plus+wt_minus-one).le.VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"wt_plus+wt_minus should be 1"
@@ -19671,13 +19684,13 @@ end subroutine print_visual_descriptor
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid INTERNAL_default ",rho
        stop
       endif
       if (temperature.gt.zero) then
        ! do nothing
       else
-       print *,"T invalid"
+       print *,"temperature invalid INTERNAL_default ",temperature
        stop
       endif
 
@@ -19696,7 +19709,7 @@ end subroutine print_visual_descriptor
       else if (imattype.eq.0) then
        internal_energy=cv*temperature
       else
-       print *,"imattype invalid in internal default"
+       print *,"imattype invalid in internal default ",imattype
        stop
       endif
 
@@ -25035,9 +25048,9 @@ end subroutine print_visual_descriptor
       endif
       pressure=(gamma_constant-one)*rho*internal_energy- &
        gamma_constant*PP
-      if (pressure.lt.VOFTOL) then
-       pressure=VOFTOL
-      else if (pressure.ge.VOFTOL) then
+      if (pressure.lt.VOFTOL_MATERIAL) then
+       pressure=VOFTOL_MATERIAL
+      else if (pressure.ge.VOFTOL_MATERIAL) then
        !do nothing
       else
        print *,"pressure invalid: ",pressure
@@ -25110,9 +25123,9 @@ end subroutine print_visual_descriptor
 
       pressure=(gamma_constant-one)*rho*internal_energy- &
        gamma_constant*PP
-      if (pressure.lt.VOFTOL) then
-       pressure=VOFTOL
-      else if (pressure.ge.VOFTOL) then
+      if (pressure.lt.VOFTOL_MATERIAL) then
+       pressure=VOFTOL_MATERIAL
+      else if (pressure.ge.VOFTOL_MATERIAL) then
        ! do nothing
       else
        print *,"pressure invalid: ",pressure
@@ -25241,9 +25254,9 @@ end subroutine print_visual_descriptor
       endif
 
       temperature=(internal_energy-PP/rho)/cv
-      if (temperature.lt.VOFTOL) then
-       temperature=VOFTOL
-      else if (temperature.ge.VOFTOL) then
+      if (temperature.lt.VOFTOL_MATERIAL) then
+       temperature=VOFTOL_MATERIAL
+      else if (temperature.ge.VOFTOL_MATERIAL) then
        !do nothing
       else
        print *,"temperature invalid: ",temperature
@@ -25652,19 +25665,19 @@ end subroutine print_visual_descriptor
       if ((im.ge.1).and.(im.le.num_materials)) then
        !do nothing
       else
-       print *,"im invalid: ",im
+       print *,"im invalid INTERNAL_material_CORE: ",im
        stop
       endif
       if (rho.gt.zero) then
        ! do nothing
       else
-       print *,"rho invalid"
+       print *,"rho invalid INTERNAL_material_CORE ",rho
        stop
       endif
       if (temperature.gt.zero) then
        ! do nothing
       else
-       print *,"T invalid"
+       print *,"temperature invalid INTERNAL_material_CORE ",temperature
        stop
       endif
 
@@ -25751,7 +25764,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(out) :: temperature
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid71"
+       print *,"im invalid in TEMPERATURE_material_CORE line 25765 ",im
        stop
       endif
       if (rho.le.zero) then
@@ -26130,7 +26143,7 @@ if (probtype.eq.55) then
  if (maxtall.gt.zero) then
   ! do nothing
  else
-  print *,"maxtall invalid"
+  print *,"maxtall invalid ",maxtall
   stop
  endif
 
@@ -26292,6 +26305,9 @@ if (probtype.eq.55) then
      ! do nothing
     else
      print *,"maxtall, vert, or radnew invalid"
+     print *,"maxtall ",maxtall
+     print *,"vert ",vert
+     print *,"radnew ",radnew
      stop
     endif 
      
@@ -27595,11 +27611,8 @@ y=yy
 if (axis_dir.eq.0) then
  if (levelrz.eq.COORDSYS_CARTESIAN) then
   ! do nothing
- else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  x=xx*cos(yy)+50.0d0
-  y=xx*sin(yy)+50.0d0
  else
-  print *,"levelrz invalid in zalesakdist"
+  print *,"levelrz invalid in zalesakdist ",levelrz
   stop
  endif
  dist=sqrt((x-50.0d0)**2+(y-75.0d0)**2)-15.0d0
@@ -27636,12 +27649,10 @@ if (axis_dir.eq.0) then
  endif
 
 else if (axis_dir.eq.1) then
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  dist=x-radblob
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
  else
-  print *,"levelrz invalid zalesak dist"
+  print *,"levelrz invalid zalesak dist ",levelrz
   stop
  endif
 else if (axis_dir.eq.2) then
@@ -28113,10 +28124,8 @@ if (adv_vel.eq.zero) then
 
  if (levelrz.eq.COORDSYS_CARTESIAN) then
   u=-(Pi/314.0)*(y-50.0)
- else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  u=zero
  else
-  print *,"zalesakuu: levelrz invalid"
+  print *,"zalesakuu: levelrz invalid ",levelrz
   stop
  endif
 
@@ -28165,10 +28174,8 @@ if (adv_vel.eq.zero) then
 
  if (levelrz.eq.COORDSYS_CARTESIAN) then
   v=(Pi/314.0)*(x-50.0)
- else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  v=(Pi/314.0)*x
  else
-  print *,"zalesakvv: levelrz invalid"
+  print *,"zalesakvv: levelrz invalid ",levelrz
   stop
  endif
 
@@ -28617,7 +28624,7 @@ endif
 return
 end subroutine JohnsonCookSoftening
 
-  ! called from fort_updatetensor() and fort_update_particle_tensor()
+  ! called from fort_updatetensor()
   ! in GODUNOV_3D.F90
   ! vel is the advective velocity
   ! Plastic algorithm resource: 
@@ -28885,8 +28892,6 @@ endif
 if (levelrz.eq.COORDSYS_CARTESIAN) then
  !do nothing
 else if (levelrz.eq.COORDSYS_RZ) then
- !do nothing
-else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
  !do nothing
 else
  print *,"levelrz invalid: ",levelrz
@@ -29436,28 +29441,6 @@ do jj=1,3 !deriv dir
    gradV_MAC=gradV_MAC+half*(xmac(D_DECL(i,j,k))+ &
      xmac(D_DECL(i+1,j,k)))/r_hoop
   endif
- else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  if (r_hoop.gt.zero) then
-   !do nothing
-  else
-   print *,"r_hoop invalid: ",r_hoop
-   stop
-  endif
-  if (jj.eq.2) then
-   if (ii.eq.1) then
-    gradV_MAC=gradV_MAC-half*(ymac(D_DECL(i,j,k))+ &
-     ymac(D_DECL(i,j+1,k)))
-   else if (ii.eq.2) then
-    gradV_MAC=gradV_MAC+half*(xmac(D_DECL(i,j,k))+ &
-     xmac(D_DECL(i+1,j,k)))
-   else if (ii.eq.3) then
-    !do nothing
-   else
-    print *,"ii invalid: ",ii
-    stop
-   endif
-   gradV_MAC=gradV_MAC/r_hoop
-  endif
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
   !do nothing
  else
@@ -29516,9 +29499,6 @@ enddo
 
 !hydrostatic strain rate
 if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_RZ)) then
- trace_MAC=trace_MAC/3.0d0
- trace_dim=3
-else if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
  trace_MAC=trace_MAC/3.0d0
  trace_dim=3
 else if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_CARTESIAN)) then
@@ -30836,7 +30816,6 @@ integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_SMOOTH).or. & ! curvature project
      (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
      (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
   project_option_momeqnF=1
@@ -30861,7 +30840,6 @@ integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_SMOOTH).or. & ! curvature project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_singular_possibleF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
@@ -30885,7 +30863,6 @@ integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_SMOOTH).or. & ! curvature project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_olddata_neededF=0
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
@@ -30909,7 +30886,6 @@ integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
-     (project_option.eq.SOLVETYPE_SMOOTH).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then  !pressure extrap
   project_option_pressureF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
@@ -30938,7 +30914,6 @@ integer, INTENT(in) :: project_option
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then 
   project_option_needs_scalingF=1
  else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & 
-          (project_option.eq.SOLVETYPE_SMOOTH).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. & 
           (project_option.eq.SOLVETYPE_VISC).or. &  
           ((project_option.ge.SOLVETYPE_SPEC).and. &
@@ -30965,7 +30940,6 @@ integer, INTENT(in) :: project_option
      (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial project
   project_option_FSI_rigid=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. &
-          (project_option.eq.SOLVETYPE_SMOOTH).or. & ! curvature project
           (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
           (project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
@@ -30990,7 +30964,6 @@ integer :: project_option_projectionF
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_SMOOTH).or. &
      (project_option.eq.SOLVETYPE_INITPROJ)) then 
   project_option_projectionF=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. & 
@@ -31266,1028 +31239,6 @@ integer :: k
 
 end subroutine CopyArrayReal
 
-subroutine sort_branch_data(source_branch,splittingrule, &
-     median_index,median_value)
-use probcommon_module
-
-Type(branch_type), INTENT(inout) :: source_branch
-integer, INTENT(in) :: splittingrule
-integer, INTENT(out) :: median_index
-real(amrex_real), INTENT(out) :: median_value
-integer, allocatable :: A_list(:)
-integer, allocatable :: B_list(:)
-real(amrex_real), allocatable :: data_to_sort(:)
-real(amrex_real), allocatable :: save_data_decisions(:,:)
-real(amrex_real), allocatable :: save_data_classify(:,:)
-integer :: datalo(2)
-integer :: datahi(2)
-integer :: datalo_classify(2)
-integer :: datahi_classify(2)
-integer :: idata,dir
-real(amrex_real)    :: data1,data2
-
- datalo=LBOUND(source_branch%data_decisions)
- datahi=UBOUND(source_branch%data_decisions)
-
- allocate(save_data_decisions(datahi(1),datahi(2)))
- save_data_decisions=source_branch%data_decisions
-
- datalo_classify=LBOUND(source_branch%data_classify)
- datahi_classify=UBOUND(source_branch%data_classify)
-
- allocate(save_data_classify(datahi_classify(1),datahi_classify(2)))
- save_data_classify=source_branch%data_classify
-
- if ((datalo(1).eq.1).and. &
-     (datalo(2).eq.1)) then
-  if ((datahi(1).eq.source_branch%ndata).and. &
-      (datahi(1).ge.2).and.  &
-      (datahi(2).ge.splittingrule)) then
-   allocate(A_list(datahi(1)))
-   allocate(B_list(datahi(1)))
-   allocate(data_to_sort(datahi(1)))
-   do idata=1,datahi(1)
-    A_list(idata)=idata
-    B_list(idata)=idata
-    data_to_sort(idata)=source_branch%data_decisions(idata,splittingrule)
-   enddo
-   call TopDownMergeSortReal(data_to_sort,A_list,B_list,datahi(1))
-
-    !sanity check
-   do idata=1,datahi(1)-1
-    if (data_to_sort(A_list(idata)).le.data_to_sort(A_list(idata+1))) then
-     ! do nothing
-    else
-     print *,"data_to_sort not sorted properly"
-     stop
-    endif
-   enddo
-
-   do idata=1,datahi(1)
-    do dir=1,datahi(2)
-     source_branch%data_decisions(idata,dir)= &
-            save_data_decisions(A_list(idata),dir)
-    enddo
-   enddo
-
-   if ((datalo_classify(1).eq.1).and. &
-       (datalo_classify(2).eq.1)) then
-    if ((datahi_classify(1).eq.source_branch%ndata).and. &
-        (datahi_classify(1).ge.2)) then
-
-     do idata=1,datahi_classify(1)
-      do dir=1,datahi_classify(2)
-       source_branch%data_classify(idata,dir)= &
-            save_data_classify(A_list(idata),dir)
-      enddo
-     enddo
-
-    else
-     print *,"datahi invalid"
-     stop
-    endif
-   else
-    print *,"datalo invalid"
-    stop
-   endif
-
-   !sanity check
-   do idata=1,datahi(1)-1
-    data1=source_branch%data_decisions(idata,splittingrule)
-    data2=source_branch%data_decisions(idata+1,splittingrule)
-    if (data1.le.data2) then
-     ! do nothing
-    else
-     print *,"source_branch not sorted properly"
-     stop
-    endif
-   enddo
-
-   median_index=datahi(1)/2
-   source_branch%median_index=median_index
-
-   if ((median_index.ge.1).and. &
-       (median_index.lt.datahi(1))) then
-    median_value= &
-     half*(source_branch%data_decisions(median_index,splittingrule)+ &
-           source_branch%data_decisions(median_index+1,splittingrule))
-    source_branch%median_value=median_value
-   else
-    print *,"median_index invalid"
-    stop
-   endif
-
-   deallocate(A_list)
-   deallocate(B_list)
-   deallocate(data_to_sort)
-
-   deallocate(save_data_decisions)
-   deallocate(save_data_classify)
-
-  else
-   print *,"datahi invalid"
-   stop
-  endif
- else
-  print *,"datalo invalid"
-  stop
- endif
-
-end subroutine sort_branch_data
-
-subroutine statistics_branch_data( &
-   ndim_classify, &
-   source_branch, &
-   splittingrule, &
-   variance_reduction)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: ndim_classify
-integer, INTENT(in) :: splittingrule
-Type(branch_type), INTENT(in) :: source_branch
-real(amrex_real), INTENT(out) :: variance_reduction
-integer :: datalo(2)
-integer :: datahi(2)
-integer :: datalo_classify(2)
-integer :: datahi_classify(2)
-integer :: idata,dir
-real(amrex_real) :: mean(ndim_classify)
-real(amrex_real) :: mean_child1(ndim_classify)
-real(amrex_real) :: mean_child2(ndim_classify)
-real(amrex_real) :: variance
-real(amrex_real) :: variance_scale
-real(amrex_real) :: variance_child1
-real(amrex_real) :: variance_child2
-
- datalo=LBOUND(source_branch%data_decisions)
- datahi=UBOUND(source_branch%data_decisions)
-
- datalo_classify=LBOUND(source_branch%data_classify)
- datahi_classify=UBOUND(source_branch%data_classify)
-
- if ((datalo(1).eq.1).and. &
-     (datalo(2).eq.1).and. &
-     (datalo_classify(1).eq.1).and. &
-     (datalo_classify(2).eq.1)) then
-  if ((datahi(1).eq.source_branch%ndata).and. &
-      (datahi(1).ge.2).and. &
-      (datahi(2).ge.splittingrule).and. &
-      (datahi_classify(1).eq.source_branch%ndata).and. &
-      (datahi_classify(2).eq.ndim_classify)) then
-
-   do dir=1,ndim_classify
-    mean(dir)=zero
-    mean_child1(dir)=zero
-    mean_child2(dir)=zero
-   enddo
-
-   do idata=1,datahi_classify(1)
-    do dir=1,ndim_classify
-     mean(dir)=mean(dir)+source_branch%data_classify(idata,dir)
-     if (idata.le.source_branch%median_index) then
-      mean_child1(dir)=mean_child1(dir)+ &
-          source_branch%data_classify(idata,dir)
-     else if ((idata.gt.source_branch%median_index).and. &
-              (idata.le.source_branch%ndata)) then
-      mean_child2(dir)=mean_child2(dir)+ &
-          source_branch%data_classify(idata,dir)
-     else
-      print *,"idata invalid"
-      stop
-     endif
-    enddo
-   enddo
-   do dir=1,ndim_classify
-    mean(dir)=mean(dir)/source_branch%ndata
-
-    if ((source_branch%median_index.ge.1).and. &
-        (source_branch%median_index.lt.source_branch%ndata)) then
-     mean_child1(dir)=mean_child1(dir)/source_branch%median_index
-     mean_child2(dir)=mean_child2(dir)/ &
-        (source_branch%ndata-source_branch%median_index)
-    else
-     print *,"median_index invalid"
-     stop
-    endif
-   enddo
-   variance=zero
-   variance_child1=zero
-   variance_child2=zero
-    
-   do idata=1,datahi_classify(1)
-    do dir=1,ndim_classify
-     variance=variance+ &
-        (source_branch%data_classify(idata,dir)-mean(dir))**2
-     if (idata.le.source_branch%median_index) then
-      variance_child1=variance_child1+ &
-        (source_branch%data_classify(idata,dir)-mean_child1(dir))**2
-     else if ((idata.gt.source_branch%median_index).and. &
-              (idata.le.source_branch%ndata)) then
-      variance_child2=variance_child2+ &
-        (source_branch%data_classify(idata,dir)-mean_child2(dir))**2
-     else
-      print *,"idata invalid"
-      stop
-     endif
-    enddo
-   enddo
-
-  else
-   print *,"datahi invalid"
-   stop
-  endif
- else
-  print *,"datalo invalid"
-  stop
- endif
-
- variance_reduction=variance-(variance_child1+variance_child2)
- variance_scale=max(variance,one)
-
- if (variance_reduction.ge.zero) then
-  !do nothing
- else if (variance_reduction.ge.-EPS_8_4*variance_scale) then
-  variance_reduction=zero
- else
-  print *,"variance_reduction invalid: ",variance_reduction
-  print *,"variance: ",variance
-  print *,"variance_scale: ",variance_scale
-  print *,"variance_child1: ",variance_child1
-  print *,"variance_child2: ",variance_child2
-  stop
- endif
-
-end subroutine statistics_branch_data
-
-
-subroutine children_branch_data( &
-   tree_var, &
-   ndim_decisions, &
-   ndim_classify, &
-   current_level, &
-   current_branch_id, &
-   source_branch, &
-   splittingrule)
-use probcommon_module
-IMPLICIT NONE
-
-Type(tree_type), INTENT(inout) :: tree_var
-integer, INTENT(in) :: ndim_decisions
-integer, INTENT(in) :: ndim_classify
-integer, INTENT(in) :: splittingrule
-Type(branch_type), INTENT(inout) :: source_branch
-integer, INTENT(in) :: current_level
-integer, INTENT(inout) :: current_branch_id
-integer :: datalo(2)
-integer :: datahi(2)
-integer :: datalo_classify(2)
-integer :: datahi_classify(2)
-integer :: idata,dir
-real(amrex_real), allocatable :: save_data_decisions(:,:)
-real(amrex_real), allocatable :: save_data_classify(:,:)
-
-integer :: local_ndata
-integer :: local_parent_id
-integer :: local_parent_level
-integer :: local_current_id
-integer :: local_current_level
-integer :: local_splittingrule
-integer :: local_median_index
-real(amrex_real) :: local_median_value
-integer :: local_child1_id
-integer :: local_child_level
-integer :: local_child2_id
-
- datalo=LBOUND(source_branch%data_decisions)
- datahi=UBOUND(source_branch%data_decisions)
-
- datalo_classify=LBOUND(source_branch%data_classify)
- datahi_classify=UBOUND(source_branch%data_classify)
-
- if ((datalo(1).eq.1).and. &
-     (datalo(2).eq.1).and. &
-     (datalo_classify(1).eq.1).and. &
-     (datalo_classify(2).eq.1)) then
-  if ((datahi(1).eq.source_branch%ndata).and. &
-      (datahi(1).ge.2).and. &
-      (datahi(2).ge.splittingrule).and. &
-      (datahi(2).eq.ndim_decisions).and. &
-      (datahi_classify(1).eq.source_branch%ndata).and. &
-      (datahi_classify(2).eq.ndim_classify)) then
-
-   source_branch%splittingrule=splittingrule
-
-   current_branch_id=current_branch_id+2
-   tree_var%branch_list_level(current_level+1)%nbranches=current_branch_id
-
-   source_branch%child1_id=current_branch_id-1
-   source_branch%child2_id=current_branch_id
-   source_branch%child_level=current_level+1
-
-   if (source_branch%current_level.eq.current_level) then
-    ! do nothing
-   else
-    print *,"current_level invalid(1)"
-    print *,"current_level=",current_level
-    print *,"source_branch%current_level=",source_branch%current_level
-    stop
-   endif
-
-   local_ndata=source_branch%median_index
-   local_parent_id=source_branch%current_id
-   local_parent_level=current_level
-   local_current_id=current_branch_id-1
-   local_current_level=current_level+1
-   local_splittingrule=-1
-   local_median_index=-1
-   local_median_value=zero
-   local_child1_id=-1
-   local_child2_id=-1
-   local_child_level=-1
-
-   allocate(save_data_decisions(local_ndata,ndim_decisions))
-   allocate(save_data_classify(local_ndata,ndim_classify))
-
-   do idata=1,local_ndata
-    do dir=1,ndim_decisions
-     save_data_decisions(idata,dir)=source_branch%data_decisions(idata,dir)
-    enddo
-   enddo
-   do idata=1,local_ndata
-    do dir=1,ndim_classify
-     save_data_classify(idata,dir)=source_branch%data_classify(idata,dir)
-    enddo
-   enddo
-
-   call init_branch( &
-    tree_var%branch_list_level(local_current_level)% &
-       branch_list(local_current_id), &
-    ndim_decisions, &
-    ndim_classify, &
-    save_data_decisions, &
-    save_data_classify, &
-    local_ndata, &
-    local_parent_id, &
-    local_parent_level, &
-    local_current_id, &
-    local_current_level, &
-    local_splittingrule, &
-    local_median_index, &
-    local_median_value, &
-    local_child1_id, &
-    local_child2_id, &
-    local_child_level)
-
-   deallocate(save_data_decisions)
-   deallocate(save_data_classify)
-
-   local_ndata=source_branch%ndata-source_branch%median_index
-   local_parent_id=source_branch%current_id
-   local_parent_level=current_level
-   local_current_id=current_branch_id
-   local_current_level=current_level+1
-   local_splittingrule=-1
-   local_median_index=-1
-   local_median_value=zero
-   local_child1_id=-1
-   local_child2_id=-1
-   local_child_level=-1
-
-   allocate(save_data_decisions(local_ndata,ndim_decisions))
-   allocate(save_data_classify(local_ndata,ndim_classify))
-
-   do idata=1,local_ndata
-    do dir=1,ndim_decisions
-     save_data_decisions(idata,dir)= &
-          source_branch%data_decisions(idata+source_branch%median_index,dir)
-    enddo
-   enddo
-   do idata=1,local_ndata
-    do dir=1,ndim_classify
-     save_data_classify(idata,dir)= &
-          source_branch%data_classify(idata+source_branch%median_index,dir)
-    enddo
-   enddo
-
-   call init_branch( &
-    tree_var%branch_list_level(local_current_level)% &
-       branch_list(local_current_id), &
-    ndim_decisions, &
-    ndim_classify, &
-    save_data_decisions, &
-    save_data_classify, &
-    local_ndata, &
-    local_parent_id, &
-    local_parent_level, &
-    local_current_id, &
-    local_current_level, &
-    local_splittingrule, &
-    local_median_index, &
-    local_median_value, &
-    local_child1_id, &
-    local_child2_id, &
-    local_child_level)
-
-   deallocate(save_data_decisions)
-   deallocate(save_data_classify)
-
-   deallocate(source_branch%data_decisions)
-   deallocate(source_branch%data_classify)
-
-  else
-   print *,"datahi invalid"
-   stop
-  endif
- else
-  print *,"datalo invalid"
-  stop
- endif
-
-end subroutine children_branch_data
-
-subroutine test_variance_results( &
-   nbranches, &
-   ndim_classify, &
-   splittingrule, &
-   tree_var, &
-   current_level, &
-   variance_reduction)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: nbranches
-integer, INTENT(in) :: ndim_classify
-integer, INTENT(in) :: splittingrule
-Type(tree_type), INTENT(inout) :: tree_var
-integer, INTENT(in) :: current_level
-real(amrex_real), INTENT(out) :: variance_reduction(nbranches)
-integer :: ibranch
-integer :: local_ndata
-integer :: local_median_index
-real(amrex_real) :: local_median_value
-real(amrex_real) :: local_variance_reduction
-
- if ((nbranches.eq.tree_var%nbranches_level(current_level)).and. &
-     (nbranches.eq.tree_var%branch_list_level(current_level)%nbranches)) then
-  ! do nothing
- else
-  print *,"nbranches corrupt(1)"
-  print *,"nbranches=",nbranches
-  print *,"tree_var%nbranches_level(current_level)= ", &
-    tree_var%nbranches_level(current_level)
-  stop
- endif
-
- do ibranch=1,nbranches
-  variance_reduction(ibranch)=zero
- enddo
-
- do ibranch=1,nbranches
-  local_ndata=tree_var%branch_list_level(current_level)% &
-          branch_list(ibranch)%ndata
-  if (local_ndata.eq.1) then
-   ! do nothing
-  else if (local_ndata.ge.2) then
-   call sort_branch_data( &
-    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule, & 
-    local_median_index, &
-    local_median_value)
-   call statistics_branch_data( &
-    ndim_classify, &
-    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule, & 
-    local_variance_reduction)
-   variance_reduction(ibranch)=variance_reduction(ibranch)+ &
-       local_variance_reduction
-  else
-   print *,"local_ndata invalid"
-   stop
-  endif
- enddo ! do ibranch=1,nbranches
-
-end subroutine test_variance_results
-
-subroutine init_new_tree_level( &
-   nbranches, &
-   ndim_decisions, &
-   ndim_classify, &
-   splittingrule, &
-   tree_var, &
-   current_level)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: nbranches
-integer, INTENT(in) :: ndim_decisions
-integer, INTENT(in) :: ndim_classify
-integer, INTENT(in) :: splittingrule(nbranches)
-Type(tree_type), INTENT(inout) :: tree_var
-integer, INTENT(in) :: current_level
-integer :: current_branch_id
-integer :: ibranch
-integer :: local_ndata
-integer :: local_median_index
-real(amrex_real) :: local_median_value
-
- if ((nbranches.eq.tree_var%nbranches_level(current_level)).and. &
-     (nbranches.eq.tree_var%branch_list_level(current_level)%nbranches)) then
-  ! do nothing
- else
-  print *,"nbranches corrupt(2)"
-  print *,"nbranches=",nbranches
-  print *,"tree_var%nbranches_level(current_level)= ", &
-    tree_var%nbranches_level(current_level)
-  stop
- endif
-
- current_branch_id=0
- do ibranch=1,nbranches
-  local_ndata=tree_var%branch_list_level(current_level)% &
-          branch_list(ibranch)%ndata
-  if (local_ndata.eq.1) then
-   ! do nothing
-  else if (local_ndata.ge.2) then
-   call sort_branch_data( &
-    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule(ibranch), & 
-    local_median_index, &
-    local_median_value)
-   call children_branch_data( &
-    tree_var, &
-    ndim_decisions, &
-    ndim_classify, &
-    current_level, &
-    current_branch_id, &
-    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule(ibranch))
-  else
-   print *,"local_ndata invalid"
-   stop
-  endif
- enddo ! ibranch=1,nbranches
-
-end subroutine init_new_tree_level
-
-subroutine init_branch( &
-   dest_branch, &
-   ndim_decisions, &
-   ndim_classify, &
-   data_decisions, &
-   data_classify, &
-   ndata, &
-   parent_id, &
-   parent_level, &
-   current_id, &
-   current_level, &
-   splittingrule, &
-   median_index, &
-   median_value, &
-   child1_id, &
-   child2_id, &
-   child_level)
-use probcommon_module
-IMPLICIT NONE
-
-Type(branch_type), INTENT(out) :: dest_branch
-integer, INTENT(in) :: ndim_decisions
-integer, INTENT(in) :: ndim_classify
-integer, INTENT(in) :: ndata
-real(amrex_real), INTENT(in) :: data_decisions(ndata,ndim_decisions)
-real(amrex_real), INTENT(in) :: data_classify(ndata,ndim_classify)
-integer, INTENT(in) :: parent_id
-integer, INTENT(in) :: parent_level
-integer, INTENT(in) :: current_id
-integer, INTENT(in) :: current_level
-integer, INTENT(in) :: splittingrule
-integer, INTENT(in) :: median_index
-real(amrex_real), INTENT(in) :: median_value
-integer, INTENT(in) :: child1_id
-integer, INTENT(in) :: child2_id
-integer, INTENT(in) :: child_level
-
- if (ndata.ge.1) then
-  ! do nothing
- else
-  print *,"ndata invalid"
-  stop
- endif
-
- dest_branch%ndata=ndata
- dest_branch%parent_id=parent_id
- dest_branch%parent_level=parent_level
- dest_branch%current_id=current_id
- dest_branch%current_level=current_level
- dest_branch%splittingrule=splittingrule
- dest_branch%median_index=median_index
- dest_branch%median_value=median_value
- dest_branch%child1_id=child1_id
- dest_branch%child2_id=child2_id
- dest_branch%child_level=child_level
-
- allocate(dest_branch%data_decisions(ndata,ndim_decisions))
- dest_branch%data_decisions=data_decisions
- allocate(dest_branch%data_classify(ndata,ndim_classify))
- dest_branch%data_classify=data_classify
-    
-end subroutine init_branch
-
-subroutine initialize_decision_tree(data_decisions,data_classify, &
-        nsamples,ndim_decisions,ndim_classify,tree_var)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: nsamples
-integer, INTENT(in) :: ndim_decisions
-integer, INTENT(in) :: ndim_classify
-real(amrex_real), INTENT(in) :: data_decisions(nsamples,ndim_decisions)
-real(amrex_real), INTENT(in) :: data_classify(nsamples,ndim_classify)
-Type(tree_type), INTENT(out) :: tree_var
-
-integer :: nsamples_copy
-integer :: datahi_decisions(2)
-integer :: datahi_classify(2)
-
-integer :: local_ndata
-integer :: local_parent_id
-integer :: local_parent_level
-integer :: local_current_id
-integer :: local_current_level
-integer :: local_splittingrule
-integer :: local_median_index
-real(amrex_real) :: local_median_value
-integer :: local_child1_id
-integer :: local_child_level
-integer :: local_child2_id
-
-real(amrex_real), allocatable :: local_variance_reduction(:)
-real(amrex_real), allocatable :: max_variance_reduction(:)
-integer, allocatable :: max_splittingrule(:)
-real(amrex_real) :: total_variance_reduction
-
-integer :: local_nbranches
-integer :: local_nbranches_next_level
-integer :: ibranch
-
- tree_var%max_number_tree_levels=1
- tree_var%number_tree_levels=1
- 
- nsamples_copy=nsamples
- do while (nsamples_copy.gt.0) 
-  nsamples_copy=nsamples_copy/2
-  tree_var%max_number_tree_levels=tree_var%max_number_tree_levels+1
- enddo
-
- print *,"nsamples,max_number_tree_levels ",nsamples, &
-         tree_var%max_number_tree_levels
- print *,"ndim_decisions,ndim_classify ",ndim_decisions,ndim_classify
-
- allocate(tree_var%nbranches_level(tree_var%max_number_tree_levels))
- allocate(tree_var%branch_list_level(tree_var%max_number_tree_levels))
-
- datahi_decisions=UBOUND(data_decisions)
- datahi_classify=UBOUND(data_classify)
- if ((datahi_decisions(2).eq.ndim_decisions).and. &
-     (datahi_decisions(1).eq.nsamples)) then
-  ! do nothing
- else
-  print *,"datahi_decisions failed"
-  stop
- endif
- if ((datahi_classify(2).eq.ndim_classify).and. &
-     (datahi_classify(1).eq.nsamples)) then
-  ! do nothing
- else
-  print *,"datahi_classify failed"
-  stop
- endif
-
- tree_var%nbranches_level(1)=1
- tree_var%branch_list_level(1)%nbranches=1
- allocate(tree_var%branch_list_level(1)%branch_list(1))
-
- local_ndata=nsamples
- local_parent_id=-1
- local_parent_level=-1
- local_current_id=1
- local_current_level=1
- local_splittingrule=-1
- local_median_index=-1
- local_median_value=zero
- local_child1_id=-1
- local_child2_id=-1
- local_child_level=2
-
- call init_branch( &
-  tree_var%branch_list_level(local_current_level)%branch_list(1), &
-  ndim_decisions, &
-  ndim_classify, &
-  data_decisions, &
-  data_classify, &
-  local_ndata, &
-  local_parent_id, &
-  local_parent_level, &
-  local_current_id, &
-  local_current_level, &
-  local_splittingrule, &
-  local_median_index, &
-  local_median_value, &
-  local_child1_id, &
-  local_child2_id, &
-  local_child_level)
-
- do while (local_current_level.lt.tree_var%max_number_tree_levels)
-
-   local_nbranches=tree_var%branch_list_level(local_current_level)%nbranches
-   allocate(tree_var%branch_list_level(local_current_level+1)% &
-        branch_list(2*local_nbranches))
-
-   local_nbranches_next_level=0
-
-   do ibranch=1,local_nbranches
-    local_ndata=tree_var%branch_list_level(local_current_level)% &
-            branch_list(ibranch)%ndata
-    if (local_ndata.ge.2) then
-     local_nbranches_next_level=local_nbranches_next_level+2
-    else if (local_ndata.eq.1) then
-     ! do nothing
-    else
-     print *,"local_ndata invalid"
-     stop
-    endif
-   enddo !ibranch=1,local_nbranches
-
-   tree_var%nbranches_level(local_current_level+1)= &
-       local_nbranches_next_level
-   tree_var%branch_list_level(local_current_level+1)%nbranches= &
-       local_nbranches_next_level
-
-   if ((local_nbranches_next_level.ge.0).and. &
-       (local_nbranches_next_level.le.2*local_nbranches)) then
-
-    if (local_nbranches_next_level.gt.0) then
-     tree_var%number_tree_levels=local_current_level+1
-    endif
-
-   else
-    print *,"local_nbranches_next_level invalid"
-    stop
-   endif
-
-   allocate(max_variance_reduction(local_nbranches))
-   allocate(local_variance_reduction(local_nbranches))
-   allocate(max_splittingrule(local_nbranches))
-
-   do ibranch=1,local_nbranches
-    max_variance_reduction(ibranch)=zero
-    local_variance_reduction(ibranch)=zero
-    max_splittingrule(ibranch)=0
-   enddo
-   total_variance_reduction=zero
-
-   do local_splittingrule=1,ndim_decisions
-
-    call test_variance_results( &
-     local_nbranches, &
-     ndim_classify, &
-     local_splittingrule, &
-     tree_var, &
-     local_current_level, &
-     local_variance_reduction)
-
-    total_variance_reduction=zero
-    do ibranch=1,local_nbranches
-     if (local_variance_reduction(ibranch).ge.zero) then
-      total_variance_reduction=total_variance_reduction+ &
-       local_variance_reduction(ibranch)
-     else
-      print *,"local_variance_reduction is NaN"
-      print *,"ibranch,local_nbranches: ",ibranch,local_nbranches
-      print *,"local_variance_reduction(ibranch): ", &
-         local_variance_reduction(ibranch)
-      stop
-     endif
-    enddo
-
-    if (total_variance_reduction.ge.zero) then
-     ! do nothing
-    else
-     print *,"total_variance_reduction is NaN: ",total_variance_reduction
-     stop
-    endif
-
-    if (1.eq.1) then
-     do ibranch=1,local_nbranches
-      local_variance_reduction(ibranch)=total_variance_reduction
-     enddo
-    endif
-
-    if (local_splittingrule.eq.1) then
-     do ibranch=1,local_nbranches
-      max_variance_reduction(ibranch)=local_variance_reduction(ibranch)
-      max_splittingrule(ibranch)=local_splittingrule
-     enddo
-    else if ((local_splittingrule.gt.1).and. &
-             (local_splittingrule.le.ndim_decisions)) then
-
-     do ibranch=1,local_nbranches
-
-      if (local_variance_reduction(ibranch).gt. &
-          max_variance_reduction(ibranch)) then
-       max_variance_reduction(ibranch)=local_variance_reduction(ibranch)
-       max_splittingrule(ibranch)=local_splittingrule
-      else if (local_variance_reduction(ibranch).le. &
-               max_variance_reduction(ibranch)) then
-       ! do nothing
-      else
-       print *,"NaN encountered"
-       stop
-      endif
-
-     enddo ! do ibranch=1,local_nbranches
-
-    else
-     print *,"local_splittingrule invalid"
-     stop
-    endif
-
-   enddo !do local_splittingrule=1,ndim_decisions
-
-   call init_new_tree_level( &
-     local_nbranches, &
-     ndim_decisions, &
-     ndim_classify, &
-     max_splittingrule, &
-     tree_var, &
-     local_current_level)
-
-   deallocate(max_variance_reduction)
-   deallocate(local_variance_reduction)
-   deallocate(max_splittingrule)
-
-   local_current_level=local_current_level+1
- enddo !while (local_current_level.lt.tree_var%max_number_tree_levels)
-
-end subroutine initialize_decision_tree
-
-subroutine decision_tree_predict(data_decision,data_classified, &
-  ndim_decisions,ndim_classify,tree_var)
-use probcommon_module
-IMPLICIT NONE
-
-integer, INTENT(in) :: ndim_decisions
-integer, INTENT(in) :: ndim_classify
-real(amrex_real), INTENT(in) :: data_decision(ndim_decisions)
-real(amrex_real), INTENT(out) :: data_classified(ndim_classify)
-Type(tree_type), INTENT(in) :: tree_var
-integer :: prev_id
-integer :: prev_level
-integer :: current_level
-integer :: current_id
-integer :: current_ndata
-integer :: previous_ndata
-integer :: splittingrule
-integer :: median_index
-integer :: dir
-real(amrex_real) :: median_value
-integer :: datalo(2)
-integer :: datahi(2)
-
- if ((tree_var%number_tree_levels.ge.1).and. &
-     (tree_var%number_tree_levels.le. &
-      tree_var%max_number_tree_levels)) then
-  ! do nothing
- else
-  print *,"number_tree_levels invalid"
-  stop
- endif
-
- current_level=1
- current_id=1
- current_ndata=tree_var%branch_list_level(current_level)% &
-    branch_list(current_id)%ndata
-
- do while (current_ndata.ge.2)
-
-  if (current_level.le.tree_var%number_tree_levels) then
-   ! do nothing
-  else
-   print *,"current_level invalid(2)"
-   print *,"current_level=",current_level
-   print *,"tree_var%number_tree_levels=", &
-     tree_var%number_tree_levels
-   stop
-  endif
-
-  if (current_id.le.tree_var%branch_list_level(current_level)%nbranches) then
-   ! do nothing
-  else
-   print *,"current_id invalid"
-   stop
-  endif
-
-  datalo=LBOUND(tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%data_decisions)
-  datahi=UBOUND(tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%data_decisions)
-  if ((datalo(1).eq.1).and. &
-      (datalo(2).eq.1).and. &
-      (datahi(1).eq.current_ndata).and. &
-      (datahi(2).eq.ndim_decisions)) then
-   ! do nothing
-  else
-   print *,"datalo or datahi invalid"
-   stop
-  endif
-
-  datalo=LBOUND(tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%data_classify)
-  datahi=UBOUND(tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%data_classify)
-
-  if ((datalo(1).eq.1).and. &
-      (datalo(2).eq.1).and. &
-      (datahi(1).eq.current_ndata).and. &
-      (datahi(2).eq.ndim_classify)) then
-   ! do nothing
-  else
-   print *,"datalo or datahi invalid"
-   stop
-  endif
-
-  splittingrule=tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%splittingrule
-  if ((splittingrule.ge.1).and. &
-      (splittingrule.le.ndim_decisions)) then
-   median_index=tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%median_index
-   median_value=tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)%median_value
-   if ((median_index.ge.1).and. &
-       (median_index.lt.current_ndata)) then
-
-    prev_id=current_id
-    prev_level=current_level
-
-    if (data_decision(splittingrule).le.median_value) then
-     current_id=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child1_id
-     current_level=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child_level
-    else if (data_decision(splittingrule).gt.median_value) then
-     current_id=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child2_id
-     current_level=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child_level
-    else
-     print *,"data_decision bust"
-     stop
-    endif
-
-    if (current_level.eq.prev_level+1) then
-     ! do nothing
-    else
-     print *,"current_level invalid(3)"
-     print *,"current_level=",current_level
-     print *,"prev_level=",prev_level
-     stop
-    endif
-
-    previous_ndata=current_ndata
-    current_ndata=tree_var%branch_list_level(current_level)% &
-         branch_list(current_id)%ndata
-    if ((current_ndata.le.previous_ndata/2+1).and. &
-        (current_ndata.ge.1).and. &
-        (current_ndata.ge.previous_ndata/2)) then
-     !do nothing
-    else
-     print *,"current_ndata too large"
-     stop
-    endif
-   else
-    print *,"median_index invalid"
-    stop
-   endif
-  else
-   print *,"splittingrule invalid"
-   stop
-  endif
- enddo !do while (current_ndata.ge.2)
-
- if (current_ndata.eq.1) then
-  ! do nothing
- else
-  print *,"current_ndata invalid"
-  stop
- endif
-
- do dir=1,ndim_classify
-  data_classified(dir)=tree_var%branch_list_level(current_level)% &
-     branch_list(current_id)%data_classify(1,dir)
- enddo
-
-end subroutine decision_tree_predict
 
 end module global_utility_module
 

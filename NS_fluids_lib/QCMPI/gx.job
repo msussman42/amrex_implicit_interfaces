@@ -1,0 +1,21 @@
+#!/bin/csh
+#PBS -l size=16:16
+#PBS -l walltime=0:20:00
+#PBS -j oe
+#PBS -q batch
+# PBS -q debug
+#PBS -N GNB
+
+set echo
+
+#move to my $SCRATCH directory
+cd $SCRATCH
+
+#copy executable to $SCRATCH
+cp $HOME/QCMPI/GN.out .
+cp $HOME/QCMPI/Input.txt Input.txt 
+cat Input.txt
+rm fort.*
+#run my executable
+pbsyod -SN -size $PBS_NPROCS ./GN.out
+cat fort.*

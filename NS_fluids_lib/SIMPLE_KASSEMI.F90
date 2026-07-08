@@ -1220,7 +1220,7 @@ if (isweep.eq.0) then
  increment_out1(4)=zero
  increment_out1(5)=zero
  increment_out1(6)=zero
- if (VOF_analytical.le.VOFTOL) then
+ if (VOF_analytical.le.VOFTOL_MATERIAL) then
   im_crit=2
   tcomp=(im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
@@ -1229,7 +1229,7 @@ if (isweep.eq.0) then
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
   increment_out1(4)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
- else if (VOF_analytical.ge.one-VOFTOL) then
+ else if (VOF_analytical.ge.one-VOFTOL_MATERIAL) then
   im_crit=1
   tcomp=(im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
@@ -1238,8 +1238,8 @@ if (isweep.eq.0) then
   Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
   increment_out1(6)=GRID_DATA_IN%volgrid* &
           abs(Y_compute-Y_analytical)
- else if ((VOF_analytical.ge.VOFTOL).and. &
-          (VOF_analytical.le.one-VOFTOL)) then
+ else if ((VOF_analytical.ge.VOFTOL_MATERIAL).and. &
+          (VOF_analytical.le.one-VOFTOL_MATERIAL)) then
   ! do nothing
  else
   print *,"VOF_analytical invalid"

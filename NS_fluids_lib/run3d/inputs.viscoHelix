@@ -29,13 +29,11 @@ ns.num_species_var=0
 ns.post_init_pressure_solve=1
 
 ns.MOFITERMAX=30
-#ns.MOF_TURN_OFF_LS=0
 #ns.MOF_DEBUG_RECON=0
 
 #continuous_mof=1 => CMOF
 ns.continuous_mof=0 #for the structure interfaces it is always MOF anyway.
 
-#ns.mof_error_ordering=0
 #ns.mof_ordering=0 1 0 1 
 
 ## multigrid class

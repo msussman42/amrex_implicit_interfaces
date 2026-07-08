@@ -78,7 +78,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   //SOLVETYPE_PRES,
   //SOLVETYPE_INITPROJ
-  //SOLVETYPE_SMOOTH
  if (project_option_projection(project_option)==1) {
 
   // do nothing
@@ -643,7 +642,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // if project_option==SOLVETYPE_PRES,
    //    project_option==SOLVETYPE_INITPROJ,
-   //    project_option==SOLVETYPE_SMOOTH
    //    project_option==SOLVETYPE_PRESEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 
@@ -1894,6 +1892,7 @@ void NavierStokes::apply_div(
    &ns_time_order, 
    &divu_outer_sweeps, 
    &num_divu_outer_sweeps, 
+   material_conservation_form.dataPtr(),
    &operation_flag,  //operation_flag=100=OP_RHS_CELL
    &energyflag,
    constant_density_all_time.dataPtr(),
@@ -2589,6 +2588,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
+    material_conservation_form.dataPtr(),
     &operation_flag, // operation_flag==110=OP_DIV_CELL
     &energyflag,
     constant_density_all_time.dataPtr(),

@@ -109,7 +109,6 @@ ns.viscconst=0.013 0.000142 # g/(cm s)  0.000142
 # water: k=0.58 W/(M K)=58000 cgs units
 ns.heatviscconst=58000.0 2400.0
 ns.denconst=0.78 0.00627
-ns.density_ratio_relaxation_factor=100.0
 # 7,4,999 compressible liquid,
 # or 
 # 0,4,999 incompressible liquid

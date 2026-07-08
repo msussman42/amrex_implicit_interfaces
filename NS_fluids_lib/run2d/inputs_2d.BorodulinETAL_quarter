@@ -55,11 +55,7 @@ ns.num_materials=2 # 1: liquid 2: air
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=30 #no particles
-#ns.MOFITERMAX_AFTER_PREDICT=0 #particles
-ns.mof_decision_tree_learning=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
-ns.mof_error_ordering=0 # 0-centroid furthest  1-use MOF error
 #water air
 ns.mof_ordering=3 3 
 
@@ -171,7 +167,6 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_conservation_form=1 1
-ns.material_type_interface=0 
 ns.shock_timestep=1 1 #compressible
 #ns.shock_timestep=2 2 #incompressible
 #ns.material_type=0 0  # incompressible
@@ -202,7 +197,6 @@ ns.heatviscconst=0.6e+5 0.024e+5 #CODY:k_liquid=10^-1 W/(m*K),
 #1joule=1 kg m^2/s^2
 #1 W/(m K)=J/(m s K)=kg m^2/(m s^3 K)=kg m/(s^3 K)=10^5 g cm/(s^3 K)
 #k_gas = 10^-2 W/(m*K) = 10^3 g*cm/(s^3*K)
-ns.heatviscconst_interface=0.0 
 # (rho Y)_t + div(rho u Y) = div (rho D grad Y)
 # D is here:
 ns.speciesviscconst=0.1 0.1 # CODY ~ D = 10^-5 m^2/s = 0.1 cm^2/s

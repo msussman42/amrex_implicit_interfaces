@@ -99,13 +99,12 @@ stop
       contains
 
 
-      subroutine get_mach_number(tessellate, &
+      subroutine get_mach_number( &
         vel,den,vof,mach)
       use MOF_routines_module
       use global_utility_module
       IMPLICIT NONE
  
-      integer, INTENT(in) :: tessellate
       real(amrex_real), INTENT(in) :: vel(SDIM+1)
       real(amrex_real), INTENT(in) :: den(num_materials*num_state_material)
       real(amrex_real), INTENT(in) :: vof(num_materials)
@@ -121,19 +120,10 @@ stop
       integer ispec
       real(amrex_real) :: massfrac_parm(num_species_var+1)
 
-      if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-          (tessellate.eq.TESSELLATE_ALL).or. &
-          (tessellate.eq.TESSELLATE_ALL_RASTER)) then
-       !do nothing
-      else
-       print *,"tessellate invalid in get_mach_number: ",tessellate
-       stop
-      endif
-
+       !get_mach_number
       call get_primary_material_VFRAC( &
        vof, &
-       im_primary, &
-       tessellate)
+       im_primary)
      
       if ((im_primary.lt.1).or.(im_primary.gt.num_materials)) then
        print *,"im_primary invalid"
@@ -192,6 +182,7 @@ stop
        !called from fort_init_elasticmask_and_elasticmaskpart (GODUNOV_3D.F90)
        !called from fort_tagexpansion (GODUNOV_3D.F90)
       subroutine get_elasticmask_and_elasticmaskpart( &
+        i,j,k, &
         im_elastic_map, &
         num_FSI_outer_sweeps, &
         FSI_outer_sweeps, &
@@ -206,14 +197,15 @@ stop
         im_primary, &
         ireverse, &
         denstate, &
-        LS, &
-        VOF, &
+        LS_ptr, &
+        VOF_ptr, &
         distribute_from_target, &
         complement_flag)
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: i,j,k
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
@@ -229,13 +221,16 @@ stop
       real(amrex_real), INTENT(out) :: elasticmask
       real(amrex_real), INTENT(out) :: elasticmaskpart
       real(amrex_real), INTENT(in) :: denstate(nden)
-      real(amrex_real), INTENT(in) :: LS(num_materials)
-      real(amrex_real), INTENT(in) :: VOF(num_materials)
+      real(amrex_real), INTENT(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), pointer :: VOF_ptr(D_DECL(:,:,:),:)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
       integer, INTENT(in) :: complement_flag
 
       real(amrex_real) dist_mask_override
+      integer vof_flag
       integer im_primary_vof
+      integer im_secondary_vof
+      integer im_tertiary_vof
       integer im_secondary
       integer im_tertiary
       integer im_ice
@@ -247,7 +242,6 @@ stop
       real(amrex_real) dxmax
       real(amrex_real) :: def_thermal(num_materials)
       integer :: im_local
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       integer im_rigid_CL !get_elasticmask_and_elasticmaskpart
 
        ! see subroutine eval_face_coeff
@@ -256,7 +250,6 @@ stop
        ! not used; all elastic/ice materials are fluids
        ! cc_group=cc (SOLVETYPE_PRES)
        ! cc_group=cc*cc_elasticmask (SOLVETYPE_INITPROJ)
-       ! cc_group=cc*cc_elasticmask (SOLVETYPE_SMOOTH)
        im_rigid_CL=num_materials 
       else if ((FSI_outer_sweeps.ge.1).and. &
                (FSI_outer_sweeps.lt. &
@@ -322,47 +315,18 @@ stop
 
       call get_dxmax(dx,bfact,dxmax)
 
-      call get_primary_material(dx,LS,im_primary)
+       !get_elasticmask_and_elasticmaskpart
+       !get_primary_material_group declared in GLOBALUTIL.F90
+      vof_flag=0
+      call get_primary_material_group(dx,LS_ptr, &
+        im_primary,im_secondary,im_tertiary, &
+        i,j,k,vof_flag)
+      vof_flag=1
+      call get_primary_material_group(dx,VOF_ptr, &
+        im_primary_vof,im_secondary_vof,im_tertiary_vof, &
+        i,j,k,vof_flag)
 
-      call get_primary_material_VFRAC( &
-       VOF, &
-       im_primary_vof, &
-       tessellate) !TESSELLATE_FLUIDS
-
-      call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
-
-      if ((im_primary.ge.1).and. &
-          (im_primary.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_primary invalid : ",im_primary
-       stop
-      endif
-
-      if ((im_secondary.ge.1).and. &
-          (im_secondary.le.num_materials)) then
-        ! get_tertiary_material is declared in MOF.F90
-        ! is_rigid(im_tertiary)=0
-       call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
-      else
-       print *,"im_secondary invalid : ",im_secondary
-       stop
-      endif
-
-      if ((im_tertiary.ge.0).and.(im_tertiary.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_tertiary invalid: ",im_tertiary
-       stop
-      endif
-
-      if (im_primary.eq.im_secondary) then
-       print *,"im_primary.eq.im_secondary"
-       stop
-      else if (im_primary.eq.im_tertiary) then
-       print *,"im_primary.eq.im_tertiary"
-       stop
-      else if (im_primary.lt.im_secondary) then
+      if (im_primary.lt.im_secondary) then
        im=im_primary
        im_opp=im_secondary
       else if (im_primary.gt.im_secondary) then
@@ -373,275 +337,303 @@ stop
        stop
       endif
 
-      call get_iten(im,im_opp,iten)
+      if ((im_opp.ge.1).and.(im_opp.le.num_materials)) then
 
-      do ireverse=0,1
-       LL(ireverse)= &
-        get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
-      enddo
+       call get_iten(im,im_opp,iten)
 
-      if ((is_ice(im).eq.0).and. &
-          (is_ice(im_opp).eq.0)) then
-       im_ice=0
-      else if ((is_ice(im).eq.1).and. &
-               (is_ice(im_opp).eq.0)) then
-       im_ice=im
-      else if ((is_ice(im).eq.0).and. &
-               (is_ice(im_opp).eq.1)) then
-       im_ice=im_opp
-      else if ((is_ice(im).eq.1).and. &
-               (is_ice(im_opp).eq.1)) then
-       im_ice=im_primary
-      else
-       print *,"is_ice invalid"
-       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
-       print *,"is_ice(im) ",is_ice(im)
-       print *,"is_ice(im_opp) ",is_ice(im_opp)
-       stop
-      endif
+       do ireverse=0,1
+        LL(ireverse)= &
+         get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+       enddo
+
+       if ((is_ice(im).eq.0).and. &
+           (is_ice(im_opp).eq.0)) then
+        im_ice=0
+       else if ((is_ice(im).eq.1).and. &
+                (is_ice(im_opp).eq.0)) then
+        im_ice=im
+       else if ((is_ice(im).eq.0).and. &
+                (is_ice(im_opp).eq.1)) then
+        im_ice=im_opp
+       else if ((is_ice(im).eq.1).and. &
+                (is_ice(im_opp).eq.1)) then
+        im_ice=im_primary
+       else
+        print *,"is_ice invalid"
+        print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+        print *,"is_ice(im) ",is_ice(im)
+        print *,"is_ice(im_opp) ",is_ice(im_opp)
+        stop
+       endif
      
-      if ((is_FSI_rigid(im).eq.0).and. &
-          (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=0
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=im
-      else if ((is_FSI_rigid(im).eq.0).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_opp
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_primary
-      else
-       print *,"is_FSI_rigid invalid"
-       print *,"im,im_opp ",im,im_opp
-       print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
-       print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
-       stop
-      endif
-
-      if ((is_FSI_elastic(im).eq.0).and. &
-          (is_FSI_elastic(im_opp).eq.0)) then
-       im_FSI_elastic=0
-      else if ((is_FSI_elastic(im).eq.1).and. &
-               (is_FSI_elastic(im_opp).eq.0)) then
-       im_FSI_elastic=im
-      else if ((is_FSI_elastic(im).eq.0).and. &
-               (is_FSI_elastic(im_opp).eq.1)) then
-       im_FSI_elastic=im_opp
-      else if ((is_FSI_elastic(im).eq.1).and. &
-               (is_FSI_elastic(im_opp).eq.1)) then
-       im_FSI_elastic=im_primary
-      else
-       print *,"is_FSI_elastic invalid"
-       print *,"im, im_opp, im_primary ",im,im_opp,im_primary
-       print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
-       print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
-       stop
-      endif
-
-       !if SOLVETYPE_INITPROJ then
-       ! cc_group=cc*cc_elasticmask
-       !if SOLVETYPE_SMOOTH then
-       ! cc_group=cc*cc_elasticmask
-       !if SOLVETYPE_PRES then
-       ! if (num_FSI_outer_sweeps.eq.1) then
-       !  cc_group=cc*cc_elasticmask
-       ! else if (FSI_outer_sweeps>=1)
-       !  cc_group=cc*cc_elasticmaskpart
-       ! else if (FSI_outer_sweeps==0)
-       !  cc_group=cc
-      if (im_FSI_rigid.eq.im_primary) then
-
-       ireverse=-1
-       elasticmask=zero
-       elasticmaskpart=one
-       if (im_primary.le.im_rigid_CL) then
-        elasticmaskpart=zero
-       endif
-
-       ! a "non-ice" elastic material.
-      else if ((im_FSI_elastic.eq.im_primary).and. &
-               (im_ice.ne.im_primary)) then
-
-       ireverse=-1
-       elasticmask=zero
-       elasticmaskpart=one
-       if (im_primary.le.im_rigid_CL) then
-        elasticmaskpart=zero
-       endif
-
-      else if ((im_FSI_rigid.ne.im_primary).and. &
-               ((im_FSI_elastic.ne.im_primary).or. &
-                (im_ice.eq.im_primary))) then
-
-       if ((im_FSI_rigid.lt.0).or. &
-           (im_FSI_rigid.gt.num_materials).or. &
-           (im_FSI_elastic.lt.0).or. &
-           (im_FSI_elastic.gt.num_materials)) then
-        print *,"im_FSI_rigid or im_FSI_elastic invalid", &
-          im_FSI_rigid,im_FSI_elastic
+       if ((is_FSI_rigid(im).eq.0).and. &
+           (is_FSI_rigid(im_opp).eq.0)) then
+        im_FSI_rigid=0
+       else if ((is_FSI_rigid(im).eq.1).and. &
+                (is_FSI_rigid(im_opp).eq.0)) then
+        im_FSI_rigid=im
+       else if ((is_FSI_rigid(im).eq.0).and. &
+                (is_FSI_rigid(im_opp).eq.1)) then
+        im_FSI_rigid=im_opp
+       else if ((is_FSI_rigid(im).eq.1).and. &
+                (is_FSI_rigid(im_opp).eq.1)) then
+        im_FSI_rigid=im_primary
+       else
+        print *,"is_FSI_rigid invalid"
+        print *,"im,im_opp ",im,im_opp
+        print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
+        print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
         stop
        endif
 
-        ! either the primary or secondary material is "ice"
-       if ((im_ice.ge.1).and. &
-           (im_ice.le.num_materials)) then 
+       if ((is_FSI_elastic(im).eq.0).and. &
+           (is_FSI_elastic(im_opp).eq.0)) then
+        im_FSI_elastic=0
+       else if ((is_FSI_elastic(im).eq.1).and. &
+                (is_FSI_elastic(im_opp).eq.0)) then
+        im_FSI_elastic=im
+       else if ((is_FSI_elastic(im).eq.0).and. &
+                (is_FSI_elastic(im_opp).eq.1)) then
+        im_FSI_elastic=im_opp
+       else if ((is_FSI_elastic(im).eq.1).and. &
+                (is_FSI_elastic(im_opp).eq.1)) then
+        im_FSI_elastic=im_primary
+       else
+        print *,"is_FSI_elastic invalid"
+        print *,"im, im_opp, im_primary ",im,im_opp,im_primary
+        print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
+        print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
+        stop
+       endif
 
-         ! if the associated "melt" material
-         ! is not the primary or secondary material,
-         ! then check if it is the tertiary material.
-        if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
-         if ((im_tertiary.ge.1).and. &
-             (im_tertiary.le.num_materials)) then
-          if (is_rigid(im_tertiary).eq.0) then
-           if (is_FSI_rigid(im_tertiary).eq.0) then
-            if (is_FSI_elastic(im_tertiary).eq.0) then
-             if (is_ice(im_tertiary).eq.0) then
-              if (im_ice.lt.im_tertiary) then
-               im=im_ice
-               im_opp=im_tertiary
-              else if (im_ice.gt.im_tertiary) then
-               im_opp=im_ice
-               im=im_tertiary
-              else
-               print *,"im_ice or im_tertiary invalid"
-               stop
-              endif
+        !if SOLVETYPE_INITPROJ then
+        ! cc_group=cc*cc_elasticmask
+        !if SOLVETYPE_PRES then
+        ! if (num_FSI_outer_sweeps.eq.1) then
+        !  cc_group=cc*cc_elasticmask
+        ! else if (FSI_outer_sweeps>=1)
+        !  cc_group=cc*cc_elasticmaskpart
+        ! else if (FSI_outer_sweeps==0)
+        !  cc_group=cc
+       if (im_FSI_rigid.eq.im_primary) then
 
-              call get_iten(im,im_opp,iten)
-              do ireverse=0,1
-               LL(ireverse)= &
-                get_user_latent_heat(iten+ireverse*num_interfaces, &
-                   room_temperature,1)
-              enddo
-             else if (is_ice(im_tertiary).eq.1) then
-              ! do nothing
-             else
-              print *,"is_ice(im_tertiary) invalid"
-              print *,"im_tertiary ",im_tertiary
-              print *,"is_ice(im_tertiary): ",is_ice(im_tertiary)
-              stop
-             endif
-            else if (is_FSI_elastic(im_tertiary).eq.1) then
-             ! do nothing
-            else
-             print *,"is_FSI_elastic(im_tertiary) invalid"
-             print *,"im_tertiary ",im_tertiary
-             print *,"is_FSI_elastic(im_tertiary): ", &
-              is_FSI_elastic(im_tertiary)
-             stop
-            endif
-           else if (is_FSI_rigid(im_tertiary).eq.1) then
-            ! do nothing
-           else
-            print *,"is_FSI_rigid(im_tertiary) invalid"
-            print *,"im_tertiary ",im_tertiary
-            print *,"is_FSI_rigid(im_tertiary): ", &
-             is_FSI_rigid(im_tertiary)
-            stop
-           endif
-          else
-           print *,"is_rigid(im_tertiary) invalid"
-           print *,"contradiction with: get_tertiary_material"
-           print *,"im_tertiary ",im_tertiary
-           print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
-           stop
-          endif
-         else if (im_tertiary.eq.0) then
-          print *,"expecting im_tertiary>=1 and <=num_materials"
-          print *,"im_tertiary: ",im_tertiary
-          print *,"im_ice: ",im_ice
-          print *,"im_FSI_rigid: ",im_FSI_rigid
-          print *,"im_FSI_elastic: ",im_FSI_elastic
-          stop
-         else
-          print *,"im_tertiary invalid: ",im_tertiary
-          stop
-         endif
-        else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
-         ! do nothing
-        else
-         print *,"LL invalid: ",LL
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+
+        ! a "non-ice" elastic material.
+       else if ((im_FSI_elastic.eq.im_primary).and. &
+                (im_ice.ne.im_primary)) then
+
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+
+       else if ((im_FSI_rigid.ne.im_primary).and. &
+                ((im_FSI_elastic.ne.im_primary).or. &
+                 (im_ice.eq.im_primary))) then
+
+        if ((im_FSI_rigid.lt.0).or. &
+            (im_FSI_rigid.gt.num_materials).or. &
+            (im_FSI_elastic.lt.0).or. &
+            (im_FSI_elastic.gt.num_materials)) then
+         print *,"im_FSI_rigid or im_FSI_elastic invalid", &
+           im_FSI_rigid,im_FSI_elastic
          stop
         endif
 
-         ! an associated melt material was not found:
-        if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+         ! either the primary or secondary material is "ice"
+        if ((im_ice.ge.1).and. &
+            (im_ice.le.num_materials)) then 
 
-         ireverse=-1
+          ! if the associated "melt" material
+          ! is not the primary or secondary material,
+          ! then check if it is the tertiary material.
+         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+          if ((im_tertiary.ge.1).and. &
+              (im_tertiary.le.num_materials)) then
+           if (is_rigid(im_tertiary).eq.0) then
+            if (is_FSI_rigid(im_tertiary).eq.0) then
+             if (is_FSI_elastic(im_tertiary).eq.0) then
+              if (is_ice(im_tertiary).eq.0) then
+               if (im_ice.lt.im_tertiary) then
+                im=im_ice
+                im_opp=im_tertiary
+               else if (im_ice.gt.im_tertiary) then
+                im_opp=im_ice
+                im=im_tertiary
+               else
+                print *,"im_ice or im_tertiary invalid"
+                stop
+               endif
 
-         if (is_ice(im_primary).eq.1) then ! in ice bulk region
-
-          elasticmask=zero
-          elasticmaskpart=one
-          if (im_primary.le.im_rigid_CL) then
-           elasticmaskpart=zero
+               call get_iten(im,im_opp,iten)
+               do ireverse=0,1
+                LL(ireverse)= &
+                 get_user_latent_heat(iten+ireverse*num_interfaces, &
+                    room_temperature,1)
+               enddo
+              else if (is_ice(im_tertiary).eq.1) then
+               ! do nothing
+              else
+               print *,"is_ice(im_tertiary) invalid"
+               print *,"im_tertiary ",im_tertiary
+               print *,"is_ice(im_tertiary): ",is_ice(im_tertiary)
+               stop
+              endif
+             else if (is_FSI_elastic(im_tertiary).eq.1) then
+              ! do nothing
+             else
+              print *,"is_FSI_elastic(im_tertiary) invalid"
+              print *,"im_tertiary ",im_tertiary
+              print *,"is_FSI_elastic(im_tertiary): ", &
+               is_FSI_elastic(im_tertiary)
+              stop
+             endif
+            else if (is_FSI_rigid(im_tertiary).eq.1) then
+             ! do nothing
+            else
+             print *,"is_FSI_rigid(im_tertiary) invalid"
+             print *,"im_tertiary ",im_tertiary
+             print *,"is_FSI_rigid(im_tertiary): ", &
+              is_FSI_rigid(im_tertiary)
+             stop
+            endif
+           else if (is_rigid(im_tertiary).eq.1) then
+            !do nothing
+           else
+            print *,"is_rigid(im_tertiary) invalid"
+            print *,"im_tertiary ",im_tertiary
+            print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
+            stop
+           endif
+          else if (im_tertiary.eq.num_materials+1) then
+           !do nothing (melt not found nearby)
+          else
+           print *,"im_tertiary invalid: ",im_tertiary
+           stop
           endif
-
-         else if (is_ice(im_primary).eq.0) then
-          elasticmask=one
-          elasticmaskpart=one
+         else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
+          ! do nothing
          else
-          print *,"is_ice(im_primary) invalid"
-          print *,"im_primary ",im_primary
-          print *,"is_ice(im_primary) ",is_ice(im_primary)
+          print *,"LL invalid: ",LL
           stop
          endif
 
-        else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
-         ireverse=0
-         im_source=im
-         im_dest=im_opp
-        else if ((LL(0).eq.zero).and.(LL(1).ne.zero)) then
-         ireverse=1
-         im_source=im_opp
-         im_dest=im
-        else if ((LL(0).ne.zero).and.(LL(1).ne.zero)) then
-         if (LS(im).ge.LS(im_opp)) then
+          ! an associated melt material was not found:
+         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+
+          ireverse=-1
+
+          if (is_ice(im_primary).eq.1) then ! in ice bulk region
+
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_primary.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
+
+          else if (is_ice(im_primary).eq.0) then
+           elasticmask=one
+           elasticmaskpart=one
+          else
+           print *,"is_ice(im_primary) invalid"
+           print *,"im_primary ",im_primary
+           print *,"is_ice(im_primary) ",is_ice(im_primary)
+           stop
+          endif
+
+         else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
           ireverse=0
           im_source=im
           im_dest=im_opp
-         else if (LS(im_opp).ge.LS(im)) then
+         else if ((LL(0).eq.zero).and.(LL(1).ne.zero)) then
           ireverse=1
           im_source=im_opp
           im_dest=im
-         else
-          print *,"LS(im) or LS(im_opp) invalid"
-          print *,"im, im_opp ",im,im_opp
-          print *,"LS(im),LS(im_opp) ",LS(im),LS(im_opp)
-          stop
-         endif
-        else
-         print *,"LL invalid"
-         print *,"LL(0),LL(1) ",LL(0),LL(1)
-         stop
-        endif
-   
-        if (ireverse.eq.-1) then
-         ! do nothing
-        else if ((ireverse.eq.0).or. &
-                 (ireverse.eq.1)) then
-
-         if (im_ice.eq.im_dest) then  ! freezing
-
-          if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
-           ! do nothing
+         else if ((LL(0).ne.zero).and.(LL(1).ne.zero)) then
+          if (im.eq.im_primary) then
+           ireverse=0
+           im_source=im
+           im_dest=im_opp
+          else if (im_opp.eq.im_primary) then
+           ireverse=1
+           im_source=im_opp
+           im_dest=im
           else
-           print *,"required freezing: "
-           print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+           print *,"im_primary invalid ",im_primary
+           print *,"im, im_opp ",im,im_opp
            stop
           endif
+         else
+          print *,"LL invalid"
+          print *,"LL(0),LL(1) ",LL(0),LL(1)
+          stop
+         endif
+    
+         if (ireverse.eq.-1) then
+          ! do nothing
+         else if ((ireverse.eq.0).or. &
+                  (ireverse.eq.1)) then
 
-          ! dist_mask_override>0 in the substrate. (dest is ice)  this routine
-          ! tells one whether to force mask=0
-          call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
+          if (im_ice.eq.im_dest) then  ! freezing
 
-          if (dist_mask_override.ge.zero) then
-           elasticmask=zero
-           elasticmaskpart=zero
-          else if (dist_mask_override.le.zero) then
-           if (LS(im_ice).ge.zero) then
+           if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
+            ! do nothing
+           else
+            print *,"required freezing: "
+            print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+            stop
+           endif
+
+           ! dist_mask_override>0 in the substrate. (dest is ice)  this routine
+           ! tells one whether to force mask=0
+           call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
+
+           if (dist_mask_override.ge.zero) then
+            elasticmask=zero
+            elasticmaskpart=zero
+           else if (dist_mask_override.le.zero) then
+
+            if (im_primary.eq.im_ice) then
+             elasticmask=zero
+             elasticmaskpart=one
+             if (im_ice.le.im_rigid_CL) then
+              elasticmaskpart=zero
+             endif
+            else if (im_primary_vof.eq.im_ice) then
+             elasticmask=zero
+             elasticmaskpart=one
+             if (im_ice.le.im_rigid_CL) then
+              elasticmaskpart=zero
+             endif
+            else
+             elasticmask=one
+             elasticmaskpart=one
+            endif
+
+           else
+            print *,"dist_mask_override bust: ",dist_mask_override
+            stop
+           endif
+
+          else if (im_ice.eq.im_source) then ! melting
+
+           if (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
+            ! dist. from the ice to the liquid
+           else
+            print *,"required melting:"
+            print *,"distribute_from_target(iten+num_interfaces*ireverse)=0"
+            stop
+           endif
+
+           if (im_primary.eq.im_ice) then
             elasticmask=zero
             elasticmaskpart=one
             if (im_ice.le.im_rigid_CL) then
@@ -653,94 +645,92 @@ stop
             if (im_ice.le.im_rigid_CL) then
              elasticmaskpart=zero
             endif
-           else if (im_primary.eq.im_ice) then
-            elasticmask=zero
-            elasticmaskpart=one
-            if (im_ice.le.im_rigid_CL) then
-             elasticmaskpart=zero
-            endif
-           else if (VOF(im_ice).ge.0.5d0) then
-            elasticmask=zero
-            elasticmaskpart=one
-            if (im_ice.le.im_rigid_CL) then
-             elasticmaskpart=zero
-            endif
            else
             elasticmask=one
             elasticmaskpart=one
            endif
 
           else
-           print *,"dist_mask_override bust: ",dist_mask_override
+           print *,"im_ice invalid: ",im_ice
            stop
-          endif
-
-         else if (im_ice.eq.im_source) then ! melting
-
-          if (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
-           ! dist. from the ice to the liquid
-          else
-           print *,"required melting:"
-           print *,"distribute_from_target(iten+num_interfaces*ireverse)=0"
-           stop
-          endif
-
-          if (LS(im_ice).ge.zero) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (im_primary_vof.eq.im_ice) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (im_primary.eq.im_ice) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else if (VOF(im_ice).ge.0.5d0) then
-           elasticmask=zero
-           elasticmaskpart=one
-           if (im_ice.le.im_rigid_CL) then
-            elasticmaskpart=zero
-           endif
-          else
-           elasticmask=one
-           elasticmaskpart=one
           endif
 
          else
-          print *,"im_ice invalid: ",im_ice
+          print *,"ireverse invalid: ",ireverse
           stop
          endif
+  
+        else if (im_ice.eq.0) then
+
+         ireverse=-1
+         elasticmask=one
+         elasticmaskpart=one
 
         else
-         print *,"ireverse invalid: ",ireverse
+         print *,"im_ice invalid:",im_ice
          stop
         endif
- 
-       else if (im_ice.eq.0) then
-
-        ireverse=-1
-        elasticmask=one
-        elasticmaskpart=one
 
        else
-        print *,"im_ice invalid:",im_ice
+        print *,"im_FSI_rigid invalid? ",im_FSI_rigid
+        print *,"im_FSI_elastic invalid? ",im_FSI_elastic
+        print *,"im_ice invalid? ",im_ice
+        print *,"num_materials: ",num_materials
+        print *,"im_primary: ",im_primary
+        stop
+       endif
+
+      else if (im_opp.eq.num_materials+1) then
+
+       ireverse=-1
+       elasticmask=one
+       elasticmaskpart=one
+
+       if (is_ice(im).eq.0) then
+        im_ice=0
+       else if (is_ice(im).eq.1) then
+        im_ice=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+       if (is_FSI_rigid(im).eq.0) then
+        im_FSI_rigid=0
+       else if (is_FSI_rigid(im).eq.1) then
+        im_FSI_rigid=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_FSI_rigid invalid"
+        stop
+       endif
+       if (is_FSI_elastic(im).eq.0) then
+        im_FSI_elastic=0
+       else if (is_FSI_elastic(im).eq.1) then
+        im_FSI_elastic=im
+        ireverse=-1
+        elasticmask=zero
+        elasticmaskpart=one
+        if (im_primary.le.im_rigid_CL) then
+         elasticmaskpart=zero
+        endif
+       else
+        print *,"is_FSI_elastic invalid"
         stop
        endif
 
       else
-       print *,"im_FSI_rigid invalid? ",im_FSI_rigid
-       print *,"im_FSI_elastic invalid? ",im_FSI_elastic
-       print *,"im_ice invalid? ",im_ice
-       print *,"num_materials: ",num_materials
-       print *,"im_primary: ",im_primary
+       print *,"im_opp invalid ",im_opp
        stop
       endif
 
@@ -1205,6 +1195,7 @@ stop
         stop
        endif
 
+       ! in: subroutine check_user_defined_velbc
        ! vinletgas is a prescribed boiling rate
        if (probtype.eq.801) then
         uu=max(abs(uu),abs(vinletgas)*fort_denconst(1)/fort_denconst(2))
@@ -2435,22 +2426,18 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
-       ! if denconst_interface==0.0 (default), then
        !  denjump_scale=(rhoA - rhoB)/max(rhoA,rhoB)
       subroutine get_max_denjump_scale( &
-              denjump_scale, &
-              denconst_interface)
+              denjump_scale)
       use global_utility_module
 
       IMPLICIT NONE
 
       integer im,im_opp
       integer iten
-      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(out) :: denjump_scale
       real(amrex_real) denjump_scale_temp
       real(amrex_real) max_den_interface
-      real(amrex_real) den_interface
       integer internal_wave_exists
 
       denjump_scale=zero
@@ -2469,21 +2456,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
           if (max_den_interface.gt.zero) then
       
-           den_interface=denconst_interface(iten)
-           if (den_interface.eq.zero) then
-            ! do nothing
-           else if (den_interface.gt.zero) then 
-            if (den_interface.gt.max_den_interface) then
-             max_den_interface=den_interface
-            else
-             print *,"need den_interface.gt.max_den_interface"
-             stop
-            endif
-           else
-            print *,"den_interface invalid"
-            stop
-           endif
-
            denjump_scale_temp=abs(fort_denconst(im)-fort_denconst(im_opp))/ &
              max_den_interface
 
@@ -2731,32 +2703,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"angular_velocity_vector(2) must be 0 for RZ"
          stop
         endif
-
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (angular_velocity_vector(1).eq.zero) then
-         ! do nothing
-        else
-         print *,"angular_velocity_vector(1) must be 0 for RTZ"
-         stop
-        endif
-        if (angular_velocity_vector(2).eq.zero) then
-         ! do nothing
-        else
-         print *,"angular_velocity_vector(2) must be 0 for RTZ"
-         stop
-        endif
-        if ((lever_arm_custom(1).eq.zero).and. &
-            (lever_arm_custom(2).eq.zero).and. &
-            (lever_arm_custom(SDIM).eq.zero)) then
-         !do nothing
-        else
-         print *,"lever_arm_custom must be zero for RTZ"
-         stop
-        endif
-
-        pres_hydrostatic=pres_hydrostatic+ &
-           half*rho_hydrostatic*centrifugal_force_factor* &
-           (angular_velocity_vector_custom(3)**2)*(xcell(1)**2)
 
        else
         print *,"levelrz invalid general hydrostatic pressure density"
@@ -3238,7 +3184,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       internal_energy=internal_energy_in*global_pressure_scale
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid71"
+       print *,"im invalid TEMPERATURE_material line 3184 ",im
        stop
       endif
       if (rho.gt.zero) then
@@ -3642,13 +3588,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         vfrac=vfrac/volbox
        endif
 
-       if (vfrac.le.VOFTOL) then
+       if (vfrac.le.VOFTOL_MATERIAL) then
         vfrac=zero
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
         enddo
        endif
-       if (vfrac.ge.one-VOFTOL) then
+       if (vfrac.ge.one-VOFTOL_MATERIAL) then
         vfrac=one
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
@@ -3783,19 +3729,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         vfrac=vfrac/volbox
         do dir=1,SDIM
          cenbox(dir)=cenbox(dir)/volbox
-         if (vfrac.ge.VOFTOL) then
+         if (vfrac.ge.VOFTOL_MATERIAL) then
           cen(dir)=cen(dir)/(vfrac*volbox)
          endif
         enddo ! dir
        endif
 
-       if (vfrac.le.VOFTOL) then
+       if (vfrac.le.VOFTOL_MATERIAL) then
         vfrac=zero
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
         enddo
        endif
-       if (vfrac.ge.one-VOFTOL) then
+       if (vfrac.ge.one-VOFTOL_MATERIAL) then
         vfrac=one
         do dir=1,SDIM
          cen(dir)=cenbox(dir)
@@ -4410,7 +4356,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (tension(i12).gt.zero) then
 
        err=1.0D+20
-       do while ((err.gt.VOFTOL).and.(iter.lt.maxiter))
+       do while ((err.gt.VOFTOL_MATERIAL).and.(iter.lt.maxiter))
         t3=two*Pi-t1-t2
         t1old=t1
         t2old=t2
@@ -4718,591 +4664,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
-       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
-       !if theta_air=Pi => sigma_ice_melt=0.0
-       !In general: if sigma_{ij}=0.0, then merge materials i and j.
-       !For contact line dynamics:
-       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
-       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
-       ! => merge materials j and k.
-       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
-       ! => merge materials i and k.
-      subroutine merge_levelset(xpos,dx,time,LS,LS_merge,merge_flag)
-      use global_utility_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-      real(amrex_real), INTENT(in) :: xpos(SDIM)
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(in) :: time
-      real(amrex_real), INTENT(in) :: LS(num_materials)
-      real(amrex_real), INTENT(out) :: LS_merge(num_materials)
-      integer, INTENT(out) :: merge_flag
-
-      integer im,im_opp,im_3
-      integer iten
-      integer iten_interface
-      integer im_primary
-      integer im_secondary
-      integer im_tertiary
-      real(amrex_real) :: user_tension(num_interfaces)
-      real(amrex_real) :: def_thermal(num_materials)
-      real(amrex_real) :: dx_sanity
-      integer dir
-
-      do dir=1,SDIM
-       dx_sanity=problen_array(dir)*half
-       if ((dx(dir).gt.zero).and.(dx(dir).le.dx_sanity)) then
-        !do nothing
-       else
-        print *,"dx invalid in fluid_interface: ",dx
-        print *,"problen_array=",problen_array
-        stop
-       endif
-      enddo !dir=1,SDIM
-
-      merge_flag=0
-
-      do im=1,num_materials
-       def_thermal(im)=room_temperature
-       LS_merge(im)=LS(im)
-      enddo
-
-      do im=1,num_materials
-       if ((is_ice(im).eq.1).or. &
-           (is_rigid(im).eq.1).or. &
-           (is_rigid_CL(im).eq.1)) then
-        do im_opp=1,num_materials
-         if (im_opp.ne.im) then
-          if ((is_rigid(im_opp).eq.0).and. &
-              (is_ice(im_opp).eq.0).and. &
-              (is_rigid_CL(im_opp).eq.0)) then
-           call get_iten(im,im_opp,iten)
-           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
-            ! do nothing
-           else
-            print *,"iten invalid: ",iten
-            stop
-           endif
-
-           call get_user_tension( &
-            xpos,time,fort_tension,user_tension,def_thermal)
-
-              ! "merge_levelset" is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-           if (user_tension(iten).eq.zero) then
-
-             !get_primary_material is declared in GLOBALUTIL.F90
-            call get_primary_material(dx,LS,im_primary)
-             !get_secondary_material is declared in MOF.F90
-            call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
-             !get_tertiary_material is declared in MOF.F90
-             !is_rigid(im_tertiary)=0
-            call get_tertiary_material(LS, &
-              im_primary,im_secondary,im_tertiary)
-            if (im_tertiary.eq.0) then
-             ! do nothing (there is no surface tension in this case)
-            else if (is_rigid(im_tertiary).eq.1) then
-             print *,"get_tertiary_material only returns fluids not solids"
-             print *,"expecting is_rigid(im_tertiary)==0"
-             stop
-            else if (is_ice(im_tertiary).eq.1) then
-             !do nothing
-            else if (is_rigid_CL(im_tertiary).eq.1) then
-             !do nothing
-            else if ((im_tertiary.ge.1).and. &
-                     (im_tertiary.le.num_materials)) then
-
-             im_3=0
-             if ((im_primary.ne.im).and.(im_primary.ne.im_opp)) then
-              im_3=im_primary
-             else if ((im_secondary.ne.im).and.(im_secondary.ne.im_opp)) then
-              im_3=im_secondary
-             else if ((im_tertiary.ne.im).and.(im_tertiary.ne.im_opp)) then
-              im_3=im_tertiary
-             else
-              print *,"cannot find im_3"
-              stop
-             endif
-
-             if (is_rigid_CL(im_3).eq.1) then
-              !do nothing
-             else if (is_rigid_CL(im_3).eq.0) then
-
-              call get_iten(im_3,im_opp,iten_interface)
-              if (user_tension(iten_interface).eq.zero) then
-               ! do nothing
-              else if (user_tension(iten_interface).gt.zero) then
-
-               merge_flag=1
-
-               LS_merge(im)=-99999.0d0 ! delete the ice/rigid/rigid_CL material.
-
-               if (im_primary.eq.im) then ! ice/rigid/rigid_CL was primary
-
-                if (im_secondary.eq.im_opp) then !"water" was secondary
-                 LS_merge(im_opp)=-LS(im_tertiary) !im_tertiary="air"
-                else if (im_secondary.ne.im_opp) then
-                 LS_merge(im_opp)=-LS(im_secondary) !im_secondary="air"
-                else
-                 print *,"im_secondary bust: ",im_secondary
-                 stop
-                endif
-
-               else if (im_primary.eq.im_opp) then !"water" is primary
-
-                if (im_secondary.eq.im) then ! ice/rigid/rigid_CL is secondary
-                 LS_merge(im_opp)=-LS(im_tertiary) !im_tertiary="air"
-                else
-                 ! do nothing (im_secondary is "air")
-                endif
-
-               else if ((im_primary.ne.im).and. &
-                        (im_primary.ne.im_opp)) then
-
-                ! "water" replaces ice/rigid/rigid_CL
-                if (im_secondary.eq.im) then
-                 LS_merge(im_opp)=LS(im) 
-                else if (im_secondary.eq.im_opp) then
-                 ! do nothing
-                else if ((im_secondary.ne.im).and. &
-                         (im_secondary.ne.im_opp)) then
-                 if (LS(im).gt.LS(im_opp)) then
-                  LS_merge(im_opp)=LS(im) 
-                 else if (LS(im).le.LS(im_opp)) then
-                  ! do nothing
-                 else
-                  print *,"LS(im) invalid: ",im,LS(im)
-                  stop 
-                 endif
-                else
-                 print *,"im_secondary invalid: ",im_secondary
-                 stop
-                endif
-
-               else
-                print *,"im_primary invalid: ",im_primary
-                stop
-               endif
-
-              else
-               print *,"user_tension(iten_interface) invalid"
-               stop
-              endif
- 
-             else
-              print *,"is_rigid_CL(im_3) invalid: ", &
-               im_3,is_rigid_CL(im_3)
-              stop
-             endif 
-
-            else
-             print *,"im_tertiary invalid: ",im_tertiary
-             stop
-            endif
-
-           else if (user_tension(iten).gt.zero) then
-            !do nothing
-           else
-            print *,"user_tension invalid: ",user_tension(iten)
-            stop
-           endif
-          else if ((is_rigid(im_opp).eq.1).or. &
-                   (is_ice(im_opp).eq.1).or. &
-                   (is_rigid_CL(im_opp).eq.1)) then
-           ! do nothing
-          else
-           print *,"im_opp inconsistency: ",im_opp
-           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
-           print *,"is_ice(im_opp): ",is_ice(im_opp)
-           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
-           stop
-          endif
-         else if (im_opp.eq.im) then
-          ! do nothing
-         else
-          print *,"im_opp or im bust: ",im,im_opp
-          stop
-         endif
-        enddo !im_opp=1,num_materials
-       else if ((is_ice(im).eq.0).and. &
-                (is_rigid(im).eq.0).and. &
-                (is_rigid_CL(im).eq.0)) then
-        ! do nothing
-       else
-        print *,"im inconsistency: ",im
-        print *,"is_rigid(im): ",is_rigid(im)
-        print *,"is_ice(im): ",is_ice(im)
-        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
-        stop
-       endif
-      enddo !im=1,num_materials
-
-      end subroutine merge_levelset
-
-
-       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
-       !if theta_air=Pi => sigma_ice_melt=0
-       !In general: if sigma_{ij}=0.0, then merge materials i and j.
-       !For contact line dynamics:
-       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
-       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
-       ! => merge materials j and k.
-       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
-       ! => merge materials i and k.
-      subroutine merge_normal(xpos,dx,time,LS,nrm,nrm_merge)
-      use global_utility_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-      real(amrex_real), INTENT(in) :: xpos(SDIM)
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(in) :: time
-      real(amrex_real), INTENT(in) :: LS(num_materials)
-      real(amrex_real), INTENT(in) :: nrm(num_materials*SDIM)
-      real(amrex_real), INTENT(out) :: nrm_merge(num_materials*SDIM)
-      integer im,im_opp,im_3
-      integer iten
-      integer iten_interface
-      integer dir
-      integer im_primary
-      integer im_secondary
-      integer im_tertiary
-      real(amrex_real) :: user_tension(num_interfaces)
-      real(amrex_real) :: def_thermal(num_materials)
-
-      do im=1,num_materials
-       def_thermal(im)=room_temperature
-      enddo
-      do im=1,num_materials*SDIM
-       nrm_merge(im)=nrm(im)
-      enddo
-      do im=1,num_materials
-       if ((is_ice(im).eq.1).or. &
-           (is_rigid(im).eq.1).or. &
-           (is_rigid_CL(im).eq.1)) then
-        do im_opp=1,num_materials
-         if (im_opp.ne.im) then
-          if ((is_rigid(im_opp).eq.0).and. &
-              (is_ice(im_opp).eq.0).and. &
-              (is_rigid_CL(im_opp).eq.0)) then
-           call get_iten(im,im_opp,iten)
-           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
-            ! do nothing
-           else
-            print *,"iten invalid: ",iten
-            stop
-           endif
-
-           call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
-
-              ! "merge_normal" is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-           if (user_tension(iten).eq.zero) then
-
-             !get_primary_material is declared in GLOBALUTIL.F90
-            call get_primary_material(dx,LS,im_primary)
-             !get_secondary_material is declared in MOF.F90
-            call get_secondary_material(dx,LS,im_primary,im_secondary,SDIM)
-             !get_tertiary_material is declared in MOF.F90
-             !is_rigid(im_tertiary)=0
-            call get_tertiary_material(LS, &
-              im_primary,im_secondary,im_tertiary)
-            if (im_tertiary.eq.0) then
-             ! do nothing (there is no surface tension in this case)
-            else if (is_rigid(im_tertiary).eq.1) then
-             print *,"expecting is_rigid(im_tertiary)==0"
-             stop
-            else if (is_ice(im_tertiary).eq.1) then
-             !do nothing
-            else if (is_rigid_CL(im_tertiary).eq.1) then
-             !do nothing
-            else if ((im_tertiary.ge.1).and. &
-                     (im_tertiary.le.num_materials)) then
-
-             im_3=0
-             if ((im_primary.ne.im).and.(im_primary.ne.im_opp)) then
-              im_3=im_primary
-             else if ((im_secondary.ne.im).and.(im_secondary.ne.im_opp)) then
-              im_3=im_secondary
-             else if ((im_tertiary.ne.im).and.(im_tertiary.ne.im_opp)) then
-              im_3=im_tertiary
-             else
-              print *,"cannot find im_3"
-              stop
-             endif
-
-             if (is_rigid_CL(im_3).eq.1) then
-              !do nothing
-             else if (is_rigid_CL(im_3).eq.0) then
-
-              call get_iten(im_3,im_opp,iten_interface)
-
-              if (user_tension(iten_interface).eq.zero) then
-               ! do nothing
-              else if (user_tension(iten_interface).gt.zero) then
-
-               if (im_primary.eq.im) then ! ice/rigid/rigid_CL was primary
-
-                if (im_secondary.eq.im_opp) then !"water" was secondary
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_tertiary-1)*SDIM+dir)
-                 enddo
-                else if (im_secondary.ne.im_opp) then
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_secondary-1)*SDIM+dir)
-                 enddo
-                else
-                 print *,"im_secondary bust: ",im_secondary
-                 stop
-                endif
-
-               else if (im_primary.eq.im_opp) then !"water" is primary
-
-                if (im_secondary.eq.im) then ! ice/rigid/rigid_CL is secondary
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                       -nrm((im_tertiary-1)*SDIM+dir)
-                 enddo
-                else
-                 ! do nothing (im_secondary is "air")
-                endif
-
-               else if ((im_primary.ne.im).and. &
-                        (im_primary.ne.im_opp)) then
-
-                ! "water" replaces ice/rigid/rigid_CL
-                if (im_secondary.eq.im) then
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        nrm((im-1)*SDIM+dir)
-                 enddo
-                else if (im_secondary.eq.im_opp) then
-                 ! do nothing
-                else if ((im_secondary.ne.im).and. &
-                         (im_secondary.ne.im_opp)) then
-                 if (LS(im).gt.LS(im_opp)) then
-                  do dir=1,SDIM
-                   nrm_merge((im_opp-1)*SDIM+dir)= &
-                        nrm((im-1)*SDIM+dir)
-                  enddo
-                 else if (LS(im).le.LS(im_opp)) then
-                  ! do nothing
-                 else
-                  print *,"LS(im) invalid: ",im,LS(im)
-                  stop 
-                 endif
-                else
-                 print *,"im_secondary invalid: ",im_secondary
-                 stop
-                endif
-
-               else
-                print *,"im_primary invalid: ",im_primary
-                stop
-               endif
-
-              else
-               print *,"user_tension(iten_interface) invalid"
-               stop
-              endif
-
-             else
-              print *,"is_rigid_CL(im_3) invalid: ", &
-               im_3,is_rigid_CL(im_3)
-              stop
-             endif 
-
-            else
-             print *,"im_tertiary invalid: ",im_tertiary
-             stop
-            endif
-
-           else if (user_tension(iten).gt.zero) then
-            ! do nothing
-           else
-            print *,"user_tension invalid: ",user_tension(iten)
-            stop
-           endif
-          else if ((is_rigid(im_opp).eq.1).or. &
-                   (is_ice(im_opp).eq.1).or. &
-                   (is_rigid_CL(im_opp).eq.1)) then
-           ! do nothing
-          else
-           print *,"im_opp inconsistency: ",im_opp
-           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
-           print *,"is_ice(im_opp): ",is_ice(im_opp)
-           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
-           stop
-          endif
-         else if (im_opp.eq.im) then
-          ! do nothing
-         else
-          print *,"im_opp or im bust: ",im,im_opp
-          stop
-         endif
-        enddo !im_opp=1,num_materials
-       else if ((is_ice(im).eq.0).and. &
-                (is_rigid(im).eq.0).and. &
-                (is_rigid_CL(im).eq.0)) then
-        ! do nothing
-       else
-        print *,"im inconsistency: ",im
-        print *,"is_rigid(im): ",is_rigid(im)
-        print *,"is_ice(im): ",is_ice(im)
-        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
-        stop
-       endif
-      enddo !im=1,num_materials
-
-      end subroutine merge_normal
-
-
-       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
-       !if theta_air=Pi => sigma_ice_melt=0
-       !In general: if sigma_{ij}=0.0, then merge materials i and j.
-       !For contact line dynamics:
-       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
-       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
-       ! => merge materials j and k.
-       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
-       ! => merge materials i and k.
-      subroutine merge_vof(xpos,time,vof,vof_merge)
-      use global_utility_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-      real(amrex_real), INTENT(in) :: xpos(SDIM)
-      real(amrex_real), INTENT(in) :: time
-      real(amrex_real), INTENT(in) :: vof(num_materials)
-      real(amrex_real), INTENT(out) :: vof_merge(num_materials)
-      integer im,im_opp,im_loop
-      integer iten
-      real(amrex_real) :: user_tension(num_interfaces)
-      real(amrex_real) :: def_thermal(num_materials)
-
-      do im=1,num_materials
-       def_thermal(im)=room_temperature
-       vof_merge(im)=vof(im)
-      enddo
-      do im=1,num_materials
-       if ((is_ice(im).eq.1).or. &
-           (is_rigid(im).eq.1).or. &
-           (is_rigid_CL(im).eq.1)) then
-        do im_opp=1,num_materials
-         if (im_opp.ne.im) then
-          if ((is_rigid(im_opp).eq.0).and. &
-              (is_ice(im_opp).eq.0).and. &
-              (is_rigid_CL(im_opp).eq.0)) then
-           call get_iten(im,im_opp,iten)
-           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
-            ! do nothing
-           else
-            print *,"iten invalid: ",iten
-            stop
-           endif
-
-           call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
-
-             ! "merge_vof" code is for the algorithm described by:
-             ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-             ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-           if (user_tension(iten).eq.zero) then
-
-            if (is_rigid(im).eq.0) then
-             vof_merge(im)=zero
-             vof_merge(im_opp)=vof(im_opp)+vof(im)
-            else if (is_rigid(im).eq.1) then
-             if ((vof(im).gt.zero).and.(vof(im).lt.one)) then
-              do im_loop=1,num_materials
-               if (is_rigid(im_loop).eq.1) then
-                ! do nothing
-               else if (is_rigid(im_loop).eq.0) then
-                vof_merge(im_loop)=(one-vof(im))*vof(im_loop)
-               else
-                print *,"is_rigid(im_loop) invalid: ", &
-                  im_loop,is_rigid(im_loop)
-                stop
-               endif
-              enddo !im_loop
-              vof_merge(im_opp)=max(vof_merge(im_opp)+vof(im),one)
-              vof_merge(im)=zero
-             else if (vof(im).le.zero) then
-              vof_merge(im)=zero
-             else if (vof(im).ge.one) then
-              do im_loop=1,num_materials
-               if (is_rigid(im_loop).eq.1) then
-                ! do nothing
-               else if (is_rigid(im_loop).eq.0) then
-                vof_merge(im_loop)=zero
-               else 
-                print *,"is_rigid(im_loop) invalid: ", &
-                  im_loop,is_rigid(im_loop)
-                stop
-               endif
-              enddo !im_loop=1 ... num_materials
-              vof_merge(im)=zero
-              vof_merge(im_opp)=one
-             else
-              print *,"vof(im) invalid:",im,vof(im)
-              stop
-             endif
-            else 
-             print *,"is_rigid(im) invalid: ",im,is_rigid(im)
-             stop
-            endif
-
-           else if (user_tension(iten).gt.zero) then
-            ! do nothing
-           else
-            print *,"user_tension invalid: ",user_tension(iten)
-            stop
-           endif
-          else if ((is_rigid(im_opp).eq.1).or. &
-                   (is_ice(im_opp).eq.1).or. &
-                   (is_rigid_CL(im_opp).eq.1)) then
-           ! do nothing
-          else
-           print *,"im_opp inconsistency: ",im_opp
-           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
-           print *,"is_ice(im_opp): ",is_ice(im_opp)
-           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
-           stop
-          endif
-
-         else if (im_opp.eq.im) then
-          ! do nothing
-         else
-          print *,"im_opp or im bust: ",im,im_opp
-          stop
-         endif
-        enddo !im_opp=1,num_materials
-       else if ((is_ice(im).eq.0).and. &
-                (is_rigid(im).eq.0).and. &
-                (is_rigid_CL(im).eq.0)) then
-        ! do nothing
-       else
-        print *,"im inconsistency: ",im
-        print *,"is_rigid(im): ",is_rigid(im)
-        print *,"is_ice(im): ",is_ice(im)
-        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
-        stop
-       endif
-      enddo !im=1,num_materials
-
-      end subroutine merge_vof
-
        ! called from:
        !   fort_init_physics_vars
        !   fort_cell_to_mac (surface tension force on MAC grid)
       subroutine fluid_interface_tension( &
-         xpos,dx,time, &
+         dx,time, &
          LSleft,LSright, &
          gradh, & !INTENT(out)
          im_opp,im, & !INTENT(out)
@@ -5312,16 +4678,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
-      real(amrex_real), INTENT(in) :: xpos(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(out) :: im_opp,im
       real(amrex_real), INTENT(in) :: LSleft(num_materials)
       real(amrex_real), INTENT(in) :: LSright(num_materials)
       real(amrex_real), INTENT(out) :: gradh
-      real(amrex_real) :: LSleft_merge(num_materials)
-      real(amrex_real) :: LSright_merge(num_materials)
-      integer :: merge_flag
       integer, INTENT(out) :: imL,imR
       real(amrex_real) :: dx_sanity
       integer dir
@@ -5341,11 +4703,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call merge_levelset(xpos,dx,time,LSleft,LSleft_merge,merge_flag)
-      call merge_levelset(xpos,dx,time,LSright,LSright_merge,merge_flag)
-
-      call get_primary_material(dx,LSleft_merge,imL)
-      call get_primary_material(dx,LSright_merge,imR)
+      call get_primary_material(dx,LSleft,imL)
+      call get_primary_material(dx,LSright,imR)
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
           (imR.lt.1).or.(imR.gt.num_materials)) then
@@ -5584,11 +4943,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
       enddo ! im=1..num_materials
 
-      if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
+      if ((vfrac_rigid_sum.ge.one-VOFTOL_MATERIAL).and. &
           (vfrac_rigid_sum.le.one+EPS1)) then
        vfrac_rigid_sum=one
       else if ((vfrac_rigid_sum.ge.-EPS1).and. &
-               (vfrac_rigid_sum.le.VOFTOL)) then
+               (vfrac_rigid_sum.le.VOFTOL_MATERIAL)) then
        vfrac_rigid_sum=zero
       else if ((vfrac_rigid_sum.gt.zero).and. &
                (vfrac_rigid_sum.lt.one)) then
@@ -5604,14 +4963,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if ((is_rigid(im_primary).eq.0).or. &   ! fluid primary
           ((is_rigid(im_primary).eq.1).and. & ! solid primary, but fluids
-           (vfrac_rigid_sum.le.one-VOFTOL))) then  ! in the cell.
+           (vfrac_rigid_sum.le.one-VOFTOL_MATERIAL))) then  ! in the cell.
 
        do im=1,num_materials 
-        if ((voflist(im).ge.VOFTOL).and. &
+        if ((voflist(im).ge.VOFTOL_MATERIAL).and. &
             (voflist(im).le.one+EPS1)) then
          material_present_flag(im)=1
         else if ((voflist(im).ge.-EPS1).and. &
-                 (voflist(im).le.VOFTOL)) then
+                 (voflist(im).le.VOFTOL_MATERIAL)) then
          ! do nothing
         else
          print *,"voflist invalid: ",voflist(im)
@@ -5657,7 +5016,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo ! i1,j1,k1
 
       else if ((is_rigid(im_primary).eq.1).and. &
-               (vfrac_rigid_sum.gt.one-VOFTOL)) then
+               (vfrac_rigid_sum.gt.one-VOFTOL_MATERIAL)) then
        ! do nothing
       else
        print *,"is_rigid or vfrac_rigid_sum invalid"
@@ -5925,7 +5284,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       ! get_symmetric_error
       real(amrex_real), INTENT(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       integer nmax
-      integer, parameter :: tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
       integer vofcomp
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
@@ -5961,10 +5321,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid get_symmetric error"
+       print *,"levelrz invalid get_symmetric error ",levelrz
        stop
       endif
 
@@ -6078,11 +5436,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
 
-        if (vfrac.lt.VOFTOL) then
+        if (vfrac.lt.VOFTOL_MATERIAL) then
          minusflag(2)=1
-        else if (vfrac.gt.one-VOFTOL) then
+        else if (vfrac.gt.one-VOFTOL_MATERIAL) then
          plusflag(2)=1
-        else if ((vfrac.ge.VOFTOL).and.(vfrac.le.one-VOFTOL)) then
+        else if ((vfrac.ge.VOFTOL_MATERIAL).and.(vfrac.le.one-VOFTOL_MATERIAL)) then
          minusflag(2)=1
          plusflag(2)=1
         else
@@ -6172,7 +5530,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call multi_get_volume_grid_simple( &
         tid_local, &
         EPS2, &
-        tessellate, &  ! =TESSELLATE_ALL
+        tessellate_source, &  ! =TESSELLATE_FLUIDS
+        tessellate_dest, &  ! =TESSELLATE_ALL
         bfact,dx,xsten0,nhalf0, &
         mofdata, & !input: fluids tessellate, solids embedded
         xsten,nhalf, &
@@ -6269,10 +5628,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid stackerror"
+       print *,"levelrz invalid stackerror ",levelrz
        stop
       endif
 
@@ -6620,8 +5977,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine dumbbelldist
 
-       ! override_tagflag is called from fort_vfracerror (PROB.F90) if 
+       ! override_tagflag is called from 
+       ! fort_error_estimate_helper (PROB.F90) if 
        ! level<max_level_for_use.
+       ! fort_error_estimate_helper is called from NavieStokes::errorEst
       subroutine override_tagflag( &
         i,j,k, &
         level,max_level, &
@@ -7048,8 +6407,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if ( ((xsten(0,SDIM).gt.probhiz+VOFTOL*dx(SDIM)).or. &
-            (xsten(0,SDIM).lt.probloz-VOFTOL*dx(SDIM))).and. &
+      if ( ((xsten(0,SDIM).gt.probhiz+VOFTOL_MATERIAL*dx(SDIM)).or. &
+            (xsten(0,SDIM).lt.probloz-VOFTOL_MATERIAL*dx(SDIM))).and. &
            (SDIM.eq.3)) then
 
        do im=1,num_materials
@@ -7091,7 +6450,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo
        enddo
 
-       EBVOFTOL=VOFTOL
+       EBVOFTOL=VOFTOL_MATERIAL
        call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
         centroid,EBVOFTOL,SDIM)
@@ -7545,6 +6904,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) distsolid
       real(amrex_real) drat,veltop,velbot,ytop,ybot
       integer im_solid_materialdist
+      integer im_ice_materialdist
+      integer im_elastic
       integer dir
       real(amrex_real) x_in(SDIM)
       real(amrex_real) maxdx
@@ -7648,7 +7009,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (probtype.eq.311) then ! user defined problem
        call USERDEF_LS(x_in,time,dist)
 
-       ! HYDRATE (materialdist_batch)
+       !inside of: subroutine materialdist_batch
+       !HYDRATE
       else if (probtype.eq.199) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid for hydrate problem"
@@ -7664,7 +7026,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo
 
-       !in: materialdist_batch
+       !inside of: subroutine materialdist_batch
       else if (probtype.eq.220) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid for unimaterial problem"
@@ -7738,7 +7100,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo
 
-       ! in: materialdist_batch
+       !inside of: subroutine materialdist_batch
        ! cavitation
       else if ((probtype.eq.46).and. &
                (axis_dir.ne.10).and. &
@@ -7751,6 +7113,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"num_materials invalid"
          stop
         endif
+         !inside of: subroutine materialdist_batch
         call vapordist(xsten,nhalf,dx,bfact,dist(1))  ! water
         call cavitation_bubble_dist(xsten,nhalf,dist(2),dx,bfact) ! jwl
         dist(3)=y-(zblob+yblob) ! air
@@ -7783,15 +7146,22 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dist(1)=dist(1)-z
        dist(2)=-dist(1)
 
-       ! hydrobulge
-       ! (materialdist_batch)
+       !inside of: subroutine materialdist_batch
+       !hydrobulge
       else if ((probtype.eq.36).and.(axis_dir.eq.310)) then
+       im_elastic=3
         !vapordist is declared in PROB.F90
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        dist(2)=-dist(1)
        if (num_materials.eq.4) then
-        if ((FSI_flag(3).eq.FSI_EULERIAN_ELASTIC).or. &
-            (FSI_flag(3).eq.FSI_RIGID_NOTPRESCRIBED)) then
+        if (FSI_flag(im_elastic).eq.FSI_EULERIAN_ELASTIC) then
+         if (is_elastic(im_elastic).eq.1) then
+          !do nothing
+         else
+          print *,"expecting is_elastic=1; im_elastic= ",im_elastic
+          print *,"is_elastic(im_elastic) ",is_elastic(im_elastic)
+          stop
+         endif
          outer_radius=half*radblob3
          inner_radius=outer_radius-radblob2
          if (SDIM.eq.2) then
@@ -7803,24 +7173,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
          if (raddist.le.inner_radius) then
-          dist(3)=raddist-inner_radius
+          dist(im_elastic)=raddist-inner_radius
          else if (raddist.ge.outer_radius) then
-          dist(3)=outer_radius-raddist
+          dist(im_elastic)=outer_radius-raddist
          else if ((raddist.ge.inner_radius).and. &
                   (raddist.le.outer_radius)) then
-          dist(3)=half*radblob2-abs(raddist-half*(inner_radius+outer_radius))
+          dist(im_elastic)=half*radblob2- &
+            abs(raddist-half*(inner_radius+outer_radius))
          else
           print *,"raddist invalid: ",raddist
           stop
          endif
-         dist(1)=min(dist(1),-dist(3))
-         if (raddist.ge.inner_radius) then
-          dist(1)=inner_radius-raddist
-         endif
-         dist(4)=raddist-outer_radius
+         dist(4)=raddist-half*(outer_radius+inner_radius)
+         dist(1)=min(dist(1),-dist(4))
         else
          print *,"probtype.eq.36(310) invalid FSI_flag: ", &
-           FSI_flag(3),probtype,axis_dir
+           FSI_flag(im_elastic),probtype,axis_dir
+         print *,"im_elastic= ",im_elastic
          stop
         endif
 
@@ -7846,9 +7215,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
+         !inside of: subroutine materialdist_batch
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (probtype.eq.42) then
-        ball_id=2
+        ball_id=2 !JWL
         backing_id=3
        else if (probtype.eq.46) then
         ball_id=num_materials
@@ -7860,6 +7230,21 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        biofilm_id=backing_id+1
 
        dist(ball_id)=-dist(1)
+
+       if ((probtype.eq.46).and.(axis_dir.eq.11)) then
+        dist(1)=9999.0d0 !gas
+        if ((FSI_flag(ball_id).eq.FSI_EULERIAN_ELASTIC).and. &
+            (FSI_flag(backing_id).eq.FSI_EULERIAN_ELASTIC)) then
+         !do nothing
+        else
+         print *,"FSI_flag invalid"
+         print *,"FSI_flag ",FSI_flag
+         print *,"probtype=",probtype
+         print *,"axis_dir=",axis_dir
+         stop
+        endif
+       endif
+
        if (num_materials.ge.3) then
         if ((FSI_flag(backing_id).eq.FSI_PRESCRIBED_NODES).or. &
             (FSI_flag(backing_id).eq.FSI_SHOELE_CTML).or. &
@@ -7874,7 +7259,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call jetting_plate_dist(x,y,z,dist(backing_id),solid_id, &
                  for_clamped,clamp_width)
          dist(backing_id)=-dist(backing_id) !now:dist(backing_id)>0 in plate.
-         dist(1)=min(dist(1),-dist(backing_id))
+
+         if (is_elastic(backing_id).eq.1) then
+          !do nothing
+         else if (is_elastic(backing_id).eq.0) then
+          print *,"must have is_elastic=1"
+          print *,"probtype ",probtype
+          print *,"axis_dir ",axis_dir
+          print *,"backing_id ",backing_id
+          stop
+          dist(1)=min(dist(1),-dist(backing_id))
+         else
+          print *,"is_elastic invalid"
+          print *,"backing_id ",backing_id
+          print *,"is_elastic(backing_id) ",is_elastic(backing_id)
+          stop
+         endif
+
          if (num_materials.eq.3) then
           !do nothing
          else if (num_materials.eq.4) then
@@ -7884,7 +7285,23 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             dist(biofilm_id),solid_id, &
             for_clamped,clamp_width)
           dist(biofilm_id)=-dist(biofilm_id)
-          dist(1)=min(dist(1),-dist(biofilm_id))
+
+          if (is_elastic(biofilm_id).eq.1) then
+           !do nothing
+          else if (is_elastic(biofilm_id).eq.0) then
+           print *,"must have is_elastic=1"
+           print *,"probtype ",probtype
+           print *,"axis_dir ",axis_dir
+           print *,"biofilm_id ",biofilm_id
+           stop
+           dist(1)=min(dist(1),-dist(biofilm_id))
+          else
+           print *,"is_elastic invalid"
+           print *,"biofilm_id ",biofilm_id
+           print *,"is_elastic(biofilm_id) ",is_elastic(biofilm_id)
+           stop
+          endif
+
          else
           print *,"num_materials invalid: ",num_materials
           stop
@@ -7901,6 +7318,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else
 
+         !inside of: subroutine materialdist_batch
        call vapordist(xsten,nhalf,dx,bfact,dist(1)) 
        if (im_solid_materialdist.ne.2) then
         dist(2)=-dist(1)
@@ -7920,25 +7338,40 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        endif ! probtype.eq.531 ?
 
+        ! inside of: subroutine materialdist_batch
         ! freezing disk: ice, water, air
-       if ((probtype.eq.801).and. &
-           (num_materials.eq.3).and.(radblob2.gt.zero)) then
-        if (axis_dir.eq.3) then
-         dist(3)=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob2
-        else if (axis_dir.eq.0) then
-         dist(3)=sqrt( (x-xblob)**2 )-radblob2
+       if (probtype.eq.801) then
+
+        im_ice_materialdist=2
+        if (is_ice(im_ice_materialdist).eq.1) then
+         dist(im_ice_materialdist)=-dist(1) 
+         dist(1)=99999.0
+        else if (is_ice(im_ice_materialdist).eq.0) then
+         !do nothing
         else
-         print *,"axis_dir invalid probtype=801"
+         print *,"is_ice(im_ice_materialdist) invalid"
          stop
         endif
-        if (dist(1).gt.zero) then
-         if (dist(3).ge.zero) then
-          dist(1)=-dist(3)
+
+        if ((num_materials.eq.3).and.(radblob2.gt.zero)) then
+         if (axis_dir.eq.3) then
+          dist(3)=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob2
+         else if (axis_dir.eq.0) then
+          dist(3)=sqrt( (x-xblob)**2 )-radblob2
          else
-          dist(1)=min(dist(1),-dist(3))
+          print *,"axis_dir invalid probtype=801"
+          stop
+         endif
+         if (dist(1).gt.zero) then
+          if (dist(3).ge.zero) then
+           dist(1)=-dist(3)
+          else
+           dist(1)=min(dist(1),-dist(3))
+          endif
          endif
         endif
-       endif
+
+       endif !probtype.eq.801
 
         ! material 1 = top half  material 2=inside circle
         ! material 3 = bottom half
@@ -8350,7 +7783,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo
       enddo
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,EBVOFTOL,SDIM)
@@ -8433,7 +7866,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo ! i1,j1,k1
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
         ! in: MOF.F90
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
@@ -8443,12 +7876,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (vfrac(im).lt.zero) then
         print *,"vfrac invalid in get_initial_vfrac 1"
         stop
-       else if (vfrac(im).le.VOFTOL) then
+       else if (vfrac(im).le.VOFTOL_MATERIAL) then
          ! if the interface is linear and LS_center>=0, then
          !  F>=1/2.  If LS_center>=0, and F<1/2 => nonlinear
          !  interface.
         LS_center=lsgrid(D_DECL(2,2,2),im)
-        if (LS_center.ge.-VOFTOL*dx(1)) then
+        if (LS_center.ge.-VOFTOL_MATERIAL*dx(1)) then
          vfrac(im)=VOFTOL_SLOPES
         endif
        else if ((vfrac(im).gt.zero).and. &
@@ -8569,7 +8002,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.539) then ! supnozz - jetbend_vel
 
         call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
-        if (vfrac(1).gt.VOFTOL) then !initial velocity in the gap
+        if (vfrac(1).gt.VOFTOL_MATERIAL) then !initial velocity in the gap
          angle=1.07961377
          vel(1)=advbot*cos(angle)
          vel(2)=advbot*sin(angle)
@@ -9174,9 +8607,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call cylinderdist(x,y2d,z,xblob,yblob,radblob,zmin,zmax,dist)
         dist=-dist
 
+       !inside of: subroutine vapordist
       else if (probtype.eq.801) then
 
-       ! vapordist:
        ! test problems from Welch and Wilson 2000
        ! vapor on left, water on right.
 
@@ -9810,6 +9243,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        else if (probtype.eq.46) then
         print *,"vapordist 3D: this problem not ready in 3d"
+        print *,"probtype= ",probtype
+        print *,"axis_dir ",axis_dir
         stop
        else if (probtype.eq.37) then
         dist=radblob-sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )
@@ -10345,7 +9780,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       enddo
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,EBVOFTOL,SDIM)
@@ -12048,10 +11483,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
           else if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           ! do nothing
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -12081,7 +11514,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! SOLVETYPE_PRES, 
         ! SOLVETYPE_INITPROJ,
-        ! SOLVETYPE_SMOOTH,
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
@@ -12108,8 +11540,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
-         cc_group=cc*cc_elasticmask
-        else if (project_option.eq.SOLVETYPE_SMOOTH) then!curvature projection
          cc_group=cc*cc_elasticmask
         else
          print *,"project_option invalid eval_face_coeff: ",project_option
@@ -14846,7 +14276,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
 
-        ! SOLVETYPE_PRES, SOLVETYPE_INITPROJ, SOLVETYPE_SMOOTH
+        ! SOLVETYPE_PRES, SOLVETYPE_INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid2 SEM_MAC_TO_CELL"
@@ -15293,10 +14723,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           RR=xstenMAC(0,1)
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -15482,10 +14910,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           RR=xsten(0,1)
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid ",levelrz
            stop
           endif
 
@@ -15495,10 +14921,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"dir_main invalid sem mac to cell 4"
           stop
          endif 
-
-         if ((dir_main.eq.2).and.(levelrz.eq.COORDSYS_CYLINDRICAL)) then ! theta direction
-          RRTHETA=xsten(0,1)
-         endif
 
          if (operation_flag.eq.OP_GRADU_MAC_TO_CELL) then ! interp grad U
 
@@ -17072,7 +16494,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       if ((dir.eq.1).and.(side.eq.1)) then
-       if (xwall+dx(dir)*VOFTOL.ge.x) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.x) then
         ! do nothing
        else
         print *,"xwall,x invalid"
@@ -17080,7 +16502,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.1).and.(side.eq.2)) then
-       if (xwall-dx(dir)*VOFTOL.le.x) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.x) then
         ! do nothing
        else
         print *,"xwall,x invalid"
@@ -17088,7 +16510,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.1)) then
-       if (xwall+dx(dir)*VOFTOL.ge.y) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.y) then
         ! do nothing
        else
         print *,"xwall,y invalid"
@@ -17096,7 +16518,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.2).and.(side.eq.2)) then
-       if (xwall-dx(dir)*VOFTOL.le.y) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.y) then
         ! do nothing
        else
         print *,"xwall,y invalid"
@@ -17104,7 +16526,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
-       if (xwall+dx(dir)*VOFTOL.ge.z) then
+       if (xwall+dx(dir)*VOFTOL_MATERIAL.ge.z) then
         ! do nothing
        else
         print *,"xwall,z invalid"
@@ -17112,7 +16534,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        ADV=local_ADVwall
       else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then
-       if (xwall-dx(dir)*VOFTOL.le.z) then
+       if (xwall-dx(dir)*VOFTOL_MATERIAL.le.z) then
         ! do nothing
        else
         print *,"xwall,z invalid"
@@ -19350,6 +18772,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: wavelen,den1,den2,visc1,visc2,tension
       real(amrex_real), INTENT(out) :: wavespeed
       real(amrex_real) omega,k
+      real(amrex_real) den_mix
 
       if ((wavelen.gt.zero).and.(den1.gt.zero).and. &
           (den2.gt.zero).and.(visc1.gt.zero).and. &
@@ -19369,7 +18792,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx ^ {3/2}/sqrt( pi * tension / den ) =
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
-      omega=(k**(1.5d0))*sqrt(tension/min(den1,den2))
+      den_mix=min(den1,den2)
+      if (den_mix.gt.zero) then
+       !do nothing
+      else
+       print *,"den_mix invalid ",den_mix
+       stop
+      endif
+      omega=(k**(1.5d0))*sqrt(tension/den_mix)
        ! wavespeed=omega/k=
        ! sqrt(k)*sqrt(tension/(den1+den2))=
        ! sqrt(2\pi tension/((den1+den2)*dx)=
@@ -19787,6 +19217,7 @@ end subroutine RatePhaseChange
 ! -----------------
 
 
+       !ASHWANI PAL SLAC
       subroutine get_vel_phasechange_NUCLEATE( &
                       nucleate_in,nucleate_out)
       use global_utility_module
@@ -19833,13 +19264,8 @@ end subroutine RatePhaseChange
       integer nmax
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
-      integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
-      integer tessellate
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer ibasesrc,ibasedst
       integer ibase_raw,ibase_recon
 
@@ -19855,7 +19281,7 @@ end subroutine RatePhaseChange
       real(amrex_real) cen_dst(SDIM)
       real(amrex_real) vfluid_sum
       real(amrex_real) VOF_source,VOF_dest
-      integer local_tessellate
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL_RASTER
 
       nmax=POLYGON_LIST_MAX 
 
@@ -19914,12 +19340,6 @@ end subroutine RatePhaseChange
        subscale_spec_id=0
        subscale_vfrac=zero
 
-       grid_index(1)=i
-       grid_index(2)=j
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=k
-       endif
-
        call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
 
        if ((local_freezing_model.eq.0).or. & !stefan model freezing/boiling
@@ -19927,6 +19347,11 @@ end subroutine RatePhaseChange
            (local_freezing_model.eq.6)) then !TSAT variable evap/condensation
 
         if (is_in_probtype_list().eq.1) then
+          !git log --all --name-only --pretty=format: | grep "petsc"
+          !git log --all -G"PetscNullSpace" --source --oneline
+          !git log --all -S"PetscNullSpace" --oneline
+          !git log --all -S"SUB_nucleation" 
+          !ASHWANI PAL SLAC
          call SUB_nucleation( &
               nucleate_in, & !in
               xsten, & !in
@@ -20052,7 +19477,6 @@ end subroutine RatePhaseChange
         ! create unidirectional seed
         ! initialize volume fraction, level set function, centroid,
         ! density, temperature, and vapor mass fraction.
-        tessellate=TESSELLATE_FLUIDS
 
         do im_local=1,num_materials
          ibase_raw=(im_local-1)*ngeom_raw+1
@@ -20069,12 +19493,10 @@ end subroutine RatePhaseChange
         enddo  ! im_local=1..num_materials
 
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
-          continuous_mof, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
-          tessellate, &  ! =TESSELLATE_FLUIDS
+          tessellate_source, &  ! =TESSELLATE_FLUIDS
           mofdata, &
           SDIM)
 
@@ -20084,39 +19506,35 @@ end subroutine RatePhaseChange
         enddo
 
         call multimaterial_MOF( &
-         tessellate, & ! =TESSELLATE_FLUIDS
+         tessellate_source, & ! =TESSELLATE_FLUIDS
          nucleate_in%tid, &
          nucleate_in%bfact, &
          nucleate_in%dx, &
-         xsten,nhalf, &
+         xsten, &
+         nhalf, &
          mof_verbose, & ! =0
          use_ls_data, & ! =0
          LS_stencil, &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
-         geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
-         mofdata, & !intent(inout)
+         mofdata, & !intent(inout) override normal and order cleared.
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! =STANDARD_MOF
-         cmofsten, &
-         grid_index, &
-         grid_level, &
          SDIM)
 
-         ! if local_tessellate==TESSELLATE_ALL_RASTER: 
+         ! tessellate_dest==TESSELLATE_ALL_RASTER: 
          !  (rasterized reconstruction for solids)
          !  if solid material(s) dominate the cell, then F_solid_raster=1
          !  and F_fluid=0.
          !  if fluid material(s) dominate the cell, then F_solid=0,
          !  sum F_fluid=1 
          !FIX ME?
-        local_tessellate=TESSELLATE_ALL_RASTER
          !EPS2
         call multi_get_volume_tessellate( &
          nucleate_in%tid, &
-         local_tessellate, & ! =TESSELLATE_ALL_RASTER
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL_RASTER
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
@@ -20287,7 +19705,8 @@ end subroutine RatePhaseChange
        Cmethane_in_hydrate, &
        C_w0, &
        PHYDWATER, &
-       VOFsrc,VOFdst) ! VOFsrc,VOFdst used for the hydrate model.
+       dx, &
+       LSsrc,LSdst) ! LSsrc,LSdst used for the hydrate model.
       use hydrateReactor_module
       use global_utility_module
 
@@ -20295,6 +19714,7 @@ end subroutine RatePhaseChange
 
       integer, INTENT(in) :: interface_mass_transfer_model
       integer, INTENT(in) :: for_estdt
+      real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xI(SDIM)
       integer, INTENT(in) :: local_freezing_model
 !1=Tanasawa 2=Schrage 3=Kassemi 
@@ -20334,7 +19754,7 @@ end subroutine RatePhaseChange
       real(amrex_real), INTENT(in) :: Tsrc_INT,Tdst_INT
       real(amrex_real), INTENT(in) :: K_f
       real(amrex_real), INTENT(in) :: Cmethane_in_hydrate,C_w0,PHYDWATER
-      real(amrex_real), INTENT(in) :: VOFsrc,VOFdst
+      real(amrex_real), INTENT(in) :: LSsrc,LSdst
 
       real(amrex_real) DTsrc,DTdst
       real(amrex_real) velsrc,veldst,velsum
@@ -20410,13 +19830,11 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((VOFsrc.ge.-EPS1).and. &
-          (VOFdst.ge.-EPS1).and. &
-          (VOFsrc.le.one+EPS1).and. &
-          (VOFdst.le.one+EPS1)) then
+      if ((abs(LSsrc).ge.zero).and. &
+          (abs(LSdst).ge.zero)) then
        ! do nothing
       else
-       print *,"VOFsrc or VOFdst invalid: ",VOFsrc,VOFdst
+       print *,"LSsrc or LSdst invalid: ",LSsrc,LSdst
        stop
       endif
 
@@ -20731,7 +20149,8 @@ end subroutine RatePhaseChange
         endif
 
         verb_hydrate=0
-        if (((VOFsrc.ge.VOFTOL).and.(VOFdst.ge.VOFTOL)).or. &
+        if (((LSsrc.ge.-dx(1)).and. &
+             (LSdst.ge.-dx(1))).or. &
             (for_estdt.eq.0)) then
          call HYDRATE_FORMATION_RATE(time,Cmethane_in_hydrate, &
           C_w0,Tsrc_probe,PHYDWATER,vel,Tsat,K_f,verb_hydrate)
@@ -20745,11 +20164,15 @@ end subroutine RatePhaseChange
           stop
          endif
 
-        else if (((VOFsrc.le.VOFTOL).or.(VOFdst.le.VOFTOL)).and. &
+        else if (((LSsrc.le.-dx(1)).or. &
+                  (LSdst.le.-dx(1))).and. &
                  (for_estdt.eq.1)) then
          vel=zero
         else
-         print *,"VOFsrc, VOFdst, or for_estdt invalid"
+         print *,"LSsrc, LSdst, or for_estdt invalid"
+         print *,"LSsrc ",LSsrc
+         print *,"LSdst ",LSdst
+         print *,"dx= ",dx
          stop
         endif
 
@@ -21072,13 +20495,13 @@ end subroutine RatePhaseChange
         if (local_buffer(ibuf).eq.zero) then
          ! do nothing
         else if ((local_buffer(ibuf).gt.zero).and. &
-                 (local_buffer(ibuf).le.problen(dirbc)*(one+VOFTOL))) then
+                 (local_buffer(ibuf).le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
       
          if (presbc_array(dirbc,side).eq.EXT_DIR) then
           if (side.eq.1) then
            dist=(x(dirbc)-problo(dirbc))
-           if (dist.lt.-VOFTOL*problen(dirbc)) then
-            print *,"dist.lt.-VOFTOL*problen"
+           if (dist.lt.-VOFTOL_MATERIAL*problen(dirbc)) then
+            print *,"dist.lt.-VOFTOL_MATERIAL*problen"
             stop
            else if (dist.le.local_buffer(ibuf)) then
             if (dir+1.eq.dirbc) then
@@ -21097,7 +20520,7 @@ end subroutine RatePhaseChange
              stop
             endif
            else if ((dist.ge.local_buffer(ibuf)).and. &
-                    (dist.le.problen(dirbc)*(one+VOFTOL))) then
+                    (dist.le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
             ! do nothing
            else
             print *,"dist invalid"
@@ -21107,8 +20530,8 @@ end subroutine RatePhaseChange
           else if (side.eq.2) then
 
            dist=(probhi(dirbc)-x(dirbc))
-           if (dist.lt.-VOFTOL*problen(dirbc)) then
-            print *,"dist.lt.-VOFTOL*problen"
+           if (dist.lt.-VOFTOL_MATERIAL*problen(dirbc)) then
+            print *,"dist.lt.-VOFTOL_MATERIAL*problen"
             stop
            else if (dist.le.local_buffer(ibuf)) then
             if (dir+1.eq.dirbc) then
@@ -21127,7 +20550,7 @@ end subroutine RatePhaseChange
              stop
             endif
            else if ((dist.ge.local_buffer(ibuf)).and. &
-                    (dist.le.problen(dirbc)*(one+VOFTOL))) then
+                    (dist.le.problen(dirbc)*(one+VOFTOL_MATERIAL))) then
             ! do nothing
            else
             print *,"dist invalid"
@@ -22786,7 +22209,7 @@ end subroutine initialize2d
        ! before this routine:
        ! calc_error_indicator
        ! EOS_error_ind
-      subroutine fort_vfracerror(  &
+      subroutine fort_error_estimate_helper(  &
        tid_current, &
        error_set_count, &
        tag, &
@@ -22814,7 +22237,7 @@ end subroutine initialize2d
        ncoarseblocks, &
        xcoarseblocks,ycoarseblocks,zcoarseblocks, &
        rxcoarseblocks,rycoarseblocks,rzcoarseblocks) &
-      bind(c,name='fort_vfracerror')
+      bind(c,name='fort_error_estimate_helper')
 
       use global_utility_module
       use geometry_intersect_module
@@ -22875,12 +22298,12 @@ end subroutine initialize2d
       integer coarseblocks_available
 
       if (bfact.lt.1) then
-       print *,"bfact invalid200"
+       print *,"bfact invalid fort_error_estimate_helper ",bfact
        stop
       endif
 
       if (level.lt.0) then
-       print *,"level invalid vfrac error: ",level
+       print *,"level invalid fort_error_estimate_helper: ",level
        stop
       endif
       if (max_level.le.level) then
@@ -22909,6 +22332,10 @@ end subroutine initialize2d
       snew_ptr=>snew
 
       call checkbound_int_array1(tilelo,tilehi,tag_ptr,0,-1)
+       !in NavierStokes.cpp "errorEst"
+       ! MultiFab* snew_mf=getState(1,0,STATE_NCOMP,nudge_time);
+       ! MultiFab* lsnew_mf = getStateDist(1,nudge_time,local_caller_string);
+       ! 
       call checkbound_array1(fablo,fabhi,errfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
@@ -22947,6 +22374,7 @@ end subroutine initialize2d
        if (level.lt.max_level_for_use) then
 
          ! updates "tagflag" and/or "rflag"
+         ! subroutine override_tagflag is in PROB.F90 too.
         call override_tagflag( &
          i,j,k, &
          level,max_level, &
@@ -22994,7 +22422,7 @@ end subroutine initialize2d
         else if (rflag.eq.zero) then
          ! do nothing
         else
-         print *,"rflag invalid in fort_vfracerror: ",rflag
+         print *,"rflag invalid in fort_error_estimate_helper: ",rflag
          print *,"probtype=",probtype
          print *,"axis_dir=",axis_dir
          stop
@@ -23058,7 +22486,7 @@ end subroutine initialize2d
        else if (level.ge.max_level_for_use) then
         ! do nothing
        else
-        print *,"level invalid"
+        print *,"level invalid ",level
         stop
        endif
 
@@ -23072,7 +22500,7 @@ end subroutine initialize2d
       enddo
 
       return
-      end subroutine fort_vfracerror
+      end subroutine fort_error_estimate_helper
 
       subroutine fort_group_extrapfill ( &
       tid_in, &
@@ -23539,21 +22967,8 @@ end subroutine initialize2d
 
        integer, INTENT(in) :: homflag,project_option
 
-       if (project_option.eq.SOLVETYPE_SMOOTH) then
-
-        if (homflag.eq.0) then
-         pres_homflag=0
-         vel_homflag=0
-        else if (homflag.eq.1) then
-         pres_homflag=1
-         vel_homflag=1
-        else
-         print *,"homflag invalid in override pbc"
-         stop
-        endif
-
         ! project_option_singular_possibleF is declared in: GLOBALUTIL.F90
-       else if (project_option_singular_possibleF(project_option).eq.1) then
+       if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
          pres_homflag=0
         else if (homflag.eq.1) then
@@ -24852,9 +24267,6 @@ end subroutine initialize2d
        integer n,im
        integer dir
 
-       integer, parameter :: num_particles=0
-       real(amrex_real) :: particle_list(1,SDIM+1)
-
        real(amrex_real) vfracsum_test
 
        real(amrex_real) fluiddata(num_materials,2*SDIM+2)
@@ -24880,7 +24292,6 @@ end subroutine initialize2d
        real(amrex_real) x,y,z,rr
        real(amrex_real) volcell
        real(amrex_real) cencell(SDIM)
-       real(amrex_real) centroid_absolute(SDIM)
        
        real(amrex_real) debug_vfrac_sum
        real(amrex_real) vel(SDIM)
@@ -24910,7 +24321,7 @@ end subroutine initialize2d
        real(amrex_real) L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
        real(amrex_real) T_FIELD
        real(amrex_real) den_ratio
-       real(amrex_real) dxmaxLS
+       real(amrex_real) dxmax
        integer im_solid_initdata
        real(amrex_real) lsnormal(num_materials,SDIM)
        integer lsnormal_valid(num_materials)
@@ -24919,11 +24330,9 @@ end subroutine initialize2d
        real(amrex_real) local_state(num_materials*num_state_material)
        real(amrex_real) massfrac_parm(num_species_var+1)
        integer local_ibase
-       integer, parameter :: tessellate=TESSELLATE_FLUIDS
+       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
        integer, parameter :: bcflag_initdata=0
        integer, PARAMETER :: from_boundary_hydrostatic=0
-       integer, parameter :: continuous_mof=STANDARD_MOF
-       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
        real(amrex_real) theta_initdata
        real(amrex_real) concentration_initdata
        real(amrex_real) concen1_initdata,concen2_initdata
@@ -24969,7 +24378,7 @@ end subroutine initialize2d
         stop
        endif
 
-       call get_dxmaxLS(dx,bfact,dxmaxLS)
+       call get_dxmax(dx,bfact,dxmax)
 
        im_solid_initdata=im_solid_primary()
 
@@ -25380,14 +24789,14 @@ end subroutine initialize2d
              pz_sanity=-one+a1*(probhi_array(SDIM)-problo_array(SDIM))+ &
                 D2*(probhi_array(SDIM)-problo_array(SDIM))* &
                    (probhi_array(SDIM)-zcrit)
-             if (abs(pz_sanity-one).le.VOFTOL) then
+             if (abs(pz_sanity-one).le.VOFTOL_MATERIAL) then
               ! do nothing
              else
               print *,"pz_sanity invalid"
               stop
              endif
              pz_sanity=-one+a1*(zcrit-problo_array(SDIM))
-             if (abs(pz_sanity).le.VOFTOL) then
+             if (abs(pz_sanity).le.VOFTOL_MATERIAL) then
               ! do nothing
              else
               print *,"pz_sanity invalid"
@@ -26218,11 +25627,9 @@ end subroutine initialize2d
         ! sum F_fluid=1  sum F_solid <= 1
         ! centroids are projected to the cell in question.
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
-          continuous_mof, &
           bfact,dx, &
-          tessellate, & ! =TESSELLATE_FLUIDS
+          tessellate_source, & ! =TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -26249,12 +25656,15 @@ end subroutine initialize2d
         vfracsum_test=zero
         do im=1,num_materials
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and. &
+             (is_elastic(im).eq.0)) then
           vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or. &
+                  (is_elastic(im).eq.1)) then
           ! do nothing
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
+          print *,"or is_elastic(im) invalid ",im,is_elastic(im)
           stop
          endif
         enddo !im=1..num_materials
@@ -26282,25 +25692,15 @@ end subroutine initialize2d
 
         do imls=1,num_materials 
 
-         vofcomp_recon=(imls-1)*ngeom_recon+1
-         do dir=1,SDIM
-          centroid_absolute(dir)=cencell(dir)+ &
-             mofdata(vofcomp_recon+dir)
-         enddo
-
          call find_cut_geom_slope_CLSVOF( &
-          continuous_mof, & !STANDARD_MOF
           LS_stencil, &
-          particle_list, &
-          num_particles, &
           lsnormal, &
           lsnormal_valid, &
           ls_intercept, &
           bfact,dx, &
           xsten,nhalf, &
-          centroid_absolute, &
           imls, &
-          dxmaxLS, &
+          dxmax, &
           SDIM)
 
          if (lsnormal_valid(imls).eq.1) then
@@ -26313,6 +25713,7 @@ end subroutine initialize2d
           print *,"lsnormal_valid invalid"
           stop
          endif
+
         enddo !imls=1..num_materials 
 
         do im=1,num_materials
@@ -26467,9 +25868,7 @@ end subroutine initialize2d
       real(amrex_real) centroid_local(SDIM)
       real(amrex_real) cencell(SDIM)
       real(amrex_real) mofdata(ngeom_recon*num_materials)
-      integer, PARAMETER :: continuous_mof_parm=STANDARD_MOF
-      integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, PARAMETER :: tessellate_source=TESSELLATE_FLUIDS
 
 
       if (bfact.lt.1) then
@@ -26600,6 +25999,7 @@ end subroutine initialize2d
          enddo
          enddo
          call getvolume( &
+           volcell, & !intent(out)
            bfact, &
            dx, &
            xsten, &
@@ -26608,7 +26008,7 @@ end subroutine initialize2d
            vfrac_local, &
            facearea_local, &
            centroid_local, &
-           VOFTOL, &
+           VOFTOL_MATERIAL, &
            SDIM)
          call CISBOX( &
            xsten, &
@@ -26632,11 +26032,9 @@ end subroutine initialize2d
         enddo !im=1,num_materials
 
         call make_vfrac_sum_ok_base( &
-          cmofsten, &
           xsten,nhalf, &
-          continuous_mof_parm, &
           bfact,dx, &
-          tessellate, & !=TESSELLATE_FLUIDS
+          tessellate_source, & !=TESSELLATE_FLUIDS
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -29812,11 +29210,6 @@ end subroutine initialize2d
       integer ibasedst
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
-      integer, parameter :: continuous_mof=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
 
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
       real(amrex_real) multi_centroidA(num_materials,SDIM)
@@ -29831,11 +29224,11 @@ end subroutine initialize2d
       real(amrex_real) uwall(num_materials*ngeom_raw)
       real(amrex_real) uboundary(num_materials*ngeom_raw)
       integer vofcomp
-      real(amrex_real) voffluid_wall,vofsolid_wall
-      real(amrex_real) voffluid_bound,vofsolid_bound
+      real(amrex_real) voffluid_wall,vofsolid_wall,vofelastic_wall
+      real(amrex_real) voffluid_bound,vofsolid_bound,vofelastic_bound
       real(amrex_real) voftest_wall,voftest_bound
 
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
 
       integer, parameter :: nhalf=3
 
@@ -29954,12 +29347,6 @@ end subroutine initialize2d
         do j=borderlo(2),borderhi(2)
         do i=borderlo(1),borderhi(1)
 
-         grid_index(1)=i
-         grid_index(2)=j
-         if (SDIM.eq.3) then
-          grid_index(SDIM)=k
-         endif
-
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
          IWALL(1)=i
@@ -29986,20 +29373,26 @@ end subroutine initialize2d
 
          voffluid_wall=zero
          vofsolid_wall=zero
+         vofelastic_wall=zero
          voffluid_bound=zero
          vofsolid_bound=zero
+         vofelastic_bound=zero
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_raw+1
           voftest_wall=uwall(vofcomp)
           voftest_bound=uboundary(vofcomp)
-          if (is_rigid(im).eq.0) then
+          if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
            voffluid_wall=voffluid_wall+voftest_wall
            voffluid_bound=voffluid_bound+voftest_bound
           else if (is_rigid(im).eq.1) then
            vofsolid_wall=vofsolid_wall+voftest_wall
            vofsolid_bound=vofsolid_bound+voftest_bound
+          else if (is_elastic(im).eq.1) then
+           vofelastic_wall=vofelastic_wall+voftest_wall
+           vofelastic_bound=vofelastic_bound+voftest_bound
           else
-           print *,"is_rigid invalid PROB.F90"
+           print *,"is_rigid invalid PROB.F90 ",im,is_rigid(im)
+           print *,"or is_elastic invalid PROB.F90 ",im,is_elastic(im)
            stop
           endif
          enddo ! im=1..num_materials
@@ -30008,14 +29401,22 @@ end subroutine initialize2d
           print *,"fluid disappeared in GROUP_EXTMOFFILL"
           print *,"i,j,k ",i,j,k
           print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
-          print *,"voffluid_wall,vofsolid_wall ",voffluid_wall,vofsolid_wall
-          print *,"voffluid_bound,vofsolid_bound ",voffluid_bound, &
-            vofsolid_bound
+          print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
+             voffluid_wall,vofsolid_wall,vofelastic_wall
+          print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
+             voffluid_bound,vofsolid_bound,vofelastic_bound
           stop
          else if ((voffluid_wall.le.two).and.(voffluid_bound.le.two)) then
           ! do nothing
          else
-          print *,"voffluid_wall or voffluid_bound invalid"
+          print *,"i,j,k ",i,j,k
+          print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
+          print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
+             voffluid_wall,vofsolid_wall,vofelastic_wall
+          print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
+             voffluid_bound,vofsolid_bound,vofelastic_bound
+          print *,"voffluid_wall or voffluid_bound invalid ", &
+               voffluid_wall,voffluid_bound
           stop
          endif
 
@@ -30038,11 +29439,9 @@ end subroutine initialize2d
          enddo  ! im=1,num_materials
 
          call make_vfrac_sum_ok_base( &
-           cmofsten, &
            xsten,nhalf, &
-           continuous_mof, &
            bfact,dx, &
-           tessellate, &  ! =TESSELLATE_FLUIDS
+           tessellate_source, &  ! =TESSELLATE_FLUIDS
            mofdata, &
            SDIM)
 
@@ -30052,23 +29451,20 @@ end subroutine initialize2d
          enddo
 
          call multimaterial_MOF( &
-          tessellate, &  ! =TESSELLATE_FLUIDS
+          tessellate_source, &  ! =TESSELLATE_FLUIDS
           tid_in, &
-          bfact,dx,xsten,nhalf, &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
           mof_verbose, & !=0
           use_ls_data, & !=0
           LS_stencil, & 
           geom_xtetlist(1,1,1,tid_in+1), &
-          geom_xtetlist(1,1,1,tid_in+1), &
           nmax, &
           nmax, &
-          mofdata, & !intent(inout)
+          mofdata, & !intent(inout) override normal and order cleared.
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & !=STANDARD_MOF
-          cmofsten, &
-          grid_index, &
-          grid_level, &
           SDIM)
 
          do dir3=1,num_materials*ngeom_recon

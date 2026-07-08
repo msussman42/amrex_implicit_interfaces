@@ -160,7 +160,6 @@ ns.material_type=0 0 999
 ns.heatviscconst=6.80000e+02 2.48000e+01 6.80000e+02
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 ns.viscconst=2.79000e-03 1.20200e-04 2.79000e-03
 # density: kg/m^3

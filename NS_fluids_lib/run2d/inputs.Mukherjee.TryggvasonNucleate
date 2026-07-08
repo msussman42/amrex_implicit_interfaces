@@ -155,7 +155,6 @@ ns.heatviscconst=0.680 0.0248 0.680
 # 0.0 means do not use.
 # December 21: changed to all zeros (since substrate is only 2 cells from 
 # bottom of the domain).
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 ns.viscconst=279E-6 12.02e-6 279E-6
 # density: kg/m^3

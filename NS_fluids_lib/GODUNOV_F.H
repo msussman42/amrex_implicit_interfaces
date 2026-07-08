@@ -198,31 +198,6 @@ extern "C"
     int* bfact,
     int* bfact_fine);
 
-   void fort_extend_mac_vel(
-    int* tid_current,
-    int* level,
-    int* finest_level,
-    int* normdir, // 0..sdim-1
-    int* im_cpp, // 0..num_materials-1
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    const Real* xlo,const Real* dx,
-    Real* time,
-    Real* dt,
-    int* velbc,
-    Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-    Real* umac,
-    AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
-    Real* umac_mask,
-    AMREX_ARLIM_P(umac_masklo),AMREX_ARLIM_P(umac_maskhi),
-    Real* scalar_mask,
-    AMREX_ARLIM_P(scalar_masklo),AMREX_ARLIM_P(scalar_maskhi),
-    Real* divu_mask,
-    AMREX_ARLIM_P(divu_masklo),AMREX_ARLIM_P(divu_maskhi),
-    Real* LS,
-    AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
-
    void fort_maketensor(
     int* partid,
     int* level,
@@ -323,7 +298,6 @@ extern "C"
     int* bfact);
 
    void fort_estdt(
-      int* surface_tension_smoothing,
       int* interface_mass_transfer_model,
       int* tid,
       int* enable_spectral,
@@ -342,9 +316,7 @@ extern "C"
       int* mass_fraction_id,
       Real* molar_mass,
       Real* species_molar_mass,
-      Real* denconst_interface,
       Real* denconst_interface_min,
-      int* lamb_capillary_wave_speed, //1=>(rho_a+rho_w)/2
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),
@@ -597,7 +569,9 @@ extern "C"
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
+    Real* LSaltnew,AMREX_ARLIM_P(LSaltnewlo),AMREX_ARLIM_P(LSaltnewhi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+    Real* recon_alt,AMREX_ARLIM_P(recon_altlo),AMREX_ARLIM_P(recon_althi));
 
 
    void fort_init_elasticmask_and_elasticmaskpart(
@@ -630,6 +604,7 @@ extern "C"
     AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
+    int* ncell_mdot_shift,
     int* im_elastic_map,
     int* num_FSI_outer_sweeps,
     int* FSI_outer_sweeps,
@@ -662,7 +637,13 @@ extern "C"
     Real* denstate,
     AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
-    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
+    Real* LS_alt,
+    AMREX_ARLIM_P(LS_altlo),
+    AMREX_ARLIM_P(LS_althi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
+    Real* recon_alt,
+    AMREX_ARLIM_P(recon_altlo),
+    AMREX_ARLIM_P(recon_althi));
 
 
    void fort_accept_weight(
@@ -677,6 +658,7 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* LSalt,AMREX_ARLIM_P(LSaltlo),AMREX_ARLIM_P(LSalthi),
     Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
     Real* tag_comp,
     AMREX_ARLIM_P(tag_comp_lo),
@@ -707,6 +689,7 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* LSalt,AMREX_ARLIM_P(LSaltlo),AMREX_ARLIM_P(LSalthi),
     Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
     Real* tag_comp,
     AMREX_ARLIM_P(tag_comp_lo),
@@ -732,6 +715,7 @@ extern "C"
      int* velbc,
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps,
+     int* material_conservation_form,
      int* EILE_flag,
      int* dir_counter,
      int* normdir,
@@ -783,7 +767,6 @@ extern "C"
      Real* ymac_old,AMREX_ARLIM_P(ymac_oldlo),AMREX_ARLIM_P(ymac_oldhi),
      Real* zmac_old,AMREX_ARLIM_P(zmac_oldlo),AMREX_ARLIM_P(zmac_oldhi),
      int* stokes_flow,
-     Real* denconst_interface,
      int* nc_conserve,
      int* map_forward,
      int* recon_ncomp,
@@ -799,8 +782,6 @@ extern "C"
 
 
    void fort_vfrac_split_smooth(
-     int* im_extension, //im_extension==-1, or 0.
-     int* local_smoothing_flag,
      int* nprocessed,
      int* tid,
      int* velbc,
@@ -862,21 +843,6 @@ extern "C"
      int* finest_level);
 
 
-   void fort_correct_for_shear(
-     int* mof_renormalize_ordering,
-     int* material_extend_velocity,
-     int* tid,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     Real* ls_fab,AMREX_ARLIM_P(ls_fablo),AMREX_ARLIM_P(ls_fabhi), 
-     Real* mof_fab,AMREX_ARLIM_P(mof_fablo),AMREX_ARLIM_P(mof_fabhi), 
-     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
-     Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi), 
-     const Real* xlo,const Real* dx,
-     int* level,
-     int* finest_level);
-
    void fort_derive_mom_den(
      int* im_parm,
      int* ngrow,
@@ -914,7 +880,6 @@ extern "C"
      int* im_solid_map,
      int* nsolve,
      int* project_option,
-     int* combine_idx,
      int* combine_flag,
      int* interface_cond_avail,
      int* nstate_main,
@@ -955,7 +920,6 @@ extern "C"
      int* nparts,
      int* nparts_def,
      int* im_solid_map,
-     int* combine_idx,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,

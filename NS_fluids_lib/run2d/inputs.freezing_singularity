@@ -39,12 +39,10 @@ ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
-ns.mof_error_ordering=0
 # water,air,ice,solid
 ns.mof_ordering=3 1 2 1
 
@@ -221,7 +219,6 @@ ns.material_type=0 0 0 999
 # KTOT approx L/(2.5 L/K + L/K)=K/3.5=0.9/3.5=0.26
 ns.heatviscconst=1.0 0.0413793 3.7586207 2.5862069 # dimensionless
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #ns.viscconst=0.02 0.0001 0.02 0.02 # dimensional
 #ns.viscconst=1.0 0.005 1.0 1.0 # dimensionless
 ns.viscconst=1.0 0.005 10.0 1.0 # dimensionless

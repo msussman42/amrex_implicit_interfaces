@@ -59,7 +59,7 @@ stop
        integer, pointer :: dencomp_dest
        real(amrex_real), pointer :: dxprobe_dest
        real(amrex_real), pointer, dimension(:) :: LSINT
-       real(amrex_real), pointer :: dxmaxLS
+       real(amrex_real), pointer :: dxmax
        integer, pointer :: bfact
        integer, pointer :: level
        integer, pointer :: finest_level
@@ -254,8 +254,7 @@ stop
         ! r=rf-new du
         ! new du=rf-sqrt(rf^2-2 rf du) =2rf du/(rf+sqrt(rf^2-2 rf du))=
         ! du/(1/2+sqrt(1/4-du/(2rf))
-      if ((levelrz.eq.COORDSYS_RZ).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_RZ) then
        if (normdir.eq.0) then
         if (rval.le.zero) then
          du=zero
@@ -282,15 +281,15 @@ stop
       else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else 
-       print *,"levelrz invalid adjust du"
+       print *,"levelrz invalid adjust du ",levelrz
        stop
       endif
  
       return
       end subroutine adjust_du
 
-       ! cc_flag=0  centroid -> center or some other target "xtarget"
-       ! cc_flag=1  center -> centroid
+       ! cc_flag=FVM_TO_GFM or
+       ! cc_flag=GFM_TO_FVM
        ! tsat_flag=-1 use all cells in the stencil
        ! tsat_flag=0 no tsat
        ! tsat_flag=1 tsat
@@ -299,9 +298,8 @@ stop
        ! if center to centroid: xtarget = xcentroid
       subroutine center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
-       tsat_flag, &
+       tsat_flag, & !intent(in)
        bfact, &
        level, &
        finest_level, &
@@ -321,8 +319,6 @@ stop
       implicit none
 
       real(amrex_real), INTENT(in) :: DATA_FLOOR
-      integer, INTENT(in) :: nsolve
-      integer :: nc
       integer, INTENT(in) :: cc_flag
       integer, INTENT(in) :: tsat_flag
       integer, INTENT(in) :: bfact
@@ -334,7 +330,7 @@ stop
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: TSAT
-      real(amrex_real), INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
+      real(amrex_real), INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real), INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer, INTENT(in) :: im_critical
       integer :: im_primary
@@ -342,7 +338,7 @@ stop
       real(amrex_real), INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real), INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) :: wt_sten(D_DECL(-1:1,-1:1,-1:1))
-      real(amrex_real), INTENT(out) :: T_out(nsolve)
+      real(amrex_real), INTENT(out) :: T_out
 
       integer i,j,k
       integer klosten,khisten
@@ -369,30 +365,28 @@ stop
       integer own_flag
       real(amrex_real) wt_local
 
-      if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
-       print *,"nsolve invalid"
-       stop
-      endif
-      if ((cc_flag.ne.0).and.(cc_flag.ne.1)) then
-       print *,"cc_flag invalid"
+      if ((cc_flag.ne.FVM_TO_GFM).and. &
+          (cc_flag.ne.GFM_TO_FVM)) then
+       print *,"cc_flag invalid center_centroid_interchange ",cc_flag
        stop
       endif
       if ((tsat_flag.ne.-1).and. &
           (tsat_flag.ne.0).and. &
           (tsat_flag.ne.1)) then
-       print *,"tsat_flag invalid"
+       print *,"tsat_flag invalid center_centroid_interchange ",tsat_flag
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid112"
+       print *,"bfact invalid center_centroid_interchange ",bfact
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid center_centroid_interchange"
+       print *,"level invalid center_centroid_interchange ", &
+         level,finest_level
        stop
       endif
       if (nhalf.ne.3) then
-       print *,"nhalf invalid"
+       print *,"nhalf invalid center_centroid_interchange ",nhalf
        stop
       endif
        ! was TEMPERATURE_FLOOR
@@ -420,7 +414,7 @@ stop
        if (dx(dir).gt.zero) then 
         ! do nothing
        else
-        print *,"dx(dir) invalid"
+        print *,"dx(dir) invalid ",dx
         stop
        endif
        if (tsat_flag.eq.1) then
@@ -435,391 +429,385 @@ stop
        endif
       enddo ! dir=1..sdim
 
-      do nc=1,nsolve
+      TMAX=-1.0D+20
+      TMIN=1.0D+20
+      TBOUNDS_INIT=0
 
-       TMAX=-1.0D+20
-       TMIN=1.0D+20
-       TBOUNDS_INIT=0
+      if (tsat_flag.eq.0) then
+       ! do nothing
+      else if (tsat_flag.eq.1) then
+       TMAX=TSAT
+       TMIN=TSAT
+       TBOUNDS_INIT=1
+      else if (tsat_flag.eq.-1) then
+       ! do nothing
+      else
+       print *,"tsat_flag invalid"
+       stop
+      endif
 
-       if (tsat_flag.eq.0) then
-        ! do nothing
-       else if (tsat_flag.eq.1) then
-        TMAX=TSAT
-        TMIN=TSAT
-        TBOUNDS_INIT=1
-       else if (tsat_flag.eq.-1) then
-        ! do nothing
-       else
-        print *,"tsat_flag invalid"
-        stop
+      T_avg=zero
+      wt_sum=zero
+      
+      do k=klosten,khisten
+      do j=-1,1
+      do i=-1,1
+
+       xtemp(1)=xsten(2*i,1)
+       xtemp(2)=xsten(2*j,2)
+       if (SDIM.eq.3) then
+        xtemp(SDIM)=xsten(2*k,SDIM)
        endif
-
-       T_avg=zero
-       wt_sum=zero
-       
-       do k=klosten,khisten
-       do j=-1,1
-       do i=-1,1
-
-        xtemp(1)=xsten(2*i,1)
-        xtemp(2)=xsten(2*j,2)
-        if (SDIM.eq.3) then
-         xtemp(SDIM)=xsten(2*k,SDIM)
-        endif
-        do dir=1,SDIM
-         if (cc_flag.eq.0) then ! centroid-> center or centroid to probe.
-          xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
-         else if (cc_flag.eq.1) then ! center-> centroid
-          xlive(dir)=xtemp(dir)  ! cell center
-         else
-          print *,"cc_flag invalid"
-          stop
-         endif
-        enddo ! dir=1..sdim
-
-        if ((tsat_flag.eq.0).or. & ! no tsat
-            (tsat_flag.eq.1)) then ! tsat
-         im_primary=im_primary_sten(D_DECL(i,j,k))
-
-         if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
-          ! do nothing
-         else if (im_primary.eq.-1) then
-          ! do nothing
-         else
-          print *,"im_primary invalid"
-          stop
-         endif
-
-         VF=VF_sten(D_DECL(i,j,k))
-         LS=LS_sten(D_DECL(i,j,k))
-        else if (tsat_flag.eq.-1) then ! use all cells in the stencil
-         im_primary=-1
-         VF=zero
-         LS=zero
+       do dir=1,SDIM
+        if (cc_flag.eq.FVM_TO_GFM) then 
+         xlive(dir)=XC_sten(D_DECL(i,j,k),dir) ! cell centroid
+        else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
+         xlive(dir)=xtemp(dir)  ! cell center
         else
-         print *,"tsat_flag invalid"
+         print *,"cc_flag invalid ",cc_flag
          stop
         endif
+       enddo ! dir=1..sdim
 
-        own_flag=0
+       if ((tsat_flag.eq.0).or. & ! no tsat
+           (tsat_flag.eq.1)) then ! tsat
+        im_primary=im_primary_sten(D_DECL(i,j,k))
 
-        if (tsat_flag.eq.-1) then
-         own_flag=1
-        else if (cc_flag.eq.0) then ! centroid->center
-         if ((VF.ge.-EPS1).and. &
-             (VF.le.VOFTOL)) then
-          own_flag=0
-         else if ((VF.ge.VOFTOL).and.(VF.le.one+EPS1)) then
-          own_flag=1
-         else
-          print *,"VF invalid"
-          stop
-         endif
-        else if (cc_flag.eq.1) then ! center->centroid
-         if ((LS.le.zero).or.(abs(VF).le.VOFTOL)) then
-          own_flag=0
-         else if ((LS.ge.zero).and.(VF.ge.VOFTOL)) then
-          own_flag=1
-         else
-          print *,"LS or VF invalid"
-          stop
-         endif
-        else
-         print *,"cc_flag invalid"
-         stop
-        endif
- 
-        wt_local=zero
- 
-        if (own_flag.eq.0) then
-         if (tsat_flag.eq.1) then
-          T_sten(D_DECL(i,j,k),nc)=TSAT
-         else if (tsat_flag.eq.0) then
-          ! do nothing
-         else
-          print *,"tsat_flag invalid:",tsat_flag
-          stop
-         endif
-         wt_local=EPS_8_4
-        else if (own_flag.eq.1) then
-          ! if normal probe is target: xtarget = xprobe
-          ! if new supermesh centroid is target: xtarget = x_new_centroid
-          ! if centroid to center: xtarget = xcenter
-          ! if center to centroid: xtarget = xcentroid
-         dist=EPS_8_4
-         do dir=1,SDIM
-          dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
-         enddo ! dir
-         if (dist.gt.zero) then
-          ! do nothing
-         else
-          print *,"dist invalid"
-          stop
-         endif
-         wt_local=one/dist
-         if (tsat_flag.eq.-1) then ! use all cells in the stencil
-          ! do nothing
-         else if ((tsat_flag.eq.1).or. &
-                  (tsat_flag.eq.0)) then
-          if (VF.gt.zero) then
-           ! do nothing
-          else
-           print *,"VF invalid"
-           stop
-          endif
-          wt_local=wt_local*(VF**2)
-         else
-          print *,"tsat_flag invalid"
-          stop
-         endif
-
-        else
-         print *,"own_flag invalid"
-         stop
-        endif
-
-        if (wt_local.gt.zero) then
+        if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
          ! do nothing
-        else
-         print *,"wt_local invalid"
-         stop
-        endif
-
-        wt_sten(D_DECL(i,j,k))=wt_local
-
-        T_test=T_sten(D_DECL(i,j,k),nc)
-
-        if ((im_primary.eq.im_critical).or. &
-            (im_primary.eq.-1)) then
-
-         if (TBOUNDS_INIT.eq.0) then
-          TBOUNDS_INIT=1
-          TMAX=T_test
-          TMIN=T_test
-         else if (TBOUNDS_INIT.eq.1) then
-          if (T_test.gt.TMAX) then
-           TMAX=T_test
-          endif
-          if (T_test.lt.TMIN) then
-           TMIN=T_Test
-          endif
-         else 
-          print *,"TBOUNDS_INIT invalid"
-          stop
-         endif
-
-        else if ((im_primary.ne.im_critical).and. &
-                 (im_primary.ge.1).and. &
-                 (im_primary.le.num_materials)) then
-
+        else if (im_primary.eq.-1) then
          ! do nothing
-
         else
          print *,"im_primary invalid"
          stop
         endif
 
-        if (abs(T_test).lt.1.0D+30) then
-         ! do nothing
-        else
-         print *,"T_test bust"
-         print *,"i,j,k,nc,T_test,TMIN,TMAX ",i,j,k,nc,T_test,TMIN,TMAX
-         stop
-        endif
-
-        wt_sum=wt_sum+wt_local
-        T_avg=T_avg+wt_local*T_test 
-
-       enddo
-       enddo
-       enddo  ! i,j,k
-
-       if (wt_sum.gt.zero) then
-        ! do nothing
-       else
-        print *,"wt_sum invalid"
-        stop
-       endif
-
-       do k=klosten,khisten
-       do j=-1,1
-       do i=-1,1
-        wt_sten(D_DECL(i,j,k))=wt_sten(D_DECL(i,j,k))/wt_sum
-       enddo
-       enddo
-       enddo
-
-       if (tsat_flag.eq.1) then
-        T_avg=T_avg/wt_sum
-        if (T_avg.ge.DATA_FLOOR) then
-         ! do nothing
-        else
-         print *,"T_avg invalid"
-         print *,"T_avg=",T_avg
-         stop
-        endif
-        T_avg=TSAT
-       else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
-        T_avg=T_avg/wt_sum
-       else
-        print *,"tsat_flag invalid"
-        stop
-       endif 
-
-       if (TBOUNDS_INIT.eq.0) then
-        TMIN=T_avg
-        TMAX=T_avg
-       else if (TBOUNDS_INIT.eq.1) then
-        ! do nothing
-       else
-        print *,"TBOUNDS_INIT invalid"
-        stop
-       endif
-
-       if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
-        mat_ncomp=SDIM+1
-       else if (tsat_flag.eq.1) then
-        mat_ncomp=SDIM
+        VF=VF_sten(D_DECL(i,j,k))
+        LS=LS_sten(D_DECL(i,j,k))
+       else if (tsat_flag.eq.-1) then ! use all cells in the stencil
+        im_primary=-1
+        VF=zero
+        LS=zero
        else
         print *,"tsat_flag invalid"
         stop
        endif
 
-       allocate(AA(mat_ncomp,mat_ncomp))
-       allocate(AAcopy(mat_ncomp,mat_ncomp))
+       own_flag=0
 
-       do i=1,mat_ncomp
-       do j=1,mat_ncomp
-        AA(i,j)=zero
-       enddo
-       enddo
-       do i=1,SDIM+1
-        BB(i)=zero
-       enddo
-
-       do i=1,mat_ncomp
-       do j=1,mat_ncomp
-        do i1=-1,1
-        do j1=-1,1
-        do k1=klosten,khisten 
-         xtemp(1)=xsten(2*i1,1)
-         xtemp(2)=xsten(2*j1,2)
-         if (SDIM.eq.3) then
-          xtemp(SDIM)=xsten(2*k1,SDIM)
-         endif
-         do dir=1,SDIM
-          if (cc_flag.eq.0) then ! centroid-> center or probe
-           xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
-          else if (cc_flag.eq.1) then ! center-> centroid
-           xlive(dir)=xtemp(dir) ! center
-          else
-           print *,"cc_flag invalid"
-           stop
-          endif
-         enddo ! dir
-
-         do dir=1,SDIM
-          delx(dir)=(xlive(dir)-xbase(dir))/dx(dir)
-         enddo ! dir
-         delx(SDIM+1)=one
-
-         AA(i,j)=AA(i,j)+wt_sten(D_DECL(i1,j1,k1))*delx(i)*delx(j)
-         if (j.eq.1) then
-          BB(i)=BB(i)+wt_sten(D_DECL(i1,j1,k1))*delx(i)* &
-           (T_sten(D_DECL(i1,j1,k1),nc)-T_avg)
-         endif
-        enddo ! k1
-        enddo ! j1
-        enddo ! i1
-        AAcopy(i,j)=AA(i,j)
-        if (j.eq.1) then
-         BBcopy(i)=BB(i)
+       if (tsat_flag.eq.-1) then
+        own_flag=1
+       else if (cc_flag.eq.FVM_TO_GFM) then ! centroid->center
+        if ((VF.ge.-EPS1).and. &
+            (VF.le.EPS1)) then
+         own_flag=0
+        else if ((VF.ge.EPS1).and.(VF.le.one+EPS1)) then
+         own_flag=1
+        else
+         print *,"VF invalid ",VF
+         stop
         endif
-       enddo   ! j
-       enddo   ! i
+       else if (cc_flag.eq.GFM_TO_FVM) then ! center->centroid
+        if ((LS.le.zero).or.(abs(VF).le.VOFTOL_MATERIAL)) then
+         own_flag=0
+        else if ((LS.ge.zero).and.(VF.ge.VOFTOL_MATERIAL)) then
+         own_flag=1
+        else
+         print *,"LS or VF invalid ",LS,VF
+         stop
+        endif
+       else
+        print *,"cc_flag invalid ",cc_flag
+        stop
+       endif
  
-       call matrix_solve(AA,GRADTEMP,BB,matstatus,mat_ncomp)
+       wt_local=zero
+ 
+       if (own_flag.eq.0) then
+        if (tsat_flag.eq.1) then
+         T_sten(D_DECL(i,j,k))=TSAT
+        else if (tsat_flag.eq.0) then
+         ! do nothing
+        else
+         print *,"tsat_flag invalid:",tsat_flag
+         stop
+        endif
+        wt_local=EPS_8_4
+       else if (own_flag.eq.1) then
+         ! if normal probe is target: xtarget = xprobe
+         ! if new supermesh centroid is target: xtarget = x_new_centroid
+         ! if centroid to center: xtarget = xcenter
+         ! if center to centroid: xtarget = xcentroid
+        dist=EPS_8_4
+        do dir=1,SDIM
+         dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
+        enddo ! dir
+        if (dist.gt.zero) then
+         ! do nothing
+        else
+         print *,"dist invalid"
+         stop
+        endif
+        wt_local=one/dist
+        if (tsat_flag.eq.-1) then ! use all cells in the stencil
+         ! do nothing
+        else if ((tsat_flag.eq.1).or. &
+                 (tsat_flag.eq.0)) then
+         if (VF.gt.zero) then
+          ! do nothing
+         else
+          print *,"VF invalid"
+          stop
+         endif
+         wt_local=wt_local*(VF**2)
+        else
+         print *,"tsat_flag invalid ",tsat_flag
+         stop
+        endif
 
-       if (matstatus.eq.1) then
-        T_hold=T_avg
+       else
+        print *,"own_flag invalid ",own_flag
+        stop
+       endif
+
+       if (wt_local.gt.zero) then
+        ! do nothing
+       else
+        print *,"wt_local invalid ",wt_local
+        stop
+       endif
+
+       wt_sten(D_DECL(i,j,k))=wt_local
+
+       T_test=T_sten(D_DECL(i,j,k))
+
+       if ((im_primary.eq.im_critical).or. &
+           (im_primary.eq.-1)) then
+
+        if (TBOUNDS_INIT.eq.0) then
+         TBOUNDS_INIT=1
+         TMAX=T_test
+         TMIN=T_test
+        else if (TBOUNDS_INIT.eq.1) then
+         if (T_test.gt.TMAX) then
+          TMAX=T_test
+         endif
+         if (T_test.lt.TMIN) then
+          TMIN=T_Test
+         endif
+        else 
+         print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
+         stop
+        endif
+
+       else if ((im_primary.ne.im_critical).and. &
+                (im_primary.ge.1).and. &
+                (im_primary.le.num_materials)) then
+
+        ! do nothing
+
+       else
+        print *,"im_primary invalid ",im_primary
+        stop
+       endif
+
+       if (abs(T_test).lt.1.0D+30) then
+        ! do nothing
+       else
+        print *,"T_test bust"
+        print *,"i,j,k,T_test,TMIN,TMAX ",i,j,k,T_test,TMIN,TMAX
+        stop
+       endif
+
+       wt_sum=wt_sum+wt_local
+       T_avg=T_avg+wt_local*T_test 
+
+      enddo
+      enddo
+      enddo  ! i,j,k
+
+      if (wt_sum.gt.zero) then
+       ! do nothing
+      else
+       print *,"wt_sum invalid ",wt_sum
+       stop
+      endif
+
+      do k=klosten,khisten
+      do j=-1,1
+      do i=-1,1
+       wt_sten(D_DECL(i,j,k))=wt_sten(D_DECL(i,j,k))/wt_sum
+      enddo
+      enddo
+      enddo
+
+      if (tsat_flag.eq.1) then
+       T_avg=T_avg/wt_sum
+       if (T_avg.ge.DATA_FLOOR) then
+        ! do nothing
+       else
+        print *,"T_avg invalid"
+        print *,"T_avg=",T_avg
+        stop
+       endif
+       T_avg=TSAT
+      else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+       T_avg=T_avg/wt_sum
+      else
+       print *,"tsat_flag invalid ",tsat_flag
+       stop
+      endif 
+
+      if (TBOUNDS_INIT.eq.0) then
+       TMIN=T_avg
+       TMAX=T_avg
+      else if (TBOUNDS_INIT.eq.1) then
+       ! do nothing
+      else
+       print *,"TBOUNDS_INIT invalid ",TBOUNDS_INIT
+       stop
+      endif
+
+      if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+       mat_ncomp=SDIM+1
+      else if (tsat_flag.eq.1) then
+       mat_ncomp=SDIM
+      else
+       print *,"tsat_flag invalid ",tsat_flag
+       stop
+      endif
+
+      allocate(AA(mat_ncomp,mat_ncomp))
+      allocate(AAcopy(mat_ncomp,mat_ncomp))
+
+      do i=1,mat_ncomp
+      do j=1,mat_ncomp
+       AA(i,j)=zero
+      enddo
+      enddo
+      do i=1,SDIM+1
+       BB(i)=zero
+      enddo
+
+      do i=1,mat_ncomp
+      do j=1,mat_ncomp
+       do i1=-1,1
+       do j1=-1,1
+       do k1=klosten,khisten 
+        xtemp(1)=xsten(2*i1,1)
+        xtemp(2)=xsten(2*j1,2)
+        if (SDIM.eq.3) then
+         xtemp(SDIM)=xsten(2*k1,SDIM)
+        endif
+        do dir=1,SDIM
+         if (cc_flag.eq.FVM_TO_GFM) then ! centroid-> center or probe
+          xlive(dir)=XC_sten(D_DECL(i1,j1,k1),dir) ! centroid
+         else if (cc_flag.eq.GFM_TO_FVM) then ! center-> centroid
+          xlive(dir)=xtemp(dir) ! center
+         else
+          print *,"cc_flag invalid ",cc_flag
+          stop
+         endif
+        enddo ! dir
 
         do dir=1,SDIM
-         delx(dir)=(xtarget(dir)-xbase(dir))/dx(dir)
+         delx(dir)=(xlive(dir)-xbase(dir))/dx(dir)
         enddo ! dir
         delx(SDIM+1)=one
 
-        do dir=1,mat_ncomp
-         T_hold=T_hold+GRADTEMP(dir)*delx(dir)
-        enddo
-        if (T_hold.lt.TMIN) then
-         T_hold=TMIN
+        AA(i,j)=AA(i,j)+wt_sten(D_DECL(i1,j1,k1))*delx(i)*delx(j)
+        if (j.eq.1) then
+         BB(i)=BB(i)+wt_sten(D_DECL(i1,j1,k1))*delx(i)* &
+          (T_sten(D_DECL(i1,j1,k1))-T_avg)
         endif
-        if (T_hold.gt.TMAX) then
-         T_hold=TMAX
-        endif
-        if (tsat_flag.eq.1) then
-         if (T_hold.ge.zero) then
-          ! do nothing
-         else
-          print *,"temperature underflow in center_centroid_interchange"
-          print *,"xI ",xI(1),xI(2),xI(SDIM)
-          print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
-          print *,"nsolve=",nsolve
-          print *,"cc_flag=",cc_flag
-          print *,"tsat_flag=",tsat_flag
-          print *,"bfact=",bfact
-          print *,"level=",level
-          print *,"finest_level=",finest_level
-          print *,"TSAT = ",TSAT
-          print *,"TMIN = ",TMIN
-          print *,"TMAX = ",TMAX
-          print *,"T_avg = ",T_avg
-          print *,"DATA_FLOOR= ",DATA_FLOOR
-          print *,"T_hold=",T_hold
-          stop
-         endif
-        else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+       enddo ! k1
+       enddo ! j1
+       enddo ! i1
+       AAcopy(i,j)=AA(i,j)
+       if (j.eq.1) then
+        BBcopy(i)=BB(i)
+       endif
+      enddo   ! j
+      enddo   ! i
+ 
+      call matrix_solve(AA,GRADTEMP,BB,matstatus,mat_ncomp)
+
+      if (matstatus.eq.1) then
+       T_hold=T_avg
+
+       do dir=1,SDIM
+        delx(dir)=(xtarget(dir)-xbase(dir))/dx(dir)
+       enddo ! dir
+       delx(SDIM+1)=one
+
+       do dir=1,mat_ncomp
+        T_hold=T_hold+GRADTEMP(dir)*delx(dir)
+       enddo
+       if (T_hold.lt.TMIN) then
+        T_hold=TMIN
+       endif
+       if (T_hold.gt.TMAX) then
+        T_hold=TMAX
+       endif
+       if (tsat_flag.eq.1) then
+        if (T_hold.ge.zero) then
          ! do nothing
         else
-         print *,"tsat_flag invalid"
+         print *,"temperature underflow in center_centroid_interchange"
+         print *,"xI ",xI(1),xI(2),xI(SDIM)
+         print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+         print *,"cc_flag=",cc_flag
+         print *,"tsat_flag=",tsat_flag
+         print *,"bfact=",bfact
+         print *,"level=",level
+         print *,"finest_level=",finest_level
+         print *,"TSAT = ",TSAT
+         print *,"TMIN = ",TMIN
+         print *,"TMAX = ",TMAX
+         print *,"T_avg = ",T_avg
+         print *,"DATA_FLOOR= ",DATA_FLOOR
+         print *,"T_hold=",T_hold
          stop
         endif
-       else if (matstatus.eq.0) then
-        print *,"WARNING: subroutine center_centroid_interchange"
-        print *,"WARNING: linear least squares failed"
-        print *,"WARNING: doing piecewise constant interpolation instead"
-        print *,"nsolve=",nsolve
-        print *,"cc_flag=",cc_flag
-        print *,"tsat_flag=",tsat_flag
-        print *,"TSAT=",TSAT
-        print *,"T_avg=",T_avg
-        print *,"wt_sum=",wt_sum
-        print *,"mat_ncomp=",mat_ncomp
-        print *,"xsten(0,dir) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-        print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
-        print *,"dx ",dx(1),dx(2),dx(SDIM)
-        print *,"xI ",xI(1),xI(2),xI(SDIM)
-        do i=1,mat_ncomp
-        do j=1,mat_ncomp
-         print *,"i,j,AAcopy,AA ",i,j,AAcopy(i,j),AA(i,j)
-        enddo
-        enddo
-        do i=1,mat_ncomp
-         print *,"i,BBcopy,BB ",i,BBcopy(i),BB(i)
-        enddo
-        
-        T_hold=T_avg
+       else if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
+        ! do nothing
        else
-        print *,"matstatus has an invalid value"
+        print *,"tsat_flag invalid ",tsat_flag
         stop
        endif
+      else if (matstatus.eq.0) then
+       print *,"WARNING: subroutine center_centroid_interchange"
+       print *,"WARNING: linear least squares failed"
+       print *,"WARNING: doing piecewise constant interpolation instead"
+       print *,"cc_flag=",cc_flag
+       print *,"tsat_flag=",tsat_flag
+       print *,"TSAT=",TSAT
+       print *,"T_avg=",T_avg
+       print *,"wt_sum=",wt_sum
+       print *,"mat_ncomp=",mat_ncomp
+       print *,"xsten(0,dir) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+       print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+       print *,"dx ",dx(1),dx(2),dx(SDIM)
+       print *,"xI ",xI(1),xI(2),xI(SDIM)
+       do i=1,mat_ncomp
+       do j=1,mat_ncomp
+        print *,"i,j,AAcopy,AA ",i,j,AAcopy(i,j),AA(i,j)
+       enddo
+       enddo
+       do i=1,mat_ncomp
+        print *,"i,BBcopy,BB ",i,BBcopy(i),BB(i)
+       enddo
+       
+       T_hold=T_avg
+      else
+       print *,"matstatus has an invalid value ",matstatus
+       stop
+      endif
  
-       T_out(nc)=T_hold
+      T_out=T_hold
 
-       deallocate(AA)
-       deallocate(AAcopy)
-
-      enddo ! do nc=1,nsolve
+      deallocate(AA)
+      deallocate(AAcopy)
 
       return
       end subroutine center_centroid_interchange
@@ -859,7 +847,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer dir
       integer ic,jc,kc
@@ -882,8 +870,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
       real(amrex_real) Tsat
       real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
       real(amrex_real) local_data_out
@@ -946,10 +932,10 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
+        !interpfabFWEIGHT
        call get_primary_material_VFRAC( &
          local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)), &
-         tessellate) !TESSELLATE_FLUIDS
+         im_primary_sten(D_DECL(i1,j1,k1)))
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -966,13 +952,11 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfabFWEIGHT
-      cc_flag=0  ! centroid -> target
+      cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=0 ! do not use TSAT
-      nsolve=1
       Tsat=room_temperature ! 293.0d0 if double prec.
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -991,7 +975,7 @@ stop
        Tsat, & ! unused if tsat_flag==0
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfabFWEIGHT
@@ -1079,7 +1063,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer ic,jc,kc
       integer i1,j1,k1
@@ -1095,7 +1079,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
       real(amrex_real) Tsat
 
       DATA_FLOOR=zero
@@ -1143,15 +1126,13 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfab
-      cc_flag=1  ! center -> target
+      cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
-      nsolve=1
       !unused if tsat_flag==-1 
       !(but set to room_temperature=293.0d0 for sanity check)
       Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1170,7 +1151,7 @@ stop
        Tsat, & ! unused if tsat_flag==-1
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfab
@@ -1203,7 +1184,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer ic,jc,kc
       integer i1,j1,k1
@@ -1219,7 +1200,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
       real(amrex_real) Tsat
 
       DATA_FLOOR=zero
@@ -1264,15 +1244,13 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfab
-      cc_flag=1  ! center -> target
+      cc_flag=GFM_TO_FVM  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
-      nsolve=1
       !unused if tsat_flag==-1 
       !(but set to room_temperature=293.0d0 for sanity check)
       Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1291,7 +1269,7 @@ stop
        Tsat, & ! unused if tsat_flag==-1
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine single_interpfab
@@ -1470,7 +1448,7 @@ stop
         print *,"TSAT_times_weight invalid: ",TSAT_times_weight
         print *,"TSAT_weight ",TSAT_weight
         print *,"project_option=",project_option
-        print *,"VOFTOL=",VOFTOL
+        print *,"VOFTOL_MATERIAL=",VOFTOL_MATERIAL
         print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
         print *,"level,finest_level,dx ",level,finest_level, &
@@ -1483,7 +1461,7 @@ stop
        endif
       else 
        print *,"TSAT_weight invalid"
-       print *,"VOFTOL=",VOFTOL
+       print *,"VOFTOL_MATERIAL=",VOFTOL_MATERIAL
        print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
        print *,"level,finest_level,dx ",level,finest_level, &
@@ -1522,8 +1500,8 @@ stop
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xtarget(SDIM)
       integer, INTENT(in) :: lo(SDIM),hi(SDIM)
-       ! first num_materials+num_interfaces components are curvatures
-       ! second num_materials+num_interfaces components are status (0=bad 1=good)
+      !first num_materials+num_interfaces components are curvatures
+      !second num_materials+num_interfaces components are status (0=bad 1=good)
       real(amrex_real), pointer, INTENT(in) :: data_in(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out) :: CURV_OUT
 
@@ -1719,7 +1697,7 @@ stop
 
       real(amrex_real) :: DATA_FLOOR
 
-      real(amrex_real) :: T_out(1)
+      real(amrex_real) :: T_out
 
       integer dir
       integer ic,jc,kc
@@ -1743,8 +1721,6 @@ stop
       real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       integer cc_flag
       integer tsat_flag
-      integer nsolve
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
 
       DATA_FLOOR=zero
 
@@ -1810,10 +1786,10 @@ stop
         local_VOF(im_local)=local_data_out
        enddo !im_local=1..num_materials
 
+        !interpfabTEMP
        call get_primary_material_VFRAC( &
          local_VOF, &
-         im_primary_sten(D_DECL(i1,j1,k1)), &
-         tessellate) !TESSELLATE_FLUIDS
+         im_primary_sten(D_DECL(i1,j1,k1)))
 
        VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
 
@@ -1834,13 +1810,11 @@ stop
       enddo ! i1,j1,k1
 
        ! in: interpfabTEMP
-      cc_flag=0  ! centroid -> target
+      cc_flag=FVM_TO_GFM  ! centroid -> target
       tsat_flag=1 ! use TSAT
-      nsolve=1
        ! YANG LIUs routine
       call center_centroid_interchange( &
        DATA_FLOOR, &
-       nsolve, &
        cc_flag, &
        tsat_flag, &
        bfact, &
@@ -1859,7 +1833,7 @@ stop
        Tsat, &
        T_out)
 
-      dest=T_out(1)
+      dest=T_out
 
       return 
       end subroutine interpfabTEMP
@@ -1982,7 +1956,7 @@ stop
         stop
        endif
 
-       ! centroid -> target (cc_flag==0)
+       ! centroid -> target (cc_flag==FVM_TO_GFM)
        ! tsat_flag==1
        ! call center_centroid_interchange
        call interpfabTEMP( &
@@ -2014,7 +1988,7 @@ stop
 
         ! the least squares interpolant is limited by the stencil values.
         ! interpfabFWEIGHT calls center_centroid_interchange with
-        ! cc_flag=0 (centroid->target), tsat_flag=0,nsolve=1,Tsat=293
+        ! cc_flag=FVM_TO_GFM (centroid->target), tsat_flag=0,Tsat=293
         ! (placeholder).
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
@@ -2056,7 +2030,7 @@ stop
 
        if (Ycomp_probe(iprobe).ge.1) then
 
-        ! centroid -> target (cc_flag==0)
+        ! centroid -> target (cc_flag==FVM_TO_GFM)
         ! tsat_flag==1
         ! call center_centroid_interchange
         call interpfabTEMP( &
@@ -2132,7 +2106,7 @@ stop
          stop
         endif
 
-         ! cc_flag=0 centroid->target
+         ! cc_flag=FVM_TO_GFM  centroid->target
          ! tsat_flag=0 do not use TSAT
         call interpfabFWEIGHT( &
          PROBE_PARMS%bfact, &
@@ -2157,7 +2131,7 @@ stop
        endif
 
        do imls=1,num_materials
-         ! center -> target (cc_flag==1)
+         ! center -> target (cc_flag==GFM_TO_FVM)
          ! tsat_flag==-1
          ! call center_centroid_interchange
         call interpfab( &
@@ -2219,7 +2193,7 @@ stop
         Y_I, &
         PROBE_PARMS%LL)
 
-       ! centroid -> target (cc_flag==0)
+       ! centroid -> target (cc_flag==FVM_TO_GFM)
        ! tsat_flag==0 do not use TSAT
        ! call center_centroid_interchange
        ! distance and volume fraction weighted linear least
@@ -3021,7 +2995,7 @@ stop
        dt, &
        unode,DIMS(unode), &
        ucell,DIMS(ucell), &
-       oldLS,DIMS(oldLS), &
+       oldLS,DIMS(oldLS), & !HOLD_LS_DATA_ALT_MF
        xlo,dx, &
        level,finest_level) &
       bind(c,name='fort_nodedisplace')
@@ -3080,7 +3054,7 @@ stop
       oldLS_ptr=>oldLS
 
       if (bfact.lt.1) then
-       print *,"bfact invalid117"
+       print *,"bfact invalid fort_nodedisplace ",bfact
        stop
       endif
 
@@ -3088,14 +3062,14 @@ stop
       if (ncomp_per_burning.eq.AMREX_SPACEDIM) then
        ! do nothing
       else
-       print *,"expecting ncomp_per_burning==sdim"
+       print *,"expecting ncomp_per_burning==sdim (fort_nodedisplace)"
        stop
       endif
 
       if (nburning.eq.EXTRAP_NCOMP_BURNING) then
        ! do nothing
       else
-       print *,"nburning invalid"
+       print *,"nburning invalid (fort_nodedisplace) ",nburning
        stop
       endif
 
@@ -3103,6 +3077,7 @@ stop
        ! do nothing
       else
        print *,"expecting nburning=(1+sdim)*num_interfaces"
+       print *,"fort_nodedisplace: ",nburning
        stop
       endif
 
@@ -3132,10 +3107,8 @@ stop
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"levelrz invalid node displace"
+       print *,"levelrz invalid node displace ",levelrz
        stop
       endif
        
@@ -3153,7 +3126,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_nodedisplace ",dt
        stop
       endif
 
@@ -3229,26 +3202,21 @@ stop
          else if (totalwt.eq.zero) then
           ! do nothing
          else
-          print *,"totalwt invalid"
+          print *,"totalwt invalid fort_nodedisplace : ",totalwt
           stop
          endif
          delta=dt*velnd
          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
              (levelrz.eq.COORDSYS_RZ)) then
           ! do nothing
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if (dir.eq.2) then
-           delta=delta/xstenND(0,1)
-          endif
          else
-          print *,"levelrz invalid node displace 2"
+          print *,"levelrz invalid node displace 2 ",levelrz
           stop
          endif
 
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (dir.eq.1) then
            if (abs(xstenND(0,dir)).le.EPS_8_4*dx(dir)) then
             delta=zero
@@ -3258,11 +3226,11 @@ stop
           else if ((dir.eq.2).or.(dir.eq.SDIM)) then
            ! do nothing
           else
-           print *,"dir invalid nodedisplace"
+           print *,"dir invalid nodedisplace ",dir
            stop
           endif 
          else
-          print *,"levelrz invalid node displace 3"
+          print *,"levelrz invalid node displace 3 ",levelrz
           stop
          endif
 
@@ -3346,14 +3314,11 @@ stop
       real(amrex_real) local_MASS(num_materials)
       real(amrex_real) species_vfrac_sum
       real(amrex_real) species_mass_sum
-      real(amrex_real) species_avg
-      real(amrex_real) speciesconst_avg
       real(amrex_real) local_rate
       integer vofcomp
       integer spec_comp
       integer dencomp
       real(amrex_real) spec_old,spec_new
-      real(amrex_real) species_scale
       real(amrex_real), PARAMETER :: species_max=1.0d0
 
       LSnew_ptr=>LSnew
@@ -3420,10 +3385,10 @@ stop
        stop
       endif
 
-      if (species_max.gt.zero) then
+      if (species_max.eq.one) then
        !do nothing
       else
-       print *,"species_max invalid: ",species_max
+       print *,"expecting species_max=1: ",species_max
        stop
       endif
 
@@ -3467,9 +3432,9 @@ stop
          endif
 
          if ((local_VOF(im).ge.-EPS1).and. &
-             (local_VOF(im).le.VOFTOL)) then
+             (local_VOF(im).le.VOFTOL_MATERIAL)) then
           local_VOF(im)=zero
-         else if ((local_VOF(im).ge.one-VOFTOL).and. &
+         else if ((local_VOF(im).ge.one-VOFTOL_MATERIAL).and. &
                   (local_VOF(im).le.one+EPS1)) then
           local_VOF(im)=one
          else if ((local_VOF(im).ge.zero).and. &
@@ -3479,13 +3444,14 @@ stop
           print *,"local_VOF invalid:",im,local_VOF(im)
           stop
          endif
-         if (is_rigid(im).eq.0) then
+         if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
           species_vfrac_sum=species_vfrac_sum+local_VOF(im)
           species_mass_sum=species_mass_sum+local_MASS(im)
-         else if (is_rigid(im).eq.1) then
+         else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid ",im,is_rigid(im)
+          print *,"or is_elastic invalid ",im,is_elastic(im)
           stop
          endif
 
@@ -3509,129 +3475,33 @@ stop
 
         do ispec=1,num_species_var
 
-         species_avg=zero
-         speciesconst_avg=zero
          do im=1,num_materials
           local_rate=speciesreactionrate((ispec-1)*num_materials+im)
 
           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
                ENUM_SPECIESVAR+ispec
 
-          species_scale=fort_speciesconst(im+num_materials*(ispec-1))
-          speciesconst_avg=speciesconst_avg+species_scale
+          spec_old=snew(D_DECL(i,j,k),spec_comp)
 
-          if (species_scale.eq.zero) then
-           species_scale=one
-          else if ((species_scale.gt.zero).and. &
-                   (species_scale.le.species_max)) then
-           !do nothing
-          else
-           print *,"species_scale invalid: ",species_scale
-           stop
-          endif
-
+           ! Y'=r Y
           if (local_rate.ge.zero) then
-           ! Y'=r(species_max-Y)
-           ! Ynew=Yold+dt * r * (species_max-Ynew)
-           ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
-           spec_old=snew(D_DECL(i,j,k),spec_comp)
-           if (abs(spec_old).le.EPS3*species_scale) then
-            spec_old=zero
-           else if (abs(spec_old-species_max).le.EPS3) then
-            spec_old=species_max
-           else if ((spec_old.ge.zero).and. &
-                    (spec_old.le.species_max)) then
-            ! do nothing
-           else
-            print *,"spec_old invalid: ",spec_old
-            stop
-           endif
-           spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
-
-           if (abs(spec_new).le.EPS3*species_scale) then
-            spec_new=zero
-           else if (abs(spec_new-species_max).le.EPS3) then
-            spec_new=species_max
-           else if ((spec_new.ge.zero).and. &
-                    (spec_new.le.species_max)) then
-            ! do nothing
-           else
-            print *,"spec_new invalid: ",spec_new
-            stop
-           endif
-           snew(D_DECL(i,j,k),spec_comp)=spec_new
+           spec_new=spec_old+dt*local_rate*spec_old
+          else if (local_rate.le.zero) then
+           spec_new=spec_old/(one+dt*local_rate)
           else
            print *,"local_rate invalid: ",local_rate
            stop
           endif
 
-          if (is_rigid(im).eq.0) then
-           species_avg=species_avg+spec_new*local_MASS(im)
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
+          if (spec_new.gt.species_max) then
+           spec_new=species_max
+          else if ((spec_new.ge.zero).and.(spec_new.le.species_max)) then
+           !do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"spec_new invalid ",spec_new
            stop
           endif
-         enddo ! im=1,num_materials
-
-         speciesconst_avg=speciesconst_avg/num_materials
-         species_scale=speciesconst_avg
-       
-         if (species_scale.eq.zero) then
-          species_scale=one
-         else if ((species_scale.gt.zero).and. &
-                  (species_scale.le.species_max)) then
-          !do nothing
-         else
-          print *,"species_scale invalid (avg): ",species_scale
-          stop
-         endif
-
-         if ((species_vfrac_sum.gt.zero).and. &
-             (species_mass_sum.gt.zero)) then
-          species_avg=species_avg/species_mass_sum
-         else
-          print *,"species_vfrac_sum or species_mass_sum invalid"
-          print *,"species_vfrac_sum: ",species_vfrac_sum
-          print *,"species_mass_sum: ",species_mass_sum
-          stop
-         endif
-         if ((species_avg.ge.zero).and. &
-             (species_avg.le.EPS3*species_scale)) then
-          species_avg=zero
-         else if (abs(species_avg-species_max).le.EPS3) then
-          species_avg=species_max
-         else if ((species_avg.gt.zero).and. &
-                  (species_avg.lt.species_max))  then
-          ! do nothing
-         else
-          print *,"species_avg invalid: ",species_avg
-          stop
-         endif
-
-         do im=1,num_materials
-          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
-                ENUM_SPECIESVAR+ispec
-          if (is_rigid(im).eq.0) then
-           if (local_VOF(im).eq.zero) then
-            snew(D_DECL(i,j,k),spec_comp)=species_avg
-           else if ((local_VOF(im).gt.zero).and. &
-                    (local_VOF(im).le.one)) then
-            ! do nothing
-           else
-            print *,"local_VOF invalid"
-            print *,"im=",im
-            print *,"local_VOF(im)=",local_VOF(im)
-            stop
-           endif
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid"
-           stop
-          endif
-
+          snew(D_DECL(i,j,k),spec_comp)=spec_new
          enddo ! im=1,num_materials
 
         enddo ! ispec=1,num_species_var
@@ -3639,7 +3509,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 
@@ -3688,12 +3558,14 @@ stop
        nodevel,DIMS(nodevel), &
        JUMPFAB,DIMS(JUMPFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
-       LSold,DIMS(LSold), &
+       LSold,DIMS(LSold), & !fluids tessellate
+       LSold_alt,DIMS(LSold_alt), & !elastics and fluids tessellate
          ! in fort_ratemasschange
-         ! LSnew=LSold - dt USTEFAN dot n, USTEFAN=|U|n  
-         ! LSnew=LSold - dt * |U|
+         ! LSnew=LSnew - dt USTEFAN dot n, USTEFAN=|U|n  
+         ! LSnew=LSnew - dt * |U|
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon), &
+       recon_alt,DIMS(recon_alt), &
        snew,DIMS(snew), &
        EOS,DIMS(EOS), &
        swept,DIMS(swept) ) &
@@ -3738,8 +3610,10 @@ stop
       integer, INTENT(in) :: DIMDEC(JUMPFAB)
       integer, INTENT(in) :: DIMDEC(TgammaFAB)
       integer, INTENT(in) :: DIMDEC(LSold)
+      integer, INTENT(in) :: DIMDEC(LSold_alt)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(recon_alt)
       integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(EOS)
       integer, INTENT(in) :: DIMDEC(swept)
@@ -3765,6 +3639,10 @@ stop
             LSold(DIMV(LSold),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LSold_ptr(D_DECL(:,:,:),:)
 
+      real(amrex_real), INTENT(in), target :: &
+            LSold_alt(DIMV(LSold_alt),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LSold_alt_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), target, INTENT(out) :: &
             LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
@@ -3772,6 +3650,10 @@ stop
       real(amrex_real), target, INTENT(in) :: &
               recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), target, INTENT(in) :: &
+              recon_alt(DIMV(recon_alt),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: recon_alt_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
@@ -3841,7 +3723,7 @@ stop
       real(amrex_real) unsplit_snew(num_materials*ngeom_raw)
       real(amrex_real) unsplit_lsnew(num_materials)
       real(amrex_real) oldLS_point(num_materials*(1+SDIM))
-      real(amrex_real) dxmax,dxmaxLS
+      real(amrex_real) dxmax
       integer recon_ncomp
       integer scomp
  
@@ -3903,7 +3785,8 @@ stop
       real(amrex_real) uncaptured_volume
       real(amrex_real) uncaptured_centroid(SDIM)
       integer shapeflag
-      integer tessellate
+      integer tessellate_dest
+      integer tessellate_source
       real(amrex_real) volcell
       real(amrex_real) volcell_ofs
       real(amrex_real) tempvfrac
@@ -3947,7 +3830,6 @@ stop
       integer im_new_crit
       real(amrex_real) DATA_FLOOR
       integer combine_flag
-      integer nsolve_interp
       real(amrex_real) xtarget_interp(SDIM)
       real(amrex_real) old_xI(SDIM)
       real(amrex_real) old_nrm(SDIM)
@@ -3959,12 +3841,6 @@ stop
       real(amrex_real) LS_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
-
-      integer, parameter :: continuous_mof_parm=STANDARD_MOF
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
 
       integer, parameter :: use_ls_data=0
       integer, parameter :: mof_verbose=0
@@ -3992,7 +3868,9 @@ stop
       swept_ptr=>swept
       maskcov_ptr=>maskcov
       LSold_ptr=>LSold
+      LSold_alt_ptr=>LSold_alt
       recon_ptr=>recon
+      recon_alt_ptr=>recon_alt
       EOS_ptr=>EOS
       nodevel_ptr=>nodevel
       conductstate_ptr=>conductstate
@@ -4033,23 +3911,32 @@ stop
        print *,"ngrow_distance invalid: ",ngrow_distance
        stop
       endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance invalid"
+       print *,"ngrow_make_distance=",ngrow_make_distance
+       print *,"ngrow_distance=",ngrow_distance
+       stop
+      endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid in convert_material"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid ",num_state_base
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small ",bfact
        stop
       endif
       if (min_stefan_velocity_for_dt.ge.zero) then
        ! do nothing
       else
-       print *,"min_stefan_velocity_for_dt invalid"
+       print *,"min_stefan_velocity_for_dt invalid ", &
+         min_stefan_velocity_for_dt
        stop
       endif
 
@@ -4058,14 +3945,14 @@ stop
            (im_outer.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_outer invalid"
+        print *,"im_outer invalid ",im_outer
         stop
        endif
        if ((im_opp_outer.ge.1).and. &
            (im_opp_outer.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_opp_outer invalid"
+        print *,"im_opp_outer invalid ",im_opp_outer
         stop
        endif
       else
@@ -4075,9 +3962,8 @@ stop
       call get_iten(im_outer,im_opp_outer,iten_outer)
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      EBVOFTOL=VOFTOL
+      EBVOFTOL=VOFTOL_MATERIAL
       if (dt.lt.one) then
        EBVOFTOL=EBVOFTOL*dt
       endif
@@ -4101,7 +3987,7 @@ stop
        stop
       endif
       if (nstate.ne.STATE_NCOMP) then
-       print *,"nstate invalid"
+       print *,"nstate invalid ",nstate
        stop
       endif
       if (dt.gt.zero) then
@@ -4118,7 +4004,8 @@ stop
          local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
          distribute_from_targ= &
             distribute_from_target(iten+ireverse*num_interfaces)
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                                 room_temperature,1)
          mass_frac_id=0
 
          if (is_multi_component_evapF(local_freezing_model, &
@@ -4159,8 +4046,10 @@ stop
       call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LSold_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,LSold_alt_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,recon_alt_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,EOS_ptr,1,-1)
       call checkbound_array(fablo,fabhi,swept_ptr,0,-1)
@@ -4175,7 +4064,7 @@ stop
        klosten=0
        khisten=0
       else
-       print *,"dimension bust"
+       print *,"dimension bust ",SDIM
        stop
       endif
 
@@ -4185,12 +4074,6 @@ stop
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
-       grid_index(1)=i
-       grid_index(2)=j
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=k
-       endif
-
        if (local_mask.eq.1) then
 
         do ireverse=0,1 
@@ -4199,7 +4082,7 @@ stop
           ! do nothing
          else
           print *, &
-           "JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*num_interfaces) bad"
+           "JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*num_interfaces)<>0"
           stop
          endif
         enddo
@@ -4216,7 +4099,7 @@ stop
         enddo
 
         do im=1,num_materials
-         lsmat(im)=LSold(D_DECL(i,j,k),im)
+         lsmat(im)=LSold_alt(D_DECL(i,j,k),im)
         enddo
         call get_primary_material(dx,lsmat,im_primary)
 
@@ -4225,12 +4108,13 @@ stop
          do im=1,num_materials
           vofcomp_recon=(im-1)*ngeom_recon+1
           F_STEN(im)=zero
-          F_STEN_CENTER(im)=recon(D_DECL(i,j,k),vofcomp_recon)
+          F_STEN_CENTER(im)=recon_alt(D_DECL(i,j,k),vofcomp_recon)
 
           do k1=klosten,khisten
           do j1=-1,1
           do i1=-1,1
-           F_STEN(im)=F_STEN(im)+recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
+           F_STEN(im)=F_STEN(im)+ &
+              recon_alt(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
           enddo
           enddo
           enddo ! i1,j1,k1
@@ -4247,7 +4131,8 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                    room_temperature,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -4260,7 +4145,7 @@ stop
               im_source=im_opp
               im_dest=im
              else
-              print *,"ireverse invalid"
+              print *,"ireverse invalid ",ireverse
               stop
              endif
 
@@ -4645,22 +4530,24 @@ stop
               do u_im=1,num_materials
 
                lsdata(u_im)= &
-                LSold(D_DECL(i+igrid,j+jgrid,k+kgrid),u_im) 
+                LSold_alt(D_DECL(i+igrid,j+jgrid,k+kgrid),u_im) 
 
                vofcomp_recon=(u_im-1)*ngeom_recon+1
                mofdata(vofcomp_recon)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon) 
+                recon_alt(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon) 
                do udir=1,SDIM 
                 mofdata(vofcomp_recon+udir)= &
-                 recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+udir)
+                 recon_alt(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+udir)
                enddo
                mofdata(vofcomp_recon+SDIM+1)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+SDIM+1)!ord
+                recon_alt(D_DECL(i+igrid,j+jgrid,k+kgrid), &
+                    vofcomp_recon+SDIM+1)!ord
                mofdata(vofcomp_recon+2*SDIM+2)= &
-                recon(D_DECL(i+igrid,j+jgrid,k+kgrid),vofcomp_recon+2*SDIM+2) 
+                recon_alt(D_DECL(i+igrid,j+jgrid,k+kgrid), &
+                      vofcomp_recon+2*SDIM+2) 
                do udir=1,SDIM
                 nn(udir)= &
-                 recon(D_DECL(i+igrid,j+jgrid,k+kgrid), &
+                 recon_alt(D_DECL(i+igrid,j+jgrid,k+kgrid), &
                        vofcomp_recon+SDIM+1+udir) 
                enddo ! udir
 
@@ -4704,12 +4591,14 @@ stop
 
                  ! find volumes within u_xsten_updatecell (target)
                shapeflag=1  
-               tessellate=TESSELLATE_FLUIDS
+               tessellate_source=TESSELLATE_IGNORE_ISELASTIC
+               tessellate_dest=TESSELLATE_IGNORE_ISELASTIC
                call multi_get_volume_grid( &
                  caller_id, &
                  tid, &
                  EPS_11_4, &
-                 tessellate, & ! =TESSELLATE_FLUIDS
+                 tessellate_source, & ! =TESSELLATE_IGNORE_ISELASTIC
+                 tessellate_dest, & ! =TESSELLATE_IGNORE_ISELASTIC
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
                  mofdata, &
@@ -4800,7 +4689,8 @@ stop
              stop
            endif
 
-           LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+           LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                   room_temperature,1)
            local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
            distribute_from_targ= &
              distribute_from_target(iten+ireverse*num_interfaces)
@@ -4829,7 +4719,7 @@ stop
            else if (Tsat_flag.eq.0) then
              ! do nothing
            else
-             print *,"Tsat_flag invalid"
+             print *,"Tsat_flag invalid ",Tsat_flag
              stop
            endif
 
@@ -4874,19 +4764,19 @@ stop
 
            do u_imaterial=1,num_materials
             vofcomp_recon=(u_imaterial-1)*ngeom_recon+1
-            oldvfrac(u_imaterial)=recon(D_DECL(i,j,k),vofcomp_recon)
+            oldvfrac(u_imaterial)=recon_alt(D_DECL(i,j,k),vofcomp_recon)
             vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
             newvfrac(u_imaterial)=unsplit_snew(vofcomp_raw)
             do dir=1,SDIM
              old_centroid(u_imaterial,dir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
+               recon_alt(D_DECL(i,j,k),vofcomp_recon+dir)+cengrid(dir)
              new_centroid(u_imaterial,dir)= &
                unsplit_snew(vofcomp_raw+dir)+cengrid(dir)
             enddo
            enddo ! u_imaterial=1,num_materials
 
            do u_imaterial=1,num_materials*(1+SDIM)
-            oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
+            oldLS_point(u_imaterial)=LSold_alt(D_DECL(i,j,k),u_imaterial)
            enddo
            call normalize_LS_normals(oldLS_point)
 
@@ -4904,9 +4794,9 @@ stop
             else if ((newvfrac(im_dest).eq.zero).and. &
                      (oldvfrac(im_source).gt.zero)) then
              new_centroid(im_dest,dir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
+               recon_alt(D_DECL(i,j,k),vofcomp_recon_source+dir)+cengrid(dir)
             else if ((newvfrac(im_dest).eq.zero).and. &
-                     (abs(oldvfrac(im_source)).le.VOFTOL)) then
+                     (abs(oldvfrac(im_source)).le.VOFTOL_MATERIAL)) then
              new_centroid(im_dest,dir)=cengrid(dir)
             else
              print *,"newvfrac(im_dest) or oldvfrac(im_source) invalid"
@@ -4933,10 +4823,10 @@ stop
             away_from_interface=1
            endif
 
-           if (((abs(unsplit_lsnew(im_source)).gt.dxmaxLS).or. &
-                (abs(unsplit_lsnew(im_dest)).gt.dxmaxLS)).and. &
-               ((abs(oldLS_point(im_dest)).gt.dxmaxLS).or. &
-                (abs(oldLS_point(im_source)).gt.dxmaxLS))) then
+           if (((abs(unsplit_lsnew(im_source)).gt.dxmax).or. &
+                (abs(unsplit_lsnew(im_dest)).gt.dxmax)).and. &
+               ((abs(oldLS_point(im_dest)).gt.dxmax).or. &
+                (abs(oldLS_point(im_source)).gt.dxmax))) then
             away_from_interface=1
            endif
 
@@ -4965,10 +4855,30 @@ stop
               ! do not touch LSnew if im_primary_old<>
               ! im_source,im_dest,im_primary_new
              else if (im_primary_old.eq.im_primary_new) then
-              LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
-              LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+              if (is_elastic(im_dest).eq.1) then
+               if (is_elastic(im_source).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_source)==0"
+                stop
+               endif
+              else
+               LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
+              endif
+              if (is_elastic(im_source).eq.1) then
+               if (is_elastic(im_dest).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_dest)==0"
+                stop
+               endif
+              else
+               LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+              endif
              else
               print *,"im_primary_new or im_primary_old invalid"
+              print *,"im_primary_new ",im_primary_new
+              print *,"im_primary_old ",im_primary_old
               stop
              endif
 
@@ -4988,23 +4898,41 @@ stop
                         oldLS_point(im_dest)).and. &
                        (unsplit_lsnew(im_source).le. &
                         oldLS_point(im_source))) then
-               LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
-               LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+               if (is_elastic(im_dest).eq.1) then
+                if (is_elastic(im_source).eq.0) then
+                 !do nothing
+                else
+                 print *,"expecting is_elastic(im_source)==0"
+                 stop
+                endif
+               else
+                LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
+               endif
+               if (is_elastic(im_source).eq.1) then
+                if (is_elastic(im_dest).eq.0) then
+                 !do nothing
+                else
+                 print *,"expecting is_elastic(im_dest)==0"
+                 stop
+                endif
+               else
+                LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
+               endif
               else
                print *,"unsplit_lsnew or lsdata invalid"
                stop
               endif
              else
-              print *,"im_primary_new invalid"
+              print *,"im_primary_new invalid ",im_primary_new
               stop
              endif
             else
-             print *,"im_primary_old invalid"
+             print *,"im_primary_old invalid ",im_primary_old
              stop
             endif
 
            else
-            print *,"away_from_interface invalid"
+            print *,"away_from_interface invalid ",away_from_interface
             stop
            endif
 
@@ -5042,14 +4970,14 @@ stop
             endif
            enddo ! im_local=1..num_materials
 
-           if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
+           if ((fixed_vfrac_sum.ge.one-VOFTOL_MATERIAL).and. &
                (fixed_vfrac_sum.le.one+EPS1)) then
             avail_vfrac=zero
            else if ((fixed_vfrac_sum.ge.-EPS1).and. &
                     (fixed_vfrac_sum.le.zero)) then
             avail_vfrac=one
            else if ((fixed_vfrac_sum.gt.zero).and. &
-                    (fixed_vfrac_sum.le.one-VOFTOL)) then
+                    (fixed_vfrac_sum.le.one-VOFTOL_MATERIAL)) then
             avail_vfrac=one-fixed_vfrac_sum
            else
             print *,"fixed_vfrac_sum invalid:",fixed_vfrac_sum
@@ -5064,7 +4992,7 @@ stop
            endif
 
            if ((avail_vfrac.eq.zero).or. &
-               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL)) then
+               (avail_vfrac.le.oldvfrac(im_dest)+VOFTOL_MATERIAL)) then
             dF=zero
             newvfrac(im_dest)=oldvfrac(im_dest)
             newvfrac(im_source)=oldvfrac(im_source)
@@ -5072,8 +5000,26 @@ stop
              new_centroid(im_source,udir)=old_centroid(im_source,udir)
              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
             enddo
-            LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
-            LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+            if (is_elastic(im_dest).eq.1) then
+             if (is_elastic(im_source).eq.0) then
+              !do nothing
+             else
+              print *,"expecting is_elastic(im_source)==0"
+              stop
+             endif
+            else
+             LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
+            endif
+            if (is_elastic(im_source).eq.1) then
+             if (is_elastic(im_dest).eq.0) then
+              !do nothing
+             else
+              print *,"expecting is_elastic(im_dest)==0"
+              stop
+             endif
+            else
+             LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
+            endif
            else if ((avail_vfrac.gt.zero).and. &
                     (avail_vfrac.le.one)) then
             dFdst=(newvfrac(im_dest)-oldvfrac(im_dest))
@@ -5095,8 +5041,26 @@ stop
               new_centroid(im_source,udir)=old_centroid(im_source,udir)
               new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
              enddo
-             LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
-             LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
+             endif
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
+             endif
             else if ((dFdst.gt.zero).or. &
                      (dFsrc.gt.zero)) then
 
@@ -5146,18 +5110,36 @@ stop
                new_centroid(im_source,udir)=old_centroid(im_source,udir)
                new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
               enddo
-              LSnew(D_DECL(i,j,k),im_source)=LSold(D_DECL(i,j,k),im_source)
-              LSnew(D_DECL(i,j,k),im_dest)=LSold(D_DECL(i,j,k),im_dest)
+              if (is_elastic(im_dest).eq.1) then
+               if (is_elastic(im_source).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_source)==0"
+                stop
+               endif
+              else
+               LSnew(D_DECL(i,j,k),im_source)=LSold_alt(D_DECL(i,j,k),im_source)
+              endif
+              if (is_elastic(im_source).eq.1) then
+               if (is_elastic(im_dest).eq.0) then
+                !do nothing
+               else
+                print *,"expecting is_elastic(im_dest)==0"
+                stop
+               endif
+              else
+               LSnew(D_DECL(i,j,k),im_dest)=LSold_alt(D_DECL(i,j,k),im_dest)
+              endif
              else if (dF.gt.zero) then
-              if (fixed_vfrac_sum.gt.VOFTOL) then
+              if (fixed_vfrac_sum.gt.VOFTOL_MATERIAL) then
                do udir=1,SDIM 
-                if (newvfrac(im_distrust).gt.VOFTOL) then
+                if (newvfrac(im_distrust).gt.VOFTOL_MATERIAL) then
                  new_centroid(im_distrust,udir)= &
                   (cengrid(udir)- &
                    (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
                     fixed_centroid_sum(udir)))/newvfrac(im_distrust)
                 else if ((newvfrac(im_distrust).ge.-EPS1).and. &
-                         (newvfrac(im_distrust).le.VOFTOL)) then
+                         (newvfrac(im_distrust).le.VOFTOL_MATERIAL)) then
                  new_centroid(im_distrust,udir)=cengrid(udir)
                 else
                  print *,"newvfrac(im_distrust) invalid"
@@ -5165,7 +5147,7 @@ stop
                 endif
                enddo ! udir=1..sdim
               else if ((fixed_vfrac_sum.ge.-EPS1).and. &
-                       (fixed_vfrac_sum.le.VOFTOL)) then
+                       (fixed_vfrac_sum.le.VOFTOL_MATERIAL)) then
                ! do nothing
               else
                print *,"fixed_vfrac_sum invalid: ",fixed_vfrac_sum
@@ -5399,44 +5381,41 @@ stop
                 new_centroid(u_im,udir)-cengrid(udir)
              enddo
              mofdata(vofcomp_recon+SDIM+1)= &
-              recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
+              recon_alt(D_DECL(i,j,k),vofcomp_recon+SDIM+1) !ord
 
              mofdata_new(vofcomp_recon+SDIM+1)=0  ! placeholder order
 
              mofdata(vofcomp_recon+2*SDIM+2)= & 
-              recon(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
+              recon_alt(D_DECL(i,j,k),vofcomp_recon+2*SDIM+2)  !intercept
 
              mofdata_new(vofcomp_recon+2*SDIM+2)=zero  ! placeholder intercept
 
              do udir=1,SDIM
               mofdata(vofcomp_recon+SDIM+1+udir)= &
-               recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
+               recon_alt(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
 
               mofdata_new(vofcomp_recon+SDIM+1+udir)=zero ! placeholder slope
              enddo ! udir
+
             enddo ! u_im=1..num_materials
 
              ! LS=n dot (x-x0)+intercept
-            tessellate=TESSELLATE_FLUIDS
+            tessellate_source=TESSELLATE_IGNORE_ISELASTIC
             call multimaterial_MOF( &
-             tessellate, & !TESSELLATE_FLUIDS
+             tessellate_source, & !TESSELLATE_IGNORE_ISELASTIC
              tid, &
              bfact,dx, &
-             u_xsten_updatecell,nhalf, &
+             u_xsten_updatecell, &
+             nhalf, &
              mof_verbose, & !=0
              use_ls_data, & !=0
              LS_stencil, &
              geom_xtetlist(1,1,1,tid+1), &
-             geom_xtetlist_old(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             mofdata_new, & !intent(inout)
+             mofdata_new, & !intent(inout) override_normal and order cleared.
              vof_super, &
              multi_centroidA, &
-             continuous_mof_parm, & !=STANDARD_MOF
-             cmofsten, &
-             grid_index, &
-             grid_level, &
              SDIM)
 
              ! xPOINT_supermesh is needed in order to determine
@@ -5458,17 +5437,15 @@ stop
             if ((newvfrac(im_dest).gt.zero).and. &
                 (newvfrac(im_dest).le.one+EPS1)) then
 
-              !mofdata is the original moment data before phase change 
-              !advection
-              !mofdata_new is after.
-              !FIX ME for freezing
-             tessellate=TESSELLATE_ALL_RASTER
              do u_im=1,num_materials*ngeom_recon
               mofdata_tess(u_im)=mofdata(u_im)
              enddo
+             tessellate_source=TESSELLATE_IGNORE_ISELASTIC
+             tessellate_dest=TESSELLATE_ALL_RASTER
              call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate_source, & !TESSELLATE_IGNORE_ISELASTIC
+               tessellate_dest, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &
@@ -5477,9 +5454,9 @@ stop
                nmax, &
                SDIM)
 
-             tessellate=TESSELLATE_IGNORE_ISRIGID
+             tessellate_dest=TESSELLATE_IGNORE_ISRIGID
              call multi_get_volumePOINT( &
-               tessellate, & !TESSELLATE_IGNORE_ISRIGID
+               tessellate_dest, & !TESSELLATE_IGNORE_ISRIGID
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata_tess, &
@@ -5535,7 +5512,7 @@ stop
             interp_to_new_supermesh=1
 
             !dF.gt.EBVOFTOL
-            !oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
+            !oldLS_point(u_imaterial)=LSold_alt(D_DECL(i,j,k),u_imaterial)
             if (oldLS_point(im_dest).ge.zero) then
              do udir=1,SDIM
               old_nrm(udir)=oldLS_point(num_materials+(im_source-1)*SDIM+udir)
@@ -5566,6 +5543,7 @@ stop
               print *,"iprobe invalid"
               stop
              endif
+
              vofcomp_recon=(im_probe-1)*ngeom_recon+1
 
              dencomp_probe=(im_probe-1)*num_state_material+ENUM_DENVAR+1
@@ -5627,24 +5605,23 @@ stop
                 do im_local=1,num_materials
                  vofcomp_local=(im_local-1)*ngeom_recon+1
                  local_VOF(im_local)= &
-                   recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
+                   recon_alt(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
                 enddo !im_local=1..num_materials
 
-                tessellate=TESSELLATE_FLUIDS
+                 !fort_convertmaterial
                 call get_primary_material_VFRAC( &
                   local_VOF, &
-                  im_primary_sten(D_DECL(i1,j1,k1)), &
-                  tessellate) !TESSELLATE_FLUIDS
+                  im_primary_sten(D_DECL(i1,j1,k1)))
 
                 do udir=1,SDIM
                  XC_sten(D_DECL(i1,j1,k1),udir)= &
-                  recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+udir)+ &
+                  recon_alt(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+udir)+ &
                   cencell_ofs(udir)
                 enddo
                 VF_sten(D_DECL(i1,j1,k1))=local_VOF(im_probe)
 
                 LS_sten(D_DECL(i1,j1,k1))= &
-                 LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
+                 LSold_alt(D_DECL(i+i1,j+j1,k+k1),im_probe)
                 temperature_sten(D_DECL(i1,j1,k1))= &
                  EOS(D_DECL(i+i1,j+j1,k+k1),tcomp_probe)
                 if (mfrac_comp_probe.eq.0) then
@@ -5657,24 +5634,22 @@ stop
                enddo
                enddo ! i1,j1,k1
 
-               if ((oldvfrac(im_probe).le.VOFTOL).and. &
+               if ((oldvfrac(im_probe).le.VOFTOL_MATERIAL).and. &
                    (oldvfrac(im_probe).ge.-EPS1)) then
                 temp_mix_new(iprobe)=Tgamma_default
                 mass_frac_new(iprobe)=Ygamma_default
-               else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
+               else if ((oldvfrac(im_probe).ge.VOFTOL_MATERIAL).and. &
                         (oldvfrac(im_probe).le.one+EPS1)) then
 
                 DATA_FLOOR=zero
-                combine_flag=0
-                nsolve_interp=1
+                combine_flag=FVM_TO_GFM !centroid to center
                 do udir=1,SDIM
                  xtarget_interp(udir)=new_centroid(im_probe,udir)
                 enddo
 
                 call center_centroid_interchange( &
                  DATA_FLOOR, &
-                 nsolve_interp, &
-                 combine_flag, & !0=>centroid -> center   1=>center->centroid
+                 combine_flag, & 
                  interp_to_new_supermesh, &!interp_to_new_supermesh(tsatflag)=1
                  bfact, &
                  level, &
@@ -5703,7 +5678,6 @@ stop
 
                 call center_centroid_interchange( &
                  DATA_FLOOR, &
-                 nsolve_interp, &
                  combine_flag, & !0=>centroid -> center   1=>center->centroid
                  interp_to_new_supermesh, &
                  bfact, &
@@ -5764,11 +5738,30 @@ stop
 
              ! centroids updated here.
             do udir=1,SDIM
-             snew(D_DECL(i,j,k),vcompdst_snew+udir)= &
-              new_centroid(im_dest,udir)-cengrid(udir)
-             snew(D_DECL(i,j,k),vcompsrc_snew+udir)= &
-              new_centroid(im_source,udir)-cengrid(udir)
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              snew(D_DECL(i,j,k),vcompdst_snew+udir)= &
+               new_centroid(im_dest,udir)-cengrid(udir)
+             endif
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
+             else
+              snew(D_DECL(i,j,k),vcompsrc_snew+udir)= &
+               new_centroid(im_source,udir)-cengrid(udir)
+             endif
             enddo ! udir
+
             if (ngeom_raw.eq.SDIM+1) then
              ! do nothing
             else
@@ -5789,8 +5782,10 @@ stop
              stop
             endif
 
-            oldvfrac(im_dest)=recon(D_DECL(i,j,k),(im_dest-1)*ngeom_recon+1)
-            oldvfrac(im_source)=recon(D_DECL(i,j,k),(im_source-1)*ngeom_recon+1)
+            oldvfrac(im_dest)=recon_alt(D_DECL(i,j,k), &
+                    (im_dest-1)*ngeom_recon+1)
+            oldvfrac(im_source)=recon_alt(D_DECL(i,j,k), &
+                    (im_source-1)*ngeom_recon+1)
             newvfrac(im_dest)=oldvfrac(im_dest)+dF
             newvfrac(im_source)=oldvfrac(im_source)-dF
 
@@ -5973,7 +5968,8 @@ stop
              wttotal=zero
              do im_weight=1,num_materials
               vofcomp_recon=(im_weight-1)*ngeom_recon+1
-              Ftemp=recon(D_DECL(i,j,k),vofcomp_recon)*fort_denconst(im_weight)
+              Ftemp=recon_alt(D_DECL(i,j,k),vofcomp_recon)* &
+                      fort_denconst(im_weight)
               local_cv_or_cp=get_user_stiffCP(im_weight)
               cvtotal=cvtotal+Ftemp*local_cv_or_cp
               wttotal=wttotal+Ftemp
@@ -6007,15 +6003,17 @@ stop
                xPOINT_GFM(udir)=u_xsten_updatecell(0,udir)
               enddo
 
-              LS_dest_old=LSold(D_DECL(i,j,k),im_dest)
+              LS_dest_old=LSold_alt(D_DECL(i,j,k),im_dest)
 
-              tessellate=TESSELLATE_ALL_RASTER
               do u_im=1,num_materials*ngeom_recon
                mofdata_tess(u_im)=mofdata(u_im)
               enddo
+              tessellate_source=TESSELLATE_IGNORE_ISELASTIC
+              tessellate_dest=TESSELLATE_ALL_RASTER
               call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate_source, & !TESSELLATE_IGNORE_ISELASTIC
+               tessellate_dest, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &
@@ -6024,9 +6022,9 @@ stop
                nmax, &
                SDIM)
 
-              tessellate=TESSELLATE_IGNORE_ISRIGID
+              tessellate_dest=TESSELLATE_IGNORE_ISRIGID
               call multi_get_volumePOINT( &
-               tessellate, & !TESSELLATE_IGNORE_ISRIGID
+               tessellate_dest, & !TESSELLATE_IGNORE_ISRIGID
                bfact,dx, &
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata_tess, &
@@ -6034,13 +6032,15 @@ stop
                im_old_crit, &
                SDIM)
 
-              tessellate=TESSELLATE_ALL_RASTER
               do u_im=1,num_materials*ngeom_recon
                mofdata_tess(u_im)=mofdata_new(u_im)
               enddo
+              tessellate_source=TESSELLATE_IGNORE_ISELASTIC
+              tessellate_dest=TESSELLATE_ALL_RASTER
               call multi_get_volume_tessellate( &
                tid, &
-               tessellate, &
+               tessellate_source, & !TESSELLATE_IGNORE_ISELASTIC
+               tessellate_dest, & !TESSELLATE_ALL_RASTER
                bfact,dx, &
                u_xsten_updatecell,nhalf, &
                mofdata_tess, &
@@ -6049,9 +6049,9 @@ stop
                nmax, &
                SDIM)
 
-              tessellate=TESSELLATE_IGNORE_ISRIGID
+              tessellate_dest=TESSELLATE_IGNORE_ISRIGID
               call multi_get_volumePOINT( &
-                tessellate, & !TESSELLATE_IGNORE_ISRIGID
+                tessellate_dest, & !TESSELLATE_IGNORE_ISRIGID
                 bfact,dx, &
                 u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                 mofdata_tess, &
@@ -6083,7 +6083,7 @@ stop
                  order_probe(iprobe)=NINT(mofdata_new(vofcomp_recon+SDIM+1))
                  do udir=1,SDIM 
                   nslope_probe(udir,iprobe)= &
-                    recon(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
+                    recon_alt(D_DECL(i,j,k),vofcomp_recon+SDIM+1+udir) !slope
                  enddo
                  intercept_probe(iprobe)= &
                    mofdata_new(vofcomp_recon+2*SDIM+2)
@@ -6152,11 +6152,11 @@ stop
                   ! if order_probe(1) or (2) == 0 => no slope found
                   ! in the reconstruction of im_source or im_dest
                   ! materials.
-               if (newvfrac(im_dest).ge.one-VOFTOL) then
+               if (newvfrac(im_dest).ge.one-VOFTOL_MATERIAL) then
                 SWEPTFACTOR=one
                 !(1) order in slope recon of im_source
                 !(2) order in slope recon of im_dest
-               else if (oldvfrac(im_source).ge.one-VOFTOL) then
+               else if (oldvfrac(im_source).ge.one-VOFTOL_MATERIAL) then
                 SWEPTFACTOR=EPS1
                else if ((order_probe(1).eq.0).and. &
                         (order_probe(2).eq.0)) then 
@@ -6305,20 +6305,29 @@ stop
               stop
              endif
 
-             do iprobe=1,2
-
-              if (iprobe.eq.1) then ! source
-               im_probe=im_source
-              else if (iprobe.eq.2) then ! dest
-               im_probe=im_dest
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
               else
-               print *,"iprobe invalid"
+               print *,"expecting is_elastic(im_source)==0"
                stop
               endif
-              snew(D_DECL(i,j,k),STATECOMP_MOF+(im_probe-1)*ngeom_raw+1)= &
-                      newvfrac(im_probe)
+             else
+              snew(D_DECL(i,j,k),STATECOMP_MOF+(im_source-1)*ngeom_raw+1)= &
+                   newvfrac(im_source)
+             endif
 
-             enddo ! iprobe=1,2
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              snew(D_DECL(i,j,k),STATECOMP_MOF+(im_dest-1)*ngeom_raw+1)= &
+                   newvfrac(im_dest)
+             endif
 
              do u_im=1,num_materials*ngeom_recon
               mofdata(u_im)=zero
@@ -6335,13 +6344,11 @@ stop
 
              ! sum of F_fluid=1
              ! sum of F_rigid<=1
-             tessellate=TESSELLATE_FLUIDS
+             tessellate_source=TESSELLATE_FLUIDS
              call make_vfrac_sum_ok_base( &
-               cmofsten, &
                u_xsten_updatecell,nhalf, &
-               continuous_mof_parm, &
                bfact,dx, &
-               tessellate, & !TESSELLATE_FLUIDS
+               tessellate_source, & !TESSELLATE_FLUIDS
                mofdata,SDIM)
 
              do u_im=1,num_materials
@@ -6400,7 +6407,8 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                                    room_temperature,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -6622,7 +6630,7 @@ stop
       real(amrex_real) weight,total_weight
       real(amrex_real) vel_sum(SDIM)
       real(amrex_real) vel_local
-      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth,LL
+      real(amrex_real) dxmax,eps,extensionwidth,LL
       real(amrex_real) ls_local(num_materials)
       integer im_local
       integer scomp
@@ -6658,6 +6666,7 @@ stop
       endif
       if (ngrow_make_distance.ne.ngrow-1) then
        print *,"expecting ngrow_make_distance==ngrow-1 fort_extend_burning_vel"
+       print *,"ngrow_make_distance=",ngrow_make_distance
        stop
       endif
       if (nburning.eq.num_interfaces*(ncomp_per+1)) then
@@ -6668,10 +6677,9 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
  
        ! Guard against division zero in the weight calculation
-      eps=dxmaxLS*EPS4
+      eps=dxmax*EPS4
 
       if (eps.gt.zero) then
        !do nothing
@@ -6680,7 +6688,7 @@ stop
        stop
       endif
 
-      extensionwidth=dxmaxLS*ngrow_make_distance 
+      extensionwidth=dxmax*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
@@ -6954,7 +6962,7 @@ stop
       real(amrex_real) weight,total_weight
       real(amrex_real) drag_sum(ncomp)
       real(amrex_real) drag_local(ncomp)
-      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth
+      real(amrex_real) dxmax,eps,extensionwidth
       real(amrex_real) ls_local(num_materials)
 
       drag_ptr=>drag
@@ -6988,10 +6996,9 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
  
        ! Guard against division zero in the weight calculation
-      eps=dxmaxLS*1.0E-4
+      eps=dxmax*1.0E-4
 
       if (eps.gt.zero) then
        !do nothing
@@ -7000,7 +7007,7 @@ stop
        stop
       endif
 
-      extensionwidth=dxmaxLS*ngrow_make_distance 
+      extensionwidth=dxmax*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
@@ -7557,7 +7564,7 @@ stop
        conductstate,DIMS(conductstate), &
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
-       LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_MF]
+       LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_ALT_MF]
        LSnew,DIMS(LSnew), & ! get_new_data(LS_Type,slab_step+1);
        Snew,DIMS(Snew), & 
        EOS,DIMS(EOS), &
@@ -7733,8 +7740,8 @@ stop
       integer, target :: Ycomp_dest
       real(amrex_real) velmag_sum,local_velmag
       integer burnflag
-      real(amrex_real) dxmin,dxmax
-      real(amrex_real), target :: dxmaxLS
+      real(amrex_real) dxmin
+      real(amrex_real), target :: dxmax
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), target :: xI(SDIM)
       real(amrex_real), target :: xsrc(SDIM)
@@ -7742,7 +7749,6 @@ stop
       real(amrex_real), target :: xsrc_micro(SDIM)
       real(amrex_real), target :: xdst_micro(SDIM)
       real(amrex_real) nrmCP(SDIM)  ! closest point normal
-      real(amrex_real) theta_nrmCP(SDIM)
       real(amrex_real), target :: LSINT(num_materials*(SDIM+1))
       real(amrex_real) LShere(num_materials)
       real(amrex_real) :: test_k_source,test_k_dest
@@ -7769,12 +7775,10 @@ stop
       integer local_Tanasawa_or_Schrage_or_Kassemi
       integer local_force_Y_probe_zero
       integer distribute_from_targ
-      integer vofcomp_source,vofcomp_dest
-      real(amrex_real) Fsource,Fdest ! used for the hydrate model
       real(amrex_real) LSSIGN,SIGNVEL
       integer found_path
       integer, target :: debugrate
-      real(amrex_real) RR,mag
+      real(amrex_real) mag
       integer for_estdt
       integer local_mask
       integer microlayer_substrate_source
@@ -7915,8 +7919,11 @@ stop
        stop
       endif
 
-      if (ngrow_distance.lt.4) then
-       print *,"expecting ngrow_distance>=4 in fort_ratemasschange"
+      if (ngrow_distance.ge.6) then
+       !do nothing
+      else
+       print *,"require ns.ngrow_distance>=6 (fort_ratemasschange) ", &
+          ngrow_distance
        stop
       endif
 
@@ -8031,7 +8038,6 @@ stop
 
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -8051,7 +8057,7 @@ stop
       create_inout%LSnew=>LSnew
 
       create_in%tid=tid
-      create_in%dxmaxLS=dxmaxLS
+      create_in%dxmax=dxmax
       create_in%bfact=bfact
       create_in%level=level
       create_in%finest_level=finest_level
@@ -8084,7 +8090,7 @@ stop
       PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
       PROBE_PARMS%recon=>recon
       PROBE_PARMS%pres=>pres
-      PROBE_PARMS%dxmaxLS=>dxmaxLS
+      PROBE_PARMS%dxmax=>dxmax
       PROBE_PARMS%bfact=>bfact
       PROBE_PARMS%level=>level
       PROBE_PARMS%finest_level=>finest_level
@@ -8113,6 +8119,7 @@ stop
          do im=1,num_materials
           LShere(im)=LS(D_DECL(i,j,k),im)
          enddo
+          !get_primary_material is declared in GLOBALUTIL.F90
          call get_primary_material(dx,LShere,im_primary)
 
          if (is_rigid(im_primary).eq.0) then
@@ -8318,13 +8325,10 @@ stop
 
                found_path=0
 
-                ! FOR YANG:
-                ! BOTH LEVELSET FUNCTIONS WITHIN 2 dx of interface and
-                ! at least one of them is positive.
-                ! note: is_rigid(im_primary).eq.0 so we are not in 
-                ! a solid material.
-               if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
-                   (abs(LShere(im_dest)).le.two*dxmaxLS)) then
+               if ((abs(LShere(im_source)).le.two*dxmax).and. &
+                   (abs(LShere(im_dest)).le.two*dxmax).and. &
+                   ((im_source.eq.im_primary).or. &
+                    (im_dest.eq.im_primary))) then
 
                 test_k_source=conductstate(D_DECL(i,j,k),im_source)
                 test_k_dest=conductstate(D_DECL(i,j,k),im_dest)
@@ -8342,15 +8346,19 @@ stop
                   ! centers, therefore, we find the jump in heat
                   ! flux at the closest point on the interface from the
                   ! cell center (xsten(0,dir)).
-                 if ((LShere(im_dest).ge.zero).or. &
-                     (LShere(im_source).ge.zero)) then
+                 if ((im_dest.eq.im_primary).or. &
+                     (im_source.eq.im_primary)) then
 
-                  if (LShere(im_dest).ge.zero) then
+                  if (im_dest.ge.im_primary) then
+
                    LS_pos=LShere(im_source) !expecting LS_pos<0
+
                    do dir=1,SDIM
                       ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
+
                     nrmCP(dir)= &
-                      LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+                     LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+
                       ! Least squares slope: see Sussman and Puckett (2000)
                     xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
 
@@ -8365,9 +8373,13 @@ stop
                     xsrc_micro(dir)=xI(dir)+ &
                      microscale_probe_size*dxmin*nrmCP(dir)
                    enddo ! dir=1..sdim
-                  else if (LShere(im_source).ge.zero) then
+
+                  else if (im_source.ge.im_primary) then
+
                    LS_pos=LShere(im_dest) !expecting LS_pos<0
+             
                    do dir=1,SDIM
+
                     nrmCP(dir)= &
                       LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
 
@@ -8381,17 +8393,19 @@ stop
                     xsrc_micro(dir)=xI(dir)- &
                        microscale_probe_size*dxmin*nrmCP(dir)
                    enddo ! dir=1..sdim
+
                   else
                    print *,"LShere bust1"
                    print *,"LShere(im_dest) ",LShere(im_dest)
                    print *,"LShere(im_source) ",LShere(im_source)
+                   print *,"im_primary ",im_primary
                    stop
                   endif
 
                   found_path=1
 
-                 else if ((LShere(im_dest).lt.zero).and. &
-                          (LShere(im_source).lt.zero)) then
+                 else if ((im_dest.ne.im_primary).and. &
+                          (im_source.ne.im_primary)) then
 
                   found_path=0
 
@@ -8403,11 +8417,6 @@ stop
                  endif
              
                  if (found_path.eq.1) then  
-
-                  vofcomp_source=(im_source-1)*ngeom_recon+1
-                  vofcomp_dest=(im_dest-1)*ngeom_recon+1
-                  Fsource=recon(D_DECL(i,j,k),vofcomp_source)
-                  Fdest=recon(D_DECL(i,j,k),vofcomp_dest)
 
                   C_w0=fort_denconst(1)  ! density of water
                   POUT%pres_I_interp(1)=2.0D+19 ! source
@@ -8476,8 +8485,8 @@ stop
                    dx,xlo, &
                    xI, &
                    fablo,fabhi, &
-                   curvfab_ptr, &
-                   CURV_OUT_I)
+                   curvfab_ptr, & !intent(in)
+                   CURV_OUT_I)    !intent(out)
 
                   use_tsatfab=0
 
@@ -8529,8 +8538,7 @@ stop
                   dxprobe_source=half*sqrt(dxprobe_source)
                   dxprobe_dest=dxprobe_source
 
-                  RR=one
-                  call prepare_normal(nrmCP,RR,mag,SDIM)
+                  call prepare_normal(nrmCP,mag,SDIM)
 
                   if (levelrz.eq.COORDSYS_CARTESIAN) then
                    ! do nothing
@@ -8539,41 +8547,8 @@ stop
                     print *,"dimension bust"
                     stop
                    endif
-                  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                   if (mag.gt.zero) then
-                    do dir=1,SDIM
-                     theta_nrmCP(dir)=nrmCP(dir)
-                    enddo
-                    RR=xsten(0,1)
-                    call prepare_normal(theta_nrmCP,RR,mag,SDIM)
-                    if (mag.gt.zero) then
-                     ! mag=theta_nrmCP dot nrmCP
-                     mag=zero
-                     do dir=1,SDIM
-                      mag=mag+theta_nrmCP(dir)*nrmCP(dir)
-                     enddo
-                     if (abs(mag).gt.one+EPS_8_4) then
-                      print *,"dot product bust: ",mag
-                      stop
-                     endif
-                     if (abs(mag).gt.zero) then
-                      dxprobe_source=dxprobe_source*abs(mag)
-                      dxprobe_dest=dxprobe_dest*abs(mag)
-                     endif
-                    else if (mag.eq.zero) then
-                     ! do nothing
-                    else
-                     print *,"mag bust"
-                     stop
-                    endif 
-                   else if (mag.eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"mag bust"
-                    stop
-                   endif 
                   else
-                   print *,"levelrz invalid rate mass change"
+                   print *,"levelrz invalid rate mass change ",levelrz
                    stop
                   endif
 
@@ -9473,7 +9448,8 @@ stop
                       POUT%Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
                       C_w0, &
                       POUT%pres_I_interp(1), & ! PHYDWATER
-                      Fsource,Fdest)
+                      dx, &
+                      LShere(im_source),LShere(im_dest))
 
                     if (VEL_correct.ge.zero) then
                      ! do nothing
@@ -9964,13 +9940,17 @@ stop
                  stop
                 endif
 
-               else if ((abs(LShere(im_source)).gt.two*dxmaxLS).or. &
-                        (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
+               else if ((abs(LShere(im_source)).gt.two*dxmax).or. &
+                        (abs(LShere(im_dest)).gt.two*dxmax).or. &
+                        ((im_source.ne.im_primary).and. &
+                         (im_dest.ne.im_primary))) then
                 ! do nothing
                else
                 print *,"LShere bust3:"
                 print *,"LShere(im_source) ",LShere(im_source)
                 print *,"LShere(im_dest) ",LShere(im_dest)
+                print *,"im_primary ",im_primary
+                print *,"LShere: ",LShere
                 stop
                endif
 
@@ -10023,24 +10003,48 @@ stop
               stop
              endif
 
-             LSnew(D_DECL(i,j,k),im_source)= &
+             if (is_elastic(im_dest).eq.1) then
+              if (is_elastic(im_source).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_source)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_source)= &
                LSnew(D_DECL(i,j,k),im_source)-dt*vel_phasechange(ireverse)
-             LSnew(D_DECL(i,j,k),im_dest)= &
+             endif
+
+             if (is_elastic(im_source).eq.1) then
+              if (is_elastic(im_dest).eq.0) then
+               !do nothing
+              else
+               print *,"expecting is_elastic(im_dest)==0"
+               stop
+              endif
+             else
+              LSnew(D_DECL(i,j,k),im_dest)= &
                LSnew(D_DECL(i,j,k),im_dest)+dt*vel_phasechange(ireverse)
+             endif
 
              do dir=1,SDIM
-              if (LShere(im_dest).ge.zero) then
+              if (im_dest.ge.im_primary) then
+
                SIGNVEL=one
                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
-              else if (LShere(im_source).ge.zero) then
+                 LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+
+              else if (im_source.ge.im_primary) then
+
                SIGNVEL=-one
                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+                 LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+
               else
                print *,"LShere bust4"
                print *,"LShere(im_dest) ",LShere(im_dest)
                print *,"LShere(im_source) ",LShere(im_source)
+               print *,"im_primary ",im_primary
                stop
               endif
              enddo ! dir=1..sdim
@@ -10225,6 +10229,7 @@ stop
          endif
 
         else if (nucleation_flag.eq.1) then
+
          ! see RatePhaseChange in PROB.F90
          ! LEVELSET FUNCTION AT CELL CENTERS.
          do im=1,num_materials
@@ -10275,6 +10280,7 @@ stop
                 create_in%im_source=im_source
                 create_in%im_dest=im_dest
                  ! get_vel_phasechange_NUCLEATE is declared in: PROB.F90
+                 ! ASHWANI PAL SLAC
                 call get_vel_phasechange_NUCLEATE( &
                  create_in,create_inout)
                else if ((im_primary.ge.1).and. &

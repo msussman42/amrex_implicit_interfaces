@@ -42,15 +42,11 @@ ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
-ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
-ns.mof_error_ordering=0
 # water,air,ice,solid
 ns.mof_ordering=3 1 2 1
 
@@ -164,7 +160,6 @@ ns.material_type=0 0 0 999
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
 ns.heatviscconst=0.546 0.026 2.2 386 # W/(m K)
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
 ns.denconst=1000 1.29 917.0 10000.0

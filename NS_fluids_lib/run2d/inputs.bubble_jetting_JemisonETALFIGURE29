@@ -24,6 +24,11 @@ geometry.prob_hi   =  400.0 400.0
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
+ns.mof_ordering=3 4 1 2 #liquid, gas, substrate, soft substrate
+ns.mof_renormalize_ordering=3 4 1 2 #EULERIAN FSI
+ns.material_extend_velocity=0 0 1 2 #EULERIAN FSI
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)
@@ -70,8 +75,6 @@ ns.num_species_var=0
 ns.num_divu_outer_sweeps=2
 
 ns.MOFITERMAX=30
-ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
-ns.mof_ordering=3 4 1 2 #liquid, gas, substrate, soft substrate
 
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # was 1.0e+6 changed to 1.0e+10 October 21, 2017
@@ -130,7 +133,6 @@ ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 1.0    # coef of viscosity
 ns.gravity        = -981.0  # must be nonzero, otherwise not used.
 ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
-ns.density_ratio_relaxation_factor=1000.0
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
 

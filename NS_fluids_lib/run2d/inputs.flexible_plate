@@ -49,15 +49,15 @@ ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
-ns.MOFITERMAX_AFTER_PREDICT=30
-ns.mof_decision_tree_learning=0
 amr.n_cell=64 128
 amr.max_level=0
 ns.ngrow_distance=6
 
-ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
-
+ns.mof_renormalize_ordering=2 3 1 #EULERIAN FSI
+ns.material_extend_velocity=0 0 1 #EULERIAN FSI
+ns.primary_flotsam_tol=1.0e-8
+ns.secondary_flotsam_tol=0.1
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10

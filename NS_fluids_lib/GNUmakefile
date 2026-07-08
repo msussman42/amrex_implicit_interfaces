@@ -45,7 +45,7 @@ USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 
 BL_NO_FORT = FALSE
 
@@ -145,9 +145,6 @@ USE_OMP = FALSE
 ifeq ($(USE_HDF5),TRUE)
  USERSuffix+=.HDF5
 endif
-ifeq ($(USE_PARTICLES),TRUE)
- USERSuffix+=.PARTICLES
-endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
@@ -193,9 +190,6 @@ endif
 
 include $(AMREX_HOME)/Src/Base/Make.package
 
-ifeq ($(USE_PARTICLES),TRUE)
-include $(AMREX_HOME)/Src/Particle/Make.package
-endif
 ifeq ($(USE_HDF5),TRUE)
 include $(AMREX_HOME)/Src/Extern/HDF5/Make.package
 endif

@@ -1,5 +1,6 @@
 # comment line
 a.out
+circular_freeze/
 contactangle/
 shed/
 SonDhir99/
@@ -99,4 +100,5 @@ checkerboard/
 hopf_bifurcation/
 CTML_DROP/
 growthrate/
+liblinear.a
 *.mod

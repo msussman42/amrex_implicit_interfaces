@@ -1238,9 +1238,8 @@ END SUBROUTINE SIMP
         dt, &
         maskcov,DIMS(maskcov), &
         vol,DIMS(vol), &
-        lsnew,DIMS(lsnew), &
         csnd,DIMS(csnd), &
-        cvof,DIMS(cvof), & ! tessellating
+        cvof,DIMS(cvof), & ! TESSELLATE_ALL_RASTER
         den,DIMS(den), &
         mdot,DIMS(mdot), & ! passed from localMF[DIFFUSIONRHS_MF]
         tilelo,tilehi, &
@@ -1274,7 +1273,6 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(vol)
-      integer, INTENT(in) :: DIMDEC(lsnew)
       integer, INTENT(in) :: DIMDEC(csnd)
       integer, INTENT(in) :: DIMDEC(cvof)
       integer, INTENT(in) :: DIMDEC(den)
@@ -1283,9 +1281,6 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: &
-              lsnew(DIMV(lsnew),num_materials*(1+SDIM))
-      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: csnd(DIMV(csnd),2) 
       real(amrex_real), pointer :: csnd_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: cvof(DIMV(cvof),num_materials) 
@@ -1296,15 +1291,13 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
 
       integer i,j,k
-      integer im,imcrit,im_weight,im_opp
-      integer iten
+      integer im,imcrit,im_weight
       integer ibase
       real(amrex_real) temperature,internal_energy,soundsqr
       real(amrex_real) pres(num_materials)
       real(amrex_real) rho(num_materials)
       real(amrex_real) one_over_c(num_materials)
       real(amrex_real) one_over_c2(num_materials)
-      real(amrex_real) localLS(num_materials)
       real(amrex_real) vfrac(num_materials)
       real(amrex_real) vfrac_weight(num_materials)
       real(amrex_real) vfrac_solid_sum
@@ -1312,7 +1305,7 @@ END SUBROUTINE SIMP
       integer infinite_weight
       integer local_infinite_weight
       real(amrex_real) csound_hold
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       real(amrex_real) cutoff
       real(amrex_real) rmaskcov
       integer local_mask
@@ -1323,7 +1316,7 @@ END SUBROUTINE SIMP
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid164"
+       print *,"bfact invalid fort_advective_pressure ",bfact
        stop
       endif
       if (num_state_base.eq.2) then
@@ -1373,7 +1366,6 @@ END SUBROUTINE SIMP
 
       maskcov_ptr=>maskcov
       vol_ptr=>vol
-      lsnew_ptr=>lsnew
       csnd_ptr=>csnd
       cvof_ptr=>cvof
       den_ptr=>den
@@ -1381,14 +1373,13 @@ END SUBROUTINE SIMP
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,csnd_ptr,0,-1)
       call checkbound_array(fablo,fabhi,cvof_ptr,0,-1)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=two*DXMAXLS
+      call get_dxmax(dx,bfact,DXMAX)
+      cutoff=two*DXMAX
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -1415,14 +1406,14 @@ END SUBROUTINE SIMP
         vfrac_fluid_sum=zero
 
         do im=1,num_materials
-         vfrac(im)=cvof(D_DECL(i,j,k),im)
+         vfrac(im)=cvof(D_DECL(i,j,k),im) !TESSELLATE_ALL_RASTER
          if ((vfrac(im).ge.-EPS1).and.(vfrac(im).le.one+EPS1)) then
           ! do nothing
          else
           print *,"vfrac invalid: ",im,vfrac(im)
           stop
          endif
-         if (vfrac(im).lt.VOFTOL) then
+         if (vfrac(im).lt.VOFTOL_MATERIAL) then
           vfrac(im)=zero
          endif
          if (is_rigid(im).eq.1) then
@@ -1430,7 +1421,7 @@ END SUBROUTINE SIMP
          else if (is_rigid(im).eq.0) then
           vfrac_fluid_sum=vfrac_fluid_sum+vfrac(im)
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid ",im,is_rigid(im)
           stop
          endif
          if (imcrit.eq.0) then
@@ -1467,10 +1458,6 @@ END SUBROUTINE SIMP
 
 
         if (project_option.eq.SOLVETYPE_PRES) then !sanity check
-
-         do im=1,num_materials
-          localLS(im)=lsnew(D_DECL(i,j,k),im)
-         enddo
 
          do im=1,num_materials
 
@@ -1529,37 +1516,12 @@ END SUBROUTINE SIMP
             one_over_c2(im)=one/soundsqr
             one_over_c(im)=sqrt(one_over_c2(im))
 
-            do im_opp=1,num_materials
-             if (im_opp.ne.im) then
-              call get_iten(im,im_opp,iten)
-              if ((fort_material_type_interface(iten).eq.0).or. &
-                  (fort_material_type_interface(iten).eq.999)) then
-               if (localLS(im_opp).ge.-incomp_thickness*DXMAXLS) then
-                pres(im)=zero
-                one_over_c2(im)=zero
-                one_over_c(im)=zero
-               else if (localLS(im_opp).le.-incomp_thickness*DXMAXLS) then
-                !do nothing
-               else
-                print *,"localLS(im_opp) invalid:",im,localLS(im_opp)
-                stop
-               endif
-              else if ((fort_material_type_interface(iten).ge.1).and. &
-                       (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
-               !do nothing
-              else
-               print *,"fort_material_type_interface(iten) invalid: ", &
-                 iten,fort_material_type_interface(iten)
-               stop
-              endif
-             endif !im_opp<>im
-            enddo !im_opp=1,num_materials
-
            else if ((fort_material_type(im).eq.0).or. &
                     (vfrac(im).eq.zero)) then
             pres(im)=zero
             one_over_c2(im)=zero
             one_over_c(im)=zero
+
            else
             print *,"material type or vfrac invalid: ",im, &
                fort_material_type(im),vfrac(im)
@@ -1580,7 +1542,7 @@ END SUBROUTINE SIMP
            one_over_c2(im)=zero
 
           else
-           print *,"is_rigid bust"
+           print *,"is_rigid bust ",im,is_rigid(im)
            stop
           endif
 
@@ -1643,14 +1605,14 @@ END SUBROUTINE SIMP
               stop
              endif
             else
-             print *,"is_rigid(im) invalid: ",is_rigid(im)
+             print *,"is_rigid(im) invalid: ",im,is_rigid(im)
              stop
             endif
 
            enddo ! im=1,num_materials
 
           else
-           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
+           print *,"is_rigid(imcrit) invalid: ",imcrit,is_rigid(imcrit)
            stop
           endif
 
@@ -1678,14 +1640,14 @@ END SUBROUTINE SIMP
           if (is_rigid(imcrit).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
+           print *,"is_rigid(imcrit) invalid: ",imcrit,is_rigid(imcrit)
            stop
           endif
 
           if (is_rigid(im_weight).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im_weight).ne.0: ",is_rigid(im_weight)
+           print *,"is_rigid(im_weight).ne.0: ",im_weight,is_rigid(im_weight)
            stop
           endif
 
@@ -1971,6 +1933,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: elastic_ncomp
       integer :: elastic_mag_ncomp
       integer, INTENT(in) :: refineden_ncomp
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: visual_tessellate_vfrac
        ! x,u,pmg,den,temp,spec,mag vort,LS
       integer, INTENT(in) :: visual_ncomp
@@ -2402,10 +2365,8 @@ END SUBROUTINE SIMP
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
       else
-       print *,"rz_flag invalid in cellgrid"
+       print *,"rz_flag invalid in cellgrid ",rz_flag
        stop
       endif
 
@@ -2433,7 +2394,8 @@ END SUBROUTINE SIMP
        ! EPS2
        call multi_get_volume_tessellate( &
         tid, &
-        tessellate_raster, & !=TESSELLATE_ALL_RASTER
+        tessellate_source, & !TESSELLATE_FLUIDS
+        tessellate_raster, & !TESSELLATE_ALL_RASTER
         bfact, &
         dx,xsten,nhalf, &
         mofdata_raster, &
@@ -2451,6 +2413,7 @@ END SUBROUTINE SIMP
          ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
+         tessellate_source, & !TESSELLATE_FLUIDS
          visual_tessellate_vfrac, & !TESSELLATE_ALL|ALL_RASTER|FLUIDS_ELASTIC
          bfact, &
          dx,xsten,nhalf, &
@@ -2735,7 +2698,7 @@ END SUBROUTINE SIMP
 
             ! used for LS interpolation (bilinear interp)
            wt_denom=abs(xsten(0,dir)-xstenND(0,dir))
-           if (wt_denom.le.VOFTOL*dx(dir)) then
+           if (wt_denom.le.VOFTOL_MATERIAL*dx(dir)) then
             print *,"wt_denom invalid"
             stop
            endif
@@ -2882,8 +2845,7 @@ END SUBROUTINE SIMP
           gradvelocitynd(dir)=gradvelocitynd(dir)+ &
             localwt*gradvelocity(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
-         call get_mach_number(visual_tessellate_vfrac, &
-           velcell,dencell,vofcell,machcell)
+         call get_mach_number(velcell,dencell,vofcell,machcell)
 
          machnd=machnd+localwt*machcell
 
@@ -3664,16 +3626,16 @@ END SUBROUTINE SIMP
 
          do dir=1,SDIM
           if (slice_dir+1.ne.dir) then
-           if ((xslice(dir).lt.xfablo(dir)-VOFTOL*dx(dir)).or. &
-               (xslice(dir).gt.xfabhi(dir)+VOFTOL*dx(dir))) then
+           if ((xslice(dir).lt.xfablo(dir)-VOFTOL_MATERIAL*dx(dir)).or. &
+               (xslice(dir).gt.xfabhi(dir)+VOFTOL_MATERIAL*dx(dir))) then
             inbox=0
            else
                ! iproblo=0
             do i=lo(dir)-1,hi(dir)
              call gridsten1D(xsten1D,problo,i,iproblo,bfact,dx,dir,nhalf)
              xposnd(dir)=xsten1D(0)
-             if ((xslice(dir).ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                 (xslice(dir).le.xsten1D(2)+VOFTOL*dx(dir))) then
+             if ((xslice(dir).ge.xsten1D(0)-VOFTOL_MATERIAL*dx(dir)).and. &
+                 (xslice(dir).le.xsten1D(2)+VOFTOL_MATERIAL*dx(dir))) then
               igridlo(dir)=i
               igridhi(dir)=i+1
              endif
@@ -3705,8 +3667,8 @@ END SUBROUTINE SIMP
             print *,"x1D= ",x1D
            endif
 
-           if ((x1D.ge.xfablo(dir)-VOFTOL*dx(dir)).and. &
-               (x1D.le.xfabhi(dir)+VOFTOL*dx(dir))) then
+           if ((x1D.ge.xfablo(dir)-VOFTOL_MATERIAL*dx(dir)).and. &
+               (x1D.le.xfabhi(dir)+VOFTOL_MATERIAL*dx(dir))) then
             inbox=0
 
              ! find bounding interval in the dir=slice_dir+1 direction.
@@ -3714,8 +3676,8 @@ END SUBROUTINE SIMP
               ! iproblo=0
              call gridsten1D(xsten1D,problo,j,iproblo,bfact,dx,dir,nhalf)
              xposnd(dir)=xsten1D(0)
-             if ((x1D.ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                 (x1D.le.xsten1D(2)+VOFTOL*dx(dir))) then
+             if ((x1D.ge.xsten1D(0)-VOFTOL_MATERIAL*dx(dir)).and. &
+                 (x1D.le.xsten1D(2)+VOFTOL_MATERIAL*dx(dir))) then
               igridlo(dir)=j
               igridhi(dir)=j+1
               inbox=1
@@ -3827,13 +3789,13 @@ END SUBROUTINE SIMP
                           problo(dir))/visual_dx(dir))
          icritlo(dir)=icrit(dir)-1
          xcrit(dir)=icritlo(dir)*visual_dx(dir)+problo(dir)
-         do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL) 
+         do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL_MATERIAL) 
           icritlo(dir)=icritlo(dir)-1
           xcrit(dir)=xcrit(dir)-visual_dx(dir)
          enddo
          icrithi(dir)=icrit(dir)+1
          xcrit(dir)=icrithi(dir)*visual_dx(dir)+problo(dir)
-         do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL) 
+         do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL_MATERIAL) 
           icrithi(dir)=icrithi(dir)+1
           xcrit(dir)=xcrit(dir)+visual_dx(dir)
          enddo
@@ -3851,8 +3813,8 @@ END SUBROUTINE SIMP
          endif
          inbox=1
          do dir=1,SDIM
-          if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL).or. &
-              (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL)) then
+          if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL_MATERIAL).or. &
+              (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL_MATERIAL)) then
            inbox=0
           endif
          enddo
@@ -4388,6 +4350,71 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_memstatus
 
+       ! only call this on the IOprocessor
+      subroutine fort_github_repo_version() &
+      bind(c,name='fort_github_repo_version')
+
+      IMPLICIT NONE
+
+      character*80 git_cmd_a
+      character*80 git_cmd_b
+      character*80 git_rm_cmd_a
+      character*80 git_rm_cmd_b
+      character*80 git_cat_cmd_a
+      character*80 git_cat_cmd_b
+
+      integer sysret
+
+      call FLUSH(6)  ! unit=6 screen
+
+      git_cmd_a='git rev-parse FETCH_HEAD > git_a'
+      git_cmd_b='git rev-parse origin/master > git_b'
+      git_rm_cmd_a='rm git_a'
+      git_rm_cmd_b='rm git_b'
+      git_cat_cmd_a='cat git_a'
+      git_cat_cmd_b='cat git_b'
+
+      sysret=0
+
+#ifdef PGIFORTRAN
+      print *,"issuing command ",git_rm_cmd_a
+      call system(git_rm_cmd_a)
+      print *,"issuing command ",git_rm_cmd_b
+      call system(git_rm_cmd_b)
+      print *,"issuing command ",git_cmd_a
+      call system(git_cmd_a)
+      print *,"issuing command ",git_cmd_b
+      call system(git_cmd_b)
+      print *,"issuing command ",git_cat_cmd_a
+      call system(git_cat_cmd_a)
+      print *,"issuing command ",git_cat_cmd_b
+      call system(git_cat_cmd_b)
+#else
+      print *,"issuing command ",git_rm_cmd_a
+      call execute_command_line(git_rm_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_rm_cmd_b
+      call execute_command_line(git_rm_cmd_b,exitstat=sysret)
+      print *,"issuing command ",git_cmd_a
+      call execute_command_line(git_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_cmd_b
+      call execute_command_line(git_cmd_b,exitstat=sysret)
+      print *,"issuing command ",git_cat_cmd_a
+      call execute_command_line(git_cat_cmd_a,exitstat=sysret)
+      print *,"issuing command ",git_cat_cmd_b
+      call execute_command_line(git_cat_cmd_b,exitstat=sysret)
+#endif
+
+      if (sysret.ne.0) then
+       print *,"execute_command_line has sysret=",sysret
+       stop
+      endif
+
+      call FLUSH(6)  ! unit=6 screen
+
+      return
+      end subroutine fort_github_repo_version
+
+
        ! fort_combinezones is called after calls to:
        !  fort_cellgrid
       subroutine fort_combinezones( &
@@ -4484,8 +4511,7 @@ END SUBROUTINE SIMP
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
@@ -4506,7 +4532,7 @@ END SUBROUTINE SIMP
         stop
        endif
       else 
-       print *,"levelrz invalid combine zones"
+       print *,"levelrz invalid combine zones ",levelrz
        stop
       endif
 
@@ -4570,10 +4596,8 @@ END SUBROUTINE SIMP
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else
-        print *,"levelrz invalid combine zones 3"
+        print *,"levelrz invalid combine zones 3 ",levelrz
         stop
        endif
 
@@ -7394,7 +7418,7 @@ END SUBROUTINE SIMP
       real(amrex_real) errorparm(num_materials*2) ! fi,ei
       real(amrex_real) xbottom,xtop,ls_above,ls_below,ZZgrid
       real(amrex_real) vof_below,vof_above,vof_face
-      real(amrex_real) volgrid,distbound
+      real(amrex_real) volgrid,distbound,volcell_parm
       real(amrex_real) cengrid(SDIM)
       real(amrex_real) xboundary(SDIM)
 
@@ -7442,7 +7466,8 @@ END SUBROUTINE SIMP
 
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
-      integer, parameter ::  local_tessellate=TESSELLATE_ALL
+      integer, parameter ::  tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter ::  tessellate_dest=TESSELLATE_ALL
 
       type(user_defined_sum_int_type) :: GRID_DATA_PARM
       real(amrex_real) local_user_out1(ncomp_sum_int_user1+1)
@@ -7622,13 +7647,8 @@ END SUBROUTINE SIMP
          endif
          rr=xsten(0,1)
          gradu(3,3)=vel(D_DECL(i,j,k),velcomp)/abs(rr)
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         rr=xsten(0,1)
-         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
-           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
-         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
         else
-         print *,"levelrz invalid summass"
+         print *,"levelrz invalid summass ",levelrz
          stop
         endif
 
@@ -7648,7 +7668,8 @@ END SUBROUTINE SIMP
         ! EPS2
         call multi_get_volume_tessellate( &
          tid, &
-         local_tessellate, & !TESSELLATE_ALL
+         tessellate_source, & !TESSELLATE_FLUIDS
+         tessellate_dest, & !TESSELLATE_ALL
          bfact, &
          dx,xsten,nhalf, &
          mofdata_tess, &
@@ -7706,10 +7727,8 @@ END SUBROUTINE SIMP
            stop
           endif
           volgrid=volgrid*two*Pi*xsten(0,1)
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          volgrid=volgrid*xsten(0,1)
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid ",levelrz
           stop
          endif
          
@@ -7752,9 +7771,11 @@ END SUBROUTINE SIMP
          enddo
           ! LSvolume is a volume fraction.
           ! LScentroid is in an absolute coordinate system.
-         call getvolume(bfact,dx,xsten,nhalf, &
+         call getvolume( &
+          volcell_parm, & !intent(out)
+          bfact,dx,xsten,nhalf, &
           ldata,LSvolume,LSfacearea, &
-          LScentroid,VOFTOL,SDIM)
+          LScentroid,VOFTOL_MATERIAL,SDIM)
 
          do dir=1,SDIM
           cen_material(dir)=mofdata_tess(vofcomp+dir)+cengrid(dir)
@@ -7937,7 +7958,7 @@ END SUBROUTINE SIMP
 
          if (local_vort_error.gt.zero) then
           if (local_vort_error.gt. &
-              resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL) then
+              resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX VORT ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7956,7 +7977,7 @@ END SUBROUTINE SIMP
 
          if (local_temperature_error.gt.zero) then
           if (local_temperature_error.gt. &
-              resultALL(IQ_TEMP_ERROR_SUM_COMP+1)-VOFTOL) then
+              resultALL(IQ_TEMP_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX TEMP ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7974,7 +7995,7 @@ END SUBROUTINE SIMP
          endif
 
          if (local_vel_error.gt.zero) then
-          if (local_vel_error.gt.resultALL(IQ_VEL_ERROR_SUM_COMP+1)-VOFTOL) then
+          if (local_vel_error.gt.resultALL(IQ_VEL_ERROR_SUM_COMP+1)-VOFTOL_MATERIAL) then
            print *,"**** POSITION OF MAX VEL ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7999,13 +8020,13 @@ END SUBROUTINE SIMP
         endif
 
         idest=IQ_LEFT_PRESSURE_SUM_COMP+1
-        if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
+        if (xsten(-1,1).le.problox+VOFTOL_MATERIAL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
         idest=IQ_LEFT_PRESSURE_SUM_COMP+2
-        if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
+        if (xsten(1,1).ge.probhix-VOFTOL_MATERIAL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
@@ -8104,9 +8125,9 @@ END SUBROUTINE SIMP
              in_slice=1
              do dir3=1,SDIM
               if (dir3.ne.dir) then
-               if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL*dx(dir3)) then
+               if (xslice(dir3).lt.xsten(-1,dir3)-VOFTOL_MATERIAL*dx(dir3)) then
                 in_slice=0
-               else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL*dx(dir3)) then    
+               else if (xslice(dir3).gt.xsten(1,dir3)+VOFTOL_MATERIAL*dx(dir3)) then    
                 in_slice=0
                endif
               endif ! dir3<>dir ?
@@ -8659,7 +8680,8 @@ END SUBROUTINE SIMP
       integer :: dir
       integer :: local_dir
       integer :: local_mask,local_mask_L
-      integer, parameter :: tessellate=TESSELLATE_ALL
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
+      integer, parameter :: tessellate_dest=TESSELLATE_ALL
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_L(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_R(-nhalf:nhalf,SDIM)
@@ -8791,7 +8813,8 @@ END SUBROUTINE SIMP
           ! EPS2
          call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & !tessellate_source=TESSELLATE_FLUIDS
+           tessellate_dest, & !tessellate_dest=TESSELLATE_ALL
            bfact, &
            dx, &
            xsten,nhalf, &
@@ -8815,9 +8838,9 @@ END SUBROUTINE SIMP
            vfrac=mofdata(vofcomp)
 
            if ((vfrac.ge.zero).and.(vfrac.le.one)) then
-            if (vfrac.le.one-VOFTOL) then
+            if (vfrac.le.one-VOFTOL_MATERIAL) then
              vfrac_raster=zero
-            else if (vfrac.ge.one-VOFTOL) then
+            else if (vfrac.ge.one-VOFTOL_MATERIAL) then
              vfrac_raster=one
             else
              print *,"vfrac bust"
@@ -9054,9 +9077,9 @@ END SUBROUTINE SIMP
                  print *,"disallowed: volume flux<>0 for compressible material"
                  stop
                 else if (imattype.eq.0) then
-                 if (abs(fort_denconst(im)-density_flux).le.VOFTOL) then
+                 if (abs(fort_denconst(im)-density_flux).le.VOFTOL_MATERIAL) then
                   ! do nothing
-                 else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL) then
+                 else if (abs(fort_denconst(im)-density_flux).gt.VOFTOL_MATERIAL) then
                   update_density_flag=1
                   if (constant_density_all_time(im).eq.0) then
                    ! do nothing
@@ -9253,7 +9276,8 @@ END SUBROUTINE SIMP
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & ! TESSELLATE_FLUIDS
+           tessellate_dest, & ! TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_R,nhalf, &
@@ -9266,7 +9290,8 @@ END SUBROUTINE SIMP
            ! EPS2
           call multi_get_volume_tessellate( &
            tid_current, &
-           tessellate, & ! tessellate=TESSELLATE_ALL
+           tessellate_source, & ! TESSELLATE_FLUIDS
+           tessellate_dest, & ! TESSELLATE_ALL
            bfact, &
            dx, &
            xsten_L,nhalf, &
@@ -9289,11 +9314,11 @@ END SUBROUTINE SIMP
             vfrac_L=mofdata_L(vofcomp)
             if ((vfrac.ge.zero).and.(vfrac.le.one).and. &
                 (vfrac_L.ge.zero).and.(vfrac_L.le.one)) then
-             if ((vfrac.le.one-VOFTOL).and. &
-                 (vfrac_L.le.one-VOFTOL)) then
+             if ((vfrac.le.one-VOFTOL_MATERIAL).and. &
+                 (vfrac_L.le.one-VOFTOL_MATERIAL)) then
               vfrac_raster=zero
-             else if ((vfrac.ge.one-VOFTOL).or. &
-                      (vfrac_L.ge.one-VOFTOL)) then
+             else if ((vfrac.ge.one-VOFTOL_MATERIAL).or. &
+                      (vfrac_L.ge.one-VOFTOL_MATERIAL)) then
               vfrac_raster=one
              else
               print *,"vfrac bust"
@@ -10802,9 +10827,7 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       if (project_option.eq.SOLVETYPE_SMOOTH) then
-        local_cut=local_cut*cc_elasticmask
-       else if (project_option.eq.SOLVETYPE_PRES) then
+       if (project_option.eq.SOLVETYPE_PRES) then
         if (num_FSI_outer_sweeps.eq.1) then
          if (FSI_outer_sweeps.eq.0) then
           local_cut=local_cut*cc_elasticmask
@@ -10849,10 +10872,8 @@ END SUBROUTINE SIMP
             (xsten(0,1).le.EPS2*dx(1))) then
          local_macnew=zero
         endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        ! do nothing
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid ",levelrz
         stop 
        endif
 
@@ -12478,7 +12499,7 @@ END SUBROUTINE SIMP
          enddo ! n=1..visual_ncomp
 
          do dir=1,SDIM
-          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+          if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL_MATERIAL*visual_dx(dir)) then
            print *,"local_data(dir) invalid"
            stop
           endif
@@ -12609,7 +12630,7 @@ END SUBROUTINE SIMP
          local_data(n)=fabout(D_DECL(i,j,k),n)
         enddo
         do dir=1,SDIM
-         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL*visual_dx(dir)) then
+         if (abs(local_data(dir)-xtest(dir)).gt.VOFTOL_MATERIAL*visual_dx(dir)) then
           print *,"local_data(dir) invalid"
           stop
          endif
@@ -13687,7 +13708,7 @@ END SUBROUTINE SIMP
       integer idx_dirside
 
       if (ncomp_curv_total.ne.num_interfaces*CURVCOMP_NCOMP) then
-       print *,"ncomp_curv_total invalid35"
+       print *,"ncomp_curv_total invalid35 ",ncomp_curv_total
        stop
       endif
 
@@ -13762,7 +13783,7 @@ END SUBROUTINE SIMP
               coarse_test=NINT(crse_value(idx_dirside))
               if ((coarse_test.ne.0).and. &
                   (coarse_test.ne.SDIM+1)) then
-               print *,"coarse_test invalid"
+               print *,"coarse_test invalid ",coarse_test
                stop
               endif
               if (fine_test.eq.0) then
@@ -13774,6 +13795,7 @@ END SUBROUTINE SIMP
               else if ((abs(fine_test).ge.1).and. &
                        (abs(fine_test).le.SDIM+1)) then
                velwt(iten)=velwt(iten)+volall
+                !idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
                crse_value(idx_dirside)=SDIM+1
                crse_value(icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
                do dir2=1,CURVCOMP_DIRSIDE_FLAG
@@ -13825,7 +13847,7 @@ END SUBROUTINE SIMP
          if (velwt(iten).eq.zero) then
           ! do nothing
          else
-          print *,"velwt invalid"
+          print *,"velwt invalid ",velwt
           stop
          endif
          do dir2=1,CURVCOMP_NCOMP
@@ -13833,18 +13855,25 @@ END SUBROUTINE SIMP
          enddo
         else if (coarse_test.eq.SDIM+1) then
          if (velwt(iten).gt.zero) then
+           !idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
           crse(D_DECL(ic,jc,kc),idx_dirside)=SDIM+1 ! dir x side
           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
           do dir2=1,CURVCOMP_DIRSIDE_FLAG
            crse(D_DECL(ic,jc,kc),icurv+dir2)= &
             crse_value(icurv+dir2)/velwt(iten)
           enddo
+           ! triple points should be on the finest level.
+          do dir2=1,SDIM
+           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_XCROSSING+dir2)=zero
+           crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_NGHOST+dir2)=zero
+          enddo
+          crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_COSANGLE+1)=zero
          else
-          print *,"velwt invalid"
+          print *,"velwt invalid ",velwt
           stop
          endif
         else
-         print *,"coarse_test invalid"
+         print *,"coarse_test invalid ",coarse_test
          stop
         endif
 
@@ -13899,9 +13928,6 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in) :: dxf(SDIM)
       integer domlo(SDIM)
 
-      integer :: grid_index(SDIM)
-      integer, parameter :: grid_level=-1
-
       integer, parameter :: nhalf=3
       integer, parameter :: nhalfgrid=1
 
@@ -13932,15 +13958,12 @@ END SUBROUTINE SIMP
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) multi_volume(num_materials)
       real(amrex_real) multi_cen(SDIM,num_materials)
-      integer, parameter :: tessellate=TESSELLATE_FLUIDS
-      integer, parameter :: continuous_mof=STANDARD_MOF
+      integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, parameter :: mof_verbose=0
       integer, parameter :: use_ls_data=0
       integer fine_covered
       real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       integer nmax
-
-      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid: ",tid_in
@@ -13952,7 +13975,7 @@ END SUBROUTINE SIMP
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid ",time
        stop
       endif
       if (bfact_f.lt.1) then
@@ -13961,7 +13984,7 @@ END SUBROUTINE SIMP
       endif
       if ((bfact_c.ne.bfact_f).and. &
           (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
+       print *,"bfact_c invalid ",bfact_c
        stop
       endif
 
@@ -13978,12 +14001,6 @@ END SUBROUTINE SIMP
       do kc=growlo(3),growhi(3)
       do jc=growlo(2),growhi(2)
       do ic=growlo(1),growhi(1)
-
-       grid_index(1)=ic
-       grid_index(2)=jc
-       if (SDIM.eq.3) then
-        grid_index(SDIM)=kc
-       endif
 
         ! coarse centroids and volume fractions are initialized
         ! to zero.
@@ -14041,9 +14058,11 @@ END SUBROUTINE SIMP
                 mofdatafine(vofcomp_recon+dir-1)= &
                  fine(D_DECL(ifine,jfine,kfine),vofcomp_raw+dir-1)
                enddo
+
                do dir=SDIM+2,ngeom_recon
                 mofdatafine(vofcomp_recon+dir-1)=zero
                enddo
+
               enddo ! im=1,num_materials
 
               call gridsten(xstencoarse,problo,ic,jc,kc, &
@@ -14061,18 +14080,20 @@ END SUBROUTINE SIMP
                xstengrid(1,dir)=min(xstencoarse(1,dir),xstenfine(1,dir))
                xstengrid(0,dir)=half*(xstengrid(-1,dir)+xstengrid(1,dir))
 
-               if (xstengrid(-1,dir).gt.xstenfine(-1,dir)+VOFTOL*dxf(dir)) then
+               if (xstengrid(-1,dir).gt. &
+                   xstenfine(-1,dir)+VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
-               if (xstengrid(1,dir).lt.xstenfine(1,dir)-VOFTOL*dxf(dir)) then
+               if (xstengrid(1,dir).lt. &
+                   xstenfine(1,dir)-VOFTOL_MATERIAL*dxf(dir)) then
                 fine_covered=0
                endif
 
                if ((bfact_f.eq.1).and.(bfact_c.eq.1)) then
                 if ((abs(xstengrid(-1,dir)-xstenfine(-1,dir)).gt. &
-                     VOFTOL*dxf(dir)).or. &
+                     VOFTOL_MATERIAL*dxf(dir)).or. &
                     (abs(xstengrid(1,dir)-xstenfine(1,dir)).gt. &
-                     VOFTOL*dxf(dir))) then
+                     VOFTOL_MATERIAL*dxf(dir))) then
                  print *,"fine cell should be completely covered by coarse"
                  stop
                 endif
@@ -14102,11 +14123,9 @@ END SUBROUTINE SIMP
 
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
-                 cmofsten, &
                  xstenfine,nhalf, &
-                 continuous_mof, &
                  bfact_f,dxf, &
-                 tessellate, & !TESSELLATE_FLUIDS
+                 tessellate_source, & !TESSELLATE_FLUIDS
                  mofdatafine, &
                  SDIM)
 
@@ -14116,30 +14135,28 @@ END SUBROUTINE SIMP
                enddo
 
                call multimaterial_MOF( &
-                tessellate, & !TESSELLATE_FLUIDS
+                tessellate_source, & !TESSELLATE_FLUIDS
                 tid_in, &
-                bfact_f,dxf,xstenfine,nhalf, &
+                bfact_f,dxf, &
+                xstenfine, &
+                nhalf, &
                 mof_verbose, & ! =0
                 use_ls_data, & ! =0
                 LS_stencil, &
                 geom_xtetlist(1,1,1,tid_in+1), &
-                geom_xtetlist(1,1,1,tid_in+1), &
                 nmax, &
                 nmax, &
-                mofdatafine, & !intent(inout)
+                mofdatafine, & !intent(inout) override normal and order cleared
                 vof_super, &
                 multi_centroidA, &
-                continuous_mof, & !=STANDARD_MOF
-                cmofsten, &
-                grid_index, &
-                grid_level, &
                 SDIM)
 
                 ! EPS2
                call multi_get_volume_grid_simple( &
                 tid_in, &
                 EPS2, &
-                tessellate, &  !=TESSELLATE_FLUIDS
+                tessellate_source, &  !=TESSELLATE_FLUIDS
+                tessellate_source, &  !=TESSELLATE_FLUIDS
                 bfact_f,dxf,xstenfine,nhalf, &
                 mofdatafine, &
                 xstengrid,nhalfgrid, &
@@ -14164,16 +14181,17 @@ END SUBROUTINE SIMP
                  mofdatacoarse(vofcomp_recon+dir)+ &
                  multi_cen(dir,im)*multi_volume(im)
                enddo
-               if (is_rigid(im).eq.0) then
+               if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then
                 volcoarse=volcoarse+multi_volume(im)
                 do dir=1,SDIM
                  cencoarse(dir)=cencoarse(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(im).eq.1) then
+               else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then
                 ! do nothing
                else
-                print *,"is_rigid(im) invalid"
+                print *,"is_rigid(im) invalid ",im,is_rigid(im)
+                print *,"or, is_elastic(im) invalid ",im,is_elastic(im)
                 stop
                endif
               enddo ! im=1..num_materials
@@ -14230,12 +14248,12 @@ END SUBROUTINE SIMP
          print *,"temp_vfrac invalid: ",temp_vfrac
          stop
         endif
-        if (temp_vfrac.le.VOFTOL) then
+        if (temp_vfrac.le.VOFTOL_MATERIAL) then
          temp_vfrac=zero
          do dir=1,SDIM
           temp_cen(dir)=zero
          enddo
-        else if (temp_vfrac.ge.one-VOFTOL) then
+        else if (temp_vfrac.ge.one-VOFTOL_MATERIAL) then
          temp_vfrac=one
          do dir=1,SDIM
           temp_cen(dir)=zero
@@ -14612,11 +14630,11 @@ END SUBROUTINE SIMP
       integer tcomp
       real(amrex_real) local_vort
       integer local_mask
-      real(amrex_real) DXMAXLS
+      real(amrex_real) DXMAX
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
-      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      call get_dxmax(dx,bfact,DXMAX)
 
       if (bfact.lt.1) then
        print *,"bfact invalid163"
@@ -14682,7 +14700,7 @@ END SUBROUTINE SIMP
 
            ! only check pressure/temperature/vorticity
            ! magnitude away from interfaces
-         if (LStest(im).gt.DXMAXLS) then
+         if (LStest(im).gt.DXMAX) then
 
           tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 
@@ -14707,7 +14725,7 @@ END SUBROUTINE SIMP
           local_vort=vort(D_DECL(i,j,k))
 
             ! error(p*scale)
-            ! errnew=max(errnew,VOFTOL)
+            ! errnew=max(errnew,VOFTOL_MATERIAL)
           call EOS_error_ind( &
            pressure_error_flag, &
            xsten,nhalf,bfact, &
@@ -14719,7 +14737,7 @@ END SUBROUTINE SIMP
            vorterr(im), &
            pressure_error_cutoff(im), &
            temperature_error_cutoff(im))
-         else if (LStest(im).le.DXMAXLS) then
+         else if (LStest(im).le.DXMAX) then
           ! do nothing
          else
           print *,"LStest(im) is NaN"
@@ -14736,7 +14754,7 @@ END SUBROUTINE SIMP
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 
@@ -15149,8 +15167,7 @@ END SUBROUTINE SIMP
 
        do n=1,ncomp
         crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-        if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-            (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
         else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
@@ -15296,19 +15313,8 @@ END SUBROUTINE SIMP
           print *,"dir invalid"
           stop
          endif
-        else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
-         if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
-          ! do nothing
-         else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.EPS2*dx(dir+1)) then
-           at_z_axis=1
-          endif
-         else
-          print *,"dir invalid"
-          stop
-         endif
         else
-         print *,"rzflag invalid"
+         print *,"rzflag invalid ",rzflag
          stop
         endif
         if ((local_area.gt.zero).or. &
@@ -15336,324 +15342,5 @@ END SUBROUTINE SIMP
       end subroutine fort_metrics
 
       end module navierstokesf90_module
-
-
-      module OUTPUT_PC_module
-
-       use iso_c_binding
-       use amrex_fort_module, only : amrex_real,amrex_particle_real
-
-       implicit none
-
-       type, bind(C) :: particle_t
-         real(amrex_particle_real) :: pos(SDIM)
-         real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
-         integer(c_int) :: id
-         integer(c_int) :: cpu
-         integer(c_int) :: extra_int(N_EXTRA_INT)
-       end type particle_t
-
-      contains
-
-      subroutine fort_particle_grid( &
-        tid, &
-        xlo,dx, &
-        particles, & ! a list of particles in the elastic structure
-        Np, & !  Np = number of particles, pass by value
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        level, &
-        gridno) &
-      bind(c,name='fort_particle_grid')
-
-      use probf90_module
-      use navierstokesf90_module
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: tid
-      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: level,gridno
-      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
-      integer, value, INTENT(in) :: Np ! pass by value
-      type(particle_t), INTENT(in) :: particles(Np)
-
-      character*28 cennamestr28
-      character*3 levstr
-      character*5 gridstr
-      character*36 cenfilename36
-
-      real(amrex_real) xref(SDIM)
-      real(amrex_real) xrefT(SDIM)
-      integer ipart_counter
-      integer i,dir
-      real(amrex_real) int_to_real_var
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid151"
-       stop
-      endif
-
-      write(cennamestr28,'(A14,A14)') &
-          './temptecplot/','tempPARCON_pos'
-
-      write(levstr,'(I3)') level
-      write(gridstr,'(I5)') gridno
-
-      do i=1,3
-       if (levstr(i:i).eq.' ') then
-        levstr(i:i)='0'
-       endif
-      enddo
-      do i=1,5
-       if (gridstr(i:i).eq.' ') then
-        gridstr(i:i)='0'
-       endif
-      enddo
-      write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
-      print *,"cenfilename36 ",cenfilename36
-
-      if (N_EXTRA_REAL.eq.2) then
-       ! do nothing
-      else
-       print *,"N_EXTRA_REAL unexpected value: ",N_EXTRA_REAL
-       stop
-      endif
-      if (N_EXTRA_INT.eq.2) then
-       ! do nothing
-      else
-       print *,"N_EXTRA_INT unexpected value: ",N_EXTRA_INT
-       stop
-      endif
-
-      open(unit=12,file=cenfilename36)
-      write(12,*) Np
-
-      do ipart_counter=1,Np
-       do dir=1,SDIM
-        xref(dir)=particles(ipart_counter)%pos(dir)
-        xrefT(dir)=xref(dir)
-       enddo
-       if (visual_RT_transform.eq.1) then
-        call RT_transform(xref,xrefT)
-       endif
-       do dir=1,SDIM
-        write(12,'(E25.16)',ADVANCE="NO") xrefT(dir)
-       enddo
-
-       do dir=1,N_EXTRA_REAL
-        write(12,'(E25.16)',ADVANCE="NO") &
-          particles(ipart_counter)%extra_state(dir)
-       enddo ! dir=1..N_EXTRA_REAL
-
-       do dir=1,N_EXTRA_INT
-        int_to_real_var=particles(ipart_counter)%extra_int(dir)
-        if (dir.lt.N_EXTRA_INT) then
-         write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
-        else if (dir.eq.N_EXTRA_INT) then
-         write(12,'(E25.16)') int_to_real_var
-        else
-         print *,"dir invalid (dir=1,N_EXTRA_INT): ",dir
-         stop
-        endif
-       enddo ! dir=1..N_EXTRA_INT
-
-      enddo ! ipart_counter=1,Np
-
-      close(12)
-
-      return
-      end subroutine fort_particle_grid
-
-      subroutine fort_combine_particles( &
-       grids_per_level,finest_level,nsteps, &
-       arrdim,time,plotint) &
-      bind(c,name='fort_combine_particles')
-
-      use global_utility_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      real(amrex_real), INTENT(in) :: time
-      integer, INTENT(in) :: plotint
-      integer :: strandid
-      integer, INTENT(in) :: arrdim,finest_level,nsteps
-      integer, INTENT(in) :: grids_per_level(arrdim)
-
-      character*28 cennamestr28
-      character*10 newcennamestr10
-
-      character*3 levstr
-      character*5 gridstr
-
-      character*36 cenfilename36
-
-      character(len=plotfile_digits) :: stepstr
-
-      character(len=plotfile_digits+14) :: newcenfilename22
-
-      integer i
-      integer ilev,igrid,ipass
-      real(amrex_real) xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-      integer nparticles,Part_nparticles
-      integer alloc_flag
-      integer istruct
-
-      alloc_flag=0
-
-      write(cennamestr28,'(A14,A14)') &
-          './temptecplot/','tempPARCON_pos'
-      
-      write(newcennamestr10,'(A10)') 'PARCON_pos'
-
-      nparticles=0
-
-      if (arrdim.ne.finest_level+1) then
-       print *,"arrdim invalid"
-       stop
-      endif
-
-      do ipass=0,1
-
-       if (ipass.eq.1) then
-
-        alloc_flag=alloc_flag+1
-
-        write(stepstr,15329) nsteps
-15329   format(I plotfile_digits )
-
-        do i=1,plotfile_digits
-         if (stepstr(i:i).eq.' ') then
-          stepstr(i:i)='0'
-         endif
-        enddo
-
-        if (plotint.le.0) then
-         strandid=8
-        else
-         strandid=8
-!        strandid=(nsteps/plotint)+1
-        endif
-
-        write(newcenfilename22,15346) newcennamestr10,stepstr,'.tec'
-15346   format(A10,A plotfile_digits ,A4)
-
-
-        print *,"newcenfilename22 ",newcenfilename22
-        open(unit=12,file=newcenfilename22)
-
-        if (N_EXTRA_REAL.eq.2) then
-         ! do nothing
-        else
-         print *,"N_EXTRA_REAL invalid: ",N_EXTRA_REAL
-         stop
-        endif
-        if (N_EXTRA_INT.eq.2) then
-         ! do nothing
-        else
-         print *,"N_EXTRA_INT invalid: ",N_EXTRA_INT
-         stop
-        endif
-
-        if (SDIM.eq.3) then
-         write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A65)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","Z","LS1","LS2","material id1","material_id2"'
-        else if (SDIM.eq.2) then
-         write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A61)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","LS1","LS2","material id1","material_id2"'
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        write(12,*) ','
-
-        if (plotint.le.0) then
-         strandid=9
-        else
-         strandid=9
-!        strandid=(nsteps/plotint)+1
-        endif
-
-        write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
-         'ZONE F="POINT", I= ', nparticles,  &
-         ', J=1, K=1, SOLUTIONTIME= ',round_time(time), &
-         ' STRANDID=',strandid-1
-
-       endif  !ipass=1
-
-       do ilev=0,finest_level
-       do igrid=0,grids_per_level(ilev+1)-1
-         write(levstr,'(I3)') ilev
-         write(gridstr,'(I5)') igrid
-
-         do i=1,3
-          if (levstr(i:i).eq.' ') then
-           levstr(i:i)='0'
-          endif
-         enddo
-         do i=1,5
-          if (gridstr(i:i).eq.' ') then
-           gridstr(i:i)='0'
-          endif
-         enddo
-
-         write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
-         print *,"cenfilename36 ",cenfilename36
-         open(unit=5,file=cenfilename36)
-
-         read(5,*) Part_nparticles
-
-         if (ipass.eq.0) then
-          nparticles=nparticles+Part_nparticles
-         else if (ipass.eq.1) then
-
-          do i=1,Part_nparticles
-           read(5,*) &
-             (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-           write(12,*) &
-             (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
-          enddo
-
-         else
-          print *,"ipass invalid"
-          stop
-         endif
-         close(5)
-       enddo ! igrid
-       enddo ! ilev
-
-       if (ipass.eq.1) then
-        close(12)
-       endif
-
-      enddo ! ipass=0..1
-
-      alloc_flag=alloc_flag-1
-
-      if (alloc_flag.gt.0) then
-       print *,"alloc_flag bust"
-       stop
-      endif
-
-      return
-      end subroutine fort_combine_particles
-
-      end module OUTPUT_PC_module
 
 

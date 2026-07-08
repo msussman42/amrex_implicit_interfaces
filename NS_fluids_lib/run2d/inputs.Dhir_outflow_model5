@@ -224,7 +224,6 @@ ns.heatviscconst=0.680 0.0248 37.7
 # OCT 2018 (4 materials)
 # 12 13 14 23 24 34 (LV LG SL VG VS GS)
 # NOV 2018 (3 materials)
-ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
 # OCT 2018 (4 materials)
 #ns.viscconst=279E-6 12.02e-6 12.02e-6 279E-6

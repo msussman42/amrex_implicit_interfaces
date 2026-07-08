@@ -517,16 +517,10 @@ NavierStokes::set_tensor_extrap_components(
    } else if (coord == COORDSYS_CARTESIAN) {
     set_hoop_bc(bc,phys_bc);
     set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
-   } else if (coord == COORDSYS_CYLINDRICAL) {
-    set_hoop_bc(bc,phys_bc);
-    set_hoop_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc);
    } else
     amrex::Error("coord invalid");
   } else if (AMREX_SPACEDIM==3) {
    if (coord == COORDSYS_CARTESIAN) {
-    set_tensor_bc(bc,phys_bc,2,2);
-    set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
-   } else if (coord == COORDSYS_CYLINDRICAL) {
     set_tensor_bc(bc,phys_bc,2,2);
     set_tensor_bc(tensor_bcs[ibase_tensor_local-ibase_tensor],phys_bc,2,2);
    } else
@@ -689,8 +683,6 @@ NavierStokes::variableSetUp ()
     } else if (coord == COORDSYS_RZ) {
      if (AMREX_SPACEDIM!=2)
       amrex::Error("RZ only in 2D");
-    } else if (coord == COORDSYS_CYLINDRICAL) {
-     //do nothing
     } else
      amrex::Error("COORDSYS invalid");
 
@@ -1007,14 +999,10 @@ NavierStokes::variableSetUp ()
          set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
         } else if (coord == COORDSYS_CARTESIAN) {
          set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-        } else if (coord == COORDSYS_CYLINDRICAL) {
-         set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
         } else
          amrex::Error("coord invalid");
        } else if (AMREX_SPACEDIM==3) {
         if (coord == COORDSYS_CARTESIAN) {
-         set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
-        } else if (coord == COORDSYS_CYLINDRICAL) {
          set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
         } else
          amrex::Error("coord invalid");
@@ -2036,8 +2024,7 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
      std::sqrt(blobdata.blob_second_moment[3]*5.0);
    local_blob.blob_axis_evec[2]=0.0;
    local_blob.blob_axis_evec[3]=1.0;
-  } else if ((NS_geometry_coord==COORDSYS_CYLINDRICAL)||
-             (NS_geometry_coord==COORDSYS_CARTESIAN)) {
+  } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
    if (force_blob_symmetry[0]==1) {
     local_blob.blob_axis_len[0]=
       std::sqrt(blobdata.blob_second_moment[0]*4.0*2.0);
@@ -2299,8 +2286,6 @@ NavierStokes::sum_integrated_quantities (
   // do nothing
  } else if (NS_geometry_coord==COORDSYS_RZ) {
   prob_volume*=(2.0*NS_PI*problen[0]/2.0);
- } else if (NS_geometry_coord==COORDSYS_CYLINDRICAL) {
-  prob_volume*=(2.0*NS_PI);
  } else
   amrex::Error("NS_geometry_coord invalid");
 
@@ -2321,8 +2306,8 @@ NavierStokes::sum_integrated_quantities (
 
  } // ilev=level..finest_level
 
- int renormalize_only=1;
- init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+ int renormalize_flag=RENORMALIZE_ONLY;
+ init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
 
  build_masksemALL();
 
@@ -2783,16 +2768,14 @@ NavierStokes::sum_integrated_quantities (
    Real A_ratio=F_ratio;
    if (F_ratio>0.0) {
     if (AMREX_SPACEDIM==2) {
-     if ((NS_geometry_coord==COORDSYS_RZ)||
-         (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
+     if (NS_geometry_coord==COORDSYS_RZ) {
       A_ratio=std::exp(std::log(A_ratio)*2.0/3.0);
      } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
       A_ratio=std::exp(std::log(A_ratio)/2.0);
      } else
       amrex::Error("NS_geometry_coord invalid"); 
     } else if (AMREX_SPACEDIM==3) {
-     if ((NS_geometry_coord==COORDSYS_CARTESIAN)||
-         (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
+     if (NS_geometry_coord==COORDSYS_CARTESIAN) {
       A_ratio=std::exp(std::log(A_ratio)*2.0/3.0);
      } else
       amrex::Error("NS_geometry_coord invalid"); 

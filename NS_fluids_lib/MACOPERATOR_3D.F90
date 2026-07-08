@@ -652,7 +652,6 @@ stop
 
          ! SOLVETYPE_PRES, 
          ! SOLVETYPE_INITPROJ
-         ! SOLVETYPE_SMOOTH
         if (project_option_projectionF(project_option).eq.1) then
 
          if (nsolve.ne.1) then
@@ -663,8 +662,6 @@ stop
          if (project_option.eq.SOLVETYPE_PRES) then
           local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
-          local_cterm(1)=zero
-         else if (project_option.eq.SOLVETYPE_SMOOTH) then
           local_cterm(1)=zero
          else
           print *,"project_option invalid fort_scalarcoeff: ",project_option
@@ -814,17 +811,8 @@ stop
               stop
              endif
             endif
-           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-            if (veldir.eq.0) then
-             if (xsten(0,1).gt.zero) then
-              ! do nothing
-             else
-              print *,"r (xsten(0,1)) invalid xsten=",xsten
-              stop
-             endif
-            endif
            else 
-            print *,"levelrz invalid scalarcoeff"
+            print *,"levelrz invalid scalarcoeff ",levelrz
             stop
            endif
 
@@ -1016,13 +1004,8 @@ stop
           print *,"dimension bust"
           stop
          endif
-          ! do nothing
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (dir.eq.1) then
-          RR=xsten(0,1)
-         endif
         else
-         print *,"levelrz invalid dividedx"
+         print *,"levelrz invalid dividedx ",levelrz
          stop
         endif
         hx=(xsten(1,dir+1)-xsten(-1,dir+1))*RR

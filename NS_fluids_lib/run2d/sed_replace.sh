@@ -1,7 +1,7 @@
 #!/bin/bash
 for file in inp*
 do
-sed 's/file_name_digits= 7/file_name_digits=8/' ${file} > ${file}_mod_
+sed 's/LSA_nsteps_power_method/LSA_nsteps_krylov_subspace_method/' ${file} > ${file}_mod_
 cp ${file}_mod_ ${file}
 rm ${file}_mod_
 done

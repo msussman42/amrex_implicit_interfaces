@@ -55,6 +55,14 @@ integer, parameter :: im_solid=3
    !CTML takes care of this.
    Phi=-99999.0
   else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
+
    if (AMREX_SPACEDIM.eq.2) then
       !squaredist returns Phi<0 in the square.
     call squaredist(x(1),x(2), &
@@ -93,12 +101,14 @@ end subroutine flexible_substrateLS
  ! fluids tessellate the domain, solids are immersed. 
 subroutine flexible_plate_impact_LS(x,t,LS,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
   integer, INTENT(in) :: nmat
   real(amrex_real), INTENT(in) :: x(SDIM)
   real(amrex_real), INTENT(in) :: t
   real(amrex_real), INTENT(out) :: LS(nmat)
+  integer, parameter :: im_solid=3
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -108,6 +118,13 @@ IMPLICIT NONE
   endif
 
 if ((num_materials.eq.3).and.(probtype.eq.2000)) then
+
+ if (is_elastic(im_solid).eq.1) then
+  !do nothing
+ else
+  print *,"expecting is_elastic(im_solid)=1"
+  stop
+ endif
 
  ! liquid
  if (SDIM.eq.3) then
@@ -120,24 +137,18 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  endif
  LS(2)=-LS(1)
 
- call flexible_substrateLS(x,LS(3))
- if (FSI_flag(3).eq.FSI_SHOELE_CTML) then
+ call flexible_substrateLS(x,LS(im_solid))
+
+ if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
- else if (FSI_flag(3).eq.FSI_EULERIAN_ELASTIC) then
-  if (LS(3).ge.zero) then !in the substrate
-   LS(2)=-LS(3)
-  else if (LS(3).le.zero) then !outside of the substrate
-   LS(2)=min(LS(2),-LS(3))
-  else
-   print *,"LS(3) invalid"
-   stop
-  endif
+ else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+  !do nothing
  else
-  print *,"FSI_flag(3) invalid"
+  print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag
   stop
  endif
 else
- print *,"num_materials or probtype invalid"
+ print *,"num_materials or probtype invalid ",num_materials,probtype
  stop
 endif
 
@@ -306,7 +317,7 @@ do dir=1,SDIM
  if (dx(dir).gt.zero) then
   ! do nothing
  else
-  print *,"dx invalid"
+  print *,"dx invalid ",dx
   stop
  endif
 enddo
@@ -694,6 +705,7 @@ subroutine flexible_plate_impact_ASSIMILATE( &
      assimilate_in,assimilate_out, &
      i,j,k,cell_flag)
 use probcommon_module
+use global_utility_module
 use geometry_intersect_module
 IMPLICIT NONE
 
@@ -705,8 +717,8 @@ integer :: nstate,nstate_test
 real(amrex_real) :: xcrit(SDIM)
 integer :: dir
 integer :: im
-real(amrex_real) ldata(D_DECL(3,3,3))
-integer :: i1,j1,k1,k1lo,k1hi
+real(amrex_real) lnode(4*(SDIM-1))
+integer :: i1,j1,k1,k1lo,k1hi,inode
 real(amrex_real) :: xdata(SDIM)
 real(amrex_real) :: volcell
 real(amrex_real) :: cencell(SDIM)
@@ -787,31 +799,34 @@ if ((num_materials.eq.3).and. &
 
    do im=1,num_materials
 
-    do k1=k1lo,k1hi
-    do j1=-1,1
-    do i1=-1,1
-     xdata(1)=assimilate_in%xsten(2*i1,1)
-     xdata(2)=assimilate_in%xsten(2*j1,2)
+    inode=1
+    do k1=k1lo,k1hi,2
+    do j1=-1,1,2
+    do i1=-1,1,2
+     xdata(1)=assimilate_in%xsten(i1,1)
+     xdata(2)=assimilate_in%xsten(j1,2)
      if (SDIM.eq.3) then
-      xdata(SDIM)=assimilate_in%xsten(2*k1,SDIM)
+      xdata(SDIM)=assimilate_in%xsten(k1,SDIM)
      endif
      call flexible_plate_impact_LS(xdata,assimilate_in%cur_time, &
        LS_flexible,num_materials)
-     ldata(D_DECL(i1+2,j1+2,k1+2))=LS_flexible(im)
-    enddo
-    enddo
-    enddo
-     ! getvolume is declared in MOF.F90
-    call getvolume( &
+     lnode(inode)=LS_flexible(im)
+     inode=inode+1
+    enddo !i1=-1,1,2
+    enddo !j1=-1,1,2
+    enddo !k1=-1,1,2
+     ! getvolumeNODE is declared in MOF.F90
+    call getvolumeNODE( &
+     volcell, & !intent(out)
      assimilate_in%bfact, &
      assimilate_in%dx, &
      assimilate_in%xsten, &
      assimilate_in%nhalf, &
-     ldata, &
+     lnode, &
      vfrac_override, &
      facearea_temp, &
      centroid_override, &
-     VOFTOL, &
+     VOFTOL_MATERIAL, &
      SDIM)
     call CISBOX( &
      assimilate_in%xsten, &
@@ -826,7 +841,7 @@ if ((num_materials.eq.3).and. &
     vfrac_comp=(im-1)*ngeom_raw+1
     VFRAC_flexible(im)=vfrac_override
     assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
-        vfrac_override
+      vfrac_override
     do dir=1,SDIM
      assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp+dir)= &
       centroid_override(dir)-cencell(dir)
@@ -836,16 +851,33 @@ if ((num_materials.eq.3).and. &
 
    vfrac_sum=zero
    do im=1,num_materials
-    vfrac_sum=vfrac_sum+VFRAC_flexible(im)
-   enddo
-   if (vfrac_sum.gt.VOFTOL) then
+    if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then 
+     vfrac_sum=vfrac_sum+VFRAC_flexible(im)
+    else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then 
+     !do nothing
+    else
+     print *,"is_rigid(im) invalid ",im,is_rigid(im)
+     print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+     stop
+    endif
+   enddo !im=1,num_materials
+
+   if (vfrac_sum.gt.VOFTOL_MATERIAL) then
     do im=1,num_materials
      vfrac_comp=(im-1)*ngeom_raw+1
-     assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
+     if ((is_rigid(im).eq.0).and.(is_elastic(im).eq.0)) then 
+      assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
        VFRAC_flexible(im)/vfrac_sum
+     else if ((is_rigid(im).eq.1).or.(is_elastic(im).eq.1)) then 
+      !do nothing
+     else
+      print *,"is_rigid(im) invalid ",im,is_rigid(im)
+      print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+      stop
+     endif
     enddo !do im=1,num_materials
    else
-    print *,"vfrac_sum invalid"
+    print *,"vfrac_sum invalid ",vfrac_sum
     stop
    endif 
 

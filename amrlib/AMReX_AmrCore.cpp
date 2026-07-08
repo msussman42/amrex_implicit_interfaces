@@ -270,13 +270,13 @@ AmrCore::InitAmr () {
   std::cout << "Amr.verbose= " << verbose << '\n';
  }
 
- LSA_nsteps_power_method=0;
- pp.queryAdd("LSA_nsteps_power_method",LSA_nsteps_power_method);
+ LSA_nsteps_krylov_subspace_method=0;
+ pp.queryAdd("LSA_nsteps_krylov_subspace_method",LSA_nsteps_krylov_subspace_method);
 
- if (LSA_nsteps_power_method>=0) {
+ if (LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
  } else
-  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  amrex::Error("expecting LSA_nsteps_krylov_subspace_method>=0");
 
  LSA_activate=0;
  pp.queryAdd("LSA_activate",LSA_activate);
@@ -291,12 +291,12 @@ AmrCore::InitAmr () {
  pp.queryAdd("LSA_plot_index",LSA_plot_index);
 
  LSA_extra_data=0;
- if (LSA_nsteps_power_method==0) {
+ if (LSA_nsteps_krylov_subspace_method==0) {
   //do nothing
- } else if (LSA_nsteps_power_method>0) {
+ } else if (LSA_nsteps_krylov_subspace_method>0) {
   LSA_extra_data=3;
  } else
-  amrex::Error("expecting LSA_nsteps_power_method>=0");
+  amrex::Error("expecting LSA_nsteps_krylov_subspace_method>=0");
  
  if ((LSA_plot_index>=0)&&(LSA_plot_index<=LSA_extra_data)) {
   //do nothing
@@ -306,8 +306,8 @@ AmrCore::InitAmr () {
  LSA_current_step=0;
 
  if (ParallelDescriptor::IOProcessor()) {
-  std::cout << "Amr.LSA_nsteps_power_method= " << 
-    LSA_nsteps_power_method  << '\n';
+  std::cout << "Amr.LSA_nsteps_krylov_subspace_method= " << 
+    LSA_nsteps_krylov_subspace_method  << '\n';
  }
 
   //AmrCore::Initialize ()
@@ -531,17 +531,17 @@ AmrCore::InitAmr () {
 
  }
 
- if ((LSA_nsteps_power_method==0)||
+ if ((LSA_nsteps_krylov_subspace_method==0)||
      (LSA_activate==0)) {
 
   LSA_max_step=0;
 
-  if (LSA_nsteps_power_method==0) {
+  if (LSA_nsteps_krylov_subspace_method==0) {
    //do nothing
-  } else if (LSA_nsteps_power_method>0) {
+  } else if (LSA_nsteps_krylov_subspace_method>0) {
    ppmain.queryAdd("max_step",LSA_max_step);
   } else
-   amrex::Error("LSA_nsteps_power_method invalid");
+   amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
 
   if (max_level==0) {
 
@@ -553,7 +553,7 @@ AmrCore::InitAmr () {
 
   } else if (max_level>0) {
 
-   if (LSA_nsteps_power_method==0) {
+   if (LSA_nsteps_krylov_subspace_method==0) {
 
     if (regrid_int>=1) {
      //do nothing
@@ -561,20 +561,20 @@ AmrCore::InitAmr () {
      amrex::Error("expecting regrid_int>=1 if max_level>0");
     }
 
-   } else if (LSA_nsteps_power_method>0) {
+   } else if (LSA_nsteps_krylov_subspace_method>0) {
 
     if (regrid_int>LSA_max_step) {
      //do nothing
     } else {
-     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_power_method>0");
+     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_krylov_subspace_method>0");
     }
    } else
-    amrex::Error("LSA_nsteps_power_method invalid");
+    amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
 
   } else
    amrex::Error("max_level invalid");
 
- } else if ((LSA_nsteps_power_method>=1)&&
+ } else if ((LSA_nsteps_krylov_subspace_method>=1)&&
             (LSA_activate==1)) {
 
   LSA_max_step=-1;
@@ -598,7 +598,7 @@ AmrCore::InitAmr () {
    amrex::Error("max_level invalid");
 
  } else
-  amrex::Error("LSA_nsteps_power_method or LSA_activate invalid");
+  amrex::Error("LSA_nsteps_krylov_subspace_method or LSA_activate invalid");
 
  Vector<int> n_cell(AMREX_SPACEDIM);
  pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
@@ -677,6 +677,8 @@ AmrCore::InitAmr () {
 
 AmrCore::~AmrCore () {
 
+    std::string local_caller_string="~AmrCore";
+
     if (level_steps[0] > last_checkpoint)
         checkPoint();
 
@@ -687,6 +689,7 @@ AmrCore::~AmrCore () {
      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,
@@ -768,10 +771,14 @@ AmrCore::okToContinue () noexcept
 
 void
 AmrCore::writeDEBUG_PlotFile(
+  const std::string& caller_string,
   int num,
   int SDC_outer_sweeps,
   int slab_step,
   int divu_outer_sweeps) {
+
+ std::string local_caller_string="writeDEBUG_PlotFile";
+ local_caller_string=caller_string+local_caller_string;
 
  if (num>=0) {
   //do nothing
@@ -781,6 +788,7 @@ AmrCore::writeDEBUG_PlotFile(
  int do_plot=1;
  int do_slice=((slice_int>0) ? 1 : 0);
  writePlotFile(
+   local_caller_string,
    do_plot,do_slice,
    SDC_outer_sweeps,
    slab_step,
@@ -790,26 +798,41 @@ AmrCore::writeDEBUG_PlotFile(
 
 void
 AmrCore::writePlotFile (
+  const std::string& caller_string,
   int do_plot,int do_slice,
   int SDC_outer_sweeps,
   int slab_step,
   int divu_outer_sweeps) {
 
- if ((do_plot==1)||
-     ((do_plot==0)&&(do_slice==1))) {
+ std::size_t local_found=caller_string.find("writePlotFile");
+  //npos is a static member constant value with the greatest possible value
+  //for an element of type size_t.
+ if (local_found<std::string::npos) {
+  //do nothing
+ } else if (local_found>=std::string::npos) {
+
+  std::string local_caller_string="writePlotFile";
+  local_caller_string=caller_string+local_caller_string;
+
+  if ((do_plot==1)||
+      ((do_plot==0)&&(do_slice==1))) {
 
    for (int k(0); k <= finest_level; ++k) {
     amr_level[k]->writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,
       divu_outer_sweeps);
    }
 
- } else if ((do_plot==0)&&(do_slice==0)) {
-  // do nothing
+  } else if ((do_plot==0)&&(do_slice==0)) {
+   // do nothing
+  } else
+   amrex::Error("do_plot or do_slice invalid");
+
  } else
-  amrex::Error("do_plot or do_slice invalid");
+  amrex::Error("local_found invalid");
   
 }  // subroutine writePlotFile
 
@@ -968,6 +991,8 @@ AmrCore::AMR_checkInput ()
 void
 AmrCore::init (Real strt_time, Real stop_time) {
 
+ std::string local_caller_string="AmrCore::init";
+
  if (!restart_file.empty() && restart_file != "init") {
   restart(restart_file);
  } else {
@@ -980,6 +1005,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
    int slab_step=Time_blockingFactor()-1+LSA_plot_index;
    int divu_outer_sweeps=0;
    writePlotFile(
+    local_caller_string,
     do_plot,do_slice,
     SDC_outer_sweeps,
     slab_step,
@@ -1329,15 +1355,15 @@ AmrCore::checkPoint ()
 
  std::string ckfileLSA;
  if ((LSA_activate==0)&&
-     (LSA_nsteps_power_method==0)) {
+     (LSA_nsteps_krylov_subspace_method==0)) {
   ckfileLSA=ckfile_temp;
  } else if ((LSA_activate==1)||
-            (LSA_nsteps_power_method>0)) {
+            (LSA_nsteps_krylov_subspace_method>0)) {
   std::stringstream result;
   result << ckfile_temp << "LSA";
   ckfileLSA=amrex::Concatenate(result.str(),LSA_current_step,file_name_digits);
  } else
-  amrex::Error("LSA_activate or LSA_nsteps_power_method invalid");
+  amrex::Error("LSA_activate or LSA_nsteps_krylov_subspace_method invalid");
 
  const std::string ckfile=ckfileLSA;
 
@@ -1534,6 +1560,8 @@ AmrCore::timeStep (Real time,
                Real stop_time)
 {
 
+ std::string local_caller_string="timeStep";
+
  if (std::abs(time-cumtime)>CPP_EPS_13_6)
   amrex::Error("time<>cumtime");
 
@@ -1601,6 +1629,7 @@ AmrCore::timeStep (Real time,
   int slab_step=Time_blockingFactor()-1+LSA_plot_index;
   int divu_outer_sweeps=0;
   writePlotFile(
+   local_caller_string,
    do_plot,do_slice,
    SDC_outer_sweeps,
    slab_step,
@@ -1650,13 +1679,13 @@ void
 AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
   Real initial_cumTime,int LSA_initial_levelSteps_in) {
 
- if ((LSA_nsteps_power_method>=1)&&
+ if ((LSA_nsteps_krylov_subspace_method>=1)&&
      (LSA_activate==1)&&
      (LSA_current_step+1==LSA_current_step_in)&&
      (LSA_current_step_in>=1)) {
   //do nothing
  } else
-  amrex::Error("LSA_nsteps_power_method/LSA_current_step(_in) bad");
+  amrex::Error("LSA_nsteps_krylov_subspace_method/LSA_current_step(_in) bad");
 
  for (int ilev=0;ilev<=finest_level;ilev++) {
   level_steps[ilev]=LSA_initial_levelSteps_in;
@@ -1685,11 +1714,13 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
   int LSA_initial_levelSteps_in)
 {
 
+    std::string local_caller_string="coarseTimeStep";
+
     LSA_current_step=LSA_current_step_in;
     LSA_initial_levelSteps=LSA_initial_levelSteps_in;
 
     if ((LSA_current_step>=0)&&
-        (LSA_current_step<=LSA_nsteps_power_method)) {
+        (LSA_current_step<=LSA_nsteps_krylov_subspace_method)) {
      //do nothing
     } else {
      std::cout << "LSA_current_step=" << LSA_current_step << '\n';
@@ -1877,6 +1908,7 @@ AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
      int divu_outer_sweeps=0;
      writePlotFile(
+      local_caller_string,
       do_plot,do_slice,
       SDC_outer_sweeps,
       slab_step,

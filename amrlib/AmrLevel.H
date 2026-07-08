@@ -235,6 +235,7 @@ public:
     //
     //
     virtual void writePlotFile (
+     const std::string& caller_string,
      int do_plot,int do_slice,
      int SDC_outer_sweeps_in,
      int slab_step_in,
@@ -560,6 +561,7 @@ AmrLevel::get_state_data (int state_indx)
     return state[state_indx];
 }
 
+//0<=slab_index<bfact_time_order+LSA_extra_data+1
 inline
 MultiFab&
 AmrLevel::get_new_data (int state_indx,int slab_index)
