@@ -2594,9 +2594,9 @@ NavierStokes::read_params ()
      amrex::Error("num materials invalid");
 
     pp.queryAdd("ncell_mdot_shift",ncell_mdot_shift);
-    if ((ncell_mdot_shift<0)||
+    if ((ncell_mdot_shift<1)||
         (ncell_mdot_shift>2))
-     amrex::Error("ncell_mdot_shift invalid");
+     amrex::Error("ncell_mdot_shift invalid (expecting 1 or 2)");
 
     pp.queryAdd("ngrow_distance",ngrow_distance);
     if ((ngrow_distance<4)||
@@ -5083,7 +5083,7 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_CTML() invalid");
 
     if (num_materials_viscoelastic>=1) {
-     num_divu_outer_sweeps=2;
+     //num_divu_outer_sweeps=2;
     } else if (num_materials_viscoelastic==0) {
      //do nothing
     } else
@@ -5091,7 +5091,7 @@ NavierStokes::read_params ()
 
      //ice, FSI_rigid, FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC)
     if (num_FSI_outer_sweeps>=2) {
-     num_divu_outer_sweeps=2;
+     //num_divu_outer_sweeps=2;
     } else if (num_FSI_outer_sweeps==1) {
      //do nothing
     } else
@@ -5100,8 +5100,8 @@ NavierStokes::read_params ()
     pp.queryAdd("num_divu_outer_sweeps",num_divu_outer_sweeps);
 
     if (some_materials_compressible()==1) {
-     if (num_divu_outer_sweeps<2) 
-      amrex::Error("num_divu_outer_sweeps must be >1 (compres)");
+     //if (num_divu_outer_sweeps<2) 
+     // amrex::Error("num_divu_outer_sweeps must be >1 (compres)");
     } else if (some_materials_compressible()==0) {
      // do nothing
     } else {
@@ -5124,16 +5124,14 @@ NavierStokes::read_params ()
      //NN_FENE_P
      //NN_LINEAR_PTT
     if (num_materials_viscoelastic>=1) {
-     if (num_divu_outer_sweeps<2) 
-      amrex::Error("num_divu_outer_sweeps must be >1 (viscoelastic)");
+     //do nothing
     } else if (num_materials_viscoelastic==0) {
      //do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
     if (num_FSI_outer_sweeps>=2) {
-     if (num_divu_outer_sweeps<2) 
-      amrex::Error("num_divu_outer_sweeps must be >1 (num_FSI_outer_sweeps)");
+     //do nothing
     } else if (num_FSI_outer_sweeps==1) {
      //do nothing
     } else
@@ -6591,11 +6589,12 @@ NavierStokes::read_params ()
      
     if (some_materials_compressible()==1) {
 
-     if (num_divu_outer_sweeps<2)
-      amrex::Error("num_divu_outer_sweeps>=2 for comp materials");
+     // do nothing
 
     } else if (some_materials_compressible()==0) {
+
      // do nothing
+
     } else
      amrex::Error("compressible flag bust");
 
@@ -16720,9 +16719,9 @@ NavierStokes::phase_change_redistributeALL() {
  } else
   amrex::Error("expecting ngrow_make_distance+1==ngrow_distance");
 
- if ((ncell_mdot_shift<0)||
+ if ((ncell_mdot_shift<1)||
      (ncell_mdot_shift>2))
-  amrex::Error("ncell_mdot_shift invalid");
+  amrex::Error("ncell_mdot_shift invalid (expecting 1 or 2)");
 
  if ((ngrow_distance>=4)&&
      (ngrow_distance<=64)) {

@@ -4373,7 +4373,9 @@ stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
           (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid fort_velmac_override"
+       print *,"divu_outer_sweeps invalid fort_velmac_override ", &
+               divu_outer_sweeps
+       print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
        stop
       endif
   
@@ -11437,11 +11439,11 @@ stop
        stop
       endif
 
-      if ((ncell_mdot_shift.ge.0).and. &
+      if ((ncell_mdot_shift.ge.1).and. &
           (ncell_mdot_shift.le.2)) then
        !do nothing
       else
-       print *,"ncell_mdot_shift invalid ",ncell_mdot_shift
+       print *,"ncell_mdot_shift invalid (expect 1 or 2)",ncell_mdot_shift
        stop
       endif
 
@@ -13512,6 +13514,7 @@ stop
        ! do nothing
       else
        print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+       print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
        stop
       endif
 
@@ -15092,6 +15095,7 @@ stop
           snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)
        else
         print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+        print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
         stop
        endif
 
@@ -16392,6 +16396,7 @@ stop
        ! do nothing
       else
        print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+       print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
        stop
       endif
 
@@ -16809,6 +16814,7 @@ stop
                   (usten_accept(1).ne.zero)) then
                print *,"expect zero velocity"
                print *,"divu_outer_sweeps=",divu_outer_sweeps
+               print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
                print *,"dir_counter=",dir_counter
                print *,"dx(1)= ",dx(1)
                print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
@@ -20275,6 +20281,7 @@ stop
        ! do nothing
       else
        print *,"divu_outer_sweeps invalid fort_face_gradients"
+       print *,"num_divu_outer_sweeps = ",num_divu_outer_sweeps
        stop
       endif
        ! in: fort_face_gradients

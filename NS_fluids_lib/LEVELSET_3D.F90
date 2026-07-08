@@ -11204,12 +11204,14 @@ stop
        stop
       endif
       if (num_divu_outer_sweeps.lt.1) then
-       print *,"num_divu_outer_sweeps invalid fort_mac_to_cell"
+       print *,"num_divu_outer_sweeps invalid fort_mac_to_cell ", &
+               num_divu_outer_sweeps
        stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
           (divu_outer_sweeps.ge.num_divu_outer_sweeps)) then
-       print *,"divu_outer_sweeps invalid fort_mac_to_cell"
+       print *,"divu_outer_sweeps invalid fort_mac_to_cell ", &
+               divu_outer_sweeps
        stop
       endif
 
