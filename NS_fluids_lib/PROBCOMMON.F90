@@ -121,6 +121,7 @@ module probcommon_module_types
        real(amrex_real) :: prev_time
        real(amrex_real) :: cur_time
        real(amrex_real) :: dt
+       integer :: level_steps
       end type nucleation_parm_type_input
 
       type user_defined_force_parm_type_input

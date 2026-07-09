@@ -618,7 +618,9 @@ real(amrex_real)       :: tempdist
 
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
-     if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+     if(tempt.ge.sites(3,ii).and. &
+       ((active_flag(ii).eq.0).or. &
+        (active_flag(ii).eq.nucleate_in%level_steps+1))) then
 !      print *,"tempt satisfied"
 
       if (ls_sol.lt.zero) then
@@ -633,7 +635,7 @@ real(amrex_real)       :: tempdist
          print *,"make seed","temp","ls_sol","site"
          print *,"make seed",tempt,ls_sol,sites(1:2,ii),tempvec1(SDIM)
          make_seed=1
-         active_flag(ii)=1
+         active_flag(ii)=nucleate_in%level_steps+1
          subscale_spec_id=1
          subscale_vfrac = 0.5d0
         elseif(tempdist.gt.radblob3)then
@@ -676,7 +678,9 @@ real(amrex_real)       :: tempdist
   tempvec1(SDIM)=xsten(0,SDIM)
   do ii=1,sitesnum
 !  print *,"sitesnum=", ii
-   if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+   if(tempt.ge.sites(3,ii).and. &
+     ((active_flag(ii).eq.0).or. &
+      (active_flag(ii).eq.nucleate_in%level_steps+1))) then
 !   print *,"tempt satisfied"
 !   print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
     if (ls_sol.lt.zero) then
@@ -698,7 +702,7 @@ real(amrex_real)       :: tempdist
        print *,"make seed ","temp ","ls_sol ","site "
        print *,"make seed",tempt,ls_sol,sites(:,ii)
        make_seed=1
-       active_flag(ii)=1
+       active_flag(ii)=nucleate_in%level_steps+1
       elseif(tempdist.gt.radblob3)then
        ! do nothing
       else
@@ -718,7 +722,9 @@ real(amrex_real)       :: tempdist
   if(1.eq.1)then
    do ii=1,sitesnum2
 !   print *,"sitesnum=", ii
-    if(tempt.ge.sites2(3,ii).and.active_flag2(ii).eq.0)then
+    if(tempt.ge.sites2(3,ii).and. &
+      ((active_flag2(ii).eq.0).or. &
+       (active_flag2(ii).eq.nucleate_in%level_steps+1))) then
 !    print *,"tempt satisfied"
      if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
@@ -734,7 +740,7 @@ real(amrex_real)       :: tempdist
         print *,"make seed","temp","ls_sol","site"
         print *,"make seed",tempt,ls_sol,sites2(:,ii)
         make_seed=1
-        active_flag2(ii)=1
+        active_flag2(ii)=nucleate_in%level_steps+1
        elseif(tempdist.gt.radblob3)then
         ! do nothing
        else
@@ -752,7 +758,9 @@ real(amrex_real)       :: tempdist
    enddo ! do ii=1,sitesnum2
 
    do ii=1,sitesnum3
-    if(tempt.ge.sites3(3,ii).and.active_flag3(ii).eq.0)then
+    if(tempt.ge.sites3(3,ii).and. &
+      ((active_flag3(ii).eq.0).or. &
+       (active_flag3(ii).eq.nucleate_in%level_steps+1))) then
      if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
        tempvec2(1)=sites3(1,ii)
@@ -769,7 +777,7 @@ real(amrex_real)       :: tempdist
         print *,"make seed","temp","ls_sol","site"
         print *,"make seed",tempt,ls_sol,sites3(:,ii)
         make_seed=1
-        active_flag3(ii)=1
+        active_flag3(ii)=nucleate_in%level_steps+1
        elseif(tempdist.gt.radblob3)then
         ! do nothing
        else
