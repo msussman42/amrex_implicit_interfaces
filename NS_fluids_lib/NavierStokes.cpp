@@ -14535,6 +14535,14 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  std::string local_caller_string="level_phase_change_rate";
 
+ int nsteps=parent->levelSteps(0);
+ if (nsteps>=0) {
+  //do nothing
+ } else {
+  std::cout << "nsteps= " << nsteps << '\n';
+  amrex::Error("nsteps invalid");
+ }
+
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -15150,6 +15158,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      xlo,dx,
      &prev_time_slab,
      &dt_slab,//ratemasschange
+     &nsteps,
      &blob_arraysize,
      blob_array.dataPtr(),
      &color_count,
@@ -15247,6 +15256,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      xlo,dx,
      &prev_time_slab,
      &dt_slab,//ratemasschange
+     &nsteps,
      &blob_arraysize,
      blob_array.dataPtr(),
      &color_count,

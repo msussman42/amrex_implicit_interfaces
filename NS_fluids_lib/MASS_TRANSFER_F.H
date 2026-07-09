@@ -138,6 +138,7 @@ extern "C"
     const Real* xlo,const Real* dx,
     Real* time,
     Real* dt,
+    int* level_steps,
     int* arraysize,
     Real* blob_array,
     int* color_count,

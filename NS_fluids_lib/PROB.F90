@@ -19230,6 +19230,8 @@ end subroutine RatePhaseChange
 
 
        !ASHWANI PAL SLAC
+       !get_vel_phasechange_NUCLEATE is called from
+       !fort_ratemasschange in MASS_TRANSFER_3D.F90
       subroutine get_vel_phasechange_NUCLEATE( &
                       nucleate_in,nucleate_out)
       use global_utility_module

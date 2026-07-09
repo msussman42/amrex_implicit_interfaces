@@ -7555,6 +7555,7 @@ stop
        xlo,dx, &
        prev_time, &
        dt, &
+       level_steps, &
        arraysize, &
        blob_array, &
        color_count, &
@@ -7657,6 +7658,7 @@ stop
       real(amrex_real), INTENT(in) :: prev_time
       real(amrex_real) :: cur_time
       real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: level_steps
       integer, INTENT(in) :: arraysize
       real(amrex_real), INTENT(in) :: blob_array(arraysize)
       integer, INTENT(in) :: color_count
@@ -7857,6 +7859,13 @@ stop
       EOS_ptr=>EOS
       pres_ptr=>pres
       pres_eos_ptr=>pres_eos
+
+      if (level_steps.ge.0) then
+       !do nothing
+      else
+       print *,"expecting level_steps>=0 ",level_steps
+       stop
+      endif
 
       if (prev_time.ge.zero) then
        cur_time=prev_time+dt
@@ -8080,6 +8089,7 @@ stop
       create_in%prev_time=prev_time
       create_in%cur_time=cur_time
       create_in%dt=dt
+      create_in%level_steps=level_steps
 
       PROBE_PARMS%tid=tid
 
