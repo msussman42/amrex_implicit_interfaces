@@ -690,6 +690,9 @@ protected:
 
     void level_phase_change_convertALL();
 
+    void mass_redistributeALL(int mass_redistribute_flag);
+    void mass_redistribute(int mass_redistribute_flag);
+
     void level_species_reaction(const std::string& caller_string);
 
     void level_phase_change_rate(Vector<blobclass> blobdata,

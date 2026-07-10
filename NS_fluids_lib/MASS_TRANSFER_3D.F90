@@ -6570,6 +6570,157 @@ stop
       return
       end subroutine fort_convertmaterial
 
+
+      subroutine fort_mass_redistribute( &
+       tid, &
+       mass_redistribute_flag, &
+       nstate, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       velbc, &
+       vofbc, &
+       dt, &
+       xlo,dx, &
+       maskcov,DIMS(maskcov), &
+       redistribute_fab, &
+       DIMS(redistribute_fab), &
+       snew,DIMS(snew), &
+       level, &
+       finest_level) &
+      bind(c,name='fort_mass_redistribute')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: mass_redistribute_flag
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nstate
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: vofbc(SDIM,2)
+      integer, INTENT(in) :: velbc(SDIM,2,SDIM)
+      real(amrex_real), INTENT(in),target :: xlo(SDIM)
+      real(amrex_real), INTENT(in),target :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(redistribute_fab)
+      integer, INTENT(in) :: DIMDEC(snew)
+
+      real(amrex_real), target, INTENT(in) :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), target, INTENT(inout) :: &
+            redistribute_fab(DIMV(redistribute_fab),num_materials)
+      real(amrex_real), pointer :: redistribute_fab_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), target, INTENT(inout) :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      integer i,j,k
+      integer nmax
+      integer local_mask
+
+      maskcov_ptr=>maskcov
+      redistribute_fab_ptr=>redistribute_fab
+      snew_ptr=>snew
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      nmax=POLYGON_LIST_MAX 
+      if ((nmax.lt.100).or.(nmax.gt.2000)) then
+       print *,"nmax invalid"
+       stop
+      endif
+
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid"
+       stop
+      endif
+
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance invalid: ",ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance invalid"
+       print *,"ngrow_make_distance=",ngrow_make_distance
+       print *,"ngrow_distance=",ngrow_distance
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_mass_redistribute"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid ",num_state_base
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact too small ",bfact
+       stop
+      endif
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid ",nstate
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid: ",dt
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+
+      call checkbound_array(fablo,fabhi,redistribute_fab_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       if (local_mask.eq.1) then
+
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine fort_mass_redistribute
+
+
       subroutine fort_extend_burning_vel( &
         velflag, &
         level, &
