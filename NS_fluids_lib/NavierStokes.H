@@ -658,6 +658,7 @@ protected:
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
 
+    void tensor_extrapolationALL();
     void tensor_extrapolation();
     void tensor_advection_update(int im);
     void tensor_advection_updateALL();
@@ -791,6 +792,7 @@ protected:
 
     void correct_flotsam();
 
+    void clear_interface_vars(); 
     void split_scalar_advection(int im_extension); 
     void split_scalar_advectionALL(int im_extension);
  
@@ -1039,15 +1041,12 @@ protected:
       Real time,
       int output_slab,
       int renormalize_flag,
-      int local_truncate,
       const std::string& caller_string);
 
     void prescribe_solid_geometry(
       Real time,
       int output_slab,
       int renormalize_flag);
-
-    void truncate_VOF(Vector<Real>& delta_mass_all);
 
     void getState_tracemag_ALL(int idx);
     void getState_tracemag(int idx);
@@ -1683,6 +1682,8 @@ protected:
      // bounding box ngrow for finding box of cells to visit for a 
      // given lagrangian element.
     static Vector<int> FSI_bounding_box_ngrow; //def: ngrow_make_distance
+
+    static int coarsest_level_CISL;  //default=0
 
     static Vector<int> ns_max_grid_size;
 

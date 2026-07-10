@@ -15487,31 +15487,49 @@ contains
 
          if (repeat_count.ge.1) then
           !do nothing
+         else if (repeat_count.eq.0) then
+          if ((mofdata_current(vofcomp_prev).le.VOFTOL_ORDERING).or. &
+              (mofdata_current(vofcomp_prev).ge.one-VOFTOL_ORDERING).or. &
+              (mofdata_current(vofcomp).le.VOFTOL_ORDERING).or. &
+              (mofdata_current(vofcomp).ge.one-VOFTOL_ORDERING)) then
+           repeat_count=1
+          else
+           print *,"leading_rank or compare_rank invalid ", &
+            leading_rank,compare_rank
+           print *,"dx=",dx
+           do dir=1,sdim
+            print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
+           enddo
+           print *,"imaterial_prev= ",imaterial_prev
+           print *,"imaterial= ",imaterial
+           print *,"vfrac,centroid prev "
+           do dir=0,sdim
+            print *,dir,mofdata_current(vofcomp_prev+dir)
+           enddo
+           print *,"vfrac,centroid current "
+           do dir=0,sdim
+            print *,dir,mofdata_current(vofcomp+dir)
+           enddo
+           print *,"recon_history ",recon_history
+           print *,"num_processed_total ",num_processed_total
+           print *,"order_algorithm_local ",order_algorithm_local
+           print *,"override_normal_valid ",override_normal_valid
+           print *,"TESSELLATE_FLUIDS=",TESSELLATE_FLUIDS
+           print *,"TESSELLATE_ALL=",TESSELLATE_ALL
+           print *,"TESSELLATE_IGNORE_ISRIGID=",TESSELLATE_IGNORE_ISRIGID
+           print *,"TESSELLATE_ALL_RASTER=",TESSELLATE_ALL_RASTER
+           print *,"TESSELLATE_FLUIDS_ELASTIC=",TESSELLATE_FLUIDS_ELASTIC
+           print *,"TESSELLATE_IGNORE_ISELASTIC=",TESSELLATE_IGNORE_ISELASTIC
+           print *,"tessellate ",tessellate
+           print *,"repeat_count ",repeat_count
+           print *,"leading_vfrac_sum ",leading_vfrac_sum
+           print *,"vof_super= ",vof_super
+           print *,"use_ls_data= ",use_ls_data
+           stop
+          endif
+
          else
-          print *,"leading_rank or compare_rank invalid ", &
-           leading_rank,compare_rank
-          do dir=1,sdim
-           print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
-          enddo
-          print *,"imaterial_prev= ",imaterial_prev
-          print *,"imaterial= ",imaterial
-          print *,"centroid prev "
-          do dir=1,sdim
-           print *,dir,mofdata_current(vofcomp_prev+dir)
-          enddo
-          print *,"centroid current "
-          do dir=1,sdim
-           print *,dir,mofdata_current(vofcomp+dir)
-          enddo
-          print *,"recon_history ",recon_history
-          print *,"num_processed_total ",num_processed_total
-          print *,"order_algorithm_local ",order_algorithm_local
-          print *,"override_normal_valid ",override_normal_valid
-          print *,"tessellate ",tessellate
-          print *,"repeat_count ",repeat_count
-          print *,"leading_vfrac_sum ",leading_vfrac_sum
-          print *,"vof_super= ",vof_super
-          print *,"use_ls_data= ",use_ls_data
+          print *,"repeat_count invalid ",repeat_count
           stop
          endif
       

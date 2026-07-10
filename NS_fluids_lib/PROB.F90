@@ -14204,14 +14204,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       if (num_divu_outer_sweeps.lt.1) then
-       print *,"num_divu_outer_sweeps invalid SEM_MAC_TO_CELL"
+       print *,"num_divu_outer_sweeps invalid SEM_MAC_TO_CELL ", &
+               num_divu_outer_sweeps
        stop
       endif
       if ((divu_outer_sweeps.ge.0).and. &
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
       else
-       print *,"divu_outer_sweeps invalid SEM_MAC_TO_CELL"
+       print *,"divu_outer_sweeps invalid SEM_MAC_TO_CELL ", &
+               divu_outer_sweeps
        stop
       endif
 
@@ -15010,6 +15012,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                 ! do nothing
                else
                 print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+                print *,"ns_time_order=",ns_time_order
+                print *,"advect_iter=",advect_iter
+                print *,"SDC_outer_sweeps =",SDC_outer_sweeps
+                print *,"divu_outer_sweeps =",divu_outer_sweeps
+                print *,"num_divu_outer_sweeps =",num_divu_outer_sweeps
                 stop
                endif
 
@@ -15034,6 +15041,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ! do nothing
               else
                print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+               print *,"ns_time_order=",ns_time_order
+               print *,"advect_iter=",advect_iter
+               print *,"SDC_outer_sweeps =",SDC_outer_sweeps
+               print *,"divu_outer_sweeps =",divu_outer_sweeps
+               print *,"num_divu_outer_sweeps =",num_divu_outer_sweeps
                stop
               endif
 
@@ -19218,6 +19230,8 @@ end subroutine RatePhaseChange
 
 
        !ASHWANI PAL SLAC
+       !get_vel_phasechange_NUCLEATE is called from
+       !fort_ratemasschange in MASS_TRANSFER_3D.F90
       subroutine get_vel_phasechange_NUCLEATE( &
                       nucleate_in,nucleate_out)
       use global_utility_module
@@ -22229,6 +22243,7 @@ end subroutine initialize2d
        problo, &
        time, &
        level, &
+       coarsest_level_CISL, &
        max_level, &
        max_level_for_use, &
        nblocks, &
@@ -22264,6 +22279,7 @@ end subroutine initialize2d
       integer, INTENT(in) :: DIMDEC(lsnew)
       integer, INTENT(in) :: set, clear
       integer, INTENT(in) :: level
+      integer, INTENT(in) :: coarsest_level_CISL
       integer, INTENT(in) :: max_level
       integer, INTENT(in) :: max_level_for_use
       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -22313,6 +22329,13 @@ end subroutine initialize2d
       if ((max_level_for_use.lt.0).or. &
           (max_level_for_use.gt.max_level)) then
        print *,"max_level_for_use invalid: ",max_level_for_use
+       stop
+      endif
+      if ((coarsest_level_CISL.ge.0).and. &
+          (coarsest_level_CISL.le.max_level_for_use)) then
+       !do nothing
+      else
+       print *,"coarsest_level_CISL invalid ",coarsest_level_CISL
        stop
       endif
       if ((nblocks.lt.0).or.(ncoarseblocks.lt.0).or. &
@@ -22371,122 +22394,133 @@ end subroutine initialize2d
        rflag=errfab(D_DECL(i,j,k))
        tagflag=0
 
-       if (level.lt.max_level_for_use) then
+       if ((level.ge.0).and.(level.lt.coarsest_level_CISL)) then
+        rflag=one
+        tagflag=1
+       else if (level.ge.coarsest_level_CISL) then
+ 
+        if (level.lt.max_level_for_use) then
 
-         ! updates "tagflag" and/or "rflag"
-         ! subroutine override_tagflag is in PROB.F90 too.
-        call override_tagflag( &
-         i,j,k, &
-         level,max_level, &
-         snew_ptr,lsnew_ptr, &
-         xsten,nhalf,time, &
-         rflag,tagflag)
+          ! updates "tagflag" and/or "rflag"
+          ! subroutine override_tagflag is in PROB.F90 too.
+         call override_tagflag( &
+          i,j,k, &
+          level,max_level, &
+          snew_ptr,lsnew_ptr, &
+          xsten,nhalf,time, &
+          rflag,tagflag)
 
-        call SUB_clamped_LS(x_local,time,LS_clamped,vel_clamped, &
-          temperature_clamped,prescribed_flag,dx)
-        if (LS_clamped.ge.zero) then
-         if (prescribed_flag.eq.0) then
-          rflag=one
-          tagflag=1
-         else if (prescribed_flag.eq.1) then
-          ! do nothing
-         else
-          print *,"prescribed_flag invalid: ",prescribed_flag
-          stop
-         endif
-        else if (LS_clamped.lt.zero) then
-         ! do nothing
-        else
-         print *,"LS_clamped invalid: ",LS_clamped
-         stop
-        endif
-        do iregions=1,number_of_source_regions
-
-         call SUB_CHARFN_REGION(iregions,x_local,time,charfn)
-
-         if (charfn.eq.one) then
-
-          rflag=one
-          tagflag=1
-
-         else if (charfn.eq.zero) then
-          ! do nothing
-         else
-          print *,"charfn invalid"
-          stop
-         endif
-        enddo !iregions=1,number_of_source_regions
-
-        if (rflag.eq.one) then
-         tagflag=1
-        else if (rflag.eq.zero) then
-         ! do nothing
-        else
-         print *,"rflag invalid in fort_error_estimate_helper: ",rflag
-         print *,"probtype=",probtype
-         print *,"axis_dir=",axis_dir
-         stop
-        endif
-
-        if (ractivex.gt.zero) then
-         if ((abs(x-xactive).gt.ractivex).or. &
-#if (AMREX_SPACEDIM==3)
-             (abs(z-zactive).gt.ractivez).or. &
-#endif
-             (abs(y-yactive).gt.ractivey)) then
-          tagflag=0
-         endif
-        endif
-
-        if (nblocks.gt.0) then
-         do np=1,nblocks
-          if ((abs(x-xblocks(np)).le.rxblocks(np)).and. &
-#if (AMREX_SPACEDIM==3)
-              (abs(z-zblocks(np)).le.rzblocks(np)).and. &
-#endif
-              (abs(y-yblocks(np)).le.ryblocks(np))) then
+         call SUB_clamped_LS(x_local,time,LS_clamped,vel_clamped, &
+           temperature_clamped,prescribed_flag,dx)
+         if (LS_clamped.ge.zero) then
+          if (prescribed_flag.eq.0) then
+           rflag=one
            tagflag=1
+          else if (prescribed_flag.eq.1) then
+           ! do nothing
+          else
+           print *,"prescribed_flag invalid: ",prescribed_flag
+           stop
           endif
-         enddo
-        endif
-
-        coarseblocks_available=1
-        if ((probtype.eq.541).and.(level.le.3)) then
-         coarseblocks_available=0
-        else
-         ! do nothing
-        endif
-
-        if (coarseblocks_available.eq.1) then
-
-         if (ncoarseblocks.gt.0) then
-          do np=1,ncoarseblocks
-           if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
-#if (AMREX_SPACEDIM==3)
-               (abs(z-zcoarseblocks(np)).ge.rzcoarseblocks(np)).or. &
-#endif
-               (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then
-            tagflag=0
-           endif
-          enddo ! do np=1,ncoarseblocks
-         else if (ncoarseblocks.eq.0) then
+         else if (LS_clamped.lt.zero) then
           ! do nothing
          else
-          print *,"ncoarseblocks invalid"
+          print *,"LS_clamped invalid: ",LS_clamped
+          stop
+         endif
+         do iregions=1,number_of_source_regions
+
+          call SUB_CHARFN_REGION(iregions,x_local,time,charfn)
+
+          if (charfn.eq.one) then
+
+           rflag=one
+           tagflag=1
+
+          else if (charfn.eq.zero) then
+           ! do nothing
+          else
+           print *,"charfn invalid"
+           stop
+          endif
+         enddo !iregions=1,number_of_source_regions
+
+         if (rflag.eq.one) then
+          tagflag=1
+         else if (rflag.eq.zero) then
+          ! do nothing
+         else
+          print *,"rflag invalid in fort_error_estimate_helper: ",rflag
+          print *,"probtype=",probtype
+          print *,"axis_dir=",axis_dir
           stop
          endif
 
-        else if (coarseblocks_available.eq.0) then
+         if (ractivex.gt.zero) then
+          if ((abs(x-xactive).gt.ractivex).or. &
+#if (AMREX_SPACEDIM==3)
+              (abs(z-zactive).gt.ractivez).or. &
+#endif
+              (abs(y-yactive).gt.ractivey)) then
+           tagflag=0
+          endif
+         endif
+
+         if (nblocks.gt.0) then
+          do np=1,nblocks
+           if ((abs(x-xblocks(np)).le.rxblocks(np)).and. &
+#if (AMREX_SPACEDIM==3)
+               (abs(z-zblocks(np)).le.rzblocks(np)).and. &
+#endif
+               (abs(y-yblocks(np)).le.ryblocks(np))) then
+            tagflag=1
+           endif
+          enddo
+         endif
+
+         coarseblocks_available=1
+         if ((probtype.eq.541).and.(level.le.3)) then
+          coarseblocks_available=0
+         else
+          ! do nothing
+         endif
+
+         if (coarseblocks_available.eq.1) then
+
+          if (ncoarseblocks.gt.0) then
+           do np=1,ncoarseblocks
+            if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
+#if (AMREX_SPACEDIM==3)
+                (abs(z-zcoarseblocks(np)).ge.rzcoarseblocks(np)).or. &
+#endif
+                (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then
+             tagflag=0
+            endif
+           enddo ! do np=1,ncoarseblocks
+          else if (ncoarseblocks.eq.0) then
+           ! do nothing
+          else
+           print *,"ncoarseblocks invalid"
+           stop
+          endif
+
+         else if (coarseblocks_available.eq.0) then
+          ! do nothing
+         else
+          print *,"coarseblocks_available invalid"
+          stop
+         endif
+         
+        else if (level.ge.max_level_for_use) then
          ! do nothing
         else
-         print *,"coarseblocks_available invalid"
+         print *,"level invalid ",level
          stop
         endif
-        
-       else if (level.ge.max_level_for_use) then
-        ! do nothing
+
        else
-        print *,"level invalid ",level
+        print *,"coarsest_level_CISL invalid ",coarsest_level_CISL
+        print *,"or level invalid ",level
         stop
        endif
 

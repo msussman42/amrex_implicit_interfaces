@@ -102,7 +102,8 @@ ns.primary_flotsam_tol=1.0e-8 #NEW VERSION
 ns.secondary_flotsam_tol=0.1
 
 #amr.n_cell=64 64 48  # XYZ
-amr.n_cell=32 32  # RZ
+#amr.n_cell=32 32  # RZ
+amr.n_cell=64 64  # RZ
 amr.max_level = 0
 # water, gas, ice, substrate
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -111,17 +112,17 @@ amr.n_error_buf     = 2 2 2 2   # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 2 2 2 2   # block factor in grid generation
-amr.check_int       = 500 # 500 (check_int=10 for testing)
+amr.check_int       = 100 # 500 (check_int=10 for testing)
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 500 # 500  (plot_int=10 for testing)
+amr.plot_int        = 100 # 500  (plot_int=10 for testing)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
-cg.min_max_grid_size=64
+amr.max_grid_size   = 128 16
+cg.min_max_grid_size=128
 amr.file_name_digits=7
-#amr.restart         = chk0003500
+#amr.restart         = chk0001500
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -152,9 +153,10 @@ ns.gravity        = -980.0   # cgs
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 # theta_L=18 degrees growth rate: sigma_LI=sigma_LG (1-cos(18 deg))
+# theta_L=45 degrees growth rate: sigma_LI=sigma_LG (1-cos(45 deg))
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
 ns.radblob9=0.0 # transition time from tension_init to tension.
-ns.tension     =72.8 0.0  72.8 72.8 143.1 72.8
+ns.tension     =72.8 72.8 72.8 72.8 72.8 72.8
 #ns.tension     =72.8 3.6  72.8 72.8 143.1 72.8
 #ns.tension_init=72.8 3.6  72.8 72.8 143.1 72.8 #wetting
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
@@ -295,7 +297,8 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-ns.explicit_viscosity_dt=1.0
+#ns.explicit_viscosity_dt=1.0
+ns.explicit_viscosity_dt=0.0
 ns.ngrow_distance=6
 #Artificial viscosity should be enough so that the explicity_viscosity_dt
 #constraint makes a difference.

@@ -129,7 +129,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   amrex::Error("localMF_grow invalid");
  }
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid new_localMF");
 
  BoxArray edge_boxes(grids);
 
@@ -260,7 +260,7 @@ void NavierStokes::getStateMAC_localMF(
   amrex::Error("localMF_grow invalid getstateMAC_localMF");
  }
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getstateMAC_localMF");
 
    // NavierStokes::getStateMAC declared in NavierStokes.cpp
  localMF[idx_MF]=getStateMAC(ngrow,dir,time);
@@ -275,7 +275,7 @@ void NavierStokes::getStateDen_localMF(int idx_MF,int ngrow,Real time) {
   amrex::Error("localMF_grow invalid getStateDen_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateDen_localMF");
 
  localMF[idx_MF]=getStateDen(ngrow,time);
  localMF_grow[idx_MF]=ngrow;
@@ -286,8 +286,11 @@ void NavierStokes::getStateDist_localMF(int idx_MF,int ngrow,
   Real time,
   const std::string& caller_string) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid getStateDist_localMF");
+ }
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -306,10 +309,13 @@ void NavierStokes::getState_localMF_list(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow>=0)&&(ngrow<=8)) {
+ if ((ngrow>=0)&&(ngrow<=ngrow_distance+8)) {
   // do nothing
- } else
+ } else {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
   amrex::Error("ngrow invalid in getState_localMF_list");
+ }
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -331,12 +337,14 @@ void NavierStokes::getState_localMF_listALL(
   Vector<int> scomp,
   Vector<int> ncomp) {
 
- if ((ngrow>=0)&&(ngrow<=8)) {
+ if ((ngrow>=0)&&(ngrow<=ngrow_distance+8)) {
   // do nothing
  } else {
   std::cout << "idx_MF=" << idx_MF << " ngrow= " << ngrow <<
    " state_index= " << state_index << " scomp.size()=" <<
    scomp.size() << '\n';
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
   amrex::Error("ngrow invalid getState_localMF_listALL");
  }
  if (localMF_grow[idx_MF]==-1) {
@@ -420,7 +428,7 @@ void NavierStokes::getState_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getState_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getState_localMF");
 
  localMF[idx_MF]=getState(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -437,7 +445,7 @@ void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getStateTensor_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateTensor_localMF");
 
  localMF[idx_MF]=getStateTensor(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -454,7 +462,7 @@ void NavierStokes::getStateRefineDensity_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getStateRefineDensity_localMF");
 
  if (ngrow<0)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid getStateRefineDensity_localMF");
 
  localMF[idx_MF]=getStateRefineDensity(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
@@ -465,8 +473,11 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
   Real tag,int clearbdry) {
 
  delete_localMF_if_exist(idx_MF,1);
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid maskfiner_localMF");
+ }
 
  localMF[idx_MF]=maskfiner(ngrow,tag,clearbdry);
  localMF_grow[idx_MF]=ngrow;
@@ -596,8 +607,11 @@ void NavierStokes::delete_localMF_if_exist(int idx_MF,int ncomp) {
 //  mask=tag at fine-fine ghost cell
 MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid maskfiner");
+ }
  
  int finest_level = parent->finestLevel();
  MultiFab* mask=new MultiFab(grids,dmap,1,ngrow,
@@ -5249,8 +5263,11 @@ void NavierStokes::allocate_levelset_ALL(int ngrow,int idx) {
  if (level!=0)
   amrex::Error("level invalid allocate_levelsetALL");
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow = " << ngrow << '\n';
+  std::cout << "ngrow_distance = " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid allocate_levelset_ALL");
+ }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5263,8 +5280,11 @@ void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
  std::string local_caller_string="allocate_levelset";
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid allocate_levelset");
+ }
 
  delete_localMF_if_exist(idx,1);
  getStateDist_localMF(idx,ngrow,cur_time_slab,local_caller_string);
@@ -5277,8 +5297,11 @@ void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
 void NavierStokes::resize_levelset(int ngrow,int idx) {
 
- if ((ngrow<0)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid resize_levelset");
+ }
 
  if (localMF_grow[idx]>=0) {
   // do nothing
@@ -6693,7 +6716,6 @@ void NavierStokes::prescribe_solid_geometryALL(
   Real time,
   int output_slab,
   int renormalize_flag,
-  int local_truncate,
   const std::string& caller_string) {
 
  if (pattern_test(caller_string,"prescribe_solid_geometryALL")==1) {
@@ -6715,7 +6737,7 @@ void NavierStokes::prescribe_solid_geometryALL(
   std::string local_caller_string="prescribe_solid_geometryALL";
   local_caller_string=caller_string+local_caller_string;
 
-  if ((step_through_data==1)&&(1==1)) {
+  if ((step_through_data==1)&&(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
@@ -6729,7 +6751,6 @@ void NavierStokes::prescribe_solid_geometryALL(
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-   std::cout << "local_truncate= " << local_truncate << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 
     "press any number then enter:begin prescribe_solid_geometryALL\n";
@@ -6754,33 +6775,6 @@ void NavierStokes::prescribe_solid_geometryALL(
    std::cout << "renormalize_flag " << renormalize_flag << '\n';
    amrex::Error("renormalize_flag invalid");
   }
-
-  if (local_truncate==1) {
-   Vector<Real> delta_mass_all;
-   delta_mass_all.resize(num_materials);
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    if (ilev<finest_level) {
-     ns_level.avgDown(LS_Type,0,num_materials,0);
-     ns_level.MOFavgDown();
-    }
-    ns_level.truncate_VOF(delta_mass_all);
-    if (verbose>0) {
-     if (ParallelDescriptor::IOProcessor()) {
-      for (int im=0;im<num_materials;im++) {
-       std::cout << "truncate statistics: im,delta_mass " << im << ' ' <<
-        delta_mass_all[im] << '\n';
-      } // im
-     } // IOProc?
-    } // verbose>0?
-
-   } // ilev
-
-  } else if (local_truncate==0) {
-   // do nothing
-  } else
-   amrex::Error("local_truncate invalid");
 
   if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
 
@@ -6810,7 +6804,7 @@ void NavierStokes::prescribe_solid_geometryALL(
    ns_level.prescribe_solid_geometry(time,output_slab,renormalize_flag);
   } //ilev=finest_level downto level
 
-  if ((step_through_data==1)&&(1==1)) {
+  if ((step_through_data==1)&&(1==0)) {
    int basestep_debug=nStep();
    parent->writeDEBUG_PlotFile(
       local_caller_string,
@@ -6824,7 +6818,6 @@ void NavierStokes::prescribe_solid_geometryALL(
 	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
 	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
-   std::cout << "local_truncate= " << local_truncate << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 
     "press any number then enter:at the end prescribe_solid_geometryALL\n";
@@ -7083,105 +7076,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int output_slab,
 }  // end subroutine prescribe_solid_geometry()
 
 
-// called from NavierStokes::prescribe_solid_geometryALL
-void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
-
- std::string local_caller_string="truncate_VOF";
- 
- bool use_tiling=ns_tiling;
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- int finest_level = parent->finestLevel();
-
- MultiFab &S_new = get_new_data(State_Type,project_slab_step+1);
- int nc=STATE_NCOMP;
- if (nc!=S_new.nComp())
-  amrex::Error("nc invalid in truncate_VOF");
-
- if (delta_mass_all.size()!=num_materials)
-  amrex::Error("delta_mass_all has invalid size");
-
- Vector< Vector<Real> > local_delta_mass;
- local_delta_mass.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  local_delta_mass[tid].resize(num_materials); 
-  for (int im=0;im<num_materials;im++)
-   local_delta_mass[tid][im]=0.0;
- } // tid
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string);
-
- const Real* dx = geom.CellSize();
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   FArrayBox& vofnew=S_new[mfi];
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-// F<VOFTOL => F=0.0
-// F>1-VOFTOL => F=1.0
-// sum F_fluid=1  sum F_solid <=1
-// fort_purgeflotsam is declared in: LEVELSET_3D.F90
-   fort_purgeflotsam(
-     local_delta_mass[tid_current].dataPtr(),
-     &level,&finest_level,
-     &cur_time_slab,
-     tilelo,tilehi,
-     fablo,fabhi,&bfact,
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     vofnew.dataPtr(STATECOMP_MOF),
-     ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
-     xlo,dx);
-
- }  // mfi
-} // omp
- ns_reconcile_d_num(LOOP_PURGEFLOTSAM,"truncate_VOF");
-
- for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int im=0;im<num_materials;im++) {
-   local_delta_mass[0][im]+=local_delta_mass[tid][im];
-  }
- } // tid
-
- ParallelDescriptor::Barrier();
- for (int im=0;im<num_materials;im++) {
-  ParallelDescriptor::ReduceRealSum(local_delta_mass[0][im]);
- }
- for (int im=0;im<num_materials;im++) {
-  delta_mass_all[im]+=local_delta_mass[0][im];
- }
-
-}  // truncate_VOF()
-
 void NavierStokes::output_triangles() {
 
  std::string local_caller_string="output_triangles";
@@ -7417,8 +7311,9 @@ void NavierStokes::check_for_NAN_TENSOR_base(
  int ngrid=mfBA.size();
  const Box& domain = geom.Domain();
 
- if (ngrow!=1)
-  amrex::Error("ngrow invalid");
+ if (ngrow!=1) {
+  amrex::Error("ngrow invalid check_for_NAN_TENSOR_base");
+ }
 
  std::fflush(NULL);
 
@@ -7475,7 +7370,7 @@ void NavierStokes::check_for_NAN_TENSOR(
  if (ncomp!=AMREX_SPACEDIM_SQR)
   amrex::Error("ncomp invalid in check_for_NAN_TENSOR");
  if (ngrow!=1)
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid in check_for_NAN_TENSOR");
 
  std::fflush(NULL);
 
@@ -7730,7 +7625,8 @@ void NavierStokes::output_zones(
 
  int bfact=parent->Space_blockingFactor(level);
 
- if (level<=tecplot_finest_level) {
+ if ((level>=coarsest_level_CISL)&&
+     (level<=tecplot_finest_level)) {
 
    //plot_grid_type==0 data interpolated to nodes.
   if (plot_grid_type==0) {
@@ -8387,7 +8283,7 @@ void NavierStokes::output_zones(
   } else
    amrex::Error("plot_grid_type invalid");
 
- } else if (level<=finest_level) {
+ } else if ((level>tecplot_finest_level)&&(level<=finest_level)) {
 
   // do nothing
 
@@ -8418,8 +8314,10 @@ void NavierStokes::Sanity_output_zones(
   //do nothing
  } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
    //do nothing
- } else
+ } else {
+  std::cout << "tower_mf_id= " << tower_mf_id << '\n';
   amrex::Error("tower_mf_id out of range");
+ }
 
  const Real* dx = geom.CellSize();
  const Real* prob_lo = geom.ProbLo();
@@ -8436,7 +8334,8 @@ void NavierStokes::Sanity_output_zones(
  if (tecplot_max_level<tecplot_finest_level)
   tecplot_finest_level=tecplot_max_level;
 
- if (level<=tecplot_finest_level) {
+ if ((level>=coarsest_level_CISL)&&
+     (level<=tecplot_finest_level)) {
 
   BoxArray cgrids(grids);
   BoxList cgrids_list(cgrids);
@@ -8573,7 +8472,7 @@ void NavierStokes::Sanity_output_zones(
   } else 
    amrex::Error("grids_per_level is corrupt");
 
- } else if (level<=finest_level) {
+ } else if ((level>tecplot_finest_level)&&(level<=finest_level)) {
 
   // do nothing
 
@@ -9135,8 +9034,11 @@ void NavierStokes::VOF_Recon_ALL(
 
 void NavierStokes::VOF_Recon_resize(int ngrow) {
 
- if ((ngrow<1)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
+ if ((ngrow<1)||(ngrow>ngrow_distance+1)) {
+  std::cout << "ngrow= " << ngrow << '\n';
+  std::cout << "ngrow_distance= " << ngrow_distance << '\n';
+  amrex::Error("ngrow invalid VOF_Recon_resize");
+ }
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon");
 
@@ -9752,7 +9654,7 @@ void NavierStokes::level_getshear(
  if ((ngrow==0)||(ngrow==1)) {
   // do nothing
  } else
-  amrex::Error("ngrow invalid");
+  amrex::Error("ngrow invalid level_getshear");
 
  bool use_tiling=ns_tiling;
 

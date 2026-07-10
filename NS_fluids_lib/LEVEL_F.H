@@ -257,16 +257,6 @@ namespace amrex{
        Real* secondary_flotsam_tol);
 
 
-     void fort_purgeflotsam(
-       Real* delta_mass,
-       int* level,int* finest_level,
-       Real* time,
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,int* bfact,
-       Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-       Real* vofnew,AMREX_ARLIM_P(vofnewlo),AMREX_ARLIM_P(vofnewhi),
-       const Real* xlo,const Real* dx);
-
       void fort_cell_to_mac(
         int* ncomp_mgoni,
         int* ncomp_xp,

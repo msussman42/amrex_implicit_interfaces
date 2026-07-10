@@ -29522,6 +29522,21 @@ do jj=1,3
  Q(ii,jj)=zero
 enddo
 enddo
+
+if (ENUM_NUM_TENSOR_EXTRA.eq.1) then
+ !do nothing
+else
+ print *,"expecting ENUM_NUM_TENSOR_EXTRA==1 ",ENUM_NUM_TENSOR_EXTRA
+ stop
+endif
+if (ENUM_NUM_TENSOR_TYPE.eq.ENUM_NUM_TENSOR_TYPE_BASE+ &
+        ENUM_NUM_TENSOR_EXTRA) then
+ !do nothing
+else
+ print *,"ENUM_NUM_TENSOR_TYPE invalid ",ENUM_NUM_TENSOR_TYPE
+ stop
+endif
+
 do dir_local=1,ENUM_NUM_TENSOR_TYPE_BASE
  call stress_index(dir_local,ii,jj)
  Q(ii,jj)=told(dir_local)
