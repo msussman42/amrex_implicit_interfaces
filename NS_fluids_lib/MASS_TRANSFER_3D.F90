@@ -3664,7 +3664,7 @@ stop
       real(amrex_real), target, INTENT(out) :: swept(DIMV(swept),num_materials)
       real(amrex_real), pointer :: swept_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real) :: denratio_factor
+      real(amrex_real) :: mass_correct
 
       integer i,j,k,dir
       integer i1,j1,k1
@@ -3823,7 +3823,7 @@ stop
       real(amrex_real) density_old(2)
       real(amrex_real) temperature_old(2)
       real(amrex_real) species_old(2)
-      real(amrex_real) delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
+      real(amrex_real) delta_mass_local(2) !iprobe==1: source  iprobe==2: dest
       real(amrex_real) :: xPOINT_supermesh(SDIM)
       real(amrex_real) :: xPOINT_GFM(SDIM)
       integer im_old_crit
@@ -5222,23 +5222,24 @@ stop
               else if (constant_density_all_time(im_probe).eq.0) then
                density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
               else
-               print *,"constant_density_all_time(im_probe) invalid"
-               stop
-              endif
-
-              if (density_old(iprobe).gt.zero) then
-               ! do nothing
-              else
-               print *,"density_old(iprobe) invalid: ",density_old(iprobe)
+               print *,"constant_density_all_time(im_probe) invalid ", &
+                 constant_density_all_time
                stop
               endif
 
              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
 
-              density_old(iprobe)=fort_denconst(im_probe)
+              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
 
              else
               print *,"mtype invalid: ",mtype
+              stop
+             endif
+
+             if (density_old(iprobe).gt.zero) then
+              ! do nothing
+             else
+              print *,"density_old(iprobe) invalid: ",density_old(iprobe)
               stop
              endif
 
@@ -5290,6 +5291,8 @@ stop
              ! do nothing
             else
              print *,"vapor_den or condensed_den invalid"
+             print *,"vapor_den=",vapor_den
+             print *,"condensed_den=",condensed_den
              stop
             endif
             if (is_multi_component_evapF(local_freezing_model, &
@@ -5570,14 +5573,14 @@ stop
               if (delta_mass_local(iprobe).le.zero) then
                ! do nothing
               else
-               print *,"delta_mass_local invalid"
+               print *,"delta_mass_local invalid ",delta_mass_local
                stop
               endif
              else if (iprobe.eq.2) then ! dest
               if (delta_mass_local(iprobe).ge.zero) then
                ! do nothing
               else
-               print *,"delta_mass_local invalid"
+               print *,"delta_mass_local invalid ",delta_mass_local
                stop
               endif
              else
@@ -5857,104 +5860,99 @@ stop
 
             jump_strength=zero
 
-            !dF=mdot/rho_source
-            !dF_expand_dest=(rho_source/rho_dest - 1)*dF
-            !dM=rho_dest * dF_dest + rho_source * dF_source=
-            !rho_dest (mdot/rho_source + (rho_source/rho_dest - 1)(dF))+
-            !rho_source * (-dF) =
-            !((rho_dest/rho_source)mdot+(rho_source-rho_dest)*dF)-rho_source*dF=
-            !(rho_dest/rho_source)mdot-rho_dest*dF=0
-            if (distribute_from_targ.eq.0) then ! default
-             ! distribute div u source to the cells in which F_dest>1/2  
+            ! iprobe==1: source
+            ! iprobe==2: dest
+            if (abs(one-density_old(1)/density_old(2)).le.EPS_8_4) then
+             mass_correct=zero
+            else if (abs(one-density_old(1)/density_old(2)).ge.EPS_8_4) then
 
-             if (dF.le.EBVOFTOL) then
-              denratio_factor=zero
-             else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. & !den_dst * dF
-                  (den_dF(1).lt.zero)) then  !-den_src * dF
-               denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst-1
-              else if ((den_dF(2).eq.zero).or. &
-                       (den_dF(1).eq.zero)) then
-               ! do nothing
+             if (distribute_from_targ.eq.0) then ! default
+              ! distribute compensating mass to the cells in which F_dest>1/2  
+
+              if (dF.le.EBVOFTOL) then
+               mass_correct=zero
+              else if (dF.ge.EBVOFTOL) then
+               ! iprobe==1: source
+               ! iprobe==2: dest
+               ! den_dF=(rho F)^new - (rho F)^old
+               if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                   (den_dF(1).lt.zero)) then  !-den_src * dF
+                mass_correct=-den_dF(1)-den_dF(2) !g/cm^3
+                 !in converting from mass source to volume source, one
+                 !divides by den_dst
+               else if ((den_dF(2).eq.zero).or. &
+                        (den_dF(1).eq.zero)) then
+                ! do nothing
+               else
+                print *,"den_dF invalid 1"
+                print *,"dF= ",dF
+                print *,"den_dF(1) = ",den_dF(1)
+                print *,"den_dF(2) = ",den_dF(2)
+                print *,"EBVOFTOL = ",EBVOFTOL
+                print *,"dt = ",dt
+                stop
+               endif
               else
-               print *,"den_dF invalid 1"
-               print *,"dF= ",dF
-               print *,"den_dF(1) = ",den_dF(1)
-               print *,"den_dF(2) = ",den_dF(2)
-               print *,"EBVOFTOL = ",EBVOFTOL
-               print *,"dt = ",dt
+               print *,"dF is corrupt ",dF
                stop
               endif
-             else
-              print *,"dF is corrupt"
+
+             else if (distribute_from_targ.eq.1) then
+              ! distribute compensating mass to the cells in which F_dest<1/2  
+
+              if (dF.le.EBVOFTOL) then
+               mass_correct=zero
+              else if (dF.ge.EBVOFTOL) then
+               ! iprobe==1: source
+               ! iprobe==2: dest
+               ! den_dF=(rho F)^new - (rho F)^old
+               if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                   (den_dF(1).lt.zero)) then  !-den_src * dF
+                mass_correct=den_dF(1)+den_dF(2) ! g/cm^3
+                 !in converting from mass source to volume source, one
+                 !divides by den_src
+               else if ((den_dF(2).eq.zero).or. &
+                        (den_dF(1).eq.zero)) then
+                ! do nothing
+               else
+                print *,"den_dF invalid 2"
+                print *,"dF= ",dF
+                print *,"den_dF(1) = ",den_dF(1)
+                print *,"den_dF(2) = ",den_dF(2)
+                print *,"EBVOFTOL = ",EBVOFTOL
+                print *,"dt = ",dt
+                stop
+               endif
+              else
+               print *,"dF is corrupt ",dF
+               stop
+              endif
+
+             else 
+              print *,"distribute_from_targ invalid ",distribute_from_targ
               stop
              endif
 
-            !dF=mdot/rho_dest
-            !dF_expand_source=(1-rho_dest/rho_source)*dF
-            !dM=rho_dest * dF_dest + rho_source * dF_source=
-            !rho_dest(mdot/rho_dest)+ 
-            !rho_source (-mdot/rho_dest+(1-rho_dest/rho_source)(dF))=
-            !mdot-(rho_source/rho_dest)mdot+(rho_source-rho_dest)dF=
-            !mdot-(rho_source/rho_dest)mdot+(rho_source/rho_dest)mdot-mdot=0
-            else if (distribute_from_targ.eq.1) then
-             ! distribute div u source to the cells in which F_dest<1/2  
-
-             if (dF.le.EBVOFTOL) then
-              denratio_factor=zero
-             else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. & !den_dst * dF
-                  (den_dF(1).lt.zero)) then  !-den_src * dF
-               denratio_factor=one+den_dF(2)/den_dF(1) ! 1-den_dst/den_src
-              else if ((den_dF(2).eq.zero).or. &
-                       (den_dF(1).eq.zero)) then
-               ! do nothing
-              else
-               print *,"den_dF invalid 2"
-               print *,"dF= ",dF
-               print *,"den_dF(1) = ",den_dF(1)
-               print *,"den_dF(2) = ",den_dF(2)
-               print *,"EBVOFTOL = ",EBVOFTOL
-               print *,"dt = ",dt
-               stop
-              endif
-             else
-              print *,"dF is corrupt"
-              stop
-             endif
-
-            else 
-             print *,"distribute_from_targ invalid"
+            else
+             print *,"density_old corruption ",density_old
              stop
             endif
 
-            if (abs(denratio_factor).le.EPS_8_4) then
-             denratio_factor=zero
-            endif
+            jump_strength=mass_correct/dt !units (gm/cm^3) * (1/s) 
 
-            jump_strength=denratio_factor/dt !units 1/s 
-
-             !for distribute_from_targ==0:
-             !mdot is distributed to the target material.
-             !velocity of the interface (cm/s) is U_source + mdot n/rho_source
-             !mdot=[k grad T]dot n/L (W/(m Kelvin))(Kelvin/m)(kg/J)=
-             !  (W/m^2)(kg/J)=kg/(m^2 s)
-             !dF=(dt/dx)mdot/rho_source  (s/m)(kg/(m^2 s))m^3/kg=unitless
-             !initially: jump_strength=(den_src/den_dst - 1)/dt
-             !ultimately jump_strength has units of cm^{3}/s^{2}
-             !source term is jump_strength
-             !dF has no units.  dF=F^new_dest - F^old_dest
-             !dF * jump_strength = (mdot/dx)(1/rho_dst-1/rho_src) (units 1/dt)
-             !note: vol div u/dt = cm^3 (cm/s) (1/cm) (1/s)=cm^3 / s^2
-             !for boiling: jump_strength>0
-     
-             !note: u=ustar-dt grad p/rho
-             !div (grad p /rho)=div(ustar)/dt
-             !vol * div(grad p/rho)=vol div(ustar)/dt
-
-             !units: (1/s)m^3/s=m^3/s^2
-            jump_strength=jump_strength*dF*volgrid/dt
-
+             !-vol * div(grad p/rho)=-vol div(ustar)/dt + source
+             !vol * div(ustar-dt grad p/rho)=-dt * source
+             !vol * div(unp1)=-dt * source
+             !units required for source term: 
+             !(cm^3)(1/s)(1/s)=cm^3/s^2
+            jump_strength=jump_strength*volgrid/dt !gm/s^2
+             !after mass redistribution, in order to convert to pressure
+             !solve source term, one must divide "jump_strength" by
+             !the local density.
+             !for compressible flow, in order to convert to 
+             !density source term:
+             !one must multiply "jump_strength" by (dt^2)(1/volgrid) and
+             !then add to the existing density.
             JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)=jump_strength
           
             if (dF.le.EBVOFTOL) then
@@ -8287,26 +8285,6 @@ stop
        print *,"color_count=",color_count
        stop
       endif
-
-       ! SANDIPAN HOOK HERE
-       ! pseudo code:
-       ! if typefab(D_DECL(i,j,k))=im_vapor then
-       !  color = colorfab(D_DECL(i,j,k))
-       !  vapor bubble statistics are in 
-       !   blob_array((color-1)*num_elements_blobclass + l)
-       !  l=1..num_elements_blobclass
-       ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
-       !  volume/dt^2
-       ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
-       ! MDOT should have the same units as volume * div u/dt
-       ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
-       ! for standard phase change:
-       ! units: cm^3/s^2
-       ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
-       ! if evaporation then expansion_term should be positive.
-       ! FOR CODY: if pressure falls below some cavitation pressure, then
-       ! material is cavitated. (velocity of phase change is dx/dt?)
-
 
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)

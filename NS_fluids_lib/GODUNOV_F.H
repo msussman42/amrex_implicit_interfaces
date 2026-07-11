@@ -550,6 +550,7 @@ extern "C"
     Real* dt,Real* time);
 
    void fort_initjumpterm(
+    int* nstate,
     Real* mdotplus,
     Real* mdotminus,
     Real* mdotcount,
@@ -567,6 +568,7 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* LSaltnew,AMREX_ARLIM_P(LSaltnewlo),AMREX_ARLIM_P(LSaltnewhi),
