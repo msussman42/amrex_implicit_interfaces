@@ -17048,6 +17048,8 @@ NavierStokes::phase_change_redistributeALL() {
  int operation_flag=OP_GATHER_MDOT; 
  int use_mac_velocity=0;
 
+//FIX ME COMPLEMENT treatment still correct? What about
+//mass source "region list logic?"
   //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
   use_mac_velocity,
@@ -17286,6 +17288,11 @@ NavierStokes::level_phase_change_redistribute(
  if (localMF[LS_alt_index]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LS_alt_index]->nComp() invalid");
  debug_ngrow(LS_alt_index,ngrow_distance,local_caller_string);
+
+ int nstate=STATE_NCOMP;
+ MultiFab& S_new = get_new_data(State_Type,project_slab_step+1);
+ if (S_new.nComp()!=nstate)
+  amrex::Error("S_new invalid ncomp");
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -17788,6 +17795,7 @@ NavierStokes::level_phase_change_redistribute(
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+    FArrayBox& snewfab=S_new[mfi];
 
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
     FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
@@ -17821,9 +17829,9 @@ NavierStokes::level_phase_change_redistribute(
     // declared in: GODUNOV_3D.F90 (distribute_from_target==0)
     //   a)  jump_strength=
     //       JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)
-    //      dF * volgrid * (den_source/den_dest-1)/ dt^2 =
-    //      units m^3/s^2
-    //   b)  divu_material=jump_strength  cm^3/s^2
+    //      dF * volgrid * (den_source-den_dest)/ dt^2 =
+    //      units kg/s^2
+    //   b)  divu_material=(1/local_density) * jump_strength  units=cm^3/s^2
     //   c)  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
     //   V = U*  - dt grad p/rho
     //   0 = div U* - dt div grad p/rho
@@ -17839,6 +17847,7 @@ NavierStokes::level_phase_change_redistribute(
     //   rho=den^dest * (1 + dF *(den_source/den_dest-1))=
     //    (1-dF)*den^dest + dF * den_source
     fort_initjumpterm( 
+     &nstate,
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
      &mdotcount_local[tid_current],
@@ -17858,6 +17867,7 @@ NavierStokes::level_phase_change_redistribute(
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      JUMPfab.dataPtr(),ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
+     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
       // mdotfab is incremented.
      mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
      newdistfab.dataPtr(),

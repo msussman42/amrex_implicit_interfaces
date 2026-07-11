@@ -4577,6 +4577,7 @@ stop
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
       subroutine fort_initjumpterm( &
+       nstate, &
        mdotplus, &
        mdotminus, &
        mdotcount, &
@@ -4594,6 +4595,7 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov), &
        JUMPFAB,DIMS(JUMPFAB), &
+       snew,DIMS(snew), &
        mdot,DIMS(mdot), &
        LSnew,DIMS(LSnew), &
        LSaltnew,DIMS(LSaltnew), &
@@ -4607,6 +4609,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(inout) :: mdotplus
       real(amrex_real), INTENT(inout) :: mdotminus
       real(amrex_real), INTENT(inout) :: mdotcount
@@ -4626,6 +4629,7 @@ stop
       real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(JUMPFAB)
+      integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(LSaltnew)
@@ -4636,6 +4640,8 @@ stop
       real(amrex_real), INTENT(in), target :: &
               JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
 
@@ -4658,8 +4664,10 @@ stop
       integer i,j,k
       integer im,im_opp,ireverse,iten
       integer iten_shift
+      integer dencomp
       integer im_source,im_dest
       real(amrex_real) jump_strength
+      real(amrex_real) local_density
 
       real(amrex_real) LL
       real(amrex_real) divu_material
@@ -4774,6 +4782,8 @@ stop
 
       JUMPFAB_ptr=>JUMPFAB
       call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
 
@@ -4843,12 +4853,22 @@ stop
 
             call get_primary_material(dx,LS_local,im_primary)
 
+            dencomp=STATECOMP_STATES+ &
+             (im_primary-1)*num_state_material+1+ENUM_DENVAR
+            local_density=snew(D_DECL(i,j,k),dencomp)
+            if (local_density.gt.zero) then
+             !do nothing
+            else
+             print *,"local_density invalid ",local_density
+             stop
+            endif
+
             if (F_solid_sum.ge.zero) then
              if (F_solid_sum.lt.half) then
               if (is_rigid(im_primary).eq.0) then
              
-               ! jump_strength units: cm^3/s^2
-               divu_material=jump_strength
+               ! jump_strength/local_density  units: cm^3/s^2
+               divu_material=jump_strength/local_density
 
                if (divu_material.gt.zero) then
                 mdotplus=mdotplus+divu_material
@@ -4859,7 +4879,7 @@ stop
                else if (divu_material.eq.zero) then
                 ! do nothing
                else
-                print *,"divu_material bust"
+                print *,"divu_material bust ",divu_material
                 stop
                endif
             
@@ -4867,25 +4887,25 @@ stop
               else if (is_rigid(im_primary).eq.1) then
                ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"is_rigid invalid ",im_primary,is_rigid(im_primary)
                stop
               endif
              else if ((F_solid_sum.ge.half).and. &
                       (F_solid_sum.le.one+EPS1)) then
               ! do nothing
              else
-              print *,"F_solid_sum invalid"
+              print *,"F_solid_sum invalid ",F_solid_sum
               stop
              endif 
             else
-             print *,"F_solid_sum invalid"
+             print *,"F_solid_sum invalid ",F_solid_sum
              stop
             endif 
 
            else if (LL.eq.zero) then
             ! do nothing
            else
-            print *,"LL bust"
+            print *,"LL bust ",LL
             stop
            endif  
           enddo ! ireverse=0...1
