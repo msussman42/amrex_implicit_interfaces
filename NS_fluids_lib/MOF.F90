@@ -21985,7 +21985,7 @@ contains
       endif
 
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon.ne.2*sdim+3"
+       print *,"ngeom_recon.ne.2*sdim+3 ",ngeom_recon
        stop
       endif
 
@@ -21997,25 +21997,26 @@ contains
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
-       print *,"nlist_alloc invalid"
+       print *,"nlist_alloc invalid ",nlist_alloc
        stop
       endif
 
       if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid multi get volume tessellate"
+       print *,"nhalf0 invalid multi get volume tessellate ",nhalf0
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid multi get volume tessellate ",bfact
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid multi_get_volume_tessellate"
+       print *,"sdim invalid multi_get_volume_tessellate ",sdim
        stop
       endif
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid multi get volume tessellate"
+       print *,"num_materials invalid multi get volume tessellate ", &
+          num_materials
        stop
       endif
  

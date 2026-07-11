@@ -6626,8 +6626,28 @@ stop
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k
+      integer dir
       integer nmax
+      integer im
       integer local_mask
+      integer layer_iter
+      integer vofcomp_raw
+      integer vofcomp_recon
+      integer tessellate_source
+      integer tessellate_dest
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) local_mass(num_materials)
+
+      real(amrex_real) vfrac_sum( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer, parameter :: use_ls_data=0
+      integer, parameter :: mof_verbose=0
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
 
       maskcov_ptr=>maskcov
       redistribute_fab_ptr=>redistribute_fab
@@ -6701,10 +6721,102 @@ stop
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
+       call gridsten_level(xsten,i,j,k,level,nhalf)
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
        if (local_mask.eq.1) then
 
+        do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+         vfrac_sum(layer_iter)=zero
+        enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+        do im=1,num_materials
+         local_mass(im)=zero
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
+         vofcomp_recon=(im-1)*ngeom_recon+1
+         do dir=1,ngeom_recon
+          mofdata(vofcomp_recon+dir-1)=zero
+         enddo
+         do dir=1,SDIM+1
+          mofdata(vofcomp_recon+dir-1)=snew(D_DECL(i,j,k),vofcomp_raw+dir-1)
+         enddo
+         vof_super(im)=mofdata(vofcomp_recon)
+         do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+          if (is_proper_layer(im,layer_iter).eq.1) then
+           vfrac_sum(layer_iter)= &
+            vfrac_sum(layer_iter)+mofdata(vofcomp_recon)
+          endif
+         enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+        enddo !im=1,num_materials
+        if ((vfrac_sum(RIGID_LAYER_INDEX).ge.one-VOFTOL_LAYER).and. &
+            (vfrac_sum(RIGID_LAYER_INDEX).le.1.5d0)) then
+         !do nothing
+        else if ((vfrac_sum(ELASTIC_LAYER_INDEX).ge.one-VOFTOL_LAYER).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).le.1.5d0)) then
+         !do nothing
+        else if ((vfrac_sum(RIGID_LAYER_INDEX).le.VOFTOL_LAYER).and. &
+                 (vfrac_sum(RIGID_LAYER_INDEX).ge.-1.5d0).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).le.VOFTOL_LAYER).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).ge.-1.5d0)) then
+         do im=1,num_materials
+          vofcomp_recon=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+           local_mass(im)=mofdata(vofcomp_recon)
+          endif
+         enddo
+        else if (((vfrac_sum(RIGID_LAYER_INDEX).ge.VOFTOL_LAYER).and. &
+                  (vfrac_sum(RIGID_LAYER_INDEX).le.one-VOFTOL_LAYER)).or. &
+                 ((vfrac_sum(ELASTIC_LAYER_INDEX).ge.VOFTOL_LAYER).and. &
+                  (vfrac_sum(ELASTIC_LAYER_INDEX).le.one-VOFTOL_LAYER))) then
+
+         ! LS=n dot (x-x0)+intercept
+         tessellate_source=TESSELLATE_FLUIDS
+         call multimaterial_MOF( &
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tid, &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
+          mof_verbose, & !=0
+          use_ls_data, & !=0
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          mofdata, & !intent(inout) override_normal and order cleared.
+          vof_super, &
+          multi_centroidA, &
+          SDIM)
+
+         do im=1,num_materials*ngeom_recon
+          mofdata_tess(im)=mofdata(im)
+         enddo
+         tessellate_source=TESSELLATE_FLUIDS
+         tessellate_dest=TESSELLATE_ALL
+         call multi_get_volume_tessellate( &
+           tid, &
+           tessellate_source, & !TESSELLATE_FLUIDS
+           tessellate_dest, & !TESSELLATE_ALL
+           bfact,dx, &
+           xsten, &
+           nhalf, &
+           mofdata_tess, &
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+           SDIM)
+
+         do im=1,num_materials
+          vofcomp_recon=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+           local_mass(im)=mofdata_tess(vofcomp_recon)
+          endif
+         enddo
+
+        else
+         print *,"vfrac_sum invalid ",vfrac_sum
+         stop
+        endif
 
        else if (local_mask.eq.0) then
         ! do nothing
