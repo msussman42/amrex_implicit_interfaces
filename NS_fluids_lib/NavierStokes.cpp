@@ -17048,8 +17048,6 @@ NavierStokes::phase_change_redistributeALL() {
  int operation_flag=OP_GATHER_MDOT; 
  int use_mac_velocity=0;
 
-//FIX ME COMPLEMENT treatment still correct? What about
-//mass source "region list logic?"
   //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
   use_mac_velocity,
