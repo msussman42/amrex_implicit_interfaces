@@ -801,7 +801,6 @@ Vector<int> NavierStokes::distribute_from_target; // 1..2*num_interfaces
 
 // 0 - mdot concentrated at full cells near interface on 1-side
 // 1 - mdot distributed evenly to all full cells; cellvol weight
-// 2 - mdot distributed evenly to all full cells; constant weight
 Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*num_interfaces
 
 //  For freezing in which liquid volume is fixed, the liquid density
@@ -4787,8 +4786,7 @@ NavierStokes::read_params ()
            (distribute_from_target[iten_local]==1)) {
 
         if ((distribute_mdot_evenly[iten_local]==0)||
-            (distribute_mdot_evenly[iten_local]==1)||
-            (distribute_mdot_evenly[iten_local]==2)) {
+            (distribute_mdot_evenly[iten_local]==1)) {
          // do nothing
         } else
          amrex::Error("distribute_mdot_evenly invalid");
@@ -5003,10 +5001,10 @@ NavierStokes::read_params ()
      if (mass_fraction_id[i+num_interfaces]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i+num_interfaces)");
      if ((distribute_mdot_evenly[i]<0)||
-         (distribute_mdot_evenly[i]>2))
+         (distribute_mdot_evenly[i]>1))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
      if ((distribute_mdot_evenly[i+num_interfaces]<0)||
-         (distribute_mdot_evenly[i+num_interfaces]>2))
+         (distribute_mdot_evenly[i+num_interfaces]>1))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i+num_interfaces)");
      if ((constant_volume_mdot[i]<-1)||
          (constant_volume_mdot[i]>1))
@@ -17843,7 +17841,9 @@ NavierStokes::level_phase_change_redistribute(
     //   rho=rho^expand (1+ dt div V)
     //   1+dt div V=1+dt^2 mdot/vol = 1+ dF * (den_source/den_dest-1)
     //   rho=den^dest * (1 + dF *(den_source/den_dest-1))=
-    //    (1-dF)*den^dest + dF * den_source
+    //    (1-dF)*den^dest + dF * den_source=
+    //    den^dest+dF*(den_source-den_dest)=
+    //    den^dest+jump_strength*dt^2/volgrid
     fort_initjumpterm( 
      &nstate,
      &mdotplus_local[tid_current],

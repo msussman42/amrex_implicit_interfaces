@@ -4679,30 +4679,30 @@ stop
       mdot_ptr=>mdot
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small fort_initjumpterm ",bfact
        stop
       endif
 
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid fort_initjumpterm ",time
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in convert_material"
+       print *,"level invalid in fort_initjumpterm ",level
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_initjumpterm ",num_state_base
        stop
       endif
 
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_initjumpterm ",dt
        stop
       endif
       if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -4770,7 +4770,8 @@ stop
           endif
 
          else
-          print *,"constant_volume_mdot(iten_shift) invalid"
+          print *,"constant_volume_mdot(iten_shift) invalid ", &
+           constant_volume_mdot
           stop
          endif
         enddo ! ireverse

@@ -5882,7 +5882,7 @@ stop
                  !divides by den_dst
                else if ((den_dF(2).eq.zero).or. &
                         (den_dF(1).eq.zero)) then
-                ! do nothing
+                mass_correct=zero
                else
                 print *,"den_dF invalid 1"
                 print *,"dF= ",dF
@@ -5913,7 +5913,7 @@ stop
                  !divides by den_src
                else if ((den_dF(2).eq.zero).or. &
                         (den_dF(1).eq.zero)) then
-                ! do nothing
+                mass_correct=zero
                else
                 print *,"den_dF invalid 2"
                 print *,"dF= ",dF
