@@ -1921,7 +1921,6 @@ protected:
 
      // 0 - mdot concentrated at full cells near interface on 1-side
      // 1 - mdot distributed evenly to all full cells; cellvol weight
-     // 2 - mdot distributed evenly to all full cells; constant weight
     static Vector<int> distribute_mdot_evenly; // 1..2*num_interfaces
      // 0 - sum mdot <>0   
      // 1 - distribute sum -mdot to the source
