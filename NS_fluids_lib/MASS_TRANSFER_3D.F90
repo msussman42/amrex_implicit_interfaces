@@ -5908,7 +5908,7 @@ stop
                ! den_dF=(rho F)^new - (rho F)^old
                if ((den_dF(2).gt.zero).and. & !den_dst * dF
                    (den_dF(1).lt.zero)) then  !-den_src * dF
-                mass_correct=den_dF(1)+den_dF(2) ! g/cm^3
+                mass_correct=-den_dF(1)-den_dF(2) ! g/cm^3
                  !in converting from mass source to volume source, one
                  !divides by den_src
                else if ((den_dF(2).eq.zero).or. &
