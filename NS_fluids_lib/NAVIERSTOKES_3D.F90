@@ -8598,6 +8598,11 @@ END SUBROUTINE SIMP
         
       end subroutine fort_reduce_sum_regions
 
+       !fort_regionsum is called from NavierSokes::SumRegions
+       !NavierStokes::SumRegions is called from 
+       !NavierStokes::Mass_Energy_Sources_SinksALL()
+       !NavierStokes::Mass_Energy_Sources_SinksALL() is called from
+       !NavierStokes::do_the_advance
       subroutine fort_regionsum( &
        tid_current, &
        isweep, &  ! isweep=0 or 1

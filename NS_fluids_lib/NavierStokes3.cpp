@@ -7696,6 +7696,17 @@ NavierStokes::ColorSumALL(
  if (idx_mdot==-1) {
   // do nothing
  } else if (idx_mdot>=0) {
+
+  if (idx_mdot==JUMP_STRENGTH_MF) {
+   //do nothing
+  } else
+   amrex::Error("expecting idx_mdot==JUMP_STRENGTH_MF");
+
+  if (idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF) {
+   //do nothing
+  } else
+   amrex::Error("expect idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF");
+
   ncomp_mdot=localMF[idx_mdot]->nComp();
   ncomp_mdot_alloc=ncomp_mdot;
   if (ncomp_mdot==2*num_interfaces) {
@@ -7856,6 +7867,17 @@ NavierStokes::ColorSumALL(
     mdot=ns_level.localMF[idx_type];
     mdot_complement=ns_level.localMF[idx_type];
    } else if (ncomp_mdot==2*num_interfaces) {
+
+    if (idx_mdot==JUMP_STRENGTH_MF) {
+     //do nothing
+    } else
+     amrex::Error("expecting idx_mdot==JUMP_STRENGTH_MF");
+
+    if (idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF) {
+     //do nothing
+    } else
+     amrex::Error("expect idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF");
+
     mdot=ns_level.localMF[idx_mdot];
     mdot_complement=ns_level.localMF[idx_mdot_complement];
    } else {
