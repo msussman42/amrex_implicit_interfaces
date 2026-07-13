@@ -1,6 +1,7 @@
-amr.n_cell      = 80 120 # 2/3 aspect ratio
-amr.max_grid_size   = 40
+amr.n_cell      = 40 60 # 2/3 aspect ratio
+amr.max_grid_size   = 128 40
 cg.min_max_grid_size=128
+ns.coarsest_level_CISL=1
 
 # grid : 4 * 7 = 28
 amr.plot_int    = 100   
@@ -116,7 +117,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
-amr.max_level =  0
+amr.max_level =  1
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0

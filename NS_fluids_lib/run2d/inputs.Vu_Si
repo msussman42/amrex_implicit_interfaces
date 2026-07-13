@@ -38,7 +38,6 @@ ns.xslice=0.0 0.0
 
 # 1: liquid 2: air 3: ice 4: solid
 ns.mof_ordering=3 4 2 1 #NEW VERSION
-ns.mof_renormalize_ordering=2 3 1 0 #NEW VERSION
 
 ns.EILE_flag=1 #NEW VERSION PREFERENCE
 ns.continuous_mof=1

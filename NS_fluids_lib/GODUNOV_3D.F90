@@ -17191,7 +17191,6 @@ stop
       end subroutine fort_vfrac_split_smooth
 
       subroutine fort_correct_flotsam( &
-       mof_renormalize_ordering, &
        material_extend_velocity, &
        tid, &
        tilelo,tilehi, &
@@ -17217,7 +17216,6 @@ stop
       integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
 
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: mof_renormalize_ordering(num_materials)
       integer, INTENT(in) :: material_extend_velocity(num_materials)
       integer :: material_list_by_rank(num_materials)
 
@@ -17319,18 +17317,6 @@ stop
 
       do im=1,num_materials
        if (material_extend_velocity(im).gt.0) then
-
-        if (material_extend_velocity(im).eq. &
-            mof_renormalize_ordering(im)) then
-         !do nothing
-        else
-         print *,"material_extend_velocity: ", &
-           material_extend_velocity
-         print *,"mof_renormalize_ordering: ", &
-           mof_renormalize_ordering
-         print *,"should be the same at the non 0"
-         stop
-        endif
 
         if (is_rigid(im).eq.0) then
          !do nothing
