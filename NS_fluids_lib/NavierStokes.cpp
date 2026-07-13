@@ -15694,6 +15694,9 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
 
+ resize_metrics(1);  
+ debug_ngrow(VOLUME_MF,1,local_caller_string); 
+
  if (localMF[MASS_REDISTRIBUTE_MF]->nGrow()!=ngrow_distance)
   amrex::Error("MASS_REDISTRIBUTE_MF invalid ngrow mass_redistribute");
  if (localMF[MASS_REDISTRIBUTE_MF]->nComp()!=num_materials)
@@ -15731,6 +15734,8 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
 
    int bfact=parent->Space_blockingFactor(level);
 
+   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
    FArrayBox& snewfab=S_new[mfi];
@@ -15752,6 +15757,8 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
     vofbc.dataPtr(),
     &dt_slab,
     xlo,dx, 
+    volfab.dataPtr(),
+    ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     redistribute_fab.dataPtr(),

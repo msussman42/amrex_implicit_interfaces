@@ -5941,8 +5941,8 @@ stop
             jump_strength=mass_correct/dt !units (gm/cm^3) * (1/s) 
 
              !-vol * div(grad p/rho)=-vol div(ustar)/dt + source
-             !vol * div(ustar-dt grad p/rho)=-dt * source
-             !vol * div(unp1)=-dt * source
+             !vol * div(ustar-dt grad p/rho)=dt * source
+             !vol * div(unp1)=dt * source
              !units required for source term: 
              !(cm^3)(1/s)(1/s)=cm^3/s^2
             jump_strength=jump_strength*volgrid/dt !gm/s^2
@@ -6580,6 +6580,7 @@ stop
        vofbc, &
        dt, &
        xlo,dx, &
+       volgrid,DIMS(volgrid), &
        maskcov,DIMS(maskcov), &
        redistribute_fab, &
        DIMS(redistribute_fab), &
@@ -6609,10 +6610,13 @@ stop
       real(amrex_real), INTENT(in),target :: xlo(SDIM)
       real(amrex_real), INTENT(in),target :: dx(SDIM)
       real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(volgrid)
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(redistribute_fab)
       integer, INTENT(in) :: DIMDEC(snew)
 
+      real(amrex_real), target, INTENT(in) :: volgrid(DIMV(volgrid))
+      real(amrex_real), pointer :: volgrid_ptr(D_DECL(:,:,:))
       real(amrex_real), target, INTENT(in) :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
@@ -6633,8 +6637,10 @@ stop
       integer vofcomp_recon
       integer tessellate_source
       integer tessellate_dest
+      integer dencomp
       real(amrex_real) vof_super(num_materials)
       real(amrex_real) local_mass(num_materials)
+      real(amrex_real) local_volume
 
       real(amrex_real) vfrac_sum( &
            RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
@@ -6647,6 +6653,7 @@ stop
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
 
+      volgrid_ptr=>volgrid
       maskcov_ptr=>maskcov
       redistribute_fab_ptr=>redistribute_fab
       snew_ptr=>snew
@@ -6708,6 +6715,7 @@ stop
        stop
       endif
 
+      call checkbound_array1(fablo,fabhi,volgrid_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,redistribute_fab_ptr,ngrow_distance,-1)
@@ -6746,6 +6754,11 @@ stop
           endif
          enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
         enddo !im=1,num_materials
+
+        do im=1,num_materials
+         local_mass(im)=zero
+        enddo
+
         if ((vfrac_sum(RIGID_LAYER_INDEX).ge.one-VOFTOL_LAYER).and. &
             (vfrac_sum(RIGID_LAYER_INDEX).le.1.5d0)) then
          !do nothing
@@ -6815,6 +6828,33 @@ stop
          print *,"vfrac_sum invalid ",vfrac_sum
          stop
         endif
+
+        local_volume=volgrid(D_DECL(i,j,k))
+        if (local_volume.gt.zero) then
+         !do nothing
+        else
+         print *,"local_volume invalid ",local_volume
+         stop
+        endif
+
+        do im=1,num_materials
+         if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+          if (mass_redistribute_flag.eq.INIT_MASS_REDISTRIBUTE_VAR) then
+           redistribute_fab(D_DECL(i,j,k),im)=local_mass(im)
+          else if (mass_redistribute_flag.eq.UPDATE_MASS_REDISTRIBUTE_VAR) then
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
+           redistribute_fab(D_DECL(i,j,k),im)= &
+              redistribute_fab(D_DECL(i,j,k),im)-local_mass(im)
+            !units are now: kg/s^2
+           redistribute_fab(D_DECL(i,j,k),im)= &
+              redistribute_fab(D_DECL(i,j,k),im)* &
+              snew(D_DECL(i,j,k),dencomp)*local_volume/(dt**2)
+          else
+           print *,"mass_redistribute_flag invalid"
+           stop
+          endif
+         endif !(is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) 
+        enddo !im=1,num_materials
 
        else if (local_mask.eq.0) then
         ! do nothing
