@@ -32,7 +32,6 @@ ns.ns_tiling=false
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.mof_ordering=2 1 #liquid, ice
-ns.mof_renormalize_ordering=2 1 #EULERIAN FSI
 ns.material_extend_velocity=0 1 #EULERIAN FSI
 ns.primary_flotsam_tol=1.0e-8  
 ns.secondary_flotsam_tol=0.1

@@ -70,7 +70,6 @@ ns.continuous_mof=1 # CMOF
 ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
 # liquid,jwl,aluminum side walls,gas
 ns.mof_ordering=2 3 1 4
-ns.mof_renormalize_ordering=2 3 1 4 #EULERIAN FSI
 ns.material_extend_velocity=0 0 1 0 #EULERIAN FSI
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1

@@ -832,7 +832,6 @@ extern "C"
 
 
    void fort_correct_flotsam(
-     int* mof_renormalize_ordering,
      int* material_extend_velocity,
      int* tid,
      const int* tilelo,const int* tilehi,
