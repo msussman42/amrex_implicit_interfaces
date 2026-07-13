@@ -80,6 +80,8 @@ extern "C"
     int* vofbc,
     Real* dt,
     const Real* xlo,const Real* dx,
+    Real* volfab,
+    AMREX_ARLIM_P(volfablo),AMREX_ARLIM_P(volfabhi), 
     Real* maskcov,
     AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* redistribute_fab,
