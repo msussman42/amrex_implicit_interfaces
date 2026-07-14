@@ -8772,7 +8772,6 @@ contains
 
       integer, INTENT(in) :: order_algorithm_in(num_materials)
       integer im
-      integer im_debug
 
 #include "mofdata.H"
 
@@ -24296,9 +24295,6 @@ contains
       integer, INTENT(in) :: MOFITERMAX_in
       integer, INTENT(in) :: MOF_DEBUG_RECON_in
       integer sdim,nmax_test
-      integer im,sub_im
-      integer default_flag
-      integer irank
 
 #include "mofdata.H"
 

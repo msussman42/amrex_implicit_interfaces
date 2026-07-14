@@ -4927,6 +4927,208 @@ stop
       return
       end subroutine fort_initjumpterm
 
+
+
+      subroutine fort_init_from_deltamass( &
+       nstate, &
+       time, &
+       level, &
+       finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       dt, &
+       maskcov,DIMS(maskcov), &
+       deltamass,DIMS(deltamass), &
+       snew,DIMS(snew), &
+       mdot,DIMS(mdot), &
+       LSnew,DIMS(LSnew)) &
+      bind(c,name='fort_init_from_deltamass')
+
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: nstate
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(deltamass)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(LSnew)
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: &
+              deltamass(DIMV(deltamass),num_materials)
+      real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+        LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+
+      integer i,j,k
+      integer im
+      integer dencomp
+      real(amrex_real) local_deltamass
+      real(amrex_real) local_density
+
+      real(amrex_real) divu_material
+      integer local_mask
+      integer imlocal,im_primary
+      real(amrex_real) LS_local(num_materials)
+
+      mdot_ptr=>mdot
+
+      if (bfact.lt.1) then
+       print *,"bfact too small fort_init_from_deltamass ",bfact
+       stop
+      endif
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid fort_init_from_deltamass ",time
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_init_from_deltamass ",level
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid fort_init_from_delta_mass ", &
+          num_state_base
+       stop
+      endif
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid fort_init_from_delta_mass ",dt
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.6) then
+       ! do nothing
+      else
+       print *,"require ns.ngrow_distance>=6(fort_init_from_deltamass) ", &
+          ngrow_distance
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+
+      deltamass_ptr=>deltamass
+      call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+
+      LSnew_ptr=>LSnew
+      call checkbound_array(fablo,fabhi,LSnew_ptr,ngrow_distance,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       if (local_mask.eq.1) then
+
+        do im=1,num_materials
+
+         if (is_rigid_CL(im).eq.0) then
+
+           !units: kg/s^2
+          local_deltamass=deltamass(D_DECL(i,j,k),im)
+  
+          do imlocal=1,num_materials
+           LS_local(imlocal)=LSnew(D_DECL(i,j,k),imlocal)
+          enddo ! imlocal=1..num_materials 
+
+          call get_primary_material(dx,LS_local,im_primary)
+
+          dencomp=STATECOMP_STATES+ &
+            (im_primary-1)*num_state_material+1+ENUM_DENVAR
+          local_density=snew(D_DECL(i,j,k),dencomp)
+          if (local_density.gt.zero) then
+           !do nothing
+          else
+           print *,"local_density invalid ",local_density
+           stop
+          endif
+
+          if (im_primary.eq.im) then
+
+           ! local_deltamass/local_density  units: cm^3/s^2
+           divu_material=local_deltamass/local_density
+
+           if (divu_material.gt.zero) then
+            !do nothing
+           else if (divu_material.lt.zero) then
+            !do nothing
+           else if (divu_material.eq.zero) then
+            ! do nothing
+           else
+            print *,"divu_material bust ",divu_material
+            stop
+           endif
+            
+           mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+          else if (im_primary.ne.im) then
+           !do nothing
+          else
+           print *,"im_primary or im invalid ",im_primary,im
+           stop
+          endif
+         else if (is_rigid_CL(im).eq.1) then
+          !do nothing
+         else
+          print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
+          stop
+         endif 
+        enddo ! im=1...num_materials
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
+
+      return
+      end subroutine fort_init_from_deltamass
+
+
+
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
@@ -11509,7 +11711,7 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in distribute_expansion"
+       print *,"level invalid in fort_tagexpansion"
        stop
       endif
       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
@@ -12474,7 +12676,7 @@ stop
        endif
 
        if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid in distribute_expansion"
+        print *,"level invalid in fort_accept_weight ",level
         stop
        end if
        if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
@@ -12673,48 +12875,23 @@ stop
        end do ! i
       end subroutine fort_accept_weight
 
-
-
-
-FIX ME
-
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagmass(&
        ncell_mdot_shift, &
-       im_elastic_map, &
-       num_FSI_outer_sweeps, &
-       FSI_outer_sweeps, &
-       nden, &
-       freezing_model, &
-       distribute_from_target, &
-       time, &
-       vofbc, &
-       expect_mdot_sign, &
-       mdot_sum, &
-       mdot_sum_comp, &
-       im_source, & !intent(in)
-       im_dest, & !intent(in)
-       indexEXP, & !intent(in) 0<=indexEXP<2*num_interfaces
+       im_critical, & !intent(in)
        level,finest_level, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xlo,dx,dt, &
+       xlo,dx, &
        maskcov,DIMS(maskcov), &
        tag, &
        DIMS(tag), &
-       tag_comp, &
-       DIMS(tag_comp), &
-       expan,DIMS(expan), &
-       expan_comp,DIMS(expan_comp), &
-       denstate,DIMS(denstate), &
-       LS,DIMS(LS), & 
-       LSalt,DIMS(LSalt), & 
-       recon,DIMS(recon), &
-       recon_alt,DIMS(recon_alt)) &
-      bind(c,name='fort_tagexpansion')
+       deltamass,DIMS(deltamass), &
+       LS,DIMS(LS)) &
+      bind(c,name='fort_tagmass')
 
       use probf90_module
       use global_utility_module
@@ -12722,98 +12899,44 @@ FIX ME
       IMPLICIT NONE
 
       integer, INTENT(in) :: ncell_mdot_shift
-      integer, INTENT(in) :: num_FSI_outer_sweeps
-      integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
-      integer, INTENT(in) :: nden
-      real(amrex_real), INTENT(in) :: time
-      real(amrex_real), INTENT(inout) :: mdot_sum
-      real(amrex_real), INTENT(inout) :: mdot_sum_comp
-      real(amrex_real), INTENT(in) :: expect_mdot_sign
-      integer, INTENT(in) :: im_source,im_dest
-      integer :: im_ice
-      integer, INTENT(in) :: indexEXP
+      integer, INTENT(in) :: im_critical
       integer, INTENT(in) :: level,finest_level
-      integer, INTENT(in) :: freezing_model(2*num_interfaces)
-      integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(tag)
-      integer, INTENT(in) :: DIMDEC(tag_comp)
-      integer, INTENT(in) :: DIMDEC(expan)
-      integer, INTENT(in) :: DIMDEC(expan_comp)
-      integer, INTENT(in) :: DIMDEC(denstate)
+      integer, INTENT(in) :: DIMDEC(deltamass)
       integer, INTENT(in) :: DIMDEC(LS)
-      integer, INTENT(in) :: DIMDEC(LSalt)
-      integer, INTENT(in) :: DIMDEC(recon)
-      integer, INTENT(in) :: DIMDEC(recon_alt)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(out), target :: tag(DIMV(tag))
       real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(out), target :: tag_comp(DIMV(tag_comp))
-      real(amrex_real), pointer :: tag_comp_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: &
-         expan(DIMV(expan),2*num_interfaces)
-      real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-           expan_comp(DIMV(expan_comp),2*num_interfaces)
-      real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
-      real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
+         deltamass(DIMV(deltamass),num_materials)
+      real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
         LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: &
-        LSalt(DIMV(LSalt),num_materials*(1+SDIM))
-      real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
-
-      real(amrex_real), INTENT(in), target :: &
-           recon(DIMV(recon),num_materials*ngeom_recon)
-      real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
-
-      real(amrex_real), INTENT(in), target :: &
-           recon_alt(DIMV(recon_alt),num_materials*ngeom_recon)
-      real(amrex_real), pointer :: recon_alt_ptr(D_DECL(:,:,:),:)
-
-      integer local_freezing_model
-      integer vofbc(SDIM,2)
       integer i,j,k
-      real(amrex_real) VFRAC(num_materials)
-      real(amrex_real) VDOT
-      real(amrex_real) local_denstate(nden)
+      integer im
       real(amrex_real) LSCELL(num_materials)
-      real(amrex_real) elasticmaskpart
-      real(amrex_real) elasticmask
-      integer im,im_opp
-      integer ireverse
-      integer iten
       integer im_primary
-      integer im_primary_elasticmask
-      integer vofcomp
       integer, PARAMETER :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_center(SDIM)
       integer local_mask
       integer dir
-      integer index_compare
-      integer complement_flag
-      real(amrex_real) LL
+      real(amrex_real) VDOT
       real(amrex_real) dxmax
       real(amrex_real) LS_DONOR_CUTOFF
 
       tag_ptr=>tag
-      tag_comp_ptr=>tag_comp
-
-      denstate_ptr=>denstate
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -12835,40 +12958,26 @@ FIX ME
 
       LS_DONOR_CUTOFF=ncell_mdot_shift*dxmax
 
-      if (time.ge.zero) then
+      if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"im_critical invalid ",im_critical
        stop
       endif
-
-      if ((im_source.ge.1).and.(im_source.le.num_materials)) then
-       ! do nothing
+      if (is_rigid_CL(im_critical).eq.0) then
+       !do nothing
       else
-       print *,"im_source invalid"
-       stop
-      endif
-      if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_dest invalid"
-       stop
-      endif
-      if (im_dest.eq.im_source) then
-       print *,"im_dest or im_source invalid"
+       print *,"expecting is_rigid_CL(im_critical)==0 ", &
+         im_critical,is_rigid_CL(im_critical)
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in distribute_expansion"
-       stop
-      endif
-      if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
-       print *,"indexEXP invalid"
+       print *,"level invalid in fort_tagmass ",level
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact invalid in fort_tagmass ",bfact
        stop
       endif
 
@@ -12881,7 +12990,7 @@ FIX ME
       if (ngrow_distance.ge.6) then
        ! do nothing
       else
-       print *,"require ns.ngrow_distance>=6 (fort_tagexpansion) ", &
+       print *,"require ns.ngrow_distance>=6 (fort_tagmass) ", &
           ngrow_distance
        stop
       endif
@@ -12889,92 +12998,14 @@ FIX ME
        print *,"num_state_base invalid"
        stop
       endif
-      if (nden.eq.num_materials*num_state_material) then
-       ! do nothing
-      else
-       print *,"nden invalid"
-       stop
-      endif
 
       maskcov_ptr=>maskcov
       LS_ptr=>LS
-      LSalt_ptr=>LSalt
-      recon_ptr=>recon
-      recon_alt_ptr=>recon_alt
-      expan_ptr=>expan
-      expan_comp_ptr=>expan_comp
+      deltamass_ptr=>deltamass
       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
-      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_distance,-1)
-
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
-      call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
-
-      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
-      call checkbound_array(fablo,fabhi,recon_alt_ptr,ngrow_distance,-1)
-
-      call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
-      call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
-      call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
-
-      local_freezing_model=freezing_model(indexEXP+1)
-      if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
-       ! do nothing
-      else
-       print *,"local_freezing_model invalid 17"
-       stop
-      endif
-      if ((distribute_from_target(indexEXP+1).lt.0).or. &
-          (distribute_from_target(indexEXP+1).gt.1)) then
-       print *,"distribute_from_target invalid"
-       stop
-      endif
-      LL=get_user_latent_heat(indexEXP+1,room_temperature,1)
-      if (LL.eq.zero) then
-       ! check nothing
-      else if (LL.ne.zero) then
-       im_ice=0
-       if (is_ice(im_dest).eq.1) then
-        im_ice=im_dest
-       else if (is_ice(im_source).eq.1) then
-        im_ice=im_source
-       else if ((is_ice(im_dest).eq.0).and. &
-                (is_ice(im_source).eq.0)) then
-        im_ice=0
-       else
-        print *,"is_ice invalid"
-        print *,"im_dest,im_source,is_ice(im_dest),is_ice(im_source) ", &
-          im_dest,im_source,is_ice(im_dest),is_ice(im_source)
-        stop
-       endif
-       if (im_ice.eq.0) then
-        ! do nothing
-       else if (im_ice.eq.im_dest) then ! freezing
-        if (distribute_from_target(indexEXP+1).eq.1) then
-         ! distribute_from_target=true
-         ! distribute_to_target=false
-         ! source=melt  dest (target)=ice
-        else 
-         print *,"distribute_from_target should be 1(freezing)"
-         stop
-        endif
-       else if (im_ice.eq.im_source) then ! melting
-        if (distribute_from_target(indexEXP+1).eq.0) then
-         ! distribute_from_target=false
-         ! distribute_to_target=true
-         ! source=ice  dest (target)=melt
-        else 
-         print *,"distribute_from_target should be 0(melting)"
-         stop
-        endif
-       else
-        print *,"im_ice invalid"
-        stop
-       endif
-      else
-       print *,"LL invalid: ",LL
-       stop
-      endif
 
       ! Iterate over the box
       do k=growlo(3),growhi(3)
@@ -12990,312 +13021,49 @@ FIX ME
          xsten_center(dir)=xsten(0,dir)
         enddo
 
-        !! water freezing to ice
-        !! im_source -> index for water material
-        !! im_dest   -> index for ice material
-            
-         ! check for being a donor cell:
-         ! 1. non-zero expansion term
-         ! 2. (F_ice < 0.5) or
-         !    (elasticmask=0.0)
-         ! 
-         ! check for being a receiving cell:
-         ! (F_ice_tessellate > 0.5)&&(elasticmask>0.0)
-         ! 
-         ! weight for redistribution: equal weight for all cells in the
-         ! redistribution stencil.
-              
         tag(D_DECL(i,j,k)) = zero
-        tag_comp(D_DECL(i,j,k)) = zero
 
         do im=1,num_materials
-         vofcomp=(im-1)*ngeom_recon+1
-         VFRAC(im)=recon_alt(D_DECL(i,j,k),vofcomp)
-         LSCELL(im)=LSalt(D_DECL(i,j,k),im)
-        enddo
-        do im=1,nden
-         local_denstate(im)=denstate(D_DECL(i,j,k),im)
+         LSCELL(im)=LS(D_DECL(i,j,k),im)
         enddo
 
-         ! "get_primary_material"
-         ! first checks the rigid materials for a positive LS; if none
-         ! exist, then "get_primary_material" checks the fluid materials.
         call get_primary_material(dx,LSCELL,im_primary)
 
-        VDOT=expan(D_DECL(i,j,k),indexEXP+1)
-        if (expect_mdot_sign.eq.one) then
-         if (VDOT.lt.zero) then
-          print *,"expecting VDOT>=0"
-          print *,"sign+ VDOT invalid i,j,k,vdot ",i,j,k,VDOT
-          stop
-         else if (VDOT.ge.zero) then
-          ! do nothing
+        VDOT=deltamass(D_DECL(i,j,k),im_critical)
+
+         ! first tag donor cells (tag=one)
+        if (VDOT.ne.zero) then 
+
+         if ((im_primary.ne.im_critical).or. &
+             (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+          tag(D_DECL(i,j,k)) = one ! donor cell
+         else if ((im_primary.eq.im_critical).and. &
+                  (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+          ! do nothing - acceptor cell
          else
-          print *,"VDOT bust: ",VDOT
-          stop
+          print *,"LSCELL or im_primary or im_critical invalid: ", &
+             LSCELL,im_primary,im_critical
+          stop      
          endif
-        else if (expect_mdot_sign.eq.-one) then
-         if (VDOT.gt.zero) then
-          print *,"expecting VDOT<=0"
-          print *,"sign- VDOT invalid i,j,k,vdot ",i,j,k,VDOT
-          stop
-         else if (VDOT.le.zero) then
-          ! do nothing
-         else
-          print *,"VDOT bust: ",VDOT
-          stop
-         endif
+
+        else if (VDOT.eq.zero) then
+         ! do nothing
         else
-         print *,"expect_mdot_sign invalid: ",expect_mdot_sign
+         print *,"VDOT became corrupt: ",VDOT
          stop
+        endif 
+
+        if ((im_primary.eq.im_critical).and. &
+            (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+         tag(D_DECL(i,j,k)) = two ! receiver
+        else if ((im_primary.ne.im_critical).or. &
+                 (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+         ! do nothing - donor cell if VDOT<>0
+        else
+         print *,"LSCELL or im_primary or im_critical invalid: ", &
+            LSCELL,im_primary,im_critical
+         stop      
         endif
-
-        do complement_flag=0,1
-
-         im_ice=0
-         if (is_ice(im_dest).eq.1) then
-          im_ice=im_dest
-         else if (is_ice(im_source).eq.1) then
-          im_ice=im_source
-         else if ((is_ice(im_dest).eq.0).and. &
-                  (is_ice(im_source).eq.0)) then
-          im_ice=0
-         else
-          print *,"is_ice invalid"
-          print *,"im_source,im_dest,is_ice(im_source),is_ice(im_dest) ", &
-           im_source,im_dest,is_ice(im_source),is_ice(im_dest)
-          stop
-         endif
-
-         if (im_ice.eq.0) then!both source and dest can be distributed to.
-          elasticmask=one
-         else if ((im_ice.ge.1).and. &
-                  (im_ice.le.num_materials)) then
-
-          ! in: fort_tagexpansion
-          ! elasticmask=0 => mask off this cell.
-          ! elasticmask=1 => do nothing
-          ! get_elasticmask_and_elasticmaskpart declared in PROB.F90
-          call get_elasticmask_and_elasticmaskpart( &
-           i,j,k, &
-           im_elastic_map, &
-           num_FSI_outer_sweeps, &
-           FSI_outer_sweeps, &
-           nden, &
-           xsten_center, &
-           time, &
-           dx,bfact, &
-           elasticmask, & !intent(out)
-           elasticmaskpart, &
-           im, &
-           im_opp, &
-           im_primary_elasticmask, &
-           ireverse, &
-           local_denstate, &
-           LSalt_ptr, &
-           recon_alt_ptr, &
-           distribute_from_target, &
-           complement_flag)
-
-          if ((elasticmask.eq.zero).or. &
-              (elasticmask.eq.one)) then
-           !do nothing
-          else
-           print *,"elasticmask invalid ",elasticmask
-           stop
-          endif
-
-          if (im_opp.eq.num_materials+1) then
-
-           !do nothing
-
-           !both source and dest can be distributed to.
-          else if (ireverse.eq.-1) then
-
-           elasticmask=one
-
-          else if ((ireverse.eq.0).or. &
-                   (ireverse.eq.1)) then
-           call get_iten(im,im_opp,iten)
-           index_compare=iten+ireverse*num_interfaces-1
-           if ((index_compare.ge.0).and. &
-               (index_compare.lt.2*num_interfaces)) then
-            if (index_compare.eq.indexEXP) then
-             ! do nothing
-            else
-             elasticmask=one !assume both source and dest can be distributed to.
-            endif
-           else
-            print *,"index_compare invalid: ",index_compare
-            stop
-           endif
-          else
-           print *,"ireverse invalid: ",ireverse
-           stop
-          endif
- 
-         else 
-          print *,"im_ice invalid: ",im_ice
-          stop
-         endif
-
-         if (complement_flag.eq.0) then
-          mdot_sum=mdot_sum+VDOT
-         else if (complement_flag.eq.1) then
-          mdot_sum_comp=mdot_sum_comp+VDOT
-         else
-          print *,"complement_flag invalid: ",complement_flag
-          stop
-         endif
-
-         if ((is_rigid(im_primary).eq.0).and. &
-             ((is_FSI_elastic(im_primary).eq.0).or. &
-              (is_ice(im_primary).eq.1)).and. &
-             (is_FSI_rigid(im_primary).eq.0)) then
-
-           ! first tag donor cells (tag=one)
-          if (VDOT.ne.zero) then ! nonzero source
-
-           if ( &
-             swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
-             .eq.0) then
-
-            if ((VFRAC(im_dest).lt.half).or. &
-                (elasticmask.eq.zero).or. &
-                (LSCELL(im_dest).lt.LS_DONOR_CUTOFF)) then
-             if (complement_flag.eq.0) then
-              tag(D_DECL(i,j,k)) = one ! donor cell
-             else if (complement_flag.eq.1) then
-              tag_comp(D_DECL(i,j,k)) = one ! donor cell
-             else
-              print *,"complement_flag invalid: ",complement_flag
-              stop
-             endif
-            else if ((VFRAC(im_dest).ge.half).and. &
-                     (elasticmask.gt.zero).and. &
-                     (elasticmask.le.one).and. &
-                     (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
-             ! do nothing - acceptor cell
-            else
-             print *,"VFRAC, LSCELL or elasticmask bust: ", &
-              im_dest,VFRAC,LSCELL,elasticmask
-             stop      
-            endif
-
-           else if ( &
-             swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
-             .eq.1) then
-
-            if ((VFRAC(im_source).lt.half).or. &
-                (elasticmask.eq.zero).or. &
-                (LSCELL(im_source).lt.LS_DONOR_CUTOFF)) then
-             if (complement_flag.eq.0) then
-              tag(D_DECL(i,j,k)) = one ! donor cell
-             else if (complement_flag.eq.1) then
-              tag_comp(D_DECL(i,j,k)) = one ! donor cell
-             else
-              print *,"complement_flag invalid: ",complement_flag
-              stop
-             endif
-            else if ((VFRAC(im_source).ge.half).and. &
-                     (elasticmask.gt.zero).and. &
-                     (elasticmask.le.one).and. &
-                     (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
-             ! do nothing - acceptor cell
-            else
-             print *,"VFRAC, LSCELL, or elasticmask bust: ", &
-               im_source,VFRAC,LSCELL,elasticmask 
-             stop
-            endif
-
-           else
-            print *,"distribute_from_target(indexEXP+1) invalid"
-            stop
-           endif
-
-          else if (VDOT.eq.zero) then
-           ! do nothing
-          else
-           print *,"VDOT became corrupt: ",VDOT
-           stop
-          endif 
-
-           ! now we tag receiver cells (tag=two)
-          if ( &
-            swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
-            .eq.0) then
-
-           if ((VFRAC(im_dest).ge.half).and. &
-               (elasticmask.gt.zero).and. &
-               (elasticmask.le.one).and. &
-               (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
-            if (complement_flag.eq.0) then
-             tag(D_DECL(i,j,k)) = two ! receiver
-            else if (complement_flag.eq.1) then
-             tag_comp(D_DECL(i,j,k)) = two ! receiver
-            else
-             print *,"complement_flag invalid: ",complement_flag
-             stop
-            endif
-           else if ((VFRAC(im_dest).lt.half).or. &
-                    (elasticmask.eq.zero).or. &
-                    (LSCELL(im_dest).le.LS_DONOR_CUTOFF)) then
-            ! do nothing - donor cell if VDOT<>0
-           else
-            print *,"VFRAC,LSCELL or elasticmask bust: ", &
-             im_dest,VFRAC,LSCELL,elasticmask
-            stop      
-           endif
- 
-          else if ( &
-              swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
-              .eq.1) then
-
-           if ((VFRAC(im_source).ge.half).and. &
-               (elasticmask.gt.zero).and. &
-               (elasticmask.le.one).and. &
-               (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
-            if (complement_flag.eq.0) then
-             tag(D_DECL(i,j,k)) = two ! receiver
-            else if (complement_flag.eq.1) then
-             tag_comp(D_DECL(i,j,k)) = two ! receiver
-            else
-             print *,"complement_flag invalid: ",complement_flag
-             stop
-            endif
-           else if ((VFRAC(im_source).lt.half).or. &
-                    (elasticmask.eq.zero).or. &
-                    (LSCELL(im_source).le.LS_DONOR_CUTOFF)) then
-            ! do nothing - donor cell if VDOT<>0
-           else
-            print *,"VFRAC,LSCELL or elasticmask bust: ", &
-             im_source,VFRAC,LSCELL,elasticmask
-            stop
-           endif
- 
-          else
-           print *,"distribute_from_target(indexEXP+1) invalid"
-           stop
-          endif
-
-          !in the prescribed solid.
-         else if ((is_rigid(im_primary).eq.1).or. &
-                  ((is_FSI_elastic(im_primary).eq.1).and. &
-                   (is_ice(im_primary).eq.0)).or. &
-                  (is_FSI_rigid(im_primary).eq.1)) then 
-          ! do nothing (tag initialized to 0, neither donor nor receiver)
-         else
-          print *,"is_rigid(im_primary) invalid or"
-          print *,"is_FSI_rigid(im_primary) invalid or "
-          print *,"is_FSI_elastic(im_primary) invalid or "
-          print *,"is_ice(im_primary) invalid "
-          print *,"im_primary,is_rigid,is_FSI_elastic,is_ice,is_FSI_rigid ", &
-           im_primary,is_rigid(im_primary),is_FSI_elastic(im_primary), &
-           is_ice(im_primary),is_FSI_rigid(im_primary)
-          stop
-         endif 
-
-        enddo ! complement_flag=0..1
 
        else if (local_mask.eq.0) then
         ! do nothing
@@ -13312,51 +13080,26 @@ FIX ME
       end subroutine fort_tagmass
 
 
-      ! recon( num_materials * ngeom_recon )
-      ! ngeom_recon=2 * SDIM + 3
-      ! volume fraction, reference centroid, order, slope, intercept
-      ! num_interfaces = 
-      ! (num_materials * (num_materials-1))/2  -> number of possible surface 
-      !                                 tension coefficients
-      ! if num_materials=2, num_interfaces=1
-      ! if num_materials=3, num_interfaces=3    12 13 23
-      ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
-      
-      ! This will be called before fort_initjumpterm and after
-      ! fort_convertmaterial
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributemass(&
-       mdot_sum, &
-       mdot_lost, &
-       mdot_sum_comp, &
-       mdot_lost_comp, &
-       im_source, &
-       im_dest, &
-       indexEXP, &
+       im_critical, &
        level,finest_level, &
        domlo,domhi, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xlo,dx,dt, &
+       xlo,dx, &
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
-       LSalt,DIMS(LSalt),&
        tag, &
        DIMS(tag),&
-       tag_comp, &
-       DIMS(tag_comp),&
        weightfab, &
        DIMS(weightfab),&
-       weight_comp, &
-       DIMS(weight_comp),&
-       expan, &
-       DIMS(expan), &
-       expan_comp, &
-       DIMS(expan_comp) ) &
-       bind(c,name='fort_distributeexpansion')
+       deltamass, &
+       DIMS(deltamass) ) &
+       bind(c,name='fort_distributemass')
 
        use probf90_module
        use global_utility_module
@@ -13364,9 +13107,7 @@ FIX ME
 
        IMPLICIT NONE
 
-       real(amrex_real), INTENT(inout) :: mdot_sum,mdot_lost
-       real(amrex_real), INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
-       integer, INTENT(in) :: im_source,im_dest,indexEXP
+       integer, INTENT(in) :: im_critical
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -13376,45 +13117,29 @@ FIX ME
        integer, INTENT(in) :: bfact
        real(amrex_real), INTENT(in) :: xlo(SDIM)
        real(amrex_real), INTENT(in) :: dx(SDIM)
-       real(amrex_real), INTENT(in) :: dt
        integer, INTENT(in) :: DIMDEC(maskcov)
        integer, INTENT(in) :: DIMDEC(LS)
-       integer, INTENT(in) :: DIMDEC(LSalt)
        integer, INTENT(in) :: DIMDEC(tag)
-       integer, INTENT(in) :: DIMDEC(tag_comp)
        integer, INTENT(in) :: DIMDEC(weightfab)
-       integer, INTENT(in) :: DIMDEC(weight_comp)
-       integer, INTENT(in) :: DIMDEC(expan)
-       integer, INTENT(in) :: DIMDEC(expan_comp)
+       integer, INTENT(in) :: DIMDEC(deltamass)
        real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
        real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
        real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
        real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-       real(amrex_real), INTENT(in), target :: LSalt(DIMV(LSalt),num_materials)
-       real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
-
        real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
        real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(in), target :: tag_comp(DIMV(tag_comp))
-       real(amrex_real), pointer :: tag_comp_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in), target :: weightfab(DIMV(weightfab))
        real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(in), target :: weight_comp(DIMV(weight_comp))
-       real(amrex_real), pointer :: weight_comp_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(inout), target :: &
-          expan(DIMV(expan),2*num_interfaces)
-       real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
-       real(amrex_real), INTENT(inout), target ::  &
-         expan_comp(DIMV(expan_comp),2*num_interfaces)
-       real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
+          deltamass(DIMV(deltamass),num_materials)
+       real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
 
-       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable,target :: &
-         expan_new
-       real(amrex_real), pointer :: expan_new_ptr(D_DECL(:,:,:),:)
-       real(amrex_real) local_expan_new
-       real(amrex_real) local_expan_old
+       real(amrex_real), dimension(D_DECL(:,:,:)), allocatable,target :: &
+         deltamass_new
+       real(amrex_real), pointer :: deltamass_new_ptr(D_DECL(:,:,:))
+       real(amrex_real) local_deltamass_new
 
        integer i,j,k
        integer dir
@@ -13428,40 +13153,25 @@ FIX ME
        real(amrex_real) xside(SDIM)
        integer local_mask
 
-       expan_ptr=>expan
-       expan_comp_ptr=>expan_comp
+       deltamass_ptr=>deltamass
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        !! Sanity checks
 
-       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
+       if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_source invalid"
-        stop
-       endif
-       if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_dest invalid"
-        stop
-       endif
-       if (im_dest.eq.im_source) then
-        print *,"im_dest or im_source invalid"
+        print *,"im_critical invalid ",im_critical
         stop
        endif
 
        if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid in distribute_expansion"
+        print *,"level invalid in fort_distributemass ",level
         stop
        end if
-       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
-        print *,"indexEXP invalid"
-        stop
-       endif
        if (bfact.lt.1) then
-        print *,"bfact too small"
+        print *,"bfact invalid fort_distributemass ",bfact
         stop
        endif
        if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -13473,40 +13183,32 @@ FIX ME
        if (ngrow_distance.ge.6) then
         ! do nothing
        else
-        print *,"require ns.ngrow_distance>=6(fort_distributeexpansion) ", &
+        print *,"require ns.ngrow_distance>=6(fort_distributemass) ", &
           ngrow_distance
         stop
        endif
 
-       allocate(expan_new(DIMV(expan),2))
-       expan_new_ptr=>expan_new
+       allocate(deltamass_new(DIMV(deltamass)))
+       deltamass_new_ptr=>deltamass_new
 
        maskcov_ptr=>maskcov
        LS_ptr=>LS
-       LSalt_ptr=>LSalt
        tag_ptr=>tag
-       tag_comp_ptr=>tag_comp
        weightfab_ptr=>weightfab
-       weight_comp_ptr=>weight_comp
 
        call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
 
-       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_new_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,deltamass_new_ptr,ngrow_distance,-1)
 
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
 
        do k=growlo(3),growhi(3)
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
-        expan_new(D_DECL(i,j,k),1)=zero
-        expan_new(D_DECL(i,j,k),2)=zero
+        deltamass_new(D_DECL(i,j,k))=zero
        enddo
        enddo
        enddo
@@ -13557,95 +13259,20 @@ FIX ME
             total_weight=weightfab(D_DECL(i_n,j_n,k_n))
             if (total_weight.gt.zero) then
              if (crit_weight.le.total_weight) then
-              expan_new(D_DECL(i,j,k),1) = &
-               expan_new(D_DECL(i,j,k),1) + &
-               expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*crit_weight/total_weight
-             else
-              print *,"crit_weight invalid: ",crit_weight
-              stop
-             endif
-            else if (total_weight.eq.zero) then
-             print *,"total_weight=0 warning (fort_distributeexpansion): ", &
-               total_weight
-             print *,"increase error_buf to remove the warning"
-            else
-             print *,"total_weight invalid (fort_distributeexpansion): ", &
-               total_weight
-             stop
-            endif
-
-           else if (TAGSIDE.eq.zero) then
-            ! do nothing
-           else
-            print *,"TAGSIDE invalid"
-            stop
-           endif 
-
-          end do ! k_n
-          end do ! j_n
-          end do ! i_n
-
-         else if ((TAGLOC.eq.one).or. & ! doner
-                  (TAGLOC.eq.zero)) then
-          ! do nothing
-         else
-          print *,"TAGLOC invalid"
-          stop
-         endif 
-
-          ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
-
-         ! if a receiving cell
-         TAGLOC=tag_comp(D_DECL(i,j,k))
-         if(TAGLOC.eq.two) then ! receiver
-          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
-
-          do dir=1,SDIM
-           if (stenlo(dir).lt.domlo(dir)) then
-            stenlo(dir)=domlo(dir)
-           endif
-           if (stenhi(dir).gt.domhi(dir)) then
-            stenhi(dir)=domhi(dir)
-           endif
-          enddo
-
-          call gridsten_level(xsten,i,j,k,level,nhalf)
-          do dir=1,SDIM
-           xmain(dir)=xsten(0,dir)
-          enddo
-            
-          do k_n=stenlo(3),stenhi(3)
-          do j_n=stenlo(2),stenhi(2)
-          do i_n=stenlo(1),stenhi(1)
-
-            !both doner and receiver cells are distributed
-            !to the receiver side.
-           TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
-           if ((TAGSIDE.eq.one).or. & ! doner
-               (TAGSIDE.eq.two)) then ! receiver
-
-            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            do dir=1,SDIM
-             xside(dir)=xsten_n(0,dir)
-            enddo
-            call redistribute_weight(xmain,xside,crit_weight)
-            total_weight=weight_comp(D_DECL(i_n,j_n,k_n))
-            if (total_weight.gt.zero) then
-             if (crit_weight.le.total_weight) then
-              expan_new(D_DECL(i,j,k),2) = &
-               expan_new(D_DECL(i,j,k),2) + &
-               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)* &
+              deltamass_new(D_DECL(i,j,k)) = &
+               deltamass_new(D_DECL(i,j,k)) + &
+               deltamass(D_DECL(i_n,j_n,k_n),im_critical)* &
                crit_weight/total_weight
              else
               print *,"crit_weight invalid: ",crit_weight
               stop
              endif
             else if (total_weight.eq.zero) then
-             print *,"total_weight=0 warning B(fort_distributeexpansion): ", &
+             print *,"total_weight=0 warning (fort_distributemass): ", &
                total_weight
              print *,"increase error_buf to remove the warning"
             else
-             print *,"total_weight invalid B(fort_distributeexpansion): ", &
+             print *,"total_weight invalid (fort_distributemass): ", &
                total_weight
              stop
             endif
@@ -13685,18 +13312,8 @@ FIX ME
        do i=growlo(1),growhi(1)
         local_mask=NINT(maskcov(D_DECL(i,j,k)))
         if (local_mask.eq.1) then
-         local_expan_new=expan_new(D_DECL(i,j,k),1)
-         local_expan_old=expan(D_DECL(i,j,k),indexEXP+1)
-         expan(D_DECL(i,j,k),indexEXP+1)=local_expan_new
-         mdot_sum=mdot_sum+local_expan_new
-         mdot_lost=mdot_lost+local_expan_old-local_expan_new
-
-         local_expan_new=expan_new(D_DECL(i,j,k),2)
-         local_expan_old=expan_comp(D_DECL(i,j,k),indexEXP+1)
-         expan_comp(D_DECL(i,j,k),indexEXP+1)=local_expan_new
-         mdot_sum_comp=mdot_sum_comp+local_expan_new
-         mdot_lost_comp=mdot_lost_comp+local_expan_old-local_expan_new
-
+         local_deltamass_new=deltamass_new(D_DECL(i,j,k))
+         deltamass(D_DECL(i,j,k),im_critical)=local_deltamass_new
         else if (local_mask.eq.0) then
          ! do nothing
         else
@@ -13707,36 +13324,27 @@ FIX ME
        end do ! j
        end do ! i
 
-       deallocate(expan_new)
+       deallocate(deltamass_new)
 
       end subroutine fort_distributemass
 
       subroutine fort_accept_weight_mass(&
-       im_source, &
-       im_dest, &
-       indexEXP, &
+       im_critical, &
        level,finest_level, &
        domlo,domhi, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xlo,dx,dt, &
+       xlo,dx, &
        maskcov,DIMS(maskcov),&
        LS,DIMS(LS),&
-       LSalt,DIMS(LSalt),&
        tag, &
        DIMS(tag),&
-       tag_comp, &
-       DIMS(tag_comp),&
        weightfab, &
        DIMS(weightfab),&
-       weight_comp, &
-       DIMS(weight_comp),&
-       expan, &
-       DIMS(expan), &
-       expan_comp, &
-       DIMS(expan_comp) ) &
-       bind(c,name='fort_accept_weight')
+       deltamass, &
+       DIMS(deltamass) ) &
+       bind(c,name='fort_accept_weight_mass')
 
        use probf90_module
        use global_utility_module
@@ -13744,7 +13352,7 @@ FIX ME
 
        IMPLICIT NONE
 
-       integer, INTENT(in) :: im_source,im_dest,indexEXP
+       integer, INTENT(in) :: im_critical
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -13754,39 +13362,24 @@ FIX ME
        integer, INTENT(in) :: bfact
        real(amrex_real), INTENT(in) :: xlo(SDIM)
        real(amrex_real), INTENT(in) :: dx(SDIM)
-       real(amrex_real), INTENT(in) :: dt
        integer, INTENT(in) :: DIMDEC(maskcov)
        integer, INTENT(in) :: DIMDEC(LS)
-       integer, INTENT(in) :: DIMDEC(LSalt)
        integer, INTENT(in) :: DIMDEC(tag)
-       integer, INTENT(in) :: DIMDEC(tag_comp)
        integer, INTENT(in) :: DIMDEC(weightfab)
-       integer, INTENT(in) :: DIMDEC(weight_comp)
-       integer, INTENT(in) :: DIMDEC(expan)
-       integer, INTENT(in) :: DIMDEC(expan_comp)
+       integer, INTENT(in) :: DIMDEC(deltamass)
        real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
        real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
        real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
        real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-       real(amrex_real), INTENT(in), target :: LSalt(DIMV(LSalt),num_materials)
-       real(amrex_real), pointer :: LSalt_ptr(D_DECL(:,:,:),:)
-
        real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
        real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(in), target :: tag_comp(DIMV(tag_comp))
-       real(amrex_real), pointer :: tag_comp_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(out), target :: weightfab(DIMV(weightfab))
        real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(out), target :: weight_comp(DIMV(weight_comp))
-       real(amrex_real), pointer :: weight_comp_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(inout), target :: &
-         expan(DIMV(expan),2*num_interfaces)
-       real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
-       real(amrex_real), INTENT(inout), target ::  &
-         expan_comp(DIMV(expan_comp),2*num_interfaces)
-       real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
+         deltamass(DIMV(deltamass),num_materials)
+       real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
 
        integer i,j,k
        integer dir
@@ -13800,40 +13393,25 @@ FIX ME
        real(amrex_real) xside(SDIM)
        integer local_mask
 
-       expan_ptr=>expan
-       expan_comp_ptr=>expan_comp
+       deltamass_ptr=>deltamass
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        !! Sanity checks
 
-       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
+       if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_source invalid"
-        stop
-       endif
-       if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_dest invalid"
-        stop
-       endif
-       if (im_dest.eq.im_source) then
-        print *,"im_dest or im_source invalid"
+        print *,"im_critical invalid ",im_critical
         stop
        endif
 
        if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid in distribute_expansion"
-        stop
-       end if
-       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
-        print *,"indexEXP invalid"
+        print *,"level invalid in fort_accept_weight_mass ",level
         stop
        endif
        if (bfact.lt.1) then
-        print *,"bfact too small"
+        print *,"bfact invalid fort_accept_weight_mass ",bfact
         stop
        endif
        if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -13845,28 +13423,21 @@ FIX ME
        if (ngrow_distance.ge.6) then
         ! do nothing
        else
-        print *,"require ns.ngrow_distance>=6 (fort_accept_weight) ", &
+        print *,"require ns.ngrow_distance>=6 (fort_accept_weight_mass) ", &
           ngrow_distance
         stop
        endif
 
        maskcov_ptr=>maskcov
        LS_ptr=>LS
-       LSalt_ptr=>LSalt
        tag_ptr=>tag
-       tag_comp_ptr=>tag_comp
        weightfab_ptr=>weightfab
-       weight_comp_ptr=>weight_comp
 
        call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,LSalt_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
 
        ! Iterate over the box
        do k=growlo(3),growhi(3)
@@ -13944,74 +13515,6 @@ FIX ME
           stop
          endif 
 
-          ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
-
-          !both doner and receiver data are redistributed to the
-          !receiver side.
-         TAGLOC=tag_comp(D_DECL(i,j,k))
-         if ((TAGLOC.eq.one).or. & ! doner cell
-             (TAGLOC.eq.two)) then ! receiver cell
-          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
-
-          do dir=1,SDIM
-           if (stenlo(dir).lt.domlo(dir)) then
-            stenlo(dir)=domlo(dir)
-           endif
-           if (stenhi(dir).gt.domhi(dir)) then
-            stenhi(dir)=domhi(dir)
-           endif
-          enddo
-
-          call gridsten_level(xsten,i,j,k,level,nhalf)
-          do dir=1,SDIM
-           xmain(dir)=xsten(0,dir)
-          enddo
-            
-          total_weight=zero
-
-          do k_n=stenlo(3),stenhi(3)
-          do j_n=stenlo(2),stenhi(2)
-          do i_n=stenlo(1),stenhi(1)
-
-           ! if there is receiver neighbor cell
-           TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.two) then ! receiver cell
-
-            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            do dir=1,SDIM
-             xside(dir)=xsten_n(0,dir)
-            enddo
-            call redistribute_weight(xmain,xside,crit_weight)
-            total_weight=total_weight+crit_weight
-           else if (TAGSIDE.eq.one) then ! donate
-            ! do nothing
-           else if (TAGSIDE.eq.zero) then
-            ! do nothing
-           else
-            print *,"TAGSIDE invalid"
-            stop
-           endif
-
-          enddo
-          enddo
-          enddo ! i_n,j_n,k_n
-
-          if (total_weight.ge.zero) then
-           ! do nothing
-          else
-           print *,"total_weight invalid(fort_accept_weight):",total_weight
-           stop
-          endif
-
-          weight_comp(D_DECL(i,j,k))=total_weight
-
-         else if (TAGLOC.eq.zero) then
-          ! do nothing
-         else
-          print *,"TAGLOC invalid"
-          stop
-         end if ! receiving cell
-
         else if (local_mask.eq.0) then
          ! do nothing
         else
@@ -14023,17 +13526,6 @@ FIX ME
        end do ! j
        end do ! i
       end subroutine fort_accept_weight_mass
-
-
-FIX ME
-
-
-
-
-
-
-
-
 
 
       subroutine fort_aggressive( &
