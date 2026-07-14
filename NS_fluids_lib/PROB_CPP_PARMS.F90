@@ -175,8 +175,6 @@ stop
       real(amrex_real), INTENT(in) :: denconst_local(num_materials)
       integer, INTENT(in) :: is_rigid_local(num_materials)
       integer :: im
-      integer :: sub_im
-      integer :: irank
       integer :: local_FSI_flag
 
       if ((num_materials.lt.1).or.(num_materials.gt.9999)) then
