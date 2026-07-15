@@ -9492,7 +9492,8 @@ stop
                     else if (microlayer_size(im_source).eq.zero) then
                      ! do nothing
                     else
-                     print *,"microlayer_size(im_source) invalid"
+                     print *,"microlayer_size(im_source) invalid ", &
+                            microlayer_size
                      stop
                     endif
 
@@ -9506,6 +9507,7 @@ stop
                        dir2=num_materials+(im_substrate_dest-1)*SDIM+dir
                        gradphi_substrate(dir)=LSINT(dir2)
                       enddo
+                       !get_physical_dist is declared in GLOBALUTIL.F90
                       call get_physical_dist(xI,LSINT(im_substrate_dest), &
                        gradphi_substrate,newphi_substrate)
                       if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
@@ -9626,6 +9628,9 @@ stop
                        ! do nothing
                       else
                        print *,"microlayer parameters invalid"
+                       print *,"max_contact_line_size ",max_contact_line_size
+                       print *,"microlayer_size ",microlayer_size
+                       print *,"macrolayer_size ",macrolayer_size
                        stop
                       endif
                      else
