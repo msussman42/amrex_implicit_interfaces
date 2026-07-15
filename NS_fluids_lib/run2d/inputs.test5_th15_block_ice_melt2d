@@ -75,7 +75,6 @@ ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
 # water,air,ice,substrate (substrate is heated)
 ns.mof_ordering=3 4 2 1  #NEW VERSION
-ns.mof_renormalize_ordering=2 3 1 0 #NEW VERSION
 
 # multigrid class
 mg.verbose = 0

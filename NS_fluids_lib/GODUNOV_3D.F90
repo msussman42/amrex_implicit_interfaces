@@ -4577,6 +4577,7 @@ stop
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
       subroutine fort_initjumpterm( &
+       nstate, &
        mdotplus, &
        mdotminus, &
        mdotcount, &
@@ -4594,6 +4595,7 @@ stop
        xlo,dx,dt, &
        maskcov,DIMS(maskcov), &
        JUMPFAB,DIMS(JUMPFAB), &
+       snew,DIMS(snew), &
        mdot,DIMS(mdot), &
        LSnew,DIMS(LSnew), &
        LSaltnew,DIMS(LSaltnew), &
@@ -4607,6 +4609,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(inout) :: mdotplus
       real(amrex_real), INTENT(inout) :: mdotminus
       real(amrex_real), INTENT(inout) :: mdotcount
@@ -4626,6 +4629,7 @@ stop
       real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(JUMPFAB)
+      integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(LSaltnew)
@@ -4636,6 +4640,8 @@ stop
       real(amrex_real), INTENT(in), target :: &
               JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
 
@@ -4658,8 +4664,10 @@ stop
       integer i,j,k
       integer im,im_opp,ireverse,iten
       integer iten_shift
+      integer dencomp
       integer im_source,im_dest
       real(amrex_real) jump_strength
+      real(amrex_real) local_density
 
       real(amrex_real) LL
       real(amrex_real) divu_material
@@ -4671,30 +4679,30 @@ stop
       mdot_ptr=>mdot
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small fort_initjumpterm ",bfact
        stop
       endif
 
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid fort_initjumpterm ",time
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in convert_material"
+       print *,"level invalid in fort_initjumpterm ",level
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_initjumpterm ",num_state_base
        stop
       endif
 
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_initjumpterm ",dt
        stop
       endif
       if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -4762,7 +4770,8 @@ stop
           endif
 
          else
-          print *,"constant_volume_mdot(iten_shift) invalid"
+          print *,"constant_volume_mdot(iten_shift) invalid ", &
+           constant_volume_mdot
           stop
          endif
         enddo ! ireverse
@@ -4774,6 +4783,8 @@ stop
 
       JUMPFAB_ptr=>JUMPFAB
       call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
 
@@ -4843,12 +4854,22 @@ stop
 
             call get_primary_material(dx,LS_local,im_primary)
 
+            dencomp=STATECOMP_STATES+ &
+             (im_primary-1)*num_state_material+1+ENUM_DENVAR
+            local_density=snew(D_DECL(i,j,k),dencomp)
+            if (local_density.gt.zero) then
+             !do nothing
+            else
+             print *,"local_density invalid ",local_density
+             stop
+            endif
+
             if (F_solid_sum.ge.zero) then
              if (F_solid_sum.lt.half) then
               if (is_rigid(im_primary).eq.0) then
              
-               ! jump_strength units: cm^3/s^2
-               divu_material=jump_strength
+               ! jump_strength/local_density  units: cm^3/s^2
+               divu_material=jump_strength/local_density
 
                if (divu_material.gt.zero) then
                 mdotplus=mdotplus+divu_material
@@ -4859,7 +4880,7 @@ stop
                else if (divu_material.eq.zero) then
                 ! do nothing
                else
-                print *,"divu_material bust"
+                print *,"divu_material bust ",divu_material
                 stop
                endif
             
@@ -4867,25 +4888,25 @@ stop
               else if (is_rigid(im_primary).eq.1) then
                ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"is_rigid invalid ",im_primary,is_rigid(im_primary)
                stop
               endif
              else if ((F_solid_sum.ge.half).and. &
                       (F_solid_sum.le.one+EPS1)) then
               ! do nothing
              else
-              print *,"F_solid_sum invalid"
+              print *,"F_solid_sum invalid ",F_solid_sum
               stop
              endif 
             else
-             print *,"F_solid_sum invalid"
+             print *,"F_solid_sum invalid ",F_solid_sum
              stop
             endif 
 
            else if (LL.eq.zero) then
             ! do nothing
            else
-            print *,"LL bust"
+            print *,"LL bust ",LL
             stop
            endif  
           enddo ! ireverse=0...1
@@ -4905,6 +4926,208 @@ stop
 
       return
       end subroutine fort_initjumpterm
+
+
+
+      subroutine fort_init_from_deltamass( &
+       nstate, &
+       time, &
+       level, &
+       finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       dt, &
+       maskcov,DIMS(maskcov), &
+       deltamass,DIMS(deltamass), &
+       snew,DIMS(snew), &
+       mdot,DIMS(mdot), &
+       LSnew,DIMS(LSnew)) &
+      bind(c,name='fort_init_from_deltamass')
+
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: nstate
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(deltamass)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(LSnew)
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: &
+              deltamass(DIMV(deltamass),num_materials)
+      real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+        LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+
+      integer i,j,k
+      integer im
+      integer dencomp
+      real(amrex_real) local_deltamass
+      real(amrex_real) local_density
+
+      real(amrex_real) divu_material
+      integer local_mask
+      integer imlocal,im_primary
+      real(amrex_real) LS_local(num_materials)
+
+      mdot_ptr=>mdot
+
+      if (bfact.lt.1) then
+       print *,"bfact too small fort_init_from_deltamass ",bfact
+       stop
+      endif
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid fort_init_from_deltamass ",time
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_init_from_deltamass ",level
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid fort_init_from_delta_mass ", &
+          num_state_base
+       stop
+      endif
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid fort_init_from_delta_mass ",dt
+       stop
+      endif
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.6) then
+       ! do nothing
+      else
+       print *,"require ns.ngrow_distance>=6(fort_init_from_deltamass) ", &
+          ngrow_distance
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+
+      deltamass_ptr=>deltamass
+      call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+
+      LSnew_ptr=>LSnew
+      call checkbound_array(fablo,fabhi,LSnew_ptr,ngrow_distance,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       if (local_mask.eq.1) then
+
+        do im=1,num_materials
+
+         if (is_rigid_CL(im).eq.0) then
+
+           !units: kg/s^2
+          local_deltamass=deltamass(D_DECL(i,j,k),im)
+  
+          do imlocal=1,num_materials
+           LS_local(imlocal)=LSnew(D_DECL(i,j,k),imlocal)
+          enddo ! imlocal=1..num_materials 
+
+          call get_primary_material(dx,LS_local,im_primary)
+
+          dencomp=STATECOMP_STATES+ &
+            (im_primary-1)*num_state_material+1+ENUM_DENVAR
+          local_density=snew(D_DECL(i,j,k),dencomp)
+          if (local_density.gt.zero) then
+           !do nothing
+          else
+           print *,"local_density invalid ",local_density
+           stop
+          endif
+
+          if (im_primary.eq.im) then
+
+           ! local_deltamass/local_density  units: cm^3/s^2
+           divu_material=local_deltamass/local_density
+
+           if (divu_material.gt.zero) then
+            !do nothing
+           else if (divu_material.lt.zero) then
+            !do nothing
+           else if (divu_material.eq.zero) then
+            ! do nothing
+           else
+            print *,"divu_material bust ",divu_material
+            stop
+           endif
+            
+           mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+          else if (im_primary.ne.im) then
+           !do nothing
+          else
+           print *,"im_primary or im invalid ",im_primary,im
+           stop
+          endif
+         else if (is_rigid_CL(im).eq.1) then
+          !do nothing
+         else
+          print *,"is_rigid_CL(im) invalid ",im,is_rigid_CL(im)
+          stop
+         endif 
+        enddo ! im=1...num_materials
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
+
+      return
+      end subroutine fort_init_from_deltamass
+
+
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
@@ -11292,6 +11515,20 @@ stop
       return
       end subroutine fort_wallfunction_predict
 
+      subroutine redistribute_weight(xmain,xside,crit_weight)
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: xmain(SDIM)
+      real(amrex_real), INTENT(in) :: xside(SDIM)
+      real(amrex_real), INTENT(out) :: crit_weight
+
+      crit_weight=one
+
+      return
+      end subroutine redistribute_weight
+
+
+
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
@@ -11474,7 +11711,7 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in distribute_expansion"
+       print *,"level invalid in fort_tagexpansion"
        stop
       endif
       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
@@ -11924,18 +12161,6 @@ stop
 
       return
       end subroutine fort_tagexpansion
-
-      subroutine redistribute_weight(xmain,xside,crit_weight)
-      IMPLICIT NONE
-
-      real(amrex_real), INTENT(in) :: xmain(SDIM)
-      real(amrex_real), INTENT(in) :: xside(SDIM)
-      real(amrex_real), INTENT(out) :: crit_weight
-
-      crit_weight=one
-
-      return
-      end subroutine redistribute_weight
 
 
       ! recon( num_materials * ngeom_recon )
@@ -12451,7 +12676,7 @@ stop
        endif
 
        if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid in distribute_expansion"
+        print *,"level invalid in fort_accept_weight ",level
         stop
        end if
        if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
@@ -12649,6 +12874,659 @@ stop
        end do ! j
        end do ! i
       end subroutine fort_accept_weight
+
+      ! tag = 1 -> donor cell
+      ! tag = 2 -> receving cell
+      ! tag = 0 -> none of above
+      subroutine fort_tagmass(&
+       ncell_mdot_shift, &
+       im_critical, & !intent(in)
+       level,finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       maskcov,DIMS(maskcov), &
+       tag, &
+       DIMS(tag), &
+       deltamass,DIMS(deltamass), &
+       LS,DIMS(LS)) &
+      bind(c,name='fort_tagmass')
+
+      use probf90_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: ncell_mdot_shift
+      integer, INTENT(in) :: im_critical
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(tag)
+      integer, INTENT(in) :: DIMDEC(deltamass)
+      integer, INTENT(in) :: DIMDEC(LS)
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(out), target :: tag(DIMV(tag))
+      real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: &
+         deltamass(DIMV(deltamass),num_materials)
+      real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+        LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+      integer i,j,k
+      integer im
+      real(amrex_real) LSCELL(num_materials)
+      integer im_primary
+      integer, PARAMETER :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_center(SDIM)
+      integer local_mask
+      integer dir
+      real(amrex_real) VDOT
+      real(amrex_real) dxmax
+      real(amrex_real) LS_DONOR_CUTOFF
+
+      tag_ptr=>tag
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      call get_dxmax(dx,bfact,dxmax)
+      if (dxmax.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmax invalid: ",dxmax
+       stop
+      endif
+
+      if ((ncell_mdot_shift.ge.1).and. &
+          (ncell_mdot_shift.le.2)) then
+       !do nothing
+      else
+       print *,"ncell_mdot_shift invalid (expect 1 or 2)",ncell_mdot_shift
+       stop
+      endif
+
+      LS_DONOR_CUTOFF=ncell_mdot_shift*dxmax
+
+      if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_critical invalid ",im_critical
+       stop
+      endif
+      if (is_rigid_CL(im_critical).eq.0) then
+       !do nothing
+      else
+       print *,"expecting is_rigid_CL(im_critical)==0 ", &
+         im_critical,is_rigid_CL(im_critical)
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_tagmass ",level
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid in fort_tagmass ",bfact
+       stop
+      endif
+
+      if (ngrow_make_distance.eq.ngrow_distance-1) then
+       !do nothing
+      else
+       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       stop
+      endif
+      if (ngrow_distance.ge.6) then
+       ! do nothing
+      else
+       print *,"require ns.ngrow_distance>=6 (fort_tagmass) ", &
+          ngrow_distance
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      LS_ptr=>LS
+      deltamass_ptr=>deltamass
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+      call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
+
+      ! Iterate over the box
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       if (local_mask.eq.1) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+        do dir=1,SDIM
+         xsten_center(dir)=xsten(0,dir)
+        enddo
+
+        tag(D_DECL(i,j,k)) = zero
+
+        do im=1,num_materials
+         LSCELL(im)=LS(D_DECL(i,j,k),im)
+        enddo
+
+        call get_primary_material(dx,LSCELL,im_primary)
+
+        VDOT=deltamass(D_DECL(i,j,k),im_critical)
+
+         ! first tag donor cells (tag=one)
+        if (VDOT.ne.zero) then 
+
+         if ((im_primary.ne.im_critical).or. &
+             (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+          tag(D_DECL(i,j,k)) = one ! donor cell
+         else if ((im_primary.eq.im_critical).and. &
+                  (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+          ! do nothing - acceptor cell
+         else
+          print *,"LSCELL or im_primary or im_critical invalid: ", &
+             LSCELL,im_primary,im_critical
+          stop      
+         endif
+
+        else if (VDOT.eq.zero) then
+         ! do nothing
+        else
+         print *,"VDOT became corrupt: ",VDOT
+         stop
+        endif 
+
+        if ((im_primary.eq.im_critical).and. &
+            (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+         tag(D_DECL(i,j,k)) = two ! receiver
+        else if ((im_primary.ne.im_critical).or. &
+                 (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+         ! do nothing - donor cell if VDOT<>0
+        else
+         print *,"LSCELL or im_primary or im_critical invalid: ", &
+            LSCELL,im_primary,im_critical
+         stop      
+        endif
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid: ",local_mask
+        stop
+       endif
+
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine fort_tagmass
+
+
+      ! tag = 1 -> donor cell
+      ! tag = 2 -> receving cell
+      ! tag = 0 -> non of above
+      subroutine fort_distributemass(&
+       im_critical, &
+       level,finest_level, &
+       domlo,domhi, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       maskcov,DIMS(maskcov),&
+       LS,DIMS(LS),&
+       tag, &
+       DIMS(tag),&
+       weightfab, &
+       DIMS(weightfab),&
+       deltamass, &
+       DIMS(deltamass) ) &
+       bind(c,name='fort_distributemass')
+
+       use probf90_module
+       use global_utility_module
+       use geometry_intersect_module
+
+       IMPLICIT NONE
+
+       integer, INTENT(in) :: im_critical
+       integer, INTENT(in) :: level,finest_level
+       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer :: stenlo(3),stenhi(3)
+       integer, INTENT(in) :: bfact
+       real(amrex_real), INTENT(in) :: xlo(SDIM)
+       real(amrex_real), INTENT(in) :: dx(SDIM)
+       integer, INTENT(in) :: DIMDEC(maskcov)
+       integer, INTENT(in) :: DIMDEC(LS)
+       integer, INTENT(in) :: DIMDEC(tag)
+       integer, INTENT(in) :: DIMDEC(weightfab)
+       integer, INTENT(in) :: DIMDEC(deltamass)
+       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+       real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
+       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
+       real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in), target :: weightfab(DIMV(weightfab))
+       real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(inout), target :: &
+          deltamass(DIMV(deltamass),num_materials)
+       real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), dimension(D_DECL(:,:,:)), allocatable,target :: &
+         deltamass_new
+       real(amrex_real), pointer :: deltamass_new_ptr(D_DECL(:,:,:))
+       real(amrex_real) local_deltamass_new
+
+       integer i,j,k
+       integer dir
+       integer i_n,j_n,k_n
+       real(amrex_real) total_weight,crit_weight
+       real(amrex_real) TAGLOC,TAGSIDE
+       integer, PARAMETER :: nhalf=1
+       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) xsten_n(-nhalf:nhalf,SDIM)
+       real(amrex_real) xmain(SDIM)
+       real(amrex_real) xside(SDIM)
+       integer local_mask
+
+       deltamass_ptr=>deltamass
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       !! Sanity checks
+
+       if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_critical invalid ",im_critical
+        stop
+       endif
+
+       if ((level.lt.0).or.(level.gt.finest_level)) then
+        print *,"level invalid in fort_distributemass ",level
+        stop
+       end if
+       if (bfact.lt.1) then
+        print *,"bfact invalid fort_distributemass ",bfact
+        stop
+       endif
+       if (ngrow_make_distance.eq.ngrow_distance-1) then
+        !do nothing
+       else
+        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+        stop
+       endif
+       if (ngrow_distance.ge.6) then
+        ! do nothing
+       else
+        print *,"require ns.ngrow_distance>=6(fort_distributemass) ", &
+          ngrow_distance
+        stop
+       endif
+
+       allocate(deltamass_new(DIMV(deltamass)))
+       deltamass_new_ptr=>deltamass_new
+
+       maskcov_ptr=>maskcov
+       LS_ptr=>LS
+       tag_ptr=>tag
+       weightfab_ptr=>weightfab
+
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+
+       call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,deltamass_new_ptr,ngrow_distance,-1)
+
+       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
+
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+        deltamass_new(D_DECL(i,j,k))=zero
+       enddo
+       enddo
+       enddo
+
+       ! Iterate over the box
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+        if (local_mask.eq.1) then
+
+         ! if a receiving cell
+         TAGLOC=tag(D_DECL(i,j,k))
+         if(TAGLOC.eq.two) then ! receiver
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
+          do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
+
+            !both doner and receiver cells are distributed
+            !to the receiver side.
+           TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
+           if ((TAGSIDE.eq.one).or. & ! doner
+               (TAGSIDE.eq.two)) then ! receiver
+
+            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=weightfab(D_DECL(i_n,j_n,k_n))
+            if (total_weight.gt.zero) then
+             if (crit_weight.le.total_weight) then
+              deltamass_new(D_DECL(i,j,k)) = &
+               deltamass_new(D_DECL(i,j,k)) + &
+               deltamass(D_DECL(i_n,j_n,k_n),im_critical)* &
+               crit_weight/total_weight
+             else
+              print *,"crit_weight invalid: ",crit_weight
+              stop
+             endif
+            else if (total_weight.eq.zero) then
+             print *,"total_weight=0 warning (fort_distributemass): ", &
+               total_weight
+             print *,"increase error_buf to remove the warning"
+            else
+             print *,"total_weight invalid (fort_distributemass): ", &
+               total_weight
+             stop
+            endif
+
+           else if (TAGSIDE.eq.zero) then
+            ! do nothing
+           else
+            print *,"TAGSIDE invalid"
+            stop
+           endif 
+
+          end do ! k_n
+          end do ! j_n
+          end do ! i_n
+
+         else if ((TAGLOC.eq.one).or. & ! doner
+                  (TAGLOC.eq.zero)) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid"
+          stop
+         endif 
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+
+       end do ! k
+       end do ! j
+       end do ! i
+
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+        if (local_mask.eq.1) then
+         local_deltamass_new=deltamass_new(D_DECL(i,j,k))
+         deltamass(D_DECL(i,j,k),im_critical)=local_deltamass_new
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+       end do ! k
+       end do ! j
+       end do ! i
+
+       deallocate(deltamass_new)
+
+      end subroutine fort_distributemass
+
+      subroutine fort_accept_weight_mass(&
+       im_critical, &
+       level,finest_level, &
+       domlo,domhi, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       maskcov,DIMS(maskcov),&
+       LS,DIMS(LS),&
+       tag, &
+       DIMS(tag),&
+       weightfab, &
+       DIMS(weightfab),&
+       deltamass, &
+       DIMS(deltamass) ) &
+       bind(c,name='fort_accept_weight_mass')
+
+       use probf90_module
+       use global_utility_module
+       use geometry_intersect_module
+
+       IMPLICIT NONE
+
+       integer, INTENT(in) :: im_critical
+       integer, INTENT(in) :: level,finest_level
+       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer :: stenlo(3),stenhi(3)
+       integer, INTENT(in) :: bfact
+       real(amrex_real), INTENT(in) :: xlo(SDIM)
+       real(amrex_real), INTENT(in) :: dx(SDIM)
+       integer, INTENT(in) :: DIMDEC(maskcov)
+       integer, INTENT(in) :: DIMDEC(LS)
+       integer, INTENT(in) :: DIMDEC(tag)
+       integer, INTENT(in) :: DIMDEC(weightfab)
+       integer, INTENT(in) :: DIMDEC(deltamass)
+       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+       real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
+       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), INTENT(in), target :: tag(DIMV(tag))
+       real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(out), target :: weightfab(DIMV(weightfab))
+       real(amrex_real), pointer :: weightfab_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(inout), target :: &
+         deltamass(DIMV(deltamass),num_materials)
+       real(amrex_real), pointer :: deltamass_ptr(D_DECL(:,:,:),:)
+
+       integer i,j,k
+       integer dir
+       integer i_n,j_n,k_n
+       real(amrex_real) total_weight,crit_weight
+       real(amrex_real) TAGLOC,TAGSIDE
+       integer, PARAMETER :: nhalf=1
+       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) xsten_n(-nhalf:nhalf,SDIM)
+       real(amrex_real) xmain(SDIM)
+       real(amrex_real) xside(SDIM)
+       integer local_mask
+
+       deltamass_ptr=>deltamass
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       !! Sanity checks
+
+       if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_critical invalid ",im_critical
+        stop
+       endif
+
+       if ((level.lt.0).or.(level.gt.finest_level)) then
+        print *,"level invalid in fort_accept_weight_mass ",level
+        stop
+       endif
+       if (bfact.lt.1) then
+        print *,"bfact invalid fort_accept_weight_mass ",bfact
+        stop
+       endif
+       if (ngrow_make_distance.eq.ngrow_distance-1) then
+        !do nothing
+       else
+        print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+        stop
+       endif
+       if (ngrow_distance.ge.6) then
+        ! do nothing
+       else
+        print *,"require ns.ngrow_distance>=6 (fort_accept_weight_mass) ", &
+          ngrow_distance
+        stop
+       endif
+
+       maskcov_ptr=>maskcov
+       LS_ptr=>LS
+       tag_ptr=>tag
+       weightfab_ptr=>weightfab
+
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,deltamass_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
+
+       ! Iterate over the box
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+        if (local_mask.eq.1) then
+
+          !both doner and receiver data are redistributed to the
+          !receiver side.
+         TAGLOC=tag(D_DECL(i,j,k))
+         if ((TAGLOC.eq.one).or. & ! doner cell
+             (TAGLOC.eq.two)) then ! receiver cell
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
+          total_weight=zero
+
+          do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
+
+           ! if there is receiver neighbor cell
+           TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
+           if (TAGSIDE.eq.two) then ! receiver cell
+
+            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=total_weight+crit_weight
+
+           else if (TAGSIDE.eq.one) then ! donate
+            ! do nothing
+           else if (TAGSIDE.eq.zero) then
+            ! do nothing
+           else
+            print *,"TAGSIDE invalid"
+            stop
+           endif
+
+          enddo
+          enddo
+          enddo ! i_n,j_n,k_n
+
+          if (total_weight.ge.zero) then
+           ! do nothing
+          else
+           print *,"total_weight invalid(fort_accept_weight): ",total_weight
+           stop
+          endif
+
+          weightfab(D_DECL(i,j,k))=total_weight
+
+         else if (TAGLOC.eq.zero) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid: ",TAGLOC
+          stop
+         endif 
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+
+       end do ! k
+       end do ! j
+       end do ! i
+      end subroutine fort_accept_weight_mass
+
 
       subroutine fort_aggressive( &
        caller_string, &
@@ -17172,7 +18050,6 @@ stop
       end subroutine fort_vfrac_split_smooth
 
       subroutine fort_correct_flotsam( &
-       mof_renormalize_ordering, &
        material_extend_velocity, &
        tid, &
        tilelo,tilehi, &
@@ -17198,7 +18075,6 @@ stop
       integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
 
       integer, INTENT(in) :: tid
-      integer, INTENT(in) :: mof_renormalize_ordering(num_materials)
       integer, INTENT(in) :: material_extend_velocity(num_materials)
       integer :: material_list_by_rank(num_materials)
 
@@ -17300,18 +18176,6 @@ stop
 
       do im=1,num_materials
        if (material_extend_velocity(im).gt.0) then
-
-        if (material_extend_velocity(im).eq. &
-            mof_renormalize_ordering(im)) then
-         !do nothing
-        else
-         print *,"material_extend_velocity: ", &
-           material_extend_velocity
-         print *,"mof_renormalize_ordering: ", &
-           mof_renormalize_ordering
-         print *,"should be the same at the non 0"
-         stop
-        endif
 
         if (is_rigid(im).eq.0) then
          !do nothing

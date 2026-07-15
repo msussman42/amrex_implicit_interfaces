@@ -564,14 +564,21 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   // delete_advect_vars() called in NavierStokes::do_the_advance
   // right after increment_face_velocityALL. 
  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
+  NavierStokes& ns_level=getLevel(ilev);
    // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF with
    // the velocity at prev_time_slab.
    // u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
    //   (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
    //   (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-   ns_level.prepare_advect_vars(prev_time_slab);
+  ns_level.prepare_advect_vars(prev_time_slab);
+
+  ns_level.new_localMF(MASS_REDISTRIBUTE_MF,num_materials,
+    ngrow_distance,-1); 
+  ns_level.setVal_localMF(MASS_REDISTRIBUTE_MF,0.0,0,
+    num_materials,ngrow_distance);
  }
+
+ debug_ngrow(MASS_REDISTRIBUTE_MF,ngrow_distance,local_caller_string);
 
  int im_extension=-1; //regular advection
 
@@ -666,6 +673,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  } else
   amrex::Error("material_extend_velocity_flag invalid");
+
+ int mass_redistribute_flag=UPDATE_MASS_REDISTRIBUTE_VAR;
+ mass_redistributeALL(mass_redistribute_flag);
+
+ delete_array(MASS_REDISTRIBUTE_MF);
 
 }  // end subroutine nonlinear_advection
 
@@ -848,7 +860,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    interface_touch_flag=1; //sub_nonlinear_advection
 
    if ((dir_absolute_direct_split>=0)&&
-       (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
+       (dir_absolute_direct_split<AMREX_SPACEDIM)) {
 
     renormalize_flag=RENORMALIZE_ONLY;
     prescribe_solid_geometryALL(
@@ -885,10 +897,8 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
      ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
     }
 
-   } else if (dir_absolute_direct_split==AMREX_SPACEDIM-1) {
-     // do nothing
    } else
-    amrex::Error("parameter bust");
+    amrex::Error("dir_absolute_direct_split invalid");
 
  }  // dir_absolute_direct_split=0..sdim-1
 
@@ -910,6 +920,9 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 //       force (if CTML) to Eulerian.
 
  if (im_extension==-1) { //standard advection (both fluids and elastics)
+
+  int mass_redistribute_flag=INIT_MASS_REDISTRIBUTE_VAR;
+  mass_redistributeALL(mass_redistribute_flag);
 
   if (read_from_CAD()==1) {
 
@@ -2435,8 +2448,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
 
 } // subroutine SEM_advectALL
 
-// called from NavierStokes::do_the_advance first thing in the loop
-// divu_outer_sweeps=0..local_num_divu_outer_sweeps-1
+// called from NavierStokes::do_the_advance first thing in the loop:
+//   divu_outer_sweeps=0..local_num_divu_outer_sweeps-1
 void NavierStokes::prelim_alloc() {
 
  int finest_level=parent->finestLevel();
@@ -7093,7 +7106,7 @@ if (sweep_num==0) {
  delete_localMF(LS_COLORSUM_MF,1);
  delete_localMF(DEN_COLORSUM_MF,1);
 } else
- amrex::Error("sweep_num invalid");
+ amrex::Error("sweep_num invalid in LowMachDIVU");
 
 }  // end subroutine LowMachDIVU
 
@@ -7111,7 +7124,7 @@ NavierStokes::LowMachDIVUALL(
  int finest_level=parent->finestLevel();
 
  if ((coarsest_level<0)||(coarsest_level>finest_level))
-  amrex::Error("coarsest_level invalid");
+  amrex::Error("coarsest_level invalid in LowMachDIVUALL");
 
  if (level!=0)
   amrex::Error("level=0 in LowMachDIVUALL");
@@ -7128,42 +7141,42 @@ NavierStokes::LowMachDIVUALL(
   if (ncomp_mdot==1) {
    // do nothing
   } else
-   amrex::Error("ncomp_mdot invalid");
+   amrex::Error("ncomp_mdot invalid LowMachDIVUALL");
   int ngrow_mdot=localMF[MDOT_LOCAL_MF]->nGrow();
   if (ngrow_mdot>=0) {
    // do nothing
   } else
-   amrex::Error("ngrow_mdot invalid");
+   amrex::Error("ngrow_mdot invalid LowMachDIVUALL");
 
  } else
-  amrex::Error("MDOT_LOCAL_MF invalid");
+  amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
 
  if (MDOT_MF>=0) {
   if (localMF[MDOT_MF]->nComp()==1) {
    // do nothing
   } else
-   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+   amrex::Error("localMF[MDOT_MF]->nComp() invalid in LowMachDIVUALL");
   if (localMF[MDOT_MF]->nGrow()>=0) {
    // do nothing
   } else
-   amrex::Error("localMF[MDOT_MF]->nGrow() invalid");
+   amrex::Error("localMF[MDOT_MF]->nGrow() invalid in LowMachDIVUALL");
 
  } else
-  amrex::Error("MDOT_MF invalid");
+  amrex::Error("MDOT_MF invalid in LowMachDIVUALL");
 
  if (QDOT_MF>=0) {
   if (localMF[QDOT_MF]->nComp()==1) {
    // do nothing
   } else
-   amrex::Error("localMF[QDOT_MF]->nComp() invalid");
+   amrex::Error("localMF[QDOT_MF]->nComp() invalid in LowMachDIVUALL");
   if (localMF[QDOT_MF]->nGrow()>=0) {
    // do nothing
   } else
-   amrex::Error("localMF[QDOT_MF]->nGrow() invalid");
+   amrex::Error("localMF[QDOT_MF]->nGrow() invalid in LowMachDIVUALL");
 
  } else
-  amrex::Error("QDOT_MF invalid");
+  amrex::Error("QDOT_MF invalid in LowMachDIVUALL");
 
 
   //mdot_data[icolor][j=0 or 1]
@@ -7183,7 +7196,7 @@ NavierStokes::LowMachDIVUALL(
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("MDOT_LOCAL_MF invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
  }  // i=0..color_count-1
 
@@ -7206,7 +7219,7 @@ NavierStokes::LowMachDIVUALL(
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("MDOT_LOCAL_MF invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
  } // i=0..color_count-1
 
@@ -7246,7 +7259,7 @@ NavierStokes::LowMachDIVUALL(
       } else
        amrex::Error("expecting j==2");
      } else
-      amrex::Error("MDOT_LOCAL_MF invalid");
+      amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
     }  // i=0..color_count-1
 
@@ -7255,7 +7268,7 @@ NavierStokes::LowMachDIVUALL(
     // do nothing
 
    } else
-     amrex::Error("sweep_num invalid");
+     amrex::Error("sweep_num invalid LowMachDIVUALL");
 
   } // ilev=coarsest_level..finest_level
 
@@ -7683,6 +7696,17 @@ NavierStokes::ColorSumALL(
  if (idx_mdot==-1) {
   // do nothing
  } else if (idx_mdot>=0) {
+
+  if (idx_mdot==JUMP_STRENGTH_MF) {
+   //do nothing
+  } else
+   amrex::Error("expecting idx_mdot==JUMP_STRENGTH_MF");
+
+  if (idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF) {
+   //do nothing
+  } else
+   amrex::Error("expect idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF");
+
   ncomp_mdot=localMF[idx_mdot]->nComp();
   ncomp_mdot_alloc=ncomp_mdot;
   if (ncomp_mdot==2*num_interfaces) {
@@ -7843,6 +7867,17 @@ NavierStokes::ColorSumALL(
     mdot=ns_level.localMF[idx_type];
     mdot_complement=ns_level.localMF[idx_type];
    } else if (ncomp_mdot==2*num_interfaces) {
+
+    if (idx_mdot==JUMP_STRENGTH_MF) {
+     //do nothing
+    } else
+     amrex::Error("expecting idx_mdot==JUMP_STRENGTH_MF");
+
+    if (idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF) {
+     //do nothing
+    } else
+     amrex::Error("expect idx_mdot_complement==JUMP_STRENGTH_COMPLEMENT_MF");
+
     mdot=ns_level.localMF[idx_mdot];
     mdot_complement=ns_level.localMF[idx_mdot_complement];
    } else {
@@ -10502,6 +10537,22 @@ void NavierStokes::multiphase_project(int project_option) {
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
 	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+
+ } else if (project_option==SOLVETYPE_PRES) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   if ((num_materials_compressible>=1)&&
+       (num_materials_compressible<=num_materials)) {
+
+    ns_level.move_mdot_to_density();
+
+   } else if (num_materials_compressible==0) {
+    //do nothing
+   } else
+    amrex::Error("num_materials_compressble invalid");
+
+  }
 
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything

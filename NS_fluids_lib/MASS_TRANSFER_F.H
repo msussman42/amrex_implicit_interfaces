@@ -69,6 +69,29 @@ extern "C"
     Real* swept,AMREX_ARLIM_P(sweptlo),AMREX_ARLIM_P(swepthi)); 
 
 
+   void fort_mass_redistribute(
+    int* tid,
+    int* mass_redistribute_flag,
+    int* nstate,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    int* velbc,
+    int* vofbc,
+    Real* dt,
+    const Real* xlo,const Real* dx,
+    Real* volfab,
+    AMREX_ARLIM_P(volfablo),AMREX_ARLIM_P(volfabhi), 
+    Real* maskcov,
+    AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* redistribute_fab,
+    AMREX_ARLIM_P(redistribute_fablo),
+    AMREX_ARLIM_P(redistribute_fabhi),
+    Real* snew,
+    AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
+    int* level,
+    int* finest_level);
+
    void fort_nodedisplace(
      int* nburning,
      const int* tilelo,const int* tilehi,

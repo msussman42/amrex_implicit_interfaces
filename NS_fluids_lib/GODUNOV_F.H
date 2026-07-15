@@ -550,6 +550,7 @@ extern "C"
     Real* dt,Real* time);
 
    void fort_initjumpterm(
+    int* nstate,
     Real* mdotplus,
     Real* mdotminus,
     Real* mdotcount,
@@ -567,11 +568,31 @@ extern "C"
     const Real* xlo,const Real* dx,Real* dt,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* LSaltnew,AMREX_ARLIM_P(LSaltnewlo),AMREX_ARLIM_P(LSaltnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
     Real* recon_alt,AMREX_ARLIM_P(recon_altlo),AMREX_ARLIM_P(recon_althi));
+
+
+
+   void fort_init_from_deltamass(
+    int* nstate,
+    Real* time,
+    int* level,
+    int* finest_level,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* deltamass,
+    AMREX_ARLIM_P(deltamasslo),AMREX_ARLIM_P(deltamasshi),
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+    Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi));
 
 
    void fort_init_elasticmask_and_elasticmaskpart(
@@ -703,6 +724,52 @@ extern "C"
     AMREX_ARLIM_P(jump_comp_lo),
     AMREX_ARLIM_P(jump_comp_hi) );
 
+   void fort_tagmass(
+    int* ncell_mdot_shift,
+    int* im_critical,
+    int* level,int* finest_level,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* tag,AMREX_ARLIM_P(tablo),AMREX_ARLIM_P(taghi),
+    Real* deltamass,
+    AMREX_ARLIM_P(deltamasslo),AMREX_ARLIM_P(deltamasshi),
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi));
+
+
+   void fort_accept_weight_mass(
+    int* im_critical,
+    int* level,int* finest_level,
+    const int* domlo,const int* domhi,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
+    Real* weightfab,AMREX_ARLIM_P(weightfablo),AMREX_ARLIM_P(weightfabhi),
+    Real* deltamass,
+    AMREX_ARLIM_P(deltamasslo),AMREX_ARLIM_P(deltamasshi));
+
+
+   void fort_distributemass(
+    int* im_critical,
+    int* level,int* finest_level,
+    const int* domlo,const int* domhi,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
+    Real* weightfab,AMREX_ARLIM_P(weightfablo),AMREX_ARLIM_P(weightfabhi),
+    Real* deltamass,
+    AMREX_ARLIM_P(deltamasslo),AMREX_ARLIM_P(deltamasshi));
+
    void fort_vfrac_split(
      int* nprocessed,
      int* tid,
@@ -830,7 +897,6 @@ extern "C"
 
 
    void fort_correct_flotsam(
-     int* mof_renormalize_ordering,
      int* material_extend_velocity,
      int* tid,
      const int* tilelo,const int* tilehi,

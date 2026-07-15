@@ -11,7 +11,6 @@ namespace amrex{
 
     void fort_initmof(
      int * order_algorithm_in,
-     int * renormalize_order_algorithm_in,
      Real* denconst_local,
      int* is_rigid_local,
      int* MOFITERMAX,

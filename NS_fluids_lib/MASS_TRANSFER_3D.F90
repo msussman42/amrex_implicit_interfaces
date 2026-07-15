@@ -3664,7 +3664,7 @@ stop
       real(amrex_real), target, INTENT(out) :: swept(DIMV(swept),num_materials)
       real(amrex_real), pointer :: swept_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real) :: denratio_factor
+      real(amrex_real) :: mass_correct
 
       integer i,j,k,dir
       integer i1,j1,k1
@@ -3823,7 +3823,7 @@ stop
       real(amrex_real) density_old(2)
       real(amrex_real) temperature_old(2)
       real(amrex_real) species_old(2)
-      real(amrex_real) delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
+      real(amrex_real) delta_mass_local(2) !iprobe==1: source  iprobe==2: dest
       real(amrex_real) :: xPOINT_supermesh(SDIM)
       real(amrex_real) :: xPOINT_GFM(SDIM)
       integer im_old_crit
@@ -5222,23 +5222,24 @@ stop
               else if (constant_density_all_time(im_probe).eq.0) then
                density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
               else
-               print *,"constant_density_all_time(im_probe) invalid"
-               stop
-              endif
-
-              if (density_old(iprobe).gt.zero) then
-               ! do nothing
-              else
-               print *,"density_old(iprobe) invalid: ",density_old(iprobe)
+               print *,"constant_density_all_time(im_probe) invalid ", &
+                 constant_density_all_time
                stop
               endif
 
              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
 
-              density_old(iprobe)=fort_denconst(im_probe)
+              density_old(iprobe)=EOS(D_DECL(i,j,k),dencomp_probe)
 
              else
               print *,"mtype invalid: ",mtype
+              stop
+             endif
+
+             if (density_old(iprobe).gt.zero) then
+              ! do nothing
+             else
+              print *,"density_old(iprobe) invalid: ",density_old(iprobe)
               stop
              endif
 
@@ -5290,6 +5291,8 @@ stop
              ! do nothing
             else
              print *,"vapor_den or condensed_den invalid"
+             print *,"vapor_den=",vapor_den
+             print *,"condensed_den=",condensed_den
              stop
             endif
             if (is_multi_component_evapF(local_freezing_model, &
@@ -5570,14 +5573,14 @@ stop
               if (delta_mass_local(iprobe).le.zero) then
                ! do nothing
               else
-               print *,"delta_mass_local invalid"
+               print *,"delta_mass_local invalid ",delta_mass_local
                stop
               endif
              else if (iprobe.eq.2) then ! dest
               if (delta_mass_local(iprobe).ge.zero) then
                ! do nothing
               else
-               print *,"delta_mass_local invalid"
+               print *,"delta_mass_local invalid ",delta_mass_local
                stop
               endif
              else
@@ -5857,104 +5860,99 @@ stop
 
             jump_strength=zero
 
-            !dF=mdot/rho_source
-            !dF_expand_dest=(rho_source/rho_dest - 1)*dF
-            !dM=rho_dest * dF_dest + rho_source * dF_source=
-            !rho_dest (mdot/rho_source + (rho_source/rho_dest - 1)(dF))+
-            !rho_source * (-dF) =
-            !((rho_dest/rho_source)mdot+(rho_source-rho_dest)*dF)-rho_source*dF=
-            !(rho_dest/rho_source)mdot-rho_dest*dF=0
-            if (distribute_from_targ.eq.0) then ! default
-             ! distribute div u source to the cells in which F_dest>1/2  
+            ! iprobe==1: source
+            ! iprobe==2: dest
+            if (abs(one-density_old(1)/density_old(2)).le.EPS_8_4) then
+             mass_correct=zero
+            else if (abs(one-density_old(1)/density_old(2)).ge.EPS_8_4) then
 
-             if (dF.le.EBVOFTOL) then
-              denratio_factor=zero
-             else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. & !den_dst * dF
-                  (den_dF(1).lt.zero)) then  !-den_src * dF
-               denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst-1
-              else if ((den_dF(2).eq.zero).or. &
-                       (den_dF(1).eq.zero)) then
-               ! do nothing
+             if (distribute_from_targ.eq.0) then ! default
+              ! distribute compensating mass to the cells in which F_dest>1/2  
+
+              if (dF.le.EBVOFTOL) then
+               mass_correct=zero
+              else if (dF.ge.EBVOFTOL) then
+               ! iprobe==1: source
+               ! iprobe==2: dest
+               ! den_dF=(rho F)^new - (rho F)^old
+               if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                   (den_dF(1).lt.zero)) then  !-den_src * dF
+                mass_correct=-den_dF(1)-den_dF(2) !g/cm^3
+                 !in converting from mass source to volume source, one
+                 !divides by den_dst
+               else if ((den_dF(2).eq.zero).or. &
+                        (den_dF(1).eq.zero)) then
+                mass_correct=zero
+               else
+                print *,"den_dF invalid 1"
+                print *,"dF= ",dF
+                print *,"den_dF(1) = ",den_dF(1)
+                print *,"den_dF(2) = ",den_dF(2)
+                print *,"EBVOFTOL = ",EBVOFTOL
+                print *,"dt = ",dt
+                stop
+               endif
               else
-               print *,"den_dF invalid 1"
-               print *,"dF= ",dF
-               print *,"den_dF(1) = ",den_dF(1)
-               print *,"den_dF(2) = ",den_dF(2)
-               print *,"EBVOFTOL = ",EBVOFTOL
-               print *,"dt = ",dt
+               print *,"dF is corrupt ",dF
                stop
               endif
-             else
-              print *,"dF is corrupt"
+
+             else if (distribute_from_targ.eq.1) then
+              ! distribute compensating mass to the cells in which F_dest<1/2  
+
+              if (dF.le.EBVOFTOL) then
+               mass_correct=zero
+              else if (dF.ge.EBVOFTOL) then
+               ! iprobe==1: source
+               ! iprobe==2: dest
+               ! den_dF=(rho F)^new - (rho F)^old
+               if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                   (den_dF(1).lt.zero)) then  !-den_src * dF
+                mass_correct=-den_dF(1)-den_dF(2) ! g/cm^3
+                 !in converting from mass source to volume source, one
+                 !divides by den_src
+               else if ((den_dF(2).eq.zero).or. &
+                        (den_dF(1).eq.zero)) then
+                mass_correct=zero
+               else
+                print *,"den_dF invalid 2"
+                print *,"dF= ",dF
+                print *,"den_dF(1) = ",den_dF(1)
+                print *,"den_dF(2) = ",den_dF(2)
+                print *,"EBVOFTOL = ",EBVOFTOL
+                print *,"dt = ",dt
+                stop
+               endif
+              else
+               print *,"dF is corrupt ",dF
+               stop
+              endif
+
+             else 
+              print *,"distribute_from_targ invalid ",distribute_from_targ
               stop
              endif
 
-            !dF=mdot/rho_dest
-            !dF_expand_source=(1-rho_dest/rho_source)*dF
-            !dM=rho_dest * dF_dest + rho_source * dF_source=
-            !rho_dest(mdot/rho_dest)+ 
-            !rho_source (-mdot/rho_dest+(1-rho_dest/rho_source)(dF))=
-            !mdot-(rho_source/rho_dest)mdot+(rho_source-rho_dest)dF=
-            !mdot-(rho_source/rho_dest)mdot+(rho_source/rho_dest)mdot-mdot=0
-            else if (distribute_from_targ.eq.1) then
-             ! distribute div u source to the cells in which F_dest<1/2  
-
-             if (dF.le.EBVOFTOL) then
-              denratio_factor=zero
-             else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. & !den_dst * dF
-                  (den_dF(1).lt.zero)) then  !-den_src * dF
-               denratio_factor=one+den_dF(2)/den_dF(1) ! 1-den_dst/den_src
-              else if ((den_dF(2).eq.zero).or. &
-                       (den_dF(1).eq.zero)) then
-               ! do nothing
-              else
-               print *,"den_dF invalid 2"
-               print *,"dF= ",dF
-               print *,"den_dF(1) = ",den_dF(1)
-               print *,"den_dF(2) = ",den_dF(2)
-               print *,"EBVOFTOL = ",EBVOFTOL
-               print *,"dt = ",dt
-               stop
-              endif
-             else
-              print *,"dF is corrupt"
-              stop
-             endif
-
-            else 
-             print *,"distribute_from_targ invalid"
+            else
+             print *,"density_old corruption ",density_old
              stop
             endif
 
-            if (abs(denratio_factor).le.EPS_8_4) then
-             denratio_factor=zero
-            endif
+            jump_strength=mass_correct/dt !units (gm/cm^3) * (1/s) 
 
-            jump_strength=denratio_factor/dt !units 1/s 
-
-             !for distribute_from_targ==0:
-             !mdot is distributed to the target material.
-             !velocity of the interface (cm/s) is U_source + mdot n/rho_source
-             !mdot=[k grad T]dot n/L (W/(m Kelvin))(Kelvin/m)(kg/J)=
-             !  (W/m^2)(kg/J)=kg/(m^2 s)
-             !dF=(dt/dx)mdot/rho_source  (s/m)(kg/(m^2 s))m^3/kg=unitless
-             !initially: jump_strength=(den_src/den_dst - 1)/dt
-             !ultimately jump_strength has units of cm^{3}/s^{2}
-             !source term is jump_strength
-             !dF has no units.  dF=F^new_dest - F^old_dest
-             !dF * jump_strength = (mdot/dx)(1/rho_dst-1/rho_src) (units 1/dt)
-             !note: vol div u/dt = cm^3 (cm/s) (1/cm) (1/s)=cm^3 / s^2
-             !for boiling: jump_strength>0
-     
-             !note: u=ustar-dt grad p/rho
-             !div (grad p /rho)=div(ustar)/dt
-             !vol * div(grad p/rho)=vol div(ustar)/dt
-
-             !units: (1/s)m^3/s=m^3/s^2
-            jump_strength=jump_strength*dF*volgrid/dt
-
+             !-vol * div(grad p/rho)=-vol div(ustar)/dt + source
+             !vol * div(ustar-dt grad p/rho)=dt * source
+             !vol * div(unp1)=dt * source
+             !units required for source term: 
+             !(cm^3)(1/s)(1/s)=cm^3/s^2
+            jump_strength=jump_strength*volgrid/dt !gm/s^2
+             !after mass redistribution, in order to convert to pressure
+             !solve source term, one must divide "jump_strength" by
+             !the local density.
+             !for compressible flow, in order to convert to 
+             !density source term:
+             !one must multiply "jump_strength" by (dt^2)(1/volgrid) and
+             !then add to the existing density.
             JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)=jump_strength
           
             if (dF.le.EBVOFTOL) then
@@ -6569,6 +6567,309 @@ stop
 
       return
       end subroutine fort_convertmaterial
+
+
+      subroutine fort_mass_redistribute( &
+       tid, &
+       mass_redistribute_flag, &
+       nstate, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       velbc, &
+       vofbc, &
+       dt, &
+       xlo,dx, &
+       volgrid,DIMS(volgrid), &
+       maskcov,DIMS(maskcov), &
+       redistribute_fab, &
+       DIMS(redistribute_fab), &
+       snew,DIMS(snew), &
+       level, &
+       finest_level) &
+      bind(c,name='fort_mass_redistribute')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: mass_redistribute_flag
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nstate
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: vofbc(SDIM,2)
+      integer, INTENT(in) :: velbc(SDIM,2,SDIM)
+      real(amrex_real), INTENT(in),target :: xlo(SDIM)
+      real(amrex_real), INTENT(in),target :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(volgrid)
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(redistribute_fab)
+      integer, INTENT(in) :: DIMDEC(snew)
+
+      real(amrex_real), target, INTENT(in) :: volgrid(DIMV(volgrid))
+      real(amrex_real), pointer :: volgrid_ptr(D_DECL(:,:,:))
+      real(amrex_real), target, INTENT(in) :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), target, INTENT(inout) :: &
+            redistribute_fab(DIMV(redistribute_fab),num_materials)
+      real(amrex_real), pointer :: redistribute_fab_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), target, INTENT(inout) :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      integer i,j,k
+      integer dir
+      integer nmax
+      integer im
+      integer local_mask
+      integer layer_iter
+      integer vofcomp_raw
+      integer vofcomp_recon
+      integer tessellate_source
+      integer tessellate_dest
+      integer dencomp
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) local_mass(num_materials)
+      real(amrex_real) local_volume
+
+      real(amrex_real) vfrac_sum( &
+           RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer, parameter :: use_ls_data=0
+      integer, parameter :: mof_verbose=0
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_tess(num_materials*ngeom_recon)
+
+      volgrid_ptr=>volgrid
+      maskcov_ptr=>maskcov
+      redistribute_fab_ptr=>redistribute_fab
+      snew_ptr=>snew
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      nmax=POLYGON_LIST_MAX 
+      if ((nmax.lt.100).or.(nmax.gt.2000)) then
+       print *,"nmax invalid"
+       stop
+      endif
+
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid"
+       stop
+      endif
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid"
+       stop
+      endif
+
+      if (ngrow_distance.lt.4) then
+       print *,"ngrow_distance invalid: ",ngrow_distance
+       stop
+      endif
+      if (ngrow_make_distance.ne.ngrow_distance-1) then
+       print *,"ngrow_make_distance invalid"
+       print *,"ngrow_make_distance=",ngrow_make_distance
+       print *,"ngrow_distance=",ngrow_distance
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in fort_mass_redistribute"
+       print *,"level=",level
+       print *,"finest_level=",finest_level
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid ",num_state_base
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact too small ",bfact
+       stop
+      endif
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid ",nstate
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid: ",dt
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,volgrid_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+
+      call checkbound_array(fablo,fabhi,redistribute_fab_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       if (local_mask.eq.1) then
+
+        do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+         vfrac_sum(layer_iter)=zero
+        enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
+        do im=1,num_materials
+         local_mass(im)=zero
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
+         vofcomp_recon=(im-1)*ngeom_recon+1
+         do dir=1,ngeom_recon
+          mofdata(vofcomp_recon+dir-1)=zero
+         enddo
+         do dir=1,SDIM+1
+          mofdata(vofcomp_recon+dir-1)=snew(D_DECL(i,j,k),vofcomp_raw+dir-1)
+         enddo
+         vof_super(im)=mofdata(vofcomp_recon)
+         do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+          if (is_proper_layer(im,layer_iter).eq.1) then
+           vfrac_sum(layer_iter)= &
+            vfrac_sum(layer_iter)+mofdata(vofcomp_recon)
+          endif
+         enddo ! layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+        enddo !im=1,num_materials
+
+        do im=1,num_materials
+         local_mass(im)=zero
+        enddo
+
+        if ((vfrac_sum(RIGID_LAYER_INDEX).ge.one-VOFTOL_LAYER).and. &
+            (vfrac_sum(RIGID_LAYER_INDEX).le.1.5d0)) then
+         !do nothing
+        else if ((vfrac_sum(ELASTIC_LAYER_INDEX).ge.one-VOFTOL_LAYER).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).le.1.5d0)) then
+         !do nothing
+        else if ((vfrac_sum(RIGID_LAYER_INDEX).le.VOFTOL_LAYER).and. &
+                 (vfrac_sum(RIGID_LAYER_INDEX).ge.-1.5d0).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).le.VOFTOL_LAYER).and. &
+                 (vfrac_sum(ELASTIC_LAYER_INDEX).ge.-1.5d0)) then
+         do im=1,num_materials
+          vofcomp_recon=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+           local_mass(im)=mofdata(vofcomp_recon)
+          endif
+         enddo
+        else if (((vfrac_sum(RIGID_LAYER_INDEX).ge.VOFTOL_LAYER).and. &
+                  (vfrac_sum(RIGID_LAYER_INDEX).le.one-VOFTOL_LAYER)).or. &
+                 ((vfrac_sum(ELASTIC_LAYER_INDEX).ge.VOFTOL_LAYER).and. &
+                  (vfrac_sum(ELASTIC_LAYER_INDEX).le.one-VOFTOL_LAYER))) then
+
+         ! LS=n dot (x-x0)+intercept
+         tessellate_source=TESSELLATE_FLUIDS
+         call multimaterial_MOF( &
+          tessellate_source, & !TESSELLATE_FLUIDS
+          tid, &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
+          mof_verbose, & !=0
+          use_ls_data, & !=0
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          mofdata, & !intent(inout) override_normal and order cleared.
+          vof_super, &
+          multi_centroidA, &
+          SDIM)
+
+         do im=1,num_materials*ngeom_recon
+          mofdata_tess(im)=mofdata(im)
+         enddo
+         tessellate_source=TESSELLATE_FLUIDS
+         tessellate_dest=TESSELLATE_ALL
+         call multi_get_volume_tessellate( &
+           tid, &
+           tessellate_source, & !TESSELLATE_FLUIDS
+           tessellate_dest, & !TESSELLATE_ALL
+           bfact,dx, &
+           xsten, &
+           nhalf, &
+           mofdata_tess, &
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+           SDIM)
+
+         do im=1,num_materials
+          vofcomp_recon=(im-1)*ngeom_recon+1
+          if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+           local_mass(im)=mofdata_tess(vofcomp_recon)
+          endif
+         enddo
+
+        else
+         print *,"vfrac_sum invalid ",vfrac_sum
+         stop
+        endif
+
+        local_volume=volgrid(D_DECL(i,j,k))
+        if (local_volume.gt.zero) then
+         !do nothing
+        else
+         print *,"local_volume invalid ",local_volume
+         stop
+        endif
+
+        do im=1,num_materials
+         if (is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) then
+          if (mass_redistribute_flag.eq.INIT_MASS_REDISTRIBUTE_VAR) then
+           redistribute_fab(D_DECL(i,j,k),im)=local_mass(im)
+          else if (mass_redistribute_flag.eq.UPDATE_MASS_REDISTRIBUTE_VAR) then
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
+           redistribute_fab(D_DECL(i,j,k),im)= &
+              redistribute_fab(D_DECL(i,j,k),im)-local_mass(im)
+            !units are now: kg/s^2
+           redistribute_fab(D_DECL(i,j,k),im)= &
+              redistribute_fab(D_DECL(i,j,k),im)* &
+              snew(D_DECL(i,j,k),dencomp)*local_volume/(dt**2)
+          else
+           print *,"mass_redistribute_flag invalid"
+           stop
+          endif
+         endif !(is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) 
+        enddo !im=1,num_materials
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine fort_mass_redistribute
+
 
       subroutine fort_extend_burning_vel( &
         velflag, &
@@ -8025,26 +8326,6 @@ stop
        stop
       endif
 
-       ! SANDIPAN HOOK HERE
-       ! pseudo code:
-       ! if typefab(D_DECL(i,j,k))=im_vapor then
-       !  color = colorfab(D_DECL(i,j,k))
-       !  vapor bubble statistics are in 
-       !   blob_array((color-1)*num_elements_blobclass + l)
-       !  l=1..num_elements_blobclass
-       ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
-       !  volume/dt^2
-       ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
-       ! MDOT should have the same units as volume * div u/dt
-       ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
-       ! for standard phase change:
-       ! units: cm^3/s^2
-       ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
-       ! if evaporation then expansion_term should be positive.
-       ! FOR CODY: if pressure falls below some cavitation pressure, then
-       ! material is cavitated. (velocity of phase change is dx/dt?)
-
-
       call get_dxmin(dx,bfact,dxmin)
       call get_dxmax(dx,bfact,dxmax)
 
@@ -9211,7 +9492,8 @@ stop
                     else if (microlayer_size(im_source).eq.zero) then
                      ! do nothing
                     else
-                     print *,"microlayer_size(im_source) invalid"
+                     print *,"microlayer_size(im_source) invalid ", &
+                            microlayer_size
                      stop
                     endif
 
@@ -9225,6 +9507,7 @@ stop
                        dir2=num_materials+(im_substrate_dest-1)*SDIM+dir
                        gradphi_substrate(dir)=LSINT(dir2)
                       enddo
+                       !get_physical_dist is declared in GLOBALUTIL.F90
                       call get_physical_dist(xI,LSINT(im_substrate_dest), &
                        gradphi_substrate,newphi_substrate)
                       if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
@@ -9345,6 +9628,9 @@ stop
                        ! do nothing
                       else
                        print *,"microlayer parameters invalid"
+                       print *,"max_contact_line_size ",max_contact_line_size
+                       print *,"microlayer_size ",microlayer_size
+                       print *,"macrolayer_size ",macrolayer_size
                        stop
                       endif
                      else

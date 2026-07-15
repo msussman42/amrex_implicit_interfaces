@@ -8764,18 +8764,14 @@ contains
        ! order_algorithm=0 => try different combinations and
        ! choose combination with smallest MOF error
       subroutine set_order_algorithm( &
-         order_algorithm_in, &
-         renormalize_order_algorithm_in)
+         order_algorithm_in)
       use probcommon_module
       use geometry_intersect_module
 
       IMPLICIT NONE
 
       integer, INTENT(in) :: order_algorithm_in(num_materials)
-      integer, INTENT(in) :: renormalize_order_algorithm_in(num_materials)
       integer im
-      integer im_debug
-      integer irank
 
 #include "mofdata.H"
 
@@ -8791,29 +8787,6 @@ contains
        if (order_algorithm(im).lt.0) then
         print *,"order_alg bust im,order_algorithm ",im,order_algorithm(im)
         stop
-       endif
-       renormalize_order_algorithm(im)=renormalize_order_algorithm_in(im)
-       if (renormalize_order_algorithm(im).lt.0) then
-        print *,"renormalize_order_alg bust im,renormalize_order_algorithm ", &
-           im,renormalize_order_algorithm(im)
-        stop
-       endif
-       irank=renormalize_order_algorithm(im)
-       if (irank.ne.0) then
-        if (rank_algorithm(irank).eq.im) then
-         !do nothing
-        else
-         print *,"im=",im
-         print *,"irank=",irank
-         print *,"rank_algorithm invalid: "
-         do im_debug=1,num_materials
-          print *,"im_debug,rank_algorithm ", &
-             im_debug,rank_algorithm(im_debug)
-          print *,"im_debug,renormalize_order_algorithm ", &
-             im_debug,renormalize_order_algorithm(im_debug)
-         enddo
-         stop
-        endif
        endif
       enddo !im=1..num_materials
 
@@ -16238,13 +16211,6 @@ contains
       integer, INTENT(in) :: tessellate
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      integer irank
-      integer last
-      integer last_elastic
-      real(amrex_real) uncapt
-      real(amrex_real) uncapt_elastic
-      real(amrex_real) test_vof
-
       integer im
       integer dir
       integer vofcomp
@@ -16260,7 +16226,7 @@ contains
       real(amrex_real) vfrac_sum_goal(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_truncate(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
       real(amrex_real) vfrac_sum_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
-      integer num_materials_local(RIGID_LAYER_INDEX:FLUID_LAYER_INDEX)
+
 #include "mofdata.H"
 
       if (nhalf.ge.1) then
@@ -16274,7 +16240,7 @@ contains
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid: ",bfact
+       print *,"bfact invalid make_vfrac_sum_ok_base: ",bfact
        stop
       endif
 
@@ -16300,11 +16266,11 @@ contains
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials bust: ",num_materials
+       print *,"num_materials bust make_vfrac_sum_ok_base: ",num_materials
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon invalid: ",ngeom_recon
+       print *,"ngeom_recon invalid make_vfrac_sum_ok_base: ",ngeom_recon
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -16417,19 +16383,7 @@ contains
         else if ((vfrac_sum_goal(layer_iter).le.one+half).and. &
                  (vfrac_sum_goal(layer_iter).ge.one-VOFTOL_LAYER)) then
 
-         if (vfrac_sum_goal(RIGID_LAYER_INDEX).eq.zero) then
-          vfrac_sum_goal(layer_iter)=one 
-         else if (tessellate.eq.TESSELLATE_FLUIDS) then
-          vfrac_sum_goal(layer_iter)=one 
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-          !do nothing
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-          !do nothing
-         else
-          print *,"tessellate invalid ",tessellate
-          print *,"or vfrac_sum_goal invalid ",vfrac_sum_goal
-          stop
-         endif
+         vfrac_sum_goal(layer_iter)=one 
 
         else if ((vfrac_sum_goal(layer_iter).ge.VOFTOL_LAYER).and. &
                  (vfrac_sum_goal(layer_iter).le.one-VOFTOL_LAYER)) then
@@ -16542,7 +16496,9 @@ contains
       enddo ! im=1,num_materials
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
        vfrac_sum_truncate(layer_iter)=zero
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16550,6 +16506,7 @@ contains
             vfrac_sum_truncate(layer_iter)+mofdata(vofcomp)
         endif
        enddo !im=1,num_materials
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16564,19 +16521,21 @@ contains
          endif
         endif
        enddo !im=1,num_materials
+
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
        vfrac_sum_local(layer_iter)=zero
-       num_materials_local(layer_iter)=0
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer_local(im,layer_iter).eq.1) then
-         num_materials_local(layer_iter)=num_materials_local(layer_iter)+1
          vfrac_sum_local(layer_iter)= &
             vfrac_sum_local(layer_iter)+mofdata(vofcomp)
         endif
        enddo !im=1,num_materials
+
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
        ! for all of the cases,
@@ -16608,205 +16567,65 @@ contains
        stop
       endif
 
-      do im=1,num_materials
-       vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid_local(im).eq.1) then
-        if (vfrac_sum_local(RIGID_LAYER_INDEX).gt.one) then
-         mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(RIGID_LAYER_INDEX)
-        else if ((vfrac_sum_local(RIGID_LAYER_INDEX).ge.zero).and. &
-                 (vfrac_sum_local(RIGID_LAYER_INDEX).le.one)) then
-         ! do nothing
-        else
-         print *,"vfrac_sum_local invalid: ",vfrac_sum_local
-         stop
-        endif
-       else if (is_rigid_local(im).eq.0) then
+      if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
+       if ((vfrac_sum_local(RIGID_LAYER_INDEX).eq.zero).and. &
+           (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero)) then
         !do nothing
        else
-        print *,"is_rigid_local invalid MOF.F90: ",im,is_rigid_local(im)
+        print *,"expecting vfrac_sum_local(RIGID_LAYER_INDEX)=0"
+        print *,"expecting vfrac_sum_local(ELASTIC_LAYER_INDEX)=0"
+        print *,"vfrac_sum_local=",vfrac_sum_local
         stop
        endif
-      enddo  ! im=1..num_materials
+      else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
+       if (vfrac_sum_local(ELASTIC_LAYER_INDEX).eq.zero) then
+        !do nothing
+       else
+        print *,"expecting vfrac_sum_local(ELASTIC_LAYER_INDEX)=0"
+        print *,"vfrac_sum_local=",vfrac_sum_local
+        stop
+       endif
+      else if (tessellate.eq.TESSELLATE_FLUIDS) then
+       !do nothing
+      else
+       print *,"tessellate invalid ",tessellate
+       stop
+      endif 
 
-      if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-
+      do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
-        if ((is_rigid_local(im).eq.1).or. &
-            (is_elastic_local(im).eq.1)) then
-         print *,"expecting is_rigid_local(im)==0"
-         print *,"and expecting is_elastic_local(im)==0"
-         print *,"tessellate=",tessellate
-         stop
-        else if ((is_rigid_local(im).eq.0).and. &
-                 (is_elastic_local(im).eq.0)) then
-         mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(FLUID_LAYER_INDEX)
+        if (is_proper_layer_local(im,layer_iter).eq.1) then
+         if ((layer_iter.eq.RIGID_LAYER_INDEX).or. &
+             (layer_iter.eq.ELASTIC_LAYER_INDEX)) then
+          if (vfrac_sum_local(layer_iter).ge.one-VOFTOL_LAYER) then
+           mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(layer_iter)
+          else if ((vfrac_sum_local(layer_iter).ge.zero).and. &
+                   (vfrac_sum_local(layer_iter).le.one-VOFTOL_LAYER)) then
+           ! do nothing
+          else
+           print *,"vfrac_sum_local invalid: ",vfrac_sum_local
+           stop
+          endif
+         else if (layer_iter.eq.FLUID_LAYER_INDEX) then
+          if (vfrac_sum_local(FLUID_LAYER_INDEX).gt.zero) then
+           mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(layer_iter)
+          else
+           print *,"vfrac_sum_local invalid: ",vfrac_sum_local
+           stop
+          endif
+         else
+          print *,"layer_iter invalid"
+          stop
+         endif
+        else if (is_proper_layer_local(im,layer_iter).eq.0) then
+         !do nothing
         else
-         print *,"is_rigid_local invalid MOF.F90: ",is_rigid_local
-         print *,"or is_elastic_local invalid MOF.F90: ",is_elastic_local
+         print *,"is_proper_layer_local invalid ",is_proper_layer_local
          stop
         endif
        enddo  ! im=1..num_materials
-
-       ! fluids tessellate, is_elastic and is_rigid embedded.
-      else if ((tessellate.eq.TESSELLATE_FLUIDS).or. &
-               (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC)) then
-
-       if ((nonzero_ranks.eq. &
-            num_materials_local(FLUID_LAYER_INDEX)+ &
-            num_materials_local(ELASTIC_LAYER_INDEX)).and. &
-           (num_materials_local(FLUID_LAYER_INDEX)+ &
-            num_materials_local(ELASTIC_LAYER_INDEX).ge.1)) then
-        !do nothing
-       else
-        print *,"nonzero_ranks invalid ",nonzero_ranks
-        print *,"num_materials_local ",num_materials_local
-        stop
-       endif
-
-       last=0
-       last_elastic=0
-       uncapt=one
-       uncapt_elastic=one
-
-       do irank=1,nonzero_ranks
-
-        im=rank_algorithm(irank)
-
-        if (renormalize_order_algorithm(im).eq.irank) then
-         !do nothing
-        else
-         print *,"irank inconsistent"
-         print *,"irank=",irank
-         print *,"im=",im
-         print *,"renormalize_order_algorithm(im)=", &
-             renormalize_order_algorithm(im)
-         stop
-        endif
-
-        vofcomp=(im-1)*ngeom_recon+1
-
-        if ((im.ge.1).and.(im.le.num_materials)) then
-
-         if (is_rigid_local(im).eq.0) then
-          !do nothing
-         else
-          print *,"expecting is_rigid_local(im).eq.0 if ranked"
-          print *,"tessellate=",tessellate
-          print *,"im=",im
-          print *,"irank=",irank
-          stop
-         endif 
-
-        else
-         print *,"im invalid ",im
-         stop
-        endif
-
-        if (is_elastic_local(im).eq.0) then
-
-          !uncapt=1 initially
-         if (uncapt.gt.zero) then
-          if ((im.ge.1).and.(im.le.num_materials)) then
-           if (is_rigid_local(im).eq.0) then
-            !do nothing
-           else
-            print *,"expecting is_rigid_local(im).eq.0"
-            print *,"im=",im
-            print *,"irank=",irank
-            stop
-           endif 
-           test_vof=mofdata(vofcomp)
-           if (test_vof.gt.zero) then
-            last=im
-           endif
-           uncapt=uncapt-test_vof
-          else
-           print *,"im invalid ",im
-           stop
-          endif
-         else if (uncapt.le.zero) then
-          mofdata(vofcomp)=zero
-          do dir=1,sdim
-           mofdata(vofcomp+dir)=zero
-          enddo
-         else
-          print *,"uncapt=NaN: ",uncapt
-          stop
-         endif
-
-        else if (is_elastic_local(im).eq.1) then
-       
-          !uncapt_elastic=1 initially
-         if (uncapt_elastic.gt.zero) then
-          if ((im.ge.1).and.(im.le.num_materials)) then
-           if (is_rigid_local(im).eq.0) then
-            !do nothing
-           else
-            print *,"expecting is_rigid_local(im).eq.0"
-            print *,"im=",im
-            print *,"irank=",irank
-            stop
-           endif 
-           test_vof=mofdata(vofcomp)
-           if (test_vof.gt.zero) then
-            last_elastic=im
-           endif
-           uncapt_elastic=uncapt_elastic-test_vof
-          else
-           print *,"im invalid ",im
-           stop
-          endif
-         else if (uncapt_elastic.le.zero) then
-          mofdata(vofcomp)=zero
-          do dir=1,sdim
-           mofdata(vofcomp+dir)=zero
-          enddo
-         else
-          print *,"uncapt_elastic=NaN: ",uncapt_elastic
-          stop
-         endif
-
-        else
-         print *,"is_elastic_local(im) invalid: ",im,is_elastic_local(im)
-         stop
-        endif
-
-       enddo !irank=1,nonzero_ranks
-
-       if (last.eq.0) then
-        print *,"all volume vanished make_vfrac_sum_ok_base"
-        stop
-       else if ((last.ge.1).and.(last.le.num_materials)) then
-        im=last
-        vofcomp=(im-1)*ngeom_recon+1
-        mofdata(vofcomp)=mofdata(vofcomp)+uncapt
-
-        if (uncapt_elastic.lt.zero) then
-         if ((last_elastic.ge.1).and.(last_elastic.le.num_materials)) then
-          im=last_elastic
-          vofcomp=(im-1)*ngeom_recon+1
-          mofdata(vofcomp)=mofdata(vofcomp)+uncapt_elastic
-         else
-          print *,"expecting 1<=last_elastic<=num_materials: ",last_elastic
-          stop
-         endif
-        else if ((uncapt_elastic.ge.zero).and.(uncapt_elastic.le.one)) then
-         !do nothing
-        else
-         print *,"uncapt_elastic invalid ",uncapt_elastic
-         stop
-        endif
-
-       else 
-        print *,"last invalid: ",last
-        stop
-       endif
-       
-      else
-       print *,"tessellate invalid make_vfrac_sum_ok_base: ",tessellate
-       stop
-      endif
+      enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -21985,7 +21804,7 @@ contains
       endif
 
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon.ne.2*sdim+3"
+       print *,"ngeom_recon.ne.2*sdim+3 ",ngeom_recon
        stop
       endif
 
@@ -21997,25 +21816,26 @@ contains
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
-       print *,"nlist_alloc invalid"
+       print *,"nlist_alloc invalid ",nlist_alloc
        stop
       endif
 
       if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid multi get volume tessellate"
+       print *,"nhalf0 invalid multi get volume tessellate ",nhalf0
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid multi get volume tessellate ",bfact
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid multi_get_volume_tessellate"
+       print *,"sdim invalid multi_get_volume_tessellate ",sdim
        stop
       endif
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid multi get volume tessellate"
+       print *,"num_materials invalid multi get volume tessellate ", &
+          num_materials
        stop
       endif
  
@@ -24449,7 +24269,6 @@ contains
         !void fortran_parameters() (in NavierStokes.cpp)
       subroutine fort_initmof( &
        order_algorithm_in, &
-       renormalize_order_algorithm_in, &
        denconst_local, &
        is_rigid_local, &
        MOFITERMAX_in, &
@@ -24466,15 +24285,11 @@ contains
 
       integer, INTENT(in) :: nmax_in,nthreads
       integer, INTENT(in) :: order_algorithm_in(num_materials)
-      integer, INTENT(in) :: renormalize_order_algorithm_in(num_materials)
       real(amrex_real), INTENT(in) :: denconst_local(num_materials)
       integer, INTENT(in) :: is_rigid_local(num_materials)
       integer, INTENT(in) :: MOFITERMAX_in
       integer, INTENT(in) :: MOF_DEBUG_RECON_in
       integer sdim,nmax_test
-      integer im,sub_im
-      integer default_flag
-      integer irank
 
 #include "mofdata.H"
 
@@ -24516,91 +24331,7 @@ contains
       allocate(mof_errors(geom_nthreads,num_materials))
       allocate(mof_iterations(geom_nthreads,num_materials))
 
-      default_flag=1
-      do im=1,num_materials
-       if (renormalize_order_algorithm_in(im).eq.0) then
-        !do nothing
-       else if (renormalize_order_algorithm_in(im).gt.0) then
-        default_flag=0
-       else
-        print *,"renormalize_order_algorithm_in(im) invalid"
-        stop
-       endif
-      enddo
-      if (default_flag.ne.0) then
-       print *,"expecting default_flag==0"
-       stop
-      endif
-
-      nonzero_ranks=0
-
-      do im=1,num_materials
-       if (denconst_local(im).gt.zero) then
-        !do nothing
-       else
-        print *,"denconst_local(im) invalid"
-        stop
-       endif
-       if (is_rigid_local(im).eq.1) then
-        !do nothing
-       else if (is_rigid_local(im).eq.0) then
-        irank=1
-        do sub_im=1,num_materials
-         if (im.ne.sub_im) then
-          if (is_rigid_local(sub_im).eq.1) then
-           !do nothing
-          else if (is_rigid_local(sub_im).eq.0) then
-           if (renormalize_order_algorithm_in(sub_im).lt. &
-               renormalize_order_algorithm_in(im)) then
-            irank=irank+1
-           else if (renormalize_order_algorithm_in(sub_im).eq. &
-                    renormalize_order_algorithm_in(im)) then
-            print *,"renormalize_order_algorithm_in invalid", &
-                    renormalize_order_algorithm_in
-            print *,"sub_im,im ",sub_im,im
-            stop
-           else if (renormalize_order_algorithm_in(sub_im).gt. &
-                    renormalize_order_algorithm_in(im)) then
-            !do nothing
-           endif
-          else
-           print *,"is_rigid_local(sub_im) invalid"
-           stop
-          endif
-         endif !im.ne.sub_im
-        enddo !sub_im=1,num_materials
-
-        do while (rank_algorithm(irank).ne.0)
-         irank=irank+1
-        enddo
-
-        if (irank.gt.num_materials) then
-         print *,"irank invalid: ",irank
-         stop
-        endif
-
-        rank_algorithm(irank)=im
-        nonzero_ranks=nonzero_ranks+1
-        if (renormalize_order_algorithm_in(im).eq.irank) then
-         !do nothing
-        else
-         print *,"renormalize_order_algorithm_in(im)<>irank"
-         print *,"im=",im
-         print *,"renormalize_order_algorithm_in(im) ", &
-           renormalize_order_algorithm_in(im)
-         print *,"renormalize_order_algorithm_in ", &
-           renormalize_order_algorithm_in
-         stop
-        endif
-       else
-        print *,"is_rigid_local(im) invalid ",im,is_rigid_local(im)
-        stop
-       endif
-      enddo ! im=1,num_materials
-
-      call set_order_algorithm( &
-        order_algorithm_in, &
-        renormalize_order_algorithm_in)
+      call set_order_algorithm(order_algorithm_in)
 
       print *,"initializing geometry tables"
 

@@ -664,12 +664,17 @@ protected:
     void tensor_advection_updateALL();
 
     void level_init_elasticmask_and_elasticmaskpart();
+
     void phase_change_redistributeALL();
+    void mass_redistributeALL();
+
     void sato_model_QDOT_MDOT_SPECIES();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
       int im_source,int im_dest,int indexEXP,
       int isweep);
+    void level_mass_redistribute(
+      int im,int isweep);
 
     void clear_blobdata(int i,Vector<blobclass>& blobdata);
     void copy_from_blobdata(int i,int& counter,
@@ -689,6 +694,9 @@ protected:
       int i_phase_change,int n_phase_change);
 
     void level_phase_change_convertALL();
+
+    void mass_redistributeALL(int mass_redistribute_flag);
+    void mass_redistribute(int mass_redistribute_flag);
 
     void level_species_reaction(const std::string& caller_string);
 
@@ -793,6 +801,7 @@ protected:
     void correct_flotsam();
 
     void clear_interface_vars(); 
+    void move_mdot_to_density(); 
     void split_scalar_advection(int im_extension); 
     void split_scalar_advectionALL(int im_extension);
  
@@ -1918,7 +1927,6 @@ protected:
 
      // 0 - mdot concentrated at full cells near interface on 1-side
      // 1 - mdot distributed evenly to all full cells; cellvol weight
-     // 2 - mdot distributed evenly to all full cells; constant weight
     static Vector<int> distribute_mdot_evenly; // 1..2*num_interfaces
      // 0 - sum mdot <>0   
      // 1 - distribute sum -mdot to the source
@@ -2194,7 +2202,6 @@ protected:
     static int axis_dir;
 
     static Vector<int> mof_ordering;
-    static Vector<int> mof_renormalize_ordering;
 
     static Real rgasinlet;
     static Real slipcoeff;

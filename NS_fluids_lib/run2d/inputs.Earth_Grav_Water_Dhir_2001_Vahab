@@ -1,19 +1,34 @@
-amr.n_cell      = 80 120 # 2/3 aspect ratio
-amr.max_grid_size   = 40
+amr.n_cell      = 40 60 # 2/3 aspect ratio
+amr.max_grid_size   = 128 40
 cg.min_max_grid_size=128
+ns.coarsest_level_CISL=1
 
 # grid : 4 * 7 = 28
 amr.plot_int    = 100   
 ns.sum_interval = 50     # timesteps between computing mass
 
-# microlayer contact angle (radians): 50 degrees            
-ns.microlayer_angle=0.872664626 0.0 0.0
+# microlayer contact angle (radians): 0.872664626 radians = 50 degrees 
+# microlayer contact angle (radians): 0.174532925 radians = 10 degrees 
+# dx coarsest=2/40=.05
+ns.microlayer_angle=0.174532925 0.0 0.0
 ns.microlayer_size=4.4661E-09 0.0 0.0        
 ns.macrolayer_size=5.0000E-02 0.0 0.0           
 
 # Density
 # density water=958 kg/m^3
 ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
+
+# =-1 static angle
+# =1 GNBC
+# =2 Jiang 1970
+# =3 Shikmurzaev 2008 
+# =4 Kalliadasis1994
+# =5 Kistler1993
+# =6 Bracke1989
+# =7 Blake2006, Popescu2008
+# =8 Cox 1986
+#ns.ZEYU_DCA_SELECT=8  #DCA=dynamic contact angle
+#ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
 
 # RZ
 # if the detachment time is 4.2, then the physical detachment time is
@@ -116,7 +131,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 ns.visual_nddata_format=0 #0 tecplot 1 native AMReX or HDF5 2 tecplot cells
 
-amr.max_level =  0
+amr.max_level =  1
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0
