@@ -801,6 +801,7 @@ protected:
     void correct_flotsam();
 
     void clear_interface_vars(); 
+    void move_mdot_to_density(); 
     void split_scalar_advection(int im_extension); 
     void split_scalar_advectionALL(int im_extension);
  

@@ -16383,19 +16383,7 @@ contains
         else if ((vfrac_sum_goal(layer_iter).le.one+half).and. &
                  (vfrac_sum_goal(layer_iter).ge.one-VOFTOL_LAYER)) then
 
-         if (vfrac_sum_goal(RIGID_LAYER_INDEX).eq.zero) then
-          vfrac_sum_goal(layer_iter)=one 
-         else if (tessellate.eq.TESSELLATE_FLUIDS) then
-          vfrac_sum_goal(layer_iter)=one 
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISRIGID) then
-          !do nothing
-         else if (tessellate.eq.TESSELLATE_IGNORE_ISELASTIC) then
-          !do nothing
-         else
-          print *,"tessellate invalid ",tessellate
-          print *,"or vfrac_sum_goal invalid ",vfrac_sum_goal
-          stop
-         endif
+         vfrac_sum_goal(layer_iter)=one 
 
         else if ((vfrac_sum_goal(layer_iter).ge.VOFTOL_LAYER).and. &
                  (vfrac_sum_goal(layer_iter).le.one-VOFTOL_LAYER)) then
@@ -16508,7 +16496,9 @@ contains
       enddo ! im=1,num_materials
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
        vfrac_sum_truncate(layer_iter)=zero
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16516,6 +16506,7 @@ contains
             vfrac_sum_truncate(layer_iter)+mofdata(vofcomp)
         endif
        enddo !im=1,num_materials
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer(im,layer_iter).eq.1) then
@@ -16530,10 +16521,13 @@ contains
          endif
         endif
        enddo !im=1,num_materials
+
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
       do layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
+
        vfrac_sum_local(layer_iter)=zero
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_proper_layer_local(im,layer_iter).eq.1) then
@@ -16541,6 +16535,7 @@ contains
             vfrac_sum_local(layer_iter)+mofdata(vofcomp)
         endif
        enddo !im=1,num_materials
+
       enddo !layer_iter=RIGID_LAYER_INDEX,FLUID_LAYER_INDEX
 
        ! for all of the cases,
@@ -16603,10 +16598,10 @@ contains
         if (is_proper_layer_local(im,layer_iter).eq.1) then
          if ((layer_iter.eq.RIGID_LAYER_INDEX).or. &
              (layer_iter.eq.ELASTIC_LAYER_INDEX)) then
-          if (vfrac_sum_local(layer_iter).gt.one) then
+          if (vfrac_sum_local(layer_iter).ge.one-VOFTOL_LAYER) then
            mofdata(vofcomp)=mofdata(vofcomp)/vfrac_sum_local(layer_iter)
           else if ((vfrac_sum_local(layer_iter).ge.zero).and. &
-                   (vfrac_sum_local(layer_iter).le.one)) then
+                   (vfrac_sum_local(layer_iter).le.one-VOFTOL_LAYER)) then
            ! do nothing
           else
            print *,"vfrac_sum_local invalid: ",vfrac_sum_local

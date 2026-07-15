@@ -19971,6 +19971,11 @@ NavierStokes::clear_interface_vars() {
 
 } //end subroutine clear_interface_vars() 
 
+void 
+NavierStokes::move_mdot_to_density() { 
+
+} //end subroutine move_mdot_to_density
+
 // Lagrangian solid info lives at t=t^n 
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
@@ -26346,6 +26351,11 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
+   // NavierStokes::allocate_mdot() declared in NavierStokes.cpp
+   // allocate MDOT_MF and QDOT_MF (delete it first if it already exists)
+   // MDOT_MF and QDOT_MF have no ghost cells.
+   // MDOT_MF and QDOT_MF are initialized to zero if 
+   // zap_mdot_flag==1
   ns_level.allocate_mdot(zap_mdot_flag); 
 
     // mask=tag if not covered by level+1 or outside the domain.
