@@ -2448,8 +2448,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
 
 } // subroutine SEM_advectALL
 
-// called from NavierStokes::do_the_advance first thing in the loop
-// divu_outer_sweeps=0..local_num_divu_outer_sweeps-1
+// called from NavierStokes::do_the_advance first thing in the loop:
+//   divu_outer_sweeps=0..local_num_divu_outer_sweeps-1
 void NavierStokes::prelim_alloc() {
 
  int finest_level=parent->finestLevel();
@@ -7106,7 +7106,7 @@ if (sweep_num==0) {
  delete_localMF(LS_COLORSUM_MF,1);
  delete_localMF(DEN_COLORSUM_MF,1);
 } else
- amrex::Error("sweep_num invalid");
+ amrex::Error("sweep_num invalid in LowMachDIVU");
 
 }  // end subroutine LowMachDIVU
 
@@ -7124,7 +7124,7 @@ NavierStokes::LowMachDIVUALL(
  int finest_level=parent->finestLevel();
 
  if ((coarsest_level<0)||(coarsest_level>finest_level))
-  amrex::Error("coarsest_level invalid");
+  amrex::Error("coarsest_level invalid in LowMachDIVUALL");
 
  if (level!=0)
   amrex::Error("level=0 in LowMachDIVUALL");
@@ -7141,42 +7141,42 @@ NavierStokes::LowMachDIVUALL(
   if (ncomp_mdot==1) {
    // do nothing
   } else
-   amrex::Error("ncomp_mdot invalid");
+   amrex::Error("ncomp_mdot invalid LowMachDIVUALL");
   int ngrow_mdot=localMF[MDOT_LOCAL_MF]->nGrow();
   if (ngrow_mdot>=0) {
    // do nothing
   } else
-   amrex::Error("ngrow_mdot invalid");
+   amrex::Error("ngrow_mdot invalid LowMachDIVUALL");
 
  } else
-  amrex::Error("MDOT_LOCAL_MF invalid");
+  amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
 
  if (MDOT_MF>=0) {
   if (localMF[MDOT_MF]->nComp()==1) {
    // do nothing
   } else
-   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+   amrex::Error("localMF[MDOT_MF]->nComp() invalid in LowMachDIVUALL");
   if (localMF[MDOT_MF]->nGrow()>=0) {
    // do nothing
   } else
-   amrex::Error("localMF[MDOT_MF]->nGrow() invalid");
+   amrex::Error("localMF[MDOT_MF]->nGrow() invalid in LowMachDIVUALL");
 
  } else
-  amrex::Error("MDOT_MF invalid");
+  amrex::Error("MDOT_MF invalid in LowMachDIVUALL");
 
  if (QDOT_MF>=0) {
   if (localMF[QDOT_MF]->nComp()==1) {
    // do nothing
   } else
-   amrex::Error("localMF[QDOT_MF]->nComp() invalid");
+   amrex::Error("localMF[QDOT_MF]->nComp() invalid in LowMachDIVUALL");
   if (localMF[QDOT_MF]->nGrow()>=0) {
    // do nothing
   } else
-   amrex::Error("localMF[QDOT_MF]->nGrow() invalid");
+   amrex::Error("localMF[QDOT_MF]->nGrow() invalid in LowMachDIVUALL");
 
  } else
-  amrex::Error("QDOT_MF invalid");
+  amrex::Error("QDOT_MF invalid in LowMachDIVUALL");
 
 
   //mdot_data[icolor][j=0 or 1]
@@ -7196,7 +7196,7 @@ NavierStokes::LowMachDIVUALL(
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("MDOT_LOCAL_MF invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
  }  // i=0..color_count-1
 
@@ -7219,7 +7219,7 @@ NavierStokes::LowMachDIVUALL(
    } else
     amrex::Error("expecting j==2");
   } else
-   amrex::Error("MDOT_LOCAL_MF invalid");
+   amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
  } // i=0..color_count-1
 
@@ -7259,7 +7259,7 @@ NavierStokes::LowMachDIVUALL(
       } else
        amrex::Error("expecting j==2");
      } else
-      amrex::Error("MDOT_LOCAL_MF invalid");
+      amrex::Error("MDOT_LOCAL_MF invalid LowMachDIVUALL");
 
     }  // i=0..color_count-1
 
@@ -7268,7 +7268,7 @@ NavierStokes::LowMachDIVUALL(
     // do nothing
 
    } else
-     amrex::Error("sweep_num invalid");
+     amrex::Error("sweep_num invalid LowMachDIVUALL");
 
   } // ilev=coarsest_level..finest_level
 
@@ -10537,6 +10537,22 @@ void NavierStokes::multiphase_project(int project_option) {
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
 	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+
+ } else if (project_option==SOLVETYPE_PRES) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   if ((num_materials_compressible>=1)&&
+       (num_materials_compressible<=num_materials)) {
+
+    ns_level.move_mdot_to_density();
+
+   } else if (num_materials_compressible==0) {
+    //do nothing
+   } else
+    amrex::Error("num_materials_compressble invalid");
+
+  }
 
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
