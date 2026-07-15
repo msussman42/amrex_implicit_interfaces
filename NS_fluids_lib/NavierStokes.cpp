@@ -19974,6 +19974,109 @@ NavierStokes::clear_interface_vars() {
 void 
 NavierStokes::move_mdot_to_density() { 
 
+ std::string local_caller_string="move_mdot_to_density";
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ int bfact=parent->Space_blockingFactor(level);
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+
+ debug_ngrow(MDOT_MF,0,local_caller_string);
+
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ int ncomp_state=S_new.nComp();
+ if (ncomp_state!=STATECOMP_STATES+
+     num_materials*(num_state_material+ngeom_raw)+1)
+  amrex::Error("ncomp_state invalid");
+
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  //do nothing
+ } else
+  amrex::Error("expecting num_materials_compressible>=1");
+
+ MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  // mask=tag if not covered by level+1 or outside the domain.
+  // mask=1-tag if covered by level+1 and inside the domain.
+  // NavierStokes::maskfiner  (clear_phys_boundary==0)
+  FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+  FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
+  FArrayBox& snewfab=S_new[mfi];
+  FArrayBox& LSfab=LS_new[mfi];
+  FArrayBox& refinedenfab=Refine_Density_new[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  fort_move_mdot(
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &dt_slab, 
+     LSfab.dataPtr(), 
+     ARLIM(LSfab.loVect()),
+     ARLIM(LSfab.hiVect()),
+     snewfab.dataPtr(), 
+     ARLIM(snewfab.loVect()),
+     ARLIM(snewfab.hiVect()),
+     refinedenfab.dataPtr(),
+     ARLIM(refinedenfab.loVect()),
+     ARLIM(refinedenfab.hiVect()),
+     mdotfab.dataPtr(),
+     ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+     maskfab.dataPtr(),
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+     xlo,dx,
+     &ncomp_state,
+     &level,
+     &finest_level);
+
+ }  // mfi
+} // omp
+
+ ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"fort_move_mdot");
+
+ if ((level>=0)&&(level<finest_level)) {
+  int spectral_override=1; // order derived from "enable_spectral"
+  avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+  for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+   avgDown_refine_density(im_comp);
+  }
+ } else if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("level invalid move_mdot_to_density");
+
 } //end subroutine move_mdot_to_density
 
 // Lagrangian solid info lives at t=t^n 

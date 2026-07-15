@@ -770,6 +770,25 @@ extern "C"
     Real* deltamass,
     AMREX_ARLIM_P(deltamasslo),AMREX_ARLIM_P(deltamasshi));
 
+
+   void fort_move_mdot(
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     int* bfact,
+     Real* dt,
+     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
+     Real* refineden,
+     AMREX_ARLIM_P(refinedenlo),AMREX_ARLIM_P(refinedenhi),
+     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+     const Real* xlo,const Real* dx,
+     int* ncomp_state,
+     int* level,
+     int* finest_level);
+
+
    void fort_vfrac_split(
      int* nprocessed,
      int* tid,
