@@ -12880,6 +12880,7 @@ stop
       ! tag = 0 -> none of above
       subroutine fort_tagmass(&
        ncell_mdot_shift, &
+       mdot_sum, &
        im_critical, & !intent(in)
        level,finest_level, &
        tilelo,tilehi, &
@@ -12899,6 +12900,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: ncell_mdot_shift
+      real(amrex_real), INTENT(inout) :: mdot_sum
       integer, INTENT(in) :: im_critical
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -13030,6 +13032,7 @@ stop
         call get_primary_material(dx,LSCELL,im_primary)
 
         VDOT=deltamass(D_DECL(i,j,k),im_critical)
+        mdot_sum=mdot_sum+VDOT
 
          ! first tag donor cells (tag=one)
         if (VDOT.ne.zero) then 

@@ -18101,6 +18101,12 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 
  if (isweep==0) { //fort_tagmass
 
+  Vector< Real > mdot_sum_local;
+  mdot_sum_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -18137,6 +18143,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
     // isweep==0 
    fort_tagmass( 
     &ncell_mdot_shift,
+    &mdot_sum_local[tid_current],
     &im,
     &level,
     &finest_level,
@@ -18158,8 +18165,13 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 } // omp
   ns_reconcile_d_num(LOOP_TAGEXPANSION,"level_mass_redistribute");
 
-  avgDown_tag_localMF(donorflag_MF);
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   mdot_sum_local[0]+=mdot_sum_local[tid];
+  }
+  ParallelDescriptor::ReduceRealSum(mdot_sum_local[0]);
+  mdot_before[0]+=mdot_sum_local[0];
 
+  avgDown_tag_localMF(donorflag_MF);
 
  } else if (isweep==1) { //fort_accept_weight_mass
 
@@ -18241,6 +18253,12 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
   if ((im<1)||(im>num_materials))
    amrex::Error("im invalid");
 
+  Vector< Real > mdot_sum2_local;
+  mdot_sum2_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -18303,6 +18321,13 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 } //omp
   ns_reconcile_d_num(LOOP_DISTRIBUTEEXPANSION,
      "level_mass_redistribute");
+
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_local[0]+=mdot_sum2_local[tid];
+  } // tid
+  ParallelDescriptor::ReduceRealSum(mdot_sum2_local[0]);
+  mdot_after[0]+=mdot_sum2_local[0];
+
 
   // isweep==0: fort_tagmass
   // isweep==1: fort_accept_weight_mass
