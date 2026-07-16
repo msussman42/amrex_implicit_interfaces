@@ -10549,6 +10549,8 @@ void NavierStokes::multiphase_project(int project_option) {
    if ((num_materials_compressible>=1)&&
        (num_materials_compressible<=num_materials)) {
 
+     //NavierStokes::move_mdot_to_density() is declared
+     //in NavierStokes.cpp
     ns_level.move_mdot_to_density();
 
    } else if (num_materials_compressible==0) {

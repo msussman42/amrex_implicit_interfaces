@@ -757,6 +757,7 @@ extern "C"
 
 
    void fort_distributemass(
+    Real* mdot_sum,
     int* im_critical,
     int* level,int* finest_level,
     const int* domlo,const int* domhi,

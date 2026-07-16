@@ -5011,7 +5011,7 @@ stop
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid fort_init_from_delta_mass ", &
+       print *,"num_state_base invalid fort_init_from_deltamass ", &
           num_state_base
        stop
       endif
@@ -5019,7 +5019,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid fort_init_from_delta_mass ",dt
+       print *,"dt invalid fort_init_from_deltamass ",dt
        stop
       endif
       if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -5116,7 +5116,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 
@@ -13087,6 +13087,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributemass(&
+       mdot_sum, &
        im_critical, &
        level,finest_level, &
        domlo,domhi, &
@@ -13110,6 +13111,7 @@ stop
 
        IMPLICIT NONE
 
+       real(amrex_real), INTENT(inout) :: mdot_sum
        integer, INTENT(in) :: im_critical
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
@@ -13317,10 +13319,11 @@ stop
         if (local_mask.eq.1) then
          local_deltamass_new=deltamass_new(D_DECL(i,j,k))
          deltamass(D_DECL(i,j,k),im_critical)=local_deltamass_new
+         mdot_sum=mdot_sum+local_deltamass_new
         else if (local_mask.eq.0) then
          ! do nothing
         else
-         print *,"local_mask invalid"
+         print *,"local_mask invalid ",local_mask
          stop
         endif
        end do ! k
@@ -13611,7 +13614,7 @@ stop
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
+       print *,"tid invalid ",tid
        stop
       endif
 
@@ -13631,13 +13634,13 @@ stop
 
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
-       print *,"level invalid fort_move_mdot"
+       print *,"level invalid fort_move_mdot ",level
        stop
       endif
 
       if (ncomp_state.ne.STATECOMP_STATES+ &
           num_materials*(num_state_material+ngeom_raw)+1) then
-       print *,"ncomp_state invalid"
+       print *,"ncomp_state invalid fort_move_mdot ",ncomp_state
        stop
       endif
 
@@ -13651,7 +13654,7 @@ stop
                 (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else
-        print *,"fort_material_type invalid"
+        print *,"fort_material_type invalid ",fort_material_type
         stop
        endif
 
@@ -13659,7 +13662,7 @@ stop
 
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
-       print *,"num_state_material invalid"
+       print *,"num_state_material invalid fort_move_mdot ",num_state_material
        stop
       endif
 
@@ -13708,7 +13711,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid fort_move_mdot ",dt
        stop
       endif
 
@@ -13734,7 +13737,7 @@ stop
         if (volcell.gt.zero) then
          !do nothing
         else
-         print *,"volcell invalid ",volcell
+         print *,"volcell invalid fort_move_mdot ",volcell
          stop
         endif
 
@@ -13762,7 +13765,7 @@ stop
           !do nothing
          else
           print *,"fort_im_refine_density_map invalid ", &
-           fort_im_refine_density_map
+           im_primary,im_refine_density,fort_im_refine_density_map
           stop
          endif
 
@@ -13779,7 +13782,13 @@ stop
           !local_mass units: kg
          local_mass=mdot(D_DECL(i,j,k))*local_density*(dt**2)
          new_density=local_density+local_mass/volcell 
-         snew(D_DECL(i,j,k),dencomp)=new_density
+ 
+         if (new_density.gt.zero) then
+          snew(D_DECL(i,j,k),dencomp)=new_density
+         else
+          print *,"new_density invalid(1) ",new_density
+          stop
+         endif
 
          kfine=0
 #if (AMREX_SPACEDIM==3)
@@ -13806,13 +13815,21 @@ stop
           if (local_density.gt.zero) then
            !do nothing
           else
-           print *,"local_density invalid ",local_density
+           print *,"local_density invalid(2) ",local_density
            stop
           endif
           new_density=local_density+local_mass/volcell
-          refineden(D_DECL(i,j,k), &
+
+          if (new_density.gt.zero) then
+
+           refineden(D_DECL(i,j,k), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
             new_density
+
+          else
+           print *,"new_density invalid(2) ",new_density
+           stop
+          endif
 
          enddo !ifine
          enddo !jfine
@@ -13833,7 +13850,7 @@ stop
        else if (mask_test.eq.0) then
         ! do nothing
        else
-        print *,"mask_test invalid: ",mask_test
+        print *,"mask_test invalid fort_move_mdot: ",mask_test
         stop
        endif
 
@@ -13843,10 +13860,6 @@ stop
 
       return
       end subroutine fort_move_mdot
-
-
-
-
 
 
       subroutine fort_aggressive( &
@@ -15066,7 +15079,7 @@ stop
            !do nothing
           else
            print *,"fort_im_refine_density_map invalid ", &
-            fort_im_refine_density_map
+            im,im_refine_density,fort_im_refine_density_map
            stop
           endif
 
@@ -15697,7 +15710,7 @@ stop
                 !do nothing
                else
                 print *,"fort_im_refine_density_map invalid ", &
-                  fort_im_refine_density_map
+                  im,im_refine_density,fort_im_refine_density_map
                 stop
                endif
                donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
@@ -15994,7 +16007,7 @@ stop
            !do nothing
           else
            print *,"fort_im_refine_density_map invalid ", &
-               fort_im_refine_density_map
+              im,im_refine_density,fort_im_refine_density_map
            stop
           endif
           if (refine_vol_bucket(im).gt.zero) then
