@@ -299,12 +299,16 @@ stop
             print *,"level,finest_level ",level,finest_level
             print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k),veldir)
             print *,"i,j,k,maskcov ",i,j,k,maskcov(D_DECL(i,j,k))
+            print *,"facewtsum = ",facewtsum
+            print *,"offdiagsum = ",offdiagsum
             stop
            endif
           else
            print *,"alpha invalid"
            print *,"i,j,k= ",i,j,k
            print *,"alpha=",alpha(D_DECL(i,j,k),veldir)
+           print *,"facewtsum = ",facewtsum
+           print *,"offdiagsum = ",offdiagsum
            stop
           endif
          else
