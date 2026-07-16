@@ -6825,7 +6825,7 @@ stop
          enddo
 
         else
-         print *,"vfrac_sum invalid ",vfrac_sum
+         print *,"vfrac_sum invalid fort_mass_redistribute ",vfrac_sum
          stop
         endif
 
@@ -6833,7 +6833,7 @@ stop
         if (local_volume.gt.zero) then
          !do nothing
         else
-         print *,"local_volume invalid ",local_volume
+         print *,"local_volume invalid fort_mass_redistribute ",local_volume
          stop
         endif
 
@@ -6850,7 +6850,7 @@ stop
               redistribute_fab(D_DECL(i,j,k),im)* &
               snew(D_DECL(i,j,k),dencomp)*local_volume/(dt**2)
           else
-           print *,"mass_redistribute_flag invalid"
+           print *,"mass_redistribute_flag invalid ",mass_redistribute_flag
            stop
           endif
          endif !(is_proper_layer(im,FLUID_LAYER_INDEX).eq.1) 
@@ -6859,7 +6859,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 

@@ -18009,8 +18009,8 @@ NavierStokes::mass_redistributeALL_second_part() {
 
  } // im=1..num_materials
 
- // copy contributions from all materials changing phase to a single
- // source term.
+ // copy contributions from all materials with mass redistribution 
+ // to a single source term.
  int isweep_combine=3;
 
  int im_filler=-1;
@@ -18023,7 +18023,7 @@ NavierStokes::mass_redistributeALL_second_part() {
 
  delete_array(LSNEW_MF);
 
-} // end subroutine mass_redistributeALL
+} // end subroutine mass_redistributeALL_second_part()
 
 
 // isweep==0: fort_tagmass
@@ -18298,6 +18298,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
      // declared in: GODUNOV_3D.F90
      // MASS_REDISTRIBUTE_MF is modified.
     fort_distributemass( 
+     &mdot_sum2_local[tid_current],
      &im,
      &level,&finest_level,
      domlo,domhi, 
@@ -20031,6 +20032,7 @@ NavierStokes::move_mdot_to_density() {
  int bfact=parent->Space_blockingFactor(level);
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
+
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
@@ -20088,6 +20090,7 @@ NavierStokes::move_mdot_to_density() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //fort_move_mdot is declared in GODUNOV_3D.F90
   fort_move_mdot(
      &tid_current,
      tilelo,tilehi,
