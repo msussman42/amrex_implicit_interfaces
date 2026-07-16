@@ -20612,6 +20612,7 @@ NavierStokes::split_scalar_advection(int im_extension) {
     fort_vfrac_split(
      &nprocessed[tid_current],
      &tid_current,
+     sato_model_spec_id.dataPtr(),
      density_floor.dataPtr(),
      density_ceiling.dataPtr(),
      &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann

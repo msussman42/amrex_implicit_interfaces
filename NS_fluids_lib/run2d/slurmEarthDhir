@@ -3,12 +3,14 @@
 #SBATCH --cpus-per-task=1
 #SBATCH -N 1
 #SBATCH -n 6
-#SBATCH --partition=backfill
+##SBATCH --partition=backfill
+#SBATCH --partition=mecfd_q
 #SBATCH --mail-type="ALL"
 #SBATCH --mail-user=msussman@fsu.edu
-#SBATCH -t 03:59:00
-#SBATCH --output=run1.out
-#SBATCH --error=run1.err
+##SBATCH -t 03:59:00
+#SBATCH -t 24:59:00
+#SBATCH --output=run.out
+#SBATCH --error=run.err
 #SBATCH --open-mode=append
 
 # other partitions:
