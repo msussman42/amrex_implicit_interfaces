@@ -726,6 +726,7 @@ extern "C"
 
    void fort_tagmass(
     int* ncell_mdot_shift,
+    Real* mdot_sum,
     int* im_critical,
     int* level,int* finest_level,
     const int* tilelo,const int* tilehi,
