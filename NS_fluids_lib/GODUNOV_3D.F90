@@ -14041,6 +14041,7 @@ stop
       subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
+       sato_model_spec_id, &
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
@@ -14268,6 +14269,8 @@ stop
       real(amrex_real), INTENT(in), target :: zmac_old(DIMV(zmac_old))
       real(amrex_real), pointer :: zmac_old_ptr(D_DECL(:,:,:))
     
+      integer, INTENT(in) :: sato_model_spec_id(num_materials)
+
       real(amrex_real), INTENT(in) :: density_floor(num_materials)
       real(amrex_real), INTENT(in) :: density_ceiling(num_materials)
 
@@ -14292,6 +14295,7 @@ stop
       integer iside
       integer vofcomp
       integer im
+      integer im_sato
       real(amrex_real) dxmax
       real(amrex_real) projected_tennew
       real(amrex_real) minA,maxA,current_A
@@ -16490,6 +16494,7 @@ stop
          else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
 
           do ispecies=1,num_species_var
+
            speccomp_data=(im-1)*num_state_material+num_state_base+ &
              ispecies
            if (no_material_flag.eq.1) then ! no material (im)
@@ -16514,6 +16519,13 @@ stop
             print *,"no_material_flag invalid"
             stop
            endif
+
+           do im_sato=1,num_materials
+            if (sato_model_spec_id(im_sato).eq.ispecies) then
+             snew_hold(STATECOMP_STATES+speccomp_data)= &
+                 den(D_DECL(icrse,jcrse,kcrse),speccomp_data)
+            endif
+           enddo !im_sato=1,num_materials
 
           enddo ! ispecies=1..num_species_var
 
@@ -17586,7 +17598,7 @@ stop
 
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
-       print *,"num_state_material invalid"
+       print *,"num_state_material invalid ",num_state_material
        stop
       endif
 
