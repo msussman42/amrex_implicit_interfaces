@@ -335,6 +335,9 @@ Vector<int> NavierStokes::normdir_direct_split;
 int NavierStokes::dir_absolute_direct_split=0;
 int NavierStokes::order_direct_split=0; // base_step mod 2
 
+Vector<Real> NavierStokes::mdot_before;
+Vector<Real> NavierStokes::mdot_after;
+
 Vector<Real> NavierStokes::mdotplus;
 Vector<Real> NavierStokes::mdotminus;
 Vector<Real> NavierStokes::mdotcount;
@@ -15751,7 +15754,7 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
     &finest_level);
  } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_NODEDISPLACE,"level_phase_change_convert");
+  ns_reconcile_d_num(LOOP_NODEDISPLACE,"fort_mass_redistribute");
 
 
 
@@ -17894,12 +17897,12 @@ NavierStokes::level_phase_change_redistribute(
 
 
 void
-NavierStokes::mass_redistributeALL() {
+NavierStokes::mass_redistributeALL_second_part() {
 
- std::string local_caller_string="mass_redistributeALL";
+ std::string local_caller_string="mass_redistributeALL_second_part";
 
  if (level!=0)
-  amrex::Error("level invalid mass_redistributeALL");
+  amrex::Error("level invalid mass_redistributeALL_second_part");
 
  if (ngrow_make_distance+1==ngrow_distance) {
   //do nothing
@@ -17923,6 +17926,9 @@ NavierStokes::mass_redistributeALL() {
 		  local_caller_string);
  }
 
+ mdot_before.resize(thread_class::nthreads);
+ mdot_after.resize(thread_class::nthreads);
+
  for (int im=1;im<=num_materials;im++) {
   //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
   //is_ice, is_FSI_rigid
@@ -17934,6 +17940,11 @@ NavierStokes::mass_redistributeALL() {
     //do nothing
    } else
     amrex::Error("expecting material_extend_velocity[im-1]==0");
+
+   for (int tid=0;tid<thread_class::nthreads;tid++) {
+    mdot_before[tid]=0.0;
+    mdot_after[tid]=0.0;
+   }
 
    allocate_array(ngrow_distance,1,-1,donorflag_MF);
     //ngrow,scomp,ncomp
@@ -17970,6 +17981,21 @@ NavierStokes::mass_redistributeALL() {
      // do nothing
     } else
      amrex::Error("isweep_redistribute invalid");
+
+    if (ParallelDescriptor::IOProcessor()) {
+
+     if (isweep_redistribute==0) { //fort_tagmass
+      std::cout << "before:im,mdot_before " <<
+         im << ' ' << mdot_before[0] << '\n';
+     } else if (isweep_redistribute==1) { //fort_accept_weight_mass
+      // do nothing
+     } else if (isweep_redistribute==2) { //fort_distributemass
+      std::cout << "after:im,mdot_after " <<   
+       im << ' ' << mdot_after[0] << '\n';
+     } else
+      amrex::Error("isweep_redistribute invalid");
+
+    } // if ParallelDescriptor::IOProcessor()
 
    } // isweep_redistribute=0,1,2
 
