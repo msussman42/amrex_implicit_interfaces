@@ -18157,6 +18157,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
     fablo,fabhi,
     &bfact, 
     xlo,dx,
+    &cur_time_slab,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     donorfab.dataPtr(),

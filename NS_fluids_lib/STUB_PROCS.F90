@@ -324,7 +324,7 @@ real(amrex_real), INTENT(out) :: temperature
 integer, INTENT(out) :: prescribed_flag
 integer dir
 
- LS=CLAMPED_NO_WHERE_LS
+ LS=CLAMPED_NO_WHERE_LS !CLAMPED_NO_WHERE_LS declared in PROBCOMMON.F90
  do dir=1,SDIM
   vel(dir)=zero
  enddo
