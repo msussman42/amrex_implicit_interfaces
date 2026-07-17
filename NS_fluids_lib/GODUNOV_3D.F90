@@ -11881,13 +11881,13 @@ stop
         call get_primary_material(dx,LSCELL,im_primary)
         call get_max_rigid_LS(LSCELL,max_rigid_LS)
         call SUB_clamped_LS( &
-              xsten_center, & !intent(in) 
-              time, & !intent(in)
-              LS_clamped, & !intent(out)
-              vel_clamped, & !intent(out)
-              temperature_clamped, & !intent(out) 
-              prescribed_flag, & !intent(out) 
-              dx) !intent(in)
+          xsten_center, & !intent(in) 
+          time, & !intent(in)
+          LS_clamped, & !intent(out)
+          vel_clamped, & !intent(out)
+          temperature_clamped, & !intent(out) 
+          prescribed_flag, & !intent(out) 
+          dx) !intent(in)
         if (LS_clamped.gt.max_rigid_LS) then
          max_rigid_LS=LS_clamped
         endif
@@ -12165,10 +12165,12 @@ stop
                   (is_FSI_rigid(im_primary).eq.1)) then 
           ! do nothing (tag initialized to 0, neither donor nor receiver)
          else
+          print *,"LS_clamped invalid or"
           print *,"is_rigid(im_primary) invalid or"
           print *,"is_FSI_rigid(im_primary) invalid or "
           print *,"is_FSI_elastic(im_primary) invalid or "
           print *,"is_ice(im_primary) invalid "
+          print *,"LS_clamped ",LS_clamped
           print *,"im_primary,is_rigid,is_FSI_elastic,is_ice,is_FSI_rigid ", &
            im_primary,is_rigid(im_primary),is_FSI_elastic(im_primary), &
            is_ice(im_primary),is_FSI_rigid(im_primary)
@@ -12916,6 +12918,7 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
+       time, &
        maskcov,DIMS(maskcov), &
        tag, &
        DIMS(tag), &
@@ -12938,6 +12941,7 @@ stop
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: xlo(SDIM)
       real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(tag)
       integer, INTENT(in) :: DIMDEC(deltamass)
@@ -12964,6 +12968,12 @@ stop
       integer local_mask
       integer dir
       real(amrex_real) VDOT
+      real(amrex_real) max_rigid_LS
+      real(amrex_real) max_elastic_LS
+      real(amrex_real) LS_clamped
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      integer prescribed_flag
       real(amrex_real) dxmax
       real(amrex_real) LS_DONOR_CUTOFF
 
@@ -12988,6 +12998,13 @@ stop
       endif
 
       LS_DONOR_CUTOFF=ncell_mdot_shift*dxmax
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid in fort_tagmass ",time
+       stop
+      endif
 
       if ((im_critical.ge.1).and.(im_critical.le.num_materials)) then
        ! do nothing
@@ -13059,6 +13076,22 @@ stop
         enddo
 
         call get_primary_material(dx,LSCELL,im_primary)
+        call get_max_rigid_LS(LSCELL,max_rigid_LS)
+        call get_max_elastic_LS(LSCELL,max_elastic_LS)
+        call SUB_clamped_LS( &
+          xsten_center, & !intent(in) 
+          time, & !intent(in)
+          LS_clamped, & !intent(out)
+          vel_clamped, & !intent(out)
+          temperature_clamped, & !intent(out) 
+          prescribed_flag, & !intent(out) 
+          dx) !intent(in)
+        if (LS_clamped.gt.max_rigid_LS) then
+         max_rigid_LS=LS_clamped
+        endif
+        if (max_elastic_LS.gt.max_rigid_LS) then
+         max_rigid_LS=max_elastic_LS
+        endif
 
         VDOT=deltamass(D_DECL(i,j,k),im_critical)
         mdot_sum=mdot_sum+VDOT
@@ -13067,10 +13100,12 @@ stop
         if (VDOT.ne.zero) then 
 
          if ((im_primary.ne.im_critical).or. &
-             (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+             (LSCELL(im_critical).lt.LS_DONOR_CUTOFF).or. &
+             (max_rigid_LS.ge.-LS_DONOR_CUTOFF)) then
           tag(D_DECL(i,j,k)) = one ! donor cell
          else if ((im_primary.eq.im_critical).and. &
-                  (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+                  (LSCELL(im_critical).ge.LS_DONOR_CUTOFF).and. &
+                  (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
           ! do nothing - acceptor cell
          else
           print *,"LSCELL or im_primary or im_critical invalid: ", &
@@ -13086,10 +13121,12 @@ stop
         endif 
 
         if ((im_primary.eq.im_critical).and. &
-            (LSCELL(im_critical).ge.LS_DONOR_CUTOFF)) then
+            (LSCELL(im_critical).ge.LS_DONOR_CUTOFF).and. &
+            (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
          tag(D_DECL(i,j,k)) = two ! receiver
         else if ((im_primary.ne.im_critical).or. &
-                 (LSCELL(im_critical).lt.LS_DONOR_CUTOFF)) then
+                 (LSCELL(im_critical).lt.LS_DONOR_CUTOFF).or. &
+                 (max_rigid_LS.ge.-LS_DONOR_CUTOFF)) then
          ! do nothing - donor cell if VDOT<>0
         else
          print *,"LSCELL or im_primary or im_critical invalid: ", &
