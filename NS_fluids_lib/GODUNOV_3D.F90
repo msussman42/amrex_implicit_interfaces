@@ -5011,7 +5011,7 @@ stop
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid fort_init_from_delta_mass ", &
+       print *,"num_state_base invalid fort_init_from_deltamass ", &
           num_state_base
        stop
       endif
@@ -5019,7 +5019,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid fort_init_from_delta_mass ",dt
+       print *,"dt invalid fort_init_from_deltamass ",dt
        stop
       endif
       if (ngrow_make_distance.eq.ngrow_distance-1) then
@@ -5116,7 +5116,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid ",local_mask
         stop
        endif
 
@@ -12880,6 +12880,7 @@ stop
       ! tag = 0 -> none of above
       subroutine fort_tagmass(&
        ncell_mdot_shift, &
+       mdot_sum, &
        im_critical, & !intent(in)
        level,finest_level, &
        tilelo,tilehi, &
@@ -12899,6 +12900,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: ncell_mdot_shift
+      real(amrex_real), INTENT(inout) :: mdot_sum
       integer, INTENT(in) :: im_critical
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -13030,6 +13032,7 @@ stop
         call get_primary_material(dx,LSCELL,im_primary)
 
         VDOT=deltamass(D_DECL(i,j,k),im_critical)
+        mdot_sum=mdot_sum+VDOT
 
          ! first tag donor cells (tag=one)
         if (VDOT.ne.zero) then 
@@ -13084,6 +13087,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributemass(&
+       mdot_sum, &
        im_critical, &
        level,finest_level, &
        domlo,domhi, &
@@ -13107,6 +13111,7 @@ stop
 
        IMPLICIT NONE
 
+       real(amrex_real), INTENT(inout) :: mdot_sum
        integer, INTENT(in) :: im_critical
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
@@ -13314,10 +13319,11 @@ stop
         if (local_mask.eq.1) then
          local_deltamass_new=deltamass_new(D_DECL(i,j,k))
          deltamass(D_DECL(i,j,k),im_critical)=local_deltamass_new
+         mdot_sum=mdot_sum+local_deltamass_new
         else if (local_mask.eq.0) then
          ! do nothing
         else
-         print *,"local_mask invalid"
+         print *,"local_mask invalid ",local_mask
          stop
         endif
        end do ! k
@@ -13527,6 +13533,334 @@ stop
        end do ! i
       end subroutine fort_accept_weight_mass
 
+      subroutine fort_move_mdot( &
+       tid, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       dt, &
+       LS,DIMS(LS), &  
+       snew, &
+       DIMS(snew), &
+       refineden,DIMS(refineden), &
+       mdot,DIMS(mdot), &
+       mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
+       xlo,dx, &
+       ncomp_state, &
+       level, &
+       finest_level) &
+      bind(c,name='fort_move_mdot')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: ncomp_state
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(refineden)
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(mask)
+      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+              refineden(DIMV(refineden),NUM_CELL_REFINE_DENSITY)
+      real(amrex_real), pointer :: refineden_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),ncomp_state)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      integer im
+      integer im_primary
+      integer im_refine_density
+      integer dencomp
+      integer mask_test
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) volcell_fine
+      real(amrex_real) cencell_fine(SDIM)
+      real(amrex_real) local_LS(num_materials)
+      real(amrex_real) local_density
+      real(amrex_real) new_density
+      real(amrex_real) local_mass
+
+      integer i,j,k
+      integer ifine,jfine,kfine,nfine
+      integer growlo(3),growhi(3)
+
+      LS_ptr=>LS
+      snew_ptr=>snew
+
+      mdot_ptr=>mdot
+      mask_ptr=>mask
+      refineden_ptr=>refineden
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid ",tid
+       stop
+      endif
+
+      if ((num_materials_compressible.ge.1).and. &
+          (num_materials_compressible.le.num_materials)) then
+       !do nothing
+      else
+       print *,"num_materials_compressible invalid:fort_move_mdot ", &
+           num_materials_compressible
+       stop
+      endif
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid fort_move_mdot ",bfact
+       stop
+      endif
+
+      if ((level.lt.0).or. &
+          (level.gt.finest_level)) then
+       print *,"level invalid fort_move_mdot ",level
+       stop
+      endif
+
+      if (ncomp_state.ne.STATECOMP_STATES+ &
+          num_materials*(num_state_material+ngeom_raw)+1) then
+       print *,"ncomp_state invalid fort_move_mdot ",ncomp_state
+       stop
+      endif
+
+      do im=1,num_materials
+
+       if (fort_material_type(im).eq.0) then
+        ! do nothing
+       else if (fort_material_type(im).eq.999) then
+        ! do nothing
+       else if ((fort_material_type(im).ge.1).and. &
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
+        ! do nothing
+       else
+        print *,"fort_material_type invalid ",fort_material_type
+        stop
+       endif
+
+      enddo  ! im=1..num_materials
+
+      if (num_state_material.ne. &
+          num_state_base+num_species_var) then
+       print *,"num_state_material invalid fort_move_mdot ",num_state_material
+       stop
+      endif
+
+      if (NUM_CELL_REFINE_DENSITY.eq. &
+          num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_REFINE_DENSITY invalid ",NUM_CELL_REFINE_DENSITY
+       stop
+      endif
+      if (ENUM_NUM_REFINE_DENSITY_TYPE.eq.4*(SDIM-1)) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_REFINE_DENSITY_TYPE invalid ", &
+           ENUM_NUM_REFINE_DENSITY_TYPE
+       stop
+      endif 
+
+      if ((num_materials_compressible.ge.1).and. &
+          (num_materials_compressible.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"num_materials_compressible invalid:fort_move_mdot ", &
+         num_materials_compressible
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       if (SDIM.ne.2) then
+        print *,"dimension crash ",SDIM
+        stop
+       endif
+      else
+       print *,"levelrz invalid fort_move_mdot ",levelrz
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,refineden_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+     
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid fort_move_mdot ",dt
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+ 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       mask_test=NINT(mask(D_DECL(i,j,k)))
+
+       !mask=tag if not covered by level+1 or outside the domain.
+       if (mask_test.eq.1) then
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        call CISBOX(xsten,nhalf, &
+         xlo,dx, &
+         i,j,k, &
+         bfact,level, &
+         volcell,cencell,SDIM)
+
+        if (volcell.gt.zero) then
+         !do nothing
+        else
+         print *,"volcell invalid fort_move_mdot ",volcell
+         stop
+        endif
+
+        do im=1,num_materials
+         local_LS(im)=LS(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(dx,local_LS,im_primary)
+      
+        if (is_compressible_mat(im_primary).eq.1) then
+
+         im_refine_density=0
+         do im=1,im_primary
+          if (is_compressible_mat(im).eq.0) then
+           !do nothing
+          else if (is_compressible_mat(im).eq.1) then
+           im_refine_density=im_refine_density+1
+          else
+           print *,"is_compressible_mat(im) invalid ",im, &
+            is_compressible_mat(im)
+           stop
+          endif
+         enddo !im=1,im_primary
+
+         if (fort_im_refine_density_map(im_refine_density).eq.im_primary-1) then
+          !do nothing
+         else
+          print *,"fort_im_refine_density_map invalid ", &
+           im_primary,im_refine_density,fort_im_refine_density_map
+          stop
+         endif
+
+         dencomp=STATECOMP_STATES+ &
+           (im_primary-1)*num_state_material+ENUM_DENVAR+1
+         local_density=snew(D_DECL(i,j,k),dencomp)
+         if (local_density.gt.zero) then
+          !do nothing
+         else
+          print *,"local_density invalid ",local_density
+          stop
+         endif
+          !mdot units: m^3/s^2
+          !local_mass units: kg
+         local_mass=mdot(D_DECL(i,j,k))*local_density*(dt**2)
+         new_density=local_density+local_mass/volcell 
+ 
+         if (new_density.gt.zero) then
+          snew(D_DECL(i,j,k),dencomp)=new_density
+         else
+          print *,"new_density invalid(1) ",new_density
+          stop
+         endif
+
+         kfine=0
+#if (AMREX_SPACEDIM==3)
+         do kfine=0,1
+#endif
+         do jfine=0,1
+         do ifine=0,1
+          nfine=4*kfine+2*jfine+ifine+1
+
+          call CISBOXFINE(xstenfine,nhalf, &
+            xlo,dx, &
+            i,j,k, &
+            ifine,jfine,kfine, &
+            bfact,level, &
+            volcell_fine,cencell_fine,SDIM)
+          if ((volcell_fine.gt.zero).and.(volcell_fine.lt.volcell)) then
+           !do nothing
+          else
+           print *,"volcell_fine invalid ",volcell_fine
+           stop
+          endif
+          local_density=refineden(D_DECL(i,j,k), &
+              (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
+          if (local_density.gt.zero) then
+           !do nothing
+          else
+           print *,"local_density invalid(2) ",local_density
+           stop
+          endif
+          new_density=local_density+local_mass/volcell
+
+          if (new_density.gt.zero) then
+
+           refineden(D_DECL(i,j,k), &
+            (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+            new_density
+
+          else
+           print *,"new_density invalid(2) ",new_density
+           stop
+          endif
+
+         enddo !ifine
+         enddo !jfine
+#if (AMREX_SPACEDIM==3)
+         enddo !kfine
+#endif
+
+         mdot(D_DECL(i,j,k))=zero
+
+        else if (is_compressible_mat(im_primary).eq.0) then
+         !do nothing
+        else
+         print *,"is_compressible_mat invalid ",im_primary, &
+          is_compressible_mat(im_primary)
+         stop
+        endif
+
+       else if (mask_test.eq.0) then
+        ! do nothing
+       else
+        print *,"mask_test invalid fort_move_mdot: ",mask_test
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
+
+      return
+      end subroutine fort_move_mdot
+
 
       subroutine fort_aggressive( &
        caller_string, &
@@ -13720,6 +14054,7 @@ stop
       subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
+       sato_model_spec_id, &
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
@@ -13947,6 +14282,8 @@ stop
       real(amrex_real), INTENT(in), target :: zmac_old(DIMV(zmac_old))
       real(amrex_real), pointer :: zmac_old_ptr(D_DECL(:,:,:))
     
+      integer, INTENT(in) :: sato_model_spec_id(num_materials)
+
       real(amrex_real), INTENT(in) :: density_floor(num_materials)
       real(amrex_real), INTENT(in) :: density_ceiling(num_materials)
 
@@ -13971,6 +14308,7 @@ stop
       integer iside
       integer vofcomp
       integer im
+      integer im_sato
       real(amrex_real) dxmax
       real(amrex_real) projected_tennew
       real(amrex_real) minA,maxA,current_A
@@ -14741,7 +15079,7 @@ stop
            !do nothing
           else
            print *,"fort_im_refine_density_map invalid ", &
-            fort_im_refine_density_map
+            im,im_refine_density,fort_im_refine_density_map
            stop
           endif
 
@@ -15372,7 +15710,7 @@ stop
                 !do nothing
                else
                 print *,"fort_im_refine_density_map invalid ", &
-                  fort_im_refine_density_map
+                  im,im_refine_density,fort_im_refine_density_map
                 stop
                endif
                donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
@@ -15671,7 +16009,7 @@ stop
            !do nothing
           else
            print *,"fort_im_refine_density_map invalid ", &
-               fort_im_refine_density_map
+              im,im_refine_density,fort_im_refine_density_map
            stop
           endif
           if (refine_vol_bucket(im).gt.zero) then
@@ -16171,6 +16509,7 @@ stop
          else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
 
           do ispecies=1,num_species_var
+
            speccomp_data=(im-1)*num_state_material+num_state_base+ &
              ispecies
            if (no_material_flag.eq.1) then ! no material (im)
@@ -16195,6 +16534,13 @@ stop
             print *,"no_material_flag invalid"
             stop
            endif
+
+           do im_sato=1,num_materials
+            if (sato_model_spec_id(im_sato).eq.ispecies) then
+             snew_hold(STATECOMP_STATES+speccomp_data)= &
+                 den(D_DECL(icrse,jcrse,kcrse),speccomp_data)
+            endif
+           enddo !im_sato=1,num_materials
 
           enddo ! ispecies=1..num_species_var
 
@@ -17267,7 +17613,7 @@ stop
 
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
-       print *,"num_state_material invalid"
+       print *,"num_state_material invalid ",num_state_material
        stop
       endif
 

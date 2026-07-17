@@ -674,8 +674,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
+   //mass_redistributeALL is declared in NavierStokes.cpp
  int mass_redistribute_flag=UPDATE_MASS_REDISTRIBUTE_VAR;
  mass_redistributeALL(mass_redistribute_flag);
+   //mass_redistributeALL_second_part is declared in NavierStokes.cpp
+ mass_redistributeALL_second_part();
 
  delete_array(MASS_REDISTRIBUTE_MF);
 
@@ -921,6 +924,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  if (im_extension==-1) { //standard advection (both fluids and elastics)
 
+   //mass_redistributeALL is declared in NavierStokes.cpp
   int mass_redistribute_flag=INIT_MASS_REDISTRIBUTE_VAR;
   mass_redistributeALL(mass_redistribute_flag);
 
@@ -10545,6 +10549,8 @@ void NavierStokes::multiphase_project(int project_option) {
    if ((num_materials_compressible>=1)&&
        (num_materials_compressible<=num_materials)) {
 
+     //NavierStokes::move_mdot_to_density() is declared
+     //in NavierStokes.cpp
     ns_level.move_mdot_to_density();
 
    } else if (num_materials_compressible==0) {

@@ -335,6 +335,9 @@ Vector<int> NavierStokes::normdir_direct_split;
 int NavierStokes::dir_absolute_direct_split=0;
 int NavierStokes::order_direct_split=0; // base_step mod 2
 
+Vector<Real> NavierStokes::mdot_before;
+Vector<Real> NavierStokes::mdot_after;
+
 Vector<Real> NavierStokes::mdotplus;
 Vector<Real> NavierStokes::mdotminus;
 Vector<Real> NavierStokes::mdotcount;
@@ -15751,7 +15754,7 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
     &finest_level);
  } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_NODEDISPLACE,"level_phase_change_convert");
+  ns_reconcile_d_num(LOOP_NODEDISPLACE,"fort_mass_redistribute");
 
 
 
@@ -17894,12 +17897,12 @@ NavierStokes::level_phase_change_redistribute(
 
 
 void
-NavierStokes::mass_redistributeALL() {
+NavierStokes::mass_redistributeALL_second_part() {
 
- std::string local_caller_string="mass_redistributeALL";
+ std::string local_caller_string="mass_redistributeALL_second_part";
 
  if (level!=0)
-  amrex::Error("level invalid mass_redistributeALL");
+  amrex::Error("level invalid mass_redistributeALL_second_part");
 
  if (ngrow_make_distance+1==ngrow_distance) {
   //do nothing
@@ -17923,6 +17926,9 @@ NavierStokes::mass_redistributeALL() {
 		  local_caller_string);
  }
 
+ mdot_before.resize(thread_class::nthreads);
+ mdot_after.resize(thread_class::nthreads);
+
  for (int im=1;im<=num_materials;im++) {
   //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
   //is_ice, is_FSI_rigid
@@ -17934,6 +17940,11 @@ NavierStokes::mass_redistributeALL() {
     //do nothing
    } else
     amrex::Error("expecting material_extend_velocity[im-1]==0");
+
+   for (int tid=0;tid<thread_class::nthreads;tid++) {
+    mdot_before[tid]=0.0;
+    mdot_after[tid]=0.0;
+   }
 
    allocate_array(ngrow_distance,1,-1,donorflag_MF);
     //ngrow,scomp,ncomp
@@ -17971,6 +17982,21 @@ NavierStokes::mass_redistributeALL() {
     } else
      amrex::Error("isweep_redistribute invalid");
 
+    if (ParallelDescriptor::IOProcessor()) {
+
+     if (isweep_redistribute==0) { //fort_tagmass
+      std::cout << "before:im,mdot_before " <<
+         im << ' ' << mdot_before[0] << '\n';
+     } else if (isweep_redistribute==1) { //fort_accept_weight_mass
+      // do nothing
+     } else if (isweep_redistribute==2) { //fort_distributemass
+      std::cout << "after:im,mdot_after " <<   
+       im << ' ' << mdot_after[0] << '\n';
+     } else
+      amrex::Error("isweep_redistribute invalid");
+
+    } // if ParallelDescriptor::IOProcessor()
+
    } // isweep_redistribute=0,1,2
 
    delete_array(donorflag_MF);
@@ -17983,8 +18009,8 @@ NavierStokes::mass_redistributeALL() {
 
  } // im=1..num_materials
 
- // copy contributions from all materials changing phase to a single
- // source term.
+ // copy contributions from all materials with mass redistribution 
+ // to a single source term.
  int isweep_combine=3;
 
  int im_filler=-1;
@@ -17997,7 +18023,7 @@ NavierStokes::mass_redistributeALL() {
 
  delete_array(LSNEW_MF);
 
-} // end subroutine mass_redistributeALL
+} // end subroutine mass_redistributeALL_second_part()
 
 
 // isweep==0: fort_tagmass
@@ -18075,6 +18101,12 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 
  if (isweep==0) { //fort_tagmass
 
+  Vector< Real > mdot_sum_local;
+  mdot_sum_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -18111,6 +18143,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
     // isweep==0 
    fort_tagmass( 
     &ncell_mdot_shift,
+    &mdot_sum_local[tid_current],
     &im,
     &level,
     &finest_level,
@@ -18132,8 +18165,13 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 } // omp
   ns_reconcile_d_num(LOOP_TAGEXPANSION,"level_mass_redistribute");
 
-  avgDown_tag_localMF(donorflag_MF);
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   mdot_sum_local[0]+=mdot_sum_local[tid];
+  }
+  ParallelDescriptor::ReduceRealSum(mdot_sum_local[0]);
+  mdot_before[0]+=mdot_sum_local[0];
 
+  avgDown_tag_localMF(donorflag_MF);
 
  } else if (isweep==1) { //fort_accept_weight_mass
 
@@ -18215,6 +18253,12 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
   if ((im<1)||(im>num_materials))
    amrex::Error("im invalid");
 
+  Vector< Real > mdot_sum2_local;
+  mdot_sum2_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -18254,6 +18298,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
      // declared in: GODUNOV_3D.F90
      // MASS_REDISTRIBUTE_MF is modified.
     fort_distributemass( 
+     &mdot_sum2_local[tid_current],
      &im,
      &level,&finest_level,
      domlo,domhi, 
@@ -18277,6 +18322,13 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 } //omp
   ns_reconcile_d_num(LOOP_DISTRIBUTEEXPANSION,
      "level_mass_redistribute");
+
+  for (int tid=1;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_local[0]+=mdot_sum2_local[tid];
+  } // tid
+  ParallelDescriptor::ReduceRealSum(mdot_sum2_local[0]);
+  mdot_after[0]+=mdot_sum2_local[0];
+
 
   // isweep==0: fort_tagmass
   // isweep==1: fort_accept_weight_mass
@@ -19974,6 +20026,111 @@ NavierStokes::clear_interface_vars() {
 void 
 NavierStokes::move_mdot_to_density() { 
 
+ std::string local_caller_string="move_mdot_to_density";
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ int bfact=parent->Space_blockingFactor(level);
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+
+ debug_ngrow(MDOT_MF,0,local_caller_string);
+
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ int ncomp_state=S_new.nComp();
+ if (ncomp_state!=STATECOMP_STATES+
+     num_materials*(num_state_material+ngeom_raw)+1)
+  amrex::Error("ncomp_state invalid");
+
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  //do nothing
+ } else
+  amrex::Error("expecting num_materials_compressible>=1");
+
+ MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  // mask=tag if not covered by level+1 or outside the domain.
+  // mask=1-tag if covered by level+1 and inside the domain.
+  // NavierStokes::maskfiner  (clear_phys_boundary==0)
+  FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+  FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
+  FArrayBox& snewfab=S_new[mfi];
+  FArrayBox& LSfab=LS_new[mfi];
+  FArrayBox& refinedenfab=Refine_Density_new[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   //fort_move_mdot is declared in GODUNOV_3D.F90
+  fort_move_mdot(
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &dt_slab, 
+     LSfab.dataPtr(), 
+     ARLIM(LSfab.loVect()),
+     ARLIM(LSfab.hiVect()),
+     snewfab.dataPtr(), 
+     ARLIM(snewfab.loVect()),
+     ARLIM(snewfab.hiVect()),
+     refinedenfab.dataPtr(),
+     ARLIM(refinedenfab.loVect()),
+     ARLIM(refinedenfab.hiVect()),
+     mdotfab.dataPtr(),
+     ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+     maskfab.dataPtr(),
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+     xlo,dx,
+     &ncomp_state,
+     &level,
+     &finest_level);
+
+ }  // mfi
+} // omp
+
+ ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"fort_move_mdot");
+
+ if ((level>=0)&&(level<finest_level)) {
+  int spectral_override=1; // order derived from "enable_spectral"
+  avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+  for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+   avgDown_refine_density(im_comp);
+  }
+ } else if (level==finest_level) {
+  // do nothing
+ } else
+  amrex::Error("level invalid move_mdot_to_density");
+
 } //end subroutine move_mdot_to_density
 
 // Lagrangian solid info lives at t=t^n 
@@ -20458,6 +20615,7 @@ NavierStokes::split_scalar_advection(int im_extension) {
     fort_vfrac_split(
      &nprocessed[tid_current],
      &tid_current,
+     sato_model_spec_id.dataPtr(),
      density_floor.dataPtr(),
      density_ceiling.dataPtr(),
      &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann

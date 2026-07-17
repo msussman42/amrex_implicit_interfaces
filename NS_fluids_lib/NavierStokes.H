@@ -666,7 +666,7 @@ protected:
     void level_init_elasticmask_and_elasticmaskpart();
 
     void phase_change_redistributeALL();
-    void mass_redistributeALL();
+    void mass_redistributeALL_second_part();
 
     void sato_model_QDOT_MDOT_SPECIES();
     void level_phase_change_redistribute(
@@ -1594,6 +1594,9 @@ protected:
     static Real max_problen;
     static Vector< Vector<Real> > minLS;
     static Vector< Vector<Real> > maxLS;
+
+    static Vector<Real> mdot_before;
+    static Vector<Real> mdot_after;
 
     static Vector<Real> mdotplus;
     static Vector<Real> mdotminus;
