@@ -17226,6 +17226,8 @@ NavierStokes::phase_change_redistributeALL() {
 
 } // end subroutine phase_change_redistributeALL
 
+// level_phase_change_redistribute is called from
+//  NavierStokes::phase_change_redistributeALL()
 // isweep==0: fort_tagexpansion
 // isweep==1: fort_accept_weight
 // isweep==2: fort_distributeexpansion
@@ -17415,6 +17417,10 @@ NavierStokes::level_phase_change_redistribute(
 
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
 
+    //LS_alt_index=ELASTIC_FLUID_LEVELSET_MF if 
+    // material_extend_velocity_flag>0
+    //ELASTIC_FLUID_LEVELSET_MF is initialized in NavierStokes::save_elastic_LS
+    //save_elastic_LS is called from NavierStokes::sub_makeStateDistALL()
    FArrayBox& newdist_alt_fab=(*localMF[LS_alt_index])[mfi];
 
    FArrayBox& denstatefab=(*state_var_mf)[mfi];

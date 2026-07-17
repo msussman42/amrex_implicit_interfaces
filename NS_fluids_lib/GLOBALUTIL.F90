@@ -30666,6 +30666,55 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
+subroutine get_max_rigid_LS(LS,max_rigid_LS)
+use probcommon_module
+
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: max_rigid_LS
+integer im
+
+max_rigid_LS=-1.0E+20
+do im=1,num_materials
+ if (is_rigid(im).eq.1) then
+  if (LS(im).gt.max_rigid_LS) then
+   max_rigid_LS=LS(im)
+  endif
+ else if (is_rigid(im).eq.0) then
+  !do nothing
+ else
+  print *,"im,is_rigid(im) invalid ",im,is_rigid(im)
+  stop
+ endif
+enddo !im=1,num_materials
+
+end subroutine get_max_rigid_LS
+
+
+subroutine get_max_elastic_LS(LS,max_elastic_LS)
+use probcommon_module
+
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: max_elastic_LS
+integer im
+
+max_elastic_LS=-1.0E+20
+do im=1,num_materials
+ if (is_elastic(im).eq.1) then
+  if (LS(im).gt.max_elastic_LS) then
+   max_elastic_LS=LS(im)
+  endif
+ else if (is_elastic(im).eq.0) then
+  !do nothing
+ else
+  print *,"im,is_elastic(im) invalid ",im,is_elastic(im)
+  stop
+ endif
+enddo !im=1,num_materials
+
+end subroutine get_max_elastic_LS
+
+
+
 subroutine get_primary_material(dx,LS,im_primary)
 use probcommon_module
 
