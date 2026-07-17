@@ -11658,6 +11658,11 @@ stop
       integer index_compare
       integer complement_flag
       real(amrex_real) LL
+      real(amrex_real) max_rigid_LS
+      real(amrex_real) LS_clamped
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      integer prescribed_flag
       real(amrex_real) dxmax
       real(amrex_real) LS_DONOR_CUTOFF
 
@@ -11689,44 +11694,46 @@ stop
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid in fort_tagexpansion ",time
        stop
       endif
 
       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
        ! do nothing
       else
-       print *,"im_source invalid"
+       print *,"im_source invalid in fort_tagexpansion ",im_source
        stop
       endif
       if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
        ! do nothing
       else
-       print *,"im_dest invalid"
+       print *,"im_dest invalid in fort_tagexpansion ",im_dest
        stop
       endif
       if (im_dest.eq.im_source) then
-       print *,"im_dest or im_source invalid"
+       print *,"im_dest or im_source invalid in fort_tagexpansion ", &
+               im_dest,im_source
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in fort_tagexpansion"
+       print *,"level invalid in fort_tagexpansion ",level
        stop
       endif
       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
-       print *,"indexEXP invalid"
+       print *,"indexEXP invalid in fort_tagexpansion ",indexEXP
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact invalid in fort_tagexpansion ",bfact
        stop
       endif
 
       if (ngrow_make_distance.eq.ngrow_distance-1) then
        !do nothing
       else
-       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       print *,"ngrow_make_distance invalid fort_tagexpansion: ", &
+               ngrow_make_distance
        stop
       endif
       if (ngrow_distance.ge.6) then
@@ -11737,13 +11744,13 @@ stop
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_tagexpansion ",num_state_base
        stop
       endif
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
-       print *,"nden invalid"
+       print *,"nden invalid invalid fort_tagexpansion ",nden
        stop
       endif
 
@@ -11872,6 +11879,18 @@ stop
          ! first checks the rigid materials for a positive LS; if none
          ! exist, then "get_primary_material" checks the fluid materials.
         call get_primary_material(dx,LSCELL,im_primary)
+        call get_max_rigid_LS(LSCELL,max_rigid_LS)
+        call SUB_clamped_LS( &
+              xsten_center, & !intent(in) 
+              time, & !intent(in)
+              LS_clamped, & !intent(out)
+              vel_clamped, & !intent(out)
+              temperature_clamped, & !intent(out) 
+              prescribed_flag, & !intent(out) 
+              dx) !intent(in)
+        if (LS_clamped.gt.max_rigid_LS) then
+         max_rigid_LS=LS_clamped
+        endif
 
         VDOT=expan(D_DECL(i,j,k),indexEXP+1)
         if (expect_mdot_sign.eq.one) then
@@ -12000,6 +12019,7 @@ stop
          endif
 
          if ((is_rigid(im_primary).eq.0).and. &
+             (LS_clamped.lt.zero).and. &
              ((is_FSI_elastic(im_primary).eq.0).or. &
               (is_ice(im_primary).eq.1)).and. &
              (is_FSI_rigid(im_primary).eq.0)) then
@@ -12013,7 +12033,8 @@ stop
 
             if ((VFRAC(im_dest).lt.half).or. &
                 (elasticmask.eq.zero).or. &
-                (LSCELL(im_dest).lt.LS_DONOR_CUTOFF)) then
+                (LSCELL(im_dest).lt.LS_DONOR_CUTOFF).or. &
+                (max_rigid_LS.gt.-LS_DONOR_CUTOFF)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12025,7 +12046,8 @@ stop
             else if ((VFRAC(im_dest).ge.half).and. &
                      (elasticmask.gt.zero).and. &
                      (elasticmask.le.one).and. &
-                     (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
+                     (LSCELL(im_dest).ge.LS_DONOR_CUTOFF).and. &
+                     (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC, LSCELL or elasticmask bust: ", &
@@ -12039,7 +12061,8 @@ stop
 
             if ((VFRAC(im_source).lt.half).or. &
                 (elasticmask.eq.zero).or. &
-                (LSCELL(im_source).lt.LS_DONOR_CUTOFF)) then
+                (LSCELL(im_source).lt.LS_DONOR_CUTOFF).or. &
+                (max_rigid_LS.gt.-LS_DONOR_CUTOFF)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12051,7 +12074,8 @@ stop
             else if ((VFRAC(im_source).ge.half).and. &
                      (elasticmask.gt.zero).and. &
                      (elasticmask.le.one).and. &
-                     (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
+                     (LSCELL(im_source).ge.LS_DONOR_CUTOFF).and. &
+                     (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC, LSCELL, or elasticmask bust: ", &
@@ -12079,7 +12103,8 @@ stop
            if ((VFRAC(im_dest).ge.half).and. &
                (elasticmask.gt.zero).and. &
                (elasticmask.le.one).and. &
-               (LSCELL(im_dest).ge.LS_DONOR_CUTOFF)) then
+               (LSCELL(im_dest).ge.LS_DONOR_CUTOFF).and. &
+               (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12090,7 +12115,8 @@ stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
                     (elasticmask.eq.zero).or. &
-                    (LSCELL(im_dest).le.LS_DONOR_CUTOFF)) then
+                    (LSCELL(im_dest).le.LS_DONOR_CUTOFF).or. &
+                    (max_rigid_LS.gt.-LS_DONOR_CUTOFF)) then
             ! do nothing - donor cell if VDOT<>0
            else
             print *,"VFRAC,LSCELL or elasticmask bust: ", &
@@ -12105,7 +12131,8 @@ stop
            if ((VFRAC(im_source).ge.half).and. &
                (elasticmask.gt.zero).and. &
                (elasticmask.le.one).and. &
-               (LSCELL(im_source).ge.LS_DONOR_CUTOFF)) then
+               (LSCELL(im_source).ge.LS_DONOR_CUTOFF).and. &
+               (max_rigid_LS.le.-LS_DONOR_CUTOFF)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12116,7 +12143,8 @@ stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
                     (elasticmask.eq.zero).or. &
-                    (LSCELL(im_source).le.LS_DONOR_CUTOFF)) then
+                    (LSCELL(im_source).le.LS_DONOR_CUTOFF).or. &
+                    (max_rigid_LS.gt.-LS_DONOR_CUTOFF)) then
             ! do nothing - donor cell if VDOT<>0
            else
             print *,"VFRAC,LSCELL or elasticmask bust: ", &
@@ -12131,6 +12159,7 @@ stop
 
           !in the prescribed solid.
          else if ((is_rigid(im_primary).eq.1).or. &
+                  (LS_clamped.ge.zero).or. &
                   ((is_FSI_elastic(im_primary).eq.1).and. &
                    (is_ice(im_primary).eq.0)).or. &
                   (is_FSI_rigid(im_primary).eq.1)) then 
@@ -12151,7 +12180,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid: ",local_mask
+        print *,"local_mask invalid fort_tagexpansion: ",local_mask
         stop
        endif
 
