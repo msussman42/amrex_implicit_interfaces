@@ -13043,7 +13043,7 @@ stop
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_tagmass ",num_state_base
        stop
       endif
 
@@ -13370,7 +13370,7 @@ stop
         else if (local_mask.eq.0) then
          ! do nothing
         else
-         print *,"local_mask invalid"
+         print *,"local_mask invalid fort_distributemass ",local_mask
          stop
         endif
 
@@ -13525,6 +13525,8 @@ stop
          TAGLOC=tag(D_DECL(i,j,k))
          if ((TAGLOC.eq.one).or. & ! doner cell
              (TAGLOC.eq.two)) then ! receiver cell
+
+           !subroutine stencilbox declared in: GLOBALUTIL.F90
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do dir=1,SDIM
@@ -13563,7 +13565,7 @@ stop
            else if (TAGSIDE.eq.zero) then
             ! do nothing
            else
-            print *,"TAGSIDE invalid"
+            print *,"TAGSIDE invalid fort_accept_weight_mass ",TAGSIDE
             stop
            endif
 
@@ -13574,7 +13576,8 @@ stop
           if (total_weight.ge.zero) then
            ! do nothing
           else
-           print *,"total_weight invalid(fort_accept_weight): ",total_weight
+           print *,"total_weight invalid(fort_accept_weight_mass): ", &
+             total_weight
            stop
           endif
 
@@ -13583,14 +13586,14 @@ stop
          else if (TAGLOC.eq.zero) then
           ! do nothing
          else
-          print *,"TAGLOC invalid: ",TAGLOC
+          print *,"TAGLOC invalid fort_accept_weight_mass: ",TAGLOC
           stop
          endif 
 
         else if (local_mask.eq.0) then
          ! do nothing
         else
-         print *,"local_mask invalid"
+         print *,"local_mask invalid fort_accept_weight_mass ",local_mask
          stop
         endif
 

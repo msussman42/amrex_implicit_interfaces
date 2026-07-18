@@ -389,7 +389,7 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_materials=0;
 int  NavierStokes::num_interfaces=0;
 
-int  NavierStokes::ncell_mdot_shift=2;
+int  NavierStokes::ncell_mdot_shift=1;
 int  NavierStokes::ngrow_distance=4;
 int  NavierStokes::ngrow_make_distance=3;
 Real NavierStokes::ngrow_elastic=3.0;
@@ -2582,11 +2582,6 @@ NavierStokes::read_params ()
     pp.get("num_materials",num_materials);
     if ((num_materials<2)||(num_materials>999))
      amrex::Error("num materials invalid");
-
-    pp.queryAdd("ncell_mdot_shift",ncell_mdot_shift);
-    if ((ncell_mdot_shift<1)||
-        (ncell_mdot_shift>2))
-     amrex::Error("ncell_mdot_shift invalid (expecting 1 or 2)");
 
     pp.queryAdd("ngrow_distance",ngrow_distance);
     if ((ngrow_distance<4)||
@@ -5087,6 +5082,20 @@ NavierStokes::read_params ()
      amrex::Error("num_FSI_outer_sweeps invalid");
 
     pp.queryAdd("num_divu_outer_sweeps",num_divu_outer_sweeps);
+
+    if (num_divu_outer_sweeps>1) {
+     ncell_mdot_shift=2;
+    } else if (num_divu_outer_sweeps==1) {
+     ncell_mdot_shift=1;
+    } else {
+     amrex::Error("num_divu_outer_sweeps invalid");
+    }
+
+    pp.queryAdd("ncell_mdot_shift",ncell_mdot_shift);
+    if ((ncell_mdot_shift<1)||
+        (ncell_mdot_shift>2))
+     amrex::Error("ncell_mdot_shift invalid (expecting 1 or 2)");
+
 
     if (some_materials_compressible()==1) {
      //if (num_divu_outer_sweeps<2) 
@@ -15754,11 +15763,21 @@ NavierStokes::mass_redistribute(int mass_redistribute_flag) {
     &finest_level);
  } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_NODEDISPLACE,"fort_mass_redistribute");
 
+ ns_reconcile_d_num(LOOP_NODEDISPLACE,"fort_mass_redistribute");
 
+ if (mass_redistribute_flag==INIT_MASS_REDISTRIBUTE_VAR) {
+  //do nothing
+ } else if (mass_redistribute_flag==UPDATE_MASS_REDISTRIBUTE_VAR) {
+  int spectral_override=LOW_ORDER_AVGDOWN;
 
-
+  for (int im_critical=0;im_critical<num_materials;im_critical++) {
+   localMF[MASS_REDISTRIBUTE_MF]->FillBoundary(
+      im_critical,1,geom.periodicity());
+   avgDown_localMF(MASS_REDISTRIBUTE_MF,im_critical,1,spectral_override);
+  }
+ } else
+  amrex::Error("mass_redistribute_flag invalid");
 
 } //end subroutine mass_redistribute
 
@@ -17932,20 +17951,43 @@ NavierStokes::mass_redistributeALL_second_part() {
 		  local_caller_string);
  }
 
+
+ if (1==0) {
+  int nsteps=parent->levelSteps(0); 
+
+   //writeSanityCheckData outputs raw data that exists on the
+   //computational domain boundary or within.
+   //MASS_REDIST<stuff>.plt (visit can open binary tecplot files)
+  writeSanityCheckData(
+   "MASS_REDIST",
+   "BEFORE: MASS_REDISTRIBUTE_MF: im=1,num_materials",
+   local_caller_string,
+   MASS_REDISTRIBUTE_MF, //tower_mf_id
+   localMF[MASS_REDISTRIBUTE_MF]->nComp(), 
+   MASS_REDISTRIBUTE_MF,
+   -1,  // State_Type==-1 
+   -1, // data_dir==-1 (cell centered)
+   parent->levelSteps(0)); 
+
+  std::cout << "press any number then enter (prior mass redistribute) \n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
  mdot_before.resize(thread_class::nthreads);
  mdot_after.resize(thread_class::nthreads);
 
- for (int im=1;im<=num_materials;im++) {
+ for (int im_critical=1;im_critical<=num_materials;im_critical++) {
   //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
   //is_ice, is_FSI_rigid
-  int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im-1],&im);
+  int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im_critical-1],&im_critical);
 
   if (is_rigid_CL_flag==0) {
 
-   if (material_extend_velocity[im-1]==0) {
+   if (material_extend_velocity[im_critical-1]==0) {
     //do nothing
    } else
-    amrex::Error("expecting material_extend_velocity[im-1]==0");
+    amrex::Error("expecting material_extend_velocity[im_critical-1]==0");
 
    for (int tid=0;tid<thread_class::nthreads;tid++) {
     mdot_before[tid]=0.0;
@@ -17969,7 +18011,7 @@ NavierStokes::mass_redistributeALL_second_part() {
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     ns_level.level_mass_redistribute(im,isweep_redistribute);
+     ns_level.level_mass_redistribute(im_critical,isweep_redistribute);
     } // ilev=finest_level ... level
 
     // idx,ngrow,scomp,ncomp,index,scompBC_map
@@ -17978,6 +18020,9 @@ NavierStokes::mass_redistributeALL_second_part() {
     scompBC_map[0]=0; //set_extrap_bc, fort_extrapfill
 
     if (isweep_redistribute==0) {
+      //PCINTERP_fill_bordersALL calls:
+      // PCINTERP_fill_borders which calls:
+      //  InterpBordersGHOST
      PCINTERP_fill_bordersALL(donorflag_MF,ngrow_distance,0,
        1,State_Type,scompBC_map);
     } else if (isweep_redistribute==1) {
@@ -17991,13 +18036,13 @@ NavierStokes::mass_redistributeALL_second_part() {
     if (ParallelDescriptor::IOProcessor()) {
 
      if (isweep_redistribute==0) { //fort_tagmass
-      std::cout << "before:im,mdot_before " <<
-         im << ' ' << mdot_before[0] << '\n';
+      std::cout << "before:im_critical,mdot_before " <<
+         im_critical << ' ' << mdot_before[0] << '\n';
      } else if (isweep_redistribute==1) { //fort_accept_weight_mass
       // do nothing
      } else if (isweep_redistribute==2) { //fort_distributemass
-      std::cout << "after:im,mdot_after " <<   
-       im << ' ' << mdot_after[0] << '\n';
+      std::cout << "after:im_critical,mdot_after " <<   
+       im_critical << ' ' << mdot_after[0] << '\n';
      } else
       amrex::Error("isweep_redistribute invalid");
 
@@ -18013,7 +18058,30 @@ NavierStokes::mass_redistributeALL_second_part() {
   } else
    amrex::Error("is_rigid_CL_flag invalid");
 
- } // im=1..num_materials
+ } // im_critical=1..num_materials
+
+ if (1==0) {
+  int nsteps=parent->levelSteps(0); 
+
+   //writeSanityCheckData outputs raw data that exists on the
+   //computational domain boundary or within.
+   //MASS_REDIST<stuff>.plt (visit can open binary tecplot files)
+  writeSanityCheckData(
+   "MASS_REDIST",
+   "AFTER: MASS_REDISTRIBUTE_MF: im=1,num_materials",
+   local_caller_string,
+   MASS_REDISTRIBUTE_MF, //tower_mf_id
+   localMF[MASS_REDISTRIBUTE_MF]->nComp(), 
+   MASS_REDISTRIBUTE_MF,
+   -1,  // State_Type==-1 
+   -1, // data_dir==-1 (cell centered)
+   parent->levelSteps(0)); 
+
+  std::cout << "press any number then enter (after mass redistribute) \n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
 
  // copy contributions from all materials with mass redistribution 
  // to a single source term.
@@ -18037,7 +18105,7 @@ NavierStokes::mass_redistributeALL_second_part() {
 // isweep==2: fort_distributemass
 // isweep==3: fort_initjumptermmass
 void
-NavierStokes::level_mass_redistribute(int im,int isweep) {
+NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
 
  std::string local_caller_string="level_mass_redistribute";
 
@@ -18090,17 +18158,17 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
   if (localMF[accept_weight_MF]->nComp()!=1)
    amrex::Error("localMF[accept_weight_MF]->nComp() invalid");
 
-  if ((im>=1)&&(im<=num_materials)) {
+  if ((im_critical>=1)&&(im_critical<=num_materials)) {
    //do nothing
   } else
-   amrex::Error("im invalid");
+   amrex::Error("im_critical invalid");
 
  } else if (isweep==3) { //fort_initjumptermmass
 
-  if (im==-1) {
+  if (im_critical==-1) {
    //do nothing
   } else
-   amrex::Error("im invalid");
+   amrex::Error("im_critical invalid");
 
  } else
   amrex::Error("isweep invalid");
@@ -18150,7 +18218,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
    fort_tagmass( 
     &ncell_mdot_shift,
     &mdot_sum_local[tid_current],
-    &im,
+    &im_critical,
     &level,
     &finest_level,
     tilelo,tilehi,
@@ -18184,8 +18252,8 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 
    //accept_weights
 
-  if ((im<1)||(im>num_materials))
-   amrex::Error("im invalid");
+  if ((im_critical<1)||(im_critical>num_materials))
+   amrex::Error("im_critical invalid");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -18227,7 +18295,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
      // declared in: GODUNOV_3D.F90
      // weightfab is modified.
     fort_accept_weight_mass( 
-     &im,
+     &im_critical,
      &level,&finest_level,
      domlo,domhi, 
      tilelo,tilehi,
@@ -18257,8 +18325,8 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
 
    // redistribution.
 
-  if ((im<1)||(im>num_materials))
-   amrex::Error("im invalid");
+  if ((im_critical<1)||(im_critical>num_materials))
+   amrex::Error("im_critical invalid");
 
   Vector< Real > mdot_sum2_local;
   mdot_sum2_local.resize(thread_class::nthreads);
@@ -18306,7 +18374,7 @@ NavierStokes::level_mass_redistribute(int im,int isweep) {
      // MASS_REDISTRIBUTE_MF is modified.
     fort_distributemass( 
      &mdot_sum2_local[tid_current],
-     &im,
+     &im_critical,
      &level,&finest_level,
      domlo,domhi, 
      tilelo,tilehi,
