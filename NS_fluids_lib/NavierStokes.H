@@ -674,7 +674,7 @@ protected:
       int im_source,int im_dest,int indexEXP,
       int isweep);
     void level_mass_redistribute(
-      int im,int isweep);
+      int im_critical,int isweep);
 
     void clear_blobdata(int i,Vector<blobclass>& blobdata);
     void copy_from_blobdata(int i,int& counter,

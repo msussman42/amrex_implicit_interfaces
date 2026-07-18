@@ -39,6 +39,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
+ns.ncell_mdot_shift=1
 ns.num_divu_outer_sweeps=1
 ns.num_species_var=0
 #0=MOF (moment of fluid)
