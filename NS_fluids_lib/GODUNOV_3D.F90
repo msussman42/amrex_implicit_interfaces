@@ -4930,6 +4930,7 @@ stop
 
 
       subroutine fort_init_from_deltamass( &
+       disable_mass_fix, &
        nstate, &
        time, &
        level, &
@@ -4952,6 +4953,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: disable_mass_fix
       integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: level,finest_level
@@ -5097,8 +5099,16 @@ stop
             print *,"divu_material bust ",divu_material
             stop
            endif
-            
-           mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+           
+           if (disable_mass_fix.eq.0) then 
+            mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+           else if (disable_mass_fix.eq.1) then
+            !do nothing
+           else
+            print *,"disable_mass_fix invalid ",disable_mass_fix
+            stop
+           endif
+
           else if (im_primary.ne.im) then
            !do nothing
           else

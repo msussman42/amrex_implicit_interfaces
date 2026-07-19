@@ -551,6 +551,7 @@ Real NavierStokes::twall=0.1;
 // 1=EILE (default), -1=Weymouth Yue
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
+int NavierStokes::disable_mass_fix=0;
 
 int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
@@ -3784,6 +3785,7 @@ NavierStokes::read_params ()
     pp.queryAdd("krylov_subspace_max_num_outer_iter",krylov_subspace_max_num_outer_iter);
 
     pp.queryAdd("EILE_flag",EILE_flag);
+    pp.queryAdd("disable_mass_fix",disable_mass_fix);
 
     if ((EILE_flag==1)|| // EILE
         (EILE_flag==2)|| // EI
@@ -6421,6 +6423,7 @@ NavierStokes::read_params ()
      std::cout << "slipcoeff " << slipcoeff << '\n';
 
      std::cout << "EILE_flag " << EILE_flag << '\n';
+     std::cout << "disable_mass_fix " << disable_mass_fix << '\n';
 
      std::cout << "ractive " << ractive << '\n';
      std::cout << "ractivex " << ractivex << '\n';
@@ -18005,7 +18008,7 @@ NavierStokes::mass_redistributeALL_second_part() {
    // isweep==0: fort_tagmass
    // isweep==1: fort_accept_weight_mass
    // isweep==2: fort_distributemass
-   // isweep==3: fort_initjumpterm_mass
+   // isweep==3: fort_init_from_deltamass
    for (int isweep_redistribute=0;isweep_redistribute<=2;
         isweep_redistribute++) {
 
@@ -18092,7 +18095,7 @@ NavierStokes::mass_redistributeALL_second_part() {
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.level_mass_redistribute(
-   im_filler,isweep_combine); // ==3 (fort_initjumptermmass)
+   im_filler,isweep_combine); // ==3 (fort_init_from_deltamass)
  } // ilev=finest_level ... level
 
  delete_array(LSNEW_MF);
@@ -18103,7 +18106,7 @@ NavierStokes::mass_redistributeALL_second_part() {
 // isweep==0: fort_tagmass
 // isweep==1: fort_accept_weight_mass
 // isweep==2: fort_distributemass
-// isweep==3: fort_initjumptermmass
+// isweep==3: fort_init_from_deltamass
 void
 NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
 
@@ -18163,7 +18166,7 @@ NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
   } else
    amrex::Error("im_critical invalid");
 
- } else if (isweep==3) { //fort_initjumptermmass
+ } else if (isweep==3) { //fort_init_from_deltamass
 
   if (im_critical==-1) {
    //do nothing
@@ -18445,6 +18448,7 @@ NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     fort_init_from_deltamass( 
+     &disable_mass_fix,
      &nstate,
      &cur_time_slab,
      &level,
