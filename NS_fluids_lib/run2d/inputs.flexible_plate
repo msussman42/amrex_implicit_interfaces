@@ -121,7 +121,7 @@ ns.law_of_the_wall=0 0 0
 # =8 Cox 1986
 ns.ZEYU_DCA_SELECT=-1
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
-ns.sum_interval   = 10       # timesteps between computing mass 
+ns.sum_interval   = 1       # timesteps between computing mass 
 ns.twall=0.0
 
 ns.axis_dir=0
