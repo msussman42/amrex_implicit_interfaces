@@ -578,6 +578,7 @@ extern "C"
 
 
    void fort_init_from_deltamass(
+    int* disable_mass_fix,
     int* nstate,
     Real* time,
     int* level,
