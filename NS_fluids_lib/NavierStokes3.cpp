@@ -1830,7 +1830,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     // take care of AMR grid change.
     // calls MOFavgDown, LS_Type avgDown
     // projects volume fractions so that sum F_m_fluid=1.
-   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+//   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
    prescribe_solid_geometryALL(
      upper_slab_time,
      project_slab_step+1,
@@ -2900,7 +2901,8 @@ void NavierStokes::phase_change_code_segment(
   // 1. prescribe solid temperature, velocity, and geometry where
   //    appropriate.
   // 2. extend level set functions into the solid.
- int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+// int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
@@ -4325,7 +4327,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+//       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
        prescribe_solid_geometryALL(
         cur_time_slab,
         project_slab_step+1,
@@ -10551,7 +10554,13 @@ void NavierStokes::multiphase_project(int project_option) {
 
      //NavierStokes::move_mdot_to_density() is declared
      //in NavierStokes.cpp
-    ns_level.move_mdot_to_density();
+    if ((FSI_outer_sweeps>0)&&
+        (FSI_outer_sweeps<=min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
+     //do nothing
+    } else if (FSI_outer_sweeps==0) {
+     ns_level.move_mdot_to_density();
+    } else
+     amrex::Error("FSI_outer_sweeps invalid");
 
    } else if (num_materials_compressible==0) {
     //do nothing

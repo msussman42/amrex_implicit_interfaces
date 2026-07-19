@@ -8000,7 +8000,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
 
- if (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE) {
+ if ((renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE)||
+     (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_VELOCITY)) {
   if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
    if (pattern_test(local_caller_string,"prescribe_solid_geometryALL")==1) {
 
@@ -18038,14 +18039,20 @@ NavierStokes::mass_redistributeALL_second_part() {
 
     if (ParallelDescriptor::IOProcessor()) {
 
+     Real vol_factor=dt_slab*dt_slab/denconst[im_critical-1];
+
      if (isweep_redistribute==0) { //fort_tagmass
-      std::cout << "before:im_critical,mdot_before " <<
-         im_critical << ' ' << mdot_before[0] << '\n';
+      Real vdot_before=mdot_before[0]*vol_factor;
+      std::cout << "before:im_critical,mdot_before,vdot_before " <<
+       im_critical << ' ' << mdot_before[0] << 
+       ' ' << vdot_before << '\n';
      } else if (isweep_redistribute==1) { //fort_accept_weight_mass
       // do nothing
      } else if (isweep_redistribute==2) { //fort_distributemass
-      std::cout << "after:im_critical,mdot_after " <<   
-       im_critical << ' ' << mdot_after[0] << '\n';
+      Real vdot_after=mdot_after[0]*vol_factor;
+      std::cout << "after:im_critical,mdot_after,vdot_after " <<   
+       im_critical << ' ' << mdot_after[0] << 
+       ' ' << vdot_after << '\n';
      } else
       amrex::Error("isweep_redistribute invalid");
 
