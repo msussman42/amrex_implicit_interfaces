@@ -924,10 +924,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  if (im_extension==-1) { //standard advection (both fluids and elastics)
 
-   //mass_redistributeALL is declared in NavierStokes.cpp
-  int mass_redistribute_flag=INIT_MASS_REDISTRIBUTE_VAR;
-  mass_redistributeALL(mass_redistribute_flag);
-
   if (read_from_CAD()==1) {
 
     //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
@@ -1052,6 +1048,17 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    local_caller_string);
 
  interface_touch_flag=1; //sub_nonlinear_advection
+			 
+ if (im_extension==-1) { //standard advection (both fluids and elastics)
+
+   //mass_redistributeALL is declared in NavierStokes.cpp
+  int mass_redistribute_flag=INIT_MASS_REDISTRIBUTE_VAR;
+  mass_redistributeALL(mass_redistribute_flag);
+
+ } else if (im_extension==0) { //just elastics
+  //do nothing
+ } else
+  amrex::Error("im_extension invalid");
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
@@ -1830,8 +1837,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     // take care of AMR grid change.
     // calls MOFavgDown, LS_Type avgDown
     // projects volume fractions so that sum F_m_fluid=1.
-//   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
-   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
+   int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
    prescribe_solid_geometryALL(
      upper_slab_time,
      project_slab_step+1,
@@ -2901,8 +2907,7 @@ void NavierStokes::phase_change_code_segment(
   // 1. prescribe solid temperature, velocity, and geometry where
   //    appropriate.
   // 2. extend level set functions into the solid.
-// int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
- int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
@@ -4327,8 +4332,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-//       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
-       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_VELOCITY;
+       renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
        prescribe_solid_geometryALL(
         cur_time_slab,
         project_slab_step+1,
