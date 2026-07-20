@@ -551,7 +551,6 @@ Real NavierStokes::twall=0.1;
 // 1=EILE (default), -1=Weymouth Yue
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
-int NavierStokes::disable_mass_fix=0;
 
 int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
@@ -3785,7 +3784,6 @@ NavierStokes::read_params ()
     pp.queryAdd("krylov_subspace_max_num_outer_iter",krylov_subspace_max_num_outer_iter);
 
     pp.queryAdd("EILE_flag",EILE_flag);
-    pp.queryAdd("disable_mass_fix",disable_mass_fix);
 
     if ((EILE_flag==1)|| // EILE
         (EILE_flag==2)|| // EI
@@ -6423,7 +6421,6 @@ NavierStokes::read_params ()
      std::cout << "slipcoeff " << slipcoeff << '\n';
 
      std::cout << "EILE_flag " << EILE_flag << '\n';
-     std::cout << "disable_mass_fix " << disable_mass_fix << '\n';
 
      std::cout << "ractive " << ractive << '\n';
      std::cout << "ractivex " << ractivex << '\n';
@@ -18455,7 +18452,6 @@ NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     fort_init_from_deltamass( 
-     &disable_mass_fix,
      &nstate,
      &cur_time_slab,
      &level,

@@ -37,5 +37,5 @@ echo "running on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with 
  module load gnu/11.2.1
  module load openmpi
 # # module load intel-openmpi
-srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/growthrate/amrgrowth inputs.growthrate.LSA
+srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/growthrate/LSA_activate0/amrgrowth inputs.growthrate.LSA
 

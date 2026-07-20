@@ -91,7 +91,7 @@ ns.EILE_flag=1
 #CMOF or particle CMOF
 ns.continuous_mof=1
 ns.ngrow_distance=6
-ns.ncell_mdot_shift=1
+ns.ncell_mdot_shift=2
 ns.MOFITERMAX=30
 #MOF or CMOF
 #MOF or CMOF with particles

@@ -69,9 +69,9 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 
 #amr.n_cell    = 32 128
-amr.n_cell    = 32 256
-#amr.max_level = 2
-amr.max_level = 0
+amr.n_cell    = 16 128
+#amr.max_level = 3
+amr.max_level = 1
 ns.projection_pressure_scale=1.0
 
 #defines the magnitude of the initial perturbation for velocity
@@ -106,9 +106,11 @@ amr.LSA_plot_index=0
 #amr.plot_int       = 100 # perturbation
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 256
+ns.coarsest_level_CISL=1
+amr.max_grid_size   = 256 16
 cg.min_max_grid_size   = 256
-amr.restart         = chk00000 #non-intrusive LSA
+ns.ngrow_distance=6
+#amr.restart         = chk00000 #non-intrusive LSA
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt

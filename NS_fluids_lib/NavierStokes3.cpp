@@ -571,14 +571,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    //   (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
    //   (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
   ns_level.prepare_advect_vars(prev_time_slab);
-
-  ns_level.new_localMF(MASS_REDISTRIBUTE_MF,num_materials,
-    ngrow_distance,-1); 
-  ns_level.setVal_localMF(MASS_REDISTRIBUTE_MF,0.0,0,
-    num_materials,ngrow_distance);
  }
-
- debug_ngrow(MASS_REDISTRIBUTE_MF,ngrow_distance,local_caller_string);
 
  int im_extension=-1; //regular advection
 
@@ -673,14 +666,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  } else
   amrex::Error("material_extend_velocity_flag invalid");
-
-   //mass_redistributeALL is declared in NavierStokes.cpp
- int mass_redistribute_flag=UPDATE_MASS_REDISTRIBUTE_VAR;
- mass_redistributeALL(mass_redistribute_flag);
-   //mass_redistributeALL_second_part is declared in NavierStokes.cpp
- mass_redistributeALL_second_part();
-
- delete_array(MASS_REDISTRIBUTE_MF);
 
 }  // end subroutine nonlinear_advection
 
@@ -1050,11 +1035,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  interface_touch_flag=1; //sub_nonlinear_advection
 			 
  if (im_extension==-1) { //standard advection (both fluids and elastics)
-
-   //mass_redistributeALL is declared in NavierStokes.cpp
-  int mass_redistribute_flag=INIT_MASS_REDISTRIBUTE_VAR;
-  mass_redistributeALL(mass_redistribute_flag);
-
+  //do nothing
  } else if (im_extension==0) { //just elastics
   //do nothing
  } else
