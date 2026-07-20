@@ -2214,7 +2214,6 @@ protected:
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-    static int disable_mass_fix; 
     static int krylov_subspace_max_num_outer_iter;
     static Real projection_pressure_scale;
     static Real projection_velocity_scale;
