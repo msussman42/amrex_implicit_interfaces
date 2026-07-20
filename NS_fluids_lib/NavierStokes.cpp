@@ -389,7 +389,7 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_materials=0;
 int  NavierStokes::num_interfaces=0;
 
-int  NavierStokes::ncell_mdot_shift=1;
+int  NavierStokes::ncell_mdot_shift=2;
 int  NavierStokes::ngrow_distance=4;
 int  NavierStokes::ngrow_make_distance=3;
 Real NavierStokes::ngrow_elastic=3.0;
@@ -5086,7 +5086,7 @@ NavierStokes::read_params ()
     if (num_divu_outer_sweeps>1) {
      ncell_mdot_shift=2;
     } else if (num_divu_outer_sweeps==1) {
-     ncell_mdot_shift=1;
+     ncell_mdot_shift=2;
     } else {
      amrex::Error("num_divu_outer_sweeps invalid");
     }
