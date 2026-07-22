@@ -176,7 +176,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
 
       if ((domain_bc_found[bcidx]==1)&&
           (domain_bcpres[bcidx]!=bc))
-       amrex::Error("inconsistent pressure/viscosity BC type on a domain side");
+       amrex::Error("inconsistent pres/visc/temp BC type on a domain side");
 
       domain_bcpres[bcidx]=bc; //default INT_DIR
       domain_bc_found[bcidx]=1; //default 0
