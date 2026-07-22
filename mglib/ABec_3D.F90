@@ -91,17 +91,18 @@
       phi_ptr=>phi
 
       if (bfact.lt.1) then
-       print *,"bfact invalid"
+       print *,"bfact invalid fort_gsrb ",bfact
        stop
       endif
       if (bfact_top.lt.1) then
-       print *,"bfact_top invalid"
+       print *,"bfact_top invalid fort_gsrb ",bfact_top
        stop
       endif
       if ((level.ge.0).and.(level.le.mg_coarsest_level)) then
        ! do nothing
       else
-       print *,"level or mg_coarsest_level invalid"
+       print *,"level or mg_coarsest_level invalid fort_gsrb ", &
+         level,mg_coarsest_level
        stop
       endif
 
@@ -111,7 +112,7 @@
       call checkbound_array1(fablo,fabhi,rhs,0,-1)
 
       if (num_sweeps.le.1) then
-       print *,"num_sweeps invalid"
+       print *,"num_sweeps invalid fort_gsrb ",num_sweeps
        stop
       endif
 
@@ -133,7 +134,8 @@
 #endif
          -diagfab(D_DECL(i,j,k))*phi(D_DECL(i,j,k))
         else
-         print *,"diagfab invalid"
+         print *,"diagfab invalid fort_gsrb ", &
+           diagfab(D_DECL(i,j,k))
          stop
         endif
        enddo
@@ -172,7 +174,8 @@
 #endif
            -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagfab invalid"
+           print *,"diagfab invalid fort_gsrb(2) ", &
+             diagfab(D_DECL(i,j,k))
            stop
           endif
          enddo
@@ -196,7 +199,7 @@
           if (local_diag.gt.zero) then
            ! do nothing
           else
-           print *,"local_diag invalid"
+           print *,"local_diag invalid fort_gsrb ",local_diag
            stop
           endif
 
@@ -214,7 +217,7 @@
           if (local_diag.gt.zero) then
            ! do nothing
           else
-           print *,"local_diag invalid"
+           print *,"local_diag invalid fort_gsrb (2) ",local_diag
            stop
           endif
 
@@ -251,7 +254,7 @@
 #endif
            )/local_diag
           else
-           print *,"local_diag invalid 3"
+           print *,"local_diag invalid fort_gsrb (3) ",local_diag
            stop
           endif
          enddo
@@ -269,7 +272,7 @@
          enddo
          enddo
         else
-         print *,"isweep invalid"
+         print *,"isweep invalid fort_gsrb ",isweep
          stop
         endif
 
@@ -308,7 +311,8 @@
 #endif
            -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagfab invalid"
+           print *,"diagfab invalid fort_gsrb ", &
+            diagfab(D_DECL(i,j,k))
            stop
           endif
          enddo
@@ -332,7 +336,7 @@
           if (local_diag.gt.zero) then
            ! do nothing
           else
-           print *,"local_diag invalid: ",local_diag
+           print *,"local_diag invalid fort_gsrb : ",local_diag
            stop
           endif
 
@@ -351,7 +355,7 @@
          enddo
          enddo
         else
-         print *,"isweep invalid"
+         print *,"isweep invalid fort_gsrb ",isweep
          stop
         endif
 
@@ -375,7 +379,8 @@
 #endif
            -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
           else
-           print *,"diagfab invalid"
+           print *,"diagfab invalid fort_gsrb ", &
+             diagfab(D_DECL(i,j,k))
            stop
           endif
          enddo
@@ -408,11 +413,11 @@
          do j=growlo(2),growhi(2)
          do i=growlo(1),growhi(1)
           local_diag=icdiag(D_DECL(i,j,k))
-          if (local_diag.ne.zero) then
+          if (local_diag.gt.zero) then
            blacksoln(D_DECL(i,j,k))= &
             redsoln(D_DECL(i,j,k))/local_diag
           else
-           print *,"local_diag invalid 5"
+           print *,"local_diag invalid fort_gsrb (5) ",local_diag
            stop
           endif
          enddo 
@@ -450,12 +455,12 @@
          enddo
          enddo
         else 
-         print *,"isweep invalid"
+         print *,"isweep invalid fort_gsrb ",isweep
          stop
         endif
 
        else 
-        print *,"smooth_type invalid"
+        print *,"smooth_type invalid fort_gsrb ",smooth_type
         stop
        endif
 
@@ -475,7 +480,7 @@
        enddo
        enddo
       else
-       print *,"isweep invalid"
+       print *,"isweep invalid fort_gsrb ",isweep
        stop
       endif
 

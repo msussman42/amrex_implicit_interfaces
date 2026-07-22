@@ -10,6 +10,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Utility.H>
 #include <AMReX_ParallelDescriptor.H>
+#include <AMReX_BC_TYPES.H>
 
 #include <ABecLaplacian.H>
 #include <LO_F.H>
@@ -30,10 +31,12 @@ namespace amrex{
 
 int ABecLaplacian::mglib_blocking_factor = 2;
 
+int ABecLaplacian::force_ILU_smoother_single_grid=1;
+
 #if (AMREX_SPACEDIM==3)
-int ABecLaplacian::min_max_grid_size = 64;
+int ABecLaplacian::min_max_grid_size = 8;
 #else
-int ABecLaplacian::min_max_grid_size = 128;
+int ABecLaplacian::min_max_grid_size = 32;
 #endif
 
 int ABecLaplacian::nghostRHS=0;
@@ -126,6 +129,75 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  if (bcpres_array.size()!=gbox[0].size()*AMREX_SPACEDIM*2*nsolve_ABec)
   amrex::Error("bcpres_array size invalid");
 
+  // bcpres_array is indexed using the level-zero BoxArray.  A multigrid
+  // level can have a different number and ordering of boxes after
+  // agglomeration, so reusing the same grid index assigns unrelated physical
+  // boundary flags to coarse boxes.  First recover the domain-side BC type
+  // from level zero, then map it to this level geometrically.
+ const int bc_per_grid=AMREX_SPACEDIM*2*nsolve_ABec;
+ Vector<int> domain_bcpres(bc_per_grid,INT_DIR);
+
+ Vector<int> domain_bc_found(bc_per_grid,0);
+
+ const Box& fine_domain=geomarray[0].Domain();
+
+  //see NavierStokes::allocate_FACE_WEIGHT
+ int test_fine_bcidx=0;
+
+ for (int fine_gridno=0;fine_gridno<gbox[0].size();fine_gridno++) {
+
+  int test_bcidx=0;
+
+  const Box& fine_grid=gbox[0][fine_gridno];
+  for (int n=0;n<nsolve_ABec;n++) {
+   for (int side=0;side<2;side++) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     bool touches_domain=(side==0) ?
+       (fine_grid.smallEnd(dir)==fine_domain.smallEnd(dir)) :
+       (fine_grid.bigEnd(dir)==fine_domain.bigEnd(dir));
+
+     if (touches_domain) {
+
+      int bcidx=n*2*AMREX_SPACEDIM+side*AMREX_SPACEDIM+dir;
+
+      if (test_bcidx==bcidx) {
+       //do nothing
+      } else
+       amrex::Error("test_bcidex==bcidx failed");
+
+      int fine_bcidx=fine_gridno*bc_per_grid+bcidx;
+
+      if (test_fine_bcidx==fine_bcidx) {
+       //do nothing
+      } else
+       amrex::Error("test_fine_bcidx==fine_bcidx failed");
+
+      int bc=bcpres_array[fine_bcidx];
+
+      if ((domain_bc_found[bcidx]==1)&&
+          (domain_bcpres[bcidx]!=bc))
+       amrex::Error("inconsistent pressure/viscosity BC type on a domain side");
+
+      domain_bcpres[bcidx]=bc; //default INT_DIR
+      domain_bc_found[bcidx]=1; //default 0
+  
+     } else if (!touches_domain) {
+      //do nothing
+     } else {
+      amrex::Error("touches_domain invalid");
+     }
+
+     test_bcidx++;
+     test_fine_bcidx++;
+    } //dir=0 ... sdim-1
+   } //side=0 ... 1
+  } //n=0 ... nsolve_ABec-1
+ } //fine_gridno
+
+  // A partially refined AMR level need not touch every physical side.  The
+  // untouched entries correctly remain INT_DIR and are never used as a
+  // physical boundary on a geometrically coarsened version of that layout.
+
  if (maskvals[level]->nGrow()!=1)
   amrex::Error("maskvals invalid ngrow");
 
@@ -173,10 +245,41 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   const int* fabhi=fabgrid.hiVect();        
 
   Vector<int> bcpres;
-  bcpres.resize(2*AMREX_SPACEDIM*nsolve_ABec);
-  int ibase=2*AMREX_SPACEDIM*gridno*nsolve_ABec;
-  for (int i=0;i<2*AMREX_SPACEDIM*nsolve_ABec;i++)
-   bcpres[i]=bcpres_array[i+ibase];
+  bcpres.resize(bc_per_grid,INT_DIR);
+
+  const Box& level_domain=geomarray[level].Domain();
+
+  int test_bcidx=0;
+
+  for (int n=0;n<nsolve_ABec;n++) {
+   for (int side=0;side<2;side++) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     bool touches_domain=(side==0) ?
+       (fabgrid.smallEnd(dir)==level_domain.smallEnd(dir)) :
+       (fabgrid.bigEnd(dir)==level_domain.bigEnd(dir));
+
+     if (touches_domain) {
+
+      int bcidx=n*2*AMREX_SPACEDIM+side*AMREX_SPACEDIM+dir;
+
+      if (test_bcidx==bcidx) {
+       //do nothing
+      } else
+       amrex::Error("test_bcidex==bcidx failed");
+
+      bcpres[bcidx]=domain_bcpres[bcidx];
+
+     } else if (!touches_domain) {
+      //do nothing
+     } else {
+      amrex::Error("touches_domain invalid");
+     }
+
+     test_bcidx++;
+    } //dir=0 ... sdim-1
+   } //side=0 ... 1
+  } //n=0 ... nsolve_ABec-1
+
   FArrayBox& mfab=(*maskvals[level])[gridno];
   FArrayBox& bfab=pbdry[gridno];
 
@@ -982,7 +1085,7 @@ ABecLaplacian::ABecLaplacian (
  } else
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
- int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 64 : 128);
+ int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 8 : 32);
 
  ppcg.queryAdd("min_max_grid_size", min_max_grid_size);
  if (min_max_grid_size>=default_min_max_grid_size) {
@@ -994,6 +1097,8 @@ ABecLaplacian::ABecLaplacian (
     min_max_grid_size << '\n';
   amrex::Error("expecting cg.min_max_grid_size>=default_min_max_grid_size");
  }
+
+ ppcg.queryAdd("force_ILU_smoother_single_grid",force_ILU_smoother_single_grid);
 
  ppcg.queryAdd("maxiter", CG_def_maxiter);
  ppcg.queryAdd("restart_period", CG_def_restart_period);
@@ -1160,7 +1265,7 @@ ABecLaplacian::ABecLaplacian (
      local_max_grid_size=min_max_grid_size;
 
      //the larger local_max_grid_size, the more effective the
-     //IC precondiioner
+     //ILU precondiioner
     if (local_max_grid_size>=default_min_max_grid_size) {
      gbox[level]=one_cgrid;
      gbox[level].maxSize(local_max_grid_size);
@@ -1485,15 +1590,30 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
 
+ int local_smooth_type=smooth_type;
+
+ if (force_ILU_smoother_single_grid==0) {
+  //do nothing
+ } else if (force_ILU_smoother_single_grid==1) {
+  if (number_grids==1) {
+   local_smooth_type=2;
+  } else if (number_grids>1) {
+   //do nothing
+  } else
+   amrex::Error("number_grids invalid");
+ } else 
+  amrex::Error("force_ILU_smoother_single_grid invalid");
+
+
  int num_sweeps=0;
- if (smooth_type==0) { // GSRB
+ if (local_smooth_type==0) { // GSRB
   num_sweeps=6;
- } else if (smooth_type==1) { // weighted Jacobi
+ } else if (local_smooth_type==1) { // weighted Jacobi
   num_sweeps=4;
- } else if (smooth_type==2) { // ILU
+ } else if (local_smooth_type==2) { // ILU
   num_sweeps=7;
  } else {
-  amrex::Error("three options for smooth_type now: 0=GSRB 1=Wtd Jacobi 2=ILU");
+  amrex::Error("3 options for local_smooth_type: 0=GSRB 1=Wtd Jacobi 2=ILU");
  }
 
 
@@ -1597,7 +1717,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
      work[mfi].dataPtr(blacksolncomp+ofs), 
      tilelo,tilehi,
      fablo,fabhi,&bfact,&bfact_top,
-     &smooth_type);
+     &local_smooth_type);
 
 #if (profile_solver==1)
     bprof.stop();
@@ -1606,8 +1726,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
    if (gsrb_timing==1) {
     t2 = ParallelDescriptor::second();
-    std::cout << "GSRB time, level= " << level << " smooth_type=" <<
-     smooth_type << " gridno= " << gridno << " t2-t1=" << t2-t1 << '\n';
+    std::cout << "GSRB time, level= " << level << " local_smooth_type=" <<
+     local_smooth_type << " gridno= " << gridno << " t2-t1=" << t2-t1 << '\n';
    }
   } // mfi
 } // omp
@@ -2916,6 +3036,8 @@ ABecLaplacian::CG_solve(
          mglib_blocking_factor << '\n';
        std::cout << "min_max_grid_size= " << 
          min_max_grid_size << '\n';
+       std::cout << "force_ILU_smoother_single_grid= " << 
+         force_ILU_smoother_single_grid << '\n';
        std::cout << "smooth_type= " << smooth_type << '\n';
        std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
        std::cout << "local_presmooth= " << local_presmooth << '\n';
@@ -2938,6 +3060,8 @@ ABecLaplacian::CG_solve(
         mglib_blocking_factor << '\n';
       std::cout << "min_max_grid_size= " << 
         min_max_grid_size << '\n';
+      std::cout << "force_ILU_smoother_single_grid= " << 
+        force_ILU_smoother_single_grid << '\n';
       std::cout << "smooth_type= " << smooth_type << '\n';
       std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
       std::cout << "local_presmooth= " << local_presmooth << '\n';
