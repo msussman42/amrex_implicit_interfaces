@@ -47,14 +47,22 @@ public:
     void bCoefficients (MultiFab& _b, int dir);
 
     void apply (MultiFab& out, MultiFab& in,
-     int level,MultiFab& pbdry,Vector<int> bcpres_array);
+     int level,MultiFab& pbdry,
+     Vector<int> bcpres_array,
+     Vector<int> dombcpres_array);
     void applyBC (MultiFab& inout,int level,
-       MultiFab& pbdry,Vector<int> bcpres_array);
+       MultiFab& pbdry,
+       Vector<int> bcpres_array,
+       Vector<int> dombcpres_array);
     void residual (MultiFab& residL,MultiFab& rhsL,
        MultiFab& solnL,int level,
-       MultiFab& pbdry,Vector<int> bcpres_array);
+       MultiFab& pbdry,
+       Vector<int> bcpres_array,
+       Vector<int> dombcpres_array);
     void smooth (MultiFab& solnL,MultiFab& rhsL,
-      int level,MultiFab& pbdry,Vector<int> bcpres_array,
+      int level,MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int smooth_type);
 
     void project_null_space(MultiFab& rhsL,int level);
@@ -70,6 +78,7 @@ public:
      Real eps_abs,Real bot_atol,
      MultiFab* pbdryhom,
      Vector<int> bcpres_array,
+     Vector<int> dombcpres_array,
      int usecg_at_bottom,
      int smooth_type,int bottom_smooth_type,
      int presmooth,int postsmooth,
@@ -83,7 +92,9 @@ public:
       MultiFab& solnL,
       MultiFab& rhsL,
       Real eps_abs,Real bot_atol,
-      MultiFab& pbdry,Vector<int> bcpres_array,
+      MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int usecg_at_bottom,
       int& meets_tol,int smooth_type,
       int bottom_smooth_type,int presmooth,
@@ -108,6 +119,7 @@ public:
      Real _eps_abs,Real _atol_b,
      int usecg_at_bottom,MultiFab& pbdry,
      Vector<int> bcpres_array,
+     Vector<int> dombcpres_array,
      int smooth_type,
      int bottom_smooth_type,int presmooth,
      int postsmooth);
@@ -179,31 +191,41 @@ protected:
     Vector< Array<Real,4> > CG_error_history;
 
     void MG_solve_ (int nsverbose,MultiFab& _sol,
-     Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
+     Real eps_abs,Real atol_b,MultiFab& pbdry,
+     Vector<int> bcpres_array,
+     Vector<int> dombcpres_array,
      int usecg_at_bottom,
      int smooth_type,int bottom_smooth_type,int presmooth,int postsmooth);
 
     void MG_residualCorrectionForm (MultiFab& newrhs,
       MultiFab& oldrhs,MultiFab& solnL,
-      MultiFab& inisol,MultiFab& pbdry,Vector<int> bcpres_array,
+      MultiFab& inisol,MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int level);
 
     int MG_numLevels (const Box& local_box) const;
     virtual Real MG_errorEstimate (int level,
-        MultiFab& pbdry,Vector<int> bcpres_array);
+        MultiFab& pbdry,
+	Vector<int> bcpres_array,
+	Vector<int> dombcpres_array);
     void MG_average (MultiFab& c,MultiFab& f,int clevel,int flevel);
     void MG_interpolate (MultiFab& f,MultiFab& c,int clevel,int flevel);
     void MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
       int level,Real eps_abs,Real atol_b,
       int usecg_at_bottom,
-      MultiFab& pbdry,Vector<int> bcpres_array,
+      MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int smooth_type,int bottom_smooth_type,
       int presmooth,int postsmooth);
 
     void MG_relax (MultiFab& solL,MultiFab& rhsL,
       int level,Real eps_abs,
       Real atol_b,int usecg_at_bottom,
-      MultiFab& pbdry,Vector<int> bcpres_array,
+      MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int smooth_type,
       int bottom_smooth_type,int presmooth,int postsmooth);
 

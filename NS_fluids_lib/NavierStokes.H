@@ -557,6 +557,9 @@ protected:
     void getBCArray_list(Vector<int>& listbc,int state_index,
      int gridno,Vector<int> scomp,Vector<int> ncomp);
 
+    void dombc_list(Vector<int>& listbc,int state_index,
+     Vector<int> scomp,Vector<int> ncomp);
+
     void resize_maskfiner(int ngrow,int mask_id);
     void maskfiner_localMF(int idx_MF,int ngrow,
      Real tag,int clearbdry);
@@ -1653,6 +1656,7 @@ protected:
     int save_mg_precond;
 
     Vector<int> bcpres_array;
+    Vector<int> dombcpres_array;
     Vector<Real> xarray;
     int icnt_xarray;
 

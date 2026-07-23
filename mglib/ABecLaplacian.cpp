@@ -70,9 +70,11 @@ Spacer (std::ostream& os, int lev)
 // level==0 is the finest level
 void
 ABecLaplacian::apply (MultiFab& out,MultiFab& in,
-  int level,MultiFab& pbdry,Vector<int> bcpres_array) {
+  int level,MultiFab& pbdry,
+  Vector<int> bcpres_array,
+  Vector<int> dombcpres_array) {
 
-    applyBC(in,level,pbdry,bcpres_array);
+    applyBC(in,level,pbdry,bcpres_array,dombcpres_array);
     Fapply(out,in,level);
 } // end subroutine apply
 
@@ -80,7 +82,9 @@ ABecLaplacian::apply (MultiFab& out,MultiFab& in,
 // level==0 is the finest level
 void
 ABecLaplacian::applyBC (MultiFab& inout,int level,
-       MultiFab& pbdry,Vector<int> bcpres_array) {
+       MultiFab& pbdry,
+       Vector<int> bcpres_array,
+       Vector<int> dombcpres_array) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::applyBC";
@@ -128,6 +132,8 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
 
  if (bcpres_array.size()!=gbox[0].size()*AMREX_SPACEDIM*2*nsolve_ABec)
   amrex::Error("bcpres_array size invalid");
+ if (dombcpres_array.size()!=AMREX_SPACEDIM*2*nsolve_ABec)
+  amrex::Error("dombcpres_array size invalid");
 
   // bcpres_array is indexed using the level-zero BoxArray.  A multigrid
   // level can have a different number and ordering of boxes after
@@ -177,6 +183,11 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
       if ((domain_bc_found[bcidx]==1)&&
           (domain_bcpres[bcidx]!=bc))
        amrex::Error("inconsistent pres/visc/temp BC type on a domain side");
+
+      if (dombcpres_array[bcidx]==bc) {
+       //do nothing
+      } else
+       amrex::Error("dombcpres_array[bcidx]==bc failed");
 
       domain_bcpres[bcidx]=bc; //default INT_DIR
       domain_bc_found[bcidx]=1; //default 0
@@ -320,7 +331,9 @@ void
 ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
   MultiFab& solnL,
   int level,
-  MultiFab& pbdry,Vector<int> bcpres_array) {
+  MultiFab& pbdry,
+  Vector<int> bcpres_array,
+  Vector<int> dombcpres_array) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::residual";
@@ -358,7 +371,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
  if (residL.nGrow()!=0)
   amrex::Error("residL invalid ngrow");
   
- apply(residL,solnL,level,pbdry,bcpres_array);
+ apply(residL,solnL,level,pbdry,bcpres_array,dombcpres_array);
  Fdiagsum(*MG_CG_diagsumL[level],level);
  int bfact=bfact_array[level];
  int bfact_top=bfact_array[0];
@@ -459,7 +472,9 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 
 void
 ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
-  int level,MultiFab& pbdry,Vector<int> bcpres_array,
+  int level,MultiFab& pbdry,
+  Vector<int> bcpres_array,
+  Vector<int> dombcpres_array,
   int smooth_type) {
 
     int nc = solnL.nComp();
@@ -472,7 +487,7 @@ ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
     if (ngrow_rhs!=0)
      amrex::Error("ngrow_rhs invalid");
 
-    applyBC(solnL,level,pbdry,bcpres_array);
+    applyBC(solnL,level,pbdry,bcpres_array,dombcpres_array);
     Fsmooth(solnL, rhsL, level, smooth_type);
 
 } // end subroutine smooth
@@ -2455,6 +2470,7 @@ ABecLaplacian::pcg_solve(
     Real eps_abs,Real bot_atol,
     MultiFab* pbdryhom_in,
     Vector<int> bcpres_array,
+    Vector<int> dombcpres_array,
     int usecg_at_bottom,
     int smooth_type,int bottom_smooth_type,
     int presmooth,int postsmooth,
@@ -2501,7 +2517,9 @@ ABecLaplacian::pcg_solve(
       *z_in,
       *r_in,
       eps_abs,bot_atol,
-      usecg_at_bottom,*pbdryhom_in,bcpres_array,
+      usecg_at_bottom,*pbdryhom_in,
+      bcpres_array,
+      dombcpres_array,
       smooth_type,bottom_smooth_type,
       presmooth,postsmooth);
    } else
@@ -2519,7 +2537,10 @@ ABecLaplacian::pcg_solve(
     smooth(*z_in,
 	   *r_in,
 	   level,
-	   *pbdryhom_in,bcpres_array,smooth_type);
+	   *pbdryhom_in,
+	   bcpres_array,
+	   dombcpres_array,
+	   smooth_type);
     project_null_space(*z_in,level);
    }
   } else
@@ -2700,6 +2721,7 @@ ABecLaplacian::CG_solve(
     Real bot_atol,// bottom_bottom_tol : caller
     MultiFab& pbdry,
     Vector<int> bcpres_array,
+    Vector<int> dombcpres_array,
     int usecg_at_bottom,
     int& meets_tol,
     int smooth_type,int bottom_smooth_type,
@@ -2793,7 +2815,9 @@ ABecLaplacian::CG_solve(
 
   // resid,rhs,soln
  residual((*CG_r[coarsefine]),(*CG_rhs_resid_cor_form[coarsefine]),
-    sol,level,pbdry,bcpres_array);
+    sol,level,pbdry,
+    bcpres_array,
+    dombcpres_array);
 
  project_null_space((*CG_r[coarsefine]),level);
 
@@ -2958,6 +2982,7 @@ ABecLaplacian::CG_solve(
      eps_abs,bot_atol,
      CG_pbdryhom[coarsefine],
      bcpres_array,
+     dombcpres_array,
      usecg_at_bottom,
      smooth_type,bottom_smooth_type,
      local_presmooth,local_postsmooth,
@@ -2987,7 +3012,9 @@ ABecLaplacian::CG_solve(
 
      apply(*CG_Av_search[coarsefine],
            *CG_p_search_SOLN[coarsefine],level,
-           *CG_pbdryhom[coarsefine],bcpres_array);
+           *CG_pbdryhom[coarsefine],
+	   bcpres_array,
+	   dombcpres_array);
      project_null_space((*CG_Av_search[coarsefine]),level);
 
      Real pAp=0.0;
@@ -3011,7 +3038,8 @@ ABecLaplacian::CG_solve(
         (*CG_delta_sol[coarsefine]),
         level,
         *CG_pbdryhom[coarsefine],
-        bcpres_array); 
+        bcpres_array,
+	dombcpres_array); 
        project_null_space((*CG_r[coarsefine]),level);
 
        sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,
@@ -3130,7 +3158,8 @@ ABecLaplacian::CG_solve(
      CG_v_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
 
      MultiFab::Copy(sol,restart_sol,0,0,nsolve_ABec,sol.nGrow());
-     residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,bcpres_array);
+     residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,
+       bcpres_array,dombcpres_array);
      project_null_space(*CG_r[coarsefine],level);
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
        *CG_r[coarsefine],0,0,nsolve_ABec,nghostRHS);
@@ -3238,7 +3267,9 @@ ABecLaplacian::CG_solve(
   amrex::Error("ncomp invalid");
 
  if ((CG_verbose>0)||(nsverbose>0)) {
-  residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,bcpres_array);
+  residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,
+     bcpres_array,
+     dombcpres_array);
   project_null_space(*CG_r[coarsefine],level);
 
   Real testnorm=LPnorm(*CG_r[coarsefine],level);
@@ -3369,10 +3400,14 @@ void ABecLaplacian::CG_advance (
 
 Real
 ABecLaplacian::MG_errorEstimate(int level,
-  MultiFab& pbdry,Vector<int> bcpres_array) {
+  MultiFab& pbdry,
+  Vector<int> bcpres_array,
+  Vector<int> dombcpres_array) {
   
  residual(*(MG_res[level]),*(MG_rhs[level]),*(MG_cor[level]), 
-     level,pbdry,bcpres_array);
+     level,pbdry,
+     bcpres_array,
+     dombcpres_array);
  MultiFab& resid = *(MG_res[level]);
  int ncomp=resid.nComp();
  if (ncomp!=nsolve_ABec)
@@ -3385,7 +3420,9 @@ ABecLaplacian::MG_errorEstimate(int level,
 
 void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
       MultiFab& oldrhs,MultiFab& solnL,
-      MultiFab& inisol,MultiFab& pbdry,Vector<int> bcpres_array,
+      MultiFab& inisol,MultiFab& pbdry,
+      Vector<int> bcpres_array,
+      Vector<int> dombcpres_array,
       int level) {
 
 #if (profile_solver==1)
@@ -3415,7 +3452,8 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
  bprof.stop();
 #endif
 
- residual(newrhs, oldrhs, solnL, level, pbdry,bcpres_array);
+ residual(newrhs, oldrhs, solnL, level, pbdry,
+	bcpres_array,dombcpres_array);
  solnL.setVal(0.0,0,nsolve_ABec,1);
 } // end subroutine MG_residualCorrectionForm
 
@@ -3425,6 +3463,7 @@ ABecLaplacian::MG_solve (int nsverbose,
   Real _eps_abs,Real _atol_b,
   int usecg_at_bottom,MultiFab& pbdry,
   Vector<int> bcpres_array,
+  Vector<int> dombcpres_array,
   int smooth_type,
   int bottom_smooth_type,
   int presmooth,
@@ -3448,13 +3487,18 @@ ABecLaplacian::MG_solve (int nsverbose,
 
  project_null_space(_rhs,level);
  MG_residualCorrectionForm(*MG_rhs[level],_rhs,*MG_cor[level],
-     _sol,pbdry,bcpres_array,level);
+     _sol,pbdry,
+     bcpres_array,
+     dombcpres_array,
+     level);
  project_null_space(*MG_rhs[level],level);
  MG_pbdryhom->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
  MG_solve_(nsverbose,_sol, 
    _eps_abs, _atol_b, 
-   *MG_pbdryhom,bcpres_array,
+   *MG_pbdryhom,
+   bcpres_array,
+   dombcpres_array,
    usecg_at_bottom,
    smooth_type,
    bottom_smooth_type,
@@ -3465,7 +3509,9 @@ ABecLaplacian::MG_solve (int nsverbose,
 // pbdry will always be identically zero since residual correction form.
 void
 ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
-  Real eps_abs,Real atol_b,MultiFab& pbdry,Vector<int> bcpres_array,
+  Real eps_abs,Real atol_b,MultiFab& pbdry,
+  Vector<int> bcpres_array,
+  Vector<int> dombcpres_array,
   int usecg_at_bottom,
   int smooth_type,int bottom_smooth_type,
   int presmooth,int postsmooth) {
@@ -3495,7 +3541,8 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
  if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
- const Real error0 = MG_errorEstimate(level,pbdry,bcpres_array);
+ const Real error0 = MG_errorEstimate(level,pbdry,
+	 bcpres_array,dombcpres_array);
  Real error = error0;
  if ((ParallelDescriptor::IOProcessor()) && 
      ((MG_verbose)||(nsverbose>0))) {
@@ -3514,12 +3561,14 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
 
  
  MG_relax(*MG_cor[level],*MG_rhs[level],level,eps_abs,
-   atol_b,usecg_at_bottom,pbdry,bcpres_array,
+   atol_b,usecg_at_bottom,pbdry,
+   bcpres_array,
+   dombcpres_array,
    smooth_type,bottom_smooth_type,
    presmooth,postsmooth);
  project_null_space(*MG_cor[level],level);
 
- error = MG_errorEstimate(level,pbdry,bcpres_array);
+ error = MG_errorEstimate(level,pbdry,bcpres_array,dombcpres_array);
 
  if (ParallelDescriptor::IOProcessor()) {
   if (MG_verbose > 1 ) {
@@ -3573,7 +3622,9 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
    Real eps_abs,
    Real atol_b,
    int usecg_at_bottom,
-   MultiFab& pbdry,Vector<int> bcpres_array,
+   MultiFab& pbdry,
+   Vector<int> bcpres_array,
+   Vector<int> dombcpres_array,
    int smooth_type,int bottom_smooth_type,
    int presmooth,int postsmooth)
 {
@@ -3592,7 +3643,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
  if (usecg_at_bottom==0) {
   Real error0;
   if (MG_verbose) {
-   error0 = MG_errorEstimate(level,pbdry,bcpres_array);
+   error0 = MG_errorEstimate(level,pbdry,bcpres_array,dombcpres_array);
    if (ParallelDescriptor::IOProcessor())
     std::cout << "   Bottom Smoother: Initial error (error0) = " 
        << error0 << '\n';
@@ -3601,11 +3652,11 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
   project_null_space(rhsL,level);
 
   for (int i = MG_nu_f; i > 0; i--) {
-   smooth(solL,rhsL,level,pbdry,bcpres_array,smooth_type); 
+   smooth(solL,rhsL,level,pbdry,bcpres_array,dombcpres_array,smooth_type); 
    project_null_space(solL,level);
 
    if (MG_verbose > 1 || (i == 1 && MG_verbose)) {
-    Real error = MG_errorEstimate(level,pbdry,bcpres_array);
+    Real error = MG_errorEstimate(level,pbdry,bcpres_array,dombcpres_array);
     if (ParallelDescriptor::IOProcessor())
      std::cout << "   Bottom Smoother: Iteration " << i
        << " error/error0 " << error/error0 << " error " 
@@ -3624,7 +3675,10 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
     solL,rhsL, 
     atol_b, 
     atol_b,
-    pbdry,bcpres_array,usecg_at_bottom,
+    pbdry,
+    bcpres_array,
+    dombcpres_array,
+    usecg_at_bottom,
     local_meets_tol,
     bottom_smooth_type,bottom_smooth_type,
     presmooth,postsmooth,
@@ -3638,7 +3692,9 @@ void
 ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
    int level,Real eps_abs,
    Real atol_b,int usecg_at_bottom,
-   MultiFab& pbdry,Vector<int> bcpres_array,
+   MultiFab& pbdry,
+   Vector<int> bcpres_array,
+   Vector<int> dombcpres_array,
    int smooth_type,int bottom_smooth_type,
    int presmooth,
    int postsmooth) {
@@ -3674,10 +3730,11 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
   project_null_space(rhsL,level);
 
   for (int i = presmooth ; i > 0 ; i--) {
-   smooth(solL,rhsL,level,pbdry,bcpres_array,smooth_type);
+   smooth(solL,rhsL,level,pbdry,bcpres_array,dombcpres_array,smooth_type);
    project_null_space(solL,level);
   }
-  residual(*MG_res[level],rhsL,solL,level,pbdry,bcpres_array);
+  residual(*MG_res[level],rhsL,solL,level,pbdry,
+	  bcpres_array,dombcpres_array);
   project_null_space(*MG_res[level],level);
   MG_average(*MG_rhs[level+1], *MG_res[level],level+1,level);
   MG_cor[level+1]->setVal(0.0);
@@ -3689,18 +3746,22 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
   for (int i = MG_def_nu_0; i > 0 ; i--) {
    MG_relax(*(MG_cor[level+1]),*(MG_rhs[level+1]),level+1,
     eps_abs,atol_b,usecg_at_bottom,
-    *(MG_pbdrycoarser[level+1]),bcpres_array,
+    *(MG_pbdrycoarser[level+1]),
+    bcpres_array,
+    dombcpres_array,
     smooth_type,bottom_smooth_type,
     presmooth,postsmooth);
   }
 
   MG_interpolate(solL, *(MG_cor[level+1]),level+1,level);
   for (int i = postsmooth; i > 0 ; i--) {
-   smooth(solL, rhsL, level,pbdry,bcpres_array,smooth_type);
+   smooth(solL, rhsL, level,pbdry,bcpres_array,dombcpres_array,smooth_type);
   }
  } else {
   MG_coarsestSmooth(solL,rhsL,level,eps_abs,atol_b,
-   usecg_at_bottom,pbdry,bcpres_array,
+   usecg_at_bottom,pbdry,
+   bcpres_array,
+   dombcpres_array,
    smooth_type,bottom_smooth_type,
    presmooth,postsmooth);
  }
