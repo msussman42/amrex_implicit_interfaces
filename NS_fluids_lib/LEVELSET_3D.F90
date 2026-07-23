@@ -19292,7 +19292,7 @@ stop
       integer im_hard_material
       integer check_elastic,im_elastic_max
       real(amrex_real) sum_vfrac_elastic
-      integer vofcomp,vofcompraw
+      integer vofcomp,vofcompraw,vofcomp_hard
       integer i1,j1,k1
       real(amrex_real) centroid(SDIM)
       real(amrex_real) volcell
@@ -19305,6 +19305,8 @@ stop
       real(amrex_real) xsten_local(-nhalf:nhalf,SDIM)
 
       real(amrex_real) mofnew(num_materials*ngeom_recon)
+      real(amrex_real) local_vfrac
+
       integer istenlo(3),istenhi(3)
       integer big_stenlo(3),big_stenhi(3)
       integer local_maskcov
@@ -19352,6 +19354,7 @@ stop
       real(amrex_real) :: LS_closest_CL(num_materials*(1+SDIM))
       real(amrex_real) :: dist_closest(num_materials)
       real(amrex_real) :: dist_closest_CL(num_materials)
+      real(amrex_real) :: dist_triple_point(num_materials)
       real(amrex_real) :: LS_local(num_materials*(1+SDIM))
       real(amrex_real) :: curv_local(num_curv)
       real(amrex_real) :: dist_local
@@ -20818,6 +20821,7 @@ stop
             do im=1,num_materials
              dist_closest(im)=-one
              dist_closest_CL(im)=-one
+             dist_triple_point(im)=-one
             enddo
 
              ! -ngrow_distance,...,ngrow_distance
@@ -20912,6 +20916,7 @@ stop
                               (nghost_mag.gt.zero)) then
                       dist_closest_CL(im)=dist_local
                       LS_closest_CL(im)=zero
+                      dist_triple_point(im)=zero
                       do dir=1,SDIM
                        LS_closest_CL(num_materials+(im-1)*SDIM+dir)= &
                          nghost(dir)/nghost_mag
@@ -20922,7 +20927,12 @@ stop
                            local_XPOS(dir)- &  !x_{i,j,k}
                            (xsten_local(0,dir)+xcrossing(dir)))/ &!x_{i',j',k'} 
                            nghost_mag
+                       dist_triple_point(im)=dist_triple_point(im)+ &
+                           (local_XPOS(dir)- &
+                            (xsten_local(0,dir)+xcrossing(dir)))**2
                       enddo !dir=1,sdim
+                      dist_triple_point(im)=sqrt(dist_triple_point(im))
+
                       if (im.lt.im_opp) then
                        !do nothing
                       else if (im.gt.im_opp) then
@@ -21004,7 +21014,8 @@ stop
               enddo
 
              else if (is_rigid_CL(im).eq.0) then
-           
+          
+               !stencil point is deep within the elastic material. 
               if (dist_closest(im).eq.-one) then
 
                im_fluid_critical=0
@@ -21082,11 +21093,21 @@ stop
                else if (dist_closest_CL(im).ge.LS_extend_thick) then
                 !do nothing
                else if (dist_closest_CL(im).ge.zero) then
-                LS_extrap(im)=LS_closest_CL(im)
-                do dir=1,SDIM 
-                 LS_extrap(num_materials+(im-1)*SDIM+dir)= &
-                   LS_closest_CL(num_materials+(im-1)*SDIM+dir)
-                enddo
+
+                if (dist_triple_point(im).gt.two*dxmax) then
+                 !do nothing
+                else if ((dist_triple_point(im).ge.zero).and. &
+                         (dist_triple_point(im).le.two*dxmax)) then
+                 LS_extrap(im)=LS_closest_CL(im)
+                 do dir=1,SDIM 
+                  LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                    LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+                 enddo
+                else
+                 print *,"dist_triple_point(im) invalid ",dist_triple_point(im)
+                 stop
+                endif
+
                else
                 print *,"dist_closest_CL invalid: ",dist_closest_CL
                 stop
@@ -21106,7 +21127,7 @@ stop
 
             ! FIX_LS_tessellate is declared in: MOF.F90
             ! input : fluids tessellate, solids/elastics are embedded
-            ! output: fluids tessellate and one and only one fluid LS is positive
+            ! output: fluids tessellate and one fluid LS is positive
             call FIX_LS_tessellate(LS_extrap,LS_extrap_fixed)
 
             do im=1,num_materials
@@ -21145,28 +21166,41 @@ stop
               call getvolume( &
                volcell_parm, & !intent(out)
                bfact,dx,xsten,nhalf, &
-               LS_temp,mofnew(vofcomp),LSfacearea, &
+               LS_temp,local_vfrac,LSfacearea, &
                LScentroid,VOFTOL_MATERIAL,SDIM)
 
               do dir=1,SDIM
                mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)
               enddo
 
-              if (mofnew(vofcomp).lt.zero) then
-               print *,"mofnew(vofcomp) invalid: ",vofcomp,mofnew(vofcomp)
+              if (local_vfrac.lt.zero) then
+               print *,"local_vfrac invalid: ",vofcomp,local_vfrac
                stop
-              else if (mofnew(vofcomp).le.VOFTOL_MATERIAL) then
+              else if (local_vfrac.le.VOFTOL_MATERIAL) then
                if (ls_hold(im).ge.zero) then
-                mofnew(vofcomp)=VOFTOL_SLOPES
+                local_vfrac=VOFTOL_SLOPES
                endif
-              else if ((mofnew(vofcomp).gt.zero).and. &
-                       (mofnew(vofcomp).le.one+EPS1)) then
+              else if ((local_vfrac.gt.zero).and. &
+                       (local_vfrac.le.one+EPS1)) then
                ! do nothing
               else
-               print *,"mofnew(vofcomp) invalid"
+               print *,"local_vfrac invalid ",local_vfrac
                stop
               endif
-              F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
+
+              vofcomp_hard=(im_hard_material-1)*ngeom_recon+1
+              if ((mofnew(vofcomp_hard).gt.zero).and. &
+                  (mofnew(vofcomp_hard).le.half)) then
+               !do nothing
+              else if ((mofnew(vofcomp_hard).gt.half).and. &
+                       (mofnew(vofcomp_hard).le.one+half)) then
+               mofnew(vofcomp)=local_vfrac
+               F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
+              else
+               print *,"mofnew(vofcomp_hard) invalid ", &
+                 vofcomp_hard,mofnew(vofcomp_hard)
+               stop
+              endif
 
              else
               print *,"is_rigid_CL invalid LEVELSET_3D.F90: ", &
@@ -21255,7 +21289,7 @@ stop
        else if (local_maskcov.eq.0) then
         ! do nothing
        else
-        print *,"local_maskcov invalid"
+        print *,"local_maskcov invalid ",local_maskcov
         stop
        endif
 

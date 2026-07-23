@@ -677,6 +677,17 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  init_rest_fraction(local_caller_string);
 
+ int do_post_process=0;
+
+ if (im_extension==0) {
+  do_post_process=1;
+ } else if ((im_extension==-1)&&(material_extend_velocity_flag==0)) {
+  do_post_process=1;
+ } else if ((im_extension==-1)&&(material_extend_velocity_flag>0)) {
+  do_post_process=0;
+ } else
+  amrex::Error("im_extension or material_extend_velocity_flag invalid");
+
  int renormalize_flag=RENORMALIZE_ONLY;
 
  if (level!=0)
@@ -907,7 +918,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 //   (c) convert Lagrangian position, velocity, temperature, and
 //       force (if CTML) to Eulerian.
 
- if (im_extension==-1) { //standard advection (both fluids and elastics)
+ if (do_post_process==1) { 
 
   if (read_from_CAD()==1) {
 
@@ -1016,16 +1027,21 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     parent->levelSteps(0)); 
   }
 
- } else if (im_extension==0) { //just elastics
+  // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
+  renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+  prescribe_solid_geometryALL(
+   cur_time_slab,
+   project_slab_step+1,
+   renormalize_flag,
+   local_caller_string);
+
+ } else if (do_post_process==0) { 
   //do nothing
  } else
-  amrex::Error("im_extension invalid");
+  amrex::Error("do_post_process invalid");
 
-  // in: nonlinear_advection
-  // level set function, volume fractions, and centroids are
-  // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
- renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+ renormalize_flag=RENORMALIZE_ONLY;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
@@ -1043,23 +1059,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
- if (1==0) {
-    // S_new is level 0 data
-  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
-   // data file name "AFTERPRESCRIBE<stuff>.plt"
-   // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
-   // (VFRAC,centroid) x num_materials, error indicator
-  writeSanityCheckData(
-   "AFTERPRESCRIBE",
-   "in: NavierStokes::nonlinear_advection, State_Type ", 
-   local_caller_string,
-   State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
-   S_new.nComp(),
-   -1, // data_mf==-1
-   State_Type, //state_type_mf==State_Type
-   -1, // data_dir==-1
-   parent->levelSteps(0)); 
- }
 #if (NS_profile_solver==1)
  bprof.stop();
 #endif
@@ -2927,7 +2926,7 @@ void NavierStokes::no_mass_transfer_code_segment(
  VOF_Recon_ALL(
    local_caller_string, //no_mass_transfer_code_segment
    cur_time_slab,
-   RECON_UPDATE_STATE_ERR_AND_CENTROID,
+   RECON_UPDATE_STATE_ERR,
    init_vof_prev_time);
 
  int local_redistribute_main=0;
@@ -3044,12 +3043,21 @@ void NavierStokes::nucleation_code_segment(
 
  // generates SLOPE_RECON_MF
  int init_vof_prev_time=0;
-  // Fluids tessellate; solids overlay.
+
   // output:SLOPE_RECON_MF
  VOF_Recon_ALL(
    local_caller_string,  //nucleation_code_segment
    cur_time_slab,
-   RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
+   RECON_UPDATE_STATE_CENTROID,
+   init_vof_prev_time);
+
+  // in: nucleation_code_segment
+ int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
+ prescribe_solid_geometryALL(
+   cur_time_slab,
+   project_slab_step+1,
+   renormalize_flag,
+   local_caller_string);
 
  int local_redistribute_main=0;
 

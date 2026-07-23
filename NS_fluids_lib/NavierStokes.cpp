@@ -15954,7 +15954,7 @@ NavierStokes::level_phase_change_convertALL() {
       VOF_Recon_ALL(
          local_caller_string, //level_phase_change_convertALL
          cur_time_slab,
-	 RECON_UPDATE_STATE_CENTROID,
+	 RECON_UPDATE_NULL,
 	 init_vof_prev_time);
 
       if (material_extend_velocity_flag>0) {
@@ -26128,7 +26128,8 @@ NavierStokes::volWgtSumALL(
   //output: SLOPE_RECON_MF
  VOF_Recon_ALL(
    local_caller_string, //volWgtSumALL
-   cur_time_slab,RECON_UPDATE_NULL,
+   cur_time_slab,
+   RECON_UPDATE_NULL,
    init_vof_prev_time); 
 
   // need to initialize viscosity and density temporary 
