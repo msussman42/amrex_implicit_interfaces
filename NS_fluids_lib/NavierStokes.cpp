@@ -2669,7 +2669,7 @@ NavierStokes::read_params ()
     ns_max_grid_size.resize(ns_max_level+1);
     for (int ilev=0;ilev<=ns_max_level;ilev++) {
      if (AMREX_SPACEDIM==2) {
-      ns_max_grid_size[ilev]=32;
+      ns_max_grid_size[ilev]=16;
      } else if (AMREX_SPACEDIM==3) {
       ns_max_grid_size[ilev]=8;
      } else
@@ -5503,7 +5503,7 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
 
-    int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 8 : 32);
+    int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 8 : 16);
     int local_min_max_grid_size=default_min_max_grid_size;
 
     ppcg.queryAdd("min_max_grid_size", local_min_max_grid_size);

@@ -36,7 +36,7 @@ int ABecLaplacian::force_ILU_smoother_single_grid=1;
 #if (AMREX_SPACEDIM==3)
 int ABecLaplacian::min_max_grid_size = 8;
 #else
-int ABecLaplacian::min_max_grid_size = 32;
+int ABecLaplacian::min_max_grid_size = 16;
 #endif
 
 int ABecLaplacian::nghostRHS=0;
@@ -1085,7 +1085,7 @@ ABecLaplacian::ABecLaplacian (
  } else
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
- int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 8 : 32);
+ int default_min_max_grid_size=((AMREX_SPACEDIM==3) ? 8 : 16);
 
  ppcg.queryAdd("min_max_grid_size", min_max_grid_size);
  if (min_max_grid_size>=default_min_max_grid_size) {
