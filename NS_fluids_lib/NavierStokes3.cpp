@@ -8722,11 +8722,18 @@ void NavierStokes::allocate_FACE_WEIGHT(
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
  int bcsize=AMREX_SPACEDIM*2*nsolve*grids.size();
+ int dombcsize=AMREX_SPACEDIM*2*nsolve;
  bcpres_array.resize(bcsize);
+ dombcpres_array.resize(dombcsize);
+
+  // NavierStokes::dombc_list is declared in NavierStokes.cpp
+ dombc_list(dombcpres_array,state_index,scomp,ncomp);
+
  for (int gridno=0;gridno<grids.size();gridno++) {
 
    // presbc declared as presbc(sdim,2) in fortran
    // components ordered at  1,1  2,1  3,1  1,2  2,2  3,2
+   // NavierStokes::getBCArray_list is declared in NavierStokes.cpp
   Vector<int> presbc;
   getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
   if (presbc.size()!=AMREX_SPACEDIM*2*nsolve)
@@ -9726,7 +9733,7 @@ void NavierStokes::relaxLEVEL(
   for (int i=presmooth;i>0;i--) {
    int apply_lev_presmooth=0;
    mac_op->smooth(*localMF[idx_phi],*rhsmf,
-    apply_lev_presmooth,*pbdry,bcpres_array,smooth_type);
+    apply_lev_presmooth,*pbdry,bcpres_array,dombcpres_array,smooth_type);
   }
   MultiFab* residmf=new MultiFab(grids,dmap,nsolve,0,
 	MFInfo().SetTag("residmf"),FArrayBoxFactory());
@@ -9737,7 +9744,8 @@ void NavierStokes::relaxLEVEL(
 
    // low order BC
   int apply_lev_BC=0;
-  mac_op->applyBC(*localMF[idx_phi],apply_lev_BC,*pbdry,bcpres_array);
+  mac_op->applyBC(*localMF[idx_phi],apply_lev_BC,*pbdry,bcpres_array,
+		  dombcpres_array);
 
    // gradpedge= -dt * grad p * denedgebc * densolidedgebc =
    //            -dt * grad p * face_weight_stable
@@ -9775,7 +9783,7 @@ void NavierStokes::relaxLEVEL(
   int apply_lev_resid=0;
   mac_op->residual(*residmf,*rhsmf,*localMF[idx_phi],
     apply_lev_resid,
-    *pbdry,bcpres_array);
+    *pbdry,bcpres_array,dombcpres_array);
    // update resid where mask=1.  This step is necessary if
    // the complete operator differs from the simplified "mac_op"
    // operator.
@@ -9851,7 +9859,7 @@ void NavierStokes::relaxLEVEL(
   for (int i=presmooth;i>0;i--) {
    int apply_lev_post_smooth=0;
    mac_op->smooth(*localMF[idx_phi],*rhsmf,
-    apply_lev_post_smooth,*pbdry,bcpres_array,smooth_type);
+    apply_lev_post_smooth,*pbdry,bcpres_array,dombcpres_array,smooth_type);
   }
 
  } else if (level==0) {
@@ -9881,6 +9889,7 @@ void NavierStokes::relaxLEVEL(
    bottom_bottom_tol,
    *pbdry,
    bcpres_array,
+   dombcpres_array,
    usecg_at_bottom,
    temp_meets_tol,
    smooth_type,

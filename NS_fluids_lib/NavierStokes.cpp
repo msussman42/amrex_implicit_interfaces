@@ -28060,6 +28060,7 @@ void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
 
  int dcomp=0;
  for (int ilist=0;ilist<scomp.size();ilist++) {
+   // AmrLevel::getBCArray
   Vector<int> bc_single=getBCArray(state_index,gridno,
     scomp[ilist],ncomp[ilist]);
 
@@ -28078,6 +28079,42 @@ void NavierStokes::getBCArray_list(Vector<int>& listbc,int state_index,
   amrex::Error("dcomp invalid");
 
 }  // end subroutine getBCArray_list
+
+void NavierStokes::dombc_list(Vector<int>& listbc,int state_index,
+     Vector<int> scomp,Vector<int> ncomp) {
+
+ int ncomp_list=0;
+ for (int ilist=0;ilist<scomp.size();ilist++)
+  ncomp_list+=ncomp[ilist];
+ if (ncomp_list<=0)
+  amrex::Error("ncomp_list invalid");
+
+ listbc.resize(ncomp_list*AMREX_SPACEDIM*2);
+
+ int dcomp=0;
+ for (int ilist=0;ilist<scomp.size();ilist++) {
+  for (int jlist=0;jlist<ncomp[ilist];jlist++) {
+   Vector<int> dombc(2*AMREX_SPACEDIM);
+   const BCRec& descbc = get_desc_lst()[state_index].getBC(scomp[ilist]+jlist);
+   const int* b_rec=descbc.vect();
+   for (int m=0;m<2*AMREX_SPACEDIM;m++)
+    dombc[m]=b_rec[m];
+
+   int bc_scomp=0;
+   for (int side=0;side<=1;side++) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     listbc[dcomp]=dombc[bc_scomp];
+     bc_scomp++;
+     dcomp++;
+    } // dir
+   } // side
+  } // jlist
+ } // ilist
+ if (dcomp!=ncomp_list*AMREX_SPACEDIM*2)
+  amrex::Error("dcomp invalid");
+
+}  // end subroutine dombc_list
+
 
 MultiFab* NavierStokes::getState_list(
  int ngrow,Vector<int> scomp,Vector<int> ncomp,
