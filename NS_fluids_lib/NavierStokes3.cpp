@@ -1041,7 +1041,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   amrex::Error("do_post_process invalid");
 
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
- renormalize_flag=RENORMALIZE_ONLY;
+ renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
  prescribe_solid_geometryALL(
    cur_time_slab,
    project_slab_step+1,
@@ -2926,7 +2926,7 @@ void NavierStokes::no_mass_transfer_code_segment(
  VOF_Recon_ALL(
    local_caller_string, //no_mass_transfer_code_segment
    cur_time_slab,
-   RECON_UPDATE_STATE_ERR,
+   RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
  int local_redistribute_main=0;

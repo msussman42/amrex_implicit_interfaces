@@ -21094,19 +21094,20 @@ stop
                 !do nothing
                else if (dist_closest_CL(im).ge.zero) then
 
-                if (dist_triple_point(im).gt.two*dxmax) then
+                  
+                if (dist_triple_point(im).ge.zero) then
                  !do nothing
-                else if ((dist_triple_point(im).ge.zero).and. &
-                         (dist_triple_point(im).le.two*dxmax)) then
-                 LS_extrap(im)=LS_closest_CL(im)
-                 do dir=1,SDIM 
-                  LS_extrap(num_materials+(im-1)*SDIM+dir)= &
-                    LS_closest_CL(num_materials+(im-1)*SDIM+dir)
-                 enddo
                 else
-                 print *,"dist_triple_point(im) invalid ",dist_triple_point(im)
+                 print *,"dist_triple_point(im) invalid ", &
+                    im,dist_triple_point(im)
                  stop
                 endif
+
+                LS_extrap(im)=LS_closest_CL(im)
+                do dir=1,SDIM 
+                 LS_extrap(num_materials+(im-1)*SDIM+dir)= &
+                   LS_closest_CL(num_materials+(im-1)*SDIM+dir)
+                enddo
 
                else
                 print *,"dist_closest_CL invalid: ",dist_closest_CL
@@ -21166,7 +21167,9 @@ stop
               call getvolume( &
                volcell_parm, & !intent(out)
                bfact,dx,xsten,nhalf, &
-               LS_temp,local_vfrac,LSfacearea, &
+               LS_temp, &
+               local_vfrac, &
+               LSfacearea, &
                LScentroid,VOFTOL_MATERIAL,SDIM)
 
               do dir=1,SDIM
