@@ -12,7 +12,7 @@
 #SBATCH --output=run.out
 #SBATCH --error=run.err
 #SBATCH --open-mode=append
-#SBATCH --exclusive
+##SBATCH --exclusive
 
 
 
