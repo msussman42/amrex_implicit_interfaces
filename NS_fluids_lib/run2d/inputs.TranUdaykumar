@@ -117,8 +117,8 @@ amr.plot_int        = 100     # 5 for movies.
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
-cg.min_max_grid_size=2048
-#amr.restart         = chk09350
+cg.min_max_grid_size=16
+#amr.restart         = chk05600
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------

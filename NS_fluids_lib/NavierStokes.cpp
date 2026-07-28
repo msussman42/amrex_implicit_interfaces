@@ -20141,6 +20141,10 @@ NavierStokes::move_mdot_to_density() {
  MultiFab& Refine_Density_new=
     get_new_data(Refine_Density_Type,project_slab_step+1);
 
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -20200,7 +20204,10 @@ NavierStokes::move_mdot_to_density() {
  }  // mfi
 } // omp
 
- ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"fort_move_mdot");
+ ns_reconcile_d_num(LOOP_FORT_MOVE_MDOT,"fort_move_mdot");
+   //thread_class::sync_tile_d_numPts(),
+   //ParallelDescriptor::ReduceRealSum
+   //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
 
  if ((level>=0)&&(level<finest_level)) {
   int spectral_override=1; // order derived from "enable_spectral"
