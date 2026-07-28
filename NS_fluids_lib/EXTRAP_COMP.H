@@ -596,6 +596,8 @@ ENUM_NUM_TENSOR_TYPE=((ENUM_NUM_TENSOR_TYPE_BASE)+(ENUM_NUM_TENSOR_EXTRA))
 #define LOOP_BUILDELASTICFLUID 192
 #define LOOP_BUILDELASTICFLUID_LS 193
 
+#define LOOP_FORT_MOVE_MDOT 194
+
 #define caller_FSI_make_distance 0
 #define caller_post_restart 1
 #define caller_initData 2
