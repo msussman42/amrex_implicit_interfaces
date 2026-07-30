@@ -3576,9 +3576,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
       VOF_Recon_ALL(
-	 local_caller_string, //do_the_advance
-         cur_time_slab,
-         RECON_UPDATE_NULL,init_vof_prev_time);
+       local_caller_string, //do_the_advance
+       cur_time_slab,
+       RECON_UPDATE_NULL,
+       init_vof_prev_time);
 
     } else
       amrex::Error("slab_step invalid");

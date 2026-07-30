@@ -59,13 +59,13 @@ ns.visual_tessellate_vfrac=0
 
 #amr.n_cell    = 16 16 32
 #amr.n_cell    = 32 64
-amr.n_cell    = 16 32
-amr.max_level =  1  # 4 levels for finest
+amr.n_cell    = 32 64
+amr.max_level =  0  # 4 levels for finest
 #amr.max_level =  0  # 4 levels for finest
-amr.max_grid_size   = 256 16
-ns.coarsest_level_CISL=1
+amr.max_grid_size   = 16 16
+ns.coarsest_level_CISL=0
 #ns.coarsest_level_CISL=0
-cg.min_max_grid_size=256
+cg.min_max_grid_size=16
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=4 4 4
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -144,6 +144,8 @@ ns.output_drop_distribution = 1  # output droplet
 
 # cavity type 1-7
 # make axis_dir=7 for bubble below substrate (substrate on top)
+# "xblob3" source is used when axis_dir=8, 9, 10, or 12.
+# axis_dir=8 => "charfn_out=1" if zblob2<x(SDIM)<xblob2
 ns.axis_dir=8
 ns.xblob3=0.14148      # 7272.0  energy flux Watts=J/s
 #ns.yblob3=1.0e-10  # initial thermal layer (meters)
@@ -190,7 +192,9 @@ ns.viscconst=156.2e-06 5.3e-06 156.2e-06
 #ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
 ns.denconst=809.8 4.571 8960.0
 ns.FSI_flag=0 0 1 #FSI_flag=FSI_PRESCRIBED_PROBF90=1
-# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# 0=diffuse in solid, 
+# 1=dirichlet, 
+# 2=neumann
 # if solidheat_flag=2, then "tempfluxsolid" is called.
 ns.solidheat_flag=0
 # liquid, vapor, solid
@@ -217,6 +221,7 @@ ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
 # not use
 ns.xblob2=10.0e-3 
 ns.yblob2=9.0e-3
+#if axis_dir=8 and x(SDIM)<zblob2 then thermal_k=0.0
 ns.zblob2=9.0e-3   # heater position (zlob2,xblob2)
 
 ns.xblob4=77.25  # tref   tmax=tref+zblob4

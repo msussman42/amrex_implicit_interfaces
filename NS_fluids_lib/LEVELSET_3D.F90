@@ -21193,9 +21193,9 @@ stop
 
               vofcomp_hard=(im_hard_material-1)*ngeom_recon+1
               if ((mofnew(vofcomp_hard).gt.zero).and. &
-                  (mofnew(vofcomp_hard).le.half)) then
+                  (mofnew(vofcomp_hard).le.one-EPS2)) then
                !do nothing
-              else if ((mofnew(vofcomp_hard).gt.half).and. &
+              else if ((mofnew(vofcomp_hard).ge.one-EPS2).and. &
                        (mofnew(vofcomp_hard).le.one+half)) then
                mofnew(vofcomp)=local_vfrac
                F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
