@@ -838,7 +838,7 @@ integer :: im,iregion,dir
  if (number_of_source_regions.ge.0) then
   ! do nothing
  else
-  print *,"number_of_source_regions invalid"
+  print *,"number_of_source_regions invalid: ",number_of_source_regions
   stop
  endif
 
@@ -849,7 +849,7 @@ integer :: im,iregion,dir
                        0:number_of_threads_regions))
 
  do iregion=1,number_of_source_regions
-  regions_list(iregion,0)%region_material_id=0
+  regions_list(iregion,0)%region_material_id=0 !default to "null material"
   regions_list(iregion,0)%region_dt=0.0d0  ! timestep
   regions_list(iregion,0)%region_mass_flux=0.0d0
   regions_list(iregion,0)%region_volume_flux=0.0d0
@@ -874,7 +874,8 @@ integer :: im,iregion,dir
      axis_dir.eq.9.or. &
      axis_dir.eq.10.or.&
      axis_dir.eq.12) then
-  regions_list(1,0)%region_material_id=3 !heater
+   ! 1<=region_material_id<=num_materials
+  regions_list(1,0)%region_material_id=3 !heater (material 3 is the substrate)
   regions_list(1,0)%region_energy_flux=xblob3 ! Watts=J/s
 !  print *,"m_id",regions_list(1,0)%region_material_id
 !  print *,"flux",regions_list(1,0)%region_energy_flux
@@ -903,7 +904,7 @@ real(amrex_real)           :: rtemp
 
   if(axis_dir.eq.8)then 
 
-   if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
+   if((x(SDIM).lt.xblob2).and.(x(SDIM).gt.zblob2))then
     charfn_out=one
    else
     charfn_out=0.0d0
@@ -3241,7 +3242,7 @@ endif
 if (nstate_mat.eq.num_state_material) then
  ! do nothing
 else
- print *,"nstate_mat invalid"
+ print *,"nstate_mat invalid ",nstate_mat
  stop
 endif
 if (probtype.eq.710) then
@@ -3521,10 +3522,20 @@ integer local_bcflag
 if (nmat.eq.num_materials) then
  ! do nothing
 else
- print *,"nmat invalid"
+ print *,"nmat invalid ",nmat
  stop
 endif
 local_bcflag=1
+
+! density
+! temperature
+! num_species
+if (num_state_material.ge.2) then
+ !do nothing
+else
+ print *,"num_state_material must be >=2 ",num_state_material
+ stop
+endif
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
@@ -3539,7 +3550,7 @@ if ((istate.ge.1).and. &
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 else
- print *,"istate invalid"
+ print *,"istate invalid ",istate
  stop
 endif
 

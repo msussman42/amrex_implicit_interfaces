@@ -8892,7 +8892,7 @@ void NavierStokes::VOF_Recon_ALL(
 
   int local_update_flag=update_flag;
 
-  if (update_centroid_after_recon==1) {
+  if (update_centroid_after_recon==1) { //default
    // do nothing
   } else if (update_centroid_after_recon==0) {
 

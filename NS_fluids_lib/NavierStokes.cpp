@@ -26725,7 +26725,7 @@ NavierStokes::post_init_state () {
 
  const int finest_level = parent->finestLevel();
 
-   // inside of post_init_state
+   // calling from: post_init_state
 
    // metrics_data
    // allocate_mdot (MDOT_MF=0.0)
