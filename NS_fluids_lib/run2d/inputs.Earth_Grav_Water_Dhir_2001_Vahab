@@ -11,7 +11,7 @@ ns.sum_interval = 50     # timesteps between computing mass
 # microlayer contact angle (radians): 0.174532925 radians = 10 degrees 
 # dx coarsest=2/40=.05
 #ns.microlayer_angle=0.174532925 0.0 0.0
-ns.microlayer_angle=0.872664626 0.0 0.0
+ns.microlayer_angle=0.872664626 0.0 0.0 #50 degrees=0.87*180/pi
 ns.microlayer_size=4.4661E-09 0.0 0.0        
 #ns.microlayer_size=4.4661E-11 0.0 0.0        
 ns.macrolayer_size=5.0000E-02 0.0 0.0           
