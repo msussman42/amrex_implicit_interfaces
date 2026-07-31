@@ -22,7 +22,8 @@ namespace amrex{
      int* type_flag,
      int* ncomp_type,
      int* ncomp_source,
-     int* zero_diag_flag);
+     int* zero_diag_flag,
+     int* ngrow_color);
 
      void fort_getcolorsum(
        int* tid_current,

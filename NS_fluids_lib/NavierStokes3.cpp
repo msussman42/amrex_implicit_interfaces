@@ -3002,14 +3002,13 @@ void NavierStokes::nucleation_code_segment(
  int use_mac_velocity=0;
 
   //calling from: NavierStokes::nucleation_code_segment()
+  //TYPE_MF, COLOR_MF
  ColorSumALL( 
    use_mac_velocity,
    operation_flag, //=OP_GATHER_MDOT
    tessellate, //=TESSELLATE_ALL
    coarsest_level,
    color_count,
-   TYPE_MF,
-   COLOR_MF,
    idx_mdot,
    idx_mdot,
    type_flag,
@@ -4234,13 +4233,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // for each blob, find sum_{F>=1/2} pressure * vol and
  	  // sum_{F>=1/2} vol.
           // calling from: NavierStokes::do_the_advance()
+          //TYPE_MF, COLOR_MF
           ColorSumALL(
            use_mac_velocity,
            operation_flag, // =OP_GATHER_MDOT
            local_tessellate, //=TESSELLATE_ALL_RASTER
            coarsest_level,
            local_color_count,
-           TYPE_MF,COLOR_MF,
            idx_mdot,
            idx_mdot,
            local_type_flag,
@@ -5186,7 +5185,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
  ns_reconcile_d_num(LOOP_AVGDOWNCOLOR,"avgDownColor");
 
  S_crse->ParallelCopy(crse_S_fine,0,0,1);
-}
+} //end subroutine avgDownColor
 
 
 // maskfinemf corresponds to level+1
@@ -6063,17 +6062,19 @@ void NavierStokes::sync_colors(
  } // level<finest_level
 
 
-} // subroutine sync_colors
+} // end subroutine sync_colors
  
 // type_flag should have size num_materials.
 // type_flag[i]=1 if fluid "i" exists. (note, fictitious solid on the
 //  boundaries will show up as existing if ngrow>0)
 void NavierStokes::color_variable(
  int& coarsest_level,
- int idx_color,int idx_type,
+ int idx_color,
+ int idx_type,
  int* color_count,
  Vector<int> type_flag,
- int zero_diag_flag) {
+ int zero_diag_flag,
+ int ngrow_color) {
 
 int ilev;
 
@@ -6082,7 +6083,7 @@ int ilev;
  if (level!=0)
   amrex::Error("level invalid color_variable");
 
- allocate_array(1,1,-1,idx_color);
+ allocate_array(ngrow_color,1,-1,idx_color);
 
  Vector<int> colormax;
  colormax.resize(finest_level+1);
@@ -6090,9 +6091,16 @@ int ilev;
  int fully_covered=0;
  for (ilev=finest_level;((ilev>=0)&&(fully_covered==0));ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  
-  ns_level.assign_colors(fully_covered,
-   idx_color,idx_type,colormax,type_flag,
+ 
+FIX ME 
+ALSO FIX COLORSUM 
+PASS ngrow_color
+  ns_level.assign_colors(
+   fully_covered,
+   idx_color,
+   idx_type,
+   colormax,
+   type_flag,
    zero_diag_flag); 
   if (fully_covered==0) {
    // do nothing
@@ -6139,8 +6147,6 @@ NavierStokes::ColorSum(
  int sweep_num,
  int ncomp_mdot_alloc,
  int ncomp_mdot,
- MultiFab* typemf,
- MultiFab* color,
  MultiFab* mdot, // holds typemf if ncomp_mdot==0
  MultiFab* mdot_complement, // holds typemf if ncomp_mdot==0
  Vector<blobclass>& level_blobdata,
@@ -6441,10 +6447,10 @@ NavierStokes::ColorSum(
  if (localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac)
   amrex::Error("localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac");
 
- if (typemf->nGrow()!=1)
-  amrex::Error("typemf->nGrow()!=1");
- if (color->nGrow()!=1)
-  amrex::Error("color->nGrow()!=1");
+ if (localMF[TYPE_MF]->nGrow()!=1)
+  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
+ if (localMF[COLOR_MF]->nGrow()!=1)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
  if (mdot->nGrow()>=0) {
   // do nothing
  } else
@@ -6493,7 +6499,7 @@ NavierStokes::ColorSum(
   FArrayBox& mdotfab=(*mdot)[mfi];
   FArrayBox& mdot_comp_fab=(*mdot_complement)[mfi];
 
-  FArrayBox& typefab=(*typemf)[mfi];
+  FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LS_COLORSUM_MF])[mfi];
   FArrayBox& velfab=(*localMF[VEL_COLORSUM_MF])[mfi];
   FArrayBox& denfab=(*localMF[DEN_COLORSUM_MF])[mfi];
@@ -6504,7 +6510,7 @@ NavierStokes::ColorSum(
   FArrayBox& zfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
   FArrayBox& cellfab=(*localMF[CELLFRAC_MM_MF])[mfi];
 
-  FArrayBox& colorfab=(*color)[mfi];
+  FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
   FArrayBox& maskfab=(*mask)[mfi];
 
   FArrayBox& areax=(*localMF[AREA_MF])[mfi];
@@ -7615,6 +7621,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 
 //operation_flag==1 (OP_SCATTER_MDOT) => scatter data collected when 
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
+//TYPE_MF, COLOR_MF
 void
 NavierStokes::ColorSumALL(
  int use_mac_velocity,
@@ -7622,8 +7629,6 @@ NavierStokes::ColorSumALL(
  int tessellate,  // TESSELLATE_ALL or TESSELLATE_ALL_RASTER
  int coarsest_level,
  int& color_count,
- int idx_type,
- int idx_color,
  int idx_mdot,  // ==-1 if no mdot
  int idx_mdot_complement,  // ==-1 if no mdot_complement
  Vector<int>& type_flag, 
@@ -7642,6 +7647,13 @@ NavierStokes::ColorSumALL(
  if (level!=0)
   amrex::Error("level=0 in ColorSumALL");
 
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("ngrow_make_distance!=ngrow_distance-1");
+ if (ngrow_distance<4)
+  amrex::Error("ngrow_distance<4");
+
+ int ngrow_color=ngrow_distance;
+
  if (operation_flag==OP_GATHER_MDOT) {
 
   // type_flag[im]=1 if material im exists in the domain.
@@ -7651,12 +7663,18 @@ NavierStokes::ColorSumALL(
   // zero_diag_flag=0 => color by material
   // zero_diag_flag=1 => color by masked cells
   int zero_diag_flag=0;
-  TypeALL(idx_type,type_flag,zero_diag_flag);
+  TypeALL(TYPE_MF,type_flag,zero_diag_flag,ngrow_color);
 
   // color_count=number of colors
-  // ngrow=1, fort_extrapfill, pc_interp for COLOR_MF
-  color_variable(coarsest_level,
-   idx_color,idx_type,&color_count,type_flag,zero_diag_flag);
+  // ngrow_color, fort_extrapfill, pc_interp for COLOR_MF
+  color_variable(
+   coarsest_level,
+   COLOR_MF,
+   TYPE_MF,
+   &color_count,
+   type_flag,
+   zero_diag_flag,
+   ngrow_color);
 
  } else if (operation_flag==OP_SCATTER_MDOT) {
 
@@ -7865,8 +7883,8 @@ NavierStokes::ColorSumALL(
    MultiFab* mdot=nullptr;
    MultiFab* mdot_complement=nullptr;
    if (ncomp_mdot==0) {
-    mdot=ns_level.localMF[idx_type];
-    mdot_complement=ns_level.localMF[idx_type];
+    mdot=ns_level.localMF[TYPE_MF];
+    mdot_complement=ns_level.localMF[TYPE_MF];
    } else if (ncomp_mdot==2*num_interfaces) {
 
     if (idx_mdot==JUMP_STRENGTH_MF) {
@@ -7893,8 +7911,6 @@ NavierStokes::ColorSumALL(
     sweep_num,
     ncomp_mdot_alloc,
     ncomp_mdot,
-    ns_level.localMF[idx_type],
-    ns_level.localMF[idx_color],
     mdot,
     mdot_complement,
     level_blobdata,
@@ -8429,7 +8445,7 @@ NavierStokes::ColorSumALL(
 void
 NavierStokes::Type_level(
   MultiFab* typemf,Vector<int>& type_flag,
-  int zero_diag_flag) {
+  int zero_diag_flag,int ngrow_color) {
 
  std::string local_caller_string="Type_level";
 
@@ -8462,7 +8478,7 @@ NavierStokes::Type_level(
  int ncomp_source=0;
 
  if (zero_diag_flag==0) {
-  Type_Source_MF=getStateDist(1,cur_time_slab,local_caller_string);
+  Type_Source_MF=getStateDist(ngrow_color,cur_time_slab,local_caller_string);
   ncomp_source=Type_Source_MF->nComp();
   if (Type_Source_MF->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("Type_Source_MF->nComp() invalid");
@@ -8474,8 +8490,8 @@ NavierStokes::Type_level(
  } else
   amrex::Error("zero_diag_flag invalid");
 
- if (typemf->nGrow()!=1)
-  amrex::Error("typemf->nGrow()!=1");
+ if (typemf->nGrow()!=ngrow_color)
+  amrex::Error("typemf->nGrow()!=ngrow_color");
 
  const Real* dx = geom.CellSize();
 
@@ -8522,7 +8538,8 @@ NavierStokes::Type_level(
    local_type_flag[tid_current].dataPtr(),
    &ncomp_type,
    &ncomp_source,
-   &zero_diag_flag);
+   &zero_diag_flag,
+   &ngrow_color);
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_GETTYPEFAB,"Type_level");
@@ -8556,7 +8573,7 @@ NavierStokes::Type_level(
 //   NavierStokes::multiphase_project
 //   NavierStokes::ColorSumALL
 void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
-		int zero_diag_flag) {
+		int zero_diag_flag,int ngrow_color) {
 
  int finest_level=parent->finestLevel();
 
@@ -8572,14 +8589,15 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
  for (int im=0;im<ncomp_type;im++) {
   type_flag[im]=0;
  }
- allocate_array(1,1,-1,idx_type);
+ allocate_array(ngrow_color,1,-1,idx_type);
  if (level!=0)
   amrex::Error("level=0 in TypeALL");
 
   // updates one ghost cell.
  for (int k = 0; k <= finest_level; k++) {
   NavierStokes& ns_level = getLevel(k);
-  ns_level.Type_level(ns_level.localMF[idx_type],type_flag,zero_diag_flag);
+  ns_level.Type_level(ns_level.localMF[idx_type],type_flag,zero_diag_flag,
+     ngrow_color);
  }
  int color_counter=0;
  for (int im=0;im<ncomp_type;im++) {
@@ -10960,13 +10978,13 @@ void NavierStokes::multiphase_project(int project_option) {
    int use_mac_velocity=1;
 
    //calling from: NavierStokes::multiphase_project
+   //TYPE_MF, COLOR_MF
    ColorSumALL(
      use_mac_velocity,
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=TESSELLATE_ALL
      coarsest_level,
      color_count,
-     TYPE_MF,COLOR_MF,
      idx_mdot,
      idx_mdot,
      type_flag,
@@ -11254,11 +11272,18 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (create_hierarchy==0) {
 
+  int ngrow_color=1;
+
   int zero_diag_flag=1;
-  TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag);
-  color_variable(coarsest_ONES_level,COLOR_ONES_MF,TYPE_ONES_MF,
+  TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag,ngrow_color);
+  color_variable(
+   coarsest_ONES_level,
+   COLOR_ONES_MF,
+   TYPE_ONES_MF,
    &color_ONES_count, 
-   type_ONES_flag,zero_diag_flag);
+   type_ONES_flag,
+   zero_diag_flag,
+   ngrow_color);
 
   ones_sum_global.resize(color_ONES_count);
   // for each given color, singular_patch_flag=

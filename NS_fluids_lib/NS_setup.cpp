@@ -2425,14 +2425,13 @@ NavierStokes::sum_integrated_quantities (
 
    // declared in NavierStokes3.cpp
    // calling from: NavierStokes::sum_integrated_quantities()
+   //TYPE_MF, COLOR_MF
   ColorSumALL(
     use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
     tessellate, // =TESSELLATE_ALL
     coarsest_level,
     color_count,
-    TYPE_MF,
-    COLOR_MF,
     idx_mdot,
     idx_mdot,
     type_flag,
