@@ -3749,7 +3749,8 @@ stop
        type_flag, &
        ncomp_type, &
        ncomp_source, &
-       zero_diag_flag) &
+       zero_diag_flag, &
+       ngrow_color) &
       bind(c,name='fort_gettypefab')
 
       use probf90_module
@@ -3760,6 +3761,7 @@ stop
 
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xlo(SDIM)
+      integer, INTENT(in) :: ngrow_color
       integer, INTENT(in) :: ncomp_type
       integer, INTENT(in) :: ncomp_source
       integer, INTENT(in) :: zero_diag_flag
@@ -3784,7 +3786,7 @@ stop
 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid91"
+       print *,"bfact invalid fort_gettypefab ",bfact
        stop
       endif
       if (zero_diag_flag.eq.0) then
@@ -3820,10 +3822,10 @@ stop
 
       source_fab_ptr=>source_fab
       typefab_ptr=>typefab
-      call checkbound_array(fablo,fabhi,source_fab_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,source_fab_ptr,ngrow_color,-1)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,ngrow_color,-1)
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow_color) 
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)

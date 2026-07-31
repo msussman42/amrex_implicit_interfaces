@@ -929,10 +929,12 @@ protected:
 
     void color_variable(
      int& coarsest_level,
-     int idx_color,int idx_type,
+     int idx_color,
+     int idx_type,
      int* color_count,
      Vector<int> type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void SumRegions(int isweep); //isweep = 0 or 1
 
@@ -942,8 +944,6 @@ protected:
      int sweep_num,
      int ncomp_mdot_alloc,
      int ncomp_mdot,
-     MultiFab* typemf,
-     MultiFab* color,
      MultiFab* mdot,
      MultiFab* mdot_complement,
      Vector<blobclass>& level_blobdata,
@@ -956,14 +956,13 @@ protected:
      Vector< Vector<Real> >& level_mdot_comp_data_redistribute 
      );
 
+     //TYPE_MF, COLOR_MF
     void ColorSumALL(
      int use_mac_velocity,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,
-     int idx_type,
-     int idx_color,
      int idx_mdot,  // ==-1 if no mdot
      int idx_mdot_complement,  // ==-1 if no mdot_complement
      Vector<int>& type_flag, 
@@ -998,12 +997,14 @@ protected:
 
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void TypeALL(
      int idx_type,
      Vector<int>& type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     virtual void post_init_state ();
 
