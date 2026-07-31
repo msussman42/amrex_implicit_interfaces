@@ -19292,6 +19292,7 @@ stop
       integer im_hard_material
       integer check_elastic,im_elastic_max
       real(amrex_real) sum_vfrac_elastic
+      real(amrex_real) substrate_cutoff
       integer vofcomp,vofcompraw,vofcomp_hard
       integer i1,j1,k1
       real(amrex_real) centroid(SDIM)
@@ -21191,11 +21192,13 @@ stop
                stop
               endif
 
+              substrate_cutoff=half
+
               vofcomp_hard=(im_hard_material-1)*ngeom_recon+1
               if ((mofnew(vofcomp_hard).gt.zero).and. &
-                  (mofnew(vofcomp_hard).le.one-EPS2)) then
+                  (mofnew(vofcomp_hard).le.one-substrate_cutoff)) then
                !do nothing
-              else if ((mofnew(vofcomp_hard).ge.one-EPS2).and. &
+              else if ((mofnew(vofcomp_hard).ge.one-substrate_cutoff).and. &
                        (mofnew(vofcomp_hard).le.one+half)) then
                mofnew(vofcomp)=local_vfrac
                F_stencil_array(D_DECL(0,0,0),im)=mofnew(vofcomp)
