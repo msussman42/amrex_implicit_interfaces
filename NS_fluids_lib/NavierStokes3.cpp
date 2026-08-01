@@ -4861,7 +4861,8 @@ void NavierStokes::cross_check(
 } // end subroutine cross_check
 
 void NavierStokes::correct_colors(
- int idx_color,int base_level,
+ int idx_color,
+ int base_level,
  Vector<int> domaincolormap,
  int max_colors_level) {
 
@@ -4928,9 +4929,12 @@ void NavierStokes::correct_colors(
 //
 void NavierStokes::assign_colors(
  int& fully_covered,
- int idx_color,int idx_type,
- Vector<int>& colormax,Vector<int> type_flag,
- int zero_diag_flag) {
+ int idx_color,
+ int idx_type,
+ Vector<int>& colormax,
+ Vector<int> type_flag,
+ int zero_diag_flag,
+ int ngrow_color) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -4939,12 +4943,21 @@ void NavierStokes::assign_colors(
  fully_covered=0;
 
  int ncomp_type=num_materials;
+ int expected_ngrow_color=ngrow_distance;
+
  if (zero_diag_flag==1) {
   ncomp_type=2;
+  expected_ngrow_color=1;
  } else if (zero_diag_flag==0) {
   ncomp_type=num_materials;
+  expected_ngrow_color=ngrow_distance;
  } else
   amrex::Error("zero_diag_flag invalid");
+
+ if (ngrow_color==expected_ngrow_color) {
+  //do nothing
+ } else
+  amrex::Error("ngrow_color invalid");
 
  int typedim=type_flag.size();
  if (typedim!=ncomp_type)
@@ -4971,12 +4984,12 @@ void NavierStokes::assign_colors(
  } // tid
 
   // mask=tag if not covered by level+1 and at fine-fine ghost cell.
- int ngrowmask=1;
+ int ngrowmask=ngrow_color;
  Real tag=1.0;
  int clear_phys_boundary=2;
  MultiFab* maskmf=maskfiner(ngrowmask,tag,clear_phys_boundary); 
 
- colormf->setVal(0.0,0,1,1);
+ colormf->setVal(0.0,0,1,ngrow_color);
 
   // first pass initialize the colors
   // 1<=color_num<=max_colors_grid
@@ -5079,12 +5092,16 @@ void NavierStokes::assign_colors(
     amrex::Error("max_colors_grid_array[0]==0 on finest_level");
  } else if (max_colors_grid_array[0]>=1) {
    int check_corners=1;
-   sync_colors(idx_color,idx_type,
+   sync_colors(
+    idx_color,
+    idx_type,
     color_per_grid_array[0],
     colormax,
     max_colors_grid_array[0],
-    maskmf,check_corners,
-    zero_diag_flag);
+    maskmf,
+    check_corners,
+    zero_diag_flag,
+    ngrow_color);
  } else
    amrex::Error("max_colors_grid_array[0] invalid");
   
@@ -5172,8 +5189,10 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
   const FArrayBox& typec=type_coarse_fine[gridno];
 
   fort_avgdowncolor(
-    prob_lo,dxf, 
-    &bfact_f,&bfact,
+    prob_lo,
+    dxf, 
+    &bfact_f,
+    &bfact,
     xlo_fine,dx,
     c_dat,ARLIM(clo),ARLIM(chi),
     f_dat,ARLIM(flo),ARLIM(fhi),
@@ -5318,7 +5337,8 @@ void NavierStokes::sync_colors(
  int max_colors_grid,
  MultiFab* maskmf,
  int check_corners,
- int zero_diag_flag) {
+ int zero_diag_flag,
+ int ngrow_color) {
 
  int finest_level=parent->finestLevel();
 
@@ -5716,15 +5736,20 @@ void NavierStokes::sync_colors(
     colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
     xlo,dx,
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,
+    &bfact,
     levelcolormap.dataPtr(),
     &max_colors_grid,
-    &number_grids,&arrsize);
+    &number_grids,
+    &arrsize,
+    &ngrow_color);
  }  //mfi
 } //omp
  ns_reconcile_d_num(LOOP_GRIDRECOLOR,"sync_colors");
 
  colormax[level]=total_colors;
+
+ colormf->FillBoundary(geom.periodicity());
 
  if (level<finest_level) {
 
@@ -6040,14 +6065,12 @@ void NavierStokes::sync_colors(
    level_color_array[tid].resize(1);
   }
 
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "after 2nd cross_check: level,max_colors_level,n_assoc " <<
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "after 2nd cross_check: level,max_colors_level,n_assoc " <<
      level << ' ' << max_colors_level << ' ' << n_assoc << '\n';
+   }
   }
- }
-
-
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    colormax[ilev]=total_colors;
@@ -6061,12 +6084,16 @@ void NavierStokes::sync_colors(
   }
  } // level<finest_level
 
+ colormf->FillBoundary(geom.periodicity());
+
 
 } // end subroutine sync_colors
  
 // type_flag should have size num_materials.
 // type_flag[i]=1 if fluid "i" exists. (note, fictitious solid on the
 //  boundaries will show up as existing if ngrow>0)
+//  color_variable is called from NavierStokes::ColorSumALL and
+//  called from NavierStokes::multiphase_project
 void NavierStokes::color_variable(
  int& coarsest_level,
  int idx_color,
@@ -6092,16 +6119,14 @@ int ilev;
  for (ilev=finest_level;((ilev>=0)&&(fully_covered==0));ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
  
-FIX ME 
-ALSO FIX COLORSUM 
-PASS ngrow_color
   ns_level.assign_colors(
    fully_covered,
    idx_color,
    idx_type,
    colormax,
    type_flag,
-   zero_diag_flag); 
+   zero_diag_flag,
+   ngrow_color); 
   if (fully_covered==0) {
    // do nothing
   } else if (fully_covered==1) {
@@ -6124,9 +6149,9 @@ PASS ngrow_color
  scompBC_map.resize(1);
  scompBC_map[0]=0;
 
-  // ngrow=1 scomp=0 ncomp=1 
+  // scomp=0 ncomp=1 
   // fort_extrapfill, pc_interp
- PCINTERP_fill_bordersALL(idx_color,1,0,1,State_Type,scompBC_map);
+ PCINTERP_fill_bordersALL(idx_color,ngrow_color,0,1,State_Type,scompBC_map);
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
@@ -6135,7 +6160,7 @@ PASS ngrow_color
     std::cout << "ilev,colormax_ilev " << ilev << ' ' << 
      colormax[ilev] << '\n';
   }
-} // subroutine color_variable
+} // end subroutine color_variable
 
 //called from NavierStokes::ColorSumALL
 //operation_flag==1 OP_SCATTER_MDOT => scatter data collected when 
@@ -7667,6 +7692,7 @@ NavierStokes::ColorSumALL(
 
   // color_count=number of colors
   // ngrow_color, fort_extrapfill, pc_interp for COLOR_MF
+  // FIX ME
   color_variable(
    coarsest_level,
    COLOR_MF,

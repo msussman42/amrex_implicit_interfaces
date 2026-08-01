@@ -6908,10 +6908,12 @@ stop
         DIMS(color), &
         xlo,dx, &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        bfact, &
         domaincolormap, &
         max_colors_level, &
-        level,base_level,arrsize) &
+        level, &
+        base_level,arrsize) &
       bind(c,name='fort_levelrecolor')
 
       use probcommon_module
@@ -6938,11 +6940,11 @@ stop
       call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid93"
+       print *,"bfact invalid levelrecolor ",bfact
        stop
       endif
       if (arrsize.ne.2*max_colors_level) then
-       print *,"arrsize invalid"
+       print *,"arrsize invalid levelrecolor ",arrsize
        stop
       endif
 
@@ -7220,9 +7222,13 @@ stop
        DIMS(color), &
        xlo,dx, &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       levelcolormap,max_colors_grid,number_grids, &
-       arrsize) &
+       fablo,fabhi, &
+       bfact, &
+       levelcolormap, &
+       max_colors_grid, &
+       number_grids, &
+       arrsize, &
+       ngrow_color) &
       bind(c,name='fort_gridrecolor')
       use probcommon_module
       use global_utility_module
@@ -7233,6 +7239,7 @@ stop
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: ngrow_color
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(mask)
       integer, INTENT(in) :: DIMDEC(color)
@@ -7248,11 +7255,11 @@ stop
       mask_ptr=>mask
       color_ptr=>color
 
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow_color,-1)
+      call checkbound_array1(fablo,fabhi,color_ptr,ngrow_color,-1)
 
       if (bfact.lt.1) then
-       print *,"bfact invalid94"
+       print *,"bfact invalid fort_gridrecolor ",bfact
        stop
       endif
 
@@ -7289,9 +7296,12 @@ stop
       end subroutine fort_gridrecolor
 
       subroutine fort_avgdowncolor( &
-        problo,dxf, &
-        bfact_f,bfact, &
-        xlo_fine,dx, &
+        problo, &
+        dxf, &
+        bfact_f, &
+        bfact, &
+        xlo_fine, &
+        dx, &
         crse,DIMS(crse), &
         fine,DIMS(fine), &
         typef,DIMS(typef), &
@@ -7329,16 +7339,17 @@ stop
 
 
       if (bfact_f.lt.1) then
-       print *,"bfact_f invalid1 ",bfact_f
+       print *,"bfact_f invalid fort_avgdowncolor ",bfact_f
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid96"
+       print *,"bfact invalid fort_avgdowncolor ",bfact
        stop
       endif
       if ((bfact.ne.bfact_f).and. &
           (bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid97"
+       print *,"bfact or bfact_f invalid fort_avgdowncolor ", &
+         bfact,bfact_f
        stop
       endif
 
@@ -7390,7 +7401,11 @@ stop
 
 ! components are: color1,type1,color2,type2,color3,type3
       subroutine fort_copyfinecoarsecolor( &
-        problo,dxf,bfact_f,bfact,xlo_fine,dx, &
+        problo, &
+        dxf, &
+        bfact_f, &
+        bfact, &
+        xlo_fine,dx, &
         crse,DIMS(crse), &
         fine,DIMS(fine), &
         typef,DIMS(typef), &
@@ -7436,16 +7451,17 @@ stop
 
 
       if (bfact_f.lt.1) then
-       print *,"bfact_f invalid2  bfact_f=",bfact_f
+       print *,"bfact_f invalid copyfinecoarsecolor  bfact_f=",bfact_f
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid98"
+       print *,"bfact invalid copyfinecoarsecolor ",bfact
        stop
       endif
       if ((bfact.ne.bfact_f).and. &
           (bfact.ne.2*bfact_f)) then
-       print *,"bfact invalid99"
+       print *,"bfact or bfact_f invalid copyfinecoarsecolor ", &
+         bfact,bfact_f
        stop
       endif
 
@@ -7455,7 +7471,7 @@ stop
       else if (zero_diag_flag.eq.0) then
        ncomp_type=num_materials
       else
-       print *,"zero_diag_flag invalid"
+       print *,"zero_diag_flag invalid copyfinecoarsecolor ",zero_diag_flag
        stop
       endif
 
@@ -7530,7 +7546,7 @@ stop
               endif 
 
              else if (masktest.ne.zero) then
-              print *,"masktest invalid"
+              print *,"masktest invalid copyfinecoarsecolor ",masktest
               stop
              endif
             endif
