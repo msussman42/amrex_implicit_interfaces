@@ -5327,6 +5327,308 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
  return mf;
 } //end subroutine CopyFineToCoarseColor
 
+//called from NavierStokes::ColorSumALL
+void NavierStokes::color_to_group_map(
+  int color_count,
+  int& total_groups,
+  Vector<int>& group_map) {
+
+ int finest_level=parent->finestLevel();
+ if (level==finest_level) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
+
+ group_map.resize(color_count);
+
+ if (localMF[TYPE_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[TYPE_MF]->nGrow()!=ngrow_distance");
+ if (localMF[COLOR_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=ngrow_distance");
+
+ Vector< Vector< Vector<int> > > color_color_array;
+
+ color_color_array.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  color_color_array[tid].resize(color_count);
+  for (int i=0;i<color_count;i++) {
+   color_color_array[tid][i].resize(1);
+   color_color_array[tid][i][0]=i;
+  }
+ } //tid
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[TYPE_MF]->boxArray().d_numPts());
+
+// color_color_array[tid][i][j]=1 if color i "neighbors" color j and
+// they have the same type.
+//
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[TYPE_MF],false); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  const int gridno = mfi.index();
+  const Box& fabgrid=grids[gridno];
+  const int* lo = fabgrid.loVect();
+  const int* hi = fabgrid.hiVect();
+  FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+  FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+
+#if (AMREX_SPACEDIM==3)
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++)
+  for (int k=lo[2];k<=hi[2];k++) {
+#endif
+#if (AMREX_SPACEDIM==2)
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++) {
+#endif
+   IntVect p(D_DECL(i,j,k));
+
+   int icolor_round=(int) (colorfab(p)+0.5);
+   int icolor_trunc=(int) (colorfab(p));
+   int primary_type_round=(int) (typefab(p)+0.5);
+   int primary_type_trunc=(int) (typefab(p));
+
+   if ((icolor_round==icolor_trunc)&&
+       (primary_type_round==primary_type_trunc)) {
+    //do nothing
+   } else
+    amrex::Error("expecting round=trunc");
+
+   if (icolor_round>0) {
+#if (AMREX_SPACEDIM==3)
+    for (int ii=-2;ii<=2;ii++)
+    for (int jj=-2;jj<=2;jj++)
+    for (int kk=-2;kk<=2;kk++) {
+#endif
+#if (AMREX_SPACEDIM==2)
+    for (int ii=-2;ii<=2;ii++)
+    for (int jj=-2;jj<=2;jj++) {
+#endif
+     IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
+
+     int jcolor_round=(int) (colorfab(pofs)+0.5);
+     int jcolor_trunc=(int) (colorfab(pofs));
+     int secondary_type_round=(int) (typefab(pofs)+0.5);
+     int secondary_type_trunc=(int) (typefab(pofs));
+     if ((jcolor_round==jcolor_trunc)&&
+         (secondary_type_round==secondary_type_trunc)) {
+      //do nothing
+     } else
+      amrex::Error("expecting round=trunc");
+
+     if (jcolor_round<=0) {
+      std::cout << "level= " << level << '\n';
+      std::cout << "ii,jj= " << ii << ' ' << jj << '\n';
+      std::cout << "i,j= " << i << ' ' << j << '\n';
+      for (int dir2=0;dir2<AMREX_SPACEDIM;dir2++) {
+       std::cout << "dir,lo,hi " << dir2 << ' ' <<
+         lo[dir2] << ' ' << hi[dir2] << '\n';
+      }
+      std::cout << "jcolor_round = " << jcolor_round << '\n';
+       amrex::Error("jcolor_round invalid"); 
+     } // jcolor<=0
+	   
+     if (secondary_type_round==primary_type_round) {
+
+      if ((icolor_round>color_count)||(jcolor_round>color_count))
+       amrex::Error("icolor or jcolor invalid"); 
+
+      if (icolor_round!=jcolor_round) {
+
+       int size_i=color_color_array[tid_current][icolor_round-1].size();
+       int size_j=color_color_array[tid_current][jcolor_round-1].size();
+
+       if ((size_i>=1)&&(size_j>=1)) {
+
+  	int dup_flag=0;
+	for (int idup=0;idup<size_i;idup++) {
+ 	 if (color_color_array[tid_current][icolor_round-1][idup]==
+  	     jcolor_round-1) {
+	  dup_flag=1;
+         }
+	}
+	for (int idup=0;idup<size_j;idup++) {
+ 	 if (color_color_array[tid_current][jcolor_round-1][idup]==
+	     icolor_round-1) {
+          dup_flag=1;
+         }
+	}
+        if (dup_flag==0) {
+         color_color_array[tid_current][icolor_round-1].resize(size_i+1);
+         color_color_array[tid_current][icolor_round-1][size_i]=
+           jcolor_round-1;
+         color_color_array[tid_current][jcolor_round-1].resize(size_j+1);
+         color_color_array[tid_current][jcolor_round-1][size_j]=
+           icolor_round-1;
+	}
+       } else
+        amrex::Error("size_i or size_j invalid");
+
+      } else if (icolor_round==jcolor_round) {
+       //do nothing
+      } else
+       amrex::Error("icolor or jcolor bust");
+				 
+     } // primary_type==secondary_type
+
+    } // ii,jj,kk
+   } else
+    amrex::Error("icolor invalid");
+  } // i,j,k
+ } // mfi
+} //omp
+ ns_reconcile_d_num(LOOP_SYNC_GROUPS,"sync_groups");
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after initializing color_color_array \n";
+  }
+ }
+
+  // first reduce color_color_array from the different threads
+ for (int i_index=0;i_index<color_count;i_index++) {
+
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   int i_size=color_color_array[tid][i_index].size();
+   for (int i_trial=0;i_trial<i_size;i_trial++) {
+    int j_index=color_color_array[tid][i_index][i_trial];
+    int dup_flag=0;
+    int base_size=color_color_array[0][i_index].size();
+    for (int idup=0;idup<base_size;idup++) {
+     if (color_color_array[0][i_index][idup]==j_index) {
+      dup_flag=1;
+     }
+    }
+    if (dup_flag==0) {
+     color_color_array[0][i_index].resize(base_size+1);
+     color_color_array[0][i_index][base_size]=j_index;
+    }
+   } //i_trial
+  } //tid
+ } // i_index
+
+ ParallelDescriptor::Barrier();
+
+  // second: reduce color_color_array from the different cores
+ for (int i_index=0;i_index<color_count;i_index++) {
+
+  ParallelDescriptor::Barrier();
+
+  Vector<int> local_array;
+  local_array.resize(color_count);
+  for (int j_index=0;j_index<color_count;j_index++) {
+   local_array[j_index]=0;
+  }
+  int i_size_sync=color_color_array[0][i_index].size();
+  for (int i_trial=0;i_trial<i_size_sync;i_trial++) {
+   int j_index=color_color_array[0][i_index][i_trial];
+   local_array[j_index]=1;
+  }
+
+  color_color_array[0][i_index].resize(0);
+
+  ParallelDescriptor::Barrier();
+
+  for (int j_index=0;j_index<color_count;j_index++) {
+
+   ParallelDescriptor::ReduceIntMax(local_array[j_index]);
+   if (local_array[j_index]==0) {
+    //do nothing
+   } else if (local_array[j_index]==1) {
+    int i_size_grid=color_color_array[0][i_index].size();
+    color_color_array[0][i_index].resize(i_size_grid+1);
+    color_color_array[0][i_index][i_size_grid]=j_index;
+   } else
+    amrex::Error("local_array[j_index] invalid");
+  }  // j_index
+ }  // i_index
+     
+ ParallelDescriptor::Barrier();
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after ReduceIntMax \n";
+  }
+ }
+
+  // group_map[i] associates color "i" to a given group number.
+ for (int i=0;i<color_count;i++) {
+  group_map[i]=0;
+ }
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "before cross_check group_map \n";
+  }
+ }
+
+ Vector<int> stackdata;
+ int n_assoc=0;
+ for (int i_index=0;i_index<color_count;i_index++) {
+  n_assoc+=color_color_array[0][i_index].size();
+ }
+ total_groups=0;
+
+  //group_map only needs to be updated on the IOProcessor and
+  //initialized to 0 on the other processors.  A "reduceintmax"
+  //command synchronizes the IOProcessor to the others.
+ if (ParallelDescriptor::IOProcessor()) {
+
+  stackdata.resize(n_assoc);
+
+  for (int i_index=0;i_index<color_count;i_index++) {
+   if (group_map[i_index]==0) {
+    if (color_color_array[0][i_index].size()>0) {
+     total_groups++;
+     group_map[i_index]=total_groups;
+     if (group_map[i_index]<1)
+      amrex::Error("group_map invalid");
+     cross_check(group_map,stackdata,color_color_array[0],i_index);
+    } else
+     amrex::Error("expecting color_color_array[0][i_index].size()>0");
+   } else if (group_map[i_index]>0) {
+    //do nothing
+   } else {
+    amrex::Error("group_map invalid");
+   } 
+  } // i_index
+
+  stackdata.resize(0);
+
+ }  // IOProcessor
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after cross_check: group_map " << ' ' << n_assoc << '\n';
+  }
+ }
+
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  color_color_array[tid].resize(1);
+ }
+
+ ParallelDescriptor::Barrier();
+
+ for (int i_index=0;i_index<color_count;i_index++) {
+  ParallelDescriptor::ReduceIntMax(group_map[i_index]);
+ }
+ ParallelDescriptor::ReduceIntMax(total_groups);
+ ParallelDescriptor::Barrier();
+
+} //end subroutine color_to_group_map
+
 // c++ example of iterating components of a FAB
 // for more examples, check FArrayBox.cpp:
 // for (IntVect p = bx.smallEnd(); p <= bx.bigEnd(); bx.next(p)) ...
@@ -5575,6 +5877,7 @@ void NavierStokes::sync_colors(
 
  ParallelDescriptor::Barrier();
 
+  // second: reduce color_color_array from the different cores
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
    int i_index=max_colors_grid*igrid+icolor-1;
@@ -5583,8 +5886,9 @@ void NavierStokes::sync_colors(
 
    Vector<int> local_array;
    local_array.resize(Nside);
-   for (int j_index=0;j_index<Nside;j_index++)
+   for (int j_index=0;j_index<Nside;j_index++) {
     local_array[j_index]=0;
+   }
    int i_size_sync=grid_color_array[0][i_index].size();
    for (int i_trial=0;i_trial<i_size_sync;i_trial++) {
     int j_index=grid_color_array[0][i_index][i_trial];
@@ -6472,10 +6776,10 @@ NavierStokes::ColorSum(
  if (localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac)
   amrex::Error("localMF[CELLFRAC_MM_MF]->nComp()!=ncellfrac");
 
- if (localMF[TYPE_MF]->nGrow()!=1)
-  amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
- if (localMF[COLOR_MF]->nGrow()!=1)
-  amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
+ if (localMF[TYPE_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[TYPE_MF]->nGrow()!=ngrow_distance");
+ if (localMF[COLOR_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=ngrow_distance");
  if (mdot->nGrow()>=0) {
   // do nothing
  } else
@@ -7379,7 +7683,11 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
 
  blobdata[i].blob_cell_count=blob_array[counter+BLB_CELL_CNT];
  blobdata[i].blob_cellvol_count=blob_array[counter+BLB_CELLVOL_CNT];
+
  blobdata[i].blob_mass=blob_array[counter+BLB_MASS];
+ blobdata[i].blob_mass_target=blob_array[counter+BLB_MASS_TARGET];
+ blobdata[i].blob_mass_mdot=blob_array[counter+BLB_MASS_MDOT];
+
  blobdata[i].blob_pressure=blob_array[counter+BLB_PRES];
 
  for (int dir=0;dir<6;dir++) {
@@ -7404,6 +7712,7 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
   for (int i=0;i<num_colors;i++) {
 
    dest_blobdata[i].im=source_blobdata[i].im;
+   dest_blobdata[i].group_id=source_blobdata[i].group_id;
 
    for (int dir=0;dir<3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);dir++) {
     dest_blobdata[i].blob_matrix[dir]=
@@ -7456,6 +7765,10 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
 
    dest_blobdata[i].blob_mass=
      source_blobdata[i].blob_mass;
+   dest_blobdata[i].blob_mass_target=
+     source_blobdata[i].blob_mass_target;
+   dest_blobdata[i].blob_mass_mdot=
+     source_blobdata[i].blob_mass_mdot;
 
    dest_blobdata[i].blob_pressure=
      source_blobdata[i].blob_pressure;
@@ -7488,7 +7801,11 @@ void NavierStokes::sum_blobdata(int i,
   blobdata[i].blob_volume+=level_blobdata[i].blob_volume;
   blobdata[i].blob_cell_count+=level_blobdata[i].blob_cell_count;
   blobdata[i].blob_cellvol_count+=level_blobdata[i].blob_cellvol_count;
+
   blobdata[i].blob_mass+=level_blobdata[i].blob_mass;
+  blobdata[i].blob_mass_target+=level_blobdata[i].blob_mass_target;
+  blobdata[i].blob_mass_mdot+=level_blobdata[i].blob_mass_mdot;
+
   blobdata[i].blob_pressure+=level_blobdata[i].blob_pressure;
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -7586,7 +7903,11 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
  } // im1
  blob_array[counter+BLB_CELL_CNT]=blobdata[i].blob_cell_count;
  blob_array[counter+BLB_CELLVOL_CNT]=blobdata[i].blob_cellvol_count;
+
  blob_array[counter+BLB_MASS]=blobdata[i].blob_mass;
+ blob_array[counter+BLB_MASS_TARGET]=blobdata[i].blob_mass_target;
+ blob_array[counter+BLB_MASS_MDOT]=blobdata[i].blob_mass_mdot;
+
  blob_array[counter+BLB_PRES]=blobdata[i].blob_pressure;
  for (int dir=0;dir<6;dir++) {
   blob_array[counter+BLB_SECONDMOMENT+dir]=
@@ -7618,7 +7939,11 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  blobdata[i].blob_volume=0.0;
  blobdata[i].blob_cell_count=0.0;
  blobdata[i].blob_cellvol_count=0.0;
+
  blobdata[i].blob_mass=0.0;
+ blobdata[i].blob_mass_target=0.0;
+ blobdata[i].blob_mass_mdot=0.0;
+
  blobdata[i].blob_pressure=0.0;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -7679,6 +8004,9 @@ NavierStokes::ColorSumALL(
 
  int ngrow_color=ngrow_distance;
 
+ int total_groups=0;
+ Vector<int> group_map;
+
  if (operation_flag==OP_GATHER_MDOT) {
 
   // type_flag[im]=1 if material im exists in the domain.
@@ -7701,6 +8029,8 @@ NavierStokes::ColorSumALL(
    type_flag,
    zero_diag_flag,
    ngrow_color);
+
+  color_to_group_map(color_count,total_groups,group_map);
 
  } else if (operation_flag==OP_SCATTER_MDOT) {
 

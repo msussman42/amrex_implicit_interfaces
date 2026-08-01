@@ -27,6 +27,8 @@ namespace amrex{
       int* blb_cell_cnt_in,
       int* blb_cellvol_cnt_in,
       int* blb_mass_in,
+      int* blb_mass_target_in,
+      int* blb_mass_mdot_in,
       int* blb_pres_in,
       int* blb_secondmoment_in,
       int* num_elements_blobclass_in);

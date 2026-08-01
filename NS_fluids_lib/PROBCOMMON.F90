@@ -487,6 +487,8 @@ implicit none
       integer :: BLB_CELL_CNT=-32767
       integer :: BLB_CELLVOL_CNT=-32767
       integer :: BLB_MASS=-32767
+      integer :: BLB_MASS_TARGET=-32767
+      integer :: BLB_MASS_MDOT=-32767
       integer :: BLB_PRES=-32767
       integer :: BLB_SECONDMOMENT=-32767
       integer :: num_elements_blobclass=-32767

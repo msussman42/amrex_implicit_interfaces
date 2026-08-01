@@ -575,6 +575,8 @@ int NavierStokes::BLB_TRIPLE_PERIM=-32767;
 int NavierStokes::BLB_CELL_CNT=-32767;
 int NavierStokes::BLB_CELLVOL_CNT=-32767;
 int NavierStokes::BLB_MASS=-32767;
+int NavierStokes::BLB_MASS_TARGET=-32767;
+int NavierStokes::BLB_MASS_MDOT=-32767;
 int NavierStokes::BLB_PRES=-32767;
 int NavierStokes::BLB_SECONDMOMENT=-32767;
 
@@ -2630,7 +2632,9 @@ NavierStokes::read_params ()
     BLB_CELL_CNT=BLB_TRIPLE_PERIM+num_materials*num_materials; //F_m>=1/2
     BLB_CELLVOL_CNT=BLB_CELL_CNT+1; //F_m>=1/2
     BLB_MASS=BLB_CELLVOL_CNT+1;
-    BLB_PRES=BLB_MASS+1; //F_m>=1/2
+    BLB_MASS_TARGET=BLB_MASS+1;
+    BLB_MASS_MDOT=BLB_MASS_TARGET+1;
+    BLB_PRES=BLB_MASS_MDOT+1; //F_m>=1/2
     BLB_SECONDMOMENT=BLB_PRES+1;
     num_elements_blobclass=BLB_SECONDMOMENT+6;
 
@@ -2651,6 +2655,8 @@ NavierStokes::read_params ()
      &BLB_CELL_CNT,
      &BLB_CELLVOL_CNT,
      &BLB_MASS,
+     &BLB_MASS_TARGET,
+     &BLB_MASS_MDOT,
      &BLB_PRES,
      &BLB_SECONDMOMENT,
      &num_elements_blobclass);
