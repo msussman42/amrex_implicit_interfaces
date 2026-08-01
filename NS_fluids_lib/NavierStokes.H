@@ -910,9 +910,12 @@ protected:
 
     void assign_colors(
      int& fully_covered,
-     int idx_color,int idx_type,
-     Vector<int>& colormax,Vector<int> type_flag,
-     int zero_diag_flag);
+     int idx_color,
+     int idx_type,
+     Vector<int>& colormax,
+     Vector<int> type_flag,
+     int zero_diag_flag,
+     int ngrow_color);
 
     void avgDownColor(int idx_color,int idx_type);
     MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type,
@@ -925,7 +928,8 @@ protected:
      int max_colors_grid,
      MultiFab* maskmf,
      int check_corners,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void color_variable(
      int& coarsest_level,

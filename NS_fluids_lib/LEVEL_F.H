@@ -175,7 +175,9 @@ namespace amrex{
      int* bfact,
      int* levelcolormap,
      int* max_colors_grid,
-     int* number_grids,int* arrsize);
+     int* number_grids,
+     int* arrsize,
+     int* ngrow_color);
 
     void fort_colorfill(
      const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
