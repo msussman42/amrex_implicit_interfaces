@@ -921,6 +921,11 @@ protected:
     MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type,
 		    int zero_diag_flag);
 
+    void color_to_group_map(
+      int color_count,
+      int& total_groups,
+      Vector<int>& group_map);
+
     void sync_colors(
      int idx_color,int idx_type,
      Vector<int> color_per_grid,
@@ -1963,6 +1968,8 @@ protected:
     static int BLB_CELL_CNT;
     static int BLB_CELLVOL_CNT;
     static int BLB_MASS;
+    static int BLB_MASS_TARGET;
+    static int BLB_MASS_MDOT;
     static int BLB_PRES;
     static int BLB_SECONDMOMENT;  //6 components, uses BLB_CEN_ACT and BLB_VOL
 

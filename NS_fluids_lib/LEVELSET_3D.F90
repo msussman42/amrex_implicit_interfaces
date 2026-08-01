@@ -4125,6 +4125,8 @@ stop
       real(amrex_real) blob_cell_count
       real(amrex_real) blob_cellvol_count
       real(amrex_real) blob_mass
+      real(amrex_real) blob_mass_target
+      real(amrex_real) blob_mass_mdot
       real(amrex_real) blob_volume
       real(amrex_real) blob_pressure
       real(amrex_real) mdot_total
@@ -4994,7 +4996,8 @@ stop
              else
               print *,"ic invalid for blob_cell_count"
               print *,"blob_cell_count,blob_cellvol_count,"
-              print *,"blob_mass,blob_pressure,"
+              print *,"blob_mass,blob_mass_target,blob_mass_mdot,"
+              print *,"blob_pressure,"
               print *,"ic=",ic
               print *,"im=",im
               print *,"opposite_color(im)=",opposite_color(im)
@@ -5005,7 +5008,9 @@ stop
               ! blob_cell_count  (ic)
               ! blob_cellvol_count (ic+1)
               ! blob_mass (ic+2)
-              ! blob_pressure (ic+3)
+              ! blob_mass_target (ic+3)
+              ! blob_mass_mdot (ic+4)
+              ! blob_pressure (ic+5)
              if (vfrac.ge.half) then
               level_blobdata(ic)=level_blobdata(ic)+one !blob_cell_count
               level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
@@ -5042,7 +5047,6 @@ stop
                 print *,"fort_material_type(im) invalid"
                 stop
                endif
-
 
                if (local_material_type.eq.0) then
                 ! do nothing
@@ -5099,13 +5103,40 @@ stop
                stop
               endif
 
+              if (ic+2.eq. &
+                  (opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_MASS+1) then
+               !do nothing
+              else
+               print *,"expecting ic+2 to correspond to BLB_MASS+1"
+               stop
+              endif
+
               if (ic+3.eq. &
                   (opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_MASS_TARGET+1) then
+               !do nothing
+              else
+               print *,"expecting ic+3 to correspond to BLB_MASS_TARGET+1"
+               stop
+              endif
+
+              if (ic+4.eq. &
+                  (opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_MASS_MDOT+1) then
+               !do nothing
+              else
+               print *,"expecting ic+4 to correspond to BLB_MASS_MDOT+1"
+               stop
+              endif
+
+              if (ic+5.eq. &
+                  (opposite_color(im)-1)*num_elements_blobclass+ &
                    BLB_PRES+1) then
-               level_blobdata(ic+3)=level_blobdata(ic+3)+ &
+               level_blobdata(ic+5)=level_blobdata(ic+5)+ &
                  vol*pressure_local !blob_pressure
               else
-               print *,"expecting ic+3 to correspond to BLB_PRES+1"
+               print *,"expecting ic+5 to correspond to BLB_PRES+1"
                stop
               endif
 
@@ -5138,8 +5169,10 @@ stop
              ! blob_cell_count  (ic)
              ! blob_cellvol_count (ic+1)
              ! blob_mass (ic+2)
-             ! blob_pressure (ic+3)
-             ic=ic+3
+             ! blob_mass_target (ic+3)
+             ! blob_mass_mdot (ic+4)
+             ! blob_pressure (ic+5)
+             ic=ic+5 !now "ic" points to blob_pressure
 
              if (ic.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
@@ -5166,11 +5199,13 @@ stop
              endif
              if (den_mat.ge.(one-VOFTOL_MATERIAL)*fort_density_floor(im)) then
               if (den_mat.le.(one+VOFTOL_MATERIAL)*fort_density_ceiling(im)) then
-               ! blob_cell_count  (ic-3)
-               ! blob_cellvol_count (ic-2)
-               ! blob_mass (ic-1)
+               ! blob_cell_count  (ic-5)
+               ! blob_cellvol_count (ic-4)
+               ! blob_mass (ic-3)
+               ! blob_mass_target (ic-2)
+               ! blob_mass_mdot (ic-1)
                ! blob_pressure (ic)
-               level_blobdata(ic-1)=level_blobdata(ic-1)+vol*vfrac*den_mat
+               level_blobdata(ic-3)=level_blobdata(ic-3)+vol*vfrac*den_mat
               else
                print *,"den_mat overflow"
                print *,"den_mat= ",den_mat
@@ -5179,6 +5214,39 @@ stop
               endif
              else
               print *,"den_mat underflow"
+              stop
+             endif
+
+             if (ic-3.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_MASS+1) then
+              ! do nothing
+             else
+              print *,"ic invalid in getcolorsum"
+              stop
+             endif
+             if (ic-2.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_MASS_TARGET+1) then
+              ! do nothing
+             else
+              print *,"ic invalid in getcolorsum"
+              stop
+             endif
+             if (ic-1.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_MASS_MDOT+1) then
+              ! do nothing
+             else
+              print *,"ic invalid in getcolorsum"
+              stop
+             endif
+             if (ic.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_PRES+1) then
+              ! do nothing
+             else
+              print *,"ic invalid in getcolorsum"
               stop
              endif
 
@@ -5613,8 +5681,10 @@ stop
                   blob_cell_count=cum_blobdata(ic)
                   blob_cellvol_count=cum_blobdata(ic+1)
                   blob_mass=cum_blobdata(ic+2)
-                  blob_pressure=cum_blobdata(ic+3)
-                  ic=ic+3
+                  blob_mass_target=cum_blobdata(ic+3)
+                  blob_mass_mdot=cum_blobdata(ic+4)
+                  blob_pressure=cum_blobdata(ic+5)
+                  ic=ic+5
 
                   if (ic_base.eq. &
                       (opposite_color(im)-1)*num_elements_blobclass) then
