@@ -3103,6 +3103,9 @@ NavierStokes::read_params ()
     blob_history_class.start_step=-1;
     blob_history_class.end_step=-1;
 
+     //amrlevel_repair_blobclass is declared in AmrLevel.H
+    amrlevel_repair_blobclass.repair_blobclass_data.resize(0);
+
     gravity_vector.resize(AMREX_SPACEDIM);
 
     bool gravity_in_table=pp.contains("gravity");
@@ -12104,6 +12107,7 @@ void NavierStokes::Number_CellsALL(Real& rcells) {
 // called from:
 //  NavierStokes::do_the_advance  (near beginning)
 //  NavierStokes::prepare_post_process (near beginning)
+//  NavierStokes::ColorSumALL
 void NavierStokes::allocate_mdot(int zap_mdot_flag) {
 
  int nsolve=1;
@@ -17062,10 +17066,12 @@ NavierStokes::phase_change_redistributeALL() {
  int tessellate=TESSELLATE_ALL_RASTER;
  int operation_flag=OP_GATHER_MDOT; 
  int use_mac_velocity=0;
+ int update_mdot=0;
 
   //calling from: NavierStokes::phase_change_redistributeALL
   //TYPE_MF, COLOR_MF
  ColorSumALL(
+  update_mdot,
   use_mac_velocity,
   operation_flag, // =OP_GATHER_MDOT
   tessellate,  //=TESSELLATE_ALL_RASTER
@@ -17086,6 +17092,7 @@ NavierStokes::phase_change_redistributeALL() {
   //calling from: NavierStokes::phase_change_redistributeALL
   //TYPE_MF, COLOR_MF
  ColorSumALL(
+  update_mdot,
   use_mac_velocity,
   operation_flag, //=OP_SCATTER_MDOT
   tessellate,  //=TESSELLATE_ALL_RASTER
@@ -26783,10 +26790,12 @@ NavierStokes::post_init_state () {
  int operation_flag=OP_GATHER_MDOT;
 
  int use_mac_velocity=0;
+ int update_mdot=0;
 
   //calling from: NavierStokes::post_init_state()
   //TYPE_MF, COLOR_MF
  ColorSumALL(
+  update_mdot,
   use_mac_velocity,
   operation_flag, //=OP_GATHER_MDOT
   tessellate,  //=TESSELLATE_ALL

@@ -2207,7 +2207,10 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
  }
 
 } //end subroutine append_blob_history
-  
+ 
+//called from NavierStokes::post_restart if sum_interval>0 
+//called from NavierStokes::post_timestep if sum_interval>0 
+//called from NavierStokes::post_init
 void
 NavierStokes::sum_integrated_quantities (
 	const std::string& caller_string,
@@ -2421,12 +2424,13 @@ NavierStokes::sum_integrated_quantities (
   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
   int operation_flag=OP_GATHER_MDOT;
   int use_mac_velocity=0;
-
+  int update_mdot=0;
 
    // declared in NavierStokes3.cpp
    // calling from: NavierStokes::sum_integrated_quantities()
    //TYPE_MF, COLOR_MF
   ColorSumALL(
+    update_mdot,
     use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
     tessellate, // =TESSELLATE_ALL
@@ -2529,6 +2533,7 @@ NavierStokes::sum_integrated_quantities (
 
        // 1..num_materials
       int imbase=blobdata[iblob].im;
+      int groupbase=blobdata[iblob].group_id;
       if ((imbase<1)||(imbase>num_materials))
        amrex::Error("imbase invalid");
 
@@ -2538,11 +2543,13 @@ NavierStokes::sum_integrated_quantities (
       Real gdiam=2.0*std::exp(std::log(3.0*gvol_modify/(4.0*NS_PI))/3.0);
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<
+       " group_id= " << groupbase <<
        " volume = " << gvol_modify << '\n';
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
-        " im= " << imbase <<     
-        " diameter= " << gdiam << " perim= " <<
-        blobdata[iblob].blob_perim << '\n';
+       " im= " << imbase <<     
+       " group_id= " << groupbase <<
+       " diameter= " << gdiam << " perim= " <<
+       blobdata[iblob].blob_perim << '\n';
 
        // surface area in 3D
        // perimeter in 2D
@@ -2572,6 +2579,7 @@ NavierStokes::sum_integrated_quantities (
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
         " im= " << imbase << 
+        " group_id= " << groupbase <<
         " center dir = " << dir << " coordinate=" << 
         blobdata[iblob].blob_center_integral[dir]/gvol << '\n';
        }
@@ -2661,6 +2669,25 @@ NavierStokes::sum_integrated_quantities (
        // do nothing
       } else
        amrex::Error("cellvol invalid");
+
+      Real mass_target=blobdata[iblob].blob_mass_target;
+      Real mass_original=blobdata[iblob].blob_mass;
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " group_id= " << groupbase <<
+       " blob_mass_target= " <<
+        mass_target << '\n';
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " group_id= " << groupbase <<
+       " blob_mass_original= " <<
+        mass_original << '\n';
+
+      Real mass_mdot=blobdata[iblob].blob_mass_mdot;
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " blob_mass_mdot= " <<
+        mass_mdot << '\n';
 
      }  // isort1=0..material_blob_count-1
      std::cout << "-----------------------------------------------\n";

@@ -3261,10 +3261,12 @@ void NavierStokes::project_to_rigid_velocityALL() {
  int tessellate=TESSELLATE_ALL;
  int operation_flag=OP_GATHER_MDOT;
  int use_mac_velocity=0;
+ int update_mdot=0;
 
   //calling from: void NavierStokes::project_to_rigid_velocityALL() 
   //TYPE_MF, COLOR_MF
  ColorSumALL(
+    update_mdot,
     use_mac_velocity,
     operation_flag, // =OP_GATHER_MDOT
     tessellate, //=TESSELLATE_ALL

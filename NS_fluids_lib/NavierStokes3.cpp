@@ -3000,10 +3000,12 @@ void NavierStokes::nucleation_code_segment(
  int coarsest_level=0;
 
  int use_mac_velocity=0;
+ int update_mdot=0;
 
   //calling from: NavierStokes::nucleation_code_segment()
   //TYPE_MF, COLOR_MF
  ColorSumALL( 
+   update_mdot,
    use_mac_velocity,
    operation_flag, //=OP_GATHER_MDOT
    tessellate, //=TESSELLATE_ALL
@@ -4229,12 +4231,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
           int use_mac_velocity=0;
+          int update_mdot=0;
 
           // for each blob, find sum_{F>=1/2} pressure * vol and
  	  // sum_{F>=1/2} vol.
           // calling from: NavierStokes::do_the_advance()
           //TYPE_MF, COLOR_MF
           ColorSumALL(
+           update_mdot,
            use_mac_velocity,
            operation_flag, // =OP_GATHER_MDOT
            local_tessellate, //=TESSELLATE_ALL_RASTER
@@ -6466,11 +6470,18 @@ int ilev;
   }
 } // end subroutine color_variable
 
+void 
+NavierStokes::sync_groups(
+ Vector<blobclass>& blobdata) {
+
+} //end subroutine sync_groups
+
 //called from NavierStokes::ColorSumALL
 //operation_flag==1 OP_SCATTER_MDOT => scatter data collected when 
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSum(
+ int update_mdot,
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
  int sweep_num,
@@ -6556,11 +6567,28 @@ NavierStokes::ColorSum(
      level_mdot_comp_data_redistribute[i][j]=0.0;
     }
    } // i=0..num_colors-1
-     
+
+  } else if (sweep_num==2) {
+
+   if (tessellate==TESSELLATE_ALL) {
+    //do nothing
+   } else
+    amrex::Error("tessellate invalid");
+
+   if (update_mdot==1) {
+    //do nothing
+   } else
+    amrex::Error("update_mdot invalid");
+
   } else
    amrex::Error("sweep_num invalid");
 
  } else if (operation_flag==OP_SCATTER_MDOT) {
+
+  if (update_mdot==0) {
+   //do nothing
+  } else
+   amrex::Error("update_mdot invalid");
 
   if (sweep_num==0) {
 
@@ -6657,8 +6685,27 @@ NavierStokes::ColorSum(
 
   if (operation_flag==OP_GATHER_MDOT) {
 
-   // do nothing
-   
+   if ((sweep_num==0)||(sweep_num==1)) {
+    // do nothing
+   } else if (sweep_num==2) {
+  
+    counter=0;
+ 
+    for (int i=0;i<num_colors;i++) {
+     copy_from_blobdata(i,counter,level_blob_array[tid],level_blobdata);
+     if ((level_blobdata[i].im>=1)&&
+         (level_blobdata[i].im<=num_materials)) {
+      level_blob_type_array[tid][i]=level_blobdata[i].im;
+     } else
+      amrex::Error("level_blobdata[i].im invalid");
+    } // i=0..num_colors
+
+    if (counter!=blob_array_size)
+     amrex::Error("counter invalid");
+ 
+   } else
+    amrex::Error("sweep_num invalid");
+ 
   } else if (operation_flag==OP_SCATTER_MDOT) {
    
    counter=0;
@@ -6684,6 +6731,7 @@ NavierStokes::ColorSum(
      amrex::Error("j invalid");
 
    } // i=0..num_colors
+
    if (counter!=blob_array_size)
     amrex::Error("counter invalid");
    if (mdot_counter!=mdot_array_size) {
@@ -6706,6 +6754,10 @@ NavierStokes::ColorSum(
    amrex::Error("area_mf boxarrays do not match");
  } // dir=0..sdim-1
  
+ debug_ngrow(MDOT_MF,0,local_caller_string);
+ if (localMF[MDOT_MF]->nComp()!=1)
+  amrex::Error("localMF[MDOT_MF]->nComp() invalid");
+
  debug_ngrow(VOLUME_MF,0,local_caller_string);
  VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
@@ -6741,6 +6793,8 @@ NavierStokes::ColorSum(
    //makeCellFrac declared in: NavierStokes.cpp
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
+  // do nothing
+ } else if (sweep_num==2) {
   // do nothing
  } else
   amrex::Error("sweep_num invalid");
@@ -6825,6 +6879,8 @@ NavierStokes::ColorSum(
 
   FArrayBox& snewfab=S_new[mfi];
 
+  FArrayBox& mdot_pres_fab=(*localMF[MDOT_MF])[mfi];
+
   FArrayBox& mdotfab=(*mdot)[mfi];
   FArrayBox& mdot_comp_fab=(*mdot_complement)[mfi];
 
@@ -6870,7 +6926,11 @@ NavierStokes::ColorSum(
    dx, 
    xlo, 
    &nstate,
-   snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+   snewfab.dataPtr(),
+   ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+   mdot_pres_fab.dataPtr(),
+   ARLIM(mdot_pres_fab.loVect()),
+   ARLIM(mdot_pres_fab.hiVect()),
    mdotfab.dataPtr(),
    ARLIM(mdotfab.loVect()),
    ARLIM(mdotfab.hiVect()),
@@ -7966,14 +8026,20 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  }
 
  blobdata[i].im=0;
+ blobdata[i].group_id=0;
 
 } // end subroutine clear_blobdata
 
 //operation_flag==1 (OP_SCATTER_MDOT) => scatter data collected when 
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 //TYPE_MF, COLOR_MF
+//ColorSumALL is called from: sum_integrated_quantities, 
+// project_to_rigid_velocityALL,nucleation_code_segment,
+// do_the_advance,multiphase_project,phase_change_redistributeALL,
+// post_init_state
 void
 NavierStokes::ColorSumALL(
+ int update_mdot,
  int use_mac_velocity,
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // TESSELLATE_ALL or TESSELLATE_ALL_RASTER
@@ -8001,6 +8067,12 @@ NavierStokes::ColorSumALL(
   amrex::Error("ngrow_make_distance!=ngrow_distance-1");
  if (ngrow_distance<4)
   amrex::Error("ngrow_distance<4");
+
+ int zap_mdot_flag=0;
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.allocate_mdot(zap_mdot_flag); 
+ }
 
  int ngrow_color=ngrow_distance;
 
@@ -8183,8 +8255,22 @@ NavierStokes::ColorSumALL(
  int num_sweeps=2;
 
  if (operation_flag==OP_GATHER_MDOT) {
-  // do nothing
+
+  if (update_mdot==1) {
+   num_sweeps=3;
+  } else if (update_mdot==0) {
+   //do nothing
+  } else
+   amrex::Error("update_mdot invalid");
+
  } else if (operation_flag==OP_SCATTER_MDOT) { 
+
+  if (update_mdot==0) {
+   //do nothing
+  } else
+   amrex::Error("update_mdot invalid");
+
+   
    // (dest,source)
   copy_blobdata(level_blobdata,blobdata);
 
@@ -8232,6 +8318,17 @@ NavierStokes::ColorSumALL(
 
  for (int sweep_num=0;sweep_num<num_sweeps;sweep_num++) {
 
+  if ((sweep_num>=0)&&(sweep_num<=1)) {
+   //do nothing
+  } else if (sweep_num==2) {
+   if (update_mdot==1) {
+    // (dest,source)
+    copy_blobdata(level_blobdata,blobdata);
+   } else
+    amrex::Error("update_mdot invalid");
+  } else
+   amrex::Error("sweep_num invalid");
+
   for (int ilev = coarsest_level; ilev <= finest_level; ilev++) {
 
    NavierStokes& ns_level = getLevel(ilev);
@@ -8262,6 +8359,7 @@ NavierStokes::ColorSumALL(
    }
 
    ns_level.ColorSum(
+    update_mdot,
     operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
     tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
     sweep_num,
@@ -8321,10 +8419,22 @@ NavierStokes::ColorSumALL(
       sum_blobdata(i,blobdata,level_blobdata,sweep_num);
      }  // i=0..color_count-1
 
+    } else if (sweep_num==2) {
+
+     if (update_mdot==1) {
+      //do nothing
+     } else
+      amrex::Error("update_mdot invalid");
+
     } else
      amrex::Error("sweep_num invalid");
 
    } else if (operation_flag==OP_SCATTER_MDOT) { //blobdata not updated.
+
+    if (update_mdot==0) {
+     //do nothing
+    } else
+     amrex::Error("update_mdot invalid");
 
     if (sweep_num==0) {
 
@@ -8647,6 +8757,13 @@ NavierStokes::ColorSumALL(
 
     } // i=0..color_count-1
 
+   } else if (sweep_num==2) {
+
+    if (update_mdot==1) {
+     //do nothing
+    } else
+     amrex::Error("update_mdot invalid");
+
    } else
     amrex::Error("sweep_num invalid");
 
@@ -8655,7 +8772,43 @@ NavierStokes::ColorSumALL(
   } else
    amrex::Error("operation_flag invalid");
 
- } // sweep_num=0..1
+  if (sweep_num==1) {
+
+   if (operation_flag==OP_GATHER_MDOT) {
+
+    if (group_map.size()==color_count) {
+     //do nothing
+    } else
+     amrex::Error("group_map.size() invalid");
+
+    for (int i=0;i<color_count;i++) {
+
+     if ((group_map[i]>=1)&&(group_map[i]<=color_count)) {
+      //do nothing
+     } else
+      amrex::Error("group_map invalid");
+
+     blobdata[i].group_id=group_map[i];
+    }
+
+    if (tessellate==TESSELLATE_ALL_RASTER) {
+     //do nothing
+    } else if (tessellate==TESSELLATE_ALL) {
+     sync_groups(blobdata);
+    } else
+     amrex::Error("tessellate invalid");
+
+   } else if (operation_flag==OP_SCATTER_MDOT) {
+    // do nothing
+   } else
+    amrex::Error("operation_flag invalid");
+
+  } else if ((sweep_num==0)||(sweep_num==2)) {
+   // do nothing
+  } else
+   amrex::Error("sweep_num invalid");
+
+ } // sweep_num=0..1 or sweep_num=0..2
 
  if (use_mac_velocity==1) {
   ParallelDescriptor::Barrier();
@@ -8683,6 +8836,7 @@ NavierStokes::ColorSumALL(
        blobdata[i].im << '\n';
     } else if (blobvol>0.0) {
      int imbase=blobdata[i].im;
+     int groupbase=blobdata[i].group_id;
      if ((imbase<1)||(imbase>num_materials))
       amrex::Error("imbase invalid");
 
@@ -8690,6 +8844,12 @@ NavierStokes::ColorSumALL(
       blobdata[i].blob_volume << ' ' <<
       blobdata[i].blob_perim << ' ' <<
       imbase << '\n';
+
+     std::cout << "i,group,im,mass,mass_target,mass_mdot " <<
+       i << ' ' << groupbase << ' ' << imbase << ' ' <<
+       blobdata[i].blob_mass << ' ' <<
+       blobdata[i].blob_mass_target << ' ' <<
+       blobdata[i].blob_mass_mdot << '\n';
 
      for (int imnbr=0;imnbr<num_materials;imnbr++) {
       std::cout << "perim(nbr): i,imnbr,im,perim " << i << ' ' <<
@@ -10924,27 +11084,70 @@ void NavierStokes::multiphase_project(int project_option) {
 
  } else if (project_option==SOLVETYPE_PRES) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
+  if ((FSI_outer_sweeps>0)&&
+      (FSI_outer_sweeps<=min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
+   //do nothing
+  } else if (FSI_outer_sweeps==0) {
+
+   Vector<blobclass> blobdata;
+   Vector< Vector<Real> > mdot_data;
+   Vector< Vector<Real> > mdot_comp_data;
+   Vector< Vector<Real> > mdot_data_redistribute;
+   Vector< Vector<Real> > mdot_comp_data_redistribute;
+   Vector<int> type_flag;
+
+   int color_count=0;
+   int coarsest_level=0;
+
+   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+
+   int tessellate=TESSELLATE_ALL;
+   int operation_flag=OP_GATHER_MDOT;
+
+   int use_mac_velocity=1;
+   int update_mdot=1;
+
+   //calling from: NavierStokes::multiphase_project
+   //TYPE_MF, COLOR_MF
+   ColorSumALL(
+     update_mdot,
+     use_mac_velocity,
+     operation_flag, // =OP_GATHER_MDOT
+     tessellate, //=TESSELLATE_ALL
+     coarsest_level,
+     color_count,
+     idx_mdot,
+     idx_mdot,
+     type_flag,
+     blobdata,
+     mdot_data,
+     mdot_comp_data,
+     mdot_data_redistribute,
+     mdot_comp_data_redistribute 
+     );
+
+   if (color_count!=blobdata.size())
+    amrex::Error("color_count!=blobdata.size()");
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+
+    NavierStokes& ns_level=getLevel(ilev);
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
 
      //NavierStokes::move_mdot_to_density() is declared
      //in NavierStokes.cpp
-    if ((FSI_outer_sweeps>0)&&
-        (FSI_outer_sweeps<=min(num_FSI_outer_sweeps,NFSI_LIMIT)-1)) {
-     //do nothing
-    } else if (FSI_outer_sweeps==0) {
      ns_level.move_mdot_to_density();
+
+    } else if (num_materials_compressible==0) {
+     //do nothing
     } else
-     amrex::Error("FSI_outer_sweeps invalid");
+     amrex::Error("num_materials_compressble invalid");
 
-   } else if (num_materials_compressible==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_compressble invalid");
+   } // for (int ilev=finest_level;ilev>=level;ilev--) 
 
-  }
+  } else
+   amrex::Error("FSI_outer_sweeps invalid");
 
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
@@ -11332,10 +11535,12 @@ void NavierStokes::multiphase_project(int project_option) {
    int operation_flag=OP_GATHER_MDOT;
 
    int use_mac_velocity=1;
+   int update_mdot=0;
 
    //calling from: NavierStokes::multiphase_project
    //TYPE_MF, COLOR_MF
    ColorSumALL(
+     update_mdot,
      use_mac_velocity,
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=TESSELLATE_ALL
@@ -11387,7 +11592,8 @@ void NavierStokes::multiphase_project(int project_option) {
       SDC_outer_sweeps,
       project_slab_step,
       divu_outer_sweeps);
-     std::cout << "press any number then enter: before increment_face_velocityALL\n";
+     std::cout << 
+      "press any number then enter:before increment_face_velocityALL\n";
      std::cout << "WARNING: velocity is scaled\n";
      std::cout << " cur_time_slab= " << cur_time_slab << '\n';
      std::cout << " dt_slab= " << dt_slab << '\n';
@@ -11426,7 +11632,8 @@ void NavierStokes::multiphase_project(int project_option) {
       SDC_outer_sweeps,
       project_slab_step,
       divu_outer_sweeps);
-     std::cout << "press any number then enter: after increment_face_velocityALL\n";
+     std::cout << 
+      "press any number then enter: after increment_face_velocityALL\n";
      std::cout << "WARNING: velocity is scaled\n";
      std::cout << " cur_time_slab= " << cur_time_slab << '\n';
      std::cout << " dt_slab= " << dt_slab << '\n';
@@ -11488,7 +11695,7 @@ void NavierStokes::multiphase_project(int project_option) {
    }  // dir=0..sdim-1
   } // ilev=finest_level ... level
 
- } //project_option=SOLVETYPE_[PRES|INITPROJ|SMOOTH]
+ } //project_option=SOLVETYPE_[PRES|INITPROJ]
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
