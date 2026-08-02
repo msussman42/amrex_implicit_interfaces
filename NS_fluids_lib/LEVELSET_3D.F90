@@ -3885,6 +3885,8 @@ stop
        xlo, &
        nstate, &
        snew,DIMS(snew), &
+       mdot_pres, &
+       DIMS(mdot_pres), &
        mdot, &
        DIMS(mdot), &
        mdot_complement, &
@@ -3976,6 +3978,7 @@ stop
       integer :: growlo(3), growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(mdot_pres)
       integer, INTENT(in) :: DIMDEC(mdot)
       integer, INTENT(in) :: DIMDEC(mdot_complement)
       integer, INTENT(in) :: DIMDEC(LS)
@@ -4007,6 +4010,9 @@ stop
 
       real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout), target :: mdot_pres(DIMV(mdot_pres))
+      real(amrex_real), pointer :: mdot_pres_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot),ncomp_mdot)
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:),:)
@@ -4155,6 +4161,7 @@ stop
       nmax=POLYGON_LIST_MAX ! in: fort_getcolorsum
 
       snew_ptr=>snew
+      mdot_pres_ptr=>mdot_pres
       mdot_ptr=>mdot
       mdot_complement_ptr=>mdot_complement
 
@@ -4225,6 +4232,7 @@ stop
       cutoff=DXMAX
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mdot_pres_ptr,0,-1)
       call checkbound_array(fablo,fabhi,mdot_ptr,0,-1)
       call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1)
 
@@ -4364,6 +4372,8 @@ stop
            endif
           endif
 
+         else if (sweep_num.eq.2) then
+          !do nothing
          else
           print *,"sweep_num invalid: ",sweep_num
           print *,"operation_flag: ",operation_flag
@@ -5454,6 +5464,10 @@ stop
    
               enddo ! side
              enddo ! dir
+
+            else if (sweep_num.eq.2) then
+
+             !update mdot_pres in non-clamped fluid regions.
 
             else
              print *,"sweep_num invalid: ",sweep_num

@@ -948,6 +948,7 @@ protected:
     void SumRegions(int isweep); //isweep = 0 or 1
 
     void ColorSum(
+     int update_mdot,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate, // =1 or 3
      int sweep_num,
@@ -967,6 +968,7 @@ protected:
 
      //TYPE_MF, COLOR_MF
     void ColorSumALL(
+     int update_mdot,
      int use_mac_velocity,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate,  // =1 or 3
@@ -982,7 +984,11 @@ protected:
      Vector< Vector<Real> >& mdot_comp_data_redistribute
      );
 
+    void sync_groups(
+     Vector<blobclass>& blobdata
+    );
 
+     
 
     void LowMachDIVU(
      int sweep_num,
