@@ -18,10 +18,13 @@ DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
 dynamic_blobclass_array AmrLevel::blob_history_class;
+repair_blobclass AmrLevel::amrlevel_repair_blobclass;
 
 std::ofstream FSI_container_class::CTML_checkpoint_file;
 
 std::ofstream dynamic_blobclass_array::blob_checkpoint_file;
+
+std::ofstream repair_blobclass::repair_blob_checkpoint_file;
 
 void snapshot_blobclass::sort_axis() {
 
@@ -55,7 +58,7 @@ void dynamic_blobclass_array::open_checkpoint(const std::string& FullPath) {
   int old_prec=blob_checkpoint_file.precision(15);
  }
 
-} //end subroutine open_checkpoint
+} //end subroutine dynamic_blobclass_array::open_checkpoint
 
 void dynamic_blobclass_array::close_checkpoint() {
 
@@ -154,6 +157,207 @@ void dynamic_blobclass_array::restart(int check_id,std::istream& is) {
 
 } //end subroutine dynamic_blobclass_array::restart
 
+void repair_blobclass::open_checkpoint(const std::string& FullPath) {
+
+// use std::ios::in for restarting  (std::ofstream::in ok too?)
+ if (ParallelDescriptor::IOProcessor()) {
+  std::string blob_FullPathName  = FullPath+"/repair_blob";
+  repair_blob_checkpoint_file.open(blob_FullPathName.c_str(),
+    std::ios::out|std::ios::trunc|std::ios::binary);
+  if (!repair_blob_checkpoint_file.good())
+   amrex::FileOpenFailed(blob_FullPathName);
+  int old_prec=repair_blob_checkpoint_file.precision(15);
+ }
+
+} //end subroutine repair_blobclass::open_checkpoint
+
+void repair_blobclass::close_checkpoint() {
+
+ if (ParallelDescriptor::IOProcessor()) {
+  repair_blob_checkpoint_file.close();
+ }
+
+}
+
+void repair_blobclass::checkpoint(int check_id) {
+
+ if (ParallelDescriptor::IOProcessor()) {
+  repair_blob_checkpoint_file << check_id << '\n';
+
+  int local_repair_size=repair_blobclass_data.size();
+  repair_blob_checkpoint_file << local_repair_size << '\n';
+
+  for (int iblob=0;iblob<local_repair_size;iblob++) {
+
+   for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_matrix[i] << '\n';
+   }
+   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_RHS[i] << '\n';
+   }
+   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_velocity[i] << '\n';
+   }
+   for (int i=0;i<4*AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_integral_momentum[i] << '\n';
+   }
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_energy << '\n';
+   for (int i=0;i<3;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_mass_for_velocity[i] << '\n';
+   }
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_volume << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_cell_count << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_cellvol_count << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_mass << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_mass_target << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_mass_mdot << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_pressure << '\n';
+   for (int i=0;i<6;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_second_moment[i] << '\n';
+   }
+   for (int i=0;i<AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_center_integral[i] << '\n';
+   }
+   for (int i=0;i<AMREX_SPACEDIM;i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_center_actual[i] << '\n';
+   }
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_perim << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].blob_perim_mat.size() << '\n';
+   for (int i=0;i<repair_blobclass_data[iblob].blob_perim_mat.size();i++) {
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[iblob].blob_perim_mat[i] << '\n';
+   }
+   int end_outer=repair_blobclass_data[iblob].blob_triple_perim.size();
+   repair_blob_checkpoint_file << end_outer << '\n';
+   for (int i=0;i<end_outer;i++) {
+    int end_inner=repair_blobclass_data[iblob].blob_triple_perim[i].size();
+    repair_blob_checkpoint_file << end_inner << '\n';
+    for (int j=0;j<end_inner;j++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[iblob].blob_triple_perim[i][j] << '\n';
+    } //j
+   } //i
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].im << '\n';
+   repair_blob_checkpoint_file << 
+    repair_blobclass_data[iblob].group_id << '\n';
+  } // for (int iblob=0;iblob<repair_blobclass_data.size();iblob++) 
+
+ }
+
+} //end subroutine repair_blobclass::checkpoint
+
+void repair_blobclass::restart(int check_id,std::istream& is) {
+
+ int local_check_id;
+ is >> local_check_id;
+ if (local_check_id==check_id) {
+  //do nothing
+ } else
+  amrex::Error("repair_blobclass local_check_id invalid");
+
+ int local_repair_size;
+
+ is >> local_repair_size;
+
+ repair_blobclass_data.resize(local_repair_size);
+
+ for (int iblob=0;iblob<local_repair_size;iblob++) {
+
+  for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_matrix[i];
+  }
+  for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_RHS[i];
+  }
+  for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_velocity[i];
+  }
+  for (int i=0;i<4*AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_integral_momentum[i];
+  }
+  is >>
+    repair_blobclass_data[iblob].blob_energy;
+  for (int i=0;i<3;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_mass_for_velocity[i];
+  }
+  is >>
+    repair_blobclass_data[iblob].blob_volume;
+  is >>
+    repair_blobclass_data[iblob].blob_cell_count;
+  is >>
+    repair_blobclass_data[iblob].blob_cellvol_count;
+  is >>
+    repair_blobclass_data[iblob].blob_mass;
+  is >>
+    repair_blobclass_data[iblob].blob_mass_target;
+  is >>
+    repair_blobclass_data[iblob].blob_mass_mdot;
+  is >>
+    repair_blobclass_data[iblob].blob_pressure;
+  for (int i=0;i<6;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_second_moment[i];
+  }
+  for (int i=0;i<AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_center_integral[i];
+  }
+  for (int i=0;i<AMREX_SPACEDIM;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_center_actual[i];
+  }
+  is >>
+    repair_blobclass_data[iblob].blob_perim;
+  int blob_perim_mat_size;
+  is >> blob_perim_mat_size;
+  repair_blobclass_data[iblob].blob_perim_mat.resize(blob_perim_mat_size);
+  for (int i=0;i<blob_perim_mat_size;i++) {
+   is >>
+     repair_blobclass_data[iblob].blob_perim_mat[i];
+  }
+  int end_outer;
+  is >> end_outer;
+  repair_blobclass_data[iblob].blob_triple_perim.resize(end_outer);
+  for (int i=0;i<end_outer;i++) {
+   int end_inner;
+   is >> end_inner;
+   repair_blobclass_data[iblob].blob_triple_perim[i].resize(end_inner);
+   for (int j=0;j<end_inner;j++) {
+    is >>
+      repair_blobclass_data[iblob].blob_triple_perim[i][j];
+   } //j
+  } //i
+  is >>
+    repair_blobclass_data[iblob].im;
+  is >>
+    repair_blobclass_data[iblob].group_id;
+ } // for (int iblob=0;iblob<local_repair_size();iblob++) 
+
+} //end subroutine repair_blobclass::restart
 
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
@@ -853,6 +1057,18 @@ AmrLevel::restart (AmrCore&      papa,
 
   blob_history_class.restart(0,blob_is);
 
+  std::string repair_blob_FullPathName  = FullPath+"/repair_blob";
+
+  Vector<char> repair_blob_fileCharPtr;
+  //we assume that all of the repair blob data fits on each "core"
+  ParallelDescriptor::ReadAndBcastFile(repair_blob_FullPathName, 
+     repair_blob_fileCharPtr);
+  std::string repair_blob_fileCharPtrString(repair_blob_fileCharPtr.dataPtr());
+  std::istringstream repair_blob_is(repair_blob_fileCharPtrString, 
+		  std::istringstream::in);
+
+  amrlevel_repair_blobclass.restart(1,repair_blob_is);
+
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else
@@ -1069,6 +1285,12 @@ AmrLevel::checkPoint (const std::string& dir,
      blob_history_class.close_checkpoint();
 
      ParallelDescriptor::Barrier("AmrLevel::checkPoint(blob)");
+
+     amrlevel_repair_blobclass.open_checkpoint(FullPath);
+     amrlevel_repair_blobclass.checkpoint(1);
+     amrlevel_repair_blobclass.close_checkpoint();
+
+     ParallelDescriptor::Barrier("AmrLevel::checkPoint(repair_blob)");
 
     } else if ((level>=1)&&(level<=max_level)) {
 
