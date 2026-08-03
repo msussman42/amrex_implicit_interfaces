@@ -235,6 +235,8 @@ void repair_blobclass::checkpoint(int check_id) {
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].blob_mass_mdot << '\n';
     repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_inflow_outflow << '\n';
+    repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].blob_pressure << '\n';
     for (int i=0;i<6;i++) {
      repair_blob_checkpoint_file << 
@@ -260,7 +262,7 @@ void repair_blobclass::checkpoint(int check_id) {
     int end_outer=repair_blobclass_data[istep][iblob].blob_triple_perim.size();
     repair_blob_checkpoint_file << end_outer << '\n';
     for (int i=0;i<end_outer;i++) {
-     int end_inner= &
+     int end_inner= 
 	  repair_blobclass_data[istep][iblob].blob_triple_perim[i].size();
      repair_blob_checkpoint_file << end_inner << '\n';
      for (int j=0;j<end_inner;j++) {
@@ -341,6 +343,8 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
      repair_blobclass_data[istep][iblob].blob_mass_target;
    is >>
      repair_blobclass_data[istep][iblob].blob_mass_mdot;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_inflow_outflow;
    is >>
      repair_blobclass_data[istep][iblob].blob_pressure;
    for (int i=0;i<6;i++) {

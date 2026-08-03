@@ -764,9 +764,11 @@ NavierStokes::variableSetUp ()
 
 // DIV -------------------------------------------
 
+     //ngrow=1  ncomp=1
     desc_lst.addDescriptor(DIV_Type,IndexType::TheCellType(),
      1,1,&sem_interp_DEFAULT,state_holds_data,default_blocking);
 
+     //ngrow=1  ncomp=1
     desc_lstGHOST.addDescriptor(DIV_Type,IndexType::TheCellType(),
      1,1,&sem_interp_DEFAULT,null_state_holds_data,default_blocking);
 
@@ -782,6 +784,27 @@ NavierStokes::variableSetUp ()
     desc_lst.setComponent(DIV_Type,0,
       div_pres_str,bc,fort_pressurefill,&sem_interp_DEFAULT);
 
+// COLOR_Type --------------------------------------------
+
+     //ngrow=1  ncomp=1
+    desc_lst.addDescriptor(COLOR_Type,IndexType::TheCellType(),
+     1,1,&pc_interp,state_holds_data,default_blocking);
+
+     //ngrow=1  ncomp=1
+    desc_lstGHOST.addDescriptor(COLOR_Type,IndexType::TheCellType(),
+     1,1,&pc_interp,null_state_holds_data,default_blocking);
+
+//static int extrap_bc[] =
+//{ INT_DIR, FOEXTRAP, FOEXTRAP, REFLECT_EVEN, FOEXTRAP, FOEXTRAP };
+    set_extrap_bc(bc,phys_bc);
+    std::string colorghost_str="colorghost"; 
+    desc_lstGHOST.setComponent(COLOR_Type,0,
+      colorghost_str,bc,fort_extrapfill,&pc_interp);
+
+    set_extrap_bc(bc,phys_bc);
+    std::string color_str="color";
+    desc_lst.setComponent(COLOR_Type,0,
+      color_str,bc,fort_extrapfill,&pc_interp);
 
 // Solid_State_Type  -------------------------------------------
 
@@ -2003,6 +2026,11 @@ NavierStokes::variableSetUp ()
 void 
 NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==0");
+
  snapshot_blobclass local_blob;
  local_blob.blob_volume=blobdata.blob_volume;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -2534,6 +2562,7 @@ NavierStokes::sum_integrated_quantities (
        // 1..num_materials
       int imbase=blobdata[iblob].im;
       int groupbase=blobdata[iblob].group_id;
+      Real inflow_outflow=blobdata[iblob].blob_inflow_outflow;
       if ((imbase<1)||(imbase>num_materials))
        amrex::Error("imbase invalid");
 
@@ -2688,6 +2717,11 @@ NavierStokes::sum_integrated_quantities (
        " im= " << imbase <<
        " blob_mass_mdot= " <<
         mass_mdot << '\n';
+
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " inflow_outflow= " <<
+       inflow_outflow << '\n';
 
      }  // isort1=0..material_blob_count-1
      std::cout << "-----------------------------------------------\n";

@@ -30,6 +30,7 @@ namespace amrex{
 // DIV_Type (1 variable):
 //  (a) temporary "pressure" for project_option==11, or
 //  (b) -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+// COLOR_Type (1 variable):
 // Solid_State_Type:
 // velocity
 // Tensor_Type:
@@ -1463,8 +1464,10 @@ void apply_pressure_grad(
        const std::string& caller_string);
 
     MultiFab* getStateDIV_DATA(int ngrow,int scomp,int ncomp,Real time);
+    MultiFab* getStateCOLOR_DATA(int ngrow,int scomp,int ncomp,Real time);
 
     void putStateDIV_DATA(int scomp,int ncomp,int idx_MF);
+    void putStateCOLOR_DATA(int scomp,int ncomp,int idx_MF);
 
     void getStateALL(int ngrow,Real time,int scomp,
       int ncomp,int idx_localMF);
@@ -1771,6 +1774,7 @@ protected:
     static int LS_Type;
      // -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
     static int DIV_Type;
+    static int COLOR_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
     static int Refine_Density_Type;
@@ -1976,6 +1980,7 @@ protected:
     static int BLB_MASS;
     static int BLB_MASS_TARGET;
     static int BLB_MASS_MDOT;
+    static int BLB_INFLOW_OUTFLOW;
     static int BLB_PRES;
     static int BLB_SECONDMOMENT;  //6 components, uses BLB_CEN_ACT and BLB_VOL
 

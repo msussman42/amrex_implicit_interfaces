@@ -1833,6 +1833,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     ParallelDescriptor::Barrier();
    }
 
+   //in: NavierStokes::advance, prior to calling "do_the_advance"
    //copy bfact_time_order component to the
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
@@ -6782,6 +6783,7 @@ NavierStokes::ColorSum(
 
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
+   // ngrow=1
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
@@ -7747,6 +7749,7 @@ void NavierStokes::copy_to_blobdata(int i,int& counter,
  blobdata[i].blob_mass=blob_array[counter+BLB_MASS];
  blobdata[i].blob_mass_target=blob_array[counter+BLB_MASS_TARGET];
  blobdata[i].blob_mass_mdot=blob_array[counter+BLB_MASS_MDOT];
+ blobdata[i].blob_inflow_outflow=blob_array[counter+BLB_INFLOW_OUTFLOW];
 
  blobdata[i].blob_pressure=blob_array[counter+BLB_PRES];
 
@@ -7838,6 +7841,8 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
      source_blobdata[i].blob_mass_target;
    dest_blobdata[i].blob_mass_mdot=
      source_blobdata[i].blob_mass_mdot;
+   dest_blobdata[i].blob_inflow_outflow=
+     source_blobdata[i].blob_inflow_outflow;
 
    dest_blobdata[i].blob_pressure=
      source_blobdata[i].blob_pressure;
@@ -7874,6 +7879,7 @@ void NavierStokes::sum_blobdata(int i,
   blobdata[i].blob_mass+=level_blobdata[i].blob_mass;
   blobdata[i].blob_mass_target+=level_blobdata[i].blob_mass_target;
   blobdata[i].blob_mass_mdot+=level_blobdata[i].blob_mass_mdot;
+  blobdata[i].blob_inflow_outflow+=level_blobdata[i].blob_inflow_outflow;
 
   blobdata[i].blob_pressure+=level_blobdata[i].blob_pressure;
 
@@ -7976,6 +7982,7 @@ void NavierStokes::copy_from_blobdata(int i,int& counter,
  blob_array[counter+BLB_MASS]=blobdata[i].blob_mass;
  blob_array[counter+BLB_MASS_TARGET]=blobdata[i].blob_mass_target;
  blob_array[counter+BLB_MASS_MDOT]=blobdata[i].blob_mass_mdot;
+ blob_array[counter+BLB_INFLOW_OUTFLOW]=blobdata[i].blob_inflow_outflow;
 
  blob_array[counter+BLB_PRES]=blobdata[i].blob_pressure;
  for (int dir=0;dir<6;dir++) {
@@ -8012,6 +8019,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  blobdata[i].blob_mass=0.0;
  blobdata[i].blob_mass_target=0.0;
  blobdata[i].blob_mass_mdot=0.0;
+ blobdata[i].blob_inflow_outflow=0.0;
 
  blobdata[i].blob_pressure=0.0;
 
@@ -8854,11 +8862,12 @@ NavierStokes::ColorSumALL(
       blobdata[i].blob_perim << ' ' <<
       imbase << '\n';
 
-     std::cout << "i,group,im,mass,mass_target,mass_mdot " <<
+     std::cout << "i,group,im,mass,mass_target,mass_mdot,inflow_outflow " <<
        i << ' ' << groupbase << ' ' << imbase << ' ' <<
        blobdata[i].blob_mass << ' ' <<
        blobdata[i].blob_mass_target << ' ' <<
-       blobdata[i].blob_mass_mdot << '\n';
+       blobdata[i].blob_mass_mdot << ' ' <<
+       blobdata[i].blob_inflow_outflow << '\n';
 
      for (int imnbr=0;imnbr<num_materials;imnbr++) {
       std::cout << "perim(nbr): i,imnbr,im,perim " << i << ' ' <<

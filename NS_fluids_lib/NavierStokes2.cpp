@@ -382,6 +382,10 @@ void NavierStokes::putState_localMF_list(
    if (scomp.size()!=1)
     amrex::Error("scomp.size() invalid");
    putStateDIV_DATA(scomp[0],ncomp[0],idx_MF);
+  } else if (state_index==COLOR_Type) {
+   if (scomp.size()!=1)
+    amrex::Error("scomp.size() invalid");
+   putStateCOLOR_DATA(scomp[0],ncomp[0],idx_MF);
   } else
    amrex::Error("state_index invalid");
 
