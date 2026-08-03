@@ -7806,11 +7806,20 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
    }
    dest_blobdata[i].blob_perim=
      source_blobdata[i].blob_perim;
+
+   dest_blobdata[i].blob_perim_mat.resize(num_materials);
+
    for (int imnbr=0;imnbr<num_materials;imnbr++) {
     dest_blobdata[i].blob_perim_mat[imnbr]=
       source_blobdata[i].blob_perim_mat[imnbr];
    }
+
+   dest_blobdata[i].blob_triple_perim.resize(num_materials);
+
    for (int im1=0;im1<num_materials;im1++) {
+
+    dest_blobdata[i].blob_triple_perim[im1].resize(num_materials);
+
     for (int im2=0;im2<num_materials;im2++) {
      dest_blobdata[i].blob_triple_perim[im1][im2]=
        source_blobdata[i].blob_triple_perim[im1][im2];
