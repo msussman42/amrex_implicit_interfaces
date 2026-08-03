@@ -4057,6 +4057,11 @@ stop
       integer dir,side
       integer dir2
       integer dir_i,dir_j
+      integer inflow_outflow_flag
+      integer testbc
+      real(amrex_real) :: testvel
+      integer i_array(3)
+      integer ibc(3)
       integer vofcomp
       integer dencomp
       integer base_type
@@ -4303,6 +4308,60 @@ stop
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
+        inflow_outflow_flag=0
+        i_array(1)=i
+        i_array(2)=j
+        i_array(3)=k
+
+        do dir=1,SDIM
+         do dir2=1,3
+          ibc(dir2)=i_array(dir2)
+         enddo
+         if ((i_array(dir).eq.growlo(dir)).or. &
+             (i_array(dir).eq.growhi(dir))) then
+
+          if (i_array(dir).eq.growlo(dir)) then
+           side=1
+           ibc(dir)=growlo(dir)-1
+          else if (i_array(dir).eq.growhi(dir)) then
+           side=2
+           ibc(dir)=growhi(dir)+1
+          else
+           print *,"i_array invalid ",i_array
+           stop
+          endif
+          testbc=velbc(dir,side,dir)
+          testvel=VEL(D_DECL(ibc(1),ibc(2),ibc(3)),dir)
+          if (testbc.eq.INT_DIR) then
+           !do nothing
+          else if (testbc.eq.REFLECT_ODD) then
+           !do nothing
+          else if (testbc.eq.REFLECT_EVEN) then
+           inflow_outflow_flag=1
+          else if (testbc.eq.FOEXTRAP) then
+           inflow_outflow_flag=1
+          else if (testbc.eq.EXT_DIR) then
+           if (testvel.eq.zero) then
+            !do nothing
+           else if (testvel.ne.zero) then 
+            inflow_outflow_flag=1
+           else
+            print *,"testvel invalid ",testvel
+            stop
+           endif
+          else
+           print *,"testbc invalid ",testbc
+           stop
+          endif
+         else if ((i_array(dir).gt.growlo(dir)).and. &
+                  (i_array(dir).lt.growhi(dir))) then
+          !do nothing
+         else
+          print *,"i_array invalid ",i_array
+          stop
+         endif
+        enddo !dir=1,SDIM
+
         icolor=NINT(color(D_DECL(i,j,k)))
         if ((icolor.gt.num_colors).or.(icolor.le.0)) then
          print *,"icolor invalid in fort_getcolorsum icolor=",icolor
@@ -4531,7 +4590,7 @@ stop
          if (typeside.eq.0) then
           ! do nothing
          else if (typeside.eq.base_type) then
-           ! do nothing
+           ! do nothing (already opposite_color(base_type)=icolor)
          else if ((typeside.ge.1).and.(typeside.le.num_materials)) then
           if (colorside.eq.0) then
            ! do nothing
@@ -5020,7 +5079,8 @@ stop
               ! blob_mass (ic+2)
               ! blob_mass_target (ic+3)
               ! blob_mass_mdot (ic+4)
-              ! blob_pressure (ic+5)
+              ! blob_inflow_outflow (ic+5)
+              ! blob_pressure (ic+6)
              if (vfrac.ge.half) then
               level_blobdata(ic)=level_blobdata(ic)+one !blob_cell_count
               level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
@@ -5109,7 +5169,7 @@ stop
               else if (is_rigid(im).eq.1) then
                ! do nothing
               else
-               print *,"is_rigid(im) invalid"
+               print *,"is_rigid(im) invalid ",im,is_rigid(im)
                stop
               endif
 
@@ -5142,11 +5202,21 @@ stop
 
               if (ic+5.eq. &
                   (opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_INFLOW_OUTFLOW+1) then
+               !do nothing
+              else
+               print *,"expecting ic+5 to correspond to BLB_INFLOW_OUTFLOW+1"
+               stop
+              endif
+              level_blobdata(ic+5)=level_blobdata(ic+5)+inflow_outflow_flag
+
+              if (ic+6.eq. &
+                  (opposite_color(im)-1)*num_elements_blobclass+ &
                    BLB_PRES+1) then
-               level_blobdata(ic+5)=level_blobdata(ic+5)+ &
+               level_blobdata(ic+6)=level_blobdata(ic+6)+ &
                  vol*pressure_local !blob_pressure
               else
-               print *,"expecting ic+5 to correspond to BLB_PRES+1"
+               print *,"expecting ic+6 to correspond to BLB_PRES+1"
                stop
               endif
 
@@ -5181,8 +5251,9 @@ stop
              ! blob_mass (ic+2)
              ! blob_mass_target (ic+3)
              ! blob_mass_mdot (ic+4)
-             ! blob_pressure (ic+5)
-             ic=ic+5 !now "ic" points to blob_pressure
+             ! blob_inflow_outflow (ic+5)
+             ! blob_pressure (ic+6)
+             ic=ic+6 !now "ic" points to blob_pressure
 
              if (ic.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
@@ -5208,14 +5279,25 @@ stop
               stop
              endif
              if (den_mat.ge.(one-VOFTOL_MATERIAL)*fort_density_floor(im)) then
-              if (den_mat.le.(one+VOFTOL_MATERIAL)*fort_density_ceiling(im)) then
-               ! blob_cell_count  (ic-5)
-               ! blob_cellvol_count (ic-4)
-               ! blob_mass (ic-3)
-               ! blob_mass_target (ic-2)
-               ! blob_mass_mdot (ic-1)
+              if (den_mat.le. &
+                  (one+VOFTOL_MATERIAL)*fort_density_ceiling(im)) then
+               ! blob_cell_count  (ic-6)
+               ! blob_cellvol_count (ic-5)
+               ! blob_mass (ic-4)
+               ! blob_mass_target (ic-3)
+               ! blob_mass_mdot (ic-2)
+               ! blob_inflow_outflow (ic-1)
                ! blob_pressure (ic)
-               level_blobdata(ic-3)=level_blobdata(ic-3)+vol*vfrac*den_mat
+               if (ic-4.eq. &
+                   (opposite_color(im)-1)*num_elements_blobclass+ &
+                    BLB_MASS+1) then
+                !do nothing
+               else
+                print *,"expecting ic-4 to correspond to BLB_MASS+1"
+                stop
+               endif
+
+               level_blobdata(ic-4)=level_blobdata(ic-4)+vol*vfrac*den_mat
               else
                print *,"den_mat overflow"
                print *,"den_mat= ",den_mat
@@ -5227,7 +5309,7 @@ stop
               stop
              endif
 
-             if (ic-3.eq. &
+             if (ic-4.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
                   BLB_MASS+1) then
               ! do nothing
@@ -5235,7 +5317,7 @@ stop
               print *,"ic invalid in getcolorsum"
               stop
              endif
-             if (ic-2.eq. &
+             if (ic-3.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
                   BLB_MASS_TARGET+1) then
               ! do nothing
@@ -5243,7 +5325,7 @@ stop
               print *,"ic invalid in getcolorsum"
               stop
              endif
-             if (ic-1.eq. &
+             if (ic-2.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
                   BLB_MASS_MDOT+1) then
               ! do nothing
@@ -5251,6 +5333,15 @@ stop
               print *,"ic invalid in getcolorsum"
               stop
              endif
+             if (ic-1.eq. &
+                 (opposite_color(im)-1)*num_elements_blobclass+ &
+                  BLB_INFLOW_OUTFLOW+1) then
+              ! do nothing
+             else
+              print *,"ic invalid in getcolorsum"
+              stop
+             endif
+
              if (ic.eq. &
                  (opposite_color(im)-1)*num_elements_blobclass+ &
                   BLB_PRES+1) then

@@ -45,6 +45,7 @@ stop
        blb_mass_in, &
        blb_mass_target_in, &
        blb_mass_mdot_in, &
+       blb_inflow_outflow_in, &
        blb_pres_in, &
        blb_secondmoment_in, &
        num_elements_blobclass_in) &
@@ -70,6 +71,7 @@ stop
       integer, INTENT(in) :: blb_mass_in
       integer, INTENT(in) :: blb_mass_target_in
       integer, INTENT(in) :: blb_mass_mdot_in
+      integer, INTENT(in) :: blb_inflow_outflow_in
       integer, INTENT(in) :: blb_pres_in
       integer, INTENT(in) :: blb_secondmoment_in
       integer, INTENT(in) :: num_elements_blobclass_in
@@ -91,6 +93,7 @@ stop
       BLB_MASS=blb_mass_in
       BLB_MASS_TARGET=blb_mass_target_in
       BLB_MASS_MDOT=blb_mass_mdot_in
+      BLB_INFLOW_OUTFLOW=blb_inflow_outflow_in
       BLB_PRES=blb_pres_in
       BLB_SECONDMOMENT=blb_secondmoment_in
       num_elements_blobclass=num_elements_blobclass_in
@@ -113,7 +116,8 @@ stop
           (BLB_MASS.eq.BLB_CELLVOL_CNT+1).and. &
           (BLB_MASS_TARGET.eq.BLB_MASS+1).and. &
           (BLB_MASS_MDOT.eq.BLB_MASS_TARGET+1).and. &
-          (BLB_PRES.eq.BLB_MASS_MDOT+1).and. &
+          (BLB_INFLOW_OUTFLOW.eq.BLB_MASS_MDOT+1).and. &
+          (BLB_PRES.eq.BLB_INFLOW_OUTFLOW+1).and. &
           (BLB_SECONDMOMENT.eq.BLB_PRES+1).and. &
           (num_elements_blobclass.eq.BLB_SECONDMOMENT+6)) then
           ! do nothing
@@ -136,6 +140,7 @@ stop
        print *,"BLB_MASS ",BLB_MASS
        print *,"BLB_MASS_TARGET ",BLB_MASS_TARGET
        print *,"BLB_MASS_MDOT ",BLB_MASS_MDOT
+       print *,"BLB_INFLOW_OUTFLOW ",BLB_INFLOW_OUTFLOW
        print *,"BLB_PRES ",BLB_PRES
        print *,"BLB_SECONDMOMENT ",BLB_SECONDMOMENT
        print *,"num_elements_blobclass ",num_elements_blobclass

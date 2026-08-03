@@ -212,6 +212,7 @@ public:
   Real blob_mass;
   Real blob_mass_target;
   Real blob_mass_mdot;
+  Real blob_inflow_outflow; //>0.0 if touching an inflow_outflow boundary
   Real blob_pressure;
   Real blob_second_moment[6]; //xx,xy,x(y|z),yy,y(y|z),(yy|zz)
   Real blob_center_integral[AMREX_SPACEDIM];

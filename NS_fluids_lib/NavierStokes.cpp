@@ -416,9 +416,10 @@ int  NavierStokes::Vmac_Type=Umac_Type+1;
 int  NavierStokes::Wmac_Type=Vmac_Type+AMREX_SPACEDIM-2;
 // LS 1..num_materials, LS_slope sdim x num_materials
 int  NavierStokes::LS_Type=Wmac_Type+1;
-// -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+//  -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 int  NavierStokes::DIV_Type=LS_Type+1;
-int  NavierStokes::Solid_State_Type=DIV_Type+1;
+int  NavierStokes::COLOR_Type=DIV_Type+1;
+int  NavierStokes::Solid_State_Type=COLOR_Type+1;
 int  NavierStokes::Tensor_Type=Solid_State_Type+1;
 
 int  NavierStokes::Refine_Density_Type=Tensor_Type+1;
@@ -577,6 +578,7 @@ int NavierStokes::BLB_CELLVOL_CNT=-32767;
 int NavierStokes::BLB_MASS=-32767;
 int NavierStokes::BLB_MASS_TARGET=-32767;
 int NavierStokes::BLB_MASS_MDOT=-32767;
+int NavierStokes::BLB_INFLOW_OUTFLOW=-32767;
 int NavierStokes::BLB_PRES=-32767;
 int NavierStokes::BLB_SECONDMOMENT=-32767;
 
@@ -2634,7 +2636,8 @@ NavierStokes::read_params ()
     BLB_MASS=BLB_CELLVOL_CNT+1;
     BLB_MASS_TARGET=BLB_MASS+1;
     BLB_MASS_MDOT=BLB_MASS_TARGET+1;
-    BLB_PRES=BLB_MASS_MDOT+1; //F_m>=1/2
+    BLB_INFLOW_OUTFLOW=BLB_MASS_MDOT+1;
+    BLB_PRES=BLB_INFLOW_OUTFLOW+1; //F_m>=1/2
     BLB_SECONDMOMENT=BLB_PRES+1;
     num_elements_blobclass=BLB_SECONDMOMENT+6;
 
@@ -2657,6 +2660,7 @@ NavierStokes::read_params ()
      &BLB_MASS,
      &BLB_MASS_TARGET,
      &BLB_MASS_MDOT,
+     &BLB_INFLOW_OUTFLOW,
      &BLB_PRES,
      &BLB_SECONDMOMENT,
      &num_elements_blobclass);
@@ -3660,7 +3664,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("elastic_partid==num_materials_viscoelastic failed");
 
-    NUM_STATE_TYPE=DIV_Type+1;
+    NUM_STATE_TYPE=COLOR_Type+1;
 
     if (nparts==0) {
      Solid_State_Type=-1;
@@ -10426,6 +10430,10 @@ NavierStokes::initData () {
  if (DIV_new.nComp()!=1)
   amrex::Error("DIV_new.nComp()!=1");
 
+ MultiFab& COLOR_new = get_new_data(COLOR_Type,project_slab_step+1);
+ if (COLOR_new.nComp()!=1)
+  amrex::Error("COLOR_new.nComp()!=1");
+
  int nparts=im_solid_map.size();
 
  if ((nparts>=1)&&(nparts<=num_materials)) {  
@@ -10498,7 +10506,9 @@ NavierStokes::initData () {
  } else
   amrex::Error("num_materials_compressible invalid:initData");
 
- DIV_new.setVal(0.0);
+  //val,scomp,ncomp,ngrow
+ DIV_new.setVal(0.0,0,1,1);
+ COLOR_new.setVal(0.0,0,1,1);
 
  S_new.setVal(0.0,0,nc,1);
  LS_new.setVal(-99999.0,0,num_materials,1);
@@ -10820,6 +10830,7 @@ void NavierStokes::init_boundary(
   } else if ((k==State_Type)||
              (k==LS_Type)||
              (k==DIV_Type)||
+             (k==COLOR_Type)||
              (k==Solid_State_Type)||
              (k==Tensor_Type)||
              (k==Refine_Density_Type)) {
@@ -10884,6 +10895,14 @@ void NavierStokes::init_boundary(
 
    ncomp_total_sanity+=DIV_new.nComp();
 
+  } else if (k==COLOR_Type) {
+
+   MultiFab& COLOR_new=get_new_data(COLOR_Type,project_slab_step+1);
+   if (COLOR_new.nComp()!=1)
+    amrex::Error("COLOR_new.nComp()!=1");
+
+   ncomp_total_sanity+=COLOR_new.nComp();
+
   } else if ((k==Solid_State_Type)&&
 	     (im_solid_map.size()>=1)&&
 	     (im_solid_map.size()<=num_materials)) {
@@ -10923,7 +10942,8 @@ void NavierStokes::init_boundary(
     amrex::Error("nparts invalid");
    if (nparts!=num_materials_compressible)
     amrex::Error("nparts!=num_materials_compressible");
-   MultiFab& Refine_Density_new=get_new_data(Refine_Density_Type,project_slab_step+1);
+   MultiFab& Refine_Density_new=
+     get_new_data(Refine_Density_Type,project_slab_step+1);
      // ngrow=1 scomp=0
    MultiFab* refine_density_mf=getStateRefineDensity(1,0,
      NUM_CELL_REFINE_DENSITY,cur_time_slab);
@@ -10963,6 +10983,7 @@ void NavierStokes::init_boundary(
   } else if ((k==State_Type)||
              (k==LS_Type)||
              (k==DIV_Type)||
+             (k==COLOR_Type)||
              (k==Solid_State_Type)||
              (k==Tensor_Type)||
              (k==Refine_Density_Type)) {
@@ -11169,18 +11190,25 @@ NavierStokes::init(
   for (int i=0;i<=ns_time_order;i++) {
    new_data_FSI[i].copyFrom_FSI(oldns->new_data_FSI[ns_time_order]);
   }
-  FIX ME
-  amrlevel_repair_blobclass.repair_blobclass_data.resize(2);
-  for (int i=0;i<=1;i++) {
-   int old_new_count= &
-     oldns->amrlevel_repair_blobclass.repair_blobclass_data[i].size();
-   amrlevel_repair_blobclass.repair_blobclass_data[i].resize(old_new_count);
+
+  blob_history_class=oldns->blob_history_class;
+
+  int num_old_new=2;
+  amrlevel_repair_blobclass.repair_blobclass_data.resize(num_old_new);
+  int local_count= 
+    oldns->amrlevel_repair_blobclass.
+      repair_blobclass_data[num_old_new-1].size();
+  for (int i=0;i<num_old_new;i++) {
+   amrlevel_repair_blobclass.repair_blobclass_data[i].resize(local_count);
    copy_blobdata(
     amrlevel_repair_blobclass.repair_blobclass_data[i],
-    oldns->amrlevel_repair_blobclass.repair_blobclass_data[i]);
+    oldns->amrlevel_repair_blobclass.repair_blobclass_data[num_old_new-1]);
   }
 
- }
+ } else if ((level>0)&&(level<=max_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
@@ -27551,6 +27579,7 @@ NavierStokes::avgDown(int stateidx,int startcomp,int numcomp,
  if ((stateidx!=LS_Type)&&
      (stateidx!=State_Type)&&
      (stateidx!=DIV_Type)&&
+     (stateidx!=COLOR_Type)&&
      (stateidx!=Tensor_Type)) {
   std::cout << "stateidx= " << stateidx << '\n';
   std::cout << "startcomp= " << startcomp << '\n';
@@ -28535,8 +28564,11 @@ void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 
 }  // end subroutine cpp_overridepbc
 
-MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
-		int scomp,int ncomp,Real time) {
+MultiFab* NavierStokes::getStateDIV_DATA(
+ int ngrow,
+ int scomp,
+ int ncomp,
+ Real time) {
 
  int save_bc_status=override_bc_to_homogeneous;
   //cpp_overridepbc is declared in: NavierStokes.cpp
@@ -28579,6 +28611,44 @@ void NavierStokes::putStateDIV_DATA(
 } // end subroutine putStateDIV_DATA
 
 
+MultiFab* NavierStokes::getStateCOLOR_DATA(
+ int ngrow,
+ int scomp,
+ int ncomp,
+ Real time) {
+
+ MultiFab& S_new=get_new_data(COLOR_Type,project_slab_step+1);
+ int ntotal=S_new.nComp();
+ if (ntotal!=1)
+  amrex::Error("ntotal invalid");
+
+ MultiFab* mf = new MultiFab(state[COLOR_Type].boxArray(),dmap,ncomp,
+   ngrow,MFInfo().SetTag("mf getStateCOLOR_DATA"),FArrayBoxFactory());
+
+ int called_from_regrid=0;
+ FillPatch(called_from_regrid,*this,*mf,0,time,COLOR_Type,
+           scomp,ncomp,debug_fillpatch);
+
+ ParallelDescriptor::Barrier();
+
+ return mf;
+} // end subroutine getStateCOLOR_DATA
+
+
+void NavierStokes::putStateCOLOR_DATA(
+ int scomp,int ncomp,int idx_MF) {
+
+ MultiFab& S_new=get_new_data(COLOR_Type,project_slab_step+1);
+ int ntotal=S_new.nComp();
+ if (ntotal!=1)
+  amrex::Error("ntotal invalid");
+
+ int scomp_localMF=0;
+   // dst,src,scomp,dcomp,ncomp,ngrow
+ MultiFab::Copy(S_new,*localMF[idx_MF],scomp_localMF,scomp,
+  	        ncomp,0); 
+
+} // end subroutine putStateCOLOR_DATA
 
 // called from:
 // NavierStokes::prepare_post_process if via "post_init_state"
