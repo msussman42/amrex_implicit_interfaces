@@ -3104,7 +3104,11 @@ NavierStokes::read_params ()
     blob_history_class.end_step=-1;
 
      //amrlevel_repair_blobclass is declared in AmrLevel.H
-    amrlevel_repair_blobclass.repair_blobclass_data.resize(0);
+    int new_old_size=2;
+    amrlevel_repair_blobclass.repair_blobclass_data.resize(new_old_size);
+    for (int istep=0;istep<new_old_size;istep++) {
+     amrlevel_repair_blobclass.repair_blobclass_data[istep].resize(0);
+    }
 
     gravity_vector.resize(AMREX_SPACEDIM);
 
@@ -11161,9 +11165,21 @@ NavierStokes::init(
  } // local_index=0..nstate-1
 
  if (level==0) {
+
   for (int i=0;i<=ns_time_order;i++) {
    new_data_FSI[i].copyFrom_FSI(oldns->new_data_FSI[ns_time_order]);
   }
+  FIX ME
+  amrlevel_repair_blobclass.repair_blobclass_data.resize(2);
+  for (int i=0;i<=1;i++) {
+   int old_new_count= &
+     oldns->amrlevel_repair_blobclass.repair_blobclass_data[i].size();
+   amrlevel_repair_blobclass.repair_blobclass_data[i].resize(old_new_count);
+   copy_blobdata(
+    amrlevel_repair_blobclass.repair_blobclass_data[i],
+    oldns->amrlevel_repair_blobclass.repair_blobclass_data[i]);
+  }
+
  }
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
@@ -12053,6 +12069,14 @@ void NavierStokes::CopyNewToOldALL() {
   new_data_FSI[i].copyFrom_FSI(new_data_FSI[ns_time_order]); 
  }
 
+ int new_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
+
+ amrlevel_repair_blobclass.repair_blobclass_data[0].resize(new_count);
+ copy_blobdata(
+   amrlevel_repair_blobclass.repair_blobclass_data[0],
+   amrlevel_repair_blobclass.repair_blobclass_data[1]);
+
+
 }  // end subroutine CopyNewToOldALL
 
 
@@ -12083,6 +12107,13 @@ void NavierStokes::CopyOldToNewALL() {
  for (int i=1;i<=ns_time_order;i++) {
   new_data_FSI[i].copyFrom_FSI(new_data_FSI[0]); 
  }
+
+ int old_count=amrlevel_repair_blobclass.repair_blobclass_data[0].size();
+
+ amrlevel_repair_blobclass.repair_blobclass_data[1].resize(old_count);
+ copy_blobdata(
+   amrlevel_repair_blobclass.repair_blobclass_data[1],
+   amrlevel_repair_blobclass.repair_blobclass_data[0]);
 
 } // end subroutine CopyOldToNewALL
 

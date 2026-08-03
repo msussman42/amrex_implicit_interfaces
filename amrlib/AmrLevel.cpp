@@ -182,86 +182,101 @@ void repair_blobclass::close_checkpoint() {
 void repair_blobclass::checkpoint(int check_id) {
 
  if (ParallelDescriptor::IOProcessor()) {
+
   repair_blob_checkpoint_file << check_id << '\n';
 
-  int local_repair_size=repair_blobclass_data.size();
-  repair_blob_checkpoint_file << local_repair_size << '\n';
+  int new_old_size=repair_blobclass_data.size();
+  if (new_old_size==2) {
+   //do nothing
+  } else
+   amrex::Error("new_old_size invalid");
 
-  for (int iblob=0;iblob<local_repair_size;iblob++) {
+  repair_blob_checkpoint_file << new_old_size << '\n';
 
-   for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_matrix[i] << '\n';
-   }
-   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_RHS[i] << '\n';
-   }
-   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_velocity[i] << '\n';
-   }
-   for (int i=0;i<4*AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_integral_momentum[i] << '\n';
-   }
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_energy << '\n';
-   for (int i=0;i<3;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_mass_for_velocity[i] << '\n';
-   }
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_volume << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_cell_count << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_cellvol_count << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_mass << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_mass_target << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_mass_mdot << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_pressure << '\n';
-   for (int i=0;i<6;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_second_moment[i] << '\n';
-   }
-   for (int i=0;i<AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_center_integral[i] << '\n';
-   }
-   for (int i=0;i<AMREX_SPACEDIM;i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_center_actual[i] << '\n';
-   }
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_perim << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].blob_perim_mat.size() << '\n';
-   for (int i=0;i<repair_blobclass_data[iblob].blob_perim_mat.size();i++) {
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[iblob].blob_perim_mat[i] << '\n';
-   }
-   int end_outer=repair_blobclass_data[iblob].blob_triple_perim.size();
-   repair_blob_checkpoint_file << end_outer << '\n';
-   for (int i=0;i<end_outer;i++) {
-    int end_inner=repair_blobclass_data[iblob].blob_triple_perim[i].size();
-    repair_blob_checkpoint_file << end_inner << '\n';
-    for (int j=0;j<end_inner;j++) {
+  for (int istep=0;istep<new_old_size;istep++) {
+
+   int local_repair_size=repair_blobclass_data[istep].size();
+   repair_blob_checkpoint_file << local_repair_size << '\n';
+
+   for (int iblob=0;iblob<local_repair_size;iblob++) {
+
+    for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
      repair_blob_checkpoint_file << 
-      repair_blobclass_data[iblob].blob_triple_perim[i][j] << '\n';
-    } //j
-   } //i
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].im << '\n';
-   repair_blob_checkpoint_file << 
-    repair_blobclass_data[iblob].group_id << '\n';
-  } // for (int iblob=0;iblob<repair_blobclass_data.size();iblob++) 
+      repair_blobclass_data[istep][iblob].blob_matrix[i] << '\n';
+    }
+    for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_RHS[i] << '\n';
+    }
+    for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_velocity[i] << '\n';
+    }
+    for (int i=0;i<4*AMREX_SPACEDIM;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_integral_momentum[i] << '\n';
+    }
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_energy << '\n';
+    for (int i=0;i<3;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_mass_for_velocity[i] << '\n';
+    }
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_volume << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_cell_count << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_cellvol_count << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_mass << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_mass_target << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_mass_mdot << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_pressure << '\n';
+    for (int i=0;i<6;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_second_moment[i] << '\n';
+    }
+    for (int i=0;i<AMREX_SPACEDIM;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_center_integral[i] << '\n';
+    }
+    for (int i=0;i<AMREX_SPACEDIM;i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_center_actual[i] << '\n';
+    }
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_perim << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_perim_mat.size() << '\n';
+    for (int i=0;i<repair_blobclass_data[istep][iblob].blob_perim_mat.size();
+	 i++) {
+     repair_blob_checkpoint_file << 
+      repair_blobclass_data[istep][iblob].blob_perim_mat[i] << '\n';
+    }
+    int end_outer=repair_blobclass_data[istep][iblob].blob_triple_perim.size();
+    repair_blob_checkpoint_file << end_outer << '\n';
+    for (int i=0;i<end_outer;i++) {
+     int end_inner= &
+	  repair_blobclass_data[istep][iblob].blob_triple_perim[i].size();
+     repair_blob_checkpoint_file << end_inner << '\n';
+     for (int j=0;j<end_inner;j++) {
+      repair_blob_checkpoint_file << 
+       repair_blobclass_data[istep][iblob].blob_triple_perim[i][j] << '\n';
+     } //j
+    } //i
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].im << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].group_id << '\n';
+   } // for (int iblob=0;iblob<repair_blobclass_data[istep].size();iblob++) 
 
- }
+  } //for (int istep=0;istep<new_old_size;istep++) {
+
+ } //IOproc ?
 
 } //end subroutine repair_blobclass::checkpoint
 
@@ -274,88 +289,100 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
  } else
   amrex::Error("repair_blobclass local_check_id invalid");
 
- int local_repair_size;
+ int new_old_size=0;
+ is >> new_old_size;
 
- is >> local_repair_size;
+ if (new_old_size==2) {
+  //do nothing
+ } else
+  amrex::Error("new_old_size invalid");
 
- repair_blobclass_data.resize(local_repair_size);
+ for (int istep=0;istep<new_old_size;istep++) {
 
- for (int iblob=0;iblob<local_repair_size;iblob++) {
+  int local_repair_size;
 
-  for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_matrix[i];
-  }
-  for (int i=0;i<6*AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_RHS[i];
-  }
-  for (int i=0;i<6*AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_velocity[i];
-  }
-  for (int i=0;i<4*AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_integral_momentum[i];
-  }
-  is >>
-    repair_blobclass_data[iblob].blob_energy;
-  for (int i=0;i<3;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_mass_for_velocity[i];
-  }
-  is >>
-    repair_blobclass_data[iblob].blob_volume;
-  is >>
-    repair_blobclass_data[iblob].blob_cell_count;
-  is >>
-    repair_blobclass_data[iblob].blob_cellvol_count;
-  is >>
-    repair_blobclass_data[iblob].blob_mass;
-  is >>
-    repair_blobclass_data[iblob].blob_mass_target;
-  is >>
-    repair_blobclass_data[iblob].blob_mass_mdot;
-  is >>
-    repair_blobclass_data[iblob].blob_pressure;
-  for (int i=0;i<6;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_second_moment[i];
-  }
-  for (int i=0;i<AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_center_integral[i];
-  }
-  for (int i=0;i<AMREX_SPACEDIM;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_center_actual[i];
-  }
-  is >>
-    repair_blobclass_data[iblob].blob_perim;
-  int blob_perim_mat_size;
-  is >> blob_perim_mat_size;
-  repair_blobclass_data[iblob].blob_perim_mat.resize(blob_perim_mat_size);
-  for (int i=0;i<blob_perim_mat_size;i++) {
-   is >>
-     repair_blobclass_data[iblob].blob_perim_mat[i];
-  }
-  int end_outer;
-  is >> end_outer;
-  repair_blobclass_data[iblob].blob_triple_perim.resize(end_outer);
-  for (int i=0;i<end_outer;i++) {
-   int end_inner;
-   is >> end_inner;
-   repair_blobclass_data[iblob].blob_triple_perim[i].resize(end_inner);
-   for (int j=0;j<end_inner;j++) {
+  is >> local_repair_size;
+
+  repair_blobclass_data[istep].resize(local_repair_size);
+
+  for (int iblob=0;iblob<local_repair_size;iblob++) {
+
+   for (int i=0;i<12*AMREX_SPACEDIM*AMREX_SPACEDIM;i++) {
     is >>
-      repair_blobclass_data[iblob].blob_triple_perim[i][j];
-   } //j
-  } //i
-  is >>
-    repair_blobclass_data[iblob].im;
-  is >>
-    repair_blobclass_data[iblob].group_id;
- } // for (int iblob=0;iblob<local_repair_size();iblob++) 
+      repair_blobclass_data[istep][iblob].blob_matrix[i];
+   }
+   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_RHS[i];
+   }
+   for (int i=0;i<6*AMREX_SPACEDIM;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_velocity[i];
+   }
+   for (int i=0;i<4*AMREX_SPACEDIM;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_integral_momentum[i];
+   }
+   is >>
+     repair_blobclass_data[istep][iblob].blob_energy;
+   for (int i=0;i<3;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_mass_for_velocity[i];
+   }
+   is >>
+     repair_blobclass_data[istep][iblob].blob_volume;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_cell_count;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_cellvol_count;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_mass;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_mass_target;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_mass_mdot;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_pressure;
+   for (int i=0;i<6;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_second_moment[i];
+   }
+   for (int i=0;i<AMREX_SPACEDIM;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_center_integral[i];
+   }
+   for (int i=0;i<AMREX_SPACEDIM;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_center_actual[i];
+   }
+   is >>
+     repair_blobclass_data[istep][iblob].blob_perim;
+   int blob_perim_mat_size;
+   is >> blob_perim_mat_size;
+   repair_blobclass_data[istep][iblob].blob_perim_mat.resize(blob_perim_mat_size);
+   for (int i=0;i<blob_perim_mat_size;i++) {
+    is >>
+      repair_blobclass_data[istep][iblob].blob_perim_mat[i];
+   }
+   int end_outer;
+   is >> end_outer;
+   repair_blobclass_data[istep][iblob].blob_triple_perim.resize(end_outer);
+   for (int i=0;i<end_outer;i++) {
+    int end_inner;
+    is >> end_inner;
+    repair_blobclass_data[istep][iblob].blob_triple_perim[i].resize(end_inner);
+    for (int j=0;j<end_inner;j++) {
+     is >>
+       repair_blobclass_data[istep][iblob].blob_triple_perim[i][j];
+    } //j
+   } //i
+   is >>
+     repair_blobclass_data[istep][iblob].im;
+   is >>
+     repair_blobclass_data[istep][iblob].group_id;
+  } // for (int iblob=0;iblob<local_repair_size();iblob++) 
+
+ } // for (int istep=0;istep<new_old_size;istep++) 
 
 } //end subroutine repair_blobclass::restart
 

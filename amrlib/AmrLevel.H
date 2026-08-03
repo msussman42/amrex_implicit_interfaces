@@ -237,7 +237,7 @@ public:
  void checkpoint(int check_id);
  void restart(int check_id,std::istream& is);
 
- Vector<blobclass> repair_blobclass_data;
+ Vector< Vector<blobclass> > repair_blobclass_data;
 
 }; //end class repair_blobclass
 
