@@ -908,8 +908,8 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
-          ! pressure,presder,div,divdat,mach,vof
-         do ivar_gb=1,5+num_materials
+          ! pressure,presder,div,divdat,colordat,mach,vof
+         do ivar_gb=1,6+num_materials
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -1864,6 +1864,7 @@ END SUBROUTINE SIMP
        pres,DIMS(pres), &
        div,DIMS(div), &
        divdat,DIMS(divdat), &
+       colordat,DIMS(colordat), &
        den,DIMS(den), &
        mom_den,DIMS(mom_den), &
        elastic, &
@@ -1951,6 +1952,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: DIMDEC(pres)
       integer, INTENT(in) :: DIMDEC(div)
       integer, INTENT(in) :: DIMDEC(divdat)
+      integer, INTENT(in) :: DIMDEC(colordat)
       integer, INTENT(in) :: DIMDEC(den)
       integer, INTENT(in) :: DIMDEC(mom_den)
       integer, INTENT(in) :: DIMDEC(elastic)
@@ -1983,6 +1985,8 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: div_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: divdat(DIMV(divdat))
       real(amrex_real), pointer :: divdat_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: colordat(DIMV(colordat))
+      real(amrex_real), pointer :: colordat_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: &
           den(DIMV(den),num_state_material*num_materials)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
@@ -2032,6 +2036,7 @@ END SUBROUTINE SIMP
       real(amrex_real) presnd
       real(amrex_real) divnd
       real(amrex_real) divdatnd
+      real(amrex_real) colordatnd
       real(amrex_real) dennd(num_state_material*num_materials)
       real(amrex_real) dennd_merge(num_state_material)
       real(amrex_real) mom_dennd(num_materials)
@@ -2307,6 +2312,8 @@ END SUBROUTINE SIMP
       call checkbound_array1(lo,hi,div_ptr,1,-1)
       divdat_ptr=>divdat
       call checkbound_array1(lo,hi,divdat_ptr,1,-1)
+      colordat_ptr=>colordat
+      call checkbound_array1(lo,hi,colordat_ptr,1,-1)
       den_ptr=>den
       call checkbound_array(lo,hi,den_ptr,1,-1)
       mom_den_ptr=>mom_den
@@ -2606,6 +2613,7 @@ END SUBROUTINE SIMP
         presnd=zero
         divnd=zero
         divdatnd=zero
+        colordatnd=zero
         machnd=zero
         do dir=1,num_materials
          vofnd(dir)=zero
@@ -2807,6 +2815,7 @@ END SUBROUTINE SIMP
          presnd=presnd+localwt*pres(D_DECL(i-i1,j-j1,k-k1))
          divnd=divnd+localwt*div(D_DECL(i-i1,j-j1,k-k1))
          divdatnd=divdatnd+localwt*divdat(D_DECL(i-i1,j-j1,k-k1))
+         colordatnd=colordatnd+localwt*colordat(D_DECL(i-i1,j-j1,k-k1))
 
          do dir=1,num_materials
           vofcomp=(dir-1)*ngeom_recon+1
@@ -2904,7 +2913,7 @@ END SUBROUTINE SIMP
 
         presnd=presnd/sumweight
         divnd=divnd/sumweight
-        divdatnd=divdatnd/sumweight
+        colordatnd=colordatnd/sumweight
         machnd=machnd/sumweight
 
         do dir=1,num_materials
@@ -3217,6 +3226,9 @@ END SUBROUTINE SIMP
         scomp=scomp+1
 
         writend(scomp+1)=divdatnd
+        scomp=scomp+1
+
+        writend(scomp+1)=colordatnd
         scomp=scomp+1
 
         writend(scomp+1)=machnd
@@ -4744,6 +4756,7 @@ END SUBROUTINE SIMP
        write(11) nwrite
 
        ! Variable names: combinezones
+       ! dumpstring_headers is declared in: GLOBALUTIL.F90
        add_sub_cells=0
        call dumpstring_headers(plot_sdim,add_sub_cells)
 
@@ -4780,7 +4793,7 @@ END SUBROUTINE SIMP
         else if (plot_sdim.eq.2) then
          hi_index_shift(3)=1
         else
-         print *,"plot_sdim invalid in zones_revolve_sanity"
+         print *,"plot_sdim invalid in zones_revolve_sanity ",plot_sdim
          stop
         endif
 
@@ -4867,7 +4880,7 @@ END SUBROUTINE SIMP
          klo_plot=0
          khi_plot=0
         else
-         print *,"plot_sdim invalid"
+         print *,"plot_sdim invalid ",plot_sdim
          stop
         endif
  
@@ -4974,7 +4987,7 @@ END SUBROUTINE SIMP
        close(11)
      
       else
-       print *,"visual_revolve invalid"
+       print *,"visual_revolve invalid ",visual_revolve
        stop
       endif
 

@@ -1094,6 +1094,7 @@ protected:
       MultiFab* presmf,
       MultiFab* divmf,
       MultiFab* div_data,
+      MultiFab* color_data,
       MultiFab* denmf,
       MultiFab* mom_denmf,
       MultiFab* viscoelasticmf,
