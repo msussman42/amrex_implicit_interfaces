@@ -6594,7 +6594,7 @@ NavierStokes::level_sync_groups(
       for (int idup=0;idup<size_i;idup++) {
        if (local_label[tid_current][icolor_round-1][idup]==
            icolor_round_old-1) {
-        dup_flag=idup;
+        dup_flag=idup+1;
        }
       }
       if (dup_flag==0) {
@@ -6602,10 +6602,15 @@ NavierStokes::level_sync_groups(
        local_label[tid_current][icolor_round-1][size_i]=icolor_round_old-1;
        local_intersect[tid_current][icolor_round-1].resize(size_i+1);
        local_intersect[tid_current][icolor_round-1][size_i]=0.0;
-       dup_flag=size_i;
+       dup_flag=size_i+1;
       }
-      local_intersect[tid_current][icolor_round-1][dup_flag]=
-        local_intersect[tid_current][icolor_round-1][dup_flag]+
+      if (dup_flag>0) {
+       //do nothing
+      } else
+       amrex::Error("dup_flag invalid");
+
+      local_intersect[tid_current][icolor_round-1][dup_flag-1]=
+        local_intersect[tid_current][icolor_round-1][dup_flag-1]+
         volfab(p); 
 
      } else if (old_im!=im) {
