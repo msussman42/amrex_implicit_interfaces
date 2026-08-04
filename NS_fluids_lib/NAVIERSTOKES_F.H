@@ -104,6 +104,8 @@ extern "C" {
      Real* pres,AMREX_ARLIM_P(preslo),AMREX_ARLIM_P(preshi),
      Real* div,AMREX_ARLIM_P(divlo),AMREX_ARLIM_P(divhi),
      Real* divdat,AMREX_ARLIM_P(divdatlo),AMREX_ARLIM_P(divdathi),
+     Real* colordat,
+     AMREX_ARLIM_P(colordatlo),AMREX_ARLIM_P(colordathi),
      Real* den,
      AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
      Real* mom_den,

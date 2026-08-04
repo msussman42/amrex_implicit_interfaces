@@ -7491,6 +7491,7 @@ void NavierStokes::output_zones(
    MultiFab* presmf,
    MultiFab* divmf,
    MultiFab* div_data,
+   MultiFab* color_data,
    MultiFab* denmf,
    MultiFab* mom_denmf,
    MultiFab* viscoelasticmf,
@@ -7613,6 +7614,7 @@ void NavierStokes::output_zones(
  check_for_NAN(local_caller_string,presmf);
  check_for_NAN(local_caller_string,divmf);
  check_for_NAN(local_caller_string,div_data);
+ check_for_NAN(local_caller_string,color_data);
  check_for_NAN(local_caller_string,denmf);
  check_for_NAN(local_caller_string,mom_denmf);
 
@@ -7697,6 +7699,10 @@ void NavierStokes::output_zones(
     MultiFab* div_data_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      1,1,
      MFInfo().SetTag("div_data_minus"),FArrayBoxFactory());
+
+    MultiFab* color_data_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     1,1,
+     MFInfo().SetTag("color_data_minus"),FArrayBoxFactory());
 
     MultiFab* denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nden,1,
@@ -7800,6 +7806,12 @@ void NavierStokes::output_zones(
 		   1,1,geom.periodicity()); 
 
     check_for_NAN(local_caller_string,div_data_minus);
+
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    color_data_minus->ParallelCopy(*color_data,0,0,1,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(local_caller_string,color_data_minus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     denmfminus->ParallelCopy(*denmf,0,0,nden,
@@ -7934,6 +7946,7 @@ void NavierStokes::output_zones(
      FArrayBox& presfab=(*presmfminus)[mfi];
      FArrayBox& divfab=(*divmfminus)[mfi];
      FArrayBox& div_data_fab=(*div_data_minus)[mfi];
+     FArrayBox& color_data_fab=(*color_data_minus)[mfi];
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
@@ -7973,6 +7986,8 @@ void NavierStokes::output_zones(
       divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
       div_data_fab.dataPtr(),
       ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
+      color_data_fab.dataPtr(),
+      ARLIM(color_data_fab.loVect()),ARLIM(color_data_fab.hiVect()),
       denfab.dataPtr(),
       ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
       mom_denfab.dataPtr(),
@@ -8045,6 +8060,7 @@ void NavierStokes::output_zones(
     delete presmfminus;
     delete divmfminus;
     delete div_data_minus;
+    delete color_data_minus;
     delete denmfminus;
     delete mom_denmfminus;
     delete lsdistmfminus;
@@ -8102,6 +8118,9 @@ void NavierStokes::output_zones(
 
     MultiFab* div_data_minus=div_data;
     check_for_NAN(local_caller_string,div_data_minus);
+
+    MultiFab* color_data_minus=color_data;
+    check_for_NAN(local_caller_string,color_data_minus);
 
     MultiFab* denmfminus=denmf;
     MultiFab* mom_denmfminus=mom_denmf;
@@ -8201,6 +8220,7 @@ void NavierStokes::output_zones(
      FArrayBox& presfab=(*presmfminus)[mfi];
      FArrayBox& divfab=(*divmfminus)[mfi];
      FArrayBox& div_data_fab=(*div_data_minus)[mfi];
+     FArrayBox& color_data_fab=(*color_data_minus)[mfi];
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
@@ -8239,6 +8259,8 @@ void NavierStokes::output_zones(
       divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
       div_data_fab.dataPtr(),
       ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
+      color_data_fab.dataPtr(),
+      ARLIM(color_data_fab.loVect()),ARLIM(color_data_fab.hiVect()),
       denfab.dataPtr(),
       ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
       mom_denfab.dataPtr(),

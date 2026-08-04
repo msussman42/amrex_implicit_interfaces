@@ -23770,16 +23770,25 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   MultiFab* denmf=ns_level.getStateDen(1,cur_time_slab); 
   ns_level.getStateMOM_DEN(MOM_DEN_MF,1,cur_time_slab); 
   MultiFab* lsdist=ns_level.getStateDist(1,cur_time_slab,local_caller_string);
+
    //getStateDIV_DATA is declared in: NavierStokes.cpp
    //ngrow=1 scomp=0 ncomp=1  state[DIV_Type]
    //this data goes in the "PLOTCOMP_STATE_DIV" component.
   MultiFab* div_data=ns_level.getStateDIV_DATA(1,0,1,cur_time_slab);
+
   if (1==0) {
    std::cout << "level= " << ilev << " div_data norm0= " << 
     div_data->norm0() << '\n'; 
    std::cout << "level= " << ilev << " div_datanorm0+1grow= " << 
     div_data->norm0(0,1) << '\n'; 
   }
+
+   //getStateCOLOR_DATA is declared in: NavierStokes.cpp
+   //ngrow=1 scomp=0 ncomp=1  state[COLOR_Type]
+   //this data goes in the "PLOTCOMP_STATE_COLOR" component.
+  MultiFab* color_data=ns_level.getStateCOLOR_DATA(1,0,1,cur_time_slab);
+
+
   MultiFab* viscoelasticmf=nullptr;
   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
    // do nothing
@@ -23840,6 +23849,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     presmf,
     ns_level.localMF[MACDIV_MF],
     div_data,
+    color_data,
     denmf,
     ns_level.localMF[MOM_DEN_MF],
     viscoelasticmf,
@@ -23883,6 +23893,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
 
   delete div_data;
+  delete color_data;
   delete velmf;
   delete denmf;
   delete presmf;
@@ -24194,6 +24205,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    varnames[icomp]="DIV_DERIVED";
    icomp++;
    varnames[icomp]="DIV_EXPECT";
+   icomp++;
+   varnames[icomp]="COLOR_EXPECT";
    icomp++;
    varnames[icomp]="MACH";
 
