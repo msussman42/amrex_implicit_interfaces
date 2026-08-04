@@ -6472,6 +6472,297 @@ int ilev;
 } // end subroutine color_variable
 
 void 
+NavierStokes::level_sync_groups(
+ Vector<blobclass>& blobdata,
+ Vector< Vector<Real> >& intersection_data,
+ Vector< Vector<int> >& label_intersect) {
+
+ std::string local_caller_string="level_sync_groups";
+ int finest_level=parent->finestLevel();
+ bool use_tiling=ns_tiling;
+
+ if (level>finest_level)
+  amrex::Error("level invalid level_sync_groups");
+ int num_colors=blobdata.size();
+ if (num_colors==0) 
+  amrex::Error("num_colors should be positive in level_sync_groups");
+
+ int repair_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
+ if (repair_count==0) 
+  amrex::Error("repair_count should be positive in level_sync_groups");
+
+ resize_metrics(1);
+ debug_ngrow(VOLUME_MF,0,local_caller_string);
+
+  //ngrow=0, scomp=0, ncomp=1
+ MultiFab* old_color=getStateCOLOR_DATA(0,0,1,cur_time_slab);
+
+  // mask=tag if not covered by level+1 and at fine-fine ghost cell.
+ Real tag=1.0;
+ int clear_phys_boundary=2;
+  //ngrow=0
+ MultiFab* maskmf=maskfiner(0,tag,clear_phys_boundary); 
+
+ if (localMF[COLOR_MF]->nGrow()!=ngrow_distance)
+  amrex::Error("localMF[COLOR_MF]->nGrow()!=ngrow_distance");
+
+ Vector< Vector< Vector<Real> > > local_intersect;
+ Vector< Vector< Vector<int> > > local_label;
+
+ local_intersect.resize(thread_class::nthreads);
+ local_label.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  local_intersect[tid].resize(num_colors);
+  local_label[tid].resize(num_colors);
+  for (int i=0;i<num_colors;i++) {
+   local_intersect[tid][i].resize(0);
+   local_label[tid][i].resize(0);
+  }
+ } //tid
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(localMF[COLOR_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*localMF[COLOR_MF],false); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  const int gridno = mfi.index();
+  const Box& fabgrid=grids[gridno];
+  const int* lo = fabgrid.loVect();
+  const int* hi = fabgrid.hiVect();
+  FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+  FArrayBox& old_colorfab=(*old_color)[mfi];
+  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+  FArrayBox& maskfab=(*maskmf)[mfi];
+
+#if (AMREX_SPACEDIM==3)
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++)
+  for (int k=lo[2];k<=hi[2];k++) {
+#endif
+#if (AMREX_SPACEDIM==2)
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++) {
+#endif
+   IntVect p(D_DECL(i,j,k));
+
+   if (maskfab(p)==1.0) {
+
+    int icolor_round=(int) (colorfab(p)+0.5);
+    int icolor_trunc=(int) (colorfab(p));
+    int icolor_round_old=(int) (old_colorfab(p)+0.5);
+    int icolor_trunc_old=(int) (old_colorfab(p));
+
+    if ((icolor_round==icolor_trunc)&&
+        (icolor_round_old==icolor_trunc_old)) {
+     //do nothing
+    } else
+     amrex::Error("expecting round=trunc");
+
+    if ((icolor_round>0)&&(icolor_round_old>0)&&
+        (icolor_round<=num_colors)&&
+        (icolor_round_old<=repair_count)) {
+
+     int old_im=amrlevel_repair_blobclass.
+       repair_blobclass_data[1][icolor_round_old].im;
+     int im=blobdata[icolor_round].im;
+     if ((im>=1)&&(im<=num_materials)) {
+      //do nothing
+     } else
+      amrex::Error("im invalid");
+     if ((old_im>=1)&&(old_im<=num_materials)) {
+      //do nothing
+     } else
+      amrex::Error("old_im invalid");
+
+     if (old_im==im) {
+
+      int size_i=local_intersect[tid_current][icolor_round-1].size();
+
+      int dup_flag=0;
+      for (int idup=0;idup<size_i;idup++) {
+       if (local_label[tid_current][icolor_round-1][idup]==
+           icolor_round_old-1) {
+        dup_flag=idup;
+       }
+      }
+      if (dup_flag==0) {
+       local_label[tid_current][icolor_round-1].resize(size_i+1);
+       local_label[tid_current][icolor_round-1][size_i]=icolor_round_old-1;
+       local_intersect[tid_current][icolor_round-1].resize(size_i+1);
+       local_intersect[tid_current][icolor_round-1][size_i]=0.0;
+       dup_flag=size_i;
+      }
+      local_intersect[tid_current][icolor_round-1][dup_flag]=
+        local_intersect[tid_current][icolor_round-1][dup_flag]+
+        volfab(p); 
+
+     } else if (old_im!=im) {
+      //do nothing
+     } else
+      amrex::Error("old_im or im invalid");
+
+    } else
+     amrex::Error("icolor_round invalid"
+
+   } else if (maskfab(p)==0.0) {
+    //do nothing
+   } else
+    amrex::Error("maskfab(p) invalid");
+  } // i,j,k
+ } // mfi
+} //omp
+ ns_reconcile_d_num(LOOP_SYNC_GROUPS,"level_sync_groups");
+
+FIX ME
+  // first reduce color_color_array from the different threads
+ for (int i_index=0;i_index<color_count;i_index++) {
+
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   int i_size=color_color_array[tid][i_index].size();
+   for (int i_trial=0;i_trial<i_size;i_trial++) {
+    int j_index=color_color_array[tid][i_index][i_trial];
+    int dup_flag=0;
+    int base_size=color_color_array[0][i_index].size();
+    for (int idup=0;idup<base_size;idup++) {
+     if (color_color_array[0][i_index][idup]==j_index) {
+      dup_flag=1;
+     }
+    }
+    if (dup_flag==0) {
+     color_color_array[0][i_index].resize(base_size+1);
+     color_color_array[0][i_index][base_size]=j_index;
+    }
+   } //i_trial
+  } //tid
+ } // i_index
+
+ ParallelDescriptor::Barrier();
+
+  // second: reduce color_color_array from the different cores
+ for (int i_index=0;i_index<color_count;i_index++) {
+
+  ParallelDescriptor::Barrier();
+
+  Vector<int> local_array;
+  local_array.resize(color_count);
+  for (int j_index=0;j_index<color_count;j_index++) {
+   local_array[j_index]=0;
+  }
+  int i_size_sync=color_color_array[0][i_index].size();
+  for (int i_trial=0;i_trial<i_size_sync;i_trial++) {
+   int j_index=color_color_array[0][i_index][i_trial];
+   local_array[j_index]=1;
+  }
+
+  color_color_array[0][i_index].resize(0);
+
+  ParallelDescriptor::Barrier();
+
+  for (int j_index=0;j_index<color_count;j_index++) {
+
+   ParallelDescriptor::ReduceIntMax(local_array[j_index]);
+   if (local_array[j_index]==0) {
+    //do nothing
+   } else if (local_array[j_index]==1) {
+    int i_size_grid=color_color_array[0][i_index].size();
+    color_color_array[0][i_index].resize(i_size_grid+1);
+    color_color_array[0][i_index][i_size_grid]=j_index;
+   } else
+    amrex::Error("local_array[j_index] invalid");
+  }  // j_index
+ }  // i_index
+     
+ ParallelDescriptor::Barrier();
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after ReduceIntMax \n";
+  }
+ }
+
+  // group_map[i] associates color "i" to a given group number.
+ for (int i=0;i<color_count;i++) {
+  group_map[i]=0;
+ }
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "before cross_check group_map \n";
+  }
+ }
+
+ Vector<int> stackdata;
+ int n_assoc=0;
+ for (int i_index=0;i_index<color_count;i_index++) {
+  n_assoc+=color_color_array[0][i_index].size();
+ }
+ total_groups=0;
+
+  //group_map only needs to be updated on the IOProcessor and
+  //initialized to 0 on the other processors.  A "reduceintmax"
+  //command synchronizes the IOProcessor to the others.
+ if (ParallelDescriptor::IOProcessor()) {
+
+  stackdata.resize(n_assoc);
+
+  for (int i_index=0;i_index<color_count;i_index++) {
+   if (group_map[i_index]==0) {
+    if (color_color_array[0][i_index].size()>0) {
+     total_groups++;
+     group_map[i_index]=total_groups;
+     if (group_map[i_index]<1)
+      amrex::Error("group_map invalid");
+     cross_check(group_map,stackdata,color_color_array[0],i_index);
+    } else
+     amrex::Error("expecting color_color_array[0][i_index].size()>0");
+   } else if (group_map[i_index]>0) {
+    //do nothing
+   } else {
+    amrex::Error("group_map invalid");
+   } 
+  } // i_index
+
+  stackdata.resize(0);
+
+ }  // IOProcessor
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after cross_check: group_map " << ' ' << n_assoc << '\n';
+  }
+ }
+
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  color_color_array[tid].resize(1);
+ }
+
+ ParallelDescriptor::Barrier();
+
+ for (int i_index=0;i_index<color_count;i_index++) {
+  ParallelDescriptor::ReduceIntMax(group_map[i_index]);
+ }
+ ParallelDescriptor::ReduceIntMax(total_groups);
+ ParallelDescriptor::Barrier();
+
+
+ delete old_color;
+ delete maskmf;
+
+} //end subroutine level_sync_groups
+
+void 
 NavierStokes::sync_groups(
  Vector<blobclass>& blobdata) {
 
@@ -6481,7 +6772,43 @@ NavierStokes::sync_groups(
  } else
   amrex::Error("level invalid");
 
+ int repair_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
 
+ int updated_count=blobdata.size();
+
+ if (repair_count==0) {
+
+  for (int i=0;i<updated_count;i++) {
+   blobdata[i].blob_mass_target=blobdata[i].blob_mass;
+  }
+  amrlevel_repair_blobclass.repair_blobclass_data[1].resize(updated_count);
+  copy_blobdata(
+   amrlevel_repair_blobclass.repair_blobclass_data[1],
+   blobdata);
+  
+ } else if (repair_count>0) {
+
+  Vector< Vector<Real> > intersection_data;
+  intersection_data.resize(updated_count);
+  Vector< Vector<int> > label_intersect;
+  label_intersect.resize(updated_count);
+  for (int i=0;i<updated_count;i++) {
+   intersection_data[i].resize(0);
+   label_intersect[i].resize(0);
+  }
+  for (int ilev = 0; ilev <= finest_level; ilev++) {
+   NavierStokes& ns_level = getLevel(ilev);
+   ns_level.level_sync_groups(blobdata,intersection_data,label_intersect);
+  }
+ 
+ } else
+  amrex::Error("repair_count invalid");
+
+ for (int ilev = 0; ilev <= finest_level; ilev++) {
+  NavierStokes& ns_level = getLevel(ilev);
+   //scomp=0 ncomp=
+  ns_level.putStateCOLOR_DATA(0,1,COLOR_MF); 
+ }
 
 } //end subroutine sync_groups
 
