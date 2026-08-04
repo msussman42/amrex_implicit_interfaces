@@ -6475,6 +6475,14 @@ void
 NavierStokes::sync_groups(
  Vector<blobclass>& blobdata) {
 
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
+
+
+
 } //end subroutine sync_groups
 
 //called from NavierStokes::ColorSumALL
@@ -8109,7 +8117,6 @@ NavierStokes::ColorSumALL(
 
   // color_count=number of colors
   // ngrow_color, fort_extrapfill, pc_interp for COLOR_MF
-  // FIX ME
   color_variable(
    coarsest_level,
    COLOR_MF,
