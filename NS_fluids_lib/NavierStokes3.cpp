@@ -6609,9 +6609,7 @@ NavierStokes::level_sync_groups(
       } else
        amrex::Error("dup_flag invalid");
 
-      local_intersect[tid_current][icolor_round-1][dup_flag-1]=
-        local_intersect[tid_current][icolor_round-1][dup_flag-1]+
-        volfab(p); 
+      local_intersect[tid_current][icolor_round-1][dup_flag-1]+=volfab(p); 
 
      } else if (old_im!=im) {
       //do nothing
