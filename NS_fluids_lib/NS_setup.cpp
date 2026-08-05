@@ -2561,7 +2561,6 @@ NavierStokes::sum_integrated_quantities (
 
        // 1..num_materials
       int imbase=blobdata[iblob].im;
-      int groupbase=blobdata[iblob].group_id;
       Real inflow_outflow=blobdata[iblob].blob_inflow_outflow;
       if ((imbase<1)||(imbase>num_materials))
        amrex::Error("imbase invalid");
@@ -2572,11 +2571,9 @@ NavierStokes::sum_integrated_quantities (
       Real gdiam=2.0*std::exp(std::log(3.0*gvol_modify/(4.0*NS_PI))/3.0);
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<
-       " group_id= " << groupbase <<
        " volume = " << gvol_modify << '\n';
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<     
-       " group_id= " << groupbase <<
        " diameter= " << gdiam << " perim= " <<
        blobdata[iblob].blob_perim << '\n';
 
@@ -2608,7 +2605,6 @@ NavierStokes::sum_integrated_quantities (
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
         " im= " << imbase << 
-        " group_id= " << groupbase <<
         " center dir = " << dir << " coordinate=" << 
         blobdata[iblob].blob_center_integral[dir]/gvol << '\n';
        }
@@ -2703,12 +2699,10 @@ NavierStokes::sum_integrated_quantities (
       Real mass_original=blobdata[iblob].blob_mass;
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
-       " group_id= " << groupbase <<
        " blob_mass_target= " <<
         mass_target << '\n';
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
-       " group_id= " << groupbase <<
        " blob_mass_original= " <<
         mass_original << '\n';
 
