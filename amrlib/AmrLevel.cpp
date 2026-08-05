@@ -272,8 +272,6 @@ void repair_blobclass::checkpoint(int check_id) {
     } //i
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].im << '\n';
-    repair_blob_checkpoint_file << 
-     repair_blobclass_data[istep][iblob].group_id << '\n';
    } // for (int iblob=0;iblob<repair_blobclass_data[istep].size();iblob++) 
 
   } //for (int istep=0;istep<new_old_size;istep++) {
@@ -382,8 +380,6 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
    } //i
    is >>
      repair_blobclass_data[istep][iblob].im;
-   is >>
-     repair_blobclass_data[istep][iblob].group_id;
   } // for (int iblob=0;iblob<local_repair_size();iblob++) 
 
  } // for (int istep=0;istep<new_old_size;istep++) 

@@ -922,11 +922,6 @@ protected:
     MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type,
 		    int zero_diag_flag);
 
-    void color_to_group_map(
-      int color_count,
-      int& total_groups,
-      Vector<int>& group_map);
-
     void sync_colors(
      int idx_color,int idx_type,
      Vector<int> color_per_grid,
@@ -985,13 +980,23 @@ protected:
      Vector< Vector<Real> >& mdot_comp_data_redistribute
      );
 
-    void level_sync_groups(
-     Vector<blobclass>& blobdata,
+    void level_sync_old_new_colors(
+     Vector<blobclass> blobdata_old,
+     Vector<blobclass> blobdata,
      Vector< Vector<Real> >& intersection_data,
      Vector< Vector<int> >& label_intersect
     );
 
-    void sync_groups(
+    void resolve_orphans(
+     Vector<blobclass> blobdata_old,
+     Vector<blobclass> blobdata,
+     Vector< Vector<Real> >& intersection_data,
+     Vector< Vector<int> >& label_intersect,
+     Vector< Vector<Real> >& intersection_data_old,
+     Vector< Vector<int> >& label_intersect_old
+    );
+
+    void sync_old_new_colors(
      Vector<blobclass>& blobdata
     );
 
