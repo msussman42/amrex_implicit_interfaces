@@ -985,6 +985,12 @@ protected:
      Vector< Vector<Real> >& mdot_comp_data_redistribute
      );
 
+    void level_sync_groups(
+     Vector<blobclass>& blobdata,
+     Vector< Vector<Real> >& intersection_data,
+     Vector< Vector<int> >& label_intersect
+    );
+
     void sync_groups(
      Vector<blobclass>& blobdata
     );
