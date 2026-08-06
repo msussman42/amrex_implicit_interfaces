@@ -4082,6 +4082,7 @@ stop
       real(amrex_real) vol
       real(amrex_real) mass
       real(amrex_real) den_mat
+      real(amrex_real) local_mass_increment
       real(amrex_real) TEMP_mat
       real(amrex_real) internal_energy
       real(amrex_real) massfrac_parm(num_species_var+1)
@@ -4143,6 +4144,8 @@ stop
       real(amrex_real) mdot_total
       real(amrex_real) mdot_avg
       real(amrex_real) mdot_part
+      real(amrex_real) mdot_relax
+      real(amrex_real) mdot_correct
       real(amrex_real) updated_density
       real(amrex_real) original_density
       real(amrex_real) mofdata(num_materials*ngeom_recon)
@@ -4464,7 +4467,7 @@ stop
          endif
 
         else
-         print *,"operation_flag invalid fort_getcolorsum"
+         print *,"operation_flag invalid fort_getcolorsum ",operation_flag
          stop
         endif
 
@@ -5154,7 +5157,7 @@ stop
                 if (internal_energy.gt.zero) then
                  ! do nothing
                 else
-                 print *,"internal_energy has gone nonpos"
+                 print *,"internal_energy has gone nonpos ",internal_energy
                  stop
                 endif
                 call EOS_material(den_mat,massfrac_parm, &
@@ -5208,6 +5211,8 @@ stop
                print *,"expecting ic+5 to correspond to BLB_INFLOW_OUTFLOW+1"
                stop
               endif
+               !inflow_outflow_flag=1 if u dot n bc=REFLECT_EVEN,
+               !FOEXTRAP, or inhom. EXT_DIR
               level_blobdata(ic+5)=level_blobdata(ic+5)+inflow_outflow_flag
 
               if (ic+6.eq. &
@@ -5298,6 +5303,12 @@ stop
                endif
 
                level_blobdata(ic-4)=level_blobdata(ic-4)+vol*vfrac*den_mat
+
+                !den_mat units: kg/m^3
+                !mdot_pres units: m^3/s^2
+                !local_mass_increment units: kg
+               local_mass_increment=mdot_pres(D_DECL(i,j,k))*den_mat*(dt**2)
+               level_blobdata(ic-2)=level_blobdata(ic-2)+local_mass_increment
               else
                print *,"den_mat overflow"
                print *,"den_mat= ",den_mat
@@ -5306,6 +5317,8 @@ stop
               endif
              else
               print *,"den_mat underflow"
+              print *,"den_mat= ",den_mat
+              print *,"fort_density_floor(im)=",fort_density_floor(im)
               stop
              endif
 
@@ -5559,6 +5572,103 @@ stop
             else if (sweep_num.eq.2) then
 
              !update mdot_pres in non-clamped fluid regions.
+
+             if ((is_rigid(im).eq.0).and. &
+                 (is_elastic(im).eq.0)) then
+              vofcomp=(im-1)*ngeom_recon+1
+              vfrac=mofdata(vofcomp)
+              if ((vfrac.ge.one-EPS1).and.(vfrac.le.one+half)) then
+               ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_INFLOW_OUTFLOW+1
+               if (level_blobdata(ic).eq.zero) then
+                do dir=1,SDIM
+                 xstencil_point(dir)=xsten(0,dir)
+                enddo
+                call SUB_clamped_LS(xstencil_point,cur_time_slab,LS_clamped, &
+                  VEL_clamped,temperature_clamped,prescribed_flag,dx)
+                if (LS_clamped.ge.zero) then
+                 !do nothing
+                else if (LS_clamped.le.zero) then
+
+                 if (vol.gt.zero) then
+                  ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                   BLB_CELLVOL_CNT+1
+                  blob_cellvol_count=level_blobdata(ic)
+                  if (blob_cellvol_count.gt.(one-EPS1)*vol) then
+                   ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                    BLB_MASS+1
+                   blob_mass=level_blobdata(ic)
+                   if (blob_mass.gt.zero) then
+                    ic=(opposite_color(im)-1)*num_elements_blobclass+ &
+                     BLB_MASS_TARGET+1
+                    blob_mass_target=level_blobdata(ic)
+                    if (blob_mass_target.gt.zero) then
+                     dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+                     if (constant_density_all_time(im).eq.1) then
+                      den_mat=fort_denconst(im)
+                     else if (constant_density_all_time(im).eq.0) then
+                      den_mat=DEN(D_DECL(i,j,k),dencomp)
+                     else
+                      print *,"constant_density_all_time(im) invalid"
+                      stop
+                     endif
+                     if (den_mat.gt.zero) then
+                      mdot_relax=half
+                       !mdot units: m^3/s^2
+                      mdot_correct=mdot_relax*(blob_mass_target-blob_mass)* &
+                       vol/blob_cellvol_count
+                      mdot_correct=mdot_correct/(den_mat*dt*dt)
+                      mdot_pres(D_DECL(i,j,k))=mdot_pres(D_DECL(i,j,k))+ &
+                        mdot_correct
+                     else
+                      print *,"den_mat invalid ",den_mat
+                      stop
+                     endif
+                    else
+                     print *,"blob_mass_target invalid ",blob_mass_target
+                     stop
+                    endif
+                   else
+                    print *,"blob_mass invalid ",blob_mass
+                    stop
+                   endif
+                  else
+                   print *,"blob_cellvol_count invalid ",blob_cellvol_count
+                   print *,"vol: ",vol
+                   stop
+                  endif
+                 else
+                  print *,"vol invalid: ",vol
+                  stop
+                 endif
+
+                else
+                 print *,"LS_clamped invalid ",LS_clamped
+                 stop
+                endif
+
+               else if (level_blobdata(ic).eq.one) then
+                !do nothing
+               else
+                print *,"level_blobdata(ic) invalid"
+                stop
+               endif
+
+              else if ((vfrac.le.one-EPS1).and.(vfrac.ge.-EPS1)) then
+               !do nothing
+              else
+               print *,"vfrac invalid ",vfrac
+               stop
+              endif
+
+             else if ((is_rigid(im).eq.1).or. &
+                      (is_elastic(im).eq.1)) then
+              !do nothing
+             else
+              print *,"is_rigid(im) invalid ",im,is_rigid(im)
+              print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+              stop
+             endif
 
             else
              print *,"sweep_num invalid: ",sweep_num
