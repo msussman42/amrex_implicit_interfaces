@@ -8714,6 +8714,14 @@ NavierStokes::ColorSumALL(
    if (update_mdot==1) {
     // (dest,source)
     copy_blobdata(level_blobdata,blobdata);
+    copy_blobdata(
+      amrlevel_repair_blobclass.repair_blobclass_data[1],
+      blobdata);
+    int repair_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
+    for (int i=0;i<repair_count;i++) {
+     amrlevel_repair_blobclass.repair_blobclass_data[1][i].blob_mass_target+=
+       blobdata[i].blob_mass_mdot;
+    }
    } else
     amrex::Error("update_mdot invalid");
   } else
@@ -11512,6 +11520,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
      //NavierStokes::move_mdot_to_density() is declared
      //in NavierStokes.cpp
+     //fort_move_mdot (GODUNOV_3D.F90) is called.
      ns_level.move_mdot_to_density();
 
     } else if (num_materials_compressible==0) {
