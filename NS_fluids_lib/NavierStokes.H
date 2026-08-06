@@ -981,6 +981,7 @@ protected:
      );
 
     void level_sync_old_new_colors(
+     int swap_flag,
      Vector<blobclass> blobdata_old,
      Vector<blobclass> blobdata,
      Vector< Vector<Real> >& intersection_data,
