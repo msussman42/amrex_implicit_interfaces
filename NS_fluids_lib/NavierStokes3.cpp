@@ -6675,6 +6675,8 @@ NavierStokes::sync_old_new_colors(
 
  int updated_count=blobdata.size();
 
+ Vector<blobclass> blobdata_old;
+
  if (repair_count==0) {
 
   for (int i=0;i<updated_count;i++) {
@@ -6684,10 +6686,13 @@ NavierStokes::sync_old_new_colors(
   copy_blobdata(
    amrlevel_repair_blobclass.repair_blobclass_data[1],
    blobdata);
+  blobdata_old.resize(updated_count);
+  copy_blobdata(
+   blobdata_old,
+   amrlevel_repair_blobclass.repair_blobclass_data[1]);
   
  } else if (repair_count>0) {
 
-  Vector<blobclass> blobdata_old;
   blobdata_old.resize(repair_count);
   copy_blobdata(
    blobdata_old,
@@ -6776,13 +6781,78 @@ NavierStokes::sync_old_new_colors(
    } //for (int j=0;j<label_intersect_new[i].size();j++)
 
   } //for (int i=0;i<blobdata.size();i++) 
-   
+ 
+  for (int i=0;i<updated_count;i++) {
+   blobdata[i].blob_mass_target=0.0;
+  }
+  for (int i=0;i<repair_count;i++) {
+   Real intersect_total=0.0;
+   for (int j=0;j<label_intersect_old[i].size();j++) {
+    intersect_total+=intersection_data_old[i][j];
+   }
+   for (int j=0;j<label_intersect_old[i].size();j++) {
+    Real denom=label_intersect_old[i].size();
+    Real mass_frac=1.0/denom;
+    if (intersect_total==0.0) {
+     // do nothing
+    } else if (intersect_total>0.0) {
+     mass_frac=intersection_data_old[i][j]/intersect_total;
+    } else
+     amrex::Error("intersect_total invalid");
+    if ((mass_frac>=0.0)&&(mass_frac<=1.0)) {
+     int k=label_intersect_old[i][j];
+     blobdata[k].blob_mass_target+=mass_frac*blobdata_old[i].blob_mass_target;
+    } else
+     amrex::Error("mass_frac invalid");
+   } //for (int j=0;j<label_intersect_old[i].size();j++) 
+  } //for (int i=0;i<repair_count;i++) 
+
  } else
   amrex::Error("repair_count invalid");
 
+ repair_count=blobdata_old.size();
+
+ Vector<Real> mass_target_old;
+ Vector<Real> mass_target_new;
+ mass_target_old.resize(num_materials);
+ mass_target_new.resize(num_materials);
+ for (int i=0;i<num_materials;i++) {
+  mass_target_new[i]=0.0;
+  mass_target_old[i]=0.0;
+ }
+ for (int i=0;i<updated_count;i++) {
+  int im=blobdata[i].im;
+  mass_target_new[im]+=blobdata[i].blob_mass_target;
+ }
+ for (int i=0;i<repair_count;i++) {
+  int im=blobdata_old[i].im;
+  mass_target_old[im]+=blobdata_old[i].blob_mass_target;
+ }
+ for (int i=0;i<num_materials;i++) {
+  if (mass_target_old[i]==0.0) {
+   if (mass_target_new[i]==0.0) {
+    //do nothing
+   } else
+    amrex::Error("mass_target invalid");
+  } else if (mass_target_old[i]>0.0) {
+   Real rel_error=
+     std::abs(mass_target_old[i]-mass_target_new[i])/mass_target_old[i];
+   if ((rel_error>=0.0)&&(rel_error<1.0e-7)) {
+    //do nothing
+   } else
+    amrex::Error("mass_target_old or mass_target_new invalid");
+  } else
+   amrex::Error("mass_target_old invalid");
+ } //for (int i=0;i<num_materials;i++) 
+
+ amrlevel_repair_blobclass.repair_blobclass_data[1].resize(updated_count);
+ copy_blobdata(
+  amrlevel_repair_blobclass.repair_blobclass_data[1],
+  blobdata);
+
  for (int ilev = 0; ilev <= finest_level; ilev++) {
   NavierStokes& ns_level = getLevel(ilev);
-   //scomp=0 ncomp=
+   //scomp=0 ncomp=1
   ns_level.putStateCOLOR_DATA(0,1,COLOR_MF); 
  }
 
