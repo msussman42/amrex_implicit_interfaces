@@ -128,7 +128,7 @@ public:
 
  void sort_axis();
 
-};
+}; //end class snapshot_blobclass
 
 class dynamic_blobclass
 {
@@ -141,7 +141,7 @@ public:
  int end_step;
  Vector<snapshot_blobclass> snapshots;
 
-};
+}; //end class dynamic_blobclass
 
 class dynamic_blobclass_array
 {
@@ -161,7 +161,7 @@ public:
 
  Vector<dynamic_blobclass> blob_history;
 
-};
+}; //end class dynamic_blobclass_array
 
 class blobclass
 {
@@ -210,6 +210,9 @@ public:
   Real blob_cell_count;
   Real blob_cellvol_count;
   Real blob_mass;
+  Real blob_mass_target;
+  Real blob_mass_mdot;
+  Real blob_inflow_outflow; //>0.0 if touching an inflow_outflow boundary
   Real blob_pressure;
   Real blob_second_moment[6]; //xx,xy,x(y|z),yy,y(y|z),(yy|zz)
   Real blob_center_integral[AMREX_SPACEDIM];
@@ -220,9 +223,23 @@ public:
    // perimeter of contact line between im, im1, im2
   Vector< Vector<Real> > blob_triple_perim;
   int im;  // 1<=im<=num_materials
-};
+}; //end class blobclass
 
 
+class repair_blobclass
+{
+public:
+
+ static std::ofstream repair_blob_checkpoint_file;
+
+ void open_checkpoint(const std::string& FullPath);
+ void close_checkpoint();
+ void checkpoint(int check_id);
+ void restart(int check_id,std::istream& is);
+
+ Vector< Vector<blobclass> > repair_blobclass_data;
+
+}; //end class repair_blobclass
 
 class AmrLevel
 {
@@ -479,6 +496,7 @@ public:
 #endif
 
     static dynamic_blobclass_array blob_history_class;
+    static repair_blobclass amrlevel_repair_blobclass;
 
 protected:
     //

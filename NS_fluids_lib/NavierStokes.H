@@ -30,6 +30,7 @@ namespace amrex{
 // DIV_Type (1 variable):
 //  (a) temporary "pressure" for project_option==11, or
 //  (b) -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
+// COLOR_Type (1 variable):
 // Solid_State_Type:
 // velocity
 // Tensor_Type:
@@ -910,9 +911,12 @@ protected:
 
     void assign_colors(
      int& fully_covered,
-     int idx_color,int idx_type,
-     Vector<int>& colormax,Vector<int> type_flag,
-     int zero_diag_flag);
+     int idx_color,
+     int idx_type,
+     Vector<int>& colormax,
+     Vector<int> type_flag,
+     int zero_diag_flag,
+     int ngrow_color);
 
     void avgDownColor(int idx_color,int idx_type);
     MultiFab* CopyFineToCoarseColor(int idx_color,int idx_type,
@@ -925,25 +929,27 @@ protected:
      int max_colors_grid,
      MultiFab* maskmf,
      int check_corners,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void color_variable(
      int& coarsest_level,
-     int idx_color,int idx_type,
+     int idx_color,
+     int idx_type,
      int* color_count,
      Vector<int> type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void SumRegions(int isweep); //isweep = 0 or 1
 
     void ColorSum(
+     int update_mdot,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate, // =1 or 3
      int sweep_num,
      int ncomp_mdot_alloc,
      int ncomp_mdot,
-     MultiFab* typemf,
-     MultiFab* color,
      MultiFab* mdot,
      MultiFab* mdot_complement,
      Vector<blobclass>& level_blobdata,
@@ -956,14 +962,14 @@ protected:
      Vector< Vector<Real> >& level_mdot_comp_data_redistribute 
      );
 
+     //TYPE_MF, COLOR_MF
     void ColorSumALL(
+     int update_mdot,
      int use_mac_velocity,
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,
-     int idx_type,
-     int idx_color,
      int idx_mdot,  // ==-1 if no mdot
      int idx_mdot_complement,  // ==-1 if no mdot_complement
      Vector<int>& type_flag, 
@@ -974,7 +980,28 @@ protected:
      Vector< Vector<Real> >& mdot_comp_data_redistribute
      );
 
+    void level_sync_old_new_colors(
+     int swap_flag,
+     Vector<blobclass> blobdata_old,
+     Vector<blobclass> blobdata,
+     Vector< Vector<Real> >& intersection_data,
+     Vector< Vector<int> >& label_intersect
+    );
 
+    void resolve_orphans(
+     Vector<blobclass> blobdata_old,
+     Vector<blobclass> blobdata,
+     Vector< Vector<Real> >& intersection_data,
+     Vector< Vector<int> >& label_intersect,
+     Vector< Vector<Real> >& intersection_data_old,
+     Vector< Vector<int> >& label_intersect_old
+    );
+
+    void sync_old_new_colors(
+     Vector<blobclass>& blobdata
+    );
+
+     
 
     void LowMachDIVU(
      int sweep_num,
@@ -998,12 +1025,14 @@ protected:
 
     void Type_level(
      MultiFab* typemf,Vector<int>& type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     void TypeALL(
      int idx_type,
      Vector<int>& type_flag,
-     int zero_diag_flag);
+     int zero_diag_flag,
+     int ngrow_color);
 
     virtual void post_init_state ();
 
@@ -1077,6 +1106,7 @@ protected:
       MultiFab* presmf,
       MultiFab* divmf,
       MultiFab* div_data,
+      MultiFab* color_data,
       MultiFab* denmf,
       MultiFab* mom_denmf,
       MultiFab* viscoelasticmf,
@@ -1447,8 +1477,10 @@ void apply_pressure_grad(
        const std::string& caller_string);
 
     MultiFab* getStateDIV_DATA(int ngrow,int scomp,int ncomp,Real time);
+    MultiFab* getStateCOLOR_DATA(int ngrow,int scomp,int ncomp,Real time);
 
     void putStateDIV_DATA(int scomp,int ncomp,int idx_MF);
+    void putStateCOLOR_DATA(int scomp,int ncomp,int idx_MF);
 
     void getStateALL(int ngrow,Real time,int scomp,
       int ncomp,int idx_localMF);
@@ -1755,6 +1787,7 @@ protected:
     static int LS_Type;
      // -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
     static int DIV_Type;
+    static int COLOR_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
     static int Refine_Density_Type;
@@ -1958,6 +1991,9 @@ protected:
     static int BLB_CELL_CNT;
     static int BLB_CELLVOL_CNT;
     static int BLB_MASS;
+    static int BLB_MASS_TARGET;
+    static int BLB_MASS_MDOT;
+    static int BLB_INFLOW_OUTFLOW;
     static int BLB_PRES;
     static int BLB_SECONDMOMENT;  //6 components, uses BLB_CEN_ACT and BLB_VOL
 

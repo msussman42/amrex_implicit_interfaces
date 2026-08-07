@@ -109,13 +109,14 @@ amr.n_error_buf     = 8 8 8 8 8 8  # number of buffer cells in error est
 amr.grid_eff        = 0.75   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8 8 8 8 # block factor in grid generation
-amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
-#amr.restart         = chk01200
+amr.max_grid_size   = 16
+cg.min_max_grid_size = 16
+#amr.restart         = chk04566
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -176,7 +177,7 @@ ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 #ns.material_type=35 3 0 14
 ns.material_type=35 3 36 0  #Mie Gruneison
 #ns.material_type=35 37 0 0
-ns.material_conservation_form=1 1 0 0 #Mie Gruneison
+ns.material_conservation_form=1 1 1 0 #Mie Gruneison
 
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)

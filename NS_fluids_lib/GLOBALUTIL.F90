@@ -17762,6 +17762,13 @@ end subroutine print_visual_descriptor
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1
 
+       ! expected color: "COLOR_EXPECT"
+       ! see NavierStokes.cpp: NavierStokes::getStateCOLOR_DATA
+       ! "COLOR_Type"
+      Varname='COLOR_EXPECT'
+      call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
+
       Varname='MACH'
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1

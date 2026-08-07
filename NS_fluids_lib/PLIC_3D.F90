@@ -883,7 +883,8 @@ stop
           !calc_error_indicator is declared in PROB.F90
          call calc_error_indicator( &
           level,max_level, &
-          xsten,nhalf,dx,bfact, &
+          xsten,nhalf, &
+          dx,bfact, &
           voflist_center, &
           LS_stencil, &
           err,time)

@@ -4826,15 +4826,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer material_present_flag(num_materials)
       integer k1lo,k1hi
       real(amrex_real) vfrac_rigid_sum
+      real(amrex_real) vfrac_elastic_sum
       real(amrex_real) LS_temp(num_materials)
 
       if ((level.lt.0).or.(level.gt.max_level)) then
-       print *,"level invalid calc_error_indicator"
+       print *,"level invalid calc_error_indicator ",level
        stop
       endif
 
       if (nhalf.lt.2) then
-       print *,"nhalf invalid in calc_error_indicator"
+       print *,"nhalf invalid in calc_error_indicator ",nhalf
        stop
       endif 
 
@@ -4845,7 +4846,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        k1lo=-1
        k1hi=1
       else
-       print *,"dimension bust"
+       print *,"dimension bust calc_error_indicator ",SDIM
        stop
       endif
  
@@ -4853,7 +4854,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin invalid"
+       print *,"dxmin invalid calc_error_indicator ",dxmin
        stop
       endif
 
@@ -4879,7 +4880,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (abs(dist).ge.two*dxmin) then
         ! do nothing
        else
-        print *,"dist is NaN"
+        print *,"dist is NaN calc_error_indicator ",dist
         stop
        endif
 
@@ -4905,7 +4906,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (abs(dist3).ge.two*dxmin) then
           ! do nothing
          else
-          print *,"dist3 is NaN: ",dist3
+          print *,"dist3 is NaN calc_error_indicator: ",dist3
           stop
          endif
         else
@@ -4922,7 +4923,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (adapt_nozzle_flag.eq.0) then
        ! do nothing
       else
-       print *,"adapt_nozzle_flag invalid"
+       print *,"adapt_nozzle_flag invalid calc_error_indicator ", &
+         adapt_nozzle_flag
        stop
       endif  
 
@@ -4931,16 +4933,29 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
 
       vfrac_rigid_sum=zero
+      vfrac_elastic_sum=zero
+
       do im=1,num_materials 
+
        LS_temp(im)=LS_stencil(D_DECL(0,0,0),im)
+
        if (is_rigid(im).eq.0) then
         ! do nothing
        else if (is_rigid(im).eq.1) then
         vfrac_rigid_sum=vfrac_rigid_sum+voflist(im)
        else
-        print *,"is_rigid(im) invalid"
+        print *,"is_rigid(im) invalid ",im,is_rigid(im)
         stop
        endif
+       if (is_elastic(im).eq.0) then
+        ! do nothing
+       else if (is_elastic(im).eq.1) then
+        vfrac_elastic_sum=vfrac_elastic_sum+voflist(im)
+       else
+        print *,"is_elastic(im) invalid ",im,is_elastic(im)
+        stop
+       endif
+
       enddo ! im=1..num_materials
 
       if ((vfrac_rigid_sum.ge.one-VOFTOL_MATERIAL).and. &
@@ -4957,71 +4972,125 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
+      if ((vfrac_elastic_sum.ge.one-VOFTOL_MATERIAL).and. &
+          (vfrac_elastic_sum.le.one+EPS1)) then
+       vfrac_elastic_sum=one
+      else if ((vfrac_elastic_sum.ge.-EPS1).and. &
+               (vfrac_elastic_sum.le.VOFTOL_MATERIAL)) then
+       vfrac_elastic_sum=zero
+      else if ((vfrac_elastic_sum.gt.zero).and. &
+               (vfrac_elastic_sum.lt.one)) then
+       ! do nothing
+      else
+       print *,"vfrac_elastic_sum invalid: ",vfrac_elastic_sum
+       stop
+      endif
+
       call get_primary_material(dx,LS_temp,im_primary)
 
       material_present_flag(im_primary)=1
 
-      if ((is_rigid(im_primary).eq.0).or. &   ! fluid primary
-          ((is_rigid(im_primary).eq.1).and. & ! solid primary, but fluids
+      if ((is_rigid(im_primary).eq.0).or. &   ! fluid/elastic primary
+          ((is_rigid(im_primary).eq.1).and. & ! solid primary,but fluid/elastic
            (vfrac_rigid_sum.le.one-VOFTOL_MATERIAL))) then  ! in the cell.
 
-       do im=1,num_materials 
-        if ((voflist(im).ge.VOFTOL_MATERIAL).and. &
-            (voflist(im).le.one+EPS1)) then
-         material_present_flag(im)=1
-        else if ((voflist(im).ge.-EPS1).and. &
-                 (voflist(im).le.VOFTOL_MATERIAL)) then
-         ! do nothing
-        else
-         print *,"voflist invalid: ",voflist(im)
-         stop
-        endif
-       enddo ! im=1..num_materials
+       do im=1,num_materials
 
-       do k1=k1lo,k1hi
-       do j1=-1,1
-       do i1=-1,1
-        do im=1,num_materials 
-         LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
-        enddo
-        call get_primary_material(dx,LS_temp,im_primary)
-        material_present_flag(im_primary)=1
-        if (is_rigid(im_primary).eq.0) then
-         if (probtype.eq.46) then ! cavitation (calc_error_indicator)
-          if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-           im=2 ! jwl
-           if (LS_temp(im).gt.-dxmin) then
-            material_present_flag(im)=1
-           endif
-          else if (axis_dir.eq.10) then
-           ! do nothing (steel sphere impact)
-          else if (axis_dir.eq.11) then
-           ! do nothing (Tungsten rod impact)
-          else if (axis_dir.eq.20) then
-           ! do nothing (CODY ESTEBE created test problem)
+        if ((is_elastic(im).eq.1).or. &
+            (is_rigid(im).eq.1)) then
+         if ((voflist(im).ge.VOFTOL_MATERIAL).and. &
+             (voflist(im).le.one+EPS1)) then
+          material_present_flag(im)=1
+         else if ((voflist(im).ge.-EPS1).and. &
+                  (voflist(im).le.VOFTOL_MATERIAL)) then
+          ! do nothing
+         else
+          print *,"voflist invalid: ",im,voflist(im)
+          stop
+         endif
+        else if ((is_elastic(im).eq.0).and. &
+                 (is_rigid(im).eq.0)) then
+
+         if ((is_elastic(im_primary).eq.0).or. &
+             (vfrac_elastic_sum.le.one-VOFTOL_MATERIAL)) then
+
+          if ((voflist(im).ge.VOFTOL_MATERIAL).and. &
+              (voflist(im).le.one+EPS1)) then
+           material_present_flag(im)=1
+          else if ((voflist(im).ge.-EPS1).and. &
+                   (voflist(im).le.VOFTOL_MATERIAL)) then
+           ! do nothing
           else
-           print *,"axis_dir invalid: ",axis_dir
-           print *,"probtype=",probtype
+           print *,"voflist invalid: ",im,voflist(im)
            stop
           endif
-         endif 
-        else if (is_rigid(im_primary).eq.1) then
-         ! do nothing
+
+         else if ((is_elastic(im_primary).eq.1).and. &
+                  (vfrac_elastic_sum.gt.one-VOFTOL_MATERIAL)) then
+          ! do nothing
+         else
+          print *,"is_elastic or vfrac_elastic_sum invalid ",im_primary, &
+            is_elastic(im_primary),vfrac_elastic_sum
+          stop
+         endif
+
         else
-         print *,"is_rigid invalid PROB.F90"
+         print *,"is_elastic(im) invalid ",im,is_elastic(im)
+         print *,"or is_rigid(im) invalid ",im,is_rigid(im)
          stop
         endif
-       enddo
-       enddo
-       enddo ! i1,j1,k1
+
+       enddo ! im=1..num_materials
 
       else if ((is_rigid(im_primary).eq.1).and. &
                (vfrac_rigid_sum.gt.one-VOFTOL_MATERIAL)) then
        ! do nothing
       else
-       print *,"is_rigid or vfrac_rigid_sum invalid"
+       print *,"is_rigid or vfrac_rigid_sum invalid ",im_primary, &
+         is_rigid(im_primary),vfrac_rigid_sum
        stop
       endif
+
+      do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
+
+       do im=1,num_materials 
+        LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
+       enddo
+       call get_primary_material(dx,LS_temp,im_primary)
+       material_present_flag(im_primary)=1
+
+       if (is_rigid(im_primary).eq.0) then
+        if (probtype.eq.46) then ! cavitation (calc_error_indicator)
+         if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+          im=2 ! jwl
+          if (LS_temp(im).gt.-dxmin) then
+           material_present_flag(im)=1
+          endif
+         else if (axis_dir.eq.10) then
+          ! do nothing (steel sphere impact)
+         else if (axis_dir.eq.11) then
+          ! do nothing (Tungsten rod impact)
+         else if (axis_dir.eq.20) then
+          ! do nothing (CODY ESTEBE created test problem)
+         else
+          print *,"axis_dir invalid: ",axis_dir
+          print *,"probtype=",probtype
+          stop
+         endif
+        endif  !probtype.eq.46?
+       else if (is_rigid(im_primary).eq.1) then
+        ! do nothing
+       else
+        print *,"is_rigid invalid PROB.F90 fort_calc_error_indicator ", &
+         im_primary,is_rigid(im_primary)
+        stop
+       endif
+
+      enddo !i1
+      enddo !j1
+      enddo !k1
 
       material_count=0
 
@@ -5054,7 +5123,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo ! im=1..num_materials
 
       if (material_count.gt.num_materials) then
-       print *,"material_count is corrupt"
+       print *,"material_count is corrupt ",material_count
        stop
       endif
 
@@ -5073,7 +5142,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (inear.eq.0) then
        err=zero
       else
-       print *,"inear invalid"
+       print *,"inear invalid calc_error_indicator ",inear
        stop
       endif 
  
@@ -22223,10 +22292,12 @@ end subroutine initialize2d
        ! before this routine:
        ! calc_error_indicator
        ! EOS_error_ind
+       ! fort_error_estimate_helper is called from 
+       ! NavierStokes::errorEst
       subroutine fort_error_estimate_helper(  &
        tid_current, &
        error_set_count, &
-       tag, &
+       tag, &  !TagBox& tagfab=tags[mfi];tagfab.get_itags(itags,tilegrid)
        DIMS(tag), &
        set,clear, &
        errfab, &
@@ -22323,7 +22394,7 @@ end subroutine initialize2d
        stop
       endif
       if (max_level.le.level) then
-       print *,"max_level invalid: ",max_level
+       print *,"max_level invalid fort_error_estimate_helper: ",max_level
        stop
       endif
       if ((max_level_for_use.lt.0).or. &
@@ -22345,7 +22416,7 @@ end subroutine initialize2d
       endif
       if ((tid_current.lt.0).or. &
           (tid_current.ge.geom_nthreads)) then
-       print *,"tid_current invalid"
+       print *,"tid_current invalid fort_error_estimate_helper ",tid_current
        stop
       endif
 
@@ -22440,7 +22511,7 @@ end subroutine initialize2d
           else if (charfn.eq.zero) then
            ! do nothing
           else
-           print *,"charfn invalid"
+           print *,"charfn invalid fort_error_estimate_helper ",charfn
            stop
           endif
          enddo !iregions=1,number_of_source_regions

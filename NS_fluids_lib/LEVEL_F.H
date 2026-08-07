@@ -22,7 +22,8 @@ namespace amrex{
      int* type_flag,
      int* ncomp_type,
      int* ncomp_source,
-     int* zero_diag_flag);
+     int* zero_diag_flag,
+     int* ngrow_color);
 
      void fort_getcolorsum(
        int* tid_current,
@@ -38,7 +39,10 @@ namespace amrex{
        const Real* dx,
        const Real* xlo,
        int* nstate,
-       Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+       Real* snew,
+       AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
+       Real* mdot_pres,
+       AMREX_ARLIM_P(mdot_preslo),AMREX_ARLIM_P(mdot_preshi),
        Real* mdot,
        AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
        Real* mdot_comp,
@@ -174,7 +178,9 @@ namespace amrex{
      int* bfact,
      int* levelcolormap,
      int* max_colors_grid,
-     int* number_grids,int* arrsize);
+     int* number_grids,
+     int* arrsize,
+     int* ngrow_color);
 
     void fort_colorfill(
      const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
