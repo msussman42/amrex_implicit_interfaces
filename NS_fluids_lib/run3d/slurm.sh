@@ -43,7 +43,7 @@
 pwd;hostname;date
 echo "running amrMPI (tank) on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu/11.2.1 
+module load gnu/13
 module load openmpi
 #module load intel openmpi
 srun ~/PMOFTANK/amrtank inputs3d.bubble_ullage

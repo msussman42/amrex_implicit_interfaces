@@ -48,7 +48,7 @@
 pwd;hostname;date
 echo "running amrJET on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu/11.2.1
+module load gnu/13
 module load openmpi
 srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/bubble_jetting/amrJET inputs.bubble_jetting_JemisonETALFIGURE29
 
