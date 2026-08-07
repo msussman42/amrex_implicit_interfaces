@@ -283,7 +283,7 @@ ns.ns_tiling=false
 #steel k/(rho cp)=38E5/(8 * 5E6)=0.1
 #tungsten 75E5/(18 * 1E6)=0.4
 #ns.heatviscconst=0.0 38.0e+5 75.0e+5
-ns.heatviscconst=0.0 38.0e+10 75.0e+10
+ns.heatviscconst=2400.0 38.0e+10 75.0e+10
 #ns.include_viscous_heating=1 # grad u : tau COMPRESSIBLE
 ns.include_viscous_heating=0 # grad u : tau INCOMPRESSIBLE
 #tank=520x1200x520 mm=52x120x52 cm^3

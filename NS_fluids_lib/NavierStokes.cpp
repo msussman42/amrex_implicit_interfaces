@@ -4811,6 +4811,10 @@ NavierStokes::read_params ()
     pp.queryAdd("material_conservation_form",
       material_conservation_form,num_materials);
     pp.queryAdd("positive_preserving_predictor",positive_preserving_predictor);
+    if (positive_preserving_predictor==1) {
+     //do nothing
+    } else
+     amrex::Error("required that positive_preserving_predictor==1");
 
     for (int im=0;im<num_materials;im++) {
      hold_material_conservation_form[im]=material_conservation_form[im];

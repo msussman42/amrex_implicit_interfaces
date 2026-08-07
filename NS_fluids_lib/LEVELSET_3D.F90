@@ -4057,7 +4057,7 @@ stop
       integer dir,side
       integer dir2
       integer dir_i,dir_j
-      integer inflow_outflow_flag
+      real(amrex_real) :: inflow_outflow_flag
       integer testbc
       real(amrex_real) :: testvel
       integer i_array(3)
@@ -4311,7 +4311,7 @@ stop
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
-        inflow_outflow_flag=0
+        inflow_outflow_flag=zero
         i_array(1)=i
         i_array(2)=j
         i_array(3)=k
@@ -4340,14 +4340,14 @@ stop
           else if (testbc.eq.REFLECT_ODD) then
            !do nothing
           else if (testbc.eq.REFLECT_EVEN) then
-           inflow_outflow_flag=1
+           inflow_outflow_flag=one
           else if (testbc.eq.FOEXTRAP) then
-           inflow_outflow_flag=1
+           inflow_outflow_flag=one
           else if (testbc.eq.EXT_DIR) then
            if (testvel.eq.zero) then
             !do nothing
            else if (testvel.ne.zero) then 
-            inflow_outflow_flag=1
+            inflow_outflow_flag=one
            else
             print *,"testvel invalid ",testvel
             stop
@@ -4810,7 +4810,8 @@ stop
 
            if (operation_flag.eq.OP_GATHER_MDOT) then
 
-            if ((sweep_num.eq.0).or.(sweep_num.eq.1)) then
+            if ((sweep_num.eq.0).or. &
+                (sweep_num.eq.1)) then
 
               ! local_interior_wt(1): avoid noisy velocity conditions near the
               ! interface.
@@ -5211,8 +5212,8 @@ stop
                print *,"expecting ic+5 to correspond to BLB_INFLOW_OUTFLOW+1"
                stop
               endif
-               !inflow_outflow_flag=1 if u dot n bc=REFLECT_EVEN,
-               !FOEXTRAP, or inhom. EXT_DIR
+               !inflow_outflow_flag=one if u dot n bc=REFLECT_EVEN,
+               !FOEXTRAP, or inhomogeneous EXT_DIR
               level_blobdata(ic+5)=level_blobdata(ic+5)+inflow_outflow_flag
 
               if (ic+6.eq. &
@@ -5647,7 +5648,7 @@ stop
                  stop
                 endif
 
-               else if (level_blobdata(ic).eq.one) then
+               else if (level_blobdata(ic).ge.one) then
                 !do nothing
                else
                 print *,"level_blobdata(ic) invalid"
