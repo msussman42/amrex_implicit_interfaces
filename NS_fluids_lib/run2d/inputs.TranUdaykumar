@@ -177,22 +177,14 @@ ns.twall=0.1
 ns.advbot=125000.0 # (1250 m/s impact velocity)
 ns.adv_vel=0.0
 ns.adv_dir=2 # adv_dir=1,2,3
-#Tadmor Kurganov artificial viscosity or
-#the difference between upwind and central differencing
-#given velocity=max wave speed:
-#artificial viscosity>max_wave_speed * delta x /2.0
-# liquid,backing plate (primary), biofilm (secondary), steel ball (last)
-# need \Delta x < 2(viscosity)/velocity
-# viscosity>\Delta x * velocity/2 \approx 10^6/100=10^4
+#artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
+#((s^np1-(sn_im1+sn_ip1)/2)/dt=
+#(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 # 
 # Magma viscosity: 10^2 Pa s .... 10^11 Pa s which is
 # 10^3 .... 10^12 in CGS units.
 #1PA=10 dynes/cm^2
-#for the gas: mu/rho>wave speed * delta x/2
-#delta x=1.25/80
-#wave_speed for steel=5.9e+5cm/s
-#mu>0.001*5.9e+5*0.01/2 \approx 3.0
-ns.viscconst=10.0 1000.0 1000.0 1000.0
+ns.viscconst=0.01 1000.0 1000.0 1000.0
 ns.tempconst=293.0 293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # 2 = adiabatic JWL 3=non-adiabatic JWL
@@ -287,17 +279,11 @@ ns.ns_tiling=false
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
 #gas, steel backing, Tungsten
-#Tadmor Kurganov artificial viscosity or
-#the difference between upwind and central differencing
-#given velocity=max wave speed:
-#artificial viscosity>max_wave_speed * delta x /2.0
-#viscosity>\Delta x * velocity/2 \approx 10^4
-#steel k/(rho cp)=38E5/(8 * 5E6)=0.1
-#tungsten 75E5/(18 * 1E6)=0.4
-#air k>(rho cp)*\Delta x * velocity/2=0.001 * cp * 0.01 * velocity/2
-# =10^6*10^{-5} *cp=10 * cp \approx 10^8
-#ns.heatviscconst=2400.0 38.0e+5 75.0e+5
-ns.heatviscconst=1.0e+8 38.0e+10 75.0e+10
+#artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
+#((s^np1-(sn_im1+sn_ip1)/2)/dt=
+#(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
+ns.lax_friedrichs=1.0 1.0 1.0 1.0
+ns.heatviscconst=2400.0 38.0e+5 75.0e+5
 #ns.include_viscous_heating=1 # grad u : tau COMPRESSIBLE
 ns.include_viscous_heating=0 # grad u : tau INCOMPRESSIBLE
 #tank=520x1200x520 mm=52x120x52 cm^3

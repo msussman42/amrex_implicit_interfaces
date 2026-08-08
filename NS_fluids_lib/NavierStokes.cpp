@@ -913,6 +913,7 @@ Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
+Vector<Real> NavierStokes::lax_friedrichs; //default=0;
 Vector<Real> NavierStokes::viscconst;
 Vector<Real> NavierStokes::viscconst_artificial; //default=0
 Real NavierStokes::viscconst_max=0.0;
@@ -3862,6 +3863,7 @@ NavierStokes::read_params ()
     initial_temperature.resize(num_materials);
     tempcutoff.resize(num_materials);
     tempcutoffmax.resize(num_materials);
+    lax_friedrichs.resize(num_materials);
     viscconst.resize(num_materials);
     viscconst_artificial.resize(num_materials);
     viscconst_eddy_wall.resize(num_materials);
@@ -4285,6 +4287,7 @@ NavierStokes::read_params ()
      if (viscconst[i]>viscconst_max)
       viscconst_max=viscconst[i];
 
+     lax_friedrichs[i]=0.0;
      viscconst_artificial[i]=0.0;
      viscconst_eddy_wall[i]=0.0;
      viscconst_eddy_bulk[i]=0.0;
@@ -4292,6 +4295,7 @@ NavierStokes::read_params ()
      heatviscconst_eddy_bulk[i]=0.0;
     }
     pp.queryAdd("viscconst_artificial",viscconst_artificial,num_materials);
+    pp.queryAdd("lax_friedrichs",lax_friedrichs,num_materials);
     pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall,num_materials);
     pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk,num_materials);
     pp.queryAdd("heatviscconst_eddy_wall",
@@ -6072,6 +6076,8 @@ NavierStokes::read_params ()
          override_density[i] << '\n';
       std::cout << "viscconst i=" << i << "  " << viscconst[i] << '\n';
 
+      std::cout << "lax_friedrichs i=" <<i<<"  "<<
+	      lax_friedrichs[i]<<'\n';
       std::cout << "viscconst_artificial i=" <<i<<"  "<<
 	      viscconst_artificial[i]<<'\n';
       std::cout << "viscconst_eddy_wall i=" <<i<<"  "<<

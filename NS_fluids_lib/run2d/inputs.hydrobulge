@@ -158,13 +158,15 @@ ns.adv_dir=2
 
 # liquid,jwl,aluminum side walls,gas
 # CGS units
-# need \Delta x < 2(viscosity)/velocity
-# viscosity>\Delta x * velocity/2 \approx (8/128)*5e+5/2 \approx 15000
 # 
+#artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
+#((s^np1-(sn_im1+sn_ip1)/2)/dt=
+#(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
+#
 # Magma viscosity: 10^2 Pa s .... 10^11 Pa s which is
 # 10^3 .... 10^12 in CGS units.
 #1PA=10 dynes/cm^2
-ns.viscconst=0.01 0.0 15000.0 0.0001
+ns.viscconst=0.01 0.0 1000.0 0.0001
 ns.tempconst=293.0 1367.191399689 293.0 293.0
 ns.pressure_error_cutoff=10.0 10.0 0.0 0.0
 
@@ -243,11 +245,11 @@ ns.stiff_sound_speed=5.24e+5 5.24e+5 5.24e+5 5.24e+5 #Mie Gruneison
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 #ns.heatviscconst=58000.0 58000.0 58000.0 58000.0
-#shear_modulus\approx sqrt(elastic_viscosity)=sqrt(2.5E+11)
-#viscosity>\Delta x * velocity/2 \approx (8/128)*(5e+5)/2 \approx 15000
-#viscosity=k/(rho cv)=15000
-#k=rho cv 15000=2.7 * 0.9e+7 * 15000 \approx 35.0e+10
-ns.heatviscconst=0.0 0.0 3.5e+11 0.0
+#artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
+#((s^np1-(sn_im1+sn_ip1)/2)/dt=
+#(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
+ns.lax_friedrichs=0.0 0.0 1.0 1.0
+ns.heatviscconst=0.0 0.0 38.0e+5 0.0
 ns.include_viscous_heating=0
 # liquid,jwl,aluminum side walls,air
 ns.denconst=1.0 1.765 2.7 0.00177

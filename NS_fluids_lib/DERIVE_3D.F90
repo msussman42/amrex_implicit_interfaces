@@ -1319,14 +1319,16 @@ stop
 
       real(amrex_real), INTENT(in) :: NS_sumdata(NS_sumdata_size)
 
-      real(amrex_real), INTENT(out), target :: conduct(DIMV(conduct),num_materials) 
+      real(amrex_real), INTENT(out), target :: &
+              conduct(DIMV(conduct),num_materials) 
       real(amrex_real), pointer :: conduct_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: eosdata(DIMV(eosdata), &
               num_materials*num_state_material)
       real(amrex_real), pointer :: eosdata_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+              vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k
@@ -1376,7 +1378,7 @@ stop
       endif
 
       if ((im_parm.lt.1).or.(im_parm.gt.num_materials)) then
-       print *,"im_parm invalid3"
+       print *,"im_parm invalid fort_derconductivity ",im_parm
        stop
       endif
 

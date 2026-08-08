@@ -10342,11 +10342,11 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
- for (int im=0;im<num_materials;im++) {
+ const Real* dx = geom.CellSize();
+ NavierStokes& ns_level0=getLevel(0);
+ const Real* dx_coarsest = ns_level0.geom.CellSize();
 
-  const Real* dx = geom.CellSize();
-  NavierStokes& ns_level0=getLevel(0);
-  const Real* dx_coarsest = ns_level0.geom.CellSize();
+ for (int im=0;im<num_materials;im++) {
 
   MultiFab* gammadot_mf=new MultiFab(grids,dmap,1,ngrow,
 	MFInfo().SetTag("gammadot_mf"),FArrayBoxFactory());
@@ -10568,6 +10568,31 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
   Plus_localMF(CELL_VISC_MATERIAL_MF,
     viscconst_artificial[im],im,1,ngrow);
+
+   // (uip1+uim1+ujp1+ujm1+ukp1+ukm1-6uij)/6=
+   // (1/6)(dx[0]**2 Laplace_x + dx[1]**2 Laplace_y + dx[SDIM-1]**2 Laplace_z)
+  if (lax_friedrichs[im]==0.0) {
+   //do nothing
+  } else if (lax_friedrichs[im]>0.0) {
+   Real dxmax=dx[0];
+   for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
+    dxmax=std::max(dxmax,dx[dir]);
+   }
+
+   Real lax_visc=lax_friedrichs[im]*denconst[im]*dxmax*dxmax/
+	   (2.0*AMREX_SPACEDIM);
+   lax_visc/=dt_slab;
+
+   if (lax_visc>0.0) {
+    //do nothing
+   } else
+    amrex::Error("expecting lax_visc>0");
+
+   Plus_localMF(CELL_VISC_MATERIAL_MF,
+    lax_visc,im,1,ngrow);
+  } else
+   amrex::Error("lax_friedrichs invalid");
+
  } // im=0..num_materials-1
 
  delete vel;
@@ -10673,6 +10698,31 @@ void NavierStokes::getStateCONDUCTIVITY() {
   } //mfi
 } // omp
   ns_reconcile_d_num(LOOP_DERCONDUCTIVITY,"getStateCONDUCTIVITY");
+
+   // (uip1+uim1+ujp1+ujm1+ukp1+ukm1-6uij)/6=
+   // (1/6)(dx[0]**2 Laplace_x + dx[1]**2 Laplace_y + dx[SDIM-1]**2 Laplace_z)
+  if (lax_friedrichs[im]==0.0) {
+   //do nothing
+  } else if (lax_friedrichs[im]>0.0) {
+   Real dxmax=dx[0];
+   for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
+    dxmax=std::max(dxmax,dx[dir]);
+   }
+
+   Real lax_visc=lax_friedrichs[im]*denconst[im]*dxmax*dxmax/
+	   (2.0*AMREX_SPACEDIM);
+   lax_visc/=dt_slab;
+   lax_visc*=std::max(stiffCP[im],stiffCV[im]);
+
+   if (lax_visc>0.0) {
+    //do nothing
+   } else
+    amrex::Error("expecting lax_visc>0");
+
+   Plus_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
+    lax_visc,im,1,ngrow);
+  } else
+   amrex::Error("lax_friedrichs invalid");
 
  } // im=0..num_materials-1
 

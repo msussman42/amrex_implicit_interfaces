@@ -2335,6 +2335,7 @@ protected:
      //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
      //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
     static Vector<int> override_density; // default 0 
+    static Vector<Real> lax_friedrichs;
     static Vector<Real> viscconst;
     static Vector<Real> viscconst_artificial;
     static Vector<Real> viscconst_eddy_wall;

@@ -6845,6 +6845,21 @@ NavierStokes::sync_old_new_colors(
    amrex::Error("mass_target_old invalid");
  } //for (int i=0;i<num_materials;i++) 
 
+ for (int i=0;i<updated_count;i++) {
+  int im=blobdata[i].im-1;
+  int imp1=im+1;
+  if ((ns_is_rigid(im)==1)||
+      (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1)||
+      (blobdata[i].blob_inflow_outflow>=1.0)) {
+   blobdata[i].blob_mass_target=blobdata[i].blob_mass;
+  } else if ((ns_is_rigid(im)==0)&&
+             (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
+             (blobdata[i].blob_inflow_outflow==0.0)) {
+   //do nothing
+  } else
+   amrex::Error("blobdata error");
+ } //for (int i=0;i<updated_count;i++)
+
  amrlevel_repair_blobclass.repair_blobclass_data[1].resize(updated_count);
  copy_blobdata(
   amrlevel_repair_blobclass.repair_blobclass_data[1],
