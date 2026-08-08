@@ -10588,6 +10588,13 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
    } else
     amrex::Error("expecting lax_visc>0");
 
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "level,im,lax_visc (momentum) " << level << ' ' <<
+      im << ' ' << lax_visc << '\n';
+    }
+   }
+
    Plus_localMF(CELL_VISC_MATERIAL_MF,
     lax_visc,im,1,ngrow);
   } else
@@ -10718,6 +10725,13 @@ void NavierStokes::getStateCONDUCTIVITY() {
     //do nothing
    } else
     amrex::Error("expecting lax_visc>0");
+
+   if (verbose>0) {
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "level,im,lax_visc (thermal) " << level << ' ' <<
+      im << ' ' << lax_visc << '\n';
+    }
+   }
 
    Plus_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
     lax_visc,im,1,ngrow);

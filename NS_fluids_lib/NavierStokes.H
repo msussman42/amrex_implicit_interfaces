@@ -948,6 +948,7 @@ protected:
      int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate, // =1 or 3
      int sweep_num,
+     int num_sweeps,
      int ncomp_mdot_alloc,
      int ncomp_mdot,
      MultiFab* mdot,

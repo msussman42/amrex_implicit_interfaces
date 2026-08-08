@@ -2610,6 +2610,8 @@ void NavierStokes::pressure_gradient_code_segment(
 
 } // end subroutine pressure_gradient_code_segment
 
+//TYPE_MF, COLOR_MF were allocated in NavierStokes::nucleation_code_segment()
+//TYPE_MF, COLOR_MF will be deleted in this routine.
 void NavierStokes::phase_change_code_segment(
   const std::string& caller_string,
   int& color_count,
@@ -2977,6 +2979,7 @@ void NavierStokes::nucleation_code_segment(
  }
 
   // CREATE SEEDS, NUCLEATION.
+  // COLOR_MF, TYPE_MF not needed yet since nucleation_flag=1
  for (int ilev=level;ilev<=finest_level;ilev++) {
   int nucleation_flag=1;
   color_count=1; // filler
@@ -3005,6 +3008,8 @@ void NavierStokes::nucleation_code_segment(
 
   //calling from: NavierStokes::nucleation_code_segment()
   //TYPE_MF, COLOR_MF
+  //TYPE_MF, COLOR_MF are allocated in this routine, but not deleted.
+  //TYPE_MF, COLOR_MF deleted in NavierStokes::phase_change_code_segment
  ColorSumALL( 
    update_mdot,
    use_mac_velocity,
@@ -3527,6 +3532,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
+        //TYPE_MF, COLOR_MF are allocated in this routine, but not deleted.
+	//TYPE_MF, COLOR_MF will be deleted in
        nucleation_code_segment(
 	 local_caller_string,
 	 color_count,
@@ -3611,6 +3618,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (mass_transfer_active==1) {
 
 	//calls makeStateDistALL at the end.
+	//TYPE_MF and COLOR_MF are deleted in this routine.
        phase_change_code_segment(
 	local_caller_string,
 	color_count,
@@ -6294,8 +6302,8 @@ NavierStokes::level_sync_old_new_colors(
         (icolor_round<=num_colors)&&
         (icolor_round_old<=repair_count)) {
 
-     int old_im=blobdata_old[icolor_round_old].im;
-     int im=blobdata[icolor_round].im;
+     int old_im=blobdata_old[icolor_round_old-1].im;
+     int im=blobdata[icolor_round-1].im;
      if ((im>=1)&&(im<=num_materials)) {
       //do nothing
      } else
@@ -6389,8 +6397,8 @@ NavierStokes::level_sync_old_new_colors(
           (icolor_round<=num_colors)&&
           (icolor_round_old<=repair_count)) {
 
-       int old_im=blobdata_old[icolor_round_old].im;
-       int im=blobdata[icolor_round].im;
+       int old_im=blobdata_old[icolor_round_old-1].im;
+       int im=blobdata[icolor_round-1].im;
        if ((im>=1)&&(im<=num_materials)) {
         //do nothing
        } else
@@ -6706,7 +6714,7 @@ NavierStokes::sync_old_new_colors(
   Vector< Vector<Real> > intersection_data_old;
   intersection_data_old.resize(repair_count);
   Vector< Vector<int> > label_intersect_old;
-  label_intersect_new.resize(repair_count);
+  label_intersect_old.resize(repair_count);
 
   for (int i=0;i<updated_count;i++) {
    intersection_data_new[i].resize(0);
@@ -6821,11 +6829,11 @@ NavierStokes::sync_old_new_colors(
   mass_target_old[i]=0.0;
  }
  for (int i=0;i<updated_count;i++) {
-  int im=blobdata[i].im;
+  int im=blobdata[i].im-1;
   mass_target_new[im]+=blobdata[i].blob_mass_target;
  }
  for (int i=0;i<repair_count;i++) {
-  int im=blobdata_old[i].im;
+  int im=blobdata_old[i].im-1;
   mass_target_old[im]+=blobdata_old[i].blob_mass_target;
  }
  for (int i=0;i<num_materials;i++) {
@@ -6884,6 +6892,7 @@ NavierStokes::ColorSum(
  int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
  int sweep_num,
+ int num_sweeps,
  int ncomp_mdot_alloc,
  int ncomp_mdot,
  MultiFab* mdot, // holds typemf if ncomp_mdot==0
@@ -6953,6 +6962,11 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("ncomp_mdot invalid"); 
 
+ if ((sweep_num>=0)&&(sweep_num<num_sweeps)) {
+  //do nothing
+ } else
+  amrex::Error("sweep_num invalid");
+
  if (operation_flag==OP_GATHER_MDOT) {
 
   if ((sweep_num==0)||(sweep_num==1)) {
@@ -6982,6 +6996,11 @@ NavierStokes::ColorSum(
   } else
    amrex::Error("sweep_num invalid");
 
+  if ((num_sweeps==2)||(num_sweeps==3)) {
+   //do nothing
+  } else
+   amrex::Error("num_sweeps invalid");
+
  } else if (operation_flag==OP_SCATTER_MDOT) {
 
   if (update_mdot==0) {
@@ -7007,6 +7026,11 @@ NavierStokes::ColorSum(
     amrex::Error("ncomp_mdot invalid");
   } else
    amrex::Error("sweep_num invalid");
+
+  if (num_sweeps==1) {
+   //do nothing
+  } else
+   amrex::Error("num_sweeps invalid");
 
  } else
   amrex::Error("operation_flag invalid ::ColorSum");
@@ -7476,14 +7500,14 @@ NavierStokes::ColorSum(
 
  delete mask;
 
- if ((sweep_num==0)&&(operation_flag==OP_GATHER_MDOT)) {
+ if ((sweep_num>=0)&&(sweep_num<num_sweeps-1)) {
   // do nothing
- } else if ((sweep_num==1)||(operation_flag==OP_SCATTER_MDOT)) {
+ } else if (sweep_num==num_sweeps-1) {
   delete_localMF(LS_COLORSUM_MF,1);
   delete_localMF(DEN_COLORSUM_MF,1);
   delete_localMF(VEL_COLORSUM_MF,1);
  } else
-  amrex::Error("sweep_num or operation_flag invalid");
+  amrex::Error("sweep_num or num_sweeps invalid");
 
 }  // end subroutine ColorSum
 
@@ -8778,6 +8802,7 @@ NavierStokes::ColorSumALL(
     operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
     tessellate,  // =TESSELLATE_ALL or TESSELLATE_ALL_RASTER
     sweep_num,
+    num_sweeps,
     ncomp_mdot_alloc,
     ncomp_mdot,
     mdot,
@@ -11528,6 +11553,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
    if (color_count!=blobdata.size())
     amrex::Error("color_count!=blobdata.size()");
+
+   delete_array(TYPE_MF);
+   delete_array(COLOR_MF);
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
 
