@@ -157,6 +157,7 @@ ns.material_conservation_form=0 0 0
 # 8 EULERIAN FSI
 #ns.FSI_flag=0 0 4 #CTML
 ns.FSI_flag=0 0 8 #Eulerian FSI
+ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
