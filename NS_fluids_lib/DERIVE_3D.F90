@@ -1283,6 +1283,7 @@ stop
        im_parm, & ! =1..num_materials
        dt, &
        conduct,DIMS(conduct), &
+       conduct_lf,DIMS(conduct_lf), &
        eosdata,DIMS(eosdata), &
        vof,DIMS(vof), &
        tilelo,tilehi, &
@@ -1311,6 +1312,7 @@ stop
       integer :: growlo(3), growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(conduct)
+      integer, INTENT(in) :: DIMDEC(conduct_lf)
       integer, INTENT(in) :: DIMDEC(eosdata)
       integer, INTENT(in) :: DIMDEC(vof)
       integer, INTENT(in) :: ngrow
@@ -1322,6 +1324,10 @@ stop
       real(amrex_real), INTENT(out), target :: &
               conduct(DIMV(conduct),num_materials) 
       real(amrex_real), pointer :: conduct_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(out), target :: &
+              conduct_lf(DIMV(conduct_lf),num_materials) 
+      real(amrex_real), pointer :: conduct_lf_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: eosdata(DIMV(eosdata), &
               num_materials*num_state_material)
@@ -1367,6 +1373,7 @@ stop
       nhalf=1
 
       conduct_ptr=>conduct
+      conduct_lf_ptr=>conduct_lf
 
       if (bfact.lt.1) then
        print *,"bfact invalid3"
@@ -1408,6 +1415,7 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,conduct_lf_ptr,ngrow,-1)
       eosdata_ptr=>eosdata
       call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+2,-1)
 

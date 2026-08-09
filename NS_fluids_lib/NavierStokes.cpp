@@ -15117,6 +15117,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
+    //passed to fort_ratemasschange
    FArrayBox& thermal_conductivity_fab=
 	  (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
    if (thermal_conductivity_fab.nComp()!=num_materials)
@@ -16373,6 +16374,7 @@ NavierStokes::level_phase_change_convert(
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
+    //passed to fort_convertmaterial
    FArrayBox& thermal_conductivity_fab=
 	  (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
    if (thermal_conductivity_fab.nComp()!=num_materials)
@@ -16860,6 +16862,7 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
   FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
+  // passed to fort_sato_qdot_mdot
   FArrayBox& thermal_conductivity_fab=
     (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
   if (thermal_conductivity_fab.nComp()!=num_materials)
@@ -19006,6 +19009,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     amrex::Error("Tsatfab.nComp()!=ntsat 4");
    }
 
+    //passed to fort_stefansolver
    FArrayBox& thermal_conductivity_fab=
 	 (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
    if (thermal_conductivity_fab.nComp()!=num_materials)
@@ -23616,9 +23620,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials)
   amrex::Error("viscmf invalid ncomp");
 
+  //passed to tecplot routines
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_LF_MF,1,local_caller_string);
  if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=num_materials)
   amrex::Error("thermal_conductivity_data invalid ncomp");
+ if (localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF]->nComp()!=num_materials)
+  amrex::Error("thermal_conductivity_data LF invalid ncomp");
 
   // getStateDIV_ALL is declared in: MacProj.cpp
   // getStateDIV_ALL computes the derived divergence of the MAC

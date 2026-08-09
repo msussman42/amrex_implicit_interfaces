@@ -155,6 +155,7 @@ extern "C" {
       int* fortran_im,
       Real* dt,
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
+      Real* dat_lf,AMREX_ARLIM_P(dat_lf_lo),AMREX_ARLIM_P(dat_lf_hi),
       Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
       const int* tilelo, const int* tilehi,

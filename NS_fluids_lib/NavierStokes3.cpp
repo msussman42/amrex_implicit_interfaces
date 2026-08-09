@@ -6454,14 +6454,19 @@ NavierStokes::level_sync_old_new_colors(
 } //omp
  ns_reconcile_d_num(LOOP_SYNC_GROUPS,"level_sync_old_new_colors");
 
+  //merge data from the threads
  for (int i_index=0;i_index<num_colors;i_index++) {
 
   for (int tid=0;tid<thread_class::nthreads;tid++) {
+
    int size_i=local_intersect[tid][i_index].size();
+
    for (int i_trial=0;i_trial<size_i;i_trial++) {
     int j_index=local_label[tid][i_index][i_trial];
     int dup_flag=0;
+
     int base_size=local_intersect[0][i_index].size();
+
     for (int idup=0;idup<base_size;idup++) {
      if (local_label[0][i_index][idup]==j_index) {
       dup_flag=idup+1;
@@ -6494,21 +6499,28 @@ NavierStokes::level_sync_old_new_colors(
 
  ParallelDescriptor::Barrier();
 
+  //merge data from the MPI processes
  for (int i_index=0;i_index<num_colors;i_index++) {
 
   ParallelDescriptor::Barrier();
 
   Vector<int> local_label_sync;
   Vector<Real> local_intersect_sync;
-  local_label_sync.resize(num_colors);
-  local_intersect_sync.resize(num_colors);
-  for (int j_index=0;j_index<num_colors;j_index++) {
+  local_label_sync.resize(repair_count);
+  local_intersect_sync.resize(repair_count);
+  for (int j_index=0;j_index<repair_count;j_index++) {
    local_label_sync[j_index]=0;
    local_intersect_sync[j_index]=0.0;
   }
   int i_size_sync=local_label[0][i_index].size();
   for (int i_trial=0;i_trial<i_size_sync;i_trial++) {
    int j_index=local_label[0][i_index][i_trial];
+
+   if ((j_index>=0)&&(j_index<repair_count)) {
+    //do nothing
+   } else
+    amrex::Error("j_index out of range");
+
    local_label_sync[j_index]=1;
    local_intersect_sync[j_index]=local_intersect[0][i_index][i_trial];
   }
@@ -6518,7 +6530,7 @@ NavierStokes::level_sync_old_new_colors(
 
   ParallelDescriptor::Barrier();
 
-  for (int j_index=0;j_index<num_colors;j_index++) {
+  for (int j_index=0;j_index<repair_count;j_index++) {
 
    ParallelDescriptor::ReduceIntMax(local_label_sync[j_index]);
    ParallelDescriptor::ReduceRealSum(local_intersect_sync[j_index]);
@@ -6538,13 +6550,22 @@ NavierStokes::level_sync_old_new_colors(
      
  ParallelDescriptor::Barrier();
 
+  //merge data from the levels
  for (int i_index=0;i_index<num_colors;i_index++) {
   int size_i=local_intersect[0][i_index].size();
 
   for (int i_trial=0;i_trial<size_i;i_trial++) {
    int j_index=local_label[0][i_index][i_trial];
+
+   if ((j_index>=0)&&(j_index<repair_count)) {
+    //do nothing
+   } else
+    amrex::Error("j_index out of range");
+
    int dup_flag=0;
+
    int base_size=intersection_data[i_index].size();
+
    for (int idup=0;idup<base_size;idup++) {
     if (label_intersect[i_index][idup]==j_index) {
      dup_flag=idup+1;
@@ -6630,7 +6651,7 @@ NavierStokes::resolve_orphans(
      amrex::Error("blobdata_old[j].im or blobdata[i].im invalid");
     }
    } //for (int j=0;j<blobdata_old.size();j++) 
-   if (jcrit>=0) {
+   if ((jcrit>=0)&&(jcrit<blobdata_old.size())) {
     intersection_data[i].resize(1);
     label_intersect[i].resize(1);
     intersection_data[i][0]=finest_vol;
@@ -6748,6 +6769,7 @@ NavierStokes::sync_old_new_colors(
 
   for (int i=0;i<blobdata.size();i++) {
 
+    //there must be at least one association
    if (label_intersect_new[i].size()>0) {
     //do nothing
    } else

@@ -539,6 +539,7 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
 
 //called from: NavierStokes::init_FSI_GHOST_MAC_MF_ALL
 //CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
+//CELL_CONDUCTIVITY_MATERIAL_LF_MF is deleted in ::Geometry_cleanup()
 void NavierStokes::getStateCONDUCTIVITY_ALL() {
 
  if (level!=0)
@@ -554,6 +555,8 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
   ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
+    scomp,ncomp,LOW_ORDER_AVGDOWN);
+  ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_LF_MF,
     scomp,ncomp,LOW_ORDER_AVGDOWN);
  }
 
@@ -5131,9 +5134,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("visc_data invalid ncomp");
 
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_LF_MF,1,local_caller_string);
  int ncomp_conductivity=localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
  if (ncomp_conductivity!=num_materials)
   amrex::Error("conductivity_data invalid ncomp");
+ int ncomp_conductivity_lf=localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF]->nComp();
+ if (ncomp_conductivity_lf!=num_materials)
+  amrex::Error("conductivity_data LF invalid ncomp");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5592,7 +5599,8 @@ void NavierStokes::make_physics_vars(int project_option,
    if (viscstatefab.nComp()!=3*num_materials)
     amrex::Error("viscstatefab.nComp()!=3*num_materials");
 
-   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   // passed to fort_init_physics_vars
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF])[mfi];
    if (conductivity_fab.nComp()!=num_materials)
     amrex::Error("conductivity_fab.nComp()!=num_materials");
 
@@ -10618,6 +10626,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
 
 //CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
+//CELL_CONDUCTIVITY_MATERIAL_LF_MF is deleted in ::Geometry_cleanup()
 void NavierStokes::getStateCONDUCTIVITY() {
 
  std::string local_caller_string="getStateCONDUCTIVITY";
@@ -10625,6 +10634,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
  int ngrow=1;
 
  delete_localMF_if_exist(CELL_CONDUCTIVITY_MATERIAL_MF,1);
+ delete_localMF_if_exist(CELL_CONDUCTIVITY_MATERIAL_LF_MF,1);
 
  int finest_level=parent->finestLevel();
 
@@ -10637,6 +10647,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
  //sets values to 0.0
  new_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,num_materials,ngrow,-1);
+ new_localMF(CELL_CONDUCTIVITY_MATERIAL_LF_MF,num_materials,ngrow,-1);
 
  MultiFab* EOSdata=getStateDen(ngrow+2,cur_time_slab);
  const Real* dx = geom.CellSize();
@@ -10665,6 +10676,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
    const Real* xlo = grid_loc[gridno].lo();
 
    FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   FArrayBox& conductivity_lf_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF])[mfi];
 
    FArrayBox& eosfab=(*EOSdata)[mfi];
 
@@ -10692,6 +10704,9 @@ void NavierStokes::getStateCONDUCTIVITY() {
      conductivity_fab.dataPtr(),
      ARLIM(conductivity_fab.loVect()),
      ARLIM(conductivity_fab.hiVect()),
+     conductivity_lf_fab.dataPtr(),
+     ARLIM(conductivity_lf_fab.loVect()),
+     ARLIM(conductivity_lf_fab.hiVect()),
      eosfab.dataPtr(),
      ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      voffab.dataPtr(),
@@ -10705,6 +10720,11 @@ void NavierStokes::getStateCONDUCTIVITY() {
   } //mfi
 } // omp
   ns_reconcile_d_num(LOOP_DERCONDUCTIVITY,"getStateCONDUCTIVITY");
+
+  //void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
+  //    int scomp,int dcomp,int ncomp,int ngrow) 
+  Copy_localMF(CELL_CONDUCTIVITY_MATERIAL_LF_MF,
+     CELL_CONDUCTIVITY_MATERIAL_MF,im,im,1,ngrow);
 
    // (uip1+uim1+ujp1+ujm1+ukp1+ukm1-6uij)/6=
    // (1/6)(dx[0]**2 Laplace_x + dx[1]**2 Laplace_y + dx[SDIM-1]**2 Laplace_z)
@@ -10733,8 +10753,9 @@ void NavierStokes::getStateCONDUCTIVITY() {
     }
    }
 
-   Plus_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
+   Plus_localMF(CELL_CONDUCTIVITY_MATERIAL_LF_MF,
     lax_visc,im,1,ngrow);
+
   } else
    amrex::Error("lax_friedrichs invalid");
 
