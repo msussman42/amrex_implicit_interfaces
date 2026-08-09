@@ -14688,10 +14688,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   if (counter!=blob_arraysize)
    amrex::Error("counter invalid");
 
-  if (localMF[COLOR_MF]->nGrow()!=1)
-   amrex::Error("localMF[COLOR_MF]->nGrow()!=1");
-  if (localMF[TYPE_MF]->nGrow()!=1)
-   amrex::Error("localMF[TYPE_MF]->nGrow()!=1");
+  if (localMF[COLOR_MF]->nGrow()!=ngrow_distance)
+   amrex::Error("localMF[COLOR_MF]->nGrow()!=ngrow_distance");
+  if (localMF[TYPE_MF]->nGrow()!=ngrow_distance)
+   amrex::Error("localMF[TYPE_MF]->nGrow()!=ngrow_distance");
   debug_ixType(COLOR_MF,-1,local_caller_string);
   debug_ixType(TYPE_MF,-1,local_caller_string);
 
@@ -19011,7 +19011,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
     //passed to fort_stefansolver
    FArrayBox& thermal_conductivity_fab=
-	 (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+	 (*localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF])[mfi];
    if (thermal_conductivity_fab.nComp()!=num_materials)
     amrex::Error("thermal_conductivity_fab.nComp()!=num_materials");
 

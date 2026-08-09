@@ -606,7 +606,7 @@ stop
       if (den.gt.zero) then
        ! do nothing
       else
-       print *,"den invalid"
+       print *,"den invalid in get_default_scalar_diffusion ",den
        stop
       endif
 
@@ -631,7 +631,7 @@ stop
       if (heatcoeff.ge.zero) then
        ! do nothing
       else
-       print *,"heatcoeff invalid"
+       print *,"heatcoeff invalid in get_default_scalar_diffusion ",heatcoeff
        stop
       endif
 
@@ -10214,8 +10214,10 @@ stop
                stop
               endif
          
-              if (heatcoeff.lt.zero) then
-               print *,"heatcoeff invalid"
+              if (heatcoeff.ge.zero) then
+               !do nothing
+              else
+               print *,"heatcoeff invalid fort_stefansolver ",heatcoeff
                stop
               endif
 
