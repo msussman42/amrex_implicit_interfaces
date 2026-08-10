@@ -381,7 +381,7 @@ stop
          DeDT,DIMS(DeDT), &
          lsnew,DIMS(lsnew), &
          den,DIMS(den), &
-         mu,DIMS(mu), &
+         mu,DIMS(mu), & !intent(in)
          tilelo,tilehi, &
          fablo,fabhi, &
          bfact, &

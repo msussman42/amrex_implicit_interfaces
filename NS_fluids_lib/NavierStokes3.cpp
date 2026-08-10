@@ -9908,7 +9908,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     cenden.dataPtr(),
     ARLIM(cenden.loVect()),ARLIM(cenden.hiVect()),
-    cenvisc.dataPtr(),
+    cenvisc.dataPtr(), //intent(in)
     ARLIM(cenvisc.loVect()),ARLIM(cenvisc.hiVect()),
     xfwt.dataPtr(),ARLIM(xfwt.loVect()),ARLIM(xfwt.hiVect()),
     yfwt.dataPtr(),ARLIM(yfwt.loVect()),ARLIM(yfwt.hiVect()),

@@ -5160,8 +5160,6 @@ stop
        yface,DIMS(yface), &
        zface,DIMS(zface), &
        denstate,DIMS(denstate), &
-       cell_den,DIMS(cell_den), &
-       cell_visc,DIMS(cell_visc), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon) ) &
       bind(c,name='fort_init_elasticmask_and_elasticmaskpart')
@@ -5192,8 +5190,6 @@ stop
       integer, INTENT(in) :: DIMDEC(yface)
       integer, INTENT(in) :: DIMDEC(zface)
       integer, INTENT(in) :: DIMDEC(denstate)
-      integer, INTENT(in) :: DIMDEC(cell_den)
-      integer, INTENT(in) :: DIMDEC(cell_visc)
       integer, INTENT(in) :: DIMDEC(LSnew)
       integer, INTENT(in) :: DIMDEC(recon)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
@@ -5209,10 +5205,6 @@ stop
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: cell_den(DIMV(cell_den))
-      real(amrex_real), pointer :: cell_den_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: cell_visc(DIMV(cell_visc))
-      real(amrex_real), pointer :: cell_visc_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
@@ -5252,16 +5244,12 @@ stop
       real(amrex_real) xmac(SDIM)
       integer local_mask_right
       integer local_mask_left
-      real(amrex_real) local_faceden
-      real(amrex_real) local_facevisc
 
       maskcov_ptr=>maskcov
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
       denstate_ptr=>denstate
-      cell_den_ptr=>cell_den
-      cell_visc_ptr=>cell_visc
       LSnew_ptr=>LSnew
       recon_ptr=>recon
 
@@ -5342,8 +5330,6 @@ stop
       call checkbound_array(fablo,fabhi,yface_ptr,0,1)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,cell_den_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,cell_visc_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
  
@@ -5467,21 +5453,6 @@ stop
           stop
          endif
 
-         if (dir.eq.0) then
-          local_faceden=xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
-          local_facevisc=xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
-         else if (dir.eq.1) then
-          local_faceden=yface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
-          local_facevisc=yface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
-         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          local_faceden=zface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
-          local_facevisc=zface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
-         else
-          print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart:", &
-           dir
-          stop
-         endif
-
           ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
           !
           ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
@@ -5490,18 +5461,12 @@ stop
          if (dir.eq.0) then
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
-          xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
-          xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else if (dir.eq.1) then
           yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
-          yface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
-          yface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
-          zface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)=local_faceden
-          zface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)=local_facevisc
          else
           print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart 3:", &
            dir

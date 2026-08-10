@@ -2003,7 +2003,6 @@ stop
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
-       cvisc,DIMS(cvisc), &
        c_mat_visc, &
        DIMS(c_mat_visc), &
        xlo,dx, &
@@ -2067,7 +2066,6 @@ stop
       integer, INTENT(in) :: DIMDEC(yface)
       integer, INTENT(in) :: DIMDEC(zface)
 
-      integer, INTENT(in) :: DIMDEC(cvisc)
       integer, INTENT(in) :: DIMDEC(c_mat_visc)
 
       integer, INTENT(in) :: DIMDEC(solxfab)
@@ -2110,9 +2108,6 @@ stop
       real(amrex_real), pointer :: yface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: zface(DIMV(zface),FACECOMP_NCOMP)
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
-
-      real(amrex_real), INTENT(in),target :: cvisc(DIMV(cvisc))
-      real(amrex_real), pointer :: cvisc_ptr(D_DECL(:,:,:))
 
         ! c_mat_visc initialized in fort_derviscosity
         ! 1..num_materials viscosity
@@ -2238,7 +2233,6 @@ stop
       yface_ptr=>yface
       zface_ptr=>zface
 
-      cvisc_ptr=>cvisc
       c_mat_visc_ptr=>c_mat_visc
 
       solxfab_ptr=>solxfab
@@ -2285,7 +2279,6 @@ stop
       call checkbound_array(fablo,fabhi,yface_ptr,0,1)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,cvisc_ptr,0,-1)
       call checkbound_array(fablo,fabhi,c_mat_visc_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)

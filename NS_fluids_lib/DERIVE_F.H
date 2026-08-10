@@ -76,7 +76,6 @@ extern "C" {
       Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
       Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
       Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
-      Real* cvisc,AMREX_ARLIM_P(cvisclo),AMREX_ARLIM_P(cvischi),
       Real* c_mat_visc,
       AMREX_ARLIM_P(c_mat_visclo),AMREX_ARLIM_P(c_mat_vischi),
       const Real* xlo,const Real* dx,

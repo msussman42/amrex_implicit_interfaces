@@ -7907,7 +7907,7 @@ stop
        cenden, & 
        DIMS(cenden), &   
        cenvof,DIMS(cenvof), &   
-       cenvisc,DIMS(cenvisc), &
+       cenvisc,DIMS(cenvisc), & !intent(out)
        vol,DIMS(vol), &
        levelPC,DIMS(levelPC), &
        vofC,DIMS(vofC), &
@@ -18699,7 +18699,7 @@ stop
        offdiagcheck, &
        DIMS(offdiagcheck), &
        cenden,DIMS(cenden), &
-       cenvisc,DIMS(cenvisc), &
+       cenvisc,DIMS(cenvisc), & !intent(in)
        xfwt,DIMS(xfwt), &
        yfwt,DIMS(yfwt), &
        zfwt,DIMS(zfwt), &

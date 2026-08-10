@@ -5238,7 +5238,6 @@ void NavierStokes::allocate_physics_vars() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF_if_not_exist(FACE_VAR_MF+dir,FACECOMP_NCOMP,0,dir);
   new_localMF_if_not_exist(FACE_DEN_HOLD_MF+dir,1,0,dir);
-  new_localMF_if_not_exist(FACE_VISC_HOLD_MF+dir,1,0,dir);
  }
 
   // ncomp,ngrow,dir
@@ -5266,7 +5265,6 @@ void NavierStokes::allocate_physics_vars() {
   // tessellating volume fractions.
  new_localMF_if_not_exist(CELL_VOF_MF,num_materials,1,-1); // ncomp,ngrow,dir
  new_localMF_if_not_exist(CELL_VISC_MF,1,1,-1); // ncomp,ngrow,dir
- new_localMF_if_not_exist(CELL_VISC_HOLD_MF,1,1,-1); // ncomp,ngrow,dir
 
 } // allocate_physics_vars
 
@@ -5399,7 +5397,7 @@ void NavierStokes::make_physics_vars(int project_option,
   amrex::Error("num_state_base invalid");
 
   // in: make_physics_vars
-  // FACE_VAR, FACE_DEN_HOLD, FACE_VISC_HOLD, SWEPT_CROSSING,
+  // FACE_VAR, FACE_DEN_HOLD, SWEPT_CROSSING,
   // CELL_DEDT, CELL_DEN, CELL_DEN_HOLD, CELL_SOUND, CELL_VOF,
   // CELL_VISC, CELL_VISC_HOLD
  allocate_physics_vars();
@@ -5690,7 +5688,7 @@ void NavierStokes::make_physics_vars(int project_option,
     ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
     cvoffab.dataPtr(),
     ARLIM(cvoffab.loVect()),ARLIM(cvoffab.hiVect()),
-    cviscfab.dataPtr(),
+    cviscfab.dataPtr(), //intent(out)
     ARLIM(cviscfab.loVect()),ARLIM(cviscfab.hiVect()),
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     levelpcfab.dataPtr(),
@@ -5766,7 +5764,6 @@ void NavierStokes::make_physics_vars(int project_option,
 
  } // ((fab_verbose==1)||(fab_verbose==3))
 
- MultiFab::Copy(*localMF[CELL_VISC_HOLD_MF],*localMF[CELL_VISC_MF],0,0,1,1);
  MultiFab::Copy(*localMF[CELL_DEN_HOLD_MF],*localMF[CELL_DEN_MF],0,0,1,1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   MultiFab::Copy(
@@ -5775,12 +5772,6 @@ void NavierStokes::make_physics_vars(int project_option,
     FACECOMP_FACEDEN,
     0,
     1,0);
-  MultiFab::Copy(
-   *localMF[FACE_VISC_HOLD_MF+dir],
-   *localMF[FACE_VAR_MF+dir],
-   FACECOMP_FACEVISC,
-   0,
-   1,0);
  }
 
  delete vofC;

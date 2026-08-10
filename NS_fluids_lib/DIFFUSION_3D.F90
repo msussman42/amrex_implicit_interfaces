@@ -180,7 +180,7 @@ stop
          unew,DIMS(unew), &
          lsnew,DIMS(lsnew), &
          den,DIMS(den), &  ! 1/density
-         mu,DIMS(mu), &
+         mu,DIMS(mu), & !intent(in)
          tilelo,tilehi, &
          fablo,fabhi, &
          bfact, &

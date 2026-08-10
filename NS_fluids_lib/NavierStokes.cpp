@@ -12468,6 +12468,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
   amrex::Error("VISCOTEN_MF should not be allocated");
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
@@ -12482,8 +12483,16 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
    " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ncomp invalid(1)");
  }
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nComp()!=num_materials) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_LF_MF]->nComp() << 
+   " num_materials= " << num_materials << '\n';
+  amrex::Error("cell_visc_material_lf ncomp invalid(1)");
+ }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)
   amrex::Error("cell_visc_material ngrow invalid");
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nGrow()<1)
+  amrex::Error("cell_visc_material_lf ngrow invalid");
 
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
@@ -12635,6 +12644,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
 
@@ -12657,12 +12667,25 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ncomp invalid(2)");
  }
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nComp()!=num_materials) {
+  std::cout << "ncomp= " <<
+   localMF[CELL_VISC_MATERIAL_LF_MF]->nComp() << 
+   " num_materials= " << num_materials << '\n';
+  amrex::Error("cell_visc_material_lf ncomp invalid(2)");
+ }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1) {
   std::cout << "ngrow= " <<
    localMF[CELL_VISC_MATERIAL_MF]->nGrow() << 
    " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ngrow invalid(2)");
  }
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nGrow()<1) {
+  std::cout << "ngrow= " <<
+   localMF[CELL_VISC_MATERIAL_LF_MF]->nGrow() << 
+   " num_materials= " << num_materials << '\n';
+  amrex::Error("cell_visc_material_lf ngrow invalid(2)");
+ }
+
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
  int nstate=STATE_NCOMP;
@@ -18591,7 +18614,6 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- MultiFab::Copy(*localMF[CELL_VISC_MF],*localMF[CELL_VISC_HOLD_MF],0,0,1,1);
  MultiFab::Copy(*localMF[CELL_DEN_MF],*localMF[CELL_DEN_HOLD_MF],0,0,1,1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -18601,13 +18623,6 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
     *localMF[FACE_DEN_HOLD_MF+dir],
     0,
     FACECOMP_FACEDEN,
-    1,0);
-
-  MultiFab::Copy(
-    *localMF[FACE_VAR_MF+dir],
-    *localMF[FACE_VISC_HOLD_MF+dir],
-    0,
-    FACECOMP_FACEVISC,
     1,0);
 
  }
@@ -18656,9 +18671,6 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
    FArrayBox& denstatefab=(*state_var_mf)[mfi];
 
-   FArrayBox& cell_den_fab=(*localMF[CELL_DEN_MF])[mfi];
-   FArrayBox& cell_visc_fab=(*localMF[CELL_VISC_MF])[mfi];
-
    int bfact=parent->Space_blockingFactor(level);
 
    int tid_current=ns_thread();
@@ -18684,15 +18696,11 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
     &dt_slab, //fort_init_elasticmask_and_elasticmaskpart
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),//intent(inout)
+    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),//intent(inout)
+    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),//intent(inout)
     denstatefab.dataPtr(),
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
-    cell_den_fab.dataPtr(),
-    ARLIM(cell_den_fab.loVect()),ARLIM(cell_den_fab.hiVect()),
-    cell_visc_fab.dataPtr(),
-    ARLIM(cell_visc_fab.loVect()),ARLIM(cell_visc_fab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
     reconfab.dataPtr(),
@@ -21579,18 +21587,11 @@ NavierStokes::GetDrag(int isweep) {
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
- debug_ngrow(CELL_VISC_MF,1,local_caller_string);
 
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*num_materials) {
   // do nothing
  } else {
   amrex::Error("GetDrag: CELL_VISC_MATERIAL_MF invalid ncomp");
- }
-
- if (localMF[CELL_VISC_MF]->nComp()==1) {
-  // do nothing
- } else {
-  amrex::Error("GetDrag: CELL_VISC_MF invalid ncomp");
  }
 
  resize_metrics(1);
@@ -21750,7 +21751,6 @@ NavierStokes::GetDrag(int isweep) {
   FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& mufab=(*localMF[CELL_VISC_MF])[mfi];
   FArrayBox& mu_mat_fab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
   if (mu_mat_fab.nComp()==3*num_materials) {
    // do nothing
@@ -21811,7 +21811,6 @@ NavierStokes::GetDrag(int isweep) {
    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
-   mufab.dataPtr(),ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
    mu_mat_fab.dataPtr(),
    ARLIM(mu_mat_fab.loVect()),ARLIM(mu_mat_fab.hiVect()),
    xlo,dx,

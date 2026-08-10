@@ -356,7 +356,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     denfab.dataPtr(),
     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-    mufab.dataPtr(),
+    mufab.dataPtr(), //intent(in)
     ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
