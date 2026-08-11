@@ -45,6 +45,7 @@ stop
        vof,DIMS(vof), &
        vel,DIMS(vel), &
        visc,DIMS(visc), &
+       visc_lf,DIMS(visc_lf), &
        cellten,DIMS(cellten), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -82,6 +83,7 @@ stop
       integer, INTENT(in) :: DIMDEC(vof)
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(visc)
+      integer, INTENT(in) :: DIMDEC(visc_lf)
       integer, INTENT(in) :: DIMDEC(cellten)
   
       real(amrex_real), INTENT(in), target :: &
@@ -92,8 +94,14 @@ stop
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(inout), target :: visc(DIMV(visc),ncompvisc)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout), target :: &
+              visc_lf(DIMV(visc_lf),num_materials)
+      real(amrex_real), pointer :: visc_lf_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: &
        cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: cellten_ptr(D_DECL(:,:,:),:)
@@ -162,6 +170,8 @@ stop
       call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1)
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1)
+      visc_lf_ptr=>visc_lf
+      call checkbound_array(fablo,fabhi,visc_lf_ptr,ngrow,-1)
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1)
       denstate_ptr=>denstate
@@ -647,6 +657,7 @@ stop
         etaL,etaP,etaS, &
         polymer_factor, &
         visc,DIMS(visc), &
+        visc_lf,DIMS(visc_lf), &
         vel,DIMS(vel), &
         eosdata,DIMS(eosdata), &
         lsdata,DIMS(lsdata), &
@@ -689,6 +700,7 @@ stop
       integer :: growlo(3), growhi(3)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(visc)
+      integer, INTENT(in) :: DIMDEC(visc_lf)
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(eosdata)
       integer, INTENT(in) :: DIMDEC(lsdata)
@@ -701,6 +713,10 @@ stop
        !ncompvisc=3*num_materials
       real(amrex_real), INTENT(out), target :: visc(DIMV(visc),ncompvisc) 
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(out), target :: &
+              visc_lf(DIMV(visc_lf),num_materials)
+      real(amrex_real), pointer :: visc_lf_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
@@ -730,6 +746,7 @@ stop
       integer im_primary,im_local
 
       visc_ptr=>visc
+      visc_lf_ptr=>visc_lf
 
       if (bfact.lt.1) then
        print *,"bfact invalid3"
@@ -940,6 +957,8 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,visc_lf_ptr,ngrow,-1)
+
       gammadot_ptr=>gammadot
       call checkbound_array1(fablo,fabhi,gammadot_ptr,ngrow,-1)
       eosdata_ptr=>eosdata

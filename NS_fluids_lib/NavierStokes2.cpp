@@ -531,7 +531,16 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
   ns_level.getStateVISC(local_caller_string);
   int scomp=0;
   int ncomp=ns_level.localMF[CELL_VISC_MATERIAL_MF]->nComp();
+  int ncomp_LF=ns_level.localMF[CELL_VISC_MATERIAL_LF_MF]->nComp();
+
+  if ((ncomp_LF==num_materials)&&(ncomp_LF<ncomp)) {
+   //do nothing
+  } else
+   amrex::Error("expecting ncomp_LF<ncomp and ncomp_LF==num_materials");
+
   ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,
+    LOW_ORDER_AVGDOWN);
+  ns_level.avgDown_localMF(CELL_VISC_MATERIAL_LF_MF,scomp,ncomp_LF,
     LOW_ORDER_AVGDOWN);
  }
 
@@ -551,13 +560,20 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateCONDUCTIVITY();
   int scomp=0;
+
   int ncomp=ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
+  int ncomp_LF=ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF]->nComp();
+  if (ncomp==ncomp_LF) {
+   //do nothing
+  } else
+   amrex::Error("expecting ncomp==ncomp_LF");
+
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
   ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
     scomp,ncomp,LOW_ORDER_AVGDOWN);
   ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_LF_MF,
-    scomp,ncomp,LOW_ORDER_AVGDOWN);
+    scomp,ncomp_LF,LOW_ORDER_AVGDOWN);
  }
 
 } // end subroutine getStateCONDUCTIVITY_ALL 
@@ -10250,6 +10266,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
  int ngrow=1;
 
  delete_localMF_if_exist(CELL_VISC_MATERIAL_MF,1);
+ delete_localMF_if_exist(CELL_VISC_MATERIAL_LF_MF,1);
 
  int finest_level=parent->finestLevel();
 
@@ -10321,6 +10338,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
   // viscoelastic:                 nmat+1,...,2*nmat
   // viscoelastic relaxation time: nmat+2,...,3*nmat
  new_localMF(CELL_VISC_MATERIAL_MF,ncomp_visc,ngrow,-1);//sets values to 0.0
+ new_localMF(CELL_VISC_MATERIAL_LF_MF,num_materials,ngrow,-1);
 
  MultiFab* vel=getState(ngrow+1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
@@ -10418,6 +10436,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
    FArrayBox& gammadot=(*gammadot_mf)[mfi];
 
    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+   FArrayBox& visc_lf_fab=(*localMF[CELL_VISC_MATERIAL_LF_MF])[mfi];
 
    FArrayBox& velfab=(*vel)[mfi];
    FArrayBox& eosfab=(*EOSdata)[mfi];
@@ -10457,6 +10476,8 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       &polymer_factor[im],
       viscfab.dataPtr(),
       ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      visc_lf_fab.dataPtr(),
+      ARLIM(visc_lf_fab.loVect()),ARLIM(visc_lf_fab.hiVect()),
       velfab.dataPtr(),
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       eosfab.dataPtr(),
@@ -10508,6 +10529,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
     // viscoelastic:                 nmat+1,...,2*nmat
     // viscoelastic relaxation time: nmat+2,...,3*nmat
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+    FArrayBox& visc_lf_fab=(*localMF[CELL_VISC_MATERIAL_LF_MF])[mfi];
 
     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
     if (cellten.nComp()!=AMREX_SPACEDIM_SQR)
@@ -10542,7 +10564,12 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       viscfab.dataPtr(),
       ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      visc_lf_fab.dataPtr(),
+      ARLIM(visc_lf_fab.loVect()),ARLIM(visc_lf_fab.hiVect()),
       cellten.dataPtr(),
+      visc_lf_fab.dataPtr(),
+      ARLIM(visc_lf_fab.loVect()),
+      ARLIM(visc_lf_fab.hiVect()),
       ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,&bfact,
@@ -10567,6 +10594,11 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
   Plus_localMF(CELL_VISC_MATERIAL_MF,
     viscconst_artificial[im],im,1,ngrow);
+
+  //void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
+  //    int scomp,int dcomp,int ncomp,int ngrow) 
+  Copy_localMF(CELL_VISC_MATERIAL_LF_MF,
+     CELL_VISC_MATERIAL_MF,im,im,1,ngrow);
 
    // (uip1+uim1+ujp1+ujm1+ukp1+ukm1-6uij)/6=
    // (1/6)(dx[0]**2 Laplace_x + dx[1]**2 Laplace_y + dx[SDIM-1]**2 Laplace_z)
@@ -10594,7 +10626,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
     }
    }
 
-   Plus_localMF(CELL_VISC_MATERIAL_MF,
+   Plus_localMF(CELL_VISC_MATERIAL_LF_MF,
     lax_visc,im,1,ngrow);
   } else
    amrex::Error("lax_friedrichs invalid");
