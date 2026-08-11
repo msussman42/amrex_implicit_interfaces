@@ -76,7 +76,7 @@ amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
 amr.blocking_factor = 8 8 8       # block factor in grid generation
-amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
+amr.check_int       = 50 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50     # 200 for production runs
 ns.output_drop_distribution=1
@@ -86,8 +86,10 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16 16 16
 cg.min_max_grid_size=16
+cg.force_ILU_smoother_single_grid=1
+Lp.bottom_smooth_type=1
 ns.ns_tiling=false
-#amr.restart         = chk02000
+#amr.restart         = chk00450
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -162,7 +164,8 @@ ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.lax_friedrichs=1.0 1.0 1.0 1.0
+ns.lax_friedrichs=0.0 1.0 1.0 1.0
+ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
 ns.heatviscconst=0.0 0.0 0.0
 #ns.elastic_viscosity=0.0 0.0 4.0e+5
 ns.elastic_viscosity=0.0 0.0 4.0e+4
