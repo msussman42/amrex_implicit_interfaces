@@ -2,10 +2,13 @@ amr.n_cell      = 80 120 # 2/3 aspect ratio
 amr.max_grid_size   = 40 40
 cg.min_max_grid_size=40
 ns.coarsest_level_CISL=0
+cg.force_ILU_smoother_single_grid=1
+Lp.bottom_smooth_type=1
 
 # grid : 4 * 7 = 28
 amr.plot_int    = 100   
-ns.sum_interval = 50     # timesteps between computing mass
+ns.output_drop_distribution=1
+ns.sum_interval = 1     # timesteps between computing mass
 
 # microlayer contact angle (radians): 0.872664626 radians = 50 degrees 
 # microlayer contact angle (radians): 0.174532925 radians = 10 degrees 
@@ -64,6 +67,7 @@ ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
 ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0  
 
 ns.lax_friedrichs=1.0 1.0 1.0
+ns.lax_friedrichs_energy=1.0 1.0 1.0
 ns.repair_mass=0 1 0
 
 # Thermal conductivity
@@ -285,7 +289,7 @@ ns.velfact=0.0
 ns.probtype=55
 
 #ns.mem_debug = 1
-ns.v = 0
+ns.v = 1
 #ns.d = 1
 # 0=dirichlet at inflow
 # 1=dirichlet at inflow and outflow
