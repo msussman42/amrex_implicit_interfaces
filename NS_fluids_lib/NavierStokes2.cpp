@@ -1865,6 +1865,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic,
  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
  debug_ngrow(MASK_NBR_MF,1,local_caller_string); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
@@ -5078,6 +5079,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL(
    simple_AMR_BC_flag_viscosity);
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //localMF[CELL_VISC_MATERIAL_LF_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
   //we are in:init_gradu_tensor_and_material_visc_ALL
  getStateVISC_ALL(local_caller_string); 
@@ -5138,6 +5140,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  makeStateCurvALL(cl_time,local_caller_string);
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //localMF[CELL_VISC_MATERIAL_LF_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
   // delete_array(CELLTENSOR_MF);
   // delete_array(FACETENSOR_MF);
@@ -5145,9 +5148,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
  init_gradu_tensor_and_material_visc_ALL(local_caller_string);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*num_materials)
   amrex::Error("visc_data invalid ncomp");
+ int ncomp_visc_lf=localMF[CELL_VISC_MATERIAL_LF_MF]->nComp();
+ if (ncomp_visc_lf!=num_materials)
+  amrex::Error("visc_data_lf invalid ncomp");
 
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_LF_MF,1,local_caller_string);
@@ -5613,6 +5620,10 @@ void NavierStokes::make_physics_vars(int project_option,
    if (viscstatefab.nComp()!=3*num_materials)
     amrex::Error("viscstatefab.nComp()!=3*num_materials");
 
+   FArrayBox& viscstatefabLF=(*localMF[CELL_VISC_MATERIAL_LF_MF])[mfi];
+   if (viscstatefabLF.nComp()!=num_materials)
+    amrex::Error("viscstatefabLF.nComp()!=num_materials");
+
    // passed to fort_init_physics_vars
    FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_LF_MF])[mfi];
    if (conductivity_fab.nComp()!=num_materials)
@@ -5688,8 +5699,8 @@ void NavierStokes::make_physics_vars(int project_option,
     ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     mom_denfab.dataPtr(),
     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-    viscstatefab.dataPtr(), //3*num_materials components
-    ARLIM(viscstatefab.loVect()),ARLIM(viscstatefab.hiVect()),
+    viscstatefabLF.dataPtr(), //num_materials components
+    ARLIM(viscstatefabLF.loVect()),ARLIM(viscstatefabLF.hiVect()),
     conductivity_fab.dataPtr(), //num_materials components
     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
     solxfab.dataPtr(),
@@ -10475,9 +10486,11 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       &etaL[im],&etaP[im],&etaS[im],
       &polymer_factor[im],
       viscfab.dataPtr(),
-      ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      ARLIM(viscfab.loVect()),
+      ARLIM(viscfab.hiVect()),
       visc_lf_fab.dataPtr(),
-      ARLIM(visc_lf_fab.loVect()),ARLIM(visc_lf_fab.hiVect()),
+      ARLIM(visc_lf_fab.loVect()),
+      ARLIM(visc_lf_fab.hiVect()),
       velfab.dataPtr(),
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       eosfab.dataPtr(),
@@ -10563,14 +10576,14 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
       velfab.dataPtr(),
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       viscfab.dataPtr(),
-      ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-      visc_lf_fab.dataPtr(),
-      ARLIM(visc_lf_fab.loVect()),ARLIM(visc_lf_fab.hiVect()),
-      cellten.dataPtr(),
+      ARLIM(viscfab.loVect()),
+      ARLIM(viscfab.hiVect()),
       visc_lf_fab.dataPtr(),
       ARLIM(visc_lf_fab.loVect()),
       ARLIM(visc_lf_fab.hiVect()),
-      ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
+      cellten.dataPtr(),
+      ARLIM(cellten.loVect()),
+      ARLIM(cellten.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,&bfact,
       &cur_time_slab,
@@ -10852,6 +10865,12 @@ void NavierStokes::getState_tracemag(int idx) {
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*num_materials)
   amrex::Error("visc_data invalid ncomp");
+
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
+ int ncomp_visc_lf=localMF[CELL_VISC_MATERIAL_LF_MF]->nComp();
+ if (ncomp_visc_lf!=num_materials)
+  amrex::Error("visc_data_lf invalid ncomp");
+
 
  int ncomp_den=den_data->nComp();
 

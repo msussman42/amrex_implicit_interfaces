@@ -7895,8 +7895,9 @@ stop
        DIMS(denstate), &
        mom_den, &
        DIMS(mom_den), &
-       viscstate,DIMS(viscstate), & ! 3 * num_materials components
-       conductstate,DIMS(conductstate), & ! num_materials components
+       viscstateLF,DIMS(viscstateLF), & ! 3 * num_materials components
+       conductstate, &
+       DIMS(conductstate), & ! num_materials components
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
@@ -7986,7 +7987,7 @@ stop
       integer, INTENT(in) :: DIMDEC(slope)
       integer, INTENT(in) :: DIMDEC(denstate)
       integer, INTENT(in) :: DIMDEC(mom_den)
-      integer, INTENT(in) :: DIMDEC(viscstate)
+      integer, INTENT(in) :: DIMDEC(viscstateLF)
       integer, INTENT(in) :: DIMDEC(conductstate)
       integer, INTENT(in) :: DIMDEC(solxfab)
       integer, INTENT(in) :: DIMDEC(solyfab)
@@ -8022,10 +8023,10 @@ stop
               mom_den(DIMV(mom_den),num_materials) 
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
-              viscstate(DIMV(viscstate),3*num_materials) 
-      real(amrex_real), pointer :: viscstate_ptr(D_DECL(:,:,:),:)
+              viscstateLF(DIMV(viscstateLF),num_materials) 
+      real(amrex_real), pointer :: viscstateLF_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
-              conductstate(DIMV(viscstate),num_materials) 
+              conductstate(DIMV(conductstate),num_materials) 
       real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
               solxfab(DIMV(solxfab),nparts_def*SDIM) 
@@ -8235,7 +8236,7 @@ stop
       slope_ptr=>slope
       denstate_ptr=>denstate
       mom_den_ptr=>mom_den
-      viscstate_ptr=>viscstate
+      viscstateLF_ptr=>viscstateLF
       conductstate_ptr=>conductstate
       solxfab_ptr=>solxfab
       solyfab_ptr=>solyfab
@@ -8340,7 +8341,7 @@ stop
       call checkbound_array(fablo,fabhi,curv_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,viscstateLF_ptr,1,-1)
       call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
@@ -8427,7 +8428,7 @@ stop
         stop
        endif
         ! sanity check: the real viscosity coefficient(s) are derived from
-        ! viscstate(D_DECL(:,:,:),3*num_materials)
+        ! viscstateLF(D_DECL(:,:,:),num_materials)
        if (get_user_viscconst(im,fort_denconst(im),fort_tempconst(im)).ge. &
            zero) then
         ! do nothing
@@ -9039,10 +9040,10 @@ stop
          do imspec=1,num_species_var
           facespecies_local(imspec)=zero
          enddo
-          !viscstate is initialized in fort_derviscosity
+          !viscstateLF is initialized in fort_derviscosity
          do im=1,num_materials
-          localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
-          localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
+          localvisc_plus(im)=viscstateLF(D_DECL(i,j,k),im)
+          localvisc_minus(im)=viscstateLF(D_DECL(im1,jm1,km1),im)
           localheatvisc_plus(im)=conductstate(D_DECL(i,j,k),im)
           localheatvisc_minus(im)=conductstate(D_DECL(im1,jm1,km1),im)
          enddo
@@ -10480,10 +10481,10 @@ stop
           stop
          endif
 
-         localvisc(im)=viscstate(D_DECL(i,j,k),im)
+         localvisc(im)=viscstateLF(D_DECL(i,j,k),im)
 
          if (localvisc(im).lt.zero) then
-          print *,"viscstate gone negative: ",im,localvisc(im)
+          print *,"viscstateLF gone negative: ",im,localvisc(im)
           stop
          else if (localvisc(im).eq.zero) then
           if (volmat(im).gt.zero) then

@@ -23614,10 +23614,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //localMF[CELL_VISC_MATERIAL_LF_MF] is deleted in ::Geometry_cleanup()
  getStateVISC_ALL(local_caller_string); //we are in writeTECPLOT_file
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials)
   amrex::Error("viscmf invalid ncomp");
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nComp()!=num_materials)
+  amrex::Error("viscmf LF invalid ncomp");
 
   //passed to tecplot routines
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
@@ -26274,6 +26278,7 @@ NavierStokes::volWgtSumALL(
   make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string);
  } else if (fast_mode==1) {
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //localMF[CELL_VISC_MATERIAL_LF_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
   // delete_array(CELLTENSOR_MF);
   // delete_array(FACETENSOR_MF);
@@ -26298,6 +26303,13 @@ NavierStokes::volWgtSumALL(
   // do nothing
  } else {
   amrex::Error("volWgtSumALL: CELL_VISC_MATERIAL_MF invalid ncomp");
+ }
+ debug_ngrow(CELL_VISC_MATERIAL_LF_MF,1,local_caller_string);
+
+ if (localMF[CELL_VISC_MATERIAL_LF_MF]->nComp()==num_materials) {
+  // do nothing
+ } else {
+  amrex::Error("volWgtSumALL: CELL_VISC_MATERIAL_LF_MF invalid ncomp");
  }
 
  if (ENUM_NUM_TENSOR_TYPE_BASE==2*AMREX_SPACEDIM) {
