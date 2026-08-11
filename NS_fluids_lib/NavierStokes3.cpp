@@ -3286,33 +3286,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          (advance_status==1));
         divu_outer_sweeps++) {
 
-    if (divu_outer_sweeps==local_num_divu_outer_sweeps-1) {
-
-     for (int im=0;im<num_materials;im++) {
-      material_conservation_form[im]=hold_material_conservation_form[im];
-     }
-
-    } else if ((divu_outer_sweeps>=0)&&
-               (divu_outer_sweeps<local_num_divu_outer_sweeps-1)) {
-
-     for (int im=0;im<num_materials;im++) {
-      if (hold_material_conservation_form[im]==0) {
-       material_conservation_form[im]=0;
-      } else if (hold_material_conservation_form[im]==1) {
-       if (positive_preserving_predictor==1) {
-        material_conservation_form[im]=0;
-       } else if (positive_preserving_predictor==0) {
-        material_conservation_form[im]=1;
-       } else
-        amrex::Error("positive_preserving_predictor invalid");
-      } else
-       amrex::Error("hold_material_conservation_form invalid");
-     } //im=0 ... num_materials-1
-
-    } else
-     amrex::Error("divu_outer_sweeps invalid");
-
-   
     very_last_sweep=0;
 
     if ((SDC_outer_sweeps+1==SDC_outer_sweeps_end)&&

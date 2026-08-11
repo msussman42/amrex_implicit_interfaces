@@ -426,8 +426,6 @@ public:
 
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_conservation_form; 
-    static Vector<int> hold_material_conservation_form; 
-    static int positive_preserving_predictor;  //def=1
     static Vector<int> material_extend_velocity; 
     static int material_extend_velocity_flag;
 
@@ -2338,6 +2336,7 @@ protected:
     static Vector<int> override_density; // default 0 
     static Vector<int> repair_mass;
     static Vector<Real> lax_friedrichs;
+    static Vector<Real> lax_friedrichs_energy;
     static Vector<Real> viscconst;
     static Vector<Real> viscconst_artificial;
     static Vector<Real> viscconst_eddy_wall;

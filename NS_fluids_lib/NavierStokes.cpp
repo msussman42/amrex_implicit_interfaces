@@ -915,6 +915,7 @@ Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<int> NavierStokes::repair_mass; //default=0
 Vector<Real> NavierStokes::lax_friedrichs; //default=0.0
+Vector<Real> NavierStokes::lax_friedrichs_energy; //default=lax_friedrichs
 Vector<Real> NavierStokes::viscconst;
 Vector<Real> NavierStokes::viscconst_artificial; //default=0.0
 Real NavierStokes::viscconst_max=0.0;
@@ -938,8 +939,6 @@ int NavierStokes::solidheat_flag=0;
 
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_conservation_form;
-Vector<int> NavierStokes::hold_material_conservation_form;
-int NavierStokes::positive_preserving_predictor=1;
 //nmat components.
 //values range from 0 to nmat-1
 //0=>do not extend this materials' velocity.
@@ -3434,7 +3433,6 @@ NavierStokes::read_params ()
 
     material_type.resize(num_materials);
     material_conservation_form.resize(num_materials);
-    hold_material_conservation_form.resize(num_materials);
 
     material_extend_velocity.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
@@ -3866,6 +3864,7 @@ NavierStokes::read_params ()
     tempcutoffmax.resize(num_materials);
     repair_mass.resize(num_materials);
     lax_friedrichs.resize(num_materials);
+    lax_friedrichs_energy.resize(num_materials);
     viscconst.resize(num_materials);
     viscconst_artificial.resize(num_materials);
     viscconst_eddy_wall.resize(num_materials);
@@ -4291,6 +4290,7 @@ NavierStokes::read_params ()
 
      repair_mass[i]=0;
      lax_friedrichs[i]=0.0;
+     lax_friedrichs_energy[i]=0.0;
      viscconst_artificial[i]=0.0;
      viscconst_eddy_wall[i]=0.0;
      viscconst_eddy_bulk[i]=0.0;
@@ -4299,7 +4299,14 @@ NavierStokes::read_params ()
     }
     pp.queryAdd("viscconst_artificial",viscconst_artificial,num_materials);
     pp.queryAdd("repair_mass",repair_mass,num_materials);
+
     pp.queryAdd("lax_friedrichs",lax_friedrichs,num_materials);
+
+    for (int i=0;i<num_materials;i++) {
+     lax_friedrichs_energy[i]=lax_friedrichs[i];
+    }
+    pp.queryAdd("lax_friedrichs_energy",lax_friedrichs_energy,num_materials);
+
     pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall,num_materials);
     pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk,num_materials);
     pp.queryAdd("heatviscconst_eddy_wall",
@@ -4813,20 +4820,10 @@ NavierStokes::read_params ()
 
     for (int im=0;im<num_materials;im++) {
      material_conservation_form[im]=1;
-     hold_material_conservation_form[im]=1;
     }
 
     pp.queryAdd("material_conservation_form",
       material_conservation_form,num_materials);
-    pp.queryAdd("positive_preserving_predictor",positive_preserving_predictor);
-    if (positive_preserving_predictor==1) {
-     //do nothing
-    } else
-     amrex::Error("required that positive_preserving_predictor==1");
-
-    for (int im=0;im<num_materials;im++) {
-     hold_material_conservation_form[im]=material_conservation_form[im];
-    }
 
     for (int iten=0;iten<num_interfaces;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -6007,9 +6004,6 @@ NavierStokes::read_params ()
       std::cout << "force_blob_symmetry i= " << i << ' ' <<
         force_blob_symmetry[i] << '\n';
      }
-     std::cout << "positive_preserving_predictor= " << 
-	     positive_preserving_predictor << '\n';
-
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
@@ -6084,6 +6078,8 @@ NavierStokes::read_params ()
 	      repair_mass[i]<<'\n';
       std::cout << "lax_friedrichs i=" <<i<<"  "<<
 	      lax_friedrichs[i]<<'\n';
+      std::cout << "lax_friedrichs_energy i=" <<i<<"  "<<
+	      lax_friedrichs_energy[i]<<'\n';
       std::cout << "viscconst_artificial i=" <<i<<"  "<<
 	      viscconst_artificial[i]<<'\n';
       std::cout << "viscconst_eddy_wall i=" <<i<<"  "<<

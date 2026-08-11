@@ -10764,15 +10764,15 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
    // (uip1+uim1+ujp1+ujm1+ukp1+ukm1-6uij)/6=
    // (1/6)(dx[0]**2 Laplace_x + dx[1]**2 Laplace_y + dx[SDIM-1]**2 Laplace_z)
-  if (lax_friedrichs[im]==0.0) {
+  if (lax_friedrichs_energy[im]==0.0) {
    //do nothing
-  } else if (lax_friedrichs[im]>0.0) {
+  } else if (lax_friedrichs_energy[im]>0.0) {
    Real dxmax=dx[0];
    for (int dir=1;dir<AMREX_SPACEDIM;dir++) {
     dxmax=std::max(dxmax,dx[dir]);
    }
 
-   Real lax_visc=lax_friedrichs[im]*denconst[im]*dxmax*dxmax/
+   Real lax_visc=lax_friedrichs_energy[im]*denconst[im]*dxmax*dxmax/
 	   (2.0*AMREX_SPACEDIM);
    lax_visc/=dt_slab;
    lax_visc*=std::max(stiffCP[im],stiffCV[im]);
@@ -10793,7 +10793,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
     lax_visc,im,1,ngrow);
 
   } else
-   amrex::Error("lax_friedrichs invalid");
+   amrex::Error("lax_friedrichs_energy invalid");
 
  } // im=0..num_materials-1
 
