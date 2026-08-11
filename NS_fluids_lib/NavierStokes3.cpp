@@ -6659,7 +6659,8 @@ NavierStokes::resolve_orphans(
 
 void 
 NavierStokes::sync_old_new_colors(
- Vector<blobclass>& blobdata) {
+ Vector<blobclass>& blobdata,
+ int update_mdot) {
 
  int finest_level=parent->finestLevel();
 
@@ -6787,6 +6788,12 @@ NavierStokes::sync_old_new_colors(
  
   for (int i=0;i<updated_count;i++) {
    blobdata[i].blob_mass_target=0.0;
+   if (update_mdot==1) {
+    //do nothing
+   } else if (update_mdot==0) {
+    blobdata[i].blob_mass_mdot=0.0;
+   } else
+    amrex::Error("update_mdot invalid");
   }
   for (int i=0;i<repair_count;i++) {
    Real intersect_total=0.0;
@@ -6805,6 +6812,14 @@ NavierStokes::sync_old_new_colors(
     if ((mass_frac>=0.0)&&(mass_frac<=1.0)) {
      int k=label_intersect_old[i][j];
      blobdata[k].blob_mass_target+=mass_frac*blobdata_old[i].blob_mass_target;
+
+     if (update_mdot==1) {
+      //do nothing
+     } else if (update_mdot==0) {
+      blobdata[k].blob_mass_mdot+=mass_frac*blobdata_old[i].blob_mass_mdot;
+     } else
+      amrex::Error("update_mdot invalid");
+
     } else
      amrex::Error("mass_frac invalid");
    } //for (int j=0;j<label_intersect_old[i].size();j++) 
@@ -8757,6 +8772,8 @@ NavierStokes::ColorSumALL(
     for (int i=0;i<repair_count;i++) {
      amrlevel_repair_blobclass.repair_blobclass_data[1][i].blob_mass_target+=
        blobdata[i].blob_mass_mdot;
+     amrlevel_repair_blobclass.repair_blobclass_data[1][i].blob_mass_mdot=
+       blobdata[i].blob_mass_mdot;
     }
    } else
     amrex::Error("update_mdot invalid");
@@ -9214,7 +9231,7 @@ NavierStokes::ColorSumALL(
     if (tessellate==TESSELLATE_ALL_RASTER) {
      //do nothing
     } else if (tessellate==TESSELLATE_ALL) {
-     sync_old_new_colors(blobdata);
+     sync_old_new_colors(blobdata,update_mdot);
     } else
      amrex::Error("tessellate invalid");
 

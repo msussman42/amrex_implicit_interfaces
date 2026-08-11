@@ -997,7 +997,8 @@ protected:
     );
 
     void sync_old_new_colors(
-     Vector<blobclass>& blobdata
+     Vector<blobclass>& blobdata,
+     int update_mdot
     );
 
      

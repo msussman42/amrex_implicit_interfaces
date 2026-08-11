@@ -2703,7 +2703,7 @@ NavierStokes::sum_integrated_quantities (
         mass_target << '\n';
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
-       " blob_mass_original= " <<
+       " blob_mass_original (blob_mass)= " <<
         mass_original << '\n';
 
       Real mass_mdot=blobdata[iblob].blob_mass_mdot;
