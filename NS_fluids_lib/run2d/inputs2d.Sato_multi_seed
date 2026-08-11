@@ -62,6 +62,21 @@ ns.visual_tessellate_vfrac=0
 amr.n_cell    = 32 64
 amr.max_level =  0  # 4 levels for finest
 #amr.max_level =  0  # 4 levels for finest
+#Tatebe: 1993 MGPCG
+#the multigrid preconditioner must be a symmetric preconditioner.
+#max_grid_size=16
+#min_max_grid_size=16
+#level 0 has 8 x 16^2 blocks
+#level -1 has 2 x 16^2 blocks
+#Use Jacobi method smoother on levels 0 and -1 for the bottom solver
+#Use IC method smoother for levels:
+# -2 = 8 x16
+# -3 = 4 x8
+# -4 = 2 x4
+# -5 = 1 x2
+cg.force_ILU_smoother_single_grid=1
+Lp.bottom_smooth_type=1
+
 amr.max_grid_size   = 16 16
 ns.coarsest_level_CISL=0
 #ns.coarsest_level_CISL=0

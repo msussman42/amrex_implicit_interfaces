@@ -5556,6 +5556,10 @@ NavierStokes::read_params ()
     ppcg.queryAdd("restart_period",cg_restart_period);
     int cg_maxiter=ABecLaplacian::CG_def_maxiter;
     ppcg.queryAdd("maxiter",cg_maxiter);
+    int local_force_ILU_smoother_single_grid=
+      ABecLaplacian::force_ILU_smoother_single_grid;
+    ppcg.queryAdd("force_ILU_smoother_single_grid",
+      local_force_ILU_smoother_single_grid);
 
     ppmac.queryAdd( "mac_abs_tol",mac_abs_tol);
       // mac.visc_abs_tol (not ns.visc_abs_tol)
@@ -5902,6 +5906,9 @@ NavierStokes::read_params ()
     } // i=0..num_materials-1
 
     if (ParallelDescriptor::IOProcessor()) {
+
+     std::cout << "local_force_ILU_smoother_single_grid = " <<
+      local_force_ILU_smoother_single_grid << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i,tension=" << i << ' ' <<
