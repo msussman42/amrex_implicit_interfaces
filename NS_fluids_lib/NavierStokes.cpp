@@ -17170,7 +17170,7 @@ NavierStokes::phase_change_redistributeALL() {
  int tessellate=TESSELLATE_ALL_RASTER;
  int operation_flag=OP_GATHER_MDOT; 
  int use_mac_velocity=0;
- int update_mdot=0;
+ int update_mdot=DO_NOT_UPDATE_MDOT;
 
   //calling from: NavierStokes::phase_change_redistributeALL
   //TYPE_MF, COLOR_MF
@@ -26900,7 +26900,7 @@ NavierStokes::post_init_state () {
  int operation_flag=OP_GATHER_MDOT;
 
  int use_mac_velocity=0;
- int update_mdot=0;
+ int update_mdot=DO_NOT_UPDATE_MDOT;
 
   //calling from: NavierStokes::post_init_state()
   //TYPE_MF, COLOR_MF

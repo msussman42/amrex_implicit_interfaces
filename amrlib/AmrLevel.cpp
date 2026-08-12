@@ -235,6 +235,10 @@ void repair_blobclass::checkpoint(int check_id) {
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].blob_mass_mdot << '\n';
     repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_mass_mdot_phase_change << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_mass_previous << '\n';
+    repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].blob_inflow_outflow << '\n';
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].blob_pressure << '\n';
@@ -341,6 +345,10 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
      repair_blobclass_data[istep][iblob].blob_mass_target;
    is >>
      repair_blobclass_data[istep][iblob].blob_mass_mdot;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_mass_mdot_phase_change;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_mass_previous;
    is >>
      repair_blobclass_data[istep][iblob].blob_inflow_outflow;
    is >>

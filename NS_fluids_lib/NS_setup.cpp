@@ -2452,7 +2452,7 @@ NavierStokes::sum_integrated_quantities (
   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
   int operation_flag=OP_GATHER_MDOT;
   int use_mac_velocity=0;
-  int update_mdot=0;
+  int update_mdot=DO_NOT_UPDATE_MDOT;
 
    // declared in NavierStokes3.cpp
    // calling from: NavierStokes::sum_integrated_quantities()
@@ -2711,6 +2711,18 @@ NavierStokes::sum_integrated_quantities (
        " im= " << imbase <<
        " blob_mass_mdot= " <<
         mass_mdot << '\n';
+
+      Real mass_mdot_phase_change=blobdata[iblob].blob_mass_mdot_phase_change;
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " blob_mass_mdot_phase_change= " <<
+        mass_mdot_phase_change << '\n';
+
+      Real mass_previous=blobdata[iblob].blob_mass_previous;
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " blob_mass_previous= " <<
+        mass_previous << '\n';
 
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<

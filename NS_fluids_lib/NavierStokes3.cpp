@@ -3004,7 +3004,7 @@ void NavierStokes::nucleation_code_segment(
  int coarsest_level=0;
 
  int use_mac_velocity=0;
- int update_mdot=0;
+ int update_mdot=DO_NOT_UPDATE_MDOT;
 
   //calling from: NavierStokes::nucleation_code_segment()
   //TYPE_MF, COLOR_MF
@@ -4213,7 +4213,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
           int use_mac_velocity=0;
-          int update_mdot=0;
+          int update_mdot=DO_NOT_UPDATE_MDOT;
 
           // for each blob, find sum_{F>=1/2} pressure * vol and
  	  // sum_{F>=1/2} vol.
@@ -6788,12 +6788,24 @@ NavierStokes::sync_old_new_colors(
  
   for (int i=0;i<updated_count;i++) {
    blobdata[i].blob_mass_target=0.0;
-   if (update_mdot==1) {
+   blobdata[i].blob_mass_previous=0.0;
+
+   if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
     //do nothing
-   } else if (update_mdot==0) {
+   } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+  	      (update_mdot==UPDATE_MDOT_PHASE_CHANGE)) {
     blobdata[i].blob_mass_mdot=0.0;
    } else
     amrex::Error("update_mdot invalid");
+
+   if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+    //do nothing
+   } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+  	      (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
+    blobdata[i].blob_mass_mdot_phase_change=0.0;
+   } else
+    amrex::Error("update_mdot invalid");
+
   }
   for (int i=0;i<repair_count;i++) {
    Real intersect_total=0.0;
@@ -6812,11 +6824,22 @@ NavierStokes::sync_old_new_colors(
     if ((mass_frac>=0.0)&&(mass_frac<=1.0)) {
      int k=label_intersect_old[i][j];
      blobdata[k].blob_mass_target+=mass_frac*blobdata_old[i].blob_mass_target;
+     blobdata[k].blob_mass_previous+=mass_frac*blobdata_old[i].blob_mass;
 
-     if (update_mdot==1) {
+     if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
       //do nothing
-     } else if (update_mdot==0) {
+     } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+    	        (update_mdot==UPDATE_MDOT_PHASE_CHANGE)) {
       blobdata[k].blob_mass_mdot+=mass_frac*blobdata_old[i].blob_mass_mdot;
+     } else
+      amrex::Error("update_mdot invalid");
+
+     if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+      //do nothing
+     } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+     	        (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
+      blobdata[k].blob_mass_mdot_phase_change+=
+	      mass_frac*blobdata_old[i].blob_mass_mdot_phase_change;
      } else
       amrex::Error("update_mdot invalid");
 
@@ -6998,7 +7021,7 @@ NavierStokes::ColorSum(
    } else
     amrex::Error("tessellate invalid");
 
-   if (update_mdot==1) {
+   if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
     //do nothing
    } else
     amrex::Error("update_mdot invalid");
@@ -7013,7 +7036,7 @@ NavierStokes::ColorSum(
 
  } else if (operation_flag==OP_SCATTER_MDOT) {
 
-  if (update_mdot==0) {
+  if (update_mdot==DO_NOT_UPDATE_MDOT) {
    //do nothing
   } else
    amrex::Error("update_mdot invalid");
@@ -8270,8 +8293,16 @@ void NavierStokes::copy_blobdata(Vector<blobclass>& dest_blobdata,
      source_blobdata[i].blob_mass;
    dest_blobdata[i].blob_mass_target=
      source_blobdata[i].blob_mass_target;
+
    dest_blobdata[i].blob_mass_mdot=
      source_blobdata[i].blob_mass_mdot;
+
+   dest_blobdata[i].blob_mass_mdot_phase_change=
+     source_blobdata[i].blob_mass_mdot_phase_change;
+
+   dest_blobdata[i].blob_mass_previous=
+     source_blobdata[i].blob_mass_previous;
+
    dest_blobdata[i].blob_inflow_outflow=
      source_blobdata[i].blob_inflow_outflow;
 
@@ -8450,6 +8481,8 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
  blobdata[i].blob_mass=0.0;
  blobdata[i].blob_mass_target=0.0;
  blobdata[i].blob_mass_mdot=0.0;
+ blobdata[i].blob_mass_mdot_phase_change=0.0;
+ blobdata[i].blob_mass_previous=0.0;
  blobdata[i].blob_inflow_outflow=0.0;
 
  blobdata[i].blob_pressure=0.0;
@@ -8697,16 +8730,18 @@ NavierStokes::ColorSumALL(
 
  if (operation_flag==OP_GATHER_MDOT) {
 
-  if (update_mdot==1) {
+  if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
    num_sweeps=3;
-  } else if (update_mdot==0) {
+  } else if (update_mdot==DO_NOT_UPDATE_MDOT) {
+   //do nothing
+  } else if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
    //do nothing
   } else
    amrex::Error("update_mdot invalid");
 
  } else if (operation_flag==OP_SCATTER_MDOT) { 
 
-  if (update_mdot==0) {
+  if (update_mdot==DO_NOT_UPDATE_MDOT) {
    //do nothing
   } else
    amrex::Error("update_mdot invalid");
@@ -8762,7 +8797,7 @@ NavierStokes::ColorSumALL(
   if ((sweep_num>=0)&&(sweep_num<=1)) {
    //do nothing
   } else if (sweep_num==2) {
-   if (update_mdot==1) {
+   if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
     // (dest,source)
     copy_blobdata(level_blobdata,blobdata);
     copy_blobdata(
@@ -8873,7 +8908,7 @@ NavierStokes::ColorSumALL(
 
     } else if (sweep_num==2) {
 
-     if (update_mdot==1) {
+     if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
       //do nothing
      } else
       amrex::Error("update_mdot invalid");
@@ -8883,7 +8918,7 @@ NavierStokes::ColorSumALL(
 
    } else if (operation_flag==OP_SCATTER_MDOT) { //blobdata not updated.
 
-    if (update_mdot==0) {
+    if (update_mdot==DO_NOT_UPDATE_MDOT) {
      //do nothing
     } else
      amrex::Error("update_mdot invalid");
@@ -9211,7 +9246,7 @@ NavierStokes::ColorSumALL(
 
    } else if (sweep_num==2) {
 
-    if (update_mdot==1) {
+    if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
      //do nothing
     } else
      amrex::Error("update_mdot invalid");
@@ -9286,6 +9321,8 @@ NavierStokes::ColorSumALL(
        blobdata[i].blob_mass << ' ' <<
        blobdata[i].blob_mass_target << ' ' <<
        blobdata[i].blob_mass_mdot << ' ' <<
+       blobdata[i].blob_mass_mdot_phase_change << ' ' <<
+       blobdata[i].blob_mass_previous << ' ' <<
        blobdata[i].blob_inflow_outflow << '\n';
 
      for (int imnbr=0;imnbr<num_materials;imnbr++) {
@@ -11542,7 +11579,7 @@ void NavierStokes::multiphase_project(int project_option) {
    int operation_flag=OP_GATHER_MDOT;
 
    int use_mac_velocity=1;
-   int update_mdot=1;
+   int update_mdot=UPDATE_MDOT_SOURCE_TERM;
 
    //calling from: NavierStokes::multiphase_project
    //TYPE_MF, COLOR_MF
@@ -11976,7 +12013,7 @@ void NavierStokes::multiphase_project(int project_option) {
    int operation_flag=OP_GATHER_MDOT;
 
    int use_mac_velocity=1;
-   int update_mdot=0;
+   int update_mdot=DO_NOT_UPDATE_MDOT;
 
    //calling from: NavierStokes::multiphase_project
    //TYPE_MF, COLOR_MF
