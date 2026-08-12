@@ -14490,14 +14490,6 @@ void NavierStokes::veldiffuseALL() {
    // QDOT subtracted from temperature on finest level.
    ns_level.make_heat_source();  // updates S_new
 
-   ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
-
-   if (ns_level.localMF[save_state_MF]->nComp()==
-       num_materials*num_state_material) {
-    //do nothing
-   } else
-    amrex::Error("ns_level.localMF[save_state_MF].nComp() invalid");
-
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
    int combine_flag=FVM_TO_GFM;  
@@ -15308,39 +15300,7 @@ void NavierStokes::veldiffuseALL() {
  } //dir=0 .. sdim-1
 
  if (FSI_outer_sweeps==0) {
-
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   MultiFab& S_new=ns_level.get_new_data(State_Type,project_slab_step+1);
-   MultiFab* save_S_new=ns_level.localMF[save_state_MF];
-   for (int im=0;im<num_materials;im++) {
-
-    if (heatviscconst[im]>0.0) {
-     //do nothing
-    } else if (heatviscconst[im]==0.0) {
-     MultiFab::Copy(S_new,*save_S_new,
-         num_state_material*im+ENUM_TEMPERATUREVAR,
-         STATECOMP_STATES+num_state_material*im+ENUM_TEMPERATUREVAR,1,1);
-    } else
-     amrex::Error("heatviscconst invalid");
-
-    for (int ns=0;ns<num_species_var;ns++) {
-
-     if (speciesviscconst[ns*num_materials+im]>0.0) {
-      //do nothing
-     } else if (speciesviscconst[ns*num_materials+im]==0.0) {
-      MultiFab::Copy(S_new,*save_S_new,
-         num_state_material*im+num_state_base+ns,
-         STATECOMP_STATES+num_state_material*im+num_state_base+ns,1,1);
-     } else
-      amrex::Error("heatviscconst invalid");
-
-    } //ns=0 ... num_species_var-1
-
-   } // im=0..num_materials-1
-  } //ilev=level ... finest_level
-
-  delete_array(save_state_MF);
+  //do nothing
  } else if ((FSI_outer_sweeps>0)&&
             (FSI_outer_sweeps<
              min(num_FSI_outer_sweeps,NFSI_LIMIT))) {

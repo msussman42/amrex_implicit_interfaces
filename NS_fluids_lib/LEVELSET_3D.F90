@@ -11184,7 +11184,7 @@ stop
        az,DIMS(az), &
        vol,DIMS(vol), &
        rhs,DIMS(rhs), & ! destination for div(up) if SEM.
-       veldest,DIMS(veldest), &
+       veldest,DIMS(veldest), & !UMAC -> UCELL at t^{n+1}
        dendest,DIMS(dendest), &
        mask,DIMS(mask), & ! 1=fine/fine  0=coarse/fine
        maskcoef,DIMS(maskcoef), & ! 1=not covered  0=covered
@@ -11198,7 +11198,7 @@ stop
        denold,DIMS(denold), &
         !u_advect used for OP_VEL_DIVUP_TO_CELL and 
         !OP_ISCHEME_CELL (source term.eq.SUB_OP_SDC_ISCHEME)
-       u_advect,DIMS(u_advect), &
+       u_advect,DIMS(u_advect), & !"ustar" (velocity prior to grad p/rho term)
        mdotcell,DIMS(mdotcell), & !VELADVECT_MF if OP_ISCHEME_CELL
        maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if OP_ISCHEME_CELL
        maskres,DIMS(maskres), &
@@ -12957,8 +12957,8 @@ stop
 
             do velcomp=1,SDIM
              KE_diff=KE_diff+ &
-               half*u_advect(D_DECL(i,j,k),velcomp)**2- &
-               half*veldest(D_DECL(i,j,k),velcomp)**2
+               half*u_advect(D_DECL(i,j,k),velcomp)**2- & !ustar prior grad p
+               half*veldest(D_DECL(i,j,k),velcomp)**2 !unp1
             enddo ! velcomp=1..sdim
 
             if (LStest(im).ge.-DXMAX) then
@@ -13028,6 +13028,8 @@ stop
 
               if (material_conservation_form(im).eq.1) then
 
+               !U^advect=ustar
+               !U^proj=veldest
                ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
                if (is_rigid(im).eq.0) then
                 internal_e=internal_e+KE_diff+Eforce_conservative
