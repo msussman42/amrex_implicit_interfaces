@@ -15951,6 +15951,49 @@ NavierStokes::level_phase_change_convertALL() {
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
+ Vector<blobclass> blobdata;
+ Vector< Vector<Real> > mdot_data;
+ Vector< Vector<Real> > mdot_comp_data;
+ Vector< Vector<Real> > mdot_data_redistribute;
+ Vector< Vector<Real> > mdot_comp_data_redistribute;
+ Vector<int> type_flag;
+
+ int color_count=0;
+ int coarsest_level=0;
+
+ int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+
+ int tessellate=TESSELLATE_ALL;
+ int operation_flag=OP_GATHER_MDOT;
+
+ int use_mac_velocity=0;
+ int update_mdot=DO_NOT_UPDATE_MDOT;
+
+ //calling from: NavierStokes::mass_redistributeALL
+ //TYPE_MF, COLOR_MF
+ ColorSumALL(
+  update_mdot,
+  use_mac_velocity,
+  operation_flag, // =OP_GATHER_MDOT
+  tessellate, //=TESSELLATE_ALL
+  coarsest_level,
+  color_count,
+  idx_mdot,
+  idx_mdot,
+  type_flag,
+  blobdata,
+  mdot_data,
+  mdot_comp_data,
+  mdot_data_redistribute,
+  mdot_comp_data_redistribute 
+  );
+
+ if (color_count!=blobdata.size())
+  amrex::Error("color_count!=blobdata.size()");
+
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
+
  int i_phase_change=0;
  while (i_phase_change<n_phase_change) {
 
@@ -16100,6 +16143,42 @@ NavierStokes::level_phase_change_convertALL() {
   // do nothing
  } else
   amrex::Error("i_phase_change invalid");
+
+ color_count=0;
+ coarsest_level=0;
+
+ idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+
+ tessellate=TESSELLATE_ALL;
+ operation_flag=OP_GATHER_MDOT;
+
+ use_mac_velocity=0;
+ update_mdot=UPDATE_MDOT_PHASE_CHANGE;
+
+ //calling from: NavierStokes::mass_redistributeALL
+ //TYPE_MF, COLOR_MF
+ ColorSumALL(
+  update_mdot,
+  use_mac_velocity,
+  operation_flag, // =OP_GATHER_MDOT
+  tessellate, //=TESSELLATE_ALL
+  coarsest_level,
+  color_count,
+  idx_mdot,
+  idx_mdot,
+  type_flag,
+  blobdata,
+  mdot_data,
+  mdot_comp_data,
+  mdot_data_redistribute,
+  mdot_comp_data_redistribute 
+  );
+
+ if (color_count!=blobdata.size())
+  amrex::Error("color_count!=blobdata.size()");
+
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
 
 #if (NS_profile_solver==1)
  bprof.stop();

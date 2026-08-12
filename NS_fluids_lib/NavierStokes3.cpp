@@ -6657,6 +6657,10 @@ NavierStokes::resolve_orphans(
 
 } // end subroutine resolve_orphans
 
+//called from NavierStokes::ColorSumALL when
+//operation_flag==OP_GATHER_MDOT
+//tessellate==TESSELLATE_ALL
+//sweep_num==1
 void 
 NavierStokes::sync_old_new_colors(
  Vector<blobclass>& blobdata,
@@ -6684,6 +6688,24 @@ NavierStokes::sync_old_new_colors(
 
   for (int i=0;i<updated_count;i++) {
    blobdata[i].blob_mass_target=blobdata[i].blob_mass;
+   blobdata[i].blob_mass_previous=blobdata[i].blob_mass;
+
+   if (update_mdot==UPDATE_MDOT_SOURCE_TERM) {
+    //do nothing
+   } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+  	      (update_mdot==UPDATE_MDOT_PHASE_CHANGE)) {
+    blobdata[i].blob_mass_mdot=0.0;
+   } else
+    amrex::Error("update_mdot invalid");
+
+   if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+    amrex::Error("cannot have a null blobdata_old if MDOT_PHASE_CHANGE");
+   } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+  	      (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
+    blobdata[i].blob_mass_mdot_phase_change=0.0;
+   } else
+    amrex::Error("update_mdot invalid");
+
   }
   amrlevel_repair_blobclass.repair_blobclass_data[1].resize(updated_count);
   copy_blobdata(
@@ -6806,7 +6828,8 @@ NavierStokes::sync_old_new_colors(
    } else
     amrex::Error("update_mdot invalid");
 
-  }
+  } // for (int i=0;i<updated_count;i++) 
+
   for (int i=0;i<repair_count;i++) {
    Real intersect_total=0.0;
    for (int j=0;j<label_intersect_old[i].size();j++) {
@@ -6898,7 +6921,17 @@ NavierStokes::sync_old_new_colors(
              (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
              (blobdata[i].blob_inflow_outflow==0.0)&&
              (repair_mass[im]==1)) {
-   //do nothing
+
+   if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+    blobdata[i].blob_mass_mdot_phase_change=
+      blobdata[i].blob_mass-blobdata[i].blob_mass_previous;
+    blobdata[i].blob_mass_target+=blobdata[i].blob_mass_mdot_phase_change;
+   } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+  	      (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
+    //do nothing
+   } else
+    amrex::Error("update_mdot invalid");
+
   } else
    amrex::Error("blobdata error");
  } //for (int i=0;i<updated_count;i++)
