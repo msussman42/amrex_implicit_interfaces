@@ -6997,7 +6997,7 @@ NavierStokes::sync_old_new_colors(
 
    if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
 
-    if (1==1) {
+    if (1==0) {
      std::cout << "update_mdot == UPDATE_MDOT_PHASE_CHANGE\n";
      std::cout << "im= " << im << " i= " << i << " blob_mass= " <<
       blobdata[i].blob_mass << " blob_mass_previous= " <<
@@ -7008,7 +7008,7 @@ NavierStokes::sync_old_new_colors(
       blobdata[i].blob_mass-blobdata[i].blob_mass_previous;
     blobdata[i].blob_mass_target+=blobdata[i].blob_mass_mdot_phase_change;
 
-    if (1==1) {
+    if (1==0) {
      std::cout << "im= " << im << " i= " << i << 
       " blob_mass_mdot_phase_change= " <<
       blobdata[i].blob_mass_mdot_phase_change << " blob_mass_target= " <<
@@ -7017,7 +7017,7 @@ NavierStokes::sync_old_new_colors(
 
    } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
   	      (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
-    if (1==1) {
+    if (1==0) {
      std::cout << "update_mdot <> UPDATE_MDOT_PHASE_CHANGE\n";
      std::cout << "im= " << im << " i= " << i << " blob_mass= " <<
       blobdata[i].blob_mass << " blob_mass_previous= " <<
