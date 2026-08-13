@@ -16031,7 +16031,8 @@ NavierStokes::level_phase_change_convertALL() {
 	num_state_material*num_materials,SPECTRAL_ORDER_AVGDOWN);
      } // ilev=finest_level ... level
 
-     if (i_phase_change+1<n_phase_change) {
+     if ((i_phase_change>=0)&&
+	 (i_phase_change<n_phase_change)) {
 
       for (int im_count=0;im_count<2;im_count++) {
        int im_current=0;
@@ -16055,6 +16056,7 @@ NavierStokes::level_phase_change_convertALL() {
 	  SPECTRAL_ORDER_AVGDOWN);
        scompBC_map[0]=srccomp+ENUM_DENVAR;
         //ngrow=1 scomp=dstcomp+ENUM_DENVAR ncomp=1
+        //GetStateFromLocalALL declared in: NavierStokes3.cpp
        GetStateFromLocalALL(DEN_RECON_MF,1,
 	  dstcomp+ENUM_DENVAR,1,State_Type,scompBC_map);
 
@@ -16062,6 +16064,7 @@ NavierStokes::level_phase_change_convertALL() {
        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_TEMPERATUREVAR,1,1);
        scompBC_map[0]=srccomp+ENUM_TEMPERATUREVAR;
         //ngrow=1 scomp=dstcomp+ENUM_TEMPERATUREVAR ncomp=1
+        //GetStateFromLocalALL declared in: NavierStokes3.cpp
        GetStateFromLocalALL(DEN_RECON_MF,1,
 	  dstcomp+ENUM_TEMPERATUREVAR,1,State_Type,scompBC_map);
 
@@ -16071,6 +16074,8 @@ NavierStokes::level_phase_change_convertALL() {
        } else if ((ispec>=1)&&(ispec<=num_species_var)) {
         avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_SPECIESVAR+ispec-1,1,1);
         scompBC_map[0]=srccomp+ENUM_SPECIESVAR+ispec-1;
+         //ngrow=1 scomp=dstcomp+ENUM_SPECIESVAR+ispec-1  ncomp=1
+         //GetStateFromLocalALL declared in: NavierStokes3.cpp
         GetStateFromLocalALL(DEN_RECON_MF,1,
  	   dstcomp+ENUM_SPECIESVAR+ispec-1,1,State_Type,scompBC_map);
        } else
@@ -16125,8 +16130,6 @@ NavierStokes::level_phase_change_convertALL() {
       } else
        amrex::Error("material_extend_velocity_flag invalid");
 
-     } else if (i_phase_change+1==n_phase_change) {
-      // do nothing
      } else {
       amrex::Error("i_phase_change invalid");
      }

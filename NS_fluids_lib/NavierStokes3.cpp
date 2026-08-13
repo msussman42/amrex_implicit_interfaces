@@ -6923,12 +6923,33 @@ NavierStokes::sync_old_new_colors(
              (repair_mass[im]==1)) {
 
    if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+
+    if (1==1) {
+     std::cout << "update_mdot == UPDATE_MDOT_PHASE_CHANGE\n";
+     std::cout << "im= " << im << " i= " << i << " blob_mass= " <<
+      blobdata[i].blob_mass << " blob_mass_previous= " <<
+      blobdata[i].blob_mass_previous << '\n';
+    }
+
     blobdata[i].blob_mass_mdot_phase_change=
       blobdata[i].blob_mass-blobdata[i].blob_mass_previous;
     blobdata[i].blob_mass_target+=blobdata[i].blob_mass_mdot_phase_change;
+
+    if (1==1) {
+     std::cout << "im= " << im << " i= " << i << 
+      " blob_mass_mdot_phase_change= " <<
+      blobdata[i].blob_mass_mdot_phase_change << " blob_mass_target= " <<
+      blobdata[i].blob_mass_target << '\n';
+    }
+
    } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
   	      (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
-    //do nothing
+    if (1==1) {
+     std::cout << "update_mdot <> UPDATE_MDOT_PHASE_CHANGE\n";
+     std::cout << "im= " << im << " i= " << i << " blob_mass= " <<
+      blobdata[i].blob_mass << " blob_mass_previous= " <<
+      blobdata[i].blob_mass_previous << '\n';
+    }
    } else
     amrex::Error("update_mdot invalid");
 
