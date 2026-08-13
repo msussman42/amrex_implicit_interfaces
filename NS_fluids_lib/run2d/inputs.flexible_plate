@@ -84,9 +84,10 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16 16 16
-cg.min_max_grid_size=16
+amr.max_grid_size   = 1024 16 16
+cg.min_max_grid_size=1024
 cg.force_ILU_smoother_single_grid=1
+Lp.smooth_type=1
 Lp.bottom_smooth_type=1
 ns.ns_tiling=false
 #amr.restart         = chk00450

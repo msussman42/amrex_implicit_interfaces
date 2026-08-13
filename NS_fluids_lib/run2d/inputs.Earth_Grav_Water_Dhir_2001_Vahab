@@ -3,6 +3,7 @@ amr.max_grid_size   = 40 40
 cg.min_max_grid_size=40
 ns.coarsest_level_CISL=0
 cg.force_ILU_smoother_single_grid=1
+Lp.smooth_type=1
 Lp.bottom_smooth_type=1
 
 # grid : 4 * 7 = 28

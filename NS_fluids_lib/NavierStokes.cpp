@@ -26871,9 +26871,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 
-  int local_redistribute_main=0; //global
-
-  makeStateDistALL(local_redistribute_main);
+  makeStateDistALL();
 
   prescribe_solid_geometryALL(
     cur_time_slab,
@@ -28788,28 +28786,25 @@ void NavierStokes::putStateCOLOR_DATA(
 // NavierStokes::do_the_advance
 // tessellate_source=TESSELLATE_FLUIDS|IGNORE_ISELASTIC
 void
-NavierStokes::makeStateDistALL(
-  int local_redistribute_main) {
+NavierStokes::makeStateDistALL() {
 
  int tessellate_source=TESSELLATE_FLUIDS;
 
  if (material_extend_velocity_flag>0) {
   tessellate_source=TESSELLATE_IGNORE_ISELASTIC;
-  sub_makeStateDistALL(local_redistribute_main,tessellate_source);
+  sub_makeStateDistALL(tessellate_source);
  } else if (material_extend_velocity_flag==0) {
   //do nothing
  } else
   amrex::Error("material_extend_velocity_flag invalid");
 
  tessellate_source=TESSELLATE_FLUIDS;
- sub_makeStateDistALL(local_redistribute_main,tessellate_source);
+ sub_makeStateDistALL(tessellate_source);
 
 } //subroutine makeStateDistALL
 
 void
-NavierStokes::sub_makeStateDistALL(
-  int local_redistribute_main,
-  int tessellate_source) {
+NavierStokes::sub_makeStateDistALL(int tessellate_source) {
 
  interface_touch_flag=1; //sub_makeStateDistALL
 

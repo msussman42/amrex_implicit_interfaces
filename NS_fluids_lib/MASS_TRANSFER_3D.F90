@@ -3552,7 +3552,7 @@ stop
        vofbc, &
        xlo,dx, &
        dt, &
-       delta_mass, &
+       delta_mass, & !fort_convertmaterial
        maskcov,DIMS(maskcov), &
        conductstate,DIMS(conductstate), & ! num_materials components
        nodevel,DIMS(nodevel), &

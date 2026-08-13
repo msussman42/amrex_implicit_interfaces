@@ -75,6 +75,7 @@ amr.max_level =  0  # 4 levels for finest
 # -4 = 2 x4
 # -5 = 1 x2
 cg.force_ILU_smoother_single_grid=1
+Lp.smooth_type=1
 Lp.bottom_smooth_type=1
 
 amr.max_grid_size   = 16 16

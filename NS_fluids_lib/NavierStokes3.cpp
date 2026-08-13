@@ -2897,9 +2897,7 @@ void NavierStokes::phase_change_code_segment(
    renormalize_flag,
    local_caller_string);
 
- int local_redistribute_main=0;
-
- makeStateDistALL(local_redistribute_main);
+ makeStateDistALL();
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2932,9 +2930,7 @@ void NavierStokes::no_mass_transfer_code_segment(
    RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
- int local_redistribute_main=0;
-
- makeStateDistALL(local_redistribute_main);
+ makeStateDistALL();
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2978,31 +2974,18 @@ void NavierStokes::nucleation_code_segment(
   std::cin >> n_input;
  }
 
-  // CREATE SEEDS, NUCLEATION.
-  // COLOR_MF, TYPE_MF not needed yet since nucleation_flag=1
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  int nucleation_flag=1;
-  color_count=1; // filler
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.level_phase_change_rate(blobdata,color_count,
-    nucleation_flag);
- }
-
- delta_mass.resize(thread_class::nthreads);
- for (int tid=0;tid<thread_class::nthreads;tid++) {
-  // source 1..num_materials  dest 1..num_materials
-  delta_mass[tid].resize(2*num_materials); 
-  for (int im=0;im<2*num_materials;im++)
-   delta_mass[tid][im]=0.0;
- } // tid=0 ... nthreads-1
-
- ParallelDescriptor::Barrier();
+  // output:SLOPE_RECON_MF
+ int init_vof_prev_time=0;
+ VOF_Recon_ALL(
+   local_caller_string,  //nucleation_code_segment prior to nucleation.
+   cur_time_slab,
+   RECON_UPDATE_STATE_CENTROID,
+   init_vof_prev_time);
 
  int tessellate=TESSELLATE_ALL;
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
  int operation_flag=OP_GATHER_MDOT;
  int coarsest_level=0;
-
  int use_mac_velocity=0;
  int update_mdot=DO_NOT_UPDATE_MDOT;
 
@@ -3027,6 +3010,29 @@ void NavierStokes::nucleation_code_segment(
    mdot_comp_data_redistribute
    );
 
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
+
+ ParallelDescriptor::Barrier();
+
+  // CREATE SEEDS, NUCLEATION.
+  // TYPE_MF, COLOR_MF not used for nucleation routines
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  int nucleation_flag=1;
+  color_count=1; // filler
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_rate(blobdata,color_count,
+    nucleation_flag);
+ }
+
+ delta_mass.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  // source 1..num_materials  dest 1..num_materials
+  delta_mass[tid].resize(2*num_materials); 
+  for (int im=0;im<2*num_materials;im++)
+   delta_mass[tid][im]=0.0;
+ } // tid=0 ... nthreads-1
+
  ParallelDescriptor::Barrier();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -3037,26 +3043,40 @@ void NavierStokes::nucleation_code_segment(
      num_state_material*num_materials,1);
  }  // ilev=finest_level ... level  
 
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   for (int im=0;im<num_materials;im++) {
-    std::cout << "Nucleation stats: im,source,dest " << im << ' ' <<
-     delta_mass[0][im] << ' ' << delta_mass[0][im+num_materials] << '\n';
-   }
-  }
- } 
-
  interface_touch_flag=1; //nucleation_code_segment
 
- // generates SLOPE_RECON_MF
- int init_vof_prev_time=0;
-
   // output:SLOPE_RECON_MF
+ init_vof_prev_time=0;
  VOF_Recon_ALL(
-   local_caller_string,  //nucleation_code_segment
+   local_caller_string,  //nucleation_code_segment (after the nucleation)
    cur_time_slab,
    RECON_UPDATE_STATE_CENTROID,
    init_vof_prev_time);
+
+ update_mdot=UPDATE_MDOT_PHASE_CHANGE;
+
+  //calling from: NavierStokes::nucleation_code_segment()
+  //TYPE_MF, COLOR_MF
+  //TYPE_MF, COLOR_MF are allocated in this routine, but not deleted.
+  //TYPE_MF, COLOR_MF deleted in NavierStokes::phase_change_code_segment
+ ColorSumALL( 
+   update_mdot,
+   use_mac_velocity,
+   operation_flag, //=OP_GATHER_MDOT
+   tessellate, //=TESSELLATE_ALL
+   coarsest_level,
+   color_count,
+   idx_mdot,
+   idx_mdot,
+   type_flag,
+   blobdata,
+   mdot_data,
+   mdot_comp_data,
+   mdot_data_redistribute,
+   mdot_comp_data_redistribute
+   );
+
+ ParallelDescriptor::Barrier();
 
   // in: nucleation_code_segment
  int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE;
@@ -3066,10 +3086,8 @@ void NavierStokes::nucleation_code_segment(
    renormalize_flag,
    local_caller_string);
 
- int local_redistribute_main=0;
-
   //in: nucleation_code_segment
- makeStateDistALL(local_redistribute_main);
+ makeStateDistALL();
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
@@ -6756,9 +6774,64 @@ NavierStokes::sync_old_new_colors(
     blobdata,blobdata_old,
     intersection_data_old,label_intersect_old);
   }
+  if (update_mdot==UPDATE_MDOT_PHASE_CHANGE) {
+   for (int i=0;i<blobdata.size();i++) {
+
+    if (label_intersect_new[i].size()==0) {
+     int im=blobdata[i].im-1;
+     int imp1=im+1;
+     if ((ns_is_rigid(im)==1)||
+         (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1)||
+         (blobdata[i].blob_inflow_outflow>=1.0)||
+         (repair_mass[im]==0)) {
+      //do nothing
+     } else if ((ns_is_rigid(im)==0)&&
+                (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
+                (blobdata[i].blob_inflow_outflow==0.0)&&
+                (repair_mass[im]==1)) {
+      int old_size=blobdata_old.size();
+      blobdata_old.resize(old_size+1);
+      blobdata_old[old_size]=blobdata[i];
+
+      intersection_data_old.resize(old_size+1);
+      label_intersect_old.resize(old_size+1);
+
+      intersection_data_old[old_size].resize(1); 
+      label_intersect_old[old_size].resize(1); 
+
+      intersection_data_old[old_size][0]=0.0;
+      label_intersect_old[old_size][0]=i; 
+
+      label_intersect_new[i].resize(1);
+      intersection_data_new[i].resize(1); 
+
+      intersection_data_new[i][0]=0.0;
+      label_intersect_new[i][0]=old_size;
+
+      blobdata_old[old_size].blob_mass=0.0; 
+      blobdata_old[old_size].blob_mass_target=0.0; 
+      blobdata_old[old_size].blob_mass_previous=0.0; 
+      blobdata_old[old_size].blob_mass_mdot=0.0;
+     } else 
+      amrex::Error("blobdata error");
+    } else if (label_intersect_new[i].size()>0) {
+     //do nothing
+    } else
+     amrex::Error("label_intersect_new[i].size() invalid");
+
+   } //for (int i=0;i<blobdata.size();i++) 
+
+  } else if ((update_mdot==DO_NOT_UPDATE_MDOT)||
+             (update_mdot==UPDATE_MDOT_SOURCE_TERM)) {
+   //do nothing
+  } else
+   amrex::Error("update_mdot invalid");
+
+   //resolve blobdata orphans
   resolve_orphans(blobdata_old,blobdata,
      intersection_data_new,label_intersect_new,
      intersection_data_old,label_intersect_old);
+   //resolve blobdata_old orphans
   resolve_orphans(blobdata,blobdata_old,
      intersection_data_old,label_intersect_old,
      intersection_data_new,label_intersect_new);
