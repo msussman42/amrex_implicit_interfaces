@@ -296,8 +296,6 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-#ns.explicit_viscosity_dt=1.0
-ns.explicit_viscosity_dt=0.0
 ns.ngrow_distance=6
 #Artificial viscosity should be enough so that the explicity_viscosity_dt
 #constraint makes a difference.

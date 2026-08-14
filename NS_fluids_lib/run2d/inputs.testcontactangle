@@ -106,7 +106,6 @@ ns.gravity        = 0.0
 # sigma-sigma_SL=sigma cos(60)=1/2 sigma
 # 1/2 sigma = sigma_SL
 ns.tension       = 1118.0 559.0 1118.0 
-#ns.explicit_viscosity_dt=1.0
 ns.ngrow_distance=8
 ns.visc_coef_boundary_layer_factor=1.0
 #liquid,gas,solid

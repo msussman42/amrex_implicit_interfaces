@@ -300,7 +300,6 @@ ns.species_molar_mass=18.02  # this is vapor molar mass=liquid molar mass
 # rigid body motion
 # ice is a very viscous fluid 
 ns.viscconst=0.0179 0.000172 1000.0 1000.0
-ns.viscconst_artificial=100.0 100.0 100.0 100.0
 #ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
 ns.uncoupled_viscosity=1 # div(mu grad u)

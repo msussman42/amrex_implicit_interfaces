@@ -186,18 +186,6 @@ ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K)
 # 1 Pa = 10 CGS
 #ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
 ns.viscconst=1.79e-2 1.724e-4 2.0e-2 2.0e-2 # derive CGS:  CGS= Pa s x 10
-# dt_surface_tension <= dx^(3/2)sqrt(rhobar/(pi sigma))
-# dt_surface_tension >= dx^2 rho/(6 mu)
-# dx^(3/2)sqrt(rhobar/(pi sigma)) >= dx^2 rho/(6 mu)
-# sqrt(dx)/mu = 6 sqrt(1/(pi sigma rho))
-# dx=0.2/48=0.004
-# sigma=76e-5
-# rho=1
-# mu>=5.0e-4 (see artificial_viscosity.f)
-# Also,
-# dx/U >= dx^2 rho/(6 mu)
-# dx<=6 mu/(rho U)  rho U dx/mu <= 6
-ns.explicit_viscosity_dt=1
 #ns.uncoupled_viscosity=1
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
