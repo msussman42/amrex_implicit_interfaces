@@ -6864,15 +6864,49 @@ NavierStokes::sync_old_new_colors(
          intersection_data_old[k][jj])/max_intersect;
       if (rel_error<0.01) {
        //do nothing
-      } else
+      } else {
+       std::cout << "max_intersect= " << max_intersect << '\n';
+       std::cout << "rel_error= " << rel_error << '\n';
+       std::cout << "intersection_data_new= " <<
+         intersection_data_new[i][j] << '\n';
+       std::cout << "intersection_data_old= " <<
+         intersection_data_old[k][jj] << '\n';
+       std::cout << "intersection_data_new[i].size()= " <<
+         intersection_data_new[i].size() << '\n';
+       std::cout << "intersection_data_old[k].size()= " <<
+         intersection_data_old[k].size() << '\n';
+       for (int iblob=0;iblob<blobdata.size();iblob++) {
+        std::cout << "blobdata[iblob]= " << blobdata[iblob] << '\n';
+       }
+       for (int iblob=0;iblob<blobdata_old.size();iblob++) {
+        std::cout << "blobdata_old[iblob]= " << blobdata_old[iblob] << '\n';
+       }
        amrex::Error("rel_error invalid");
+      }
      } else if (max_intersect==0.0) {
       Real rel_error=std::abs(intersection_data_new[i][j]-
          intersection_data_old[k][jj]);
       if (rel_error==0.0) {
        //do nothing
-      } else
+      } else {
+       std::cout << "max_intersect= " << max_intersect << '\n';
+       std::cout << "rel_error= " << rel_error << '\n';
+       std::cout << "intersection_data_new= " <<
+         intersection_data_new[i][j] << '\n';
+       std::cout << "intersection_data_old= " <<
+         intersection_data_old[k][jj] << '\n';
+       std::cout << "intersection_data_new[i].size()= " <<
+         intersection_data_new[i].size() << '\n';
+       std::cout << "intersection_data_old[k].size()= " <<
+         intersection_data_old[k].size() << '\n';
+       for (int iblob=0;iblob<blobdata.size();iblob++) {
+        std::cout << "blobdata[iblob]= " << blobdata[iblob] << '\n';
+       }
+       for (int iblob=0;iblob<blobdata_old.size();iblob++) {
+        std::cout << "blobdata_old[iblob]= " << blobdata_old[iblob] << '\n';
+       }
        amrex::Error("rel_error invalid");
+      }
      } else
       amrex::Error("max_intersect invalid");
     } else 

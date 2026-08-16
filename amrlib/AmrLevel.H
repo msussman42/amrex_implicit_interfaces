@@ -225,6 +225,9 @@ public:
    // perimeter of contact line between im, im1, im2
   Vector< Vector<Real> > blob_triple_perim;
   int im;  // 1<=im<=num_materials
+
+  friend std::ostream& operator << (std::ostream& os,
+    const blobclass& local_blobclass);
 }; //end class blobclass
 
 

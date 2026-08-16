@@ -394,6 +394,19 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
 
 } //end subroutine repair_blobclass::restart
 
+std::ostream& operator << (std::ostream& os,
+    const blobclass& local_blobclass) {
+
+   os << "blob_volume=" << local_blobclass.blob_volume << '\n';
+   os << "blob_mass=" << local_blobclass.blob_mass << '\n';
+   os << "blob_mass_target=" << local_blobclass.blob_mass_target << '\n';
+   os << "blob_mass_previous=" << local_blobclass.blob_mass_previous << '\n';
+   os << "blob_inflow_outflow=" << local_blobclass.blob_inflow_outflow << '\n';
+   os << "im (1..num_materials)=" << local_blobclass.im << '\n';
+   return os;
+}
+
+
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
 // use std::ios::in for restarting  (std::ofstream::in ok too?)
