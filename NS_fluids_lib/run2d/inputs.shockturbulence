@@ -83,11 +83,11 @@ mac.mac_abs_tol    = 1.0e-11
 # 0.0025 is time step when cfl=0.1 and min dx/u used (80 points)
 # for cfl=3, 6 * 8.56E-5 = 0.0005
 # This is same as cfl=0.02  and min dx/u used (at t=0).
-ns.shock_timestep=1 1
-ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.shock_timestep=2 2
+ns.cfl            = 0.8      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
-ns.init_shrink    = 0.1      # scale back initial timestep
-ns.change_max=1.01      # scale back initial timestep
+ns.init_shrink    = 0.1      # scale back initial timestep until unp1 known
+ns.change_max=1.01
 ns.visc_coef      = 0.0    # coef of viscosity
 ns.gravity        = 0.0  # must be nonzero, otherwise not used.
 ns.tension        = 0.0 

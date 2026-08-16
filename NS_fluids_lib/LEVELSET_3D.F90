@@ -11813,8 +11813,10 @@ stop
       endif
 
       do im=1,num_materials
-       if (fort_denconst(im).le.zero) then
-        print *,"denconst invalid"
+       if (fort_denconst(im).gt.zero) then
+        !do nothing
+       else
+        print *,"fort_denconst invalid ",im,fort_denconst(im)
         stop
        endif
       enddo
@@ -14177,7 +14179,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid"
+        print *,"fort_denconst invalid: ",im,fort_denconst(im)
         stop
        endif
 
@@ -14591,6 +14593,8 @@ stop
              ! do nothing
             else
              print *,"expecting denlocal=fort_denconst(im)"
+             print *,"denlocal=",denlocal
+             print *,"fort_denconst=",im,fort_denconst(im)
              stop
             endif
            else if (constant_density_all_time(im).eq.0) then
@@ -16614,7 +16618,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid: ",im,fort_denconst(im)
+        print *,"fort_denconst invalid: ",im,fort_denconst(im)
         stop
        endif
 
@@ -17353,7 +17357,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid: ",im,fort_denconst(im)
+        print *,"fort_denconst invalid: ",im,fort_denconst(im)
         stop
        endif
 
@@ -18061,7 +18065,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid: ",im,fort_denconst(im)
+        print *,"fort_denconst invalid: ",im,fort_denconst(im)
         stop
        endif
       enddo
@@ -20286,7 +20290,7 @@ stop
             if (fort_denconst(im).gt.zero) then
              !do nothing
             else
-             print *,"expecting fort_denconst>0 ",fort_denconst(im)
+             print *,"expecting fort_denconst>0 ",im,fort_denconst(im)
              stop
             endif
            else

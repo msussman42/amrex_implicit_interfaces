@@ -486,7 +486,59 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
  localMF[idx_MF]=maskfiner(ngrow,tag,clearbdry);
  localMF_grow[idx_MF]=ngrow;
 }  // end subroutine maskfiner_localMF
+ 
 
+void NavierStokes::level_get_max_density(Vector<Real>& max_density) {
+
+ int finest_level=parent->finestLevel();
+
+ if ((level>=0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid level_get_max_density");
+
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ for (int im=0;im<num_materials;im++) {
+  int scomp=STATECOMP_STATES+im*num_state_material+ENUM_DENVAR;
+   //AMReX_MultiFab.H
+   //Real norminf (int comp = 0, int nghost = 0, bool local = false,
+   //              bool ignore_covered=false)
+  Real local_den_max=S_new.norminf(scomp);
+  if (local_den_max>0.0) {
+   //do nothing
+  } else
+   amrex::Error("local_den_max invalid");
+
+  max_density[im]=std::max(local_den_max,max_density[im]);
+ } // end for (int im=0;im<num_materials;im++)
+
+} // end subroutine level_get_max_density
+
+
+void NavierStokes::get_max_density_ALL(Vector<Real>& max_density) {
+
+ if (level!=0)
+  amrex::Error("level invalid get_max_density_ALL");
+
+ max_density.resize(num_materials);
+ for (int im=0;im<num_materials;im++) {
+  max_density[im]=0.0;
+ }
+ int finest_level=parent->finestLevel();
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_get_max_density(max_density);
+ }
+ for (int im=0;im<num_materials;im++) {
+  if (max_density[im]>0.0) {
+   //do nothing
+  } else
+   amrex::Error("max_density invalid");
+ }
+
+} // end subroutine get_max_density_ALL
+ 
 //called from:
 //NavierStokes::writeTECPLOT_File
 //NavierStokes::init_gradu_tensor_and_material_visc_ALL
@@ -497,6 +549,15 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
 
  std::string local_caller_string="getStateVISC_ALL";
  local_caller_string=caller_string+local_caller_string;
+
+ Vector<Real> max_density;
+ get_max_density_ALL(max_density);
+ for (int im=0;im<num_materials;im++) {
+  if (max_density[im]>0.0) {
+   //do nothing
+  } else
+   amrex::Error("max_density invalid");
+ }
 
  if (divu_outer_sweeps+1==num_divu_outer_sweeps) {
   //do nothing
@@ -528,7 +589,7 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateVISC(local_caller_string);
+  ns_level.getStateVISC(local_caller_string,max_density);
   int scomp=0;
   int ncomp=ns_level.localMF[CELL_VISC_MATERIAL_MF]->nComp();
   int ncomp_LF=ns_level.localMF[CELL_VISC_MATERIAL_LF_MF]->nComp();
@@ -554,11 +615,20 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
  if (level!=0)
   amrex::Error("level invalid getStateCONDUCTIVITY_ALL");
 
+ Vector<Real> max_density;
+ get_max_density_ALL(max_density);
+ for (int im=0;im<num_materials;im++) {
+  if (max_density[im]>0.0) {
+   //do nothing
+  } else
+   amrex::Error("max_density invalid");
+ }
+
  int finest_level=parent->finestLevel();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateCONDUCTIVITY();
+  ns_level.getStateCONDUCTIVITY(max_density);
   int scomp=0;
 
   int ncomp=ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
@@ -10269,7 +10339,8 @@ void NavierStokes::scale_variables(int scale_flag) {
 // the viscous and viscoelastic forces should both be multiplied by
 // visc_coef.  
 // "getStateVISC" is called by "getStateVISC_ALL"
-void NavierStokes::getStateVISC(const std::string& caller_string) {
+void NavierStokes::getStateVISC(const std::string& caller_string,
+		Vector<Real> max_density) {
 
  std::string local_caller_string="getStateVISC";
  local_caller_string=caller_string+local_caller_string;
@@ -10623,7 +10694,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
     dxmax=std::max(dxmax,dx[dir]);
    }
 
-   Real lax_visc=lax_friedrichs[im]*denconst[im]*dxmax*dxmax/
+   Real lax_visc=lax_friedrichs[im]*max_density[im]*dxmax*dxmax/
 	   (2.0*AMREX_SPACEDIM);
    lax_visc/=dt_slab;
 
@@ -10634,8 +10705,8 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "level,im,lax_visc (momentum) " << level << ' ' <<
-      im << ' ' << lax_visc << '\n';
+     std::cout << "level,im,max_den,lax_visc (momentum) " << level << ' ' <<
+      im << ' ' << max_density[im] << ' ' << lax_visc << '\n';
     }
    }
 
@@ -10663,7 +10734,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
 //CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
 //CELL_CONDUCTIVITY_MATERIAL_LF_MF is deleted in ::Geometry_cleanup()
-void NavierStokes::getStateCONDUCTIVITY() {
+void NavierStokes::getStateCONDUCTIVITY(Vector<Real> max_density) {
 
  std::string local_caller_string="getStateCONDUCTIVITY";
 
@@ -10772,7 +10843,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
     dxmax=std::max(dxmax,dx[dir]);
    }
 
-   Real lax_visc=lax_friedrichs_energy[im]*denconst[im]*dxmax*dxmax/
+   Real lax_visc=lax_friedrichs_energy[im]*max_density[im]*dxmax*dxmax/
 	   (2.0*AMREX_SPACEDIM);
    lax_visc/=dt_slab;
    lax_visc*=std::max(stiffCP[im],stiffCV[im]);
@@ -10784,8 +10855,8 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "level,im,lax_visc (thermal) " << level << ' ' <<
-      im << ' ' << lax_visc << '\n';
+     std::cout << "level,im,max_den,lax_visc (thermal) " << level << ' ' <<
+      im << ' ' << max_density[im] << ' ' << lax_visc << '\n';
     }
    }
 

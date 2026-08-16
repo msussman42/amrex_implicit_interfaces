@@ -566,10 +566,14 @@ protected:
     void avgDownError_ALL();
     void avgDownError();
 
-    void getStateVISC(const std::string& caller_string);
+    void level_get_max_density(Vector<Real>& max_density); 
+    void get_max_density_ALL(Vector<Real>& max_density); 
+
+    void getStateVISC(const std::string& caller_string,
+		    Vector<Real> max_density);
     void getStateVISC_ALL(const std::string& caller_string);
 
-    void getStateCONDUCTIVITY();
+    void getStateCONDUCTIVITY(Vector<Real> max_density);
     void getStateCONDUCTIVITY_ALL();
 
     void delete_localMF(int idx_MF,int ncomp); 

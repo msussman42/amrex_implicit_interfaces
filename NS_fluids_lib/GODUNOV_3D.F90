@@ -2713,7 +2713,7 @@ stop
       else if (EILE_flag.eq.-1) then ! Weymouth and Yue
        weymouth_cfl=one/(two*SDIM)
       else
-       print *,"EILE_flag invalid"
+       print *,"EILE_flag invalid ",EILE_flag
        stop
       endif
 
@@ -2744,7 +2744,7 @@ stop
        if (mu.ge.zero) then
         ! do nothing
        else
-        print *,"viscconst invalid"
+        print *,"viscconst invalid ",im,mu
         stop
        endif
 
@@ -4183,6 +4183,7 @@ stop
            print *,"density_of_TZ=",density_of_TZ
            print *,"rho_base=",rho_base
            print *,"fort_tempconst(im_parm)=",fort_tempconst(im_parm)
+           print *,"fort_denconst(im_parm)=",fort_denconst(im_parm)
            stop
           endif
 
@@ -14667,6 +14668,7 @@ stop
         !do nothing
        else
         print *,"density_floor invalid: ",im,density_floor(im);
+        print *,"fort_denconst: ",im,fort_denconst(im);
         stop
        endif
        if ((density_ceiling(im).gt.zero).and. &
@@ -14674,6 +14676,7 @@ stop
         !do nothing
        else
         print *,"density_ceiling invalid: ",im,density_ceiling(im)
+        print *,"fort_denconst: ",im,fort_denconst(im);
         stop
        endif
 
@@ -15094,7 +15097,7 @@ stop
            else
             print *,"dencore(im) invalid"
             print *,"im,icrse,jcrse,kcrse,den ",im,icrse,jcrse,kcrse,dencore(im)
-            print *,"fort_denconst(im) ",fort_denconst(im)
+            print *,"fort_denconst(im) ",im,fort_denconst(im)
             print *,"dencomp_data=",dencomp_data
             print *,"normdir=",normdir
             print *,"level=",level
