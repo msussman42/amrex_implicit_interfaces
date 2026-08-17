@@ -6463,26 +6463,52 @@ NavierStokes::level_sync_old_new_colors(
       dup_flag=idup+1;
      }
     }
+
+    int already_counted=0;
+
     if (dup_flag==0) {
+
+     already_counted=1;
+
+     if (tid>0) {
+      //do nothing
+     } else
+      amrex::Error("expecting dup_flag>0 if tid==0");
+
      local_label[0][i_index].resize(base_size+1);
      local_label[0][i_index][base_size]=j_index;
      local_intersect[0][i_index].resize(base_size+1);
      local_intersect[0][i_index][base_size]=
         local_intersect[tid][i_index][i_trial];
      dup_flag=base_size+1;
-    }
-    if (dup_flag>0) {
+    } else if ((dup_flag>0)&&(dup_flag<=base_size)) {
+     if (tid==0) {
+      already_counted=1;
+     } else if ((tid>0)&&(tid<thread_class::nthreads)) {
+      //do nothing
+     } else
+      amrex::Error("tid invalid");
+    } else
+     amrex::Error("dup_flag invalid");
+
+    if ((dup_flag>0)&&(dup_flag<=base_size+1)) {
      //do nothing
     } else
      amrex::Error("dup_flag invalid");
 
-    if (tid==0) {
+    if (already_counted==1) {
      //do nothing
-    } else if ((tid>=1)&&(tid<thread_class::nthreads)) {
+    } else if (already_counted==0) {
+
+     if ((tid>0)&&(tid<thread_class::nthreads)) {
+      //do nothing
+     } else
+      amrex::Error("expecting already_counted==1 if tid==0");
+
      local_intersect[0][i_index][dup_flag-1]+=
        local_intersect[tid][i_index][i_trial];
     } else
-     amrex::Error("tid invalid");
+     amrex::Error("already_counted invalid");
 
    } //i_trial=0,...,size_i-1
   } //tid
