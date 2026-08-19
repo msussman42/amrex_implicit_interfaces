@@ -10698,6 +10698,11 @@ void NavierStokes::getStateVISC(const std::string& caller_string,
 	   (2.0*AMREX_SPACEDIM);
    lax_visc/=dt_slab;
 
+   if (visc_coef>0.0) {
+    lax_visc/=visc_coef;
+   } else
+    amrex::Error("expecting visc_coe>0.0 if lax_friedrichs>0.0");
+
    if (lax_visc>0.0) {
     //do nothing
    } else
@@ -10705,8 +10710,10 @@ void NavierStokes::getStateVISC(const std::string& caller_string,
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "level,im,max_den,lax_visc (momentum) " << level << ' ' <<
-      im << ' ' << max_density[im] << ' ' << lax_visc << '\n';
+     std::cout << "level,im,max_den,visc_coef,lax_visc (momentum) " << 
+      level << ' ' <<
+      im << ' ' << max_density[im] << ' ' << visc_coef << ' ' <<
+      lax_visc << '\n';
     }
    }
 
@@ -10848,6 +10855,11 @@ void NavierStokes::getStateCONDUCTIVITY(Vector<Real> max_density) {
    lax_visc/=dt_slab;
    lax_visc*=std::max(stiffCP[im],stiffCV[im]);
 
+   if (heatvisc_coef>0.0) {
+    lax_visc/=heatvisc_coef;
+   } else
+    amrex::Error("expecting heatvisc_coe>0.0 if lax_friedrichs_energy>0.0");
+
    if (lax_visc>0.0) {
     //do nothing
    } else
@@ -10855,8 +10867,10 @@ void NavierStokes::getStateCONDUCTIVITY(Vector<Real> max_density) {
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "level,im,max_den,lax_visc (thermal) " << level << ' ' <<
-      im << ' ' << max_density[im] << ' ' << lax_visc << '\n';
+     std::cout << "level,im,max_den,heatvisc_coef,lax_visc (thermal) " << 
+      level << ' ' <<
+      im << ' ' << max_density[im] << ' ' << heatvisc_coef <<
+      ' ' << lax_visc << '\n';
     }
    }
 
