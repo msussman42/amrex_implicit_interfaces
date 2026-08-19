@@ -772,7 +772,6 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //the Sato model.
 Vector<int> NavierStokes::sato_model_spec_id; 
 Real NavierStokes::sato_cslope=0.0;
-int NavierStokes::sato_rank_diagnostics=0;
 
 // 0 - distribute to the destination material 
 //     V=mdot/den_src
@@ -973,8 +972,8 @@ int  NavierStokes::initial_viscosity_cg_cycles=5;
 int  NavierStokes::initial_thermal_cg_cycles=5;
 int  NavierStokes::debug_dot_product=0;
 
-int NavierStokes::smooth_type = 2; // 0=GSRB 1=weighted Jacobi 2=ILU
-int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=weighted Jacobi 2=ILU
+int NavierStokes::smooth_type = 1; // 0=GSRB 1=weighted Jacobi 2=ILU
+int NavierStokes::bottom_smooth_type = 1; // 0=GSRB 1=weighted Jacobi 2=ILU
 int NavierStokes::global_presmooth = 2;
 int NavierStokes::global_postsmooth = 2;
 int NavierStokes::use_mg_precond_in_mglib=1;
@@ -2524,9 +2523,6 @@ NavierStokes::read_params ()
     pp.queryAdd("output_drop_distribution",output_drop_distribution);
     pp.queryAdd("show_timings",show_timings);
     pp.queryAdd("show_mem",show_mem);
-    pp.queryAdd("sato_rank_diagnostics",sato_rank_diagnostics);
-    if ((sato_rank_diagnostics<0)||(sato_rank_diagnostics>1))
-      amrex::Error("ns.sato_rank_diagnostics must be 0 or 1");
 
     pp.queryAdd("slice_dir",slice_dir);
     xslice.resize(AMREX_SPACEDIM);
@@ -2542,8 +2538,6 @@ NavierStokes::read_params ()
      std::cout << "check_nan " << check_nan << '\n';
      std::cout << "NavierStokes.verbose " << verbose << '\n';
      std::cout << "NavierStokes.fab_verbose " << fab_verbose << '\n';
-     std::cout << "NavierStokes.sato_rank_diagnostics " <<
-      sato_rank_diagnostics << '\n';
      std::cout << "slice_dir " << slice_dir << '\n';
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i=" << i << '\n';
@@ -16715,24 +16709,6 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
  } else
   amrex::Error("expecting level==finest_level sato_model_QDOT_MDOT_SPECIES");
 
- // Site activity is global physical state.  Reconcile every process-local
- // Fortran module copy before get_delta_ml_init reads it.  MAX preserves an
- // activation marker if any rank still reports the site active; a site is
- // globally deactivated only when every rank reports state zero.
- if (probtype==710) {
-  int number_sato_sites=0;
-  fort_sato_site_state_size(&number_sato_sites);
-  if ((number_sato_sites<1)||(number_sato_sites>3000))
-   amrex::Error("invalid number_sato_sites before Sato source construction");
-  Vector<int> global_sato_site_state(number_sato_sites,0);
-  fort_sato_site_state_get(&number_sato_sites,
-    global_sato_site_state.dataPtr());
-  ParallelDescriptor::ReduceIntMax(global_sato_site_state.dataPtr(),
-    number_sato_sites);
-  fort_sato_site_state_set_global(&number_sato_sites,
-    global_sato_site_state.dataPtr());
- }
-
  std::string local_caller_string="sato_model_QDOT_MDOT_SPECIES";
 
  int nstate=STATE_NCOMP;
@@ -16857,220 +16833,10 @@ NavierStokes::sato_model_QDOT_MDOT_SPECIES() {
 } // omp
  ns_reconcile_d_num(LOOP_QDOTMDOT,"sato_qdot_mdot");
 
- sato_source_diagnostics("after_sato_source");
-
  delete den_mf;
  delete LSMF;
 
 } //end subroutine sato_model_QDOT_MDOT_SPECIES()
-
-// Opt-in, globally reduced diagnostics used to verify that Sato source
-// construction is independent of the MPI box/rank decomposition.  The
-// reductions operate on valid cells only.  The diagnostic never modifies a
-// source field or a site state.
-void NavierStokes::sato_source_diagnostics(const std::string& stage) {
-
- if (sato_rank_diagnostics==0)
-  return;
- if (sato_rank_diagnostics!=1)
-  amrex::Error("sato_rank_diagnostics invalid");
-
- int finest_level=parent->finestLevel();
- NavierStokes& fine_level=getLevel(finest_level);
- const Real* dx=fine_level.geom.CellSize();
- const Box& domain=fine_level.geom.Domain();
-
- auto report_field = [&](const std::string& field_name,
-                         const MultiFab& mf,int comp,Real scale) {
-  if ((comp<0)||(comp>=mf.nComp()))
-   amrex::Error("component invalid in sato_source_diagnostics");
-  if (!(scale>0.0))
-   amrex::Error("scale invalid in sato_source_diagnostics");
-
-  Real field_sum=mf.sum(comp)*scale;
-  Real field_l1=mf.norm1(comp,0,false)*scale;
-  Real raw_min=mf.min(comp,0,false);
-  Real raw_max=mf.max(comp,0,false);
-  Real field_min=raw_min*scale;
-  Real field_max=raw_max*scale;
-
-  // MultiFab::minIndex/maxIndex choose an arbitrary tied cell after their
-  // value reduction.  For a constant field that choice depends on the box
-  // and rank decomposition.  Encode every valid-cell index in global
-  // lexicographic order, then globally select the smallest key whose value
-  // equals the already-reduced extremum.
-  Vector<Long> index_stride(AMREX_SPACEDIM,1);
-  Long number_domain_cells=1;
-  for (int dir=AMREX_SPACEDIM-1;dir>=0;dir--) {
-   if (domain.length(dir)<1)
-    amrex::Error("empty domain in sato_source_diagnostics");
-   index_stride[dir]=number_domain_cells;
-   number_domain_cells*=static_cast<Long>(domain.length(dir));
-  }
-  if (number_domain_cells<1)
-   amrex::Error("domain size overflow in sato_source_diagnostics");
-
-  Long min_key=number_domain_cells;
-  Long max_key=number_domain_cells;
-  for (MFIter mfi(mf,false);mfi.isValid();++mfi) {
-   const Box& valid_box=mfi.validbox();
-   const FArrayBox& fab=mf[mfi];
-   for (BoxIterator bit(valid_box);bit.ok();++bit) {
-    const IntVect& iv=bit();
-    Long key=0;
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     key+=(static_cast<Long>(iv[dir]-domain.smallEnd(dir)))*
-       index_stride[dir];
-    }
-    Real value=fab(iv,comp);
-    if ((value==raw_min)&&(key<min_key)) min_key=key;
-    if ((value==raw_max)&&(key<max_key)) max_key=key;
-   }
-  }
-  ParallelDescriptor::ReduceLongMin(min_key);
-  ParallelDescriptor::ReduceLongMin(max_key);
-  if ((min_key<0)||(min_key>=number_domain_cells)||
-      (max_key<0)||(max_key>=number_domain_cells))
-   amrex::Error("extremum index unavailable in sato_source_diagnostics");
-
-  auto key_to_index = [&](Long key) {
-   IntVect iv=IntVect::TheZeroVector();
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    Long offset=key/index_stride[dir];
-    key-=offset*index_stride[dir];
-    iv[dir]=domain.smallEnd(dir)+static_cast<int>(offset);
-   }
-   return iv;
-  };
-  IntVect min_index=key_to_index(min_key);
-  IntVect max_index=key_to_index(max_key);
-
-  if (ParallelDescriptor::IOProcessor()) {
-   std::ostringstream message;
-   message << std::setprecision(17)
-    << "SATO_DIAG stage=" << stage
-    << " step=" << parent->levelSteps(0)
-    << " time=" << cur_time_slab
-    << " level=" << finest_level
-    << " field=" << field_name
-    << " sum=" << field_sum
-    << " l1=" << field_l1
-    << " min=" << field_min
-    << " max=" << field_max
-    << " min_index=" << min_index
-    << " min_x=(";
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    if (dir>0) message << ',';
-    message << fine_level.geom.ProbLo(dir)+
-      (min_index[dir]-domain.smallEnd(dir)+0.5)*dx[dir];
-   }
-   message << ") max_index=" << max_index << " max_x=(";
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    if (dir>0) message << ',';
-    message << fine_level.geom.ProbLo(dir)+
-      (max_index[dir]-domain.smallEnd(dir)+0.5)*dx[dir];
-   }
-   message << ')';
-   std::cout << message.str() << '\n';
-  }
- };
-
- if ((fine_level.localMF[MDOT_MF]==NULL)||
-     (fine_level.localMF[QDOT_MF]==NULL))
-  amrex::Error("Sato source fields unavailable for diagnostics");
- report_field("MDOT",*fine_level.localMF[MDOT_MF],0,1.0);
- report_field("QDOT",*fine_level.localMF[QDOT_MF],0,1.0);
-
- MultiFab& S_new=fine_level.get_new_data(State_Type,project_slab_step+1);
- for (int im=0;im<num_materials;im++) {
-  int ispec=sato_model_spec_id[im];
-  if ((ispec>0)&&(ispec<=num_species_var)) {
-   int spec_comp=STATECOMP_STATES+im*num_state_material+
-     ENUM_SPECIESVAR+ispec-1;
-   std::ostringstream field_name;
-   field_name << "MICROLAYER_THICKNESS_MAT_" << im+1;
-   report_field(field_name.str(),S_new,spec_comp,
-     dx[AMREX_SPACEDIM-1]);
-  }
- }
-
- if (probtype==710) {
-  int number_sato_sites=0;
-  fort_sato_site_state_size(&number_sato_sites);
-  if ((number_sato_sites<1)||(number_sato_sites>3000))
-   amrex::Error("number_sato_sites invalid in Sato diagnostics");
-  Vector<int> site_min(number_sato_sites,0);
-  Vector<int> site_max(number_sato_sites,0);
-  fort_sato_site_state_get(&number_sato_sites,site_min.dataPtr());
-  site_max=site_min;
-  ParallelDescriptor::ReduceIntMin(site_min.dataPtr(),number_sato_sites);
-  ParallelDescriptor::ReduceIntMax(site_max.dataPtr(),number_sato_sites);
-  int rank_consistent=1;
-  for (int isite=0;isite<number_sato_sites;isite++) {
-   if (site_min[isite]!=site_max[isite])
-    rank_consistent=0;
-  }
-  if (ParallelDescriptor::IOProcessor()) {
-   std::ostringstream message;
-   message << "SATO_DIAG stage=" << stage
-    << " step=" << parent->levelSteps(0)
-    << " field=SITE_STATE rank_consistent=" << rank_consistent
-    << " min=[";
-   for (int isite=0;isite<number_sato_sites;isite++) {
-    if (isite>0) message << ',';
-    message << site_min[isite];
-   }
-   message << "] max=[";
-   for (int isite=0;isite<number_sato_sites;isite++) {
-    if (isite>0) message << ',';
-    message << site_max[isite];
-   }
-   message << ']';
-   std::cout << message.str() << '\n';
-  }
- }
-}
-
-// Return and print a per-level signature of the pressure RHS.  Calling this
-// immediately before and after project_right_hand_side exposes the exact
-// null-space correction while preserving the normal solver path.
-Vector<Real> NavierStokes::sato_projection_rhs_diagnostics(
-  const std::string& stage,int index_MF) {
-
- Vector<Real> rhs_sum;
- if (sato_rank_diagnostics==0)
-  return rhs_sum;
- if (level!=0)
-  amrex::Error("level must be 0 in sato_projection_rhs_diagnostics");
-
- int finest_level=parent->finestLevel();
- rhs_sum.resize(finest_level+1,0.0);
- for (int ilev=0;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-  if (ns_level.localMF[index_MF]==NULL)
-   amrex::Error("pressure RHS unavailable for Sato diagnostics");
-  MultiFab& rhs=*ns_level.localMF[index_MF];
-  if (rhs.nComp()<1)
-   amrex::Error("pressure RHS has no components");
-  rhs_sum[ilev]=rhs.sum(0);
-  Real rhs_l1=rhs.norm1(0,0,false);
-  Real rhs_min=rhs.min(0,0,false);
-  Real rhs_max=rhs.max(0,0,false);
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << std::setprecision(17)
-    << "SATO_DIAG stage=" << stage
-    << " step=" << parent->levelSteps(0)
-    << " time=" << cur_time_slab
-    << " level=" << ilev
-    << " field=PRESSURE_RHS"
-    << " sum=" << rhs_sum[ilev]
-    << " l1=" << rhs_l1
-    << " min=" << rhs_min
-    << " max=" << rhs_max << '\n';
-  }
- }
- return rhs_sum;
-}
 
 void
 NavierStokes::phase_change_redistributeALL() {

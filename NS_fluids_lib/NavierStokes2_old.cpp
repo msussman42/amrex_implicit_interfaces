@@ -2667,14 +2667,6 @@ void NavierStokes::make_MAC_velocity_consistent() {
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
    // scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(Umac_new,*tempmac,0,0,1,0);
-
-  // A face on a box boundary is valid in both adjacent face-centered FABs.
-  // Kernels such as fort_cell_to_mac update those copies independently.
-  // Establish one AMReX owner value here, before UMAC is used to assemble
-  // the projection RHS.  Synchronizing only after the projection is too late:
-  // the two different face values have already produced different cell RHSs.
-  Umac_new.OverrideSync(geom.periodicity());
-  
   delete tempmac;
  } // dir=0..sdim-1
 

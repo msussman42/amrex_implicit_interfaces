@@ -672,9 +672,6 @@ protected:
     void mass_redistributeALL_second_part();
 
     void sato_model_QDOT_MDOT_SPECIES();
-    void sato_source_diagnostics(const std::string& stage);
-    Vector<Real> sato_projection_rhs_diagnostics(
-      const std::string& stage,int index_MF);
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
       int im_source,int im_dest,int indexEXP,
@@ -1928,9 +1925,6 @@ protected:
      // "im_vapor" must be wholly contained on the finest AMR level.
     static Vector<int> sato_model_spec_id; 
     static Real sato_cslope; //default 0.0
-     // 0: off (production default); 1: globally reduced source/site/RHS
-     // diagnostics around the pressure projection.
-    static int sato_rank_diagnostics;
 
      // 0 - distribute to the destination material 
      //     V=u_src dot n + mdot/rho_src

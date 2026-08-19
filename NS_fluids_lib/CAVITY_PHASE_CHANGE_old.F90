@@ -41,500 +41,8 @@ real(amrex_real),allocatable :: &
 integer,allocatable  :: active_flag(:),active_flag2(:),active_flag3(:)
 integer,allocatable  :: flagrecord(:)
 
-! Nucleation used to update active_flag directly while walking the local
-! MultiFabs.  Consequently each MPI rank had a different view of which sites
-! were active.  The synchronization protocol below splits nucleation into a
-! read-only discovery pass and a globally agreed application pass.
-integer, parameter :: SATO_SYNC_IDLE=0
-integer, parameter :: SATO_SYNC_DISCOVER=1
-integer, parameter :: SATO_SYNC_APPLY=2
-integer :: sato_sync_mode=SATO_SYNC_IDLE
-integer :: sato_candidate_flag(max_sitesnum)=0
-integer :: sato_candidate_flag2(max_sitesnum)=0
-integer :: sato_candidate_flag3(max_sitesnum)=0
-integer :: sato_anchor_claim(max_sitesnum)=0
-integer :: sato_anchor_claim2(max_sitesnum)=0
-integer :: sato_anchor_claim3(max_sitesnum)=0
-integer :: sato_apply_flag(max_sitesnum)=0
-integer :: sato_apply_flag2(max_sitesnum)=0
-integer :: sato_apply_flag3(max_sitesnum)=0
-
 
 contains
-
-integer function sato_sync_site_count()
-use probcommon_module, only : axis_dir
-implicit none
-
- if ((axis_dir.eq.8).or.(axis_dir.eq.9)) then
-  sato_sync_site_count=sitesnum
- else if (axis_dir.eq.12) then
-  sato_sync_site_count=sitesnum+sitesnum2+sitesnum3
- else
-  sato_sync_site_count=0
- endif
-
-end function sato_sync_site_count
-
-
-subroutine fort_sato_site_sync_begin(n_sites_out) &
- bind(c,name='fort_sato_site_sync_begin')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(out) :: n_sites_out
-
- if ((.not.allocated(active_flag)).or. &
-     (.not.allocated(active_flag2)).or. &
-     (.not.allocated(active_flag3))) then
-  print *,"Sato site synchronization called before initialization"
-  stop
- endif
-
- sato_candidate_flag=0
- sato_candidate_flag2=0
- sato_candidate_flag3=0
- sato_anchor_claim=0
- sato_anchor_claim2=0
- sato_anchor_claim3=0
- sato_apply_flag=0
- sato_apply_flag2=0
- sato_apply_flag3=0
- sato_sync_mode=SATO_SYNC_DISCOVER
- n_sites_out=int(sato_sync_site_count(),kind=c_int)
-
-end subroutine fort_sato_site_sync_begin
-
-
-subroutine fort_sato_site_sync_get_candidates(n_sites_in,candidate_out) &
- bind(c,name='fort_sato_site_sync_get_candidates')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in
-integer(c_int), intent(out) :: candidate_out(*)
-integer :: ii,offset,expected_sites
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato candidate size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_DISCOVER) then
-  print *,"Sato candidates requested outside discovery pass"
-  stop
- endif
-
- offset=0
- do ii=1,sitesnum
-  candidate_out(offset+ii)=int(sato_candidate_flag(ii),kind=c_int)
- enddo
- offset=offset+sitesnum
- if (expected_sites.gt.sitesnum) then
-  do ii=1,sitesnum2
-   candidate_out(offset+ii)=int(sato_candidate_flag2(ii),kind=c_int)
-  enddo
-  offset=offset+sitesnum2
-  do ii=1,sitesnum3
-   candidate_out(offset+ii)=int(sato_candidate_flag3(ii),kind=c_int)
-  enddo
- endif
-
-end subroutine fort_sato_site_sync_get_candidates
-
-
-subroutine fort_sato_site_sync_get_anchor_claims(n_sites_in,claim_out) &
- bind(c,name='fort_sato_site_sync_get_anchor_claims')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in
-integer(c_int), intent(out) :: claim_out(*)
-integer :: ii,offset,expected_sites
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato anchor-claim size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_DISCOVER) then
-  print *,"Sato anchor claims requested outside discovery pass"
-  stop
- endif
-
- offset=0
- do ii=1,sitesnum
-  claim_out(offset+ii)=int(sato_anchor_claim(ii),kind=c_int)
- enddo
- offset=offset+sitesnum
- if (expected_sites.gt.sitesnum) then
-  do ii=1,sitesnum2
-   claim_out(offset+ii)=int(sato_anchor_claim2(ii),kind=c_int)
-  enddo
-  offset=offset+sitesnum2
-  do ii=1,sitesnum3
-   claim_out(offset+ii)=int(sato_anchor_claim3(ii),kind=c_int)
-  enddo
- endif
-
-end subroutine fort_sato_site_sync_get_anchor_claims
-
-
-subroutine fort_sato_site_sync_check_anchors( &
- n_sites_in,candidate_global,claim_global) &
- bind(c,name='fort_sato_site_sync_check_anchors')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in
-integer(c_int), intent(in) :: candidate_global(*),claim_global(*)
-integer :: ii,expected_sites
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato global anchor size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_DISCOVER) then
-  print *,"Sato anchors checked outside discovery pass"
-  stop
- endif
-
- do ii=1,expected_sites
-  if ((claim_global(ii).ne.0_c_int).and. &
-      (claim_global(ii).ne.1_c_int)) then
-   print *,"Sato site has non-unique anchor ownership",ii,claim_global(ii)
-   stop
-  endif
-  if ((candidate_global(ii).ne.0_c_int).and. &
-      (candidate_global(ii).ne.1_c_int)) then
-   print *,"invalid globally reduced Sato candidate",ii,candidate_global(ii)
-   stop
-  endif
-  if (candidate_global(ii).gt.claim_global(ii)) then
-   print *,"Sato candidate has no unique anchor owner",ii, &
-    candidate_global(ii),claim_global(ii)
-   stop
-  endif
- enddo
-
-end subroutine fort_sato_site_sync_check_anchors
-
-
-subroutine fort_sato_site_sync_set_global( &
- n_sites_in,level_steps,candidate_global) &
- bind(c,name='fort_sato_site_sync_set_global')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in,level_steps
-integer(c_int), intent(in) :: candidate_global(*)
-integer :: ii,offset,expected_sites,activation_marker
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato global candidate size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_DISCOVER) then
-  print *,"Sato global candidates set outside discovery pass"
-  stop
- endif
-
- activation_marker=int(level_steps)+1
- offset=0
- do ii=1,sitesnum
-  if ((candidate_global(offset+ii).ne.0_c_int).and. &
-      (candidate_global(offset+ii).ne.1_c_int)) then
-   print *,"invalid Sato global candidate",candidate_global(offset+ii)
-   stop
-  endif
-  sato_apply_flag(ii)=int(candidate_global(offset+ii))
-  if (sato_apply_flag(ii).eq.1) active_flag(ii)=activation_marker
- enddo
- offset=offset+sitesnum
- if (expected_sites.gt.sitesnum) then
-  do ii=1,sitesnum2
-   if ((candidate_global(offset+ii).ne.0_c_int).and. &
-       (candidate_global(offset+ii).ne.1_c_int)) then
-    print *,"invalid Sato global candidate2",candidate_global(offset+ii)
-    stop
-   endif
-   sato_apply_flag2(ii)=int(candidate_global(offset+ii))
-   if (sato_apply_flag2(ii).eq.1) active_flag2(ii)=activation_marker
-  enddo
-  offset=offset+sitesnum2
-  do ii=1,sitesnum3
-   if ((candidate_global(offset+ii).ne.0_c_int).and. &
-       (candidate_global(offset+ii).ne.1_c_int)) then
-    print *,"invalid Sato global candidate3",candidate_global(offset+ii)
-    stop
-   endif
-   sato_apply_flag3(ii)=int(candidate_global(offset+ii))
-   if (sato_apply_flag3(ii).eq.1) active_flag3(ii)=activation_marker
-  enddo
- endif
- sato_sync_mode=SATO_SYNC_APPLY
-
-end subroutine fort_sato_site_sync_set_global
-
-
-subroutine fort_sato_site_sync_end() bind(c,name='fort_sato_site_sync_end')
-implicit none
-
- if (sato_sync_mode.ne.SATO_SYNC_APPLY) then
-  print *,"Sato site synchronization ended outside application pass"
-  stop
- endif
- sato_sync_mode=SATO_SYNC_IDLE
-
-end subroutine fort_sato_site_sync_end
-
-
-logical function sato_site_enabled(site_group,site_index,level_steps)
-implicit none
-integer, intent(in) :: site_group,site_index,level_steps
-integer :: local_active,local_apply
-
- select case(site_group)
- case(1)
-  local_active=active_flag(site_index)
-  local_apply=sato_apply_flag(site_index)
- case(2)
-  local_active=active_flag2(site_index)
-  local_apply=sato_apply_flag2(site_index)
- case(3)
-  local_active=active_flag3(site_index)
-  local_apply=sato_apply_flag3(site_index)
- case default
-  print *,"invalid Sato site group",site_group
-  stop
- end select
-
- if (sato_sync_mode.eq.SATO_SYNC_APPLY) then
-  sato_site_enabled=(local_apply.eq.1)
- else if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-  sato_site_enabled=(local_active.eq.0)
- else
-  sato_site_enabled=((local_active.eq.0).or. &
-                     (local_active.eq.level_steps+1))
- endif
-
-end function sato_site_enabled
-
-
-subroutine sato_register_site_hit(site_group,site_index,level_steps, &
- activate_subscale,make_seed,subscale_spec_id,subscale_vfrac)
-implicit none
-integer, intent(in) :: site_group,site_index,level_steps,activate_subscale
-integer, intent(inout) :: make_seed
-integer, intent(inout) :: subscale_spec_id
-real(amrex_real), intent(inout) :: subscale_vfrac
-
- if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-  select case(site_group)
-  case(1)
-!$omp atomic write
-   sato_candidate_flag(site_index)=1
-  case(2)
-!$omp atomic write
-   sato_candidate_flag2(site_index)=1
-  case(3)
-!$omp atomic write
-   sato_candidate_flag3(site_index)=1
-  case default
-   print *,"invalid Sato discovery site group",site_group
-   stop
-  end select
- else
-  make_seed=1
-  select case(site_group)
-  case(1)
-   active_flag(site_index)=level_steps+1
-  case(2)
-   active_flag2(site_index)=level_steps+1
-  case(3)
-   active_flag3(site_index)=level_steps+1
-  case default
-   print *,"invalid Sato application site group",site_group
-   stop
-  end select
-  if (activate_subscale.eq.1) then
-   subscale_spec_id=1
-    ! The nucleation routine creates vapor throughout the seed volume, but
-    ! the microlayer is a wall film.  Do not fill every seed cell with the
-    ! old 0.5 sentinel (half a grid cell).  fort_sato_qdot_mdot constructs
-    ! the physical Cslope*distance film on newly vapor-covered wall area.
-   subscale_vfrac=zero
-  else if (activate_subscale.ne.0) then
-   print *,"invalid Sato activate_subscale",activate_subscale
-   stop
-  endif
- endif
-
-end subroutine sato_register_site_hit
-
-
-logical function sato_site_anchor_cell(xcell,dx,xsite)
-implicit none
-real(amrex_real), intent(in) :: xcell(SDIM),dx(SDIM),xsite(SDIM)
-real(amrex_real) :: lower_face,upper_face
-integer :: dir
-
- sato_site_anchor_cell=.true.
- do dir=1,SDIM
-  if (dx(dir).le.0.0d0) then
-   print *,"invalid cell size in sato_site_anchor_cell",dir,dx(dir)
-   stop
-  endif
-  lower_face=xcell(dir)-0.5d0*dx(dir)
-  upper_face=xcell(dir)+0.5d0*dx(dir)
-  ! Lower-inclusive and upper-exclusive makes a site on a box/cell face
-  ! belong to exactly one valid cell, independent of MPI decomposition.
-  if ((xsite(dir).lt.lower_face).or.(xsite(dir).ge.upper_face)) then
-   sato_site_anchor_cell=.false.
-  endif
- enddo
-
-end function sato_site_anchor_cell
-
-
-subroutine sato_register_anchor_claim(site_group,site_index)
-implicit none
-integer, intent(in) :: site_group,site_index
-
- if (sato_sync_mode.ne.SATO_SYNC_DISCOVER) then
-  print *,"Sato anchor claimed outside discovery pass"
-  stop
- endif
- select case(site_group)
- case(1)
-!$omp atomic write
-  sato_anchor_claim(site_index)=1
- case(2)
-!$omp atomic write
-  sato_anchor_claim2(site_index)=1
- case(3)
-!$omp atomic write
-  sato_anchor_claim3(site_index)=1
- case default
-  print *,"invalid Sato anchor site group",site_group
-  stop
- end select
-
-end subroutine sato_register_anchor_claim
-
-
-subroutine fort_sato_site_state_size(n_sites_out) &
- bind(c,name='fort_sato_site_state_size')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(out) :: n_sites_out
-
- if ((.not.allocated(active_flag)).or. &
-     (.not.allocated(active_flag2)).or. &
-     (.not.allocated(active_flag3))) then
-  print *,"Sato site state requested before initialization"
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_IDLE) then
-  print *,"Sato site state requested during nucleation synchronization"
-  stop
- endif
- n_sites_out=int(sato_sync_site_count(),kind=c_int)
-
-end subroutine fort_sato_site_state_size
-
-
-subroutine fort_sato_site_state_get(n_sites_in,state_out) &
- bind(c,name='fort_sato_site_state_get')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in
-integer(c_int), intent(out) :: state_out(*)
-integer :: ii,offset,expected_sites
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato site-state size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_IDLE) then
-  print *,"Sato site state exported during nucleation synchronization"
-  stop
- endif
-
- offset=0
- do ii=1,sitesnum
-  if (active_flag(ii).lt.0) then
-   print *,"invalid Sato site state",ii,active_flag(ii)
-   stop
-  endif
-  state_out(offset+ii)=int(active_flag(ii),kind=c_int)
- enddo
- offset=offset+sitesnum
- if (expected_sites.gt.sitesnum) then
-  do ii=1,sitesnum2
-   if (active_flag2(ii).lt.0) then
-    print *,"invalid Sato site state2",ii,active_flag2(ii)
-    stop
-   endif
-   state_out(offset+ii)=int(active_flag2(ii),kind=c_int)
-  enddo
-  offset=offset+sitesnum2
-  do ii=1,sitesnum3
-   if (active_flag3(ii).lt.0) then
-    print *,"invalid Sato site state3",ii,active_flag3(ii)
-    stop
-   endif
-   state_out(offset+ii)=int(active_flag3(ii),kind=c_int)
-  enddo
- endif
-
-end subroutine fort_sato_site_state_get
-
-
-subroutine fort_sato_site_state_set_global(n_sites_in,state_global) &
- bind(c,name='fort_sato_site_state_set_global')
-use iso_c_binding, only : c_int
-implicit none
-integer(c_int), intent(in) :: n_sites_in
-integer(c_int), intent(in) :: state_global(*)
-integer :: ii,offset,expected_sites
-
- expected_sites=sato_sync_site_count()
- if (int(n_sites_in).ne.expected_sites) then
-  print *,"Sato global site-state size mismatch",n_sites_in,expected_sites
-  stop
- endif
- if (sato_sync_mode.ne.SATO_SYNC_IDLE) then
-  print *,"Sato global state imported during nucleation synchronization"
-  stop
- endif
-
- offset=0
- do ii=1,sitesnum
-  if (state_global(offset+ii).lt.0_c_int) then
-   print *,"invalid global Sato site state",ii,state_global(offset+ii)
-   stop
-  endif
-  active_flag(ii)=int(state_global(offset+ii))
- enddo
- offset=offset+sitesnum
- if (expected_sites.gt.sitesnum) then
-  do ii=1,sitesnum2
-   if (state_global(offset+ii).lt.0_c_int) then
-    print *,"invalid global Sato site state2",ii,state_global(offset+ii)
-    stop
-   endif
-   active_flag2(ii)=int(state_global(offset+ii))
-  enddo
-  offset=offset+sitesnum2
-  do ii=1,sitesnum3
-   if (state_global(offset+ii).lt.0_c_int) then
-    print *,"invalid global Sato site state3",ii,state_global(offset+ii)
-    stop
-   endif
-   active_flag3(ii)=int(state_global(offset+ii))
-  enddo
- endif
-
-end subroutine fort_sato_site_state_set_global
 
 subroutine findmax_dist(flagnum,flaglist,distin,iout)
 implicit none
@@ -624,9 +132,6 @@ tref=xblob4
 tinit=yblob4
 tmax=tref+zblob4
 
- open(1201,file='sites.dat')
- open(1202,file='sites2.dat')
- open(1203,file='sites3.dat')
 print *,"number_of_regions",number_of_source_regions
 
 allocate(sites(3,max_sitesnum)) !x,y,temperature
@@ -662,8 +167,7 @@ do while(t.le.tmax)
    ! do nothing
   else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     !r(2)=zblob
-     r(2)=zero
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -685,8 +189,7 @@ do while(t.le.tmax)
     ! do nothing
    else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     !r(2)=zblob
-     r(2)=zero
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -764,7 +267,6 @@ enddo
 print *,"sitesnum",sitesnum,"sites list:"
 do i=1,sitesnum
  print *, sites(:,i)
- write(1201,*)sites(1,i),sites(2,i),sites(3,i)
 enddo
 
 active_flag=0
@@ -790,8 +292,7 @@ do while(t.le.tmax)
    ! do nothing
   else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     r(2)=zero
-     !r(2)=zblob
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -813,8 +314,7 @@ do while(t.le.tmax)
     ! do nothing
    else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     !r(2)=zblob
-     r(2)=zero
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -885,7 +385,6 @@ enddo
 
 print *,"sitesnum2",sitesnum2,"sites 2 list:"
 do i=1,sitesnum2
- write(1202,*)sites2(1,i),sites2(2,i),sites2(3,i)
  print *, sites2(:,i)
 enddo
 
@@ -912,8 +411,7 @@ do while(t.le.tmax)
    ! do nothing
   else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     !r(2)=zblob
-     r(2)=zero
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -935,8 +433,7 @@ do while(t.le.tmax)
     ! do nothing
    else if (SDIM.eq.2) then
     if (axis_dir.eq.8) then
-     !r(2)=zblob
-     r(2)=zero
+     r(2)=zblob
     else if(axis_dir.ne.12)then
      r(2)=zero
     else
@@ -1008,14 +505,9 @@ enddo
 print *,"sitesnum3",sitesnum3,"sites 3 list:"
 do i=1,sitesnum3
  print *, sites3(:,i)
- write(1203,*)sites3(1,i),sites3(2,i),sites3(3,i)
 enddo
 
 active_flag3=0
-
- close(1201)
- close(1202)
- close(1203) 
 
 
 return
@@ -1046,8 +538,7 @@ integer dir
     xsite_out(dir)=sites(dir,isite)
    enddo
    if (axis_dir.eq.8) then
-    !xsite_out(SDIM)=zblob
-    xsite_out(SDIM)=zero
+    xsite_out(SDIM)=zblob
    else
     print *,"expecting axis_dir=8 ",axis_dir
     stop
@@ -1127,7 +618,9 @@ real(amrex_real)       :: tempdist
 
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
-     if(sato_site_enabled(1,ii,nucleate_in%level_steps)) then
+     if(tempt.ge.sites(3,ii).and. &
+       ((active_flag(ii).eq.0).or. &
+        (active_flag(ii).eq.nucleate_in%level_steps+1))) then
 !      print *,"tempt satisfied"
 
       if (ls_sol.lt.zero) then
@@ -1139,20 +632,12 @@ real(amrex_real)       :: tempdist
         call l2norm(tempvec1,tempvec2, tempdist) 
 
         if(tempdist.le.radblob3)then
-         if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-          if (sato_site_anchor_cell(tempvec1,nucleate_in%dx,tempvec2)) then
-           call sato_register_anchor_claim(1,ii)
-           if (tempt.ge.sites(3,ii)) then
-            call sato_register_site_hit(1,ii,nucleate_in%level_steps,1, &
-             make_seed,subscale_spec_id,subscale_vfrac)
-           endif
-          endif
-         else if (tempt.ge.sites(3,ii)) then
-          print *,"make seed","temp","ls_sol","site"
-          print *,"make seed",tempt,ls_sol,sites(1:2,ii),tempvec1(SDIM)
-          call sato_register_site_hit(1,ii,nucleate_in%level_steps,1, &
-           make_seed,subscale_spec_id,subscale_vfrac)
-         endif
+         print *,"make seed","temp","ls_sol","site"
+         print *,"make seed",tempt,ls_sol,sites(1:2,ii),tempvec1(SDIM)
+         make_seed=1
+         active_flag(ii)=nucleate_in%level_steps+1
+         subscale_spec_id=1
+         subscale_vfrac = 0.5d0
         elseif(tempdist.gt.radblob3)then
          ! do nothing
         else
@@ -1193,7 +678,9 @@ real(amrex_real)       :: tempdist
   tempvec1(SDIM)=xsten(0,SDIM)
   do ii=1,sitesnum
 !  print *,"sitesnum=", ii
-   if(sato_site_enabled(1,ii,nucleate_in%level_steps)) then
+   if(tempt.ge.sites(3,ii).and. &
+     ((active_flag(ii).eq.0).or. &
+      (active_flag(ii).eq.nucleate_in%level_steps+1))) then
 !   print *,"tempt satisfied"
 !   print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
     if (ls_sol.lt.zero) then
@@ -1212,20 +699,10 @@ real(amrex_real)       :: tempdist
 !          print *,"pointin",tempvec1
 !          print *,"pointlist",tempvec2          
       if(tempdist.le.radblob3)then
-       if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-        if (sato_site_anchor_cell(tempvec1,nucleate_in%dx,tempvec2)) then
-         call sato_register_anchor_claim(1,ii)
-         if (tempt.ge.sites(3,ii)) then
-          call sato_register_site_hit(1,ii,nucleate_in%level_steps,0, &
-           make_seed,subscale_spec_id,subscale_vfrac)
-         endif
-        endif
-       else if (tempt.ge.sites(3,ii)) then
-        print *,"make seed ","temp ","ls_sol ","site "
-        print *,"make seed",tempt,ls_sol,sites(:,ii)
-        call sato_register_site_hit(1,ii,nucleate_in%level_steps,0, &
-         make_seed,subscale_spec_id,subscale_vfrac)
-       endif
+       print *,"make seed ","temp ","ls_sol ","site "
+       print *,"make seed",tempt,ls_sol,sites(:,ii)
+       make_seed=1
+       active_flag(ii)=nucleate_in%level_steps+1
       elseif(tempdist.gt.radblob3)then
        ! do nothing
       else
@@ -1245,7 +722,9 @@ real(amrex_real)       :: tempdist
   if(1.eq.1)then
    do ii=1,sitesnum2
 !   print *,"sitesnum=", ii
-    if(sato_site_enabled(2,ii,nucleate_in%level_steps)) then
+    if(tempt.ge.sites2(3,ii).and. &
+      ((active_flag2(ii).eq.0).or. &
+       (active_flag2(ii).eq.nucleate_in%level_steps+1))) then
 !    print *,"tempt satisfied"
      if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
@@ -1258,20 +737,10 @@ real(amrex_real)       :: tempdist
        endif
        call l2norm(tempvec1,tempvec2, tempdist)                               
        if(tempdist.le.radblob3)then
-        if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-         if (sato_site_anchor_cell(tempvec1,nucleate_in%dx,tempvec2)) then
-          call sato_register_anchor_claim(2,ii)
-          if (tempt.ge.sites2(3,ii)) then
-           call sato_register_site_hit(2,ii,nucleate_in%level_steps,0, &
-            make_seed,subscale_spec_id,subscale_vfrac)
-          endif
-         endif
-        else if (tempt.ge.sites2(3,ii)) then
-         print *,"make seed","temp","ls_sol","site"
-         print *,"make seed",tempt,ls_sol,sites2(:,ii)
-         call sato_register_site_hit(2,ii,nucleate_in%level_steps,0, &
-          make_seed,subscale_spec_id,subscale_vfrac)
-        endif
+        print *,"make seed","temp","ls_sol","site"
+        print *,"make seed",tempt,ls_sol,sites2(:,ii)
+        make_seed=1
+        active_flag2(ii)=nucleate_in%level_steps+1
        elseif(tempdist.gt.radblob3)then
         ! do nothing
        else
@@ -1289,7 +758,9 @@ real(amrex_real)       :: tempdist
    enddo ! do ii=1,sitesnum2
 
    do ii=1,sitesnum3
-    if(sato_site_enabled(3,ii,nucleate_in%level_steps)) then
+    if(tempt.ge.sites3(3,ii).and. &
+      ((active_flag3(ii).eq.0).or. &
+       (active_flag3(ii).eq.nucleate_in%level_steps+1))) then
      if (ls_sol.lt.zero) then
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
        tempvec2(1)=sites3(1,ii)
@@ -1303,20 +774,10 @@ real(amrex_real)       :: tempdist
        endif
        call l2norm(tempvec1,tempvec2, tempdist)                               
        if(tempdist.le.radblob3)then
-        if (sato_sync_mode.eq.SATO_SYNC_DISCOVER) then
-         if (sato_site_anchor_cell(tempvec1,nucleate_in%dx,tempvec2)) then
-          call sato_register_anchor_claim(3,ii)
-          if (tempt.ge.sites3(3,ii)) then
-           call sato_register_site_hit(3,ii,nucleate_in%level_steps,0, &
-            make_seed,subscale_spec_id,subscale_vfrac)
-          endif
-         endif
-        else if (tempt.ge.sites3(3,ii)) then
-         print *,"make seed","temp","ls_sol","site"
-         print *,"make seed",tempt,ls_sol,sites3(:,ii)
-         call sato_register_site_hit(3,ii,nucleate_in%level_steps,0, &
-          make_seed,subscale_spec_id,subscale_vfrac)
-        endif
+        print *,"make seed","temp","ls_sol","site"
+        print *,"make seed",tempt,ls_sol,sites3(:,ii)
+        make_seed=1
+        active_flag3(ii)=nucleate_in%level_steps+1
        elseif(tempdist.gt.radblob3)then
         ! do nothing
        else

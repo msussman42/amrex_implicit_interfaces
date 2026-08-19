@@ -2505,9 +2505,7 @@ void NavierStokes::pressure_gradient_code_segment(
 #endif
 
   // MDOT term included
- sato_source_diagnostics("before_pressure_projection");
  multiphase_project(SOLVETYPE_PRES);
- sato_source_diagnostics("after_pressure_projection");
 
  if ((step_through_data==1)&&(1==0)) {
   int basestep_debug=nStep();
@@ -2978,56 +2976,12 @@ void NavierStokes::nucleation_code_segment(
  }
 
   // CREATE SEEDS, NUCLEATION.
-  // CREATE SEEDS, NUCLEATION.
-  // Sato (probtype 710) requires a two-pass protocol.  The first pass only
-  // discovers locally eligible sites.  One vector reduction makes the site
-  // decision identical on every rank, and the second pass applies it.
- if (probtype==710) {
-  int number_sato_sites=0;
-  fort_sato_site_sync_begin(&number_sato_sites);
-  if ((number_sato_sites<1)||(number_sato_sites>3000))
-   amrex::Error("invalid number_sato_sites");
-
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   int nucleation_flag=1;
-   color_count=1; // filler
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.level_phase_change_rate(blobdata,color_count,
-     nucleation_flag);
-  }
-
-  Vector<int> global_sato_candidates(number_sato_sites,0);
-  Vector<int> global_sato_anchor_claims(number_sato_sites,0);
-  fort_sato_site_sync_get_candidates(&number_sato_sites,
-    global_sato_candidates.dataPtr());
-  fort_sato_site_sync_get_anchor_claims(&number_sato_sites,
-    global_sato_anchor_claims.dataPtr());
-  ParallelDescriptor::ReduceIntMax(global_sato_candidates.dataPtr(),
-    number_sato_sites);
-  ParallelDescriptor::ReduceIntSum(global_sato_anchor_claims.dataPtr(),
-    number_sato_sites);
-  fort_sato_site_sync_check_anchors(&number_sato_sites,
-    global_sato_candidates.dataPtr(),global_sato_anchor_claims.dataPtr());
-  int level_steps=parent->levelSteps(0);
-  fort_sato_site_sync_set_global(&number_sato_sites,&level_steps,
-    global_sato_candidates.dataPtr());
-
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   int nucleation_flag=1;
-   color_count=1; // filler
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.level_phase_change_rate(blobdata,color_count,
-     nucleation_flag);
-  }
-  fort_sato_site_sync_end();
- } else {
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   int nucleation_flag=1;
-   color_count=1; // filler
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.level_phase_change_rate(blobdata,color_count,
-     nucleation_flag);
-  }
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  int nucleation_flag=1;
+  color_count=1; // filler
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_rate(blobdata,color_count,
+    nucleation_flag);
  }
 
  delta_mass.resize(thread_class::nthreads);
@@ -11508,37 +11462,9 @@ void NavierStokes::multiphase_project(int project_option) {
       // 2. U dot v = U0 dot v + c(v dot v) = 0
       // 3. c=-(U0 dot v)/(v dot v)
       // 4. U=U0-[(U0 dot v)/(v dot v)] v
-     Vector<Real> sato_rhs_before;
-     if ((sato_rank_diagnostics==1)&&
-         (project_option==SOLVETYPE_PRES)) {
-       sato_rhs_before=sato_projection_rhs_diagnostics(
-        "before_pressure_rhs_nullspace",MAC_RHS_CRSE_MF);
-       }
-  
     change_flag=0;
      // change_flag set to 1 if MAC_RHS_CRSE_MF is modified.
     project_right_hand_side(MAC_RHS_CRSE_MF,project_option,change_flag);
-
-    if ((sato_rank_diagnostics==1)&&
-        (project_option==SOLVETYPE_PRES)) {
-     Vector<Real> sato_rhs_after=sato_projection_rhs_diagnostics(
-       "after_pressure_rhs_nullspace",MAC_RHS_CRSE_MF);
-     if (sato_rhs_before.size()!=sato_rhs_after.size())
-      amrex::Error("Sato pressure RHS diagnostic size mismatch");
-     if (ParallelDescriptor::IOProcessor()) {
-      for (int ilev=0;ilev<sato_rhs_after.size();ilev++) {
-       std::cout << std::setprecision(17)
-        << "SATO_DIAG stage=pressure_rhs_nullspace_correction"
-        << " step=" << parent->levelSteps(0)
-        << " time=" << cur_time_slab
-        << " level=" << ilev
-        << " field=PRESSURE_RHS"
-        << " sum_delta=" <<
-          sato_rhs_after[ilev]-sato_rhs_before[ilev]
-        << " change_flag=" << change_flag << '\n';
-      }
-     }
-    }
 
     if (initial_project_cycles<1)
      amrex::Error("must do at least 1 jacobi cycle");

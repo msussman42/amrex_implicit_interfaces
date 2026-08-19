@@ -17,21 +17,6 @@ namespace amrex{
      void fort_setfortscales(Real* pressure_scale,
        Real* velocity_scale);
 
-     void fort_sato_site_sync_begin(int* n_sites_out);
-     void fort_sato_site_sync_get_candidates(
-       int* n_sites_in,int* candidate_out);
-     void fort_sato_site_sync_get_anchor_claims(
-       int* n_sites_in,int* claim_out);
-     void fort_sato_site_sync_check_anchors(
-       int* n_sites_in,int* candidate_global,int* claim_global);
-     void fort_sato_site_sync_set_global(
-       int* n_sites_in,int* level_steps,int* candidate_global);
-     void fort_sato_site_sync_end();
-     void fort_sato_site_state_size(int* n_sites_out);
-     void fort_sato_site_state_get(int* n_sites_in,int* state_out);
-     void fort_sato_site_state_set_global(
-       int* n_sites_in,int* state_global);
-
 
      void fort_overridelsbc(int* homflag);
      void fort_overridepbc(int* homflag,int* project_option);

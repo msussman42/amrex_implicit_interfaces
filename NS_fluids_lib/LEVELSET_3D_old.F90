@@ -5866,7 +5866,7 @@ stop
       active_site_found=.false.
       dist_closest=999999.d0
       do ii=1,sitesnum
-       if (active_flag(ii).gt.0) then
+       if (active_flag(ii).eq.1) then
         active_site_found=.true.
 
         cur_dist=zero
@@ -5881,32 +5881,6 @@ stop
        endif
                
       enddo !ii=1,sitesnum
-
-      if (axis_dir.eq.12) then
-       do ii=1,sitesnum2
-        if (active_flag2(ii).gt.0) then
-         active_site_found=.true.
-         cur_dist=zero
-         do dir=1,SDIM-1
-          cur_dist=cur_dist+(xpoint(dir)-sites2(dir,ii))**2
-         enddo
-         cur_dist=sqrt(cur_dist)
-         if (cur_dist.lt.dist_closest) dist_closest=cur_dist
-        endif
-       enddo
-
-       do ii=1,sitesnum3
-        if (active_flag3(ii).gt.0) then
-         active_site_found=.true.
-         cur_dist=zero
-         do dir=1,SDIM-1
-          cur_dist=cur_dist+(xpoint(dir)-sites3(dir,ii))**2
-         enddo
-         cur_dist=sqrt(cur_dist)
-         if (cur_dist.lt.dist_closest) dist_closest=cur_dist
-        endif
-       enddo
-      endif
 
       if(active_site_found) then
        delta_ml=cslope*dist_closest !meters (for example)
@@ -5958,7 +5932,6 @@ stop
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
-      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
 
       IMPLICIT NONE
 
@@ -5998,9 +5971,9 @@ stop
       integer, INTENT(in) :: DIMDEC(areaz)
       integer, INTENT(in) :: DIMDEC(conductstate) !thermal conductivity
 
-      real(amrex_real), target, INTENT(inout) :: snew(DIMV(snew),nstate)
+      real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: sold(DIMV(sold),nstate)
+      real(amrex_real), target, INTENT(out) :: sold(DIMV(sold),nstate)
       real(amrex_real), pointer :: sold_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
@@ -6053,9 +6026,8 @@ stop
       real(amrex_real) :: TSAT
       real(amrex_real) :: k_liquid,k_vapor,k_solid,den_liquid,CP_liquid
       real(amrex_real) :: local_qdot,local_mdot
-      real(amrex_real) :: max_mdot
       real(amrex_real) :: delta_ml_temp
-      real(amrex_real) :: area_new,area_old,area_tol
+      real(amrex_real) :: area_new,area_old
       real(amrex_real) :: cell_area
       real(amrex_real) :: delta_ml_init
       integer, parameter :: nhalf=3
@@ -6220,20 +6192,6 @@ stop
 
        area_new=VOF_local(im_vapor)*cell_area
        area_old=VOF_local_old(im_vapor)*cell_area
-       area_tol=max(EPS12,64.0d0*epsilon(one))*cell_area
-       if (ieee_is_finite(area_new).and. &
-           ieee_is_finite(area_old).and. &
-           (area_new.ge.-area_tol).and. &
-           (area_new.le.cell_area+area_tol).and. &
-           (area_old.ge.-area_tol).and. &
-           (area_old.le.cell_area+area_tol)) then
-        area_new=min(cell_area,max(zero,area_new))
-        area_old=min(cell_area,max(zero,area_old))
-       else
-        print *,"Sato wall areas invalid ",area_new,area_old,cell_area
-        print *,"i,j,k,level,tid ",i,j,k,level,tid_current
-        stop
-       endif
 
        call get_primary_material(dx,LS_local,im_primary)
        if ((im_primary.eq.im_liquid).or. &
@@ -6283,18 +6241,13 @@ stop
              solid_temperature=DEN(D_DECL(iside,jside,kside), &
               (im_solid-1)* &
               num_state_material+ENUM_TEMPERATUREVAR+1)
-              ! The microlayer scalar is unitless.  Eq. 20 combines the old
-              ! film with area_old, so both quantities must come from the
-              ! same previous slab state.  Using the current state here
-              ! would also feed a write from one qualifying solid face back
-              ! into a second face in corner cells.
-              spec_comp=STATECOMP_STATES+ &
-               (im_vapor-1)*num_state_material+ &
-               ENUM_SPECIESVAR+spec_id
-              microscale_vfrac=sold(D_DECL(i,j,k),spec_comp)
-              local_volume=vol(D_DECL(i,j,k)) !volume of the cell
-              k_liquid=conductstate(D_DECL(i,j,k),im_liquid)
-              k_vapor=conductstate(D_DECL(i,j,k),im_vapor)
+              !microscale_vfrac is unitless
+             microscale_vfrac=DEN(D_DECL(i,j,k), &
+              (im_vapor-1)* &
+              num_state_material+ENUM_SPECIESVAR+spec_id)
+             local_volume=vol(D_DECL(i,j,k)) !volume of the cell
+             k_liquid=conductstate(D_DECL(i,j,k),im_liquid)
+             k_vapor=conductstate(D_DECL(i,j,k),im_vapor)
              k_solid= &
               conductstate(D_DECL(iside,jside,kside),im_solid)
              TSAT=saturation_temp(iten_boiling)
@@ -6310,94 +6263,12 @@ stop
               stop
              endif
 
-               ! If the old vapor-covered area is zero to roundoff, its
-               ! film term in Eq. 20 is identically zero.  Do not let an
-               ! irrelevant species value in an old liquid-only cell block
-               ! initialization of newly covered wall area.
-              if (area_old.le.area_tol) then
-               microscale_vfrac=zero
-              else if (ieee_is_finite(microscale_vfrac).and. &
-                       (microscale_vfrac.ge.zero).and. &
-                       (microscale_vfrac.le.one)) then
-               !do nothing
-              else
-               print *,"incoming microscale_vfrac invalid ", &
-                 microscale_vfrac
-               print *,"i,j,k,level,tid ",i,j,k,level,tid_current
-               print *,"xpoint ",xpoint
-               print *,"area_new,area_old ",area_new,area_old
-               print *,"VOF_liquid,VOF_vapor ",VOF_liquid,VOF_vapor
-               print *,"S_new microscale_vfrac ", &
-                 snew(D_DECL(i,j,k),spec_comp)
-               print *,"DEN snapshot microscale_vfrac ", &
-                 DEN(D_DECL(i,j,k),(im_vapor-1)* &
-                 num_state_material+ENUM_SPECIESVAR+spec_id)
-               stop
-              endif
+             !check if microscale_vfrac is greater than
+             !delta_ml_min otherwise, its a dry out zone
+             if (microscale_vfrac*dx(SDIM).gt.delta_ml_min) then
 
-               ! For an advancing triple-line cell, first add the initial
-               ! film on the newly vapor-covered wall area (Sato-Niceno
-               ! 2015, Eq. 20).  This must precede both the wet/dry decision
-               ! and the heat-flux calculation.  In particular, area_old=0
-               ! and an old scalar of zero are valid here.
-               ! Eq. 20 applies to every wall cell whose vapor-covered area
-               ! advances, including cells that become fully vapor covered.
-               ! Restricting this update to VOF_liquid>EPS2 leaves those
-               ! cells at the nucleation sentinel (0.5) instead of the
-               ! physical Cslope*distance film thickness.
-              if (area_new.gt.area_old+area_tol) then
-               if (ieee_is_finite(area_new).and. &
-                   ieee_is_finite(area_old).and. &
-                   (area_new.gt.zero).and. &
-                   (area_old.ge.zero)) then
-                !do nothing
-               else
-                print *,"advancing microlayer area invalid ", &
-                  area_new,area_old
-                print *,"i,j,k,level,tid ",i,j,k,level,tid_current
-                stop
-               endif
-
-                !delta_ml_init is the initial microlayer thickness (meters).
-               call get_delta_ml_init(delta_ml_init,xpoint,sato_cslope)
-               if (ieee_is_finite(delta_ml_init).and. &
-                   (delta_ml_init.ge.zero)) then
-                !do nothing
-               else
-                print *,"delta_ml_init invalid ",delta_ml_init
-                print *,"i,j,k,xpoint ",i,j,k,xpoint
-                stop
-               endif
-
-               delta_ml_temp=(area_new-area_old)*delta_ml_init+ &
-                 area_old*microscale_vfrac*dx(SDIM)
-               microscale_vfrac=delta_ml_temp/(area_new*dx(SDIM))
-
-               if (ieee_is_finite(microscale_vfrac).and. &
-                   (microscale_vfrac.ge.zero).and. &
-                   (microscale_vfrac.le.one)) then
-                !do nothing
-               else if (ieee_is_finite(microscale_vfrac).and. &
-                        (microscale_vfrac.gt.one)) then
-                 ! Preserve the existing one-cell-thickness upper limit.
-                microscale_vfrac=one
-               else
-                print *,"reconstructed microscale_vfrac invalid ", &
-                  microscale_vfrac
-                print *,"i,j,k,level,tid ",i,j,k,level,tid_current
-                print *,"area_new,area_old,delta_ml_init ", &
-                  area_new,area_old,delta_ml_init
-                stop
-               endif
-              endif
-
-              ! Classify the reconstructed physical film.  A zero value is
-              ! a valid dry state at the nucleation-site center or after
-              ! complete depletion.
-              if (microscale_vfrac*dx(SDIM).gt.delta_ml_min) then
-
-                !k units=Watts/(meter Kelvin)
-                !qdot units=Watts/Meter
+               !k units=Watts/(meter Kelvin)
+               !qdot units=Watts/Meter
                !height=vfrac * cell_volume/cell_area \approx
                !vfrac * deltaz
                !we will further assume that dx=dy=dz
@@ -6418,36 +6289,72 @@ stop
               local_mdot=local_qdot/LL
               
               !updating the microscale_vfrac
-               ! Limit evaporation before subtraction.  A previously wet
-               ! film retains the Sato dryout residual delta_ml_min.
-              max_mdot=den_liquid* &
-                max(microscale_vfrac*dx(SDIM)-delta_ml_min,zero)/dt
-              if (local_mdot.gt.max_mdot) then
-               local_mdot=max_mdot
-               local_qdot=LL*local_mdot
+              !for the cells that does not have triple line
+              if (VOF_liquid.le.EPS2) then
+
+                !dt mdot/(dx rho) is unitless
+               delta_ml_temp=dt*local_mdot/(dx(SDIM)*den_liquid) 
+               microscale_vfrac=microscale_vfrac-delta_ml_temp
+               
+               !for the cell containing triple line, we need 
+              else if (VOF_liquid.gt.EPS2) then  
+                !liquid vapor interface area from the previous time step too
+               if (area_new.gt.area_old) then
+
+                !delta_ml_init is the initial value of microlayer thickness 
+                !units: meters
+                !To be more precise:
+                !When the bubble interface is advancing then
+                !we need \delta_{0} which is the distance of the current 
+                !cell to the nucleation site.
+                !get_delta_ml_init calls "SUB_NUCLEATION_SITES"
+                !ASHWANI II
+                call get_delta_ml_init(delta_ml_init,xpoint, &
+                 sato_cslope)
+
+                delta_ml_temp=(area_new-area_old)*delta_ml_init 
+                delta_ml_temp=delta_ml_temp + &
+                   area_old*microscale_vfrac*dx(SDIM)
+                delta_ml_temp=delta_ml_temp/(area_new*dx(SDIM))
+                if ((delta_ml_temp.ge.zero).and. &
+                    (delta_ml_temp.le.one)) then
+                 !do nothing
+                else if (delta_ml_temp.gt.one) then
+                 delta_ml_temp=one
+                else
+                 print *,"delta_ml_temp invalid: ",delta_ml_temp
+                 stop
+                endif 
+
+                microscale_vfrac=delta_ml_temp
+                delta_ml_temp=dt*local_mdot/ &
+                  (dx(SDIM)*den_liquid)
+
+                microscale_vfrac=microscale_vfrac-delta_ml_temp
+               else if (area_new.le.area_old) then
+                delta_ml_temp=dt*local_mdot/ &
+                  (dx(SDIM)*den_liquid)
+                microscale_vfrac=microscale_vfrac-delta_ml_temp
+               else
+                print *,"area_new or area_old bust ",area_new,area_old
+                stop
+               endif
+               !for the cells that does not have triple line
+              else 
+               print *,"VOF_liquid bust: ",VOF_liquid
+               stop
               endif
 
-               !dt mdot/(dx rho) is unitless
-              delta_ml_temp=dt*local_mdot/(dx(SDIM)*den_liquid)
-              microscale_vfrac=microscale_vfrac-delta_ml_temp
-
-               ! The conservative cap can leave a tiny negative value only
-               ! through floating-point subtraction.
-              if ((microscale_vfrac.lt.zero).and. &
-                  (abs(microscale_vfrac).le. &
-                   64.0d0*epsilon(one))) then
-               microscale_vfrac=zero
-              endif
-              if (ieee_is_finite(microscale_vfrac).and. &
-                  (microscale_vfrac.ge.zero).and. &
+              if ((microscale_vfrac.ge.zero).and. &
                   (microscale_vfrac.le.one)) then
                !do nothing
+              else if (microscale_vfrac.lt.-delta_ml_min) then
+               microscale_vfrac=microscale_vfrac+delta_ml_temp
+               local_mdot=microscale_vfrac*dx(SDIM)*den_liquid/dt
+               local_qdot=LL*local_mdot
+               microscale_vfrac=zero
               else
-               print *,"post-evap microscale_vfrac invalid ", &
-                 microscale_vfrac
-               print *,"i,j,k,level,tid ",i,j,k,level,tid_current
-               print *,"local_mdot,delta_ml_temp ", &
-                 local_mdot,delta_ml_temp
+               print *,"microscale_vfrac invalid: ",microscale_vfrac
                stop
               endif
 
@@ -6472,9 +6379,9 @@ stop
               qdot(D_DECL(i,j,k))=qdot(D_DECL(i,j,k))+ &
                 dt*local_qdot/(dx(1)*den_liquid*CP_liquid)
              
-              else if ((microscale_vfrac*dx(SDIM).le.delta_ml_min) &
-                        .and. &
-                       (microscale_vfrac.ge.zero)) then
+             else if ((microscale_vfrac*dx(SDIM).le.delta_ml_min) &
+                       .and. &
+                      (microscale_vfrac.gt.zero)) then
               !mdot and qdot are not calculated for dry out zone 
               !do nothing
              else
@@ -6482,8 +6389,10 @@ stop
               stop
              endif 
 
-               !store the updated microscale_vfrac here:
-              snew(D_DECL(i,j,k),spec_comp)=microscale_vfrac
+              !store the updated microscale_vfrac here:
+             spec_comp=STATECOMP_STATES+(im_vapor-1)*num_state_material+ &
+               ENUM_SPECIESVAR+spec_id
+             snew(D_DECL(i,j,k),spec_comp)=microscale_vfrac
 
             else if ((dir_max.ne.dir).or. &
                      (side*nsolid(dir).le.zero)) then
@@ -6522,6 +6431,8 @@ stop
 
       return
       end subroutine fort_sato_qdot_mdot
+
+
 
       subroutine fort_get_lowmach_divu( &
        tid_current, &
