@@ -2688,13 +2688,10 @@ stop
        stop
       endif
 
-      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
-          (EILE_flag.eq.1).or.  & ! EILE
-          (EILE_flag.eq.2).or.  & ! always EI
-          (EILE_flag.eq.3)) then  ! always LE
+      if (EILE_flag.eq.1) then
        ! do nothing
       else 
-       print *,"EILE flag invalid"
+       print *,"expecting EILE flag = 1"
        stop
       endif
 
@@ -2706,16 +2703,7 @@ stop
        stop
       endif
 
-      if ((EILE_flag.eq.1).or. & ! EI-LE
-          (EILE_flag.eq.2).or. & ! always EI
-          (EILE_flag.eq.3)) then ! always LE
-       weymouth_cfl=half  ! we advect half cells.
-      else if (EILE_flag.eq.-1) then ! Weymouth and Yue
-       weymouth_cfl=one/(two*SDIM)
-      else
-       print *,"EILE_flag invalid ",EILE_flag
-       stop
-      endif
+      weymouth_cfl=half  ! we advect half cells.
 
       if ((cfl.gt.zero).and. &
           (cfl.le.0.95d0)) then
@@ -14127,7 +14115,6 @@ stop
        tennew,DIMS(tennew), & 
        refinedennew,DIMS(refinedennew), & 
        LSnew,DIMS(LSnew), &
-       vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
        umac_displace, & ! vel*dt
@@ -14222,7 +14209,6 @@ stop
       integer, INTENT(in) :: DIMDEC(refinedennew)
       integer, INTENT(in) :: DIMDEC(LSnew)
        ! other vars
-      integer, INTENT(in) :: DIMDEC(vof0)
       integer, INTENT(in) :: DIMDEC(mask)
       integer, INTENT(in) :: DIMDEC(masknbr)
       integer, INTENT(in) :: DIMDEC(umac_displace)
@@ -14278,8 +14264,6 @@ stop
               LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
-      real(amrex_real), INTENT(in), target :: vof0(DIMV(vof0),num_materials)
-      real(amrex_real), pointer :: vof0_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
       ! =1 int. =1 fine-fine in domain =0 o.t.
@@ -14434,7 +14418,6 @@ stop
       real(amrex_real) mom_dencore(num_materials)
       real(amrex_real) dencore(num_materials)
       real(amrex_real) newLS(num_materials)
-      real(amrex_real) newvfrac_weymouth(num_materials)
       real(amrex_real) newvfrac_cor(num_materials)
       real(amrex_real) newvfrac(num_materials)
       real(amrex_real) volmat_depart(num_materials)
@@ -14512,7 +14495,6 @@ stop
       velfab_ptr=>velfab
       PLICSLP_ptr=>PLICSLP
 
-      vof0_ptr=>vof0
       mask_ptr=>mask
       masknbr_ptr=>masknbr
       umac_displace_ptr=>umac_displace
@@ -14774,13 +14756,10 @@ stop
        stop
       endif
 
-      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
-          (EILE_flag.eq.1).or.  & ! EILE
-          (EILE_flag.eq.2).or.  & ! always EI
-          (EILE_flag.eq.3)) then  ! always LE
-       ! do nothing
-      else 
-       print *,"EILE flag invalid ",EILE_flag
+      if (EILE_flag.eq.1) then
+       !do nothing
+      else
+       print *,"expecting EILE_flag=1: ",EILE_flag
        stop
       endif
 
@@ -14848,7 +14827,6 @@ stop
       call checkbound_array(fablo,fabhi,refinedennew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
-      call checkbound_array(fablo,fabhi,vof0_ptr,ngrow,-1)
       call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1)
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1)
      
@@ -16284,24 +16262,7 @@ stop
         newvfrac(im)=volmat_target(im)/voltotal_target
         newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
 
-        if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
-         newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
-         if (newvfrac_weymouth(im).gt.one) then
-          newvfrac_weymouth(im)=one
-         endif
-        else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
-         newvfrac_weymouth(im)=one- &
-          (voltotal_depart-volmat_depart_cor(im))/voltotal_target
-         if (newvfrac_weymouth(im).lt.zero) then
-          newvfrac_weymouth(im)=zero
-         endif
-        else
-         print *,"vof0 bust"
-         stop
-        endif
-
         if (newvfrac(im).le.VOFTOL_MATERIAL) then
-         newvfrac_weymouth(im)=newvfrac(im)
          newvfrac_cor(im)=newvfrac(im)
         endif
      
@@ -16325,20 +16286,6 @@ stop
 
        call consistent_materials(newvfrac_cor,newcen)
 
-       if ((EILE_flag.eq.1).or. & ! EILE
-           (EILE_flag.eq.2).or. & ! EI
-           (EILE_flag.eq.3)) then ! LE
-        ! do nothing
-       else if (EILE_flag.eq.-1) then ! weymouth and Yue
-        do im=1,num_materials
-         newvfrac_cor(im)=newvfrac_weymouth(im)
-        enddo
-        call consistent_materials(newvfrac_cor,newcen)
-       else
-        print *,"EILE_flag invalid"
-        stop
-       endif
-   
        ! pressure
        statecomp_data=STATECOMP_PRES+1
 
@@ -17383,7 +17330,6 @@ stop
        PLICSLP,DIMS(PLICSLP), &  ! slope data
        snew,DIMS(snew), &  ! this is the result
        LSnew,DIMS(LSnew), &
-       vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
        umac_displace, & ! vel*dt
@@ -17445,7 +17391,6 @@ stop
       integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(LSnew)
        ! other vars
-      integer, INTENT(in) :: DIMDEC(vof0)
       integer, INTENT(in) :: DIMDEC(mask)
       integer, INTENT(in) :: DIMDEC(masknbr)
       integer, INTENT(in) :: DIMDEC(umac_displace)
@@ -17464,8 +17409,6 @@ stop
               LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
-      real(amrex_real), INTENT(in), target :: vof0(DIMV(vof0),num_materials)
-      real(amrex_real), pointer :: vof0_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
       ! =1 int. =1 fine-fine in domain =0 o.t.
@@ -17534,7 +17477,6 @@ stop
       real(amrex_real) mofdata_grid(recon_ncomp)
       real(amrex_real) snew_hold(ncomp_state)
       real(amrex_real) newLS(num_materials)
-      real(amrex_real) newvfrac_weymouth(num_materials)
       real(amrex_real) newvfrac_cor(num_materials)
       real(amrex_real) newvfrac(num_materials)
       real(amrex_real) volmat_depart(num_materials)
@@ -17578,7 +17520,6 @@ stop
       LS_ptr=>LS
       PLICSLP_ptr=>PLICSLP
 
-      vof0_ptr=>vof0
       mask_ptr=>mask
       masknbr_ptr=>masknbr
       umac_displace_ptr=>umac_displace
@@ -17664,13 +17605,10 @@ stop
        stop
       endif
 
-      if ((EILE_flag.eq.-1).or. & ! Weymouth and Yue
-          (EILE_flag.eq.1).or.  & ! EILE
-          (EILE_flag.eq.2).or.  & ! always EI
-          (EILE_flag.eq.3)) then  ! always LE
+      if (EILE_flag.eq.1) then
        ! do nothing
       else 
-       print *,"EILE flag invalid"
+       print *,"expecting EILE flag=1: ",EILE_flag
        stop
       endif
 
@@ -17726,7 +17664,6 @@ stop
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
-      call checkbound_array(fablo,fabhi,vof0_ptr,ngrow,-1)
       call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1)
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1)
      
@@ -18302,24 +18239,7 @@ stop
         newvfrac(im)=volmat_target(im)/voltotal_target
         newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
 
-        if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
-         newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
-         if (newvfrac_weymouth(im).gt.one) then
-          newvfrac_weymouth(im)=one
-         endif
-        else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
-         newvfrac_weymouth(im)=one- &
-          (voltotal_depart-volmat_depart_cor(im))/voltotal_target
-         if (newvfrac_weymouth(im).lt.zero) then
-          newvfrac_weymouth(im)=zero
-         endif
-        else
-         print *,"vof0 bust"
-         stop
-        endif
-
         if (newvfrac(im).le.VOFTOL_MATERIAL) then
-         newvfrac_weymouth(im)=newvfrac(im)
          newvfrac_cor(im)=newvfrac(im)
         endif
      
@@ -18343,20 +18263,6 @@ stop
 
        call consistent_materials(newvfrac_cor,newcen)
 
-       if ((EILE_flag.eq.1).or. & ! EILE
-           (EILE_flag.eq.2).or. & ! EI
-           (EILE_flag.eq.3)) then ! LE
-        ! do nothing
-       else if (EILE_flag.eq.-1) then ! weymouth and Yue
-        do im=1,num_materials
-         newvfrac_cor(im)=newvfrac_weymouth(im)
-        enddo
-        call consistent_materials(newvfrac_cor,newcen)
-       else
-        print *,"EILE_flag invalid"
-        stop
-       endif
-   
        ! levelset function
        ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
        do im=1,num_materials

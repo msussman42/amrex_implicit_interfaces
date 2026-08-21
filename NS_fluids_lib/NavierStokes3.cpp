@@ -741,11 +741,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
      (order_direct_split!=1))
   amrex::Error("order_direct_split invalid");
 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.new_localMF(VOF_PREV_TIME_MF,num_materials,2,-1);
- }  // ilev=finest_level ... level
-
   // order_direct_split=basestep mod 2
  map_forward_direct_split.resize(AMREX_SPACEDIM);
  normdir_direct_split.resize(AMREX_SPACEDIM);
@@ -777,6 +772,11 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
   int normdir_here=normdir_direct_split[dir_absolute_direct_split];
 
+  if (EILE_flag==1) {
+   //do nothing
+  } else
+   amrex::Error("expecting EILE_flag==1");
+
   if ((EILE_flag==-1)||  // Weymouth and Yue
       (EILE_flag==2)) {  // always EI
    map_forward_direct_split[normdir_here]=0;
@@ -787,6 +787,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    map_forward_start=1-map_forward_start;
   } else
    amrex::Error("EILE_flag invalid");
+
  } // dir_absolute_direct_split=0..sdim-1
 
  if (verbose>0) {
@@ -796,7 +797,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  }
 
  dir_absolute_direct_split=0;
- int init_vof_prev_time=1;
  int normdir_here=normdir_direct_split[dir_absolute_direct_split];
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
@@ -814,8 +814,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  VOF_Recon_ALL( 
   local_caller_string, //sub_nonlinear_advection
   advect_time_slab,
-  RECON_UPDATE_NULL,
-  init_vof_prev_time);
+  RECON_UPDATE_NULL);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -829,8 +828,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    normdir_here=normdir_direct_split[dir_absolute_direct_split];
    if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
     amrex::Error("normdir_here invalid (in loop)");
-
-   init_vof_prev_time=0;
 
    if (dir_absolute_direct_split==0) {
 
@@ -848,8 +845,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
     VOF_Recon_ALL(
       local_caller_string, //sub_nonlinear_advection
       advect_time_slab,
-      RECON_UPDATE_STATE_CENTROID,
-     init_vof_prev_time);
+      RECON_UPDATE_STATE_CENTROID);
 
    } else
     amrex::Error("dir_absolute_direct_split invalid");
@@ -903,7 +899,6 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.delete_localMF(VOF_PREV_TIME_MF,1);
 
    ns_level.delete_localMF(MAC_VELOCITY_MF,AMREX_SPACEDIM);
    ns_level.delete_localMF(RAW_MAC_VELOCITY_MF,AMREX_SPACEDIM);
@@ -2878,13 +2873,11 @@ void NavierStokes::phase_change_code_segment(
 
  interface_touch_flag=1; //phase_change_code_segment
 
- int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(
     local_caller_string, //phase_change_code_segment
     cur_time_slab,
-    RECON_UPDATE_STATE_ERR_AND_CENTROID,
-    init_vof_prev_time);
+    RECON_UPDATE_STATE_ERR_AND_CENTROID);
 
   // in: phase_change_code_segment
   // 1. prescribe solid temperature, velocity, and geometry where
@@ -2922,13 +2915,11 @@ void NavierStokes::no_mass_transfer_code_segment(
 
  interface_touch_flag=1; //no_mass_transfer_code_segment
 
- int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(
    local_caller_string, //no_mass_transfer_code_segment
    cur_time_slab,
-   RECON_UPDATE_STATE_ERR_AND_CENTROID,
-   init_vof_prev_time);
+   RECON_UPDATE_STATE_ERR_AND_CENTROID);
 
  makeStateDistALL();
 
@@ -2975,12 +2966,10 @@ void NavierStokes::nucleation_code_segment(
  }
 
   // output:SLOPE_RECON_MF
- int init_vof_prev_time=0;
  VOF_Recon_ALL(
    local_caller_string,  //nucleation_code_segment prior to nucleation.
    cur_time_slab,
-   RECON_UPDATE_STATE_CENTROID,
-   init_vof_prev_time);
+   RECON_UPDATE_STATE_CENTROID);
 
  int tessellate=TESSELLATE_ALL;
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
@@ -3046,12 +3035,10 @@ void NavierStokes::nucleation_code_segment(
  interface_touch_flag=1; //nucleation_code_segment
 
   // output:SLOPE_RECON_MF
- init_vof_prev_time=0;
  VOF_Recon_ALL(
    local_caller_string,  //nucleation_code_segment (after the nucleation)
    cur_time_slab,
-   RECON_UPDATE_STATE_CENTROID,
-   init_vof_prev_time);
+   RECON_UPDATE_STATE_CENTROID);
 
  update_mdot=UPDATE_MDOT_PHASE_CHANGE;
 
@@ -3573,13 +3560,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       interface_touch_flag=1; //do_the_advance
 
-      int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
       VOF_Recon_ALL(
        local_caller_string, //do_the_advance
        cur_time_slab,
-       RECON_UPDATE_NULL,
-       init_vof_prev_time);
+       RECON_UPDATE_NULL);
 
     } else
       amrex::Error("slab_step invalid");

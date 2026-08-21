@@ -9003,8 +9003,7 @@ void NavierStokes::delete_array(int idx_localMF) {
 void NavierStokes::VOF_Recon_ALL(
   const std::string& caller_string,
   Real time,
-  int update_flag,
-  int init_vof_prev_time) {
+  int update_flag) {
 
  if (level!=0)
   amrex::Error("level must be 0 ");
@@ -9037,8 +9036,7 @@ void NavierStokes::VOF_Recon_ALL(
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "Start: VOF_Recon_ALL: time= " <<
-     time << " local_update_flag= " << local_update_flag << 
-     " init_vof_prev_time= " << init_vof_prev_time << '\n';
+     time << " local_update_flag= " << local_update_flag << '\n';
    }
   }
 
@@ -9092,16 +9090,6 @@ void NavierStokes::VOF_Recon_ALL(
     ns_level.Copy_localMF(SLOPE_RECON_MF,VOF_RECON_MF,
       ibase_raw,ibase_recon,ngeom_raw,1); //ngrow=1
 
-    if (init_vof_prev_time==1) {
-     int ngrow_check=ns_level.localMF[VOF_PREV_TIME_MF]->nGrow();
-     if (ngrow_check!=2)
-      amrex::Error("vof prev time has invalid ngrow");
-     ns_level.Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,
-	ibase_raw,im,1,ngrow_check);  //ngrow_check=2
-    } else if (init_vof_prev_time==0) {
-     // do nothing
-    } else
-     amrex::Error("init_vof_prev_time invalid");
    } // im=0..num_materials-1
   } // for (int ilev=level;ilev<=finest_level;ilev++)
 
@@ -9111,8 +9099,7 @@ void NavierStokes::VOF_Recon_ALL(
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.VOF_Recon(
     time,
-    local_update_flag,
-    init_vof_prev_time);
+    local_update_flag);
   } // for (int ilev=level;ilev<=finest_level;ilev++) 
 
   if (local_update_flag==RECON_UPDATE_NULL) {
@@ -9214,7 +9201,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
 // update_flag=
 //  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)
 void NavierStokes::VOF_Recon(Real time,
-  int update_flag,int init_vof_prev_time) {
+  int update_flag) {
 
  std::string local_caller_string="VOF_Recon";
  bool use_tiling=ns_tiling;
@@ -9249,9 +9236,8 @@ void NavierStokes::VOF_Recon(Real time,
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "beginning of VOF_Recon: ngrow_distance,level: " << 
     ngrow_distance << ' ' << level << '\n';
-   std::cout << "time,update_flag,init_vof_prev_time " <<
-    time << ' ' << update_flag << ' ' << 
-    init_vof_prev_time << '\n';
+   std::cout << "time,update_flag " <<
+    time << ' ' << update_flag << '\n';
   } 
  }
 

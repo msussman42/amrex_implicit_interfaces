@@ -549,8 +549,9 @@ Real NavierStokes::slipcoeff=0.0;
 Real NavierStokes::vinletgas=0.0;
 Real NavierStokes::twall=0.1;
 
-// 1=EILE (default), -1=Weymouth Yue
-// 2=always EI   3=always LE
+// 1=EILE (default), 
+// 2=always EI (not allowed)  
+// 3=always LE (not allowed)
 int NavierStokes::EILE_flag=1;
 
 int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
@@ -3802,13 +3803,11 @@ NavierStokes::read_params ()
 
     pp.queryAdd("EILE_flag",EILE_flag);
 
-    if ((EILE_flag==1)|| // EILE
-        (EILE_flag==2)|| // EI
-        (EILE_flag==3)|| // LE
-        (EILE_flag==-1)) { // Weymouth and Yue
-     // do nothing
-    } else
-     amrex::Error("EILE_flag invalid");
+    if (EILE_flag==1) {
+     //do nothing
+    } else {
+     amrex::Error("EILE_flag=1 only allowed option");
+    }
 
     num_species_var=0;
 
@@ -16109,13 +16108,11 @@ NavierStokes::level_phase_change_convertALL() {
 
       interface_touch_flag=1; //level_phase_change_convertALL
 
-      int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
       VOF_Recon_ALL(
          local_caller_string, //level_phase_change_convertALL
          cur_time_slab,
-	 RECON_UPDATE_STATE_CENTROID,
-	 init_vof_prev_time);
+	 RECON_UPDATE_STATE_CENTROID);
 
       if (material_extend_velocity_flag>0) {
        for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -20464,9 +20461,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
  debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  resize_maskfiner(ngrow,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,ngrow,local_caller_string);
- debug_ngrow(VOF_PREV_TIME_MF,ngrow,local_caller_string);
- if (localMF[VOF_PREV_TIME_MF]->nComp()!=num_materials)
-  amrex::Error("vof prev time invalid ncomp");
 
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
  int ncomp_state=S_new.nComp();
@@ -20838,8 +20832,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
       // this is the slope data
     FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-    FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
-
     Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
 
        // this is the result
@@ -20937,7 +20929,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
      LSdestfab.dataPtr(),
      ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
       // other vars.
-     vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      masknbrfab.dataPtr(),
      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
@@ -21031,8 +21022,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
       // this is the slope data
     FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-    FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
-
     Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
 
        // this is the result
@@ -21080,7 +21069,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
      LSdestfab.dataPtr(),
      ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
       // other vars.
-     vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      masknbrfab.dataPtr(),
      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
@@ -26326,13 +26314,11 @@ NavierStokes::volWgtSumALL(
   amrex::Error("fast_mode invalid");
 
     // vof,ref cen, order,slope,int
- int init_vof_prev_time=0;
   //output: SLOPE_RECON_MF
  VOF_Recon_ALL(
    local_caller_string, //volWgtSumALL
    cur_time_slab,
-   RECON_UPDATE_NULL,
-   init_vof_prev_time); 
+   RECON_UPDATE_NULL); 
 
   // need to initialize viscosity and density temporary 
   // variables.
@@ -26843,7 +26829,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   }
  } // ilev=finest_level ... level
 
- int init_vof_prev_time=0;
  int error_update_flag=0;
    // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int renormalize_flag=RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE; 
@@ -26866,8 +26851,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  VOF_Recon_ALL(
   local_caller_string, //prepare_post_process
   cur_time_slab,
-  error_update_flag,
-  init_vof_prev_time);
+  error_update_flag);
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 

@@ -856,12 +856,10 @@ protected:
      // update_flag=RECON_UPDATE_STATE_CENTROID
      // update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID
     void VOF_Recon(
-      Real time,int update_flag,
-      int init_vof_prev_time);
+      Real time,int update_flag);
     void VOF_Recon_ALL(
       const std::string& caller_string,
-      Real time,int update_flag,
-      int init_vof_prev_time); //output: SLOPE_RECON_MF
+      Real time,int update_flag); //output: SLOPE_RECON_MF
     void VOF_Recon_resize(int ngrow); //output: SLOPE_RECON_MF
 
     void make_physics_varsALL(int project_option,
@@ -2252,8 +2250,9 @@ protected:
     static Real vinletgas;
     static Real twall;
     static Real walltemp;
-     // 1=EILE (default), -1=Weymouth Yue
-     // 2=always EI   3=always LE
+     // 1=EILE (default),
+     // 2=always EI (not allowed)  
+     // 3=always LE (not allowed)
     static int EILE_flag; 
     static int krylov_subspace_max_num_outer_iter;
     static Real projection_pressure_scale;

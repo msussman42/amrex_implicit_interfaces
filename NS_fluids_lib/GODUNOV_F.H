@@ -831,7 +831,6 @@ extern "C"
      AMREX_ARLIM_P(refinedennewhi), 
      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       // other vars.
-     Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* umac_displace,
@@ -896,7 +895,6 @@ extern "C"
      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       // other vars.
-     Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* umac_displace,
