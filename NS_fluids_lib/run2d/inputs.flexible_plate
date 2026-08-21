@@ -54,6 +54,7 @@ ns.coarsest_level_CISL=0
 amr.n_cell=32 64
 amr.max_level=1
 ns.ngrow_distance=6
+ns.ngrow_elastic=4.0
 
 ns.mof_ordering=2 3 1 #liquid, gas, substrate
 ns.material_extend_velocity=0 0 1 #EULERIAN FSI

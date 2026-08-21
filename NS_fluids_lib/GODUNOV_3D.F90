@@ -22726,6 +22726,13 @@ stop
        stop
       endif
 
+      if (ngrow_elastic.eq.four) then
+       !do nothing
+      else
+       print *,"expecting ngrow_elastic=4.0: ",ngrow_elastic
+       stop
+      endif
+
 !     H_radius=(ngrow_make_distance)*dxmax
       H_radius=(ngrow_elastic)*dxmax
       if (is_FSI_elastic(im_viscoelastic_p1).eq.1) then

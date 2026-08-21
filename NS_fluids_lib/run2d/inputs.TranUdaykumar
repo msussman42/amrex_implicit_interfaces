@@ -57,6 +57,7 @@ ns.material_extend_velocity=0 1 2 #EULERIAN FSI
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1
 ns.ngrow_distance=5
+ns.ngrow_elastic=4.0
 ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # force AMR tagging within these specified boxes.

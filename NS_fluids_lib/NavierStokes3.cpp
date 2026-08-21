@@ -14377,7 +14377,10 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 	 // NavierStokes::CELL_GRID_ELASTIC_FORCE is declared in
 	 //    NavierStokes2.cpp
 	 // CELL_GRID_ELASTIC_FORCE -> fort_elastic_force ->
-	 // tensor_Heaviside
+	 // H_radius=(ngrow_elastic)*dxmax
+	 // hs_smooth(phi,H_radius)
+	 // 0<ngrow_elastic<=ngrow_make_distance
+	 // fort_elastic_force is declared in GODUNOV_3D.F90
          //if elastic_force_mac_grid==1 => umac_new and u_new are updated.
          //if elastic_force_mac_grid==0 => only u_new is updated.
         for (int ilev=finest_level;ilev>=level;ilev--) {

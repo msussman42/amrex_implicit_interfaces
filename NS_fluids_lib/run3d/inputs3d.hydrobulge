@@ -72,6 +72,7 @@ amr.n_cell    = 32 32 128
 #amr.n_cell    = 32 128 #2D
 amr.max_level =  2
 ns.ngrow_distance=5 #ngrow_make_distance=4
+ns.ngrow_elastic=4.0
 
 ns.xblob10=0.0
 ns.yblob9=0.0

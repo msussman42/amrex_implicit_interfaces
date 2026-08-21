@@ -37,6 +37,7 @@ ns.secondary_flotsam_tol=0.1
 # 8 EULERIAN FSI
 #ns.FSI_flag=0 0 1
 ns.ngrow_distance=5
+ns.ngrow_elastic=4.0
 ns.FSI_flag=0 0 8 8 #Eulerian FSI FLEXIBLE
 ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+5 #FLEXIBLE (shear modulus)
 ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #FLEXIBLE

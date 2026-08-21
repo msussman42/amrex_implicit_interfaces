@@ -52,6 +52,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 ns.ngrow_distance=6
+ns.ngrow_elastic=4.0
 amr.n_cell    = 64 64
 amr.max_level = 0 # 2 for high resolution
 # 0- 1 level 1- 2 levels  2- 3 levels
