@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="LSA"
+#SBATCH --job-name="LSA Design of Experiments"
 ##https://rcc.fsu.edu/manage
 ##https://docs.rcc.fsu.edu/hpc/slurm-job-reference/#submitting-jobs
 ##SBATCH --ntasks=28
@@ -15,8 +15,8 @@
 #SBATCH -t 4:00:00
 ##SBATCH -t 48:00:00
 ##SBATCH -t 14-00:00:00
-#SBATCH --output=run.out
-#SBATCH --error=run.err
+#SBATCH --output=run2.out
+#SBATCH --error=run2.err
 #SBATCH --open-mode=append
 ##SBATCH --exclusive
 
@@ -37,5 +37,5 @@ echo "running on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with 
  module load gnu/13
  module load openmpi
 # # module load intel-openmpi
-srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/growthrate/LSA_activate0/amrgrowth inputs.growthrate.LSA
+srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/growthrate/LSA_Design_of_Experiments/amrgrowth inputs.growthrate.LSA.Design_of_Experiments
 
