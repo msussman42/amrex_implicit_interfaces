@@ -18845,7 +18845,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine gravity_wave_speed
 
-
+       !called from fort_estdt in GODUNOV_3D.F90
       subroutine capillary_wave_speed(wavelen,den1,den2,visc1,visc2, &
        tension,wavespeed)
       IMPLICIT NONE

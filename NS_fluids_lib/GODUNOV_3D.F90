@@ -2844,7 +2844,7 @@ stop
            ! =>
            ! sqrt( (N/m) (m^3/kg)(1/m) )=sqrt( (kg/s^2)(m^2/kg) )=m/s
            !
-           ! alternate derivation:
+           ! alternate derivation (but not used):
            ! ( dt tension kappa grad H/rho )dt < dx
            ! dt^2 < rho dx^3/tension
            ! dt < \sqrt(rho/tension)dx^{3/2} \equiv dx/U
