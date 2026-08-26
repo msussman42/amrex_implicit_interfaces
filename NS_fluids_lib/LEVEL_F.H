@@ -30,6 +30,7 @@ namespace amrex{
        int* operation_flag,
        int* sweep_num,
        int* tessellate,
+       int* repair_mass,
        int* distribute_mdot_evenly,
        int* constant_volume_mdot,
        int* distribute_from_target,

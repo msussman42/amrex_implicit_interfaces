@@ -994,6 +994,7 @@ protected:
     );
 
     void resolve_orphans(
+     int update_mdot,
      Vector<blobclass> blobdata_old,
      Vector<blobclass> blobdata,
      Vector< Vector<Real> >& intersection_data,

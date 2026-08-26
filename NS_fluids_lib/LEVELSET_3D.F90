@@ -3875,6 +3875,7 @@ stop
        operation_flag, &
        sweep_num, &
        tessellate, &
+       repair_mass, &
        distribute_mdot_evenly, &
        constant_volume_mdot, &
        distribute_from_target, &
@@ -3963,6 +3964,8 @@ stop
       integer, INTENT(in) :: constant_volume_mdot(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
       integer, INTENT(in) :: constant_density_all_time(num_materials)
+
+      integer, INTENT(in) :: repair_mass(num_materials)
 
       integer :: i,j,k
       integer :: ii,jj,kk
@@ -5619,6 +5622,26 @@ stop
                       mdot_correct=mdot_relax*(blob_mass_target-blob_mass)* &
                        vol/blob_cellvol_count
                       mdot_correct=mdot_correct/(den_mat*dt*dt)
+
+                      if (repair_mass(im).eq.1) then
+                       !do nothing
+                      else if (repair_mass(im).eq.0) then
+                       if (mdot_correct.eq.zero) then
+                        ! do nothing
+                       else if (mdot_correct.ne.zero) then
+                        print *,"expecting mdot_correct==0.0"
+                        print *,"mdot_correct=",mdot_correct
+                        print *,"im= ",im
+                        print *,"repair_mass= ",repair_mass
+                        stop
+                       endif
+                      else
+                       print *,"repair_mass invalid"
+                       print *,"im= ",im
+                       print *,"repair_mass= ",repair_mass
+                       stop
+                      endif
+
                       mdot_pres(D_DECL(i,j,k))=mdot_pres(D_DECL(i,j,k))+ &
                         mdot_correct
                      else

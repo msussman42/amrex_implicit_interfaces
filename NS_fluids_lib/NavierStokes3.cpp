@@ -6605,6 +6605,7 @@ NavierStokes::level_sync_old_new_colors(
 
 void 
 NavierStokes::resolve_orphans(
+ int update_mdot,
  Vector<blobclass> blobdata_old,
  Vector<blobclass> blobdata,
  Vector< Vector<Real> >& intersection_data,
@@ -6647,8 +6648,10 @@ NavierStokes::resolve_orphans(
        jcrit=j;
        mindist=localdist;
       }
-     } else
-      amrex::Error("jcrit invalid");
+     } else {
+      std::cout << "jcrit= " << jcrit << '\n';
+      amrex::Error("jcrit invalid resolve_orphans(1)");
+     }
     } else if (blobdata_old[j].im!=blobdata[i].im) {
      //do nothing
     } else {
@@ -6678,8 +6681,15 @@ NavierStokes::resolve_orphans(
     } else
      amrex::Error("idup invalid");
      
-   } else 
-    amrex::Error("jcrit invalid");
+   } else {
+    std::cout << "jcrit= " << jcrit << '\n';
+    std::cout << "update_mdot= " << update_mdot << '\n';
+    std::cout << "DO_NOT_UPDATE_MDOT= " << DO_NOT_UPDATE_MDOT << '\n';
+    std::cout << "UPDATE_MDOT_SOURCE_TERM= " << UPDATE_MDOT_SOURCE_TERM << '\n';
+    std::cout << "UPDATE_MDOT_PHASE_CHANGE= " << 
+	   UPDATE_MDOT_PHASE_CHANGE << '\n';
+    amrex::Error("jcrit invalid resolve_orphans(2)");
+   }
   } else if (label_intersect[i].size()>0) {
    //do nothing
   } else
@@ -6795,16 +6805,19 @@ NavierStokes::sync_old_new_colors(
      int imp1=im+1;
      if ((ns_is_rigid(im)==1)||
          (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1)||
-         (blobdata[i].blob_inflow_outflow>=1.0)||
-         (repair_mass[im]==0)) {
+         (blobdata[i].blob_inflow_outflow>=1.0)) {
       //do nothing
      } else if ((ns_is_rigid(im)==0)&&
                 (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
-                (blobdata[i].blob_inflow_outflow==0.0)&&
-                (repair_mass[im]==1)) {
+                (blobdata[i].blob_inflow_outflow==0.0)) {
       int old_size=blobdata_old.size();
       blobdata_old.resize(old_size+1);
       blobdata_old[old_size]=blobdata[i];
+
+      if (blobdata_old[old_size].im==blobdata[i].im) {
+       //do nothing
+      } else
+       amrex::Error("blobdata_old[old_size].im==blobdata[i].im failed");
 
       intersection_data_old.resize(old_size+1);
       label_intersect_old.resize(old_size+1);
@@ -6841,11 +6854,11 @@ NavierStokes::sync_old_new_colors(
    amrex::Error("update_mdot invalid");
 
    //resolve blobdata orphans
-  resolve_orphans(blobdata_old,blobdata,
+  resolve_orphans(update_mdot,blobdata_old,blobdata,
      intersection_data_new,label_intersect_new,
      intersection_data_old,label_intersect_old);
    //resolve blobdata_old orphans
-  resolve_orphans(blobdata,blobdata_old,
+  resolve_orphans(update_mdot,blobdata,blobdata_old,
      intersection_data_old,label_intersect_old,
      intersection_data_new,label_intersect_new);
 
@@ -7548,6 +7561,7 @@ NavierStokes::ColorSum(
    &operation_flag,//OP_GATHER_MDOT || OP_SCATTER_MDOT
    &sweep_num,
    &tessellate, //TESSELLATE_ALL,TESSELLATE_ALL_RASTER
+   repair_mass.dataPtr(),
    distribute_mdot_evenly.dataPtr(),
    constant_volume_mdot.dataPtr(),
    distribute_from_target.dataPtr(),
