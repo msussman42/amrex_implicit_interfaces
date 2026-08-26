@@ -932,6 +932,10 @@ protected:
      int zero_diag_flag,
      int ngrow_color);
 
+     //color_variable called from NavierStokes::multiphase_project 
+     //(coarsest_ONES_level) or
+     //color_variable called from NavierStokes::ColorSumALL
+     //(coarsest_level)
     void color_variable(
      int& coarsest_level,
      int idx_color,

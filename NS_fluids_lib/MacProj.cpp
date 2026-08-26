@@ -203,6 +203,14 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   int all_singular_patches=1;
 
+
+  // for each given color, singular_patch_flag=
+  //   0 if color is masked off 
+  //   1 if color is not masked off, no compressible/internal dirichlet 
+  //     regions, and not touching a Dirichlet condition wall.
+  //   2 if color is not masked off, a compressible/internal dirichlet
+  //     region exists or color is touching a Dirichlet condition wall.
+  //coarsest_ONES_level is initialized in NavierStokes::color_variable
   if (level>coarsest_ONES_level) {
    mac_op->laplacian_solvability=0; // nonsingular matrix
    all_singular_patches=0;

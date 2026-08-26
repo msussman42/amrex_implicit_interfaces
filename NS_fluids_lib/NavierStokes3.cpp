@@ -6083,8 +6083,10 @@ void NavierStokes::sync_colors(
 // type_flag should have size num_materials.
 // type_flag[i]=1 if fluid "i" exists. (note, fictitious solid on the
 //  boundaries will show up as existing if ngrow>0)
-//  color_variable is called from NavierStokes::ColorSumALL and
-//  called from NavierStokes::multiphase_project
+//color_variable called from NavierStokes::multiphase_project 
+//(coarsest_ONES_level) or
+//color_variable called from NavierStokes::ColorSumALL
+//(coarsest_level)
 void NavierStokes::color_variable(
  int& coarsest_level,
  int idx_color,
@@ -8741,6 +8743,7 @@ NavierStokes::ColorSumALL(
 
   // color_count=number of colors
   // ngrow_color, fort_extrapfill, pc_interp for COLOR_MF
+  // calling from: NavierStokes::ColorSumALL
   color_variable(
    coarsest_level,
    COLOR_MF,
@@ -12489,6 +12492,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int zero_diag_flag=1;
   TypeALL(TYPE_ONES_MF,type_ONES_flag,zero_diag_flag,ngrow_color);
+    //calling from: NavierStokes::multiphase_project
   color_variable(
    coarsest_ONES_level,
    COLOR_ONES_MF,

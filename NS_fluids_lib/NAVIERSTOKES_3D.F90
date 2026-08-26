@@ -10288,7 +10288,7 @@ END SUBROUTINE SIMP
            else if (singular_patch_flag(local_color).eq.2) then
             ! do nothing
            else
-            print *,"singular_patch_flag invalid"
+            print *,"singular_patch_flag invalid ",singular_patch_flag
             stop
            endif
 
@@ -10314,7 +10314,7 @@ END SUBROUTINE SIMP
                (singular_patch_flag(local_color).eq.2)) then
             ! do nothing
            else
-            print *,"singular_patch_flag invalid"
+            print *,"singular_patch_flag invalid ",singular_patch_flag
             stop
            endif
            if (type_flag(local_type).eq.1) then
@@ -10340,7 +10340,7 @@ END SUBROUTINE SIMP
             if (singular_patch_flag(local_color).eq.2) then
              ! do nothing
             else
-             print *,"singular_patch_flag invalid"
+             print *,"singular_patch_flag invalid ",singular_patch_flag
              stop
             endif
            else if ((plus_flag.eq.0).and.(zero_flag.eq.1)) then
@@ -10390,7 +10390,7 @@ END SUBROUTINE SIMP
                if (singular_patch_flag(local_color).eq.2) then
                 ! do nothing
                else
-                print *,"singular_patch_flag invalid"
+                print *,"singular_patch_flag invalid ",singular_patch_flag
                 stop
                endif
               else
