@@ -5634,6 +5634,9 @@ stop
                         print *,"im= ",im
                         print *,"repair_mass= ",repair_mass
                         stop
+                       else
+                        print *,"mdot_correct corrupt ",mdot_correct
+                        stop
                        endif
                       else
                        print *,"repair_mass invalid"
