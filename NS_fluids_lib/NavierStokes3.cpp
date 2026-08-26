@@ -10201,8 +10201,10 @@ void NavierStokes::sanity_check_face_wt(int project_option) {
 
     min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
 
-   } else
+   } else {
+    std::cout << "mglib_max_ratio= " << mglib_max_ratio << '\n';
     amrex::Error("mglib_max_ratio invalid");
+   }
 
   } else {
    std::cout << "max_face_wt[0][DD_COMP_FACE_WT] " <<

@@ -1127,11 +1127,11 @@ stop
                    (inorm.eq.domhi(dir+1)+1)) then
            ! do nothing
           else
-           print *,"inorm invalid"
+           print *,"inorm invalid ",inorm
            stop
           endif
          else
-          print *,"local_bx invalid"
+          print *,"local_bx invalid ",local_bx
           stop
          endif
 
@@ -1144,7 +1144,7 @@ stop
          else if (local_bx.eq.zero) then
           ! do nothing
          else
-          print *,"local_bx (facewt section) invalid"
+          print *,"local_bx (facewt section) invalid ",local_bx
           stop
          endif
 

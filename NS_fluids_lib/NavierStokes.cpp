@@ -594,7 +594,15 @@ Vector<int> NavierStokes::im_refine_density_map;
 
 Real NavierStokes::real_number_of_cells=0.0; 
 
-Real NavierStokes::mglib_max_ratio=1.0e+5; 
+//BXCOEFNOAREA = min_interior_coeff if not on the
+//edge of the domain and BXCOEFNOAREA previously < min_interior_coeff
+//BXCOEFF_MF=max(BXCOEF_NOAREA_MF,min_interior_coeff) * AREA_MF/dx
+//FACE_WEIGHT_MF = min_interior_coeff if not zero and
+//FACE_WEIGHT_MF previously<min_interior_coeff
+//min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
+//see fort_regularize_bx (MACOPERATOR_3D.F90)
+//
+Real NavierStokes::mglib_max_ratio=1.0/CPP_EPS_10_5; 
 Real NavierStokes::min_interior_coeff=0.0; 
 
 int NavierStokes::idx_umac_material_mf=-1;
@@ -4361,8 +4369,10 @@ NavierStokes::read_params ()
     pp.queryAdd("mglib_max_ratio",mglib_max_ratio);
     if (mglib_max_ratio>1.0) {
      //do nothing
-    } else
+    } else {
+     std::cout << "mglib_max_ratio= " << mglib_max_ratio << '\n';
      amrex::Error("mglib_max_ratio invalid");
+    }
 
     pp.getarr("tension",tension,0,num_interfaces);
 
@@ -5920,6 +5930,7 @@ NavierStokes::read_params ()
 
      std::cout << "mglib_max_ratio=" << 
         mglib_max_ratio << '\n';
+
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i,temperature_source_cen=" << i << ' ' <<
          temperature_source_cen[i] << '\n';

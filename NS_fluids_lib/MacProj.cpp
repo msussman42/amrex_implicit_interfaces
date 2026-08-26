@@ -632,8 +632,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  if ((min_interior_coeff>=0.0)&&
      (mglib_max_ratio>1.0)) {
   //do nothing
- } else
+ } else {
+  std::cout << "min_interior_coeff= " << min_interior_coeff << '\n';
+  std::cout << "mglib_max_ratio= " << mglib_max_ratio << '\n';
   amrex::Error("min_interior_coeff or mglib_max_ratio invalid");
+ }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -785,7 +788,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& alpha = (*localMF[ALPHACOEF_MF])[mfi];
   FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
 
+   //BXCOEFNOAREA = min_interior_coeff if not on the
+   //edge of the domain and BXCOEFNOAREA previously < min_interior_coeff
    //BXCOEFF_MF=max(BXCOEF_NOAREA_MF,min_interior_coeff) * AREA_MF/dx
+   //FACE_WEIGHT_MF = min_interior_coeff if not zero and
+   //FACE_WEIGHT_MF previously<min_interior_coeff
   FArrayBox& bxfab = (*localMF[BXCOEF_MF])[mfi];
   FArrayBox& byfab = (*localMF[BXCOEF_MF+1])[mfi];
   FArrayBox& bzfab = (*localMF[BXCOEF_MF+AMREX_SPACEDIM-1])[mfi];
