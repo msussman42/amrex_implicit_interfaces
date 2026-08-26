@@ -189,14 +189,14 @@
         test_mask=solvemask(D_DECL(i,j,k))
 
         if (offdiagsum.lt.zero) then
-         print *,"offdiagsum invalid"
+         print *,"offdiagsum invalid ",offdiagsum
          stop
         else if (offdiagsum.eq.zero) then
          ! do nothing
         else if (offdiagsum.gt.zero) then
          ! do nothing
         else
-         print *,"offdiagsum bust"
+         print *,"offdiagsum bust ",offdiagsum
          stop
         endif
 
@@ -234,7 +234,7 @@
         if (local_diag.gt.zero) then
          ! do nothing
         else
-         print *,"local_diag invalid"
+         print *,"local_diag invalid ",local_diag
          stop
         endif
         if (test_mask.eq.one) then
@@ -288,14 +288,14 @@
         if (test_mask.eq.one) then
          ! do nothing
         else
-         print *,"test_mask invalid"
+         print *,"test_mask invalid ",test_mask
          stop
         endif
 
         if (local_diag.gt.zero) then ! local_diag=a+offdiagsum
          ! do nothing
         else
-         print *,"local_diag invalid"
+         print *,"local_diag invalid ",local_diag
          stop
         endif
 

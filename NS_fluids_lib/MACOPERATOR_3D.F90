@@ -131,12 +131,12 @@ stop
       real(amrex_real) local_diag_check2
 
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
-       print *,"nsolve invalid24"
+       print *,"nsolve invalid fort_init_mask_sing"
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid nsgenerate"
+       print *,"level invalid fort_init_mask_sing"
        stop
       endif
 
@@ -169,7 +169,7 @@ stop
       call checkbound_array(fablo,fabhi,fwtz_ptr,0,AMREX_SPACEDIM-1)
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small fort_init_mask_sing"
        stop
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -1080,7 +1080,7 @@ stop
        endif
 
        if (bfact.lt.1) then
-        print *,"bfact too small"
+        print *,"bfact too small fort_regularize_bx"
         stop
        endif
        if (nsolve.ne.1) then
