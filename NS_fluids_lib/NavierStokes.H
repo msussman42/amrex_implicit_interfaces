@@ -2291,6 +2291,7 @@ protected:
      //def=2.0 if surface tension
      //def=1000.0 if no surface tension
     static Vector<Real> density_ratio_relaxation_factor; 
+    static Vector<Real> volume_fraction_weight; 
     static Vector<Real> denconst_interface_min; 
 
     static Vector<Real> stiffPINF;

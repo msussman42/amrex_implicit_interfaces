@@ -865,6 +865,7 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface_min;
 Vector<Real> NavierStokes::density_ratio_relaxation_factor;
+Vector<Real> NavierStokes::volume_fraction_weight;
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -4137,6 +4138,7 @@ NavierStokes::read_params ()
 
     denconst_interface_min.resize(num_interfaces);
     density_ratio_relaxation_factor.resize(num_interfaces);
+    volume_fraction_weight.resize(num_materials);
 
     pp.getarr("viscconst",viscconst,0,num_materials);
 
@@ -4473,7 +4475,7 @@ NavierStokes::read_params ()
        denconst_interface_min[iten-1]=
            max_den/density_ratio_relaxation_factor[iten-1];
       } else
-       amrex::Error("expecting density_ratio_relaxation_factor>1").
+       amrex::Error("expecting density_ratio_relaxation_factor>1");
 
      } //im_opp
     } //im
@@ -5834,10 +5836,15 @@ NavierStokes::read_params ()
 
     Vector<int> is_rigid_local(num_materials);
     for (int im=0;im<num_materials;im++) {
+
+     volume_fraction_weight[im]=1.0;
+
      int imp1=im+1;
      is_rigid_local[im]=fort_is_rigid_base(&FSI_flag[im],&imp1);
 
      if (is_rigid_local[im]==1) {
+
+      volume_fraction_weight[im]=1.0e+5;
 
       if (material_extend_velocity[im]==0) {
         //do nothing
@@ -5850,11 +5857,16 @@ NavierStokes::read_params ()
        //is_ice, is_FSI_rigid
       int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
       if (is_rigid_CL_flag==0) {
+
        if (material_extend_velocity[im]==0) {
         //do nothing
        } else
         amrex::Error("expecting material_extend_velocity[im]==0");
+
       } else if (is_rigid_CL_flag==1) {
+
+       volume_fraction_weight[im]=1.0e+5;
+
        if (material_extend_velocity[im]>=1) {
         //do nothing
        } else
@@ -5865,6 +5877,7 @@ NavierStokes::read_params ()
      } else
       amrex::Error("is_rigid_local[im] invalid");
     }
+    pp.queryAdd("volume_fraction_weight",volume_fraction_weight,num_materials);
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
     fort_mof_ordering_override(
@@ -5973,6 +5986,10 @@ NavierStokes::read_params ()
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
 
      for (int i=0;i<num_materials;i++) {
+
+      std::cout << "i= " << i << " volume_fraction_weight= " <<
+        volume_fraction_weight[i] << '\n';
+
       std::cout << "i= " << i << " compressible_dt_factor= " <<
         compressible_dt_factor[i] << '\n';
      }
@@ -19930,6 +19947,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef,
       &local_enable_spectral,
       &ncphys_proxy, // ncphys (NFLUXSEM)
+      volume_fraction_weight.dataPtr(),
       constant_density_all_time.dataPtr(),
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
@@ -20895,6 +20913,7 @@ NavierStokes::split_scalar_advection(int im_extension) {
     fort_vfrac_split(
      &nprocessed[tid_current],
      &tid_current,
+     volume_fraction_weight.dataPtr(),
      sato_model_spec_id.dataPtr(),
      density_floor.dataPtr(),
      density_ceiling.dataPtr(),

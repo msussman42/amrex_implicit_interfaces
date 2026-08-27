@@ -2339,6 +2339,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      &visc_coef,
      &local_enable_spectral,
      &ncphys_proxy,
+     volume_fraction_weight.dataPtr(),
      constant_density_all_time.dataPtr(),
      presbc.dataPtr(),
      velbc.dataPtr(),
@@ -3250,6 +3251,7 @@ void NavierStokes::increment_face_velocity(
        &visc_coef,
        &local_enable_spectral,
        &ncphys_proxy,
+       volume_fraction_weight.dataPtr(),
        constant_density_all_time.dataPtr(),
        velbc.dataPtr(),  // presbc
        velbc.dataPtr(),  
@@ -5038,6 +5040,7 @@ void NavierStokes::apply_pressure_grad(
      &visc_coef,
      &enable_spectral,
      &ncphys_proxy,
+     volume_fraction_weight.dataPtr(),
      constant_density_all_time.dataPtr(),
      presbc.dataPtr(),
      velbc.dataPtr(),
@@ -5739,6 +5742,7 @@ void NavierStokes::make_physics_vars(int project_option,
     &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
+    volume_fraction_weight.dataPtr(), //fort_init_physics_vars
     denconst_interface_min.dataPtr(), //fort_init_physics_vars
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -6501,6 +6505,7 @@ void NavierStokes::process_potential_force_face(
     &visc_coef,
     &local_enable_spectral,
     &ncphys_proxy,
+    volume_fraction_weight.dataPtr(),
     constant_density_all_time.dataPtr(),
     presbc.dataPtr(),
     velbc.dataPtr(),
@@ -7164,6 +7169,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int output_slab,
      &LS_extrap_iter,
      &num_curv, //num_interfaces * CURVCOMP_NCOMP
      constant_density_all_time.dataPtr(),
+     volume_fraction_weight.dataPtr(),
      &primary_flotsam_tol,
      &secondary_flotsam_tol);
 

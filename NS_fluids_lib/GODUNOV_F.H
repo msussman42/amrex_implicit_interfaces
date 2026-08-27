@@ -791,6 +791,7 @@ extern "C"
    void fort_vfrac_split(
      int* nprocessed,
      int* tid,
+     Real* volume_fraction_weight,
      int* sato_model_spec_id,
      Real* density_floor,
      Real* density_ceiling,

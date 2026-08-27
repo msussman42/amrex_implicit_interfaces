@@ -260,6 +260,7 @@ namespace amrex{
        int* LS_extrap_iter,
        int* num_curv,
        int* constant_density_all_time,
+       Real* volume_fraction_weight,
        Real* primary_flotsam_tol,
        Real* secondary_flotsam_tol);
 
@@ -278,6 +279,7 @@ namespace amrex{
         Real* visc_coef,
         int* enable_spectral,
         int* ncphys,
+        Real* volume_fraction_weight,
         int* constant_density_all_time,
         int* presbc,
         int* velbc,
@@ -468,6 +470,7 @@ namespace amrex{
        Real* curv_max,
        int* isweep,
        int* nrefine_vof,
+       Real* volume_fraction_weight,
        Real* denconst_interface_min,
        int* freezing_model,
        int* distribute_from_target,
