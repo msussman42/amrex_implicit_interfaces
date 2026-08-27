@@ -6804,11 +6804,9 @@ NavierStokes::sync_old_new_colors(
      int im=blobdata[i].im-1;
      int imp1=im+1;
      if ((ns_is_rigid(im)==1)||
-         (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1)||
          (blobdata[i].blob_inflow_outflow>=1.0)) {
       //do nothing
      } else if ((ns_is_rigid(im)==0)&&
-                (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
                 (blobdata[i].blob_inflow_outflow==0.0)) {
       int old_size=blobdata_old.size();
       blobdata_old.resize(old_size+1);
@@ -7046,12 +7044,10 @@ NavierStokes::sync_old_new_colors(
   int im=blobdata[i].im-1;
   int imp1=im+1;
   if ((ns_is_rigid(im)==1)||
-      (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1)||
       (blobdata[i].blob_inflow_outflow>=1.0)||
       (repair_mass[im]==0)) {
    blobdata[i].blob_mass_target=blobdata[i].blob_mass;
   } else if ((ns_is_rigid(im)==0)&&
-             (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0)&&
              (blobdata[i].blob_inflow_outflow==0.0)&&
              (repair_mass[im]==1)) {
 
@@ -11385,12 +11381,14 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } else if (project_option==SOLVETYPE_PRES)  { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
+   // FIX ME APPLY MASK IF FSI OUTER SWEEPS >0
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
  } else if (project_option==SOLVETYPE_INITPROJ) { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
    // MDOT_MF might not be zero at t=0 if sources/sinks of mass.
    // (but for now, MDOT_MF should be zero)
+   // FIX ME APPLY MASK IF FSI OUTER SWEEPS >0 (not applicable here)
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
   zero_independent_variable(project_option,nsolve);
  } else if (project_option==SOLVETYPE_HEAT) { 
