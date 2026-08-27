@@ -5739,7 +5739,7 @@ void NavierStokes::make_physics_vars(int project_option,
     &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
-    denconst_interface_min.dataPtr(),
+    denconst_interface_min.dataPtr(), //fort_init_physics_vars
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     &solidheat_flag,

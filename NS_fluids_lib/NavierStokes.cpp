@@ -4468,8 +4468,13 @@ NavierStokes::read_params ()
       get_iten_cpp(im+1,im_opp+1,iten);
       if ((iten<1)||(iten>num_interfaces))
        amrex::Error("iten invalid");
-      denconst_interface_min[iten-1]=
+
+      if (density_ratio_relaxation_factor[iten-1]>1.0) {
+       denconst_interface_min[iten-1]=
            max_den/density_ratio_relaxation_factor[iten-1];
+      } else
+       amrex::Error("expecting density_ratio_relaxation_factor>1").
+
      } //im_opp
     } //im
 
