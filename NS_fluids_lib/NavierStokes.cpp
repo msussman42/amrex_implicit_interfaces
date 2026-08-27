@@ -602,7 +602,7 @@ Real NavierStokes::real_number_of_cells=0.0;
 //min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
 //see fort_regularize_bx (MACOPERATOR_3D.F90)
 //
-Real NavierStokes::mglib_max_ratio=1.0/CPP_EPS_10_5; 
+Real NavierStokes::mglib_max_ratio=1.0/CPP_EPS_13_6; 
 Real NavierStokes::min_interior_coeff=0.0; 
 
 int NavierStokes::idx_umac_material_mf=-1;
