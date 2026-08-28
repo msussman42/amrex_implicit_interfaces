@@ -15071,8 +15071,8 @@ stop
                   stop
                  endif
 
-                  ! is_ice==1 or
-                  ! is_FSI_rigid==1 
+                 !is_ice_or_FSI_rigid_material_project=1 
+                 !if "is_ice" or "is_FSI_rigid" and not elastic.
                  if (is_ice_or_FSI_rigid_material_project(typeface).eq.1) then
                   if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                     ! declared in: GLOBALUTIL.F90

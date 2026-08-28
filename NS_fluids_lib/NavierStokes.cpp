@@ -4664,6 +4664,8 @@ NavierStokes::read_params ()
         } else
          amrex::Error("ireverse invalid");
 
+	 // with the exception of 
+	 // FSI_flag[im_ice-1]==FSI_ICE_EULERIAN_ELASTIC,
 	 // if freezing, we want distribute_from_target (from ice) to
 	 // be 1 since the ice is modeled as a rigid material; need
 	 // to account for expansion in the liquid.
@@ -4931,13 +4933,25 @@ NavierStokes::read_params ()
 	    // source=ice  dest (target)=melt
 	   } else 
             amrex::Error("distribute_from_target should be 0(melting)");
-	  } else if (im_dest==im_ice) {
+	  } else if (im_dest==im_ice) { //freezing
+
+           int imp1=im_ice+1;
            if (local_distribute==1) {
 	    // distribute_from_target=true
 	    // distribute_to_target=false
 	    // source=melt  dest (target)=ice
-	   } else 
+	   } else if ((local_distribute==0)&&
+                      (fort_is_FSI_elastic_base(&FSI_flag[im_ice],&imp1)==1)) {
+	    // distribute_from_target=false
+	    // distribute_to_target=true 
+	    // source=melt  dest (target)=ice
+	   } else {
+  	    std::cout << "im_ice= " << im_ice << '\n';
+  	    std::cout << "FSI_flag= " << FSI_flag << '\n';
+  	    std::cout << "local_distribute= " << local_distribute << '\n';
             amrex::Error("distribute_from_target should be 1(freezing)");
+	   }
+
 	  } else
            amrex::Error("im_ice invalid");
 
@@ -4972,8 +4986,6 @@ NavierStokes::read_params ()
       //do nothing
      } else
       amrex::Error("is_FSI_elastic_matC invalid");
-
-
 
     } // im=0;im<num_materials;im++
 
@@ -6644,6 +6656,11 @@ NavierStokes::read_params ()
     }
      for (int im=1;im<=num_materials;im++) {
 
+       //FSI_ICE_PROBF90
+       //FSI_ICE_STATIC
+       //FSI_ICE_EULERIAN_ELASTIC
+       //FSI_ICE_NODES_INIT
+       //FSI_RIGID_NOTPRESCRIBED
       if (is_ice_or_FSI_rigid_material(&im)==1) {
 
        if (enable_spectral==0) {
@@ -7461,7 +7478,10 @@ int NavierStokes::read_from_CAD() {
 
 }  // end subroutine read_from_CAD
 
-
+//FSI_ICE_PROBF90
+//FSI_ICE_STATIC
+//FSI_ICE_EULERIAN_ELASTIC
+//FSI_ICE_NODES_INIT
 int NavierStokes::is_ice_matC(int im) {
 
  if ((im<0)|(im>=num_materials))
@@ -7521,6 +7541,8 @@ int NavierStokes::is_FSI_elastic_matC(int im) {
  if ((im<0)|(im>=num_materials))
   amrex::Error("im invalid60d (is_FSI_elastic_matC)");
 
+  //FSI_EULERIAN_ELASTIC
+  //FSI_ICE_EULERIAN_ELASTIC
  int imp1=im+1;
  int local_is_FSI_elastic=fort_is_FSI_elastic_base(&FSI_flag[im],&imp1);
 
@@ -27061,9 +27083,16 @@ NavierStokes::post_init_state () {
  } else
   amrex::Error("is_zalesak() invalid");
 
+  // FSI_ICE_PROBF90
+  // FSI_ICE_STATIC
+  // Not --> FSI_ICE_EULERIAN_ELASTIC
+  // FSI_ICE_NODES_INIT
+  // FSI_RIGID_NOTPRESCRIBED
   // unew^{f} = unew^{c->f}
   // in post_init_state 
-  // if project_option==SOLVETYPE_INITPROJ, then the velocity in the ice
+  // if project_option==SOLVETYPE_INITPROJ, and
+  // is_ice_or_FSI_rigid_material_project==1,
+  // then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
  operation_flag=OP_UNEW_CELL_TO_MAC;
  int idx_velcell=-1;
