@@ -3507,6 +3507,10 @@ NavierStokes::read_params ()
 
      int imp1=im+1;
 
+      //FSI_ICE_PROBF90
+      //FSI_ICE_STATIC
+      //FSI_ICE_EULERIAN_ELASTIC
+      //FSI_ICE_NODES_INIT
      if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
       num_FSI_outer_sweeps++;
       im_elastic_map.push_back(im);
@@ -3516,12 +3520,27 @@ NavierStokes::read_params ()
       } else
        amrex::Error("expecting material_extend_velocity>0 if ice");
 
+      //FSI_RIGID_NOTPRESCRIBED
      } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
       num_FSI_outer_sweeps++;
       im_elastic_map.push_back(im);
+
+      if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1) {
+       //do nothing
+      } else
+       amrex::Error("expecting material_extend_velocity>0 if FSI_rigid");
+
+      //FSI_EULERIAN_ELASTIC
+      //FSI_ICE_EULERIAN_ELASTIC
      } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
       num_FSI_outer_sweeps++;
       im_elastic_map.push_back(im);
+
+      if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1) {
+       //do nothing
+      } else
+       amrex::Error("expecting material_extend_velocity>0 if FSI_elastic");
+
      } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
       //do nothing
      } else
@@ -5844,7 +5863,7 @@ NavierStokes::read_params ()
 
      if (is_rigid_local[im]==1) {
 
-      volume_fraction_weight[im]=1.0e+5;
+//    volume_fraction_weight[im]=1.0e+5;
 
       if (material_extend_velocity[im]==0) {
         //do nothing
@@ -5865,7 +5884,7 @@ NavierStokes::read_params ()
 
       } else if (is_rigid_CL_flag==1) {
 
-       volume_fraction_weight[im]=1.0e+5;
+//     volume_fraction_weight[im]=1.0e+5;
 
        if (material_extend_velocity[im]>=1) {
         //do nothing
@@ -5876,8 +5895,16 @@ NavierStokes::read_params ()
 
      } else
       amrex::Error("is_rigid_local[im] invalid");
-    }
+    } // for (int im=0;im<num_materials;im++) 
+      
     pp.queryAdd("volume_fraction_weight",volume_fraction_weight,num_materials);
+
+    for (int im=0;im<num_materials;im++) {
+     if (volume_fraction_weight[im]==1.0) {
+      //do nothing
+     } else
+      amrex::Error("expecting volume_fraction_weight==1");
+    }
 
      //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
     fort_mof_ordering_override(

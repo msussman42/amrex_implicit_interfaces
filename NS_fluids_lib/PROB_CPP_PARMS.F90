@@ -219,17 +219,17 @@ stop
        else if ((local_FSI_flag.eq.FSI_ICE_PROBF90).or. &
                 (local_FSI_flag.eq.FSI_ICE_STATIC).or. &
                 (local_FSI_flag.eq.FSI_ICE_NODES_INIT)) then
-        ! do nothing, tessellating
+        mof_ordering_local(im)=1  ! non-tessellating
    
         ! FSI elastic link w/Kourosh (sci_clsvof.F90)
        else if (local_FSI_flag.eq.FSI_SHOELE_CTML) then
         mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
-        mof_ordering_local(im)=1 ! tessellating
+        mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_ICE_EULERIAN_ELASTIC) then
-        mof_ordering_local(im)=1 ! tessellating
+        mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_EULERIAN_ELASTIC) then
-        mof_ordering_local(im)=1 ! tessellating
+        mof_ordering_local(im)=1 ! non-tessellating
        else
         print *,"local_FSI_flag invalid in fort_mof_ordering_override"
         print *,"im,local_FSI_flag ",im,local_FSI_flag
