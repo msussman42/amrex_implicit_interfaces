@@ -672,15 +672,12 @@ protected:
     void level_init_elasticmask_and_elasticmaskpart();
 
     void phase_change_redistributeALL();
-    void mass_redistributeALL_second_part();
 
     void sato_model_QDOT_MDOT_SPECIES();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
       int im_source,int im_dest,int indexEXP,
       int isweep);
-    void level_mass_redistribute(
-      int im_critical,int isweep);
 
     void clear_blobdata(int i,Vector<blobclass>& blobdata);
     void copy_from_blobdata(int i,int& counter,

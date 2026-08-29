@@ -1059,7 +1059,8 @@ void NavierStokes::combine_state_variable(
 
    if ((combine_flag==FVM_TO_GFM)||
        (combine_flag==GFM_TO_FVM)) {
-    if ((is_phasechange==1)&&(interface_cond_avail==1)) {
+    if ((is_phasechange==1)&&
+        (interface_cond_avail==1)) {
      if (Tsatfab.nComp()==ntsat) {
       //do nothing
      } else {

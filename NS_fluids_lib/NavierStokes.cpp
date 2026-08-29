@@ -4947,7 +4947,10 @@ NavierStokes::read_params ()
 	    // source=melt  dest (target)=ice
 	   } else {
   	    std::cout << "im_ice= " << im_ice << '\n';
-  	    std::cout << "FSI_flag= " << FSI_flag << '\n';
+            for (int im_loc=0;im_loc<num_materials;im_loc++) {
+   	     std::cout << " im_loc= " << im_loc << " FSI_flag= " << 
+  	      FSI_flag[im_loc] << '\n';
+	    }
   	    std::cout << "local_distribute= " << local_distribute << '\n';
             amrex::Error("distribute_from_target should be 1(freezing)");
 	   }
@@ -5140,15 +5143,17 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_CTML() invalid");
 
     if (num_materials_viscoelastic>=1) {
-     //num_divu_outer_sweeps=2;
+     num_divu_outer_sweeps=2;
     } else if (num_materials_viscoelastic==0) {
      //do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
-     //ice, FSI_rigid, FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC)
+     //is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
+     //is_ice (FSI_ICE_PROBF90, FSI_ICE_STATIC, FSI_ICE_EULERIAN_ELASTIC,
+     //FSI_ICE_NODES_INIT), is_FSI_rigid (FSI_RIGID_NOTPRESCRIBED)
     if (num_FSI_outer_sweeps>=2) {
-     //num_divu_outer_sweeps=2;
+     num_divu_outer_sweeps=2;
     } else if (num_FSI_outer_sweeps==1) {
      //do nothing
     } else
@@ -5171,8 +5176,8 @@ NavierStokes::read_params ()
 
 
     if (some_materials_compressible()==1) {
-     //if (num_divu_outer_sweeps<2) 
-     // amrex::Error("num_divu_outer_sweeps must be >1 (compres)");
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("num_divu_outer_sweeps must be >1 (compres)");
     } else if (some_materials_compressible()==0) {
      // do nothing
     } else {
@@ -5195,14 +5200,16 @@ NavierStokes::read_params ()
      //NN_FENE_P
      //NN_LINEAR_PTT
     if (num_materials_viscoelastic>=1) {
-     //do nothing
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("need num_divu_outer_sweeps>1(num_materials_viscoelastic>=1)");
     } else if (num_materials_viscoelastic==0) {
      //do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
     if (num_FSI_outer_sweeps>=2) {
-     //do nothing
+     if (num_divu_outer_sweeps<2) 
+      amrex::Error("need num_divu_outer_sweeps>1(num_FSI_outer_sweeps>=2)");
     } else if (num_FSI_outer_sweeps==1) {
      //do nothing
     } else
@@ -5885,7 +5892,8 @@ NavierStokes::read_params ()
      } else if (is_rigid_local[im]==0) {
 
        //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
-       //is_ice, is_FSI_rigid
+       //is_ice (FSI_ICE_PROBF90, FSI_ICE_STATIC, FSI_ICE_EULERIAN_ELASTIC,
+       //FSI_ICE_NODES_INIT), is_FSI_rigid (FSI_RIGID_NOTPRESCRIBED)
       int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im],&imp1);
       if (is_rigid_CL_flag==0) {
 
@@ -5902,6 +5910,7 @@ NavierStokes::read_params ()
         //do nothing
        } else
         amrex::Error("expecting material_extend_velocity[im]>=1");
+
       } else
        amrex::Error("is_rigid_CL_flag invalid");
 
@@ -18197,569 +18206,8 @@ NavierStokes::level_phase_change_redistribute(
 } // end subroutine level_phase_change_redistribute
 
 
-
-void
-NavierStokes::mass_redistributeALL_second_part() {
-
- std::string local_caller_string="mass_redistributeALL_second_part";
-
- if (level!=0)
-  amrex::Error("level invalid mass_redistributeALL_second_part");
-
- if (ngrow_make_distance+1==ngrow_distance) {
-  //do nothing
- } else
-  amrex::Error("expecting ngrow_make_distance+1==ngrow_distance");
-
- if ((ncell_mdot_shift<1)||
-     (ncell_mdot_shift>2))
-  amrex::Error("ncell_mdot_shift invalid (expecting 1 or 2)");
-
- if ((ngrow_distance>=4)&&
-     (ngrow_distance<=64)) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_distance>=4");
-
- int finest_level=parent->finestLevel();
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateDist_localMF(LSNEW_MF,ngrow_distance,cur_time_slab,
-		  local_caller_string);
- }
-
-
- if (1==0) {
-  int nsteps=parent->levelSteps(0); 
-
-   //writeSanityCheckData outputs raw data that exists on the
-   //computational domain boundary or within.
-   //MASS_REDIST<stuff>.plt (visit can open binary tecplot files)
-  writeSanityCheckData(
-   "MASS_REDIST",
-   "BEFORE: MASS_REDISTRIBUTE_MF: im=1,num_materials",
-   local_caller_string,
-   MASS_REDISTRIBUTE_MF, //tower_mf_id
-   localMF[MASS_REDISTRIBUTE_MF]->nComp(), 
-   MASS_REDISTRIBUTE_MF,
-   -1,  // State_Type==-1 
-   -1, // data_dir==-1 (cell centered)
-   parent->levelSteps(0)); 
-
-  std::cout << "press any number then enter (prior mass redistribute) \n";
-  int n_input;
-  std::cin >> n_input;
- }
-
- mdot_before.resize(thread_class::nthreads);
- mdot_after.resize(thread_class::nthreads);
-
- for (int im_critical=1;im_critical<=num_materials;im_critical++) {
-  //is_rigid, is_FSI_elastic (FSI_flag=FSI_EULERIAN_ELASTIC), 
-  //is_ice, is_FSI_rigid
-  int is_rigid_CL_flag=fort_is_rigid_CL(&FSI_flag[im_critical-1],&im_critical);
-
-  if (is_rigid_CL_flag==0) {
-
-   if (material_extend_velocity[im_critical-1]==0) {
-    //do nothing
-   } else
-    amrex::Error("expecting material_extend_velocity[im_critical-1]==0");
-
-   for (int tid=0;tid<thread_class::nthreads;tid++) {
-    mdot_before[tid]=0.0;
-    mdot_after[tid]=0.0;
-   }
-
-   allocate_array(ngrow_distance,1,-1,donorflag_MF);
-    //ngrow,scomp,ncomp
-   setVal_array(ngrow_distance,0,1,0.0,donorflag_MF);
-
-   allocate_array(ngrow_distance,1,-1,accept_weight_MF);
-    //ngrow,scomp,ncomp
-   setVal_array(ngrow_distance,0,1,0.0,accept_weight_MF);
-
-   // isweep==0: fort_tagmass
-   // isweep==1: fort_accept_weight_mass
-   // isweep==2: fort_distributemass
-   // isweep==3: fort_init_from_deltamass
-   for (int isweep_redistribute=0;isweep_redistribute<=2;
-        isweep_redistribute++) {
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     ns_level.level_mass_redistribute(im_critical,isweep_redistribute);
-    } // ilev=finest_level ... level
-
-    // idx,ngrow,scomp,ncomp,index,scompBC_map
-    Vector<int> scompBC_map;
-    scompBC_map.resize(1);
-    scompBC_map[0]=0; //set_extrap_bc, fort_extrapfill
-
-    if (isweep_redistribute==0) {
-      //PCINTERP_fill_bordersALL calls:
-      // PCINTERP_fill_borders which calls:
-      //  InterpBordersGHOST
-     PCINTERP_fill_bordersALL(donorflag_MF,ngrow_distance,0,
-       1,State_Type,scompBC_map);
-    } else if (isweep_redistribute==1) {
-     PCINTERP_fill_bordersALL(accept_weight_MF,ngrow_distance,0,
-       1,State_Type,scompBC_map);
-    } else if (isweep_redistribute==2) { //fort_distributemass
-     // do nothing
-    } else
-     amrex::Error("isweep_redistribute invalid");
-
-    if (ParallelDescriptor::IOProcessor()) {
-
-     Real vol_factor=dt_slab*dt_slab/denconst[im_critical-1];
-
-     if (isweep_redistribute==0) { //fort_tagmass
-      Real vdot_before=mdot_before[0]*vol_factor;
-      std::cout << "before:im_critical,mdot_before,vdot_before " <<
-       im_critical << ' ' << mdot_before[0] << 
-       ' ' << vdot_before << '\n';
-     } else if (isweep_redistribute==1) { //fort_accept_weight_mass
-      // do nothing
-     } else if (isweep_redistribute==2) { //fort_distributemass
-      Real vdot_after=mdot_after[0]*vol_factor;
-      std::cout << "after:im_critical,mdot_after,vdot_after " <<   
-       im_critical << ' ' << mdot_after[0] << 
-       ' ' << vdot_after << '\n';
-     } else
-      amrex::Error("isweep_redistribute invalid");
-
-    } // if ParallelDescriptor::IOProcessor()
-
-   } // isweep_redistribute=0,1,2
-
-   delete_array(donorflag_MF);
-   delete_array(accept_weight_MF);
-
-  } else if (is_rigid_CL_flag==1) {
-   //do nothing
-  } else
-   amrex::Error("is_rigid_CL_flag invalid");
-
- } // im_critical=1..num_materials
-
- if (1==0) {
-  int nsteps=parent->levelSteps(0); 
-
-   //writeSanityCheckData outputs raw data that exists on the
-   //computational domain boundary or within.
-   //MASS_REDIST<stuff>.plt (visit can open binary tecplot files)
-  writeSanityCheckData(
-   "MASS_REDIST",
-   "AFTER: MASS_REDISTRIBUTE_MF: im=1,num_materials",
-   local_caller_string,
-   MASS_REDISTRIBUTE_MF, //tower_mf_id
-   localMF[MASS_REDISTRIBUTE_MF]->nComp(), 
-   MASS_REDISTRIBUTE_MF,
-   -1,  // State_Type==-1 
-   -1, // data_dir==-1 (cell centered)
-   parent->levelSteps(0)); 
-
-  std::cout << "press any number then enter (after mass redistribute) \n";
-  int n_input;
-  std::cin >> n_input;
- }
-
-
- // copy contributions from all materials with mass redistribution 
- // to a single source term.
- int isweep_combine=3;
-
- int im_filler=-1;
-  
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.level_mass_redistribute(
-   im_filler,isweep_combine); // ==3 (fort_init_from_deltamass)
- } // ilev=finest_level ... level
-
- delete_array(LSNEW_MF);
-
-} // end subroutine mass_redistributeALL_second_part()
-
-
-// isweep==0: fort_tagmass
-// isweep==1: fort_accept_weight_mass
-// isweep==2: fort_distributemass
-// isweep==3: fort_init_from_deltamass
-void
-NavierStokes::level_mass_redistribute(int im_critical,int isweep) {
-
- std::string local_caller_string="level_mass_redistribute";
-
- bool use_tiling=ns_tiling;
- int finest_level=parent->finestLevel();
- if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid level_mass_redistribute");
-
- if ((ngrow_distance>=4)&&
-     (ngrow_distance<=64)) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_distance>=4");
-
- debug_ngrow(MASS_REDISTRIBUTE_MF,ngrow_distance,local_caller_string);
- if (localMF[MASS_REDISTRIBUTE_MF]->nComp()!=num_materials)
-  amrex::Error("localMF[MASS_REDISTRIBUTE_MF]->nComp()!=num_materials");
-
- resize_maskfiner(ngrow_distance,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,ngrow_distance,local_caller_string);
- 
- if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
-  amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
- debug_ngrow(LSNEW_MF,ngrow_distance,local_caller_string);
-
- int nstate=STATE_NCOMP;
- MultiFab& S_new = get_new_data(State_Type,project_slab_step+1);
- if (S_new.nComp()!=nstate)
-  amrex::Error("S_new invalid ncomp");
-
- const Real* dx = geom.CellSize();
- const Box& domain = geom.Domain();
- const int* domlo = domain.loVect(); 
- const int* domhi = domain.hiVect();
-
-  // tags for redistribution of source term
-  // 1=> donor  2=> receiver  0=> neither
-
- if ((isweep==0)|| //fort_tagmass
-     (isweep==1)|| //fort_accept_weight_mass
-     (isweep==2)) { //fort_distributemass
-
-  if (localMF[donorflag_MF]->nGrow()!=ngrow_distance)
-   amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
-  if (localMF[donorflag_MF]->nComp()!=1)
-   amrex::Error("localMF[donorflag_MF]->nComp() invalid");
-
-  if (localMF[accept_weight_MF]->nGrow()!=ngrow_distance)
-   amrex::Error("localMF[accept_weight_MF]->ngrow() invalid");
-  if (localMF[accept_weight_MF]->nComp()!=1)
-   amrex::Error("localMF[accept_weight_MF]->nComp() invalid");
-
-  if ((im_critical>=1)&&(im_critical<=num_materials)) {
-   //do nothing
-  } else
-   amrex::Error("im_critical invalid");
-
- } else if (isweep==3) { //fort_init_from_deltamass
-
-  if (im_critical==-1) {
-   //do nothing
-  } else
-   amrex::Error("im_critical invalid");
-
- } else
-  amrex::Error("isweep invalid");
-
- if (isweep==0) { //fort_tagmass
-
-  Vector< Real > mdot_sum_local;
-  mdot_sum_local.resize(thread_class::nthreads);
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   mdot_sum_local[tid]=0.0;
-  }
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[donorflag_MF],false); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-   FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
-   FArrayBox& deltamass=(*localMF[MASS_REDISTRIBUTE_MF])[mfi];
-
-   FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
-
-   int bfact=parent->Space_blockingFactor(level);
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // in: GODUNOV_3D.F90
-    // isweep==0 
-   fort_tagmass( 
-    &ncell_mdot_shift,
-    &mdot_sum_local[tid_current],
-    &im_critical,
-    &level,
-    &finest_level,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact, 
-    xlo,dx,
-    &cur_time_slab,
-    maskcov.dataPtr(),
-    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    donorfab.dataPtr(),
-    ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
-    deltamass.dataPtr(),
-    ARLIM(deltamass.loVect()),ARLIM(deltamass.hiVect()),
-    newdistfab.dataPtr(),
-    ARLIM(newdistfab.loVect()),
-    ARLIM(newdistfab.hiVect()));
- 
-  } // mfi
-} // omp
-  ns_reconcile_d_num(LOOP_TAGEXPANSION,"level_mass_redistribute");
-
-  for (int tid=1;tid<thread_class::nthreads;tid++) {
-   mdot_sum_local[0]+=mdot_sum_local[tid];
-  }
-  ParallelDescriptor::ReduceRealSum(mdot_sum_local[0]);
-  mdot_before[0]+=mdot_sum_local[0];
-
-  avgDown_tag_localMF(donorflag_MF);
-
- } else if (isweep==1) { //fort_accept_weight_mass
-
-   //accept_weights
-
-  if ((im_critical<1)||(im_critical>num_materials))
-   amrex::Error("im_critical invalid");
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[donorflag_MF],false); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-    FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
-
-    FArrayBox& weightfab=(*localMF[accept_weight_MF])[mfi];
-
-    FArrayBox& deltamass=(*localMF[MASS_REDISTRIBUTE_MF])[mfi];
-
-    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
-
-    int bfact=parent->Space_blockingFactor(level);
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     // isweep==1
-     // declared in: GODUNOV_3D.F90
-     // weightfab is modified.
-    fort_accept_weight_mass( 
-     &im_critical,
-     &level,&finest_level,
-     domlo,domhi, 
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact, 
-     xlo,dx,
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),
-     ARLIM(newdistfab.hiVect()),
-     donorfab.dataPtr(),
-     ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
-     weightfab.dataPtr(),
-     ARLIM(weightfab.loVect()),ARLIM(weightfab.hiVect()),
-     deltamass.dataPtr(),
-     ARLIM(deltamass.loVect()),
-     ARLIM(deltamass.hiVect()) );
-  } // mfi
-} //omp
-  ns_reconcile_d_num(LOOP_ACCEPT_WEIGHT,"level_mass_redistribute");
-
-   // spectral_override==0 => always low order.
-  avgDown_localMF(accept_weight_MF,0,1,LOW_ORDER_AVGDOWN);
-
- } else if (isweep==2) { //fort_distributemass
-
-   // redistribution.
-
-  if ((im_critical<1)||(im_critical>num_materials))
-   amrex::Error("im_critical invalid");
-
-  Vector< Real > mdot_sum2_local;
-  mdot_sum2_local.resize(thread_class::nthreads);
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   mdot_sum2_local[tid]=0.0;
-  }
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[donorflag_MF],false); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-
-    FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
-
-    FArrayBox& weightfab=(*localMF[accept_weight_MF])[mfi];
-
-    FArrayBox& deltamass=(*localMF[MASS_REDISTRIBUTE_MF])[mfi];
-    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
-
-    int bfact=parent->Space_blockingFactor(level);
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     // isweep==2
-     // declared in: GODUNOV_3D.F90
-     // MASS_REDISTRIBUTE_MF is modified.
-    fort_distributemass( 
-     &mdot_sum2_local[tid_current],
-     &im_critical,
-     &level,&finest_level,
-     domlo,domhi, 
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact, 
-     xlo,dx,
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),
-     ARLIM(newdistfab.hiVect()),
-     donorfab.dataPtr(),
-     ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
-     weightfab.dataPtr(),
-     ARLIM(weightfab.loVect()),ARLIM(weightfab.hiVect()),
-     deltamass.dataPtr(),
-     ARLIM(deltamass.loVect()),
-     ARLIM(deltamass.hiVect()));
-  } // mfi
-} //omp
-  ns_reconcile_d_num(LOOP_DISTRIBUTEEXPANSION,
-     "level_mass_redistribute");
-
-  for (int tid=1;tid<thread_class::nthreads;tid++) {
-   mdot_sum2_local[0]+=mdot_sum2_local[tid];
-  } // tid
-  ParallelDescriptor::ReduceRealSum(mdot_sum2_local[0]);
-  mdot_after[0]+=mdot_sum2_local[0];
-
-
-  // isweep==0: fort_tagmass
-  // isweep==1: fort_accept_weight_mass
-  // isweep==2: fort_distributemass
-  // isweep==3: fort_init_from_deltamass
- } else if (isweep==3) {
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[MDOT_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel 
-#endif
-{
-  for (MFIter mfi(*localMF[MDOT_MF],use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
-    FArrayBox& deltamass=(*localMF[MASS_REDISTRIBUTE_MF])[mfi];
-    FArrayBox& snewfab=S_new[mfi];
-
-    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
-
-    int bfact=parent->Space_blockingFactor(level);
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    fort_init_from_deltamass( 
-     &nstate,
-     &cur_time_slab,
-     &level,
-     &finest_level,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact, 
-     xlo,dx,
-     &dt_slab, //init_from_deltamass
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     deltamass.dataPtr(),
-     ARLIM(deltamass.loVect()),ARLIM(deltamass.hiVect()),
-     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-      // mdotfab is incremented.
-     mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
-     newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),
-     ARLIM(newdistfab.hiVect()));
-
-  } // mfi
-} // omp
-  ns_reconcile_d_num(LOOP_INITJUMPTERM,"level_mass_redistribute");
-
- } else
-  amrex::Error("isweep invalid");
-
-} // end subroutine level_mass_redistribute
-
-
-
 // called from: NavierStokes::make_physics_varsALL
+// FIX ME
 void
 NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
 
@@ -27126,7 +26574,7 @@ NavierStokes::post_init_state () {
   double start_pressure_solve = ParallelDescriptor::second();
 
    // U^CELL and U^MAC; assimilates the solid velocity (MAC and CELL)
-   // and  ice velocity (MAC)
+   // and  ice velocity (MAC) (if ice not elastic)
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    combine_flag=FILL_EMPTY_CELL;
