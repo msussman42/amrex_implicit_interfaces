@@ -317,6 +317,9 @@ stop
 
        !get_elasticmask_and_elasticmaskpart
        !get_primary_material_group declared in GLOBALUTIL.F90
+       !primary materials in the 3x3x3 stencil are investigated.
+       !im_secondary=num_materials+1 if not found
+       !im_tertiary=num_materials+1 if not found
       vof_flag=0
       call get_primary_material_group(dx,LS_ptr, &
         im_primary,im_secondary,im_tertiary, &
@@ -333,7 +336,8 @@ stop
        im_opp=im_primary
        im=im_secondary
       else
-       print *,"im_primary or im_secondary invalid"
+       print *,"im_primary or im_secondary invalid ", &
+        im_primary,im_secondary
        stop
       endif
 
@@ -346,6 +350,8 @@ stop
          get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
        enddo
 
+! is_ice(FSI_ICE_PROBF90,FSI_ICE_STATIC,FSI_ICE_EULERIAN_ELASTIC,
+!   FSI_ICE_NODES_INIT)
        if ((is_ice(im).eq.0).and. &
            (is_ice(im_opp).eq.0)) then
         im_ice=0
@@ -365,7 +371,8 @@ stop
         print *,"is_ice(im_opp) ",is_ice(im_opp)
         stop
        endif
-     
+    
+       ! is_FSI_RIGID(FSI_RIGID_NOTPRESCRIBED)
        if ((is_FSI_rigid(im).eq.0).and. &
            (is_FSI_rigid(im_opp).eq.0)) then
         im_FSI_rigid=0
@@ -386,6 +393,7 @@ stop
         stop
        endif
 
+       ! is_FSI_elastic(FSI_EULERIAN_ELASTIC,FSI_ICE_EULERIAN_ELASTIC)
        if ((is_FSI_elastic(im).eq.0).and. &
            (is_FSI_elastic(im_opp).eq.0)) then
         im_FSI_elastic=0
@@ -409,13 +417,18 @@ stop
         !if SOLVETYPE_INITPROJ then
         ! cc_group=cc*cc_elasticmask
         !if SOLVETYPE_PRES then
-        ! if (num_FSI_outer_sweeps.eq.1) then
-        !  cc_group=cc*cc_elasticmask
-        ! else if (FSI_outer_sweeps>=1)
+        ! if (FSI_outer_sweeps>=1)
         !  cc_group=cc*cc_elasticmaskpart
         ! else if (FSI_outer_sweeps==0)
         !  cc_group=cc
        if (im_FSI_rigid.eq.im_primary) then
+
+        if (num_FSI_outer_sweeps.ge.2) then
+         !do nothing
+        else
+         print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         stop
+        endif
 
         ireverse=-1
         elasticmask=zero
@@ -428,6 +441,13 @@ stop
        else if ((im_FSI_elastic.eq.im_primary).and. &
                 (im_ice.ne.im_primary)) then
 
+        if (num_FSI_outer_sweeps.ge.2) then
+         !do nothing
+        else
+         print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         stop
+        endif
+
         ireverse=-1
         elasticmask=zero
         elasticmaskpart=one
@@ -438,6 +458,13 @@ stop
        else if ((im_FSI_rigid.ne.im_primary).and. &
                 ((im_FSI_elastic.ne.im_primary).or. &
                  (im_ice.eq.im_primary))) then
+
+        if (num_FSI_outer_sweeps.ge.2) then
+         !do nothing
+        else
+         print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         stop
+        endif
 
         if ((im_FSI_rigid.lt.0).or. &
             (im_FSI_rigid.gt.num_materials).or. &
@@ -586,9 +613,17 @@ stop
 
            if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
             ! do nothing
+           else if &
+            (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
+            if (is_FSI_elastic(im_ice).eq.1) then
+             ! do nothing
+            else
+             print *,"required freezing: "
+             print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+             stop
+            endif
            else
-            print *,"required freezing: "
-            print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
+            print *,"distribute_from_target(iten+num_interfaces*ireverse) bad"
             stop
            endif
 
@@ -697,7 +732,7 @@ stop
          elasticmaskpart=zero
         endif
        else
-        print *,"is_ice invalid"
+        print *,"is_ice invalid ",im,is_ice(im)
         stop
        endif
        if (is_FSI_rigid(im).eq.0) then
@@ -711,7 +746,7 @@ stop
          elasticmaskpart=zero
         endif
        else
-        print *,"is_FSI_rigid invalid"
+        print *,"is_FSI_rigid invalid ",im,is_FSI_rigid(im)
         stop
        endif
        if (is_FSI_elastic(im).eq.0) then
@@ -725,7 +760,7 @@ stop
          elasticmaskpart=zero
         endif
        else
-        print *,"is_FSI_elastic invalid"
+        print *,"is_FSI_elastic invalid ",im,is_FSI_elastic(im)
         stop
        endif
 

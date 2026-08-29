@@ -615,6 +615,7 @@ extern "C"
     Real* mdot_sum_complement,
     int* im_source,
     int* im_dest,
+    int* ireverse,
     int* indexEXP,
     int* level,int* finest_level,
     const int* tilelo,const int* tilehi,
@@ -646,6 +647,7 @@ extern "C"
    void fort_accept_weight(
     int* im_source,
     int* im_dest,
+    int* ireverse,
     int* indexEXP,
     int* level,int* finest_level,
     const int* domlo,const int* domhi,
@@ -677,6 +679,7 @@ extern "C"
     Real* mdot_lost_comp,
     int* im_source,
     int* im_dest,
+    int* ireverse,
     int* indexEXP,
     int* level,int* finest_level,
     const int* domlo,const int* domhi,

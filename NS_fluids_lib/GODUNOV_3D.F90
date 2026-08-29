@@ -5188,9 +5188,14 @@ stop
           distribute_from_target, &
           complement_flag)
 
-          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          ! is_ice(FSI_ICE_PROBF90,FSI_ICE_STATIC,FSI_ICE_EULERIAN_ELASTIC,
+          ! FSI_ICE_NODES_INIT)
+          ! is_FSI_RIGID(FSI_RIGID_NOTPRESCRIBED)
+          ! is_FSI_elastic(FSI_EULERIAN_ELASTIC,FSI_ICE_EULERIAN_ELASTIC)
           !
-          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or is_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or is_FSI_elastic
           !  AND 
           ! given material has already been processed.
           !
@@ -5239,9 +5244,14 @@ stop
           stop
          endif
 
-          ! elasticmask=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          ! is_ice(FSI_ICE_PROBF90,FSI_ICE_STATIC,FSI_ICE_EULERIAN_ELASTIC,
+          ! FSI_ICE_NODES_INIT)
+          ! is_FSI_RIGID(FSI_RIGID_NOTPRESCRIBED)
+          ! is_FSI_elastic(FSI_EULERIAN_ELASTIC,FSI_ICE_EULERIAN_ELASTIC)
           !
-          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or im_FSI_elastic
+          ! elasticmask=0 if is_ice, is_FSI_RIGID, or is_FSI_elastic
+          !
+          ! elasticmask_part=0 if is_ice, is_FSI_RIGID, or is_FSI_elastic
           !  AND 
           ! given material has already been processed.
          if (dir.eq.0) then
@@ -11301,6 +11311,7 @@ stop
        mdot_sum_comp, &
        im_source, & !intent(in)
        im_dest, & !intent(in)
+       ireverse_in, & !intent(in)
        indexEXP, & !intent(in) 0<=indexEXP<2*num_interfaces
        level,finest_level, &
        tilelo,tilehi, &
@@ -11337,6 +11348,7 @@ stop
       real(amrex_real), INTENT(in) :: expect_mdot_sign
       integer, INTENT(in) :: im_source,im_dest
       integer :: im_ice
+      integer, INTENT(in) :: ireverse_in
       integer, INTENT(in) :: indexEXP
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
@@ -11562,12 +11574,19 @@ stop
        if (im_ice.eq.0) then
         ! do nothing
        else if (im_ice.eq.im_dest) then ! freezing
-        if (distribute_from_target(indexEXP+1).eq.1) then
-         ! distribute_from_target=true
-         ! distribute_to_target=false
-         ! source=melt  dest (target)=ice
-        else 
-         print *,"distribute_from_target should be 1(freezing)"
+        if (is_FSI_elastic(im_ice).eq.1) then
+         !do nothing
+        else if (is_FSI_elastic(im_ice).eq.0) then
+         if (distribute_from_target(indexEXP+1).eq.1) then
+          ! distribute_from_target=true
+          ! distribute_to_target=false
+          ! source=melt  dest (target)=ice
+         else 
+          print *,"distribute_from_target should be 1(freezing)"
+          stop
+         endif
+        else
+         print *,"is_FSI_elastic invalid ",im_ice,is_FSI_elastic(im_ice)
          stop
         endif
        else if (im_ice.eq.im_source) then ! melting
@@ -11580,11 +11599,29 @@ stop
          stop
         endif
        else
-        print *,"im_ice invalid"
+        print *,"im_ice invalid ",im_ice
         stop
        endif
       else
        print *,"LL invalid: ",LL
+       stop
+      endif
+
+      call get_iten(im_source,im_dest,iten)
+      index_compare=iten+ireverse_in*num_interfaces-1
+      if ((index_compare.ge.0).and. &
+          (index_compare.lt.2*num_interfaces)) then
+
+       if (index_compare.eq.indexEXP) then
+        !do nothing
+       else
+        print *,"indexEXP invalid ",im_source,im_dest,iten, &
+         ireverse_in,indexEXP
+        stop
+       endif
+
+      else
+       print *,"index_compare invalid ",iten,ireverse_in,index_compare
        stop
       endif
 
@@ -11711,8 +11748,8 @@ stop
            dx,bfact, &
            elasticmask, & !intent(out)
            elasticmaskpart, &
-           im, &
-           im_opp, &
+           im, & !intent(out)
+           im_opp, & !intent(out)
            im_primary_elasticmask, &
            ireverse, &
            local_denstate, &
@@ -11731,7 +11768,30 @@ stop
 
           if (im_opp.eq.num_materials+1) then
 
-           !do nothing
+           if (im.eq.im_primary) then
+            !do nothing
+           else
+            print *,"expecting im==im_primary",im,im_primary
+            print *,"im_opp= ",im_opp
+            print *,"im_ice= ",im_ice
+            stop
+           endif
+
+           if (im.eq.im_ice) then
+            if (is_FSI_elastic(im_ice).eq.1) then
+             elasticmask=one !both source and dest can be distributed to.
+            else if (is_FSI_elastic(im_ice).eq.0) then
+             ! do nothing
+            else
+             print *,"is_FSI_elastic invalid ",im_ice,is_FSI_elastic(im_ice)
+             stop
+            endif
+           else if (im.ne.im_ice) then
+            elasticmask=one !both source and dest can be distributed to.
+           else
+            print *,"corrupt ",im,im_ice
+            stop
+           endif
 
            !both source and dest can be distributed to.
           else if (ireverse.eq.-1) then
@@ -11740,19 +11800,32 @@ stop
 
           else if ((ireverse.eq.0).or. &
                    (ireverse.eq.1)) then
+
            call get_iten(im,im_opp,iten)
            index_compare=iten+ireverse*num_interfaces-1
            if ((index_compare.ge.0).and. &
                (index_compare.lt.2*num_interfaces)) then
+
             if (index_compare.eq.indexEXP) then
-             ! do nothing
+
+             if (is_FSI_elastic(im_ice).eq.1) then
+              elasticmask=one !both source and dest can be distributed to.
+             else if (is_FSI_elastic(im_ice).eq.0) then
+              ! do nothing
+             else
+              print *,"is_FSI_elastic invalid ",im_ice,is_FSI_elastic(im_ice)
+              stop
+             endif
+
             else
              elasticmask=one !assume both source and dest can be distributed to.
             endif
            else
             print *,"index_compare invalid: ",index_compare
+            print *,"im,im_opp,iten,ireverse ",im,im_opp,iten,ireverse
             stop
            endif
+
           else
            print *,"ireverse invalid: ",ireverse
            stop
@@ -11970,6 +12043,7 @@ stop
        mdot_lost_comp, &
        im_source, &
        im_dest, &
+       ireverse_in, &
        indexEXP, &
        level,finest_level, &
        domlo,domhi, &
@@ -12002,7 +12076,9 @@ stop
 
        real(amrex_real), INTENT(inout) :: mdot_sum,mdot_lost
        real(amrex_real), INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
+       integer, INTENT(in) :: ireverse_in
        integer, INTENT(in) :: im_source,im_dest,indexEXP
+       integer :: index_compare,iten
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -12137,6 +12213,25 @@ stop
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
+
+
+       call get_iten(im_source,im_dest,iten)
+       index_compare=iten+ireverse_in*num_interfaces-1
+       if ((index_compare.ge.0).and. &
+           (index_compare.lt.2*num_interfaces)) then
+
+        if (index_compare.eq.indexEXP) then
+         !do nothing
+        else
+         print *,"indexEXP invalid ",im_source,im_dest,iten, &
+          ireverse_in,indexEXP
+         stop
+        endif
+
+       else
+        print *,"index_compare invalid ",iten,ireverse_in,index_compare
+        stop
+       endif
 
        do k=growlo(3),growhi(3)
        do j=growlo(2),growhi(2)
@@ -12350,6 +12445,7 @@ stop
       subroutine fort_accept_weight(&
        im_source, &
        im_dest, &
+       ireverse_in, &
        indexEXP, &
        level,finest_level, &
        domlo,domhi, &
@@ -12380,7 +12476,9 @@ stop
 
        IMPLICIT NONE
 
+       integer, INTENT(in) :: ireverse_in
        integer, INTENT(in) :: im_source,im_dest,indexEXP
+       integer :: iten,index_compare
        integer, INTENT(in) :: level,finest_level
        integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -12503,6 +12601,24 @@ stop
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
+
+       call get_iten(im_source,im_dest,iten)
+       index_compare=iten+ireverse_in*num_interfaces-1
+       if ((index_compare.ge.0).and. &
+           (index_compare.lt.2*num_interfaces)) then
+
+        if (index_compare.eq.indexEXP) then
+         !do nothing
+        else
+         print *,"indexEXP invalid ",im_source,im_dest,iten, &
+          ireverse_in,indexEXP
+         stop
+        endif
+
+       else
+        print *,"index_compare invalid ",iten,ireverse_in,index_compare
+        stop
+       endif
 
        ! Iterate over the box
        do k=growlo(3),growhi(3)

@@ -676,7 +676,8 @@ protected:
     void sato_model_QDOT_MDOT_SPECIES();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
-      int im_source,int im_dest,int indexEXP,
+      int im_source,int im_dest,
+      int ireverse,int indexEXP,
       int isweep);
 
     void clear_blobdata(int i,Vector<blobclass>& blobdata);
@@ -697,9 +698,6 @@ protected:
       int i_phase_change,int n_phase_change);
 
     void level_phase_change_convertALL();
-
-    void mass_redistributeALL(int mass_redistribute_flag);
-    void mass_redistribute(int mass_redistribute_flag);
 
     void level_species_reaction(const std::string& caller_string);
 

@@ -15852,139 +15852,6 @@ NavierStokes::level_DRAG_extend() {
 } // end subroutine level_DRAG_extend
 
 void
-NavierStokes::mass_redistributeALL(int mass_redistribute_flag) {
-
- int finest_level=parent->finestLevel();
- if (level==0) {
-  // do nothing
- } else
-  amrex::Error("level must be 0 in mass_redistributeALL");
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.mass_redistribute(mass_redistribute_flag);
- }
-
-} //end subroutine mass_redistributeALL
-
-void
-NavierStokes::mass_redistribute(int mass_redistribute_flag) {
-
- std::string local_caller_string="mass_redistribute";
- bool use_tiling=ns_tiling;
- int finest_level=parent->finestLevel();
- if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid mass_redistribute");
-
- if ((ngrow_distance>=4)&&
-     (ngrow_distance<=64)) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_distance>=4");
-
- // mask=1 if not covered or if outside the domain.
- // NavierStokes::maskfiner_localMF
- // NavierStokes::maskfiner
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
-
- resize_metrics(1);  
- debug_ngrow(VOLUME_MF,1,local_caller_string); 
-
- if (localMF[MASS_REDISTRIBUTE_MF]->nGrow()!=ngrow_distance)
-  amrex::Error("MASS_REDISTRIBUTE_MF invalid ngrow mass_redistribute");
- if (localMF[MASS_REDISTRIBUTE_MF]->nComp()!=num_materials)
-  amrex::Error("localMF[MASS_REDISTRIBUTE_MF]->nComp() invalid");
-
- int nstate=STATE_NCOMP;
- MultiFab& S_new = get_new_data(State_Type,project_slab_step+1);
- if (nstate!=S_new.nComp())
-  amrex::Error("nstate invalid");
-
- const Real* dx = geom.CellSize();
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-
-   const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=getBCArray(State_Type,gridno,
-       STATECOMP_VEL,STATE_NCOMP_VEL);
-   Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
-
-   int bfact=parent->Space_blockingFactor(level);
-
-   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
-
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-   FArrayBox& snewfab=S_new[mfi];
-   FArrayBox& redistribute_fab=(*localMF[MASS_REDISTRIBUTE_MF])[mfi];
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    //fort_mass_redistribute is declared in:
-    // MASS_TRANSFER_3D.F90
-   fort_mass_redistribute(
-    &tid_current,
-    &mass_redistribute_flag,
-    &nstate,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact, 
-    velbc.dataPtr(),
-    vofbc.dataPtr(),
-    &dt_slab,
-    xlo,dx, 
-    volfab.dataPtr(),
-    ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-    maskcov.dataPtr(),
-    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    redistribute_fab.dataPtr(),
-    ARLIM(redistribute_fab.loVect()),
-    ARLIM(redistribute_fab.hiVect()),
-    snewfab.dataPtr(),
-    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-    &level,
-    &finest_level);
- } // mfi
-} // omp
-
- ns_reconcile_d_num(LOOP_NODEDISPLACE,"fort_mass_redistribute");
-
- if (mass_redistribute_flag==INIT_MASS_REDISTRIBUTE_VAR) {
-  //do nothing
- } else if (mass_redistribute_flag==UPDATE_MASS_REDISTRIBUTE_VAR) {
-  int spectral_override=LOW_ORDER_AVGDOWN;
-
-  for (int im_critical=0;im_critical<num_materials;im_critical++) {
-   localMF[MASS_REDISTRIBUTE_MF]->FillBoundary(
-      im_critical,1,geom.periodicity());
-   avgDown_localMF(MASS_REDISTRIBUTE_MF,im_critical,1,spectral_override);
-  }
- } else
-  amrex::Error("mass_redistribute_flag invalid");
-
-} //end subroutine mass_redistribute
-
-void
 NavierStokes::level_phase_change_convertALL() {
 
  std::string local_caller_string="level_phase_change_convertALL";
@@ -16059,7 +15926,7 @@ NavierStokes::level_phase_change_convertALL() {
  int use_mac_velocity=0;
  int update_mdot=DO_NOT_UPDATE_MDOT;
 
- //calling from: NavierStokes::mass_redistributeALL
+ //in: NavierStokes::level_phase_change_convertALL
  //TYPE_MF, COLOR_MF
  ColorSumALL(
   update_mdot,
@@ -16246,7 +16113,7 @@ NavierStokes::level_phase_change_convertALL() {
  use_mac_velocity=0;
  update_mdot=UPDATE_MDOT_PHASE_CHANGE;
 
- //calling from: NavierStokes::mass_redistributeALL
+ //in: NavierStokes::level_phase_change_convertALL
  //TYPE_MF, COLOR_MF
  ColorSumALL(
   update_mdot,
@@ -17251,7 +17118,8 @@ NavierStokes::phase_change_redistributeALL() {
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
        ns_level.level_phase_change_redistribute(
-        expect_mdot_sign,im_source,im_dest,indexEXP,
+        expect_mdot_sign,im_source,im_dest,
+        ireverse,indexEXP,
         isweep_redistribute);
       } // ilev=finest_level ... level
 
@@ -17505,12 +17373,14 @@ NavierStokes::phase_change_redistributeALL() {
  int im_source_filler=-1;
  int im_dest_filler=-1;
  int indexEXP_filler=-1;
+ int ireverse_filler=-1;
   
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.level_phase_change_redistribute(
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
+   ireverse_filler,
    indexEXP_filler,
    isweep_combine); // ==3 (fort_initjumpterm)
  } // ilev=finest_level ... level
@@ -17540,7 +17410,9 @@ NavierStokes::phase_change_redistributeALL() {
 void
 NavierStokes::level_phase_change_redistribute(
  Real expect_mdot_sign,
- int im_source,int im_dest,int indexEXP,
+ int im_source,int im_dest,
+ int ireverse,
+ int indexEXP,
  int isweep) {
 
  std::string local_caller_string="level_phase_change_redistribute";
@@ -17756,6 +17628,7 @@ NavierStokes::level_phase_change_redistribute(
     &mdot_sum_complement_local[tid_current],
     &im_source,
     &im_dest,
+    &ireverse,
     &indexEXP,
     &level,
     &finest_level,
@@ -17871,6 +17744,7 @@ NavierStokes::level_phase_change_redistribute(
     fort_accept_weight( 
      &im_source,
      &im_dest,
+     &ireverse,
      &indexEXP,
      &level,&finest_level,
      domlo,domhi, 
@@ -17999,6 +17873,7 @@ NavierStokes::level_phase_change_redistribute(
      &mdot_lost_complement_local[tid_current],
      &im_source,
      &im_dest,
+     &ireverse,
      &indexEXP,
      &level,&finest_level,
      domlo,domhi, 
@@ -18207,7 +18082,6 @@ NavierStokes::level_phase_change_redistribute(
 
 
 // called from: NavierStokes::make_physics_varsALL
-// FIX ME
 void
 NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
 
