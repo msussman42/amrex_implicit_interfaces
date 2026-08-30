@@ -675,7 +675,7 @@ stop
         else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
 
          if (nsolve.ne.1) then
-          print *,"nsolveMM invalid 150"
+          print *,"nsolveMM invalid 678 ",nsolve
           stop
          endif
 
@@ -702,7 +702,7 @@ stop
          else if (local_diag.eq.two*SDIM) then 
           local_cterm(1)=zero
          else
-          print *,"local_diag invalid"
+          print *,"local_diag invalid ",local_diag
           stop
          endif
 

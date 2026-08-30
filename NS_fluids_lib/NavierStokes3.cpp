@@ -11376,19 +11376,46 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } // dir
 
  new_localMF(DIFFUSIONRHS_MF,nsolve,0,-1);
+
  if (project_option==SOLVETYPE_PRESEXTRAP) {
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if (project_option==SOLVETYPE_PRES)  { 
+
+  if (nsolve==1) {
+   //do nothing
+  } else
+   amrex::Error("expecting nsolve==1");
+
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
-   // FIX ME APPLY MASK IF FSI OUTER SWEEPS >0
+   // FIX ME APPLY MASK IF FSI_outer_sweeps >0
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
+
+  if (FSI_outer_sweeps==0) {
+   //do nothing
+  } else if (FSI_outer_sweeps==1) {
+
+  } else
+   amrex::Error("expecting FSI_outer_sweeps=0 or 1");
+
  } else if (project_option==SOLVETYPE_INITPROJ) { 
+
+  if (nsolve==1) {
+   //do nothing
+  } else
+   amrex::Error("expecting nsolve==1");
+
+  if (FSI_outer_sweeps==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting FSI_outer_sweeps==0");
+
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
    // MDOT_MF might not be zero at t=0 if sources/sinks of mass.
    // (but for now, MDOT_MF should be zero)
-   // FIX ME APPLY MASK IF FSI OUTER SWEEPS >0 (not applicable here)
+   // The program will abort if MDOT_MF<>0 in the elastic or
+   // FSI_rigid or ice regions,
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
   zero_independent_variable(project_option,nsolve);
  } else if (project_option==SOLVETYPE_HEAT) { 

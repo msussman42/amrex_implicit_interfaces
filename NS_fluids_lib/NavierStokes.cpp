@@ -26302,6 +26302,7 @@ NavierStokes::post_init_state () {
  slab_step=ns_time_order-1; 
  project_slab_step=slab_step;
 
+ FSI_outer_sweeps=0;
  SDC_outer_sweeps=0;
  SDC_setup_step();
  dt_slab=1.0;
@@ -26416,6 +26417,8 @@ NavierStokes::post_init_state () {
   // is_ice_or_FSI_rigid_material_project==1,
   // then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
+  // If material is an elastic material, then the initial project fixes
+  // the velocity to be the "initdata" velocity.
  operation_flag=OP_UNEW_CELL_TO_MAC;
  int idx_velcell=-1;
  Real beta=0.0;

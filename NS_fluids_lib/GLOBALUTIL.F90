@@ -30903,7 +30903,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
   project_option_momeqnF=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_momeqnF=0
  endif
@@ -30927,7 +30927,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then !species
   project_option_singular_possibleF=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_singular_possibleF=0
  endif
@@ -30950,7 +30950,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then !species
   project_option_olddata_neededF=1
  else 
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_olddata_neededF=0
  endif
@@ -30973,7 +30973,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then!species
   project_option_pressureF=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_pressureF=0
  endif 
@@ -30999,7 +30999,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then 
   project_option_needs_scalingF=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_needs_scalingF=0
  endif 
@@ -31025,7 +31025,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
   project_option_FSI_rigid=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_FSI_rigid=0
  endif
@@ -31052,7 +31052,7 @@ integer, INTENT(in) :: project_option
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then ! species
   project_option_projectionF=0
  else
-  print *,"project_option invalid"
+  print *,"project_option invalid ",project_option
   stop
   project_option_projectionF=0
  endif 

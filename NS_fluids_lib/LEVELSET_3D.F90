@@ -8334,7 +8334,8 @@ stop
           (project_option.eq.SOLVETYPE_INITPROJ)) then
        ! do nothing
       else
-       print *,"project_option invalid fort_init_physics_vars"
+       print *,"project_option invalid fort_init_physics_vars ", &
+          project_option
        stop
       endif
 
@@ -12184,7 +12185,7 @@ stop
 
            endif
           else
-           print *,"homflag invalid"
+           print *,"homflag invalid ",homflag
            stop
           endif
 
@@ -12204,7 +12205,7 @@ stop
              AZL*zvel(D_DECL(i,j,k),veldir)
            endif
           else
-           print *,"maskdivres invalid" 
+           print *,"maskdivres invalid ",MSKDV 
            stop
           endif
 
@@ -12263,18 +12264,18 @@ stop
            else if ((level.ge.0).and.(level.lt.finest_level)) then
             ! do nothing
            else
-            print *,"level invalid"
+            print *,"level invalid ",level
             stop
            endif
           else if (homflag.eq.4) then
            if (local_rhs.eq.zero) then
             rhs(D_DECL(i,j,k),veldir)=divu/VOLTERM
            else
-            print *,"local_rhs invalid"
+            print *,"local_rhs invalid ",local_rhs
             stop
            endif
           else
-           print *,"homflag invalid"
+           print *,"homflag invalid ",homflag
            stop
           endif
 
@@ -12283,10 +12284,10 @@ stop
           else if (MSKRES.gt.zero) then
            ! do nothing
           else if (MSKRES.lt.zero) then
-           print *,"maskres invalid"
+           print *,"maskres invalid ",MSKRES
            stop
           else
-           print *,"MSKRES bust"
+           print *,"MSKRES bust ",MSKRES
            stop
           endif 
 
@@ -12295,7 +12296,8 @@ stop
         else if (maskcoef(D_DECL(i,j,k),1).eq.zero) then
          ! do nothing (covered)
         else 
-         print *,"mask invalid"
+         print *,"maskcoef invalid ",i,j,k, &
+           maskcoef(D_DECL(i,j,k),1)
          stop
         endif
 
@@ -13200,12 +13202,13 @@ stop
          if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
           ! do nothing if initial project
          else
-          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
+          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) ", &
+             energyflag
           stop
          endif
         else
-         print *,"project_option invalid fort_mac_to_cell 5"
-         print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
+         print *,"project_option invalid fort_mac_to_cell 5 ",project_option
+         print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL ",operation_flag
          stop
         endif
 
@@ -13962,25 +13965,25 @@ stop
        if (num_colors.eq.0) then
         ! do nothing
        else
-        print *,"num_colors inconsistent; fort_cell_to_mac"
+        print *,"num_colors inconsistent; fort_cell_to_mac(1) ",num_colors
         stop
        endif
       else if (blob_array_size.eq.num_colors*num_elements_blobclass) then
        if (num_colors.ge.1) then
         ! do nothing
        else
-        print *,"num_colors inconsistent; fort_cell_to_mac"
+        print *,"num_colors inconsistent; fort_cell_to_mac(2) ",num_colors
         stop
        endif
       else
-       print *,"blob_array_size invalid fort_cell_to_mac"
+       print *,"blob_array_size invalid fort_cell_to_mac ",blob_array_size
        stop
       endif
 
       if (num_colors.ge.0) then
        ! do nothing
       else
-       print *,"num_colors invalid fort_cell_to_mac"
+       print *,"num_colors invalid fort_cell_to_mac(3) ",num_colors
        stop
       endif
 
@@ -15014,18 +15017,20 @@ stop
                if (blob_array_size.eq.1) then
                 ! do nothing
                else
-                print *,"num_colors inconsistent; fort_cell_to_mac"
+                print *,"num_colors inconsistent; fort_cell_to_mac(1) ", &
+                   num_colors,blob_array_size
                 stop
                endif
               else if (num_colors.gt.0) then
                if (blob_array_size.eq.num_colors*num_elements_blobclass) then
                 ! do nothing 
                else
-                print *,"num_colors inconsistent; fort_cell_to_mac"
+                print *,"num_colors inconsistent; fort_cell_to_mac(2) ", &
+                    num_colors,blob_array_size
                 stop
                endif
               else
-               print *,"num_colors invalid"
+               print *,"num_colors invalid ",num_colors,blob_array_size
                stop
               endif
 
@@ -15096,7 +15101,8 @@ stop
                    else if (homogeneous_rigid_velocity.eq.1) then
                     uedge_rigid=zero
                    else
-                    print *,"homogeneous_rigid_velocity invalid"
+                    print *,"homogeneous_rigid_velocity invalid ", &
+                            homogeneous_rigid_velocity
                     stop
                    endif
 
@@ -15207,15 +15213,15 @@ stop
              else if (is_clamped_face.eq.0) then
               ! do nothing
              else
-              print *,"is_clamped_face invalid"
+              print *,"is_clamped_face invalid ",is_clamped_face
               stop
              endif
             else
-             print *,"side_boundary invalid"
+             print *,"side_boundary invalid ",side_boundary
              stop
             endif
            else 
-            print *,"iboundary invalid"
+            print *,"iboundary invalid ",iboundary
             stop
            endif
 
@@ -15234,6 +15240,7 @@ stop
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
+           print *,"project_option ",project_option
            stop
           endif
 
@@ -16983,7 +16990,7 @@ stop
             xstenMAC,nhalf,dx,bfact)
           endif
          else
-          print *,"side invalid"
+          print *,"side invalid ",side
           stop
          endif
 
@@ -16997,15 +17004,15 @@ stop
           else if (is_clamped_face.eq.0) then
            ! do nothing
           else
-           print *,"is_clamped_face invalid"
+           print *,"is_clamped_face invalid ",is_clamped_face
            stop
           endif
          else
-          print *,"side invalid"
+          print *,"side invalid(2) ",side
           stop
          endif
         else 
-         print *,"iboundary invalid"
+         print *,"iboundary invalid ",iboundary
          stop
         endif
 
@@ -17066,7 +17073,7 @@ stop
        else if (LS_clamped_minus.lt.zero) then
         is_clamped_face=0
        else
-        print *," LS_clamped_minus NaN"
+        print *," LS_clamped_minus NaN ",LS_clamped_minus
         stop
        endif
 
@@ -17074,11 +17081,12 @@ stop
         if (blob_array_size.eq.num_colors*num_elements_blobclass) then
          ! do nothing 
         else
-         print *,"num_colors inconsistent; fort_project_to_rigid_velocity"
+         print *,"num_colors inconsistent; fort_project_to_rigid_velocity ",&
+            blob_array_size,num_colors,num_elements_blobclass
          stop
         endif
        else
-        print *,"num_colors invalid"
+        print *,"num_colors invalid ",num_colors
         stop
        endif
 
@@ -17143,7 +17151,7 @@ stop
        else if (is_clamped_face.eq.0) then
         ! do nothing
        else
-        print *,"is_clamped_face invalid"
+        print *,"is_clamped_face invalid ",is_clamped_face
         stop
        endif
 
