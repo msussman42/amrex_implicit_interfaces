@@ -13106,6 +13106,114 @@ stop
       end subroutine fort_move_mdot
 
 
+      subroutine fort_clear_elastic_mdot( &
+       tid, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       xlo,dx, &
+       LS,DIMS(LS), &  
+       mdot,DIMS(mdot), &
+       mask,DIMS(mask)) & !mask=1 if not covered by level+1 or outside domain
+      bind(c,name='fort_clear_elastic_mdot')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(mask)
+      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials)
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      integer im
+      integer im_primary
+      integer mask_test
+      real(amrex_real) local_LS(num_materials)
+
+      integer i,j,k
+      integer growlo(3),growhi(3)
+
+      LS_ptr=>LS
+      mdot_ptr=>mdot
+      mask_ptr=>mask
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid ",tid
+       stop
+      endif
+
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       if (SDIM.ne.2) then
+        print *,"dimension crash ",SDIM
+        stop
+       endif
+      else
+       print *,"levelrz invalid fort_clear_elastic_mdot ",levelrz
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+     
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+ 
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       mask_test=NINT(mask(D_DECL(i,j,k)))
+
+       !mask=tag if not covered by level+1 or outside the domain.
+       if (mask_test.eq.1) then
+
+        do im=1,num_materials
+         local_LS(im)=LS(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(dx,local_LS,im_primary)
+      
+        if (is_elastic(im_primary).eq.1) then
+
+         mdot(D_DECL(i,j,k))=zero
+
+        else if (is_elastic(im_primary).eq.0) then
+         !do nothing
+        else
+         print *,"is_elastic invalid ",im_primary, &
+          is_elastic(im_primary)
+         stop
+        endif
+
+       else if (mask_test.eq.0) then
+        ! do nothing
+       else
+        print *,"mask_test invalid fort_clear_elastic_mdot: ",mask_test
+        stop
+       endif
+
+      enddo !i
+      enddo !j
+      enddo !k
+
+      return
+      end subroutine fort_clear_elastic_mdot
+
       subroutine fort_aggressive( &
        caller_string, &
        caller_string_len, &

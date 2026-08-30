@@ -7099,6 +7099,89 @@ NavierStokes::sync_old_new_colors(
 
 } //end subroutine sync_old_new_colors
 
+void
+NavierStokes::clear_elastic_mdot(int mdot_in_mf) {
+
+ std::string local_caller_string="clear_elastic_mdot";
+ bool use_tiling=ns_tiling;
+
+ debug_ngrow(mdot_in_mf,0,local_caller_string);
+
+ if (localMF[mdot_in_mf]->nComp()==1) {
+  //do nothing
+ } else 
+  amrex::Error("localMF[mdot_in_mf]->nComp() invalid");
+
+ if (localMF[mdot_in_mf]->nGrow()==0) {
+  //do nothing
+ } else 
+  amrex::Error("localMF[mdot_in_mf]->nGrow() invalid");
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  const Real* xlo = grid_loc[gridno].lo();
+
+  // mask=tag if not covered by level+1 or outside the domain.
+  // mask=1-tag if covered by level+1 and inside the domain.
+  // NavierStokes::maskfiner  (clear_phys_boundary==0)
+  FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
+  FArrayBox& mdotfab=(*localMF[mdot_in_mf])[mfi];
+  FArrayBox& LSfab=LS_new[mfi];
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   //fort_clear_elastic_mdot is declared in GODUNOV_3D.F90
+  fort_clear_elastic_mdot(
+     &tid_current,
+     tilelo,tilehi,
+     fablo,fabhi,
+     xlo,dx,
+     LSfab.dataPtr(), 
+     ARLIM(LSfab.loVect()),
+     ARLIM(LSfab.hiVect()),
+     mdotfab.dataPtr(),
+     ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
+     maskfab.dataPtr(),
+     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()));
+
+ }  // mfi
+} // omp
+
+ ns_reconcile_d_num(LOOP_FORT_CLEAR_ELASTIC_MDOT,"fort_clear_elastic_mdot");
+   //thread_class::sync_tile_d_numPts(),
+   //ParallelDescriptor::ReduceRealSum
+   //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
+
+} //end subroutine clear_elastic_mdot
+
 //called from NavierStokes::ColorSumALL
 //operation_flag==1 OP_SCATTER_MDOT => scatter data collected when 
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
@@ -11388,13 +11471,12 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
-   // FIX ME APPLY MASK IF FSI_outer_sweeps >0
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
-
+  
   if (FSI_outer_sweeps==0) {
    //do nothing
   } else if (FSI_outer_sweeps==1) {
-
+   clear_elastic_mdot(DIFFUSIONRHS_MF);
   } else
    amrex::Error("expecting FSI_outer_sweeps=0 or 1");
 

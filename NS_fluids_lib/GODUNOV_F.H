@@ -720,6 +720,14 @@ extern "C"
      int* level,
      int* finest_level);
 
+   void fort_clear_elastic_mdot(
+     int* tid,
+     const int* tilelo,const int* tilehi,
+     const int* fablo,const int* fabhi,
+     const Real* xlo,const Real* dx,
+     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
+     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi));
 
    void fort_vfrac_split(
      int* nprocessed,

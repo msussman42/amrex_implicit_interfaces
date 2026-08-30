@@ -803,6 +803,7 @@ protected:
 
     void clear_interface_vars(); 
     void move_mdot_to_density(); 
+    void clear_elastic_mdot(int mdot_in_mf); 
     void split_scalar_advection(int im_extension); 
     void split_scalar_advectionALL(int im_extension);
  
