@@ -5575,10 +5575,12 @@ stop
 
             else if (sweep_num.eq.2) then
 
-             !update mdot_pres in non-clamped fluid regions.
+             !update mdot_pres in non-clamped fluid or 
+             !deformable elastic regions.
 
              if ((is_rigid(im).eq.0).and. &
-                 (is_elastic(im).eq.0)) then
+                 ((is_elastic(im).eq.0).or. &
+                  (is_FSI_elastic(im).eq.1))) then
               vofcomp=(im-1)*ngeom_recon+1
               vfrac=mofdata(vofcomp)
               if ((vfrac.ge.one-EPS1).and.(vfrac.le.one+half)) then
@@ -5613,7 +5615,8 @@ stop
                      else if (constant_density_all_time(im).eq.0) then
                       den_mat=DEN(D_DECL(i,j,k),dencomp)
                      else
-                      print *,"constant_density_all_time(im) invalid"
+                      print *,"constant_density_all_time(im) invalid ", &
+                          im,constant_density_all_time(im)
                       stop
                      endif
                      if (den_mat.gt.zero) then
@@ -5648,15 +5651,16 @@ stop
                       mdot_pres(D_DECL(i,j,k))=mdot_pres(D_DECL(i,j,k))+ &
                         mdot_correct
                      else
-                      print *,"den_mat invalid ",den_mat
+                      print *,"den_mat must be positive ",den_mat
                       stop
                      endif
                     else
-                     print *,"blob_mass_target invalid ",blob_mass_target
+                     print *,"blob_mass_target must be positive ", &
+                          blob_mass_target
                      stop
                     endif
                    else
-                    print *,"blob_mass invalid ",blob_mass
+                    print *,"blob_mass must be positive ",blob_mass
                     stop
                    endif
                   else
@@ -5665,7 +5669,7 @@ stop
                    stop
                   endif
                  else
-                  print *,"vol invalid: ",vol
+                  print *,"vol must be positive: ",vol
                   stop
                  endif
 
@@ -5677,7 +5681,7 @@ stop
                else if (level_blobdata(ic).ge.one) then
                 !do nothing
                else
-                print *,"level_blobdata(ic) invalid"
+                print *,"level_blobdata(ic) invalid ",ic,level_blobdata(ic)
                 stop
                endif
 
@@ -5689,11 +5693,14 @@ stop
               endif
 
              else if ((is_rigid(im).eq.1).or. &
-                      (is_elastic(im).eq.1)) then
+                      ((is_elastic(im).eq.1).and. &
+                       (is_FSI_elastic(im).eq.0))) then
               !do nothing
              else
               print *,"is_rigid(im) invalid ",im,is_rigid(im)
               print *,"or is_elastic(im) invalid ",im,is_elastic(im)
+              print *,"or is_FSI_elastic(im) invalid ",im, &
+                is_FSI_elastic(im)
               stop
              endif
 

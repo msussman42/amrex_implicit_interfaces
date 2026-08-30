@@ -39,7 +39,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
-ns.num_divu_outer_sweeps=1
+ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)
@@ -85,8 +85,8 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 1024 16 16
-cg.min_max_grid_size=1024
+amr.max_grid_size   = 16 16 16
+cg.min_max_grid_size=16
 cg.force_ILU_smoother_single_grid=1
 Lp.smooth_type=1
 Lp.bottom_smooth_type=1
@@ -164,11 +164,11 @@ ns.material_conservation_form=0 0 0
 # 8 EULERIAN FSI
 #ns.FSI_flag=0 0 4 #CTML
 ns.FSI_flag=0 0 8 #Eulerian FSI
-ns.repair_mass=1 0 0 0
+ns.repair_mass=1 0 1 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.lax_friedrichs=0.0 1.0 1.0 1.0
+ns.lax_friedrichs=0.0 0.0 1.0 1.0
 ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
 ns.heatviscconst=0.0 0.0 0.0
 #ns.elastic_viscosity=0.0 0.0 4.0e+5
