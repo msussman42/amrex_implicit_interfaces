@@ -421,12 +421,17 @@ stop
         !  cc_group=cc*cc_elasticmaskpart
         ! else if (FSI_outer_sweeps==0)
         !  cc_group=cc
-       if (im_FSI_rigid.eq.im_primary) then
+       if (im_FSI_rigid.eq.im_primary) then !FSI_RIGID_NOTPRESCRIBED
 
         if (num_FSI_outer_sweeps.ge.2) then
          !do nothing
         else
          print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         print *,"im_primary= ",im_primary
+         print *,"im= ",im
+         print *,"im_opp=",im_opp
+         print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
+         print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
          stop
         endif
 
@@ -445,6 +450,12 @@ stop
          !do nothing
         else
          print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         print *,"im_primary= ",im_primary
+         print *,"im_ice= ",im_ice
+         print *,"im= ",im
+         print *,"im_opp=",im_opp
+         print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
+         print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
          stop
         endif
 
@@ -459,10 +470,29 @@ stop
                 ((im_FSI_elastic.ne.im_primary).or. &
                  (im_ice.eq.im_primary))) then
 
-        if (num_FSI_outer_sweeps.ge.2) then
-         !do nothing
+        if ((im_FSI_rigid.eq.im_primary).or. &
+            (im_FSI_elastic.eq.im_primary).or. &
+            (im_ice.eq.im_primary)) then
+         if (num_FSI_outer_sweeps.ge.2) then
+          !do nothing
+         else
+          print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+          print *,"im_primary= ",im_primary
+          print *,"im= ",im
+          print *,"im_opp=",im_opp
+          print *,"im_ice= ",im_ice
+          print *,"is_FSI_rigid(im) ",is_FSI_rigid(im)
+          print *,"is_FSI_rigid(im_opp) ",is_FSI_rigid(im_opp)
+          print *,"is_FSI_elastic(im) ",is_FSI_elastic(im)
+          print *,"is_FSI_elastic(im_opp) ",is_FSI_elastic(im_opp)
+          stop
+         endif
+        else if ((im_FSI_rigid.ne.im_primary).and. &
+                 (im_FSI_elastic.ne.im_primary).and. &
+                 (im_ice.ne.im_primary)) then
+         !check nothing
         else
-         print *,"expecting num_FSI_outer_sweeps>=2 ",num_FSI_outer_sweeps
+         print *,"parameter bust"
          stop
         endif
 
@@ -10154,6 +10184,52 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine check_lsbc_extrap
 
+      subroutine periodic_over_wrap_around(x,too_outside_flag)
+      use global_utility_module
+      IMPLICIT NONE
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      integer, INTENT(out) :: too_outside_flag
+      real(amrex_real) :: xcrit,problo_crit,probhi_crit,problen_crit
+      integer dir
+
+      too_outside_flag=0
+
+      do dir=1,SDIM
+       xcrit=x(dir)
+       if (dir.eq.1) then
+        problo_crit=problox
+        probhi_crit=probhix
+       else if (dir.eq.2) then
+        problo_crit=probloy
+        probhi_crit=probhiy
+       else if ((dir.eq.3).and.(SDIM.eq.3)) then
+        problo_crit=probloz
+        probhi_crit=probhiz
+       else
+        print *,"dir invalid ",dir
+        stop
+       endif
+       problen_crit=probhi_crit-problo_crit
+       if (problen_crit.gt.zero) then
+        !do nothing
+       else
+        print *,"problen_crit invalid ",problen_crit
+        stop
+       endif
+       if (problo_crit-xcrit.gt.problen_crit) then
+        too_outside_flag=1
+       else if (xcrit-probhi_crit.gt.problen_crit) then
+        too_outside_flag=1
+       else if ((xcrit.le.probhi_crit+problen_crit).and. &
+                (xcrit.ge.problo_crit-problen_crit)) then
+        !do nothing
+       else
+        print *,"xcrit invalid ",xcrit
+        stop
+       endif
+      enddo !dir=1,SDIM
+
+      end subroutine periodic_over_wrap_around
 
 ! inflow, outflow, slipwall, noslipwall bcs have ext dir; i.e.
 ! this routine called for inflow, outflow, slipwall, noslipwall
@@ -10177,12 +10253,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(in) :: time
       real(amrex_real) :: xwall,x,y,z
       real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real) :: xcrit(SDIM)
       real(amrex_real) cenbc(num_materials,SDIM)
       real(amrex_real) LS
       real(amrex_real) vofarray(num_materials)
       integer im
       integer vofcomp
       integer dir2
+      integer too_outside_flag
 
       real(amrex_real) vof_sum_check
       integer im_solid_mofbc
@@ -10220,9 +10298,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xwall=probhiz
        endif
       else
-       print *,"dir invalid group mof bc 0"
+       print *,"dir invalid group mof bc 0 ",dir
        stop
       endif
+
+      do dir2=1,SDIM
+       xcrit(dir2)=xsten(0,dir2)
+      enddo
 
       if ((dir.lt.1).or.(dir.gt.SDIM)) then
        print *,"dir invalid in group mof bc 1"
@@ -10250,21 +10332,32 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (vof_sum_check.ge.half) then
        ! do nothing
       else
-       print *,"(breakpoint) break point and gdb: "
-       print *,"(1) compile with the -g option"
-       print *,"(2) break PROB.F90:10814"
-       print *,"vof_sum_check failed"
-       print *,"vof_sum_check=",vof_sum_check
-       print *,"time=",time
-       print *,"dir,side ",dir,side
-       print *,"xsten(0) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-       print *,"nhalf ",nhalf
-       print *,"dx= ",dx(1),dx(2),dx(SDIM)
-       print *,"bfact=",bfact
-       print *,"num_materials=",num_materials
-       print *,"VOFwall= ",VOFwall
-       print *,"vofarray= ",vofarray
-       stop
+       call periodic_over_wrap_around(xcrit,too_outside_flag)
+
+       if (too_outside_flag.eq.1) then
+        VOF=zero
+        VOF(1)=one
+        return
+       else if (too_outside_flag.eq.0) then
+        print *,"(breakpoint) break point and gdb: "
+        print *,"(1) compile with the -g option"
+        print *,"(2) break PROB.F90:10266"
+        print *,"vof_sum_check failed"
+        print *,"vof_sum_check=",vof_sum_check
+        print *,"time=",time
+        print *,"dir,side ",dir,side
+        print *,"xsten(0) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+        print *,"nhalf ",nhalf
+        print *,"dx= ",dx(1),dx(2),dx(SDIM)
+        print *,"bfact=",bfact
+        print *,"num_materials=",num_materials
+        print *,"VOFwall= ",VOFwall
+        print *,"vofarray= ",vofarray
+        stop
+       else
+        print *,"too_outside_flag invalid ",too_outside_flag
+        stop
+       endif
       endif
 
       if (is_in_probtype_list().eq.1) then
@@ -28872,7 +28965,7 @@ end subroutine initialize2d
       integer :: test_bc
 
       integer i,j,k
-      integer dir2,dir3
+      integer dir2,dir3,dir4
       integer side
       integer side_debug
       integer ext_dir_flag,inside_index
@@ -28887,6 +28980,8 @@ end subroutine initialize2d
       real(amrex_real) uboundary(num_materials*ngeom_raw)
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xcrit(SDIM)
+      integer too_outside_flag
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
        print *,"tid_in invalid (group fill): ",tid_in
@@ -28998,6 +29093,9 @@ end subroutine initialize2d
         do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         do dir4=1,SDIM
+          xcrit(dir4)=xsten(0,dir4)
+         enddo
 
          IWALL(1)=i
          IWALL(2)=j
@@ -29010,44 +29108,54 @@ end subroutine initialize2d
               (uwall(im).le.zero)) then
            ! do nothing
           else
-           print *,"(breakpoint) break point and gdb: "
-           print *,"(1) compile with the -g option"
-           print *,"(2) break PROB.F90:29153"
+           call periodic_over_wrap_around(xcrit,too_outside_flag)
 
-           print *,"u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)=", &
+           if (too_outside_flag.eq.1) then
+            uwall=zero
+            uwall(1)=one
+           else if (too_outside_flag.eq.0) then
+            print *,"(breakpoint) break point and gdb: "
+            print *,"(1) compile with the -g option"
+            print *,"(2) break PROB.F90:29153"
+
+            print *,"u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)=", &
              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
 
-           if (1.eq.0) then
-            print *,"u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)=", &
-             u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)
-           endif
+            if (1.eq.0) then
+             print *,"u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)=", &
+              u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)
+            endif
 
-           print *,"uwall(im) is NaN: ",im,uwall(im)
-           print *,"IWALL= ",IWALL
-           print *,"inside_index= ",inside_index
-           print *,"i,j,k ",i,j,k
-           print *,"borderlo=",borderlo
-           print *,"borderhi=",borderhi
-           print *,"fablo=",fablo
-           print *,"fabhi=",fabhi
-           print *,"domlo=",domlo
-           print *,"domhi=",domhi
-           print *,"dir2,side ",dir2,side
-           print *,"EXT_DIR=",EXT_DIR
-           print *,"INT_DIR=",INT_DIR
-           print *,"FOEXTRAP=",FOEXTRAP
-           print *,"REFLECT_EVEN=",REFLECT_EVEN
-           print *,"REFLECT_ODD=",REFLECT_ODD
-           do dir3=1,SDIM
-           do side_debug=1,2
-           do im_debug=1,ncomp
-            print *,"dir,side,nc,bc(dir,side,nc) ",dir3,side_debug,im_debug, &
+            print *,"uwall(im) is NaN: ",im,uwall(im)
+            print *,"IWALL= ",IWALL
+            print *,"inside_index= ",inside_index
+            print *,"i,j,k ",i,j,k
+            print *,"borderlo=",borderlo
+            print *,"borderhi=",borderhi
+            print *,"fablo=",fablo
+            print *,"fabhi=",fabhi
+            print *,"domlo=",domlo
+            print *,"domhi=",domhi
+            print *,"dir2,side ",dir2,side
+            print *,"EXT_DIR=",EXT_DIR
+            print *,"INT_DIR=",INT_DIR
+            print *,"FOEXTRAP=",FOEXTRAP
+            print *,"REFLECT_EVEN=",REFLECT_EVEN
+            print *,"REFLECT_ODD=",REFLECT_ODD
+            do dir3=1,SDIM
+            do side_debug=1,2
+            do im_debug=1,ncomp
+             print *,"dir,side,nc,bc(dir,side,nc) ",dir3,side_debug,im_debug, &
               bc(dir3,side_debug,im_debug)
-           enddo 
-           enddo 
-           enddo 
+            enddo 
+            enddo 
+            enddo 
 
-           stop
+            stop
+           else
+            print *,"too_outside_flag invalid ",too_outside_flag
+            stop
+           endif
           endif
          enddo
          call groupmofBC(time,dir2,side, &
@@ -29344,7 +29452,7 @@ end subroutine initialize2d
       integer :: test_bc
 
       integer i,j,k
-      integer dir2,dir3,side,ext_dir_flag,inside_index
+      integer dir2,dir3,dir4,side,ext_dir_flag,inside_index
       integer isub
       integer ibasesrc
       integer ibasedst
@@ -29373,6 +29481,8 @@ end subroutine initialize2d
       integer, parameter :: nhalf=3
 
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xcrit(SDIM)
+      integer too_outside_flag
       integer nmax
 
       if ((tid_in.ge.geom_nthreads).or.(tid_in.lt.0)) then
@@ -29488,6 +29598,9 @@ end subroutine initialize2d
         do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+         do dir4=1,SDIM
+          xcrit(dir4)=xsten(0,dir4)
+         enddo
 
          IWALL(1)=i
          IWALL(2)=j
@@ -29549,15 +29662,27 @@ end subroutine initialize2d
          else if ((voffluid_wall.le.two).and.(voffluid_bound.le.two)) then
           ! do nothing
          else
-          print *,"i,j,k ",i,j,k
-          print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
-          print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
+          call periodic_over_wrap_around(xcrit,too_outside_flag)
+
+          if (too_outside_flag.eq.1) then
+           uboundary=zero
+           uboundary(1)=one
+          else if (too_outside_flag.eq.0) then
+
+           print *,"i,j,k ",i,j,k
+           print *,"IWALL ",IWALL(1),IWALL(2),IWALL(3)
+           print *,"voffluid_wall,vofsolid_wall,vofelastic_wall ", &
              voffluid_wall,vofsolid_wall,vofelastic_wall
-          print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
+           print *,"voffluid_bound,vofsolid_bound,vofelastic_bound ", &
              voffluid_bound,vofsolid_bound,vofelastic_bound
-          print *,"voffluid_wall or voffluid_bound invalid ", &
+           print *,"voffluid_wall or voffluid_bound invalid ", &
                voffluid_wall,voffluid_bound
-          stop
+           stop
+
+          else
+           print *,"too_outside_flag invalid ",too_outside_flag
+           stop
+          endif
          endif
 
          do im=1,num_materials
