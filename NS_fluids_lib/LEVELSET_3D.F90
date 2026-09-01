@@ -1228,7 +1228,7 @@ stop
          LL=get_user_latent_heat(iten_test,room_temperature,1)
          if (LL.lt.zero) then
           do dir2=1,SDIM
-           normal_im3(dir2)=master_normal(dir2)
+!          normal_im3(dir2)=master_normal(dir2)
           enddo !dir2=1..sdim
          else if (LL.ge.zero) then
           !do nothing
@@ -1241,7 +1241,7 @@ stop
          LL=get_user_latent_heat(iten_test,room_temperature,1)
          if (LL.lt.zero) then
           do dir2=1,SDIM
-           normal_im3(dir2)=-master_normal(dir2)
+!          normal_im3(dir2)=-master_normal(dir2)
           enddo !dir2=1..sdim
          else if (LL.ge.zero) then
           !do nothing
@@ -11611,7 +11611,7 @@ stop
        if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid"
+        print *,"ncomp_denold invalid ",nsolve,ncomp_denold
         stop
        endif
 
@@ -11643,7 +11643,7 @@ stop
        if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid: ",ncomp_denold
+        print *,"ncomp_denold invalid: ",nsolve,ncomp_denold
         stop
        endif
 
@@ -11690,7 +11690,7 @@ stop
        if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid"
+        print *,"ncomp_denold invalid ",nsolve,ncomp_denold
         stop
        endif
 
@@ -11718,7 +11718,7 @@ stop
        if (ncomp_denold.eq.1) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid"
+        print *,"ncomp_denold invalid ",nsolve,ncomp_denold
         stop
        endif
 
@@ -11746,7 +11746,8 @@ stop
        if (ncomp_denold.eq.num_materials*num_state_material) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid"
+        print *,"ncomp_denold invalid ",num_materials, &
+                num_state_material,ncomp_denold
         stop
        endif
 
@@ -12087,7 +12088,8 @@ stop
           if (DIAG_REGULARIZE.gt.zero) then
            ! check nothing
           else
-           print *,"DIAG_REGULARIZE invalid"
+           print *,"DIAG_REGULARIZE invalid ",i,j,k,veldir, &
+             DIAG_REGULARIZE
            stop
           endif
 

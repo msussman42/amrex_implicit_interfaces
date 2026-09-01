@@ -38,7 +38,7 @@ mg.bot_atol = 1.0e-14
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
+ns.num_materials=4  # 1=drop material 2=gas material 3=substrate 4=ice
 ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
 #0=MOF (moment of fluid)
@@ -56,8 +56,9 @@ amr.max_level=1
 ns.ngrow_distance=6
 ns.ngrow_elastic=4.0
 
-ns.mof_ordering=2 3 1 #liquid, gas, substrate
-ns.material_extend_velocity=0 0 1 #EULERIAN FSI
+ns.mof_ordering=2 3 1 1 #liquid, gas, substrate, ice
+ns.material_extend_velocity=0 0 1 1 #EULERIAN FSI
+#ns.material_extend_velocity=0 0 0 1 #RIGID SUBSTRATE
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1
 
@@ -70,7 +71,7 @@ ns.initial_thermal_cycles=10
 ns.initial_project_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-ns.shock_timestep=2 2 2
+ns.shock_timestep=2 2 2 2
 
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
@@ -111,11 +112,12 @@ ns.gravity=0.0
 # 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
-ns.tension=73.0 73.0 0.0 #180 degrees
-ns.density_ratio_relaxation_factor=100.0 100.0 10000.0
+#12 13 14 23 24 34
+ns.tension=73.0 73.0 73.0 0.0 145.0 0.0 #180 deg substrate, 10 deg ice.
+ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0
 
-ns.min_velocity_for_dt=1.0e-5 
-ns.law_of_the_wall=0 0 0
+ns.min_velocity_for_dt=1.0e-5
+ns.law_of_the_wall=0 0 0 0
 # =-1 static angle
 # =1 GNBC
 # =2 Jiang 1970
@@ -132,7 +134,7 @@ ns.twall=0.0
 
 ns.axis_dir=0
 # 0.0 means do not use vorticity as a criterion for AMR
-ns.vorterr=0.0 0.0 0.0
+ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
@@ -143,17 +145,21 @@ ns.xblob=0.0 #center of falling drop
 ns.yblob=7.2
 ns.zblob=7.2  
 ns.xblob2=0.0  #center of plate
-ns.yblob2=5.8
+ns.yblob2=5.8  #center of plate
 ns.radblob2=4.0 # radius in "x" direction of plate
 ns.radblob3=0.2 # radius in "y" direction of plate
 ns.radblob=0.6 
+ns.xblob3=0.0 #center of ice
+ns.yblob3=5.4
+ns.radblob4=4.0 # radius in "x" direction of ice
+ns.radblob5=0.2 # radius in "y" direction of ice
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
-#ns.material_type=0 0 999 # CTML
-ns.material_type=0 0 0 # Eulerian FSI
-ns.material_conservation_form=0 0 0
+#ns.material_type=0 0 999 0 # RIGID substrate
+ns.material_type=0 0 0 0 # Eulerian FSI
+ns.material_conservation_form=0 0 0 0
 #ns.material_type=0 0 25 # Compressible Eulerian FSI (elastic)
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
@@ -162,34 +168,49 @@ ns.material_conservation_form=0 0 0
 # 3 ice
 # 4 CTML
 # 8 EULERIAN FSI
-#ns.FSI_flag=0 0 4 #CTML
-ns.FSI_flag=0 0 8 #Eulerian FSI
-ns.repair_mass=1 0 1 0
+# 10 EULERIAN FSI ICE
+#ns.FSI_flag=0 0 1 10 #RIGID substrate
+ns.FSI_flag=0 0 8 10 #Eulerian FSI
+#ns.repair_mass=1 0 0 1  #RIGID substrate
+ns.repair_mass=1 0 1 1 
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 ns.lax_friedrichs=0.0 1.0 1.0 1.0
 ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
-ns.heatviscconst=0.0 0.0 0.0
-#ns.elastic_viscosity=0.0 0.0 4.0e+5
-ns.elastic_viscosity=0.0 0.0 4.0e+4
-ns.elastic_time=0.0 0.0 1.0e+31
-ns.polymer_factor=0.0 0.0 0.0 #1/L
+ns.heatviscconst=0.546e+5 0.026e+5 2.2e+5 2.2e+5 # erg/(s cm K)
+ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
+#12 13 14 23 24 34
+ns.latent_heat = 0.0 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0
+#12 13 14 23 24 34
+ns.saturation_temp = 0.0 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+
+#ns.elastic_viscosity=0.0 0.0 0.0 4.0e+4 #RIGID FSI
+ns.elastic_viscosity=0.0 0.0 4.0e+4 4.0e+4
+#ns.elastic_time=0.0 0.0 0.0 1.0e+31 #RIGID FSI
+ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31
+ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #0=FENE-CR
 #1=Oldroyd B
 #3=incremental elastic
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7
+#ns.viscoelastic_model=0 0 0 7 #RIGID FSI
+ns.viscoelastic_model=0 0 7 7
 ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.viscconst=0.01 0.000181 1.0 #CGS
-ns.denconst=1.0 0.001225 1.5
-ns.pressure_error_cutoff=0.0 0.0 0.0
-ns.tempconst=293.0 293.0 293.0
+ns.viscconst=0.01 0.000181 1.0e+13 1.0+13 #CGS
+ns.denconst=1.0 0.001225 1.0 0.917
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+# solidheat_flag=0=>diffuse in solid 
+# solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
+# solidheat_flag=2=>neumann
+ns.solidheat_flag=1
+ns.tempconst=273.0 273.0 267.0 267.0
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 3
 ns.hi_bc          = 3 2

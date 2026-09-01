@@ -56,11 +56,16 @@ ns.visual_nddata_format=2 #0=tecplot 1=native AMReX or HDF5 2=tecplot cells
 ns.visual_tessellate_vfrac=0
 #ns.step_through_data=1
 #amr.n_cell    = 16 16 32
-amr.n_cell    = 32 64
-amr.max_level =  0  # 3 levels for finest
-amr.max_grid_size   = 16 16
+amr.n_cell    = 8 16
+amr.max_level =  2  # 5 levels for finest
+amr.max_grid_size   = 16 16 16
 cg.min_max_grid_size=16
-ns.coarsest_level_CISL=0
+#the coarsest level cannot have any "zero" coefficients, otherwise the
+#bottom solver is not exact.  This is because the bottom solver uses
+#"desingularized" coefficients, and therefore gives a different solution.
+#The workaround is to choose a "level 0" such that all of the
+#coarsened coefficients are not zero.  Then, the bottom solver is exact.
+ns.coarsest_level_CISL=2
 
 Lp.bottom_smooth_type=1
 Lp.smooth_type=1
