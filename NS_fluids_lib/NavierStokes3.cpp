@@ -6620,8 +6620,6 @@ NavierStokes::resolve_orphans(
  } else
   amrex::Error("finest_level invalid");
 
- Real finest_vol=0.0;
-
  if (level==0) {
   //do nothing
  } else
@@ -6661,7 +6659,7 @@ NavierStokes::resolve_orphans(
    if ((jcrit>=0)&&(jcrit<blobdata_old.size())) {
     intersection_data[i].resize(1);
     label_intersect[i].resize(1);
-    intersection_data[i][0]=finest_vol;
+    intersection_data[i][0]=0.0;
     label_intersect[i][0]=jcrit;
 
     int j_size=label_intersect_old[jcrit].size();
@@ -6675,7 +6673,7 @@ NavierStokes::resolve_orphans(
      label_intersect_old[jcrit].resize(j_size+1);
      intersection_data_old[jcrit].resize(j_size+1);
      label_intersect_old[jcrit][j_size]=i;
-     intersection_data_old[jcrit][j_size]=finest_vol;
+     intersection_data_old[jcrit][j_size]=0.0;
     } else if (idup>0) {
      amrex::Error("not expecting label_intersect_old[jcrit][kk]==i");
     } else

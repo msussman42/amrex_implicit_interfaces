@@ -5608,7 +5608,7 @@ stop
                     ic=(opposite_color(im)-1)*num_elements_blobclass+ &
                      BLB_MASS_TARGET+1
                     blob_mass_target=level_blobdata(ic)
-                    if (blob_mass_target.gt.zero) then
+                    if (blob_mass_target.ge.zero) then
                      dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
                      if (constant_density_all_time(im).eq.1) then
                       den_mat=fort_denconst(im)
@@ -5655,7 +5655,7 @@ stop
                       stop
                      endif
                     else
-                     print *,"blob_mass_target must be positive ", &
+                     print *,"blob_mass_target must be non-negative ", &
                           blob_mass_target
                      stop
                     endif
