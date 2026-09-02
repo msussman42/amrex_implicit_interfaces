@@ -114,7 +114,7 @@ ns.gravity=0.0
 ns.tension=73.0 73.0 0.0 #180 degrees
 ns.density_ratio_relaxation_factor=100.0 100.0 10000.0
 
-ns.min_velocity_for_dt=1.0e-5 
+ns.min_velocity_for_dt=1.0e-5
 ns.law_of_the_wall=0 0 0
 # =-1 static angle
 # =1 GNBC
