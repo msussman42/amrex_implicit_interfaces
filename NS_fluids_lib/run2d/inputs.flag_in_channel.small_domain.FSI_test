@@ -96,7 +96,6 @@ ns.minimum_relative_error=1.0e-22
 #number of iterations to get the initial guess. 
 #NavierStokes::jacobi_cycles (update_vel==1)
 ns.initial_project_cycles=10
-ns.mglib_max_ratio=1.0e+5
 ns.initial_viscosity_cycles=10
 ns.initial_thermal_cycles=10
 ns.initial_cg_cycles=10

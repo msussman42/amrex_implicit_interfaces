@@ -17377,6 +17377,7 @@ NavierStokes::phase_change_redistributeALL() {
   
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
+  //fort_initjumpterm is declared in GODUNOV_3D.F90
   ns_level.level_phase_change_redistribute(
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,

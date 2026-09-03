@@ -4732,7 +4732,8 @@ stop
            print *,"dx_sten invalid: ",dx_sten(dir)
            stop
           endif
-         enddo
+         enddo !dir=1,SDIM
+
          RR=xsten(0,1)
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
@@ -5567,6 +5568,10 @@ stop
                 ! do nothing
                else
                 print *,"ic invalid for blob_cell_count"
+                print *,"ic=",ic
+                print *,"im=",im
+                print *,"opposite_color ",opposite_color
+                print *,"BLB_TRIPLE_PERIM ",BLB_TRIPLE_PERIM
                 stop
                endif
    
@@ -5597,13 +5602,36 @@ stop
                 else if (LS_clamped.le.zero) then
 
                  if (vol.gt.zero) then
+
                   ic=(opposite_color(im)-1)*num_elements_blobclass+ &
                    BLB_CELLVOL_CNT+1
                   blob_cellvol_count=level_blobdata(ic)
+
+                  if (ic-1.eq. &
+                      (opposite_color(im)-1)*num_elements_blobclass+ &
+                       BLB_CELL_CNT+1) then
+                   blob_cell_count=level_blobdata(ic-1)
+                  else
+                   print *,"ic mismatch with BLB_CELL_CNT"
+                   print *,"ic=",ic
+                   print *,"im=",im
+                   print *,"BLB_CELL_CNT ",BLB_CELL_CNT
+                   stop
+                  endif
+
                   if (blob_cellvol_count.gt.(one-EPS1)*vol) then
+
+                   if (blob_cell_count.ge.one) then
+                    !do nothing
+                   else
+                    print *,"blob_cell_count invalid ",blob_cell_count
+                    stop
+                   endif
+
                    ic=(opposite_color(im)-1)*num_elements_blobclass+ &
                     BLB_MASS+1
                    blob_mass=level_blobdata(ic)
+
                    if (blob_mass.gt.zero) then
                     ic=(opposite_color(im)-1)*num_elements_blobclass+ &
                      BLB_MASS_TARGET+1
@@ -5767,6 +5795,7 @@ stop
                    else
                     print *,"distribute_from_target(iten_shift) invalid ", &
                        distribute_from_target
+                    print *,"iten_shift=",iten_shift
                     stop
                    endif
               
@@ -5775,8 +5804,11 @@ stop
                    if (im.eq.im_evenly) then 
                     ic=(opposite_color(im)-1)*num_elements_blobclass+ &
                             BLB_CELL_CNT+1
+                     !level_blobdata(ic)=level_blobdata(ic)+one
                     blob_cell_count=cum_blobdata(ic)
+                     !level_blobdata(ic+1)=level_blobdata(ic+1)+vol
                     blob_cellvol_count=cum_blobdata(ic+1)
+
                     if ((blob_cellvol_count.gt.zero).and. &
                         (blob_cell_count.gt.zero)) then
 

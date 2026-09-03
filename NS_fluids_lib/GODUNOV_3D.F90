@@ -4697,7 +4697,8 @@ stop
       if (ngrow_make_distance.eq.ngrow_distance-1) then
        !do nothing
       else
-       print *,"ngrow_make_distance invalid: ",ngrow_make_distance
+       print *,"ngrow_make_distance invalid fort_initjumpterm: ", &
+               ngrow_make_distance
        stop
       endif
       if (ngrow_distance.ge.6) then
@@ -4836,7 +4837,7 @@ stop
              else if (is_rigid(imlocal).eq.0) then
               ! do nothing
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid: ",imlocal,is_rigid(imlocal)
               stop
              endif
             enddo ! imlocal=1..num_materials 
