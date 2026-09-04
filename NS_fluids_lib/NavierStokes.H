@@ -424,6 +424,8 @@ public:
     static int CTML_max_num_elements_list; 
     static int CTML_FSI_num_scalars;
 
+    static int cell_centered_incompressible;
+
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_conservation_form; 
     static Vector<int> material_extend_velocity; 

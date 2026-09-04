@@ -947,6 +947,8 @@ Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
 
+int NavierStokes::cell_centered_incompressible=0; 
+
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_conservation_form;
 //nmat components.
@@ -2560,6 +2562,12 @@ NavierStokes::read_params ()
      }
     } 
 
+    pp.queryAdd("cell_centered_incompressible",cell_centered_incompressible);
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "cell_centered_incompressible " << 
+      cell_centered_incompressible << '\n';
+    }
+
     pp.queryAdd("nblocks",nblocks);
 
     int nblocks_size=( (nblocks==0) ? 1 : nblocks );
@@ -2991,6 +2999,11 @@ NavierStokes::read_params ()
     pp.queryAdd("enable_spectral",enable_spectral);
 
     if (enable_spectral==1) {
+
+     if (cell_centered_incompressible==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting cell_centered_incompressible==0");
 
      if (geometry_is_all_periodic==1) {
       // do nothing
@@ -3752,13 +3765,19 @@ NavierStokes::read_params ()
 
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
+
+     if (cell_centered_incompressible==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting cell_centered_incompressible==0");
+
      Refine_Density_Type=NUM_STATE_TYPE;
      NUM_STATE_TYPE++;
     } else if (num_materials_compressible==0) {
      Refine_Density_Type=-1;
     } else
      amrex::Error("num_materials_compressible invalid");
-
+   
      //smooth_type: 0=GSRB 1=weighted Jacobi 2=ILU
     ParmParse pplp("Lp");
     pplp.queryAdd("smooth_type",smooth_type);
@@ -5143,6 +5162,12 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_CTML() invalid");
 
     if (num_materials_viscoelastic>=1) {
+
+     if (cell_centered_incompressible==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting cell_centered_incompressible==0");
+
      num_divu_outer_sweeps=2;
     } else if (num_materials_viscoelastic==0) {
      //do nothing
@@ -19945,7 +19970,16 @@ NavierStokes::split_scalar_advection(int im_extension) {
   grids_per_proc[iproc]=0;
  }
 
- int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
+ int refine_CISL=ENUM_NUM_REFINE_DENSITY_TYPE;
+
+ if (cell_centered_incompressible==0) {
+  refine_CISL=ENUM_NUM_REFINE_DENSITY_TYPE;
+ } else if (cell_centered_incompressible==1) {
+  refine_CISL=1;
+ } else
+  amrex::Error("cell_centered_incompressible invalid");
+
+ int nc_conserve=CISLCOMP_CONS_NCOMP*refine_CISL;
  int nc_bucket=CISLCOMP_NCOMP;
 
 
@@ -19980,21 +20014,32 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
   if (im_extension==-1) {
 
-   //ngrow=2
-   tensor_bucket_state=new MultiFab(grids,dmap,
-    NUM_CELL_ELASTIC+1,
-    2,
-    MFInfo().SetTag("tensor_bucket_state"),FArrayBoxFactory());
-   //scomp=0 ncomp=2 ngrow=2
-   tensor_bucket_state->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
+   if (cell_centered_incompressible==0) {
 
-   //ngrow=2
-   tensor_bucket_mass=new MultiFab(grids,dmap,
-    NUM_CELL_ELASTIC+1,
-    2,
-    MFInfo().SetTag("tensor_bucket_mass"),FArrayBoxFactory());
-   //scomp=0 ncomp=2 ngrow=2
-   tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
+    } // dir = 0..sdim-1
+
+    //ngrow=2
+    tensor_bucket_state=new MultiFab(grids,dmap,
+     NUM_CELL_ELASTIC+1,
+     2,
+     MFInfo().SetTag("tensor_bucket_state"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=2
+    tensor_bucket_state->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
+
+    //ngrow=2
+    tensor_bucket_mass=new MultiFab(grids,dmap,
+     NUM_CELL_ELASTIC+1,
+     2,
+     MFInfo().SetTag("tensor_bucket_mass"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=2
+    tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
+
+   } else if (cell_centered_incompressible==1) {
+    //do nothing
+   } else
+    amrex::Error("cell_centered_incompressible invalid");
 
    // in: split_scalar_advection
    // ngrow=2
@@ -20018,6 +20063,7 @@ NavierStokes::split_scalar_advection(int im_extension) {
      ngrow,0,
      NUM_CELL_ELASTIC_REFINE,
      advect_time_slab);
+
    } else if (num_materials_viscoelastic==0) {
     //do nothing
    } else
@@ -20041,10 +20087,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,
     advect_time_slab); 
 
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
-   } // dir = 0..sdim-1
-
    int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
    if (den_recon_ncomp!=num_state_material*num_materials)
     amrex::Error("den_recon invalid");
@@ -20061,20 +20103,27 @@ NavierStokes::split_scalar_advection(int im_extension) {
     ngrow,
     MFInfo().SetTag("conserve"),FArrayBoxFactory());
  
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (cell_centered_incompressible==0) {
 
-    //ncomp=2 ngrow=1
-    side_bucket_mom[dir]=new MultiFab(grids,dmap,
-     2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=1
-    side_bucket_mom[dir]->setVal(0.0,0,2,1);
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    //ncomp=2 ngrow=1
-    side_bucket_mass[dir]=new MultiFab(grids,dmap,
-     2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=1
-    side_bucket_mass[dir]->setVal(0.0,0,2,1);
-   }  // dir = 0..sdim-1
+     //ncomp=2 ngrow=1
+     side_bucket_mom[dir]=new MultiFab(grids,dmap,
+      2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
+     //scomp=0 ncomp=2 ngrow=1
+     side_bucket_mom[dir]->setVal(0.0,0,2,1);
+
+     //ncomp=2 ngrow=1
+     side_bucket_mass[dir]=new MultiFab(grids,dmap,
+      2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
+     //scomp=0 ncomp=2 ngrow=1
+     side_bucket_mass[dir]->setVal(0.0,0,2,1);
+    }  // dir = 0..sdim-1
+
+   } else if (cell_centered_incompressible==1) {
+    //do nothing
+   } else
+    amrex::Error("cell_centered_incompressible invalid");
 
    S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
 
@@ -20230,9 +20279,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
     FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
 
-    FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF_local])[mfi];
-    FArrayBox& refinedenfab=(*localMF[REFINE_DENSITY_RECON_MF_local])[mfi];
-
     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
 
       // this is the slope data
@@ -20243,33 +20289,16 @@ NavierStokes::split_scalar_advection(int im_extension) {
        // this is the result
     FArrayBox& destfab=S_new[mfi];
 
-    FArrayBox& tennewfab=Tensor_new[mfi];
-    FArrayBox& refinedennewfab=Refine_Density_new[mfi];
-
     FArrayBox& LSdestfab=LS_new[mfi];
 
     FArrayBox& consfab=(*conserve)[mfi];
-
-    FArrayBox& tensorstate=(*tensor_bucket_state)[mfi];
-    FArrayBox& tensormass=(*tensor_bucket_mass)[mfi];
-
-    FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
-    FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
-    FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
-
-    FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];
-    FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
-    FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
     FArrayBox& xmac_new=(*umac_new[0])[mfi];
     FArrayBox& ymac_new=(*umac_new[1])[mfi];
     FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
 
-    FArrayBox& xmac_old=(*localMF[UMACOLD_MF])[mfi];
-    FArrayBox& ymac_old=(*localMF[UMACOLD_MF+1])[mfi];
-    FArrayBox& zmac_old=(*localMF[UMACOLD_MF+AMREX_SPACEDIM-1])[mfi];
-
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
+
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -20280,102 +20309,199 @@ NavierStokes::split_scalar_advection(int im_extension) {
      grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
     }
 
-     // solid distance function and solid moments are not modified.
-     // solid temperature is modified only if solidheat_flag==0.
-    fort_vfrac_split(
-     &nprocessed[tid_current],
-     &tid_current,
-     volume_fraction_weight.dataPtr(),
-     sato_model_spec_id.dataPtr(),
-     density_floor.dataPtr(),
-     density_ceiling.dataPtr(),
-     &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
-     freezing_model.dataPtr(),
-     distribute_from_target.dataPtr(),
-     constant_density_all_time.dataPtr(),
-     velbc.dataPtr(),
-     &divu_outer_sweeps,
-     &num_divu_outer_sweeps,
-     material_conservation_form.dataPtr(),
-     &EILE_flag,
-     &dir_absolute_direct_split,
-     &normdir_here,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &bfact_f,
-     &dt_slab, // fort_vfrac_split
-     &prev_time_slab,
-     &cur_time_slab,
-     &prescribed_vel_time_slab,
-       // this is the original data
-     LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
-     ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
-     denfab.dataPtr(),
-     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-     mom_denfab.dataPtr(),
-     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-     tenfab.dataPtr(),
-     ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-     refinedenfab.dataPtr(),
-     ARLIM(refinedenfab.loVect()),
-     ARLIM(refinedenfab.hiVect()),
-     velfab.dataPtr(), //VELADVECT_MF
-     ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-       // slope data
-     vofslopefab.dataPtr(),
-     ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
-       // this is the result
-     destfab.dataPtr(),
-     ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
-     tennewfab.dataPtr(),
-     ARLIM(tennewfab.loVect()),ARLIM(tennewfab.hiVect()),
-     refinedennewfab.dataPtr(),
-     ARLIM(refinedennewfab.loVect()),
-     ARLIM(refinedennewfab.hiVect()),
-     LSdestfab.dataPtr(),
-     ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
-      // other vars.
-     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     masknbrfab.dataPtr(),
-     ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
-     umac_displace.dataPtr(),
-     ARLIM(umac_displace.loVect()),
-     ARLIM(umac_displace.hiVect()),
-     xlo,dx,
-      // local variables
-     consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-     xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
-     ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
-     zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
-     xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
-     ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
-     zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-       //umac_new[0..sdim-1]
-     xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
-     ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
-     zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
-      //UMACOLD_MF
-     xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
-     ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
-     zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
-     tensorstate.dataPtr(),
-     ARLIM(tensorstate.loVect()),ARLIM(tensorstate.hiVect()),
-     tensormass.dataPtr(),
-     ARLIM(tensormass.loVect()),ARLIM(tensormass.hiVect()),
-     &stokes_flow,
-     &nc_conserve,
-     &map_forward_direct_split[normdir_here],
-     &vofrecon_ncomp,
-     &den_recon_ncomp,
-     &ncomp_state,
-     &nc_bucket,
-     &verbose,
-     &gridno,&ngrid,
-     &level,
-     &finest_level,
-     dombc.dataPtr(), 
-     domlo,domhi);
+    if (cell_centered_incompressible==0) {
+
+     FArrayBox& refinedennewfab=Refine_Density_new[mfi];
+
+     FArrayBox& tenfab=(*localMF[TENSOR_RECON_MF_local])[mfi];
+     FArrayBox& refinedenfab=(*localMF[REFINE_DENSITY_RECON_MF_local])[mfi];
+
+     FArrayBox& tennewfab=Tensor_new[mfi];
+
+     FArrayBox& tensorstate=(*tensor_bucket_state)[mfi];
+     FArrayBox& tensormass=(*tensor_bucket_mass)[mfi];
+
+     FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
+     FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
+     FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
+     FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];
+     FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
+     FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
+
+     FArrayBox& xmac_old=(*localMF[UMACOLD_MF])[mfi];
+     FArrayBox& ymac_old=(*localMF[UMACOLD_MF+1])[mfi];
+     FArrayBox& zmac_old=(*localMF[UMACOLD_MF+AMREX_SPACEDIM-1])[mfi];
+
+      // solid distance function and solid moments are not modified.
+      // solid temperature is modified only if solidheat_flag==0.
+     fort_vfrac_split(
+      &nprocessed[tid_current],
+      &tid_current,
+      volume_fraction_weight.dataPtr(),
+      sato_model_spec_id.dataPtr(),
+      density_floor.dataPtr(),
+      density_ceiling.dataPtr(),
+      &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
+      freezing_model.dataPtr(),
+      distribute_from_target.dataPtr(),
+      constant_density_all_time.dataPtr(),
+      velbc.dataPtr(),
+      &divu_outer_sweeps,
+      &num_divu_outer_sweeps,
+      material_conservation_form.dataPtr(),
+      &EILE_flag,
+      &dir_absolute_direct_split,
+      &normdir_here,
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &bfact_f,
+      &dt_slab, // fort_vfrac_split
+      &prev_time_slab,
+      &cur_time_slab,
+      &prescribed_vel_time_slab,
+        // this is the original data
+      LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
+      ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+      denfab.dataPtr(),
+      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+      mom_denfab.dataPtr(),
+      ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
+      tenfab.dataPtr(),
+      ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
+      refinedenfab.dataPtr(),
+      ARLIM(refinedenfab.loVect()),
+      ARLIM(refinedenfab.hiVect()),
+      velfab.dataPtr(), //VELADVECT_MF
+      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+        // slope data
+      vofslopefab.dataPtr(),
+      ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
+        // this is the result
+      destfab.dataPtr(),
+      ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
+      tennewfab.dataPtr(),
+      ARLIM(tennewfab.loVect()),ARLIM(tennewfab.hiVect()),
+      refinedennewfab.dataPtr(),
+      ARLIM(refinedennewfab.loVect()),
+      ARLIM(refinedennewfab.hiVect()),
+      LSdestfab.dataPtr(),
+      ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
+       // other vars.
+      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+      masknbrfab.dataPtr(),
+      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
+      umac_displace.dataPtr(),
+      ARLIM(umac_displace.loVect()),
+      ARLIM(umac_displace.hiVect()),
+      xlo,dx,
+       // local variables
+      consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
+      xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
+      ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
+      zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
+      xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
+      ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
+      zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
+        //umac_new[0..sdim-1]
+      xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
+      ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
+      zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
+       //UMACOLD_MF
+      xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
+      ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
+      zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
+      tensorstate.dataPtr(),
+      ARLIM(tensorstate.loVect()),ARLIM(tensorstate.hiVect()),
+      tensormass.dataPtr(),
+      ARLIM(tensormass.loVect()),ARLIM(tensormass.hiVect()),
+      &stokes_flow,
+      &nc_conserve,
+      &map_forward_direct_split[normdir_here],
+      &vofrecon_ncomp,
+      &den_recon_ncomp,
+      &ncomp_state,
+      &nc_bucket,
+      &verbose,
+      &gridno,&ngrid,
+      &level,
+      &finest_level,
+      dombc.dataPtr(), 
+      domlo,domhi);
+
+    } else if (cell_centered_incompressible==1) {
+
+      // solid distance function and solid moments are not modified.
+      // solid temperature is modified only if solidheat_flag==0.
+     fort_vfrac_split_cell_centered(
+      &nprocessed[tid_current],
+      &tid_current,
+      volume_fraction_weight.dataPtr(),
+      sato_model_spec_id.dataPtr(),
+      density_floor.dataPtr(),
+      density_ceiling.dataPtr(),
+      &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
+      freezing_model.dataPtr(),
+      distribute_from_target.dataPtr(),
+      constant_density_all_time.dataPtr(),
+      velbc.dataPtr(),
+      &divu_outer_sweeps,
+      &num_divu_outer_sweeps,
+      material_conservation_form.dataPtr(),
+      &EILE_flag,
+      &dir_absolute_direct_split,
+      &normdir_here,
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      &bfact_f,
+      &dt_slab, // fort_vfrac_split
+      &prev_time_slab,
+      &cur_time_slab,
+      &prescribed_vel_time_slab,
+        // this is the original data
+      LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
+      ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
+      denfab.dataPtr(),
+      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+      mom_denfab.dataPtr(),
+      ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
+      velfab.dataPtr(), //VELADVECT_MF
+      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+        // slope data
+      vofslopefab.dataPtr(),
+      ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
+        // this is the result
+      destfab.dataPtr(),
+      ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
+      LSdestfab.dataPtr(),
+      ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
+       // other vars.
+      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+      masknbrfab.dataPtr(),
+      ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
+      umac_displace.dataPtr(),
+      ARLIM(umac_displace.loVect()),
+      ARLIM(umac_displace.hiVect()),
+      xlo,dx,
+       // local variables
+      consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
+      &stokes_flow,
+      &nc_conserve,
+      &map_forward_direct_split[normdir_here],
+      &vofrecon_ncomp,
+      &den_recon_ncomp,
+      &ncomp_state,
+      &nc_bucket,
+      &verbose,
+      &gridno,&ngrid,
+      &level,
+      &finest_level,
+      dombc.dataPtr(), 
+      domlo,domhi);
+
+    } else
+     amrex::Error("cell_centered_incompressible invalid");
 
    }  // mfi
 } // omp
@@ -20531,13 +20657,22 @@ NavierStokes::split_scalar_advection(int im_extension) {
   if (im_extension==-1) {
 
    delete conserve;
- 
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    delete side_bucket_mom[dir];
-    delete side_bucket_mass[dir];
-   }
-   delete tensor_bucket_state;
-   delete tensor_bucket_mass;
+
+   if (cell_centered_incompressible==0) {
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     delete side_bucket_mom[dir];
+     delete side_bucket_mass[dir];
+    }
+    delete tensor_bucket_state;
+    delete tensor_bucket_mass;
+
+    delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
+
+   } else if (cell_centered_incompressible==1) {
+    //do nothing
+   } else
+    amrex::Error("cell_centered_incompressible invalid");
 
    delete_localMF(VELADVECT_MF,1);
    delete_localMF(DEN_RECON_MF,1);
@@ -20559,8 +20694,6 @@ NavierStokes::split_scalar_advection(int im_extension) {
    } else
     amrex::Error("num_materials_compressible invalid:split_scalar_advection");
 
-   delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
- 
   } else if (im_extension==0) {
 
    //do nothing
