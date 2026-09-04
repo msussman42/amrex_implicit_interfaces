@@ -50,9 +50,9 @@ ns.EILE_flag=1
 ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
-ns.coarsest_level_CISL=0
-amr.n_cell=32 64
-amr.max_level=1
+ns.coarsest_level_CISL=2
+amr.n_cell=8 16
+amr.max_level=3
 ns.ngrow_distance=6
 ns.ngrow_elastic=4.0
 
@@ -163,7 +163,7 @@ ns.material_conservation_form=0 0 0
 # 8 EULERIAN FSI
 #ns.FSI_flag=0 0 4 #CTML
 ns.FSI_flag=0 0 8 #Eulerian FSI
-ns.repair_mass=1 0 1 0
+ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
