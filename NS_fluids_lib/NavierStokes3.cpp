@@ -318,6 +318,172 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 
 } //end subroutine finalize_rest_fraction
 
+void NavierStokes::save_data_worker(int dest_mf,Real source_time,
+  int dest_velocity_mf,Real source_velocity_time) {
+
+ int ncomp_interface=0;
+ MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+ ncomp_interface+=S_new.ncomp();
+ MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
+ ncomp_interface+=LS_new.ncomp();
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
+  ncomp_interface+=Tensor_new.ncomp();
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type_local,project_slab_step+1);
+  ncomp_interface+=Refine_Density_new.ncomp();
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid:initData");
+
+ new_localMF_if_not_exist(dest_mf,ncomp_interface,1,-1);
+
+ int ncomp_interface_test=0;
+
+ MultiFab* snewmf=
+  getState(1,0,S_new.nComp(),source_time); 
+ MultiFab::Copy(*localMF[dest_mf],*snewmf,0,ncomp_interface_test,
+    S_new.nComp(),1);
+ ncomp_interface_test+=S_new.nComp();
+ delete snewmf;
+
+ MultiFab* lsnewmf=getStateDist(1,source_time,local_caller_string);
+ MultiFab::Copy(*localMF[dest_mf],*lsnewmf,0,ncomp_interface_test,
+   LS_new.nComp(),1);
+ ncomp_interface_test+=LS_new.nComp();
+ delete lsnewmf;
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
+  MultiFab* tensormf=getStateTensor(1,0,
+    NUM_CELL_ELASTIC_REFINE,source_time);
+  MultiFab::Copy(*localMF[dest_mf],*tensormf,0,ncomp_interface_test,
+    Tensor_new.nComp(),1);
+  ncomp_interface_test+=Tensor_new.nComp();
+  delete tensormf;
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+  MultiFab* refine_density_mf=getStateRefineDensity(1,0,
+    NUM_CELL_REFINE_DENSITY,source_time);
+  MultiFab::Copy(*localMF[dest_mf],*refine_density_mf,
+    0,ncomp_interface_test,Refine_Density_new.nComp(),1);
+  ncomp_interface_test+=Refine_Density_new.nComp();
+  delete refine_density_mf;
+ } else if (num_materials_compressible==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
+ if (ncomp_interface==ncomp_interface_test) {
+  //do nothing
+ } else
+  amrex::Error("ncomp_interface invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ncomp=1 ngrow=0
+  new_localMF_if_not_exist(dest_velocity_mf+dir,1,0,dir);
+
+  MultiFab* velmf=getStateMAC(0,dir,source_velocity_time);
+
+  MultiFab::Copy(*localMF[dest_velocity_mf+dir],*velmf,0,0,1,0);
+  delete velmf;
+ } //dir=0;dir<AMREX_SPACEDIM
+
+} //end subroutine save_data_worker
+
+void NavierStokes::restore_data_worker(int source_mf,int dest_step,
+  int source_velocity_mf,int dest_velocity_step) {
+
+ int ncomp_interface=0;
+ MultiFab& S_new=get_new_data(State_Type,dest_step);
+ ncomp_interface+=S_new.ncomp();
+ MultiFab& LS_new=get_new_data(LS_Type,dest_step);
+ ncomp_interface+=LS_new.ncomp();
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,dest_step);
+  ncomp_interface+=Tensor_new.ncomp();
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type_local,dest_step);
+  ncomp_interface+=Refine_Density_new.ncomp();
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid:initData");
+
+ int ncomp_interface_test=0;
+
+ MultiFab::Copy(S_new,*localMF[source_mf],ncomp_interface_test,0,
+    S_new.nComp(),1);
+ ncomp_interface_test+=S_new.nComp();
+
+ MultiFab::Copy(LS_new,*localMF[source_mf],ncomp_interface_test,0,
+   LS_new.nComp(),1);
+ ncomp_interface_test+=LS_new.nComp();
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,dest_step);
+  MultiFab::Copy(Tensor_new,*localMF[source_mf],ncomp_interface_test,0,
+    Tensor_new.nComp(),1);
+  ncomp_interface_test+=Tensor_new.nComp();
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type,dest_step);
+  MultiFab::Copy(Refine_Density_new,*localMF[source_mf],
+    ncomp_interface_test,0,Refine_Density_new.nComp(),1);
+  ncomp_interface_test+=Refine_Density_new.nComp();
+ } else if (num_materials_compressible==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
+ if (ncomp_interface==ncomp_interface_test) {
+  //do nothing
+ } else
+  amrex::Error("ncomp_interface invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,dest_step);
+  MultiFab::Copy(Umac_new,*localMF[source_velocity_mf+dir],0,0,1,0);
+ } //dir=0;dir<AMREX_SPACEDIM
+
+} //end subroutine restore_data_worker
+
+
+
 void NavierStokes::save_interface_data(
   int control_flag,
   int im_extension) { //-1=main advection  0=just elastic interfaces
@@ -336,30 +502,14 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("expecting im_extension==-1");
 
-  int ncomp_interface=0;
-  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
-  ncomp_interface+=S_new.ncomp();
-  MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
-  ncomp_interface+=LS_new.ncomp();
+   //if divu_outer_sweeps>0 then vel_time_slab=t^{n+1}.
 
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=num_materials)) {
-   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-   ncomp_interface+=Tensor_new.ncomp();
-  } else if (num_materials_viscoelastic==0) {
-   //do nothing
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
-
-  if ((num_materials_compressible>=1)&&
-      (num_materials_compressible<=num_materials)) {
-   MultiFab& Refine_Density_new=
-	 get_new_data(Refine_Density_Type_local,project_slab_step+1);
-   ncomp_interface+=Refine_Density_new.ncomp();
-  } else if (num_materials_compressible==0) {
-   // do nothing
-  } else
-   amrex::Error("num_materials_compressible invalid:initData");
+  save_data_worker(interface_hold_MF,advect_time_slab,
+    interface_velocity_hold_MF,advect_time_slab);
+  save_data_worker(standard_interface_hold_MF,vel_time_slab,
+    standard_interface_velocity_hold_MF,vel_time_slab);
+  save_data_worker(improved_interface_hold_MF,vel_time_slab,
+    improved_interface_velocity_hold_MF,vel_time_slab);
 
   if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
    //do nothing
@@ -371,215 +521,19 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("expecting advect_slab_step==project_slab_step");
 
-  new_localMF(interface_hold_MF,ncomp_interface,1,-1);
-  new_localMF(improved_interface_hold_MF,ncomp_interface,1,-1);
-  new_localMF(standard_interface_hold_MF,ncomp_interface,1,-1);
-
-  int ncomp_interface_test=0;
-
-  MultiFab* snewmf=
-   getState(1,0,S_new.nComp(),advect_time_slab); 
-  MultiFab::Copy(*localMF[interface_hold_MF],*snewmf,0,ncomp_interface_test,
-    S_new.nComp(),1);
-  ncomp_interface_test+=S_new.nComp();
-  delete snewmf;
-
-  MultiFab* lsnewmf=getStateDist(1,advect_time_slab,local_caller_string);
-  MultiFab::Copy(*localMF[interface_hold_MF],*lsnewmf,0,ncomp_interface_test,
-    LS_new.nComp(),1);
-  ncomp_interface_test+=LS_new.nComp();
-  delete lsnewmf;
-
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=num_materials)) {
-   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-   MultiFab* tensormf=getStateTensor(1,0,
-     NUM_CELL_ELASTIC_REFINE,advect_time_slab);
-   MultiFab::Copy(*localMF[interface_hold_MF],*tensormf,0,ncomp_interface_test,
-    Tensor_new.nComp(),1);
-   ncomp_interface_test+=Tensor_new.nComp();
-   delete tensormf;
-  } else if (num_materials_viscoelastic==0) {
-   //do nothing
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
-
-  if ((num_materials_compressible>=1)&&
-      (num_materials_compressible<=num_materials)) {
-   MultiFab& Refine_Density_new=
-     get_new_data(Refine_Density_Type,project_slab_step+1);
-   MultiFab* refine_density_mf=getStateRefineDensity(1,0,
-     NUM_CELL_REFINE_DENSITY,advect_time_slab);
-   MultiFab::Copy(*localMF[interface_hold_MF],*refine_density_mf,
-     0,ncomp_interface_test,Refine_Density_new.nComp(),1);
-   ncomp_interface_test+=Refine_Density_new.nComp();
-   delete refine_density_mf;
-  } else if (num_materials_compressible==0) {
-   //do nothing
-  } else
-   amrex::Error("num_materials_compressible invalid");
-
-  if (ncomp_interface==ncomp_interface_test) {
-   //do nothing
-  } else
-   amrex::Error("ncomp_interface invalid");
-
-  MultiFab::Copy(*localMF[improved_interface_hold_MF],
-    *localMF[interface_hold_MF],0,0,ncomp_interface,1);
-  MultiFab::Copy(*localMF[standard_interface_hold_MF],
-    *localMF[interface_hold_MF],0,0,ncomp_interface,1);
-
-   //if divu_outer_sweeps>0 then vel_time_slab=t^{n+1}.
-   //during second pass, im_extension==0, need to restore this
-   //velocity for creating extended velocity.
-   //The updated velocity from first pass, im_extension==-1, needs to
-   //be saved too, then restored after the second pass.
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ncomp=1 ngrow=0
-   new_localMF(interface_velocity_hold_MF+dir,1,0,dir);
-
-   MultiFab* velmf=getStateMAC(0,dir,vel_time_slab);
-
-   MultiFab::Copy(*localMF[interface_velocity_hold_MF+dir],*velmf,0,0,1,0);
-   delete velmf;
-  } //dir=0;dir<AMREX_SPACEDIM
-
   //save_interface_data is called from save_interface_dataALL
   //for (int ilev=level;ilev<=finest_level;ilev++) 
  } else if (control_flag==POST_PROCESS_CONTROL) {
 
   if (im_extension==-1) { //after main advection
 
-   int ncomp_interface_test=0;
-   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
-   MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
-
-   MultiFab* snewmf=
-    getState(1,0,S_new.nComp(),cur_time_slab); 
-   MultiFab::Copy(*localMF[standard_interface_hold_MF],*snewmf,
-     0,ncomp_interface_test,S_new.nComp(),1);
-   ncomp_interface_test+=S_new.nComp();
-   delete snewmf;
-
-   MultiFab* lsnewmf=getStateDist(1,cur_time_slab,local_caller_string);
-   MultiFab::Copy(*localMF[standard_interface_hold_MF],*lsnewmf,
-    0,ncomp_interface_test,LS_new.nComp(),1);
-   ncomp_interface_test+=LS_new.nComp();
-   delete lsnewmf;
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-    MultiFab* tensormf=getStateTensor(1,0,
-     NUM_CELL_ELASTIC_REFINE,cur_time_slab);
-    MultiFab::Copy(*localMF[standard_interface_hold_MF],*tensormf,
-     0,ncomp_interface_test,Tensor_new.nComp(),1);
-    ncomp_interface_test+=Tensor_new.nComp();
-    delete tensormf;
-   } else if (num_materials_viscoelastic==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
-    MultiFab& Refine_Density_new=
-     get_new_data(Refine_Density_Type,project_slab_step+1);
-    MultiFab* refine_density_mf=getStateRefineDensity(1,0,
-     NUM_CELL_REFINE_DENSITY,cur_time_slab);
-    MultiFab::Copy(*localMF[standard_interface_hold_MF],*refine_density_mf,
-     0,ncomp_interface_test,Refine_Density_new.nComp(),1);
-    ncomp_interface_test+=Refine_Density_new.nComp();
-    delete refine_density_mf;
-   } else if (num_materials_compressible==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_compressible invalid");
-
-   if (localMF[interface_hold_MF]->nComp()==ncomp_interface_test) {
-    //do nothing
-   } else
-    amrex::Error("ncomp_interface_test invalid");
-
-    //this velocity must be saved since it will be overwritten
-    //when divu_outer_sweeps>0 in order to create an extended velocity.
-    //After the im_extension==0 sweep, standard_interface_velocity_hold
-    //is restored.
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ncomp=1 ngrow=0
-    new_localMF(standard_interface_velocity_hold_MF+dir,1,0,dir);
-    MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
-    MultiFab::Copy(*localMF[standard_interface_velocity_hold_MF+dir],*velmf,
-        0,0,1,0);
-    delete velmf;
-   } //dir=0;dir<AMREX_SPACEDIM
+   save_data_worker(standard_interface_hold_MF,cur_time_slab,
+    standard_interface_velocity_hold_MF,cur_time_slab);
 
   } else if (im_extension==0) { // after elastic material advection
 
-   int ncomp_interface_test=0;
-   MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
-   MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
-
-   MultiFab* snewmf=
-    getState(1,0,S_new.nComp(),cur_time_slab); 
-   MultiFab::Copy(*localMF[improved_interface_hold_MF],*snewmf,
-     0,ncomp_interface_test,S_new.nComp(),1);
-   ncomp_interface_test+=S_new.nComp();
-   delete snewmf;
-
-   MultiFab* lsnewmf=getStateDist(1,cur_time_slab,local_caller_string);
-   MultiFab::Copy(*localMF[improved_interface_hold_MF],*lsnewmf,
-    0,ncomp_interface_test,LS_new.nComp(),1);
-   ncomp_interface_test+=LS_new.nComp();
-   delete lsnewmf;
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-    MultiFab* tensormf=getStateTensor(1,0,
-     NUM_CELL_ELASTIC_REFINE,cur_time_slab);
-    MultiFab::Copy(*localMF[improved_interface_hold_MF],*tensormf,
-     0,ncomp_interface_test,Tensor_new.nComp(),1);
-    ncomp_interface_test+=Tensor_new.nComp();
-    delete tensormf;
-   } else if (num_materials_viscoelastic==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
-    MultiFab& Refine_Density_new=
-     get_new_data(Refine_Density_Type,project_slab_step+1);
-    MultiFab* refine_density_mf=getStateRefineDensity(1,0,
-     NUM_CELL_REFINE_DENSITY,cur_time_slab);
-    MultiFab::Copy(*localMF[improved_interface_hold_MF],*refine_density_mf,
-     0,ncomp_interface_test,Refine_Density_new.nComp(),1);
-    ncomp_interface_test+=Refine_Density_new.nComp();
-    delete refine_density_mf;
-   } else if (num_materials_compressible==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_compressible invalid");
-
-   if (localMF[interface_hold_MF]->nComp()==ncomp_interface_test) {
-    //do nothing
-   } else
-    amrex::Error("ncomp_interface_test invalid");
-
-    //this velocity must be saved since it will be overwritten
-    //when divu_outer_sweeps>0 in order to create an extended velocity.
-    //After the im_extension==0 sweep, standard_interface_velocity_hold
-    //is restored.
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ncomp=1 ngrow=0
-    new_localMF(improved_interface_velocity_hold_MF+dir,1,0,dir);
-    MultiFab* velmf=getStateMAC(0,dir,cur_time_slab);
-    MultiFab::Copy(*localMF[improved_interface_velocity_hold_MF+dir],*velmf,
-        0,0,1,0);
-    delete velmf;
-   } //dir=0;dir<AMREX_SPACEDIM
-
+   save_data_worker(improved_interface_hold_MF,cur_time_slab,
+    improved_interface_velocity_hold_MF,cur_time_slab);
 
    for (int im=0;im<num_materials;im++) {
 
@@ -601,21 +555,17 @@ void NavierStokes::save_interface_data(
      amrex::Error("material_extend_velocity invalid");
    } //im=1..num_materials
 
-    //correct the volume fractions, centroids, and level set function(s)
+
+   //restore the Umac_old velocity field
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    MultiFab& Umac_old=get_new_data(Umac_Type+dir,project_slab_step);
+    MultiFab::Copy(Umac_old,*localMF[interface_velocity_hold_MF+dir],0,0,1,0);
+   } //dir=0;dir<AMREX_SPACEDIM
+
+    //correct elastic variables
     //with corresponding values derived from the extended velocity 
     //field.
-   correct_flotsam();
-
-   //restore the velocity field
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
-     MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
-       0,0,1,0);
-     MultiFab& Umac_new_new=get_new_data(Umac_Type+dir,project_slab_step+1);
-     MultiFab::Copy(Umac_new_new,
-       *localMF[standard_interface_velocity_hold_MF+dir],
-       0,0,1,0);
-   } //dir=0;dir<AMREX_SPACEDIM
+   correct_elastic_variables();
 
    //delete the hold data
    delete_localMF(interface_hold_MF,1);
@@ -641,29 +591,40 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("im_extension invalid (RESTORE_CONTROL)");
 
-  //restore F,X,LS
-  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
+  restore_data_worker(interface_hold_MF,project_slab_step,
+    interface_velocity_hold_MF,project_slab_step);
 
-   //dest,source,scomp,dcomp,ncomp,ngrow
-  MultiFab::Copy(S_new,*localMF[interface_hold_MF],0,
-    STATECOMP_MOF,num_materials*ngeom_raw,1);
-
-  MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
-
-  MultiFab::Copy(LS_new,*localMF[interface_hold_MF],num_materials*ngeom_raw,
-    0,num_materials,1);
-
-  //restore the velocity field
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
-    MultiFab::Copy(Umac_new,*localMF[interface_velocity_hold_MF+dir],
-      0,0,1,0);
-  } //dir=0;dir<AMREX_SPACEDIM
-
-  //extrapolate the velocity field here:
+  //extrapolate the velocity field
   int im_extend=num_materials+1;
   int local_tensor_extend=0;
-  extend_FSI_data(im_extend,local_tensor_extend);
+  Real levelset_time_slab=prev_time_slab;
+  Real input_velocity_time_slab=prev_time_slab;
+  int input_velocity_slab_step=project_slab_step;
+
+  extend_FSI_data(
+    im_extend,
+    local_tensor_extend,
+    levelset_time_slab,
+    input_velocity_time_slab,
+    input_velocity_slab_step);
+
+  //restore the transporting velocity field
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
+   MultiFab::Copy(Umac_new,*localMF[improved_interface_velocity_hold_MF+dir],
+     0,0,1,0);
+  } //dir=0;dir<AMREX_SPACEDIM
+
+  //extrapolate the transporting velocity field
+  levelset_time_slab=prev_time_slab;
+  input_velocity_time_slab=velocity_time_slab;
+  input_velocity_slab_step=velocity_slab_step;
+  extend_FSI_data(
+    im_extend,
+    local_tensor_extend,
+    levelset_time_slab,
+    input_velocity_time_slab,
+    input_velocity_slab_step);
 
  } else
   amrex::Error("control_flag invalid");
@@ -795,19 +756,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    std::cin >> n_input;
   }
 
-
-   //copy VFRAC,CEN,LS to improved_interface_hold_MF
-   //copy interface_velocity_hold_MF to Umac_new|UMAC_STATIC at
-   //velocity_slab_step.
-   //if (im_extension+1==material_extend_velocity_flag) then
-   // a) correct the volume fractions, centroids and levelset functions.
-   // b) copy interface_velocity_hold back to 
-   //    velocity_slab_step|UMAC_STATIC
-   // c) copy standard_interface_velocity_hold back to 
-   //    project_slab_step+1|UMAC_STATIC
-   // d) delete interface_hold,improved_interface_hold,
-   //    standard_interface_hold,interface_velocity_hold,
-   //    standard_interface_velocity_hold
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -1002,7 +950,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
    } else
     amrex::Error("dir_absolute_direct_split invalid");
 
-   split_scalar_advectionALL(im_extension);
+   split_scalar_advectionALL();
 
    interface_touch_flag=1; //sub_nonlinear_advection
 
@@ -1460,7 +1408,15 @@ void NavierStokes::tensor_advection_updateALL() {
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         int local_tensor_extend=1;
-        ns_level.extend_FSI_data(im+1,local_tensor_extend);
+        Real levelset_time_slab=cur_time_slab;
+        Real input_velocity_time_slab=cur_time_slab;
+        int input_velocity_slab_step=project_slab_step+1;
+        ns_level.extend_FSI_data(
+           im+1,
+           local_tensor_extend,
+           levelset_time_slab,
+           input_velocity_time_slab,
+           input_velocity_slab_step);
        }
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         delete_array(FSI_MAC_VELOCITY_MF+dir);
@@ -16430,7 +16386,12 @@ void NavierStokes::manage_FSI_data() {
 } // end subroutine manage_FSI_data()
 
 //1<=im_critical<=nmat+1
-void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) { 
+void NavierStokes::extend_FSI_data(
+  int im_critical,
+  int tensor_extend,
+  Real levelset_time_slab,
+  Real input_velocity_time_slab,
+  int input_velocity_slab_step) { 
 
  int finest_level=parent->finestLevel();
 
@@ -16453,7 +16414,7 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
   debug_ngrow(LEVELPC_MF,ngrow_distance,local_caller_string);
   levelset_extend=localMF[LEVELPC_MF];
  } else if (tensor_extend==0) { //regular advection
-  levelset_extend=getStateDist(ngrow_distance,vel_time_slab,
+  levelset_extend=getStateDist(ngrow_distance,levelset_time_slab,
     local_caller_string);
  } else
   amrex::Error("tensor_extend invalid");
@@ -16467,16 +16428,21 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
+  //S_new gets the cell centered extrapolated velocity if
+  //tensor_extend=1
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
 
+  // not used if tensor_extend==0 (i.e., only used if tensor_extend=1)
  getState_localMF(FSI_CELL_VELOCITY_MF,
     1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
+  // not used if tensor_extend==0
  if (localMF[FSI_CELL_VELOCITY_MF]->nGrow()>=1) {
   //do nothing
  } else
   amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nGrow()<1");
 
+  // not used if tensor_extend==0
  if (localMF[FSI_CELL_VELOCITY_MF]->nComp()==AMREX_SPACEDIM) {
   //do nothing
  } else
@@ -16487,15 +16453,14 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
     //Umac_Type+dir
     //getStateMAC_localMF is declared in NavierStokes2.cpp
     //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
-  Real local_time=cur_time_slab;
-  int local_slab_step=project_slab_step+1;
+
+  Real local_time=input_velocity_time_slab;
+  int local_slab_step=input_velocity_slab_step;
 
   if (tensor_extend==1) {
-   local_time=cur_time_slab;
-   local_slab_step=project_slab_step+1;
+   //do nothing
   } else if (tensor_extend==0) {
-   local_time=vel_time_slab;
-   local_slab_step=velocity_slab_step;
+   //do nothing
   } else
    amrex::Error("tensor_extend invalid");
    
@@ -16504,6 +16469,7 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
    //FSI_MAC_VELOCITY_MF deleted by the caller.
   getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
      dir,local_time);
+
   if (tensor_extend==1) {
    //do nothing
   } else if (tensor_extend==0) {
@@ -16542,6 +16508,7 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
    } else
     amrex::Error("expecting localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0");
 
+    // not used if tensor_extend==0
    FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
    if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
     amrex::Error("FSIvelCELL.nComp() invalid");
@@ -16573,7 +16540,7 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
       &im_critical, //1<=im_critical<=num_materials+1
       &dir, //dir=0,1,2
       velbc.dataPtr(),  
-      &cur_time_slab, 
+      &cur_time_slab, //parameter for SUB_clamped_LS
       xlo,dx,
       // mask=tag if not covered by level+1 or outside the domain.
       maskcoeffab.dataPtr(),
@@ -16594,12 +16561,13 @@ void NavierStokes::extend_FSI_data(int im_critical,int tensor_extend) {
 } // omp
   ns_reconcile_d_num(LOOP_EXTEND_VEL,"fort_extend_elastic_velcity");
 
+  MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+
   if (tensor_extend==1) {
-   MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
    MultiFab::Copy(S_new,*localMF[FSI_CELL_VELOCITY_MF],
      dir,STATECOMP_VEL+dir,1,1);
   } else if (tensor_extend==0) {
-   MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
+   //do nothing
   } else
    amrex::Error("tensor_extend invalid");
 

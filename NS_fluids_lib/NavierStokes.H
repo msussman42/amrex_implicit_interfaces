@@ -341,7 +341,12 @@ public:
     void manage_FSI_data();
 
      //1<=im_critical<=num_materials
-    void extend_FSI_data(int im_critical,int tensor_extend); 
+    void extend_FSI_data(
+      int im_critical,
+      int tensor_extend,
+      Real levelset_time_slab,
+      Real input_velocity_time_slab,
+      int input_velocity_slab_step); 
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
@@ -801,13 +806,13 @@ protected:
     void check_for_NAN(const std::string& caller_string,
      MultiFab* mf);
 
-    void correct_flotsam();
+    void correct_elastic_variables();
 
     void clear_interface_vars(); 
     void move_mdot_to_density(); 
     void clear_elastic_mdot(int mdot_in_mf); 
-    void split_scalar_advection(int im_extension); 
-    void split_scalar_advectionALL(int im_extension);
+    void split_scalar_advection(); 
+    void split_scalar_advectionALL();
  
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
@@ -868,6 +873,11 @@ protected:
       const std::string& caller_string);
 
     void solid_temperature();
+
+    void save_data_worker(int dest_mf,Real source_time,
+      int dest_velocity_mf,Real source_velocity_time);
+    void restore_data_worker(int source_mf,int dest_step,
+      int source_velocity_mf,int dest_velocity_step);
 
     void save_interface_data(int control_flag,int im_extension);
     void save_interface_dataALL(int control_flag,int im_extension);

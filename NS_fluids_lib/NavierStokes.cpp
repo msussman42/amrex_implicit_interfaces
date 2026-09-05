@@ -19629,7 +19629,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 } // end subroutine SEM_scalar_advection
 
 void 
-NavierStokes::split_scalar_advectionALL(int im_extension) { 
+NavierStokes::split_scalar_advectionALL() { 
 
  interface_touch_flag=1; //split_scalar_advectionALL
 
@@ -19648,8 +19648,6 @@ NavierStokes::split_scalar_advectionALL(int im_extension) {
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "split_scalar_advectionALL im_extension " << 
-     im_extension << '\n';
    std::cout << "split_scalar_advectionALL dir_absolute_direct_split " << 
      dir_absolute_direct_split << '\n';
   }
@@ -19659,7 +19657,7 @@ NavierStokes::split_scalar_advectionALL(int im_extension) {
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.split_scalar_advection(im_extension);
+  ns_level.split_scalar_advection();
  } // ilev
 
 #if (NS_profile_solver==1)
@@ -19816,7 +19814,7 @@ NavierStokes::move_mdot_to_density() {
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
 void 
-NavierStokes::split_scalar_advection(int im_extension) { 
+NavierStokes::split_scalar_advection() { 
 
  std::string local_caller_string="split_scalar_advection";
 
@@ -19991,233 +19989,231 @@ NavierStokes::split_scalar_advection(int im_extension) {
   MultiFab* tensor_bucket_state;
   MultiFab* tensor_bucket_mass;
 
-  if (im_extension==-1) {
+  if (cell_centered_incompressible==0) {
 
-   if (cell_centered_incompressible==0) {
-
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
-    } // dir = 0..sdim-1
-
-    //ngrow=2
-    tensor_bucket_state=new MultiFab(grids,dmap,
-     NUM_CELL_ELASTIC+1,
-     2,
-     MFInfo().SetTag("tensor_bucket_state"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=2
-    tensor_bucket_state->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
-
-    //ngrow=2
-    tensor_bucket_mass=new MultiFab(grids,dmap,
-     NUM_CELL_ELASTIC+1,
-     2,
-     MFInfo().SetTag("tensor_bucket_mass"),FArrayBoxFactory());
-    //scomp=0 ncomp=2 ngrow=2
-    tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
-
-   } else if (cell_centered_incompressible==1) {
-    //do nothing
-   } else
-    amrex::Error("cell_centered_incompressible invalid");
-
-   // in: split_scalar_advection
-   // ngrow=2
-   getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
-
-   //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
-
-   // getStateMOM_DEN declared in: NavierStokes.cpp
-   // if override_density(im)=0 or 2, density is not modified:
-   // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
-   //   In general (non-inertial reference frame):
-   //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
-   //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
-   getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    //ngrow=2
-    getStateTensor_localMF(
-     TENSOR_RECON_MF_local,
-     ngrow,0,
-     NUM_CELL_ELASTIC_REFINE,
-     advect_time_slab);
-
-   } else if (num_materials_viscoelastic==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
-    getStateRefineDensity_localMF(
-     REFINE_DENSITY_RECON_MF_local,
-     ngrow,0,
-     NUM_CELL_REFINE_DENSITY,
-     advect_time_slab);
-   } else if (num_materials_compressible==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_compressble invalid");
-
-   // the pressure from before will be copied to the new pressure.
-   getState_localMF(VELADVECT_MF,ngrow,
-    STATECOMP_VEL,
-    STATE_NCOMP_VEL+STATE_NCOMP_PRES,
-    advect_time_slab); 
-
-   int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
-   if (den_recon_ncomp!=num_state_material*num_materials)
-    amrex::Error("den_recon invalid");
-   if (localMF[MOM_DEN_MF]->nComp()!=num_materials)
-    amrex::Error("MOM_DEN_MF invalid nComp()");
-
-   MultiFab* umac_new[AMREX_SPACEDIM];
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    umac_new[dir]=&get_new_data(Umac_Type+dir,project_slab_step+1);
-   }
+    getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
+   } // dir = 0..sdim-1
 
-   conserve=new MultiFab(grids,dmap,
-    nc_conserve,
-    ngrow,
-    MFInfo().SetTag("conserve"),FArrayBoxFactory());
- 
-   if (cell_centered_incompressible==0) {
+   //ngrow=2
+   tensor_bucket_state=new MultiFab(grids,dmap,
+    NUM_CELL_ELASTIC+1,
+    2,
+    MFInfo().SetTag("tensor_bucket_state"),FArrayBoxFactory());
+   //scomp=0 ncomp=2 ngrow=2
+   tensor_bucket_state->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
 
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow=2
+   tensor_bucket_mass=new MultiFab(grids,dmap,
+    NUM_CELL_ELASTIC+1,
+    2,
+    MFInfo().SetTag("tensor_bucket_mass"),FArrayBoxFactory());
+   //scomp=0 ncomp=2 ngrow=2
+   tensor_bucket_mass->setVal(0.0,0,NUM_CELL_ELASTIC+1,2);
 
-     //ncomp=2 ngrow=1
-     side_bucket_mom[dir]=new MultiFab(grids,dmap,
-      2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
-     //scomp=0 ncomp=2 ngrow=1
-     side_bucket_mom[dir]->setVal(0.0,0,2,1);
+  } else if (cell_centered_incompressible==1) {
+   //do nothing
+  } else
+   amrex::Error("cell_centered_incompressible invalid");
 
-     //ncomp=2 ngrow=1
-     side_bucket_mass[dir]=new MultiFab(grids,dmap,
-      2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
-     //scomp=0 ncomp=2 ngrow=1
-     side_bucket_mass[dir]->setVal(0.0,0,2,1);
-    }  // dir = 0..sdim-1
+  // in: split_scalar_advection
+  // ngrow=2
+  getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
-   } else if (cell_centered_incompressible==1) {
-    //do nothing
-   } else
-    amrex::Error("cell_centered_incompressible invalid");
+  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
 
-   S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+  // getStateMOM_DEN declared in: NavierStokes.cpp
+  // if override_density(im)=0 or 2, density is not modified:
+  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+  //   In general (non-inertial reference frame):
+  //   Dv/Dt=-grad p/rho + div(2 mu D)/rho-Omega_dot x (x-x0)+
+  //         grad (\Omega x (x-x0))^{2}/2 + g - 2\Omega x v
+  getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
-   if (divu_outer_sweeps==0) {
-    S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
-   } else if ((divu_outer_sweeps>=1)&&
-              (divu_outer_sweeps<num_divu_outer_sweeps)) {
-    //do nothing
-   } else
-    amrex::Error("divu_outer_sweeps invalid");
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
+   //ngrow=2
+   getStateTensor_localMF(
+    TENSOR_RECON_MF_local,
+    ngrow,0,
+    NUM_CELL_ELASTIC_REFINE,
+    advect_time_slab);
 
-   for (int im=0;im<num_materials;im++) {
-    if (ns_is_rigid(im)==0) {
+  } else if (num_materials_viscoelastic==0) {
+   //do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   getStateRefineDensity_localMF(
+    REFINE_DENSITY_RECON_MF_local,
+    ngrow,0,
+    NUM_CELL_REFINE_DENSITY,
+    advect_time_slab);
+  } else if (num_materials_compressible==0) {
+   //do nothing
+  } else
+   amrex::Error("num_materials_compressble invalid");
+
+  // the pressure from before will be copied to the new pressure.
+  getState_localMF(VELADVECT_MF,ngrow,
+   STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+   advect_time_slab); 
+
+  int den_recon_ncomp=localMF[DEN_RECON_MF]->nComp();
+  if (den_recon_ncomp!=num_state_material*num_materials)
+   amrex::Error("den_recon invalid");
+  if (localMF[MOM_DEN_MF]->nComp()!=num_materials)
+   amrex::Error("MOM_DEN_MF invalid nComp()");
+
+  MultiFab* umac_new[AMREX_SPACEDIM];
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   umac_new[dir]=&get_new_data(Umac_Type+dir,project_slab_step+1);
+  }
+
+  conserve=new MultiFab(grids,dmap,
+   nc_conserve,
+   ngrow,
+   MFInfo().SetTag("conserve"),FArrayBoxFactory());
+
+  if (cell_centered_incompressible==0) {
+
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+    //ncomp=2 ngrow=1
+    side_bucket_mom[dir]=new MultiFab(grids,dmap,
+     2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=1
+    side_bucket_mom[dir]->setVal(0.0,0,2,1);
+
+    //ncomp=2 ngrow=1
+    side_bucket_mass[dir]=new MultiFab(grids,dmap,
+     2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=1
+    side_bucket_mass[dir]->setVal(0.0,0,2,1);
+   }  // dir = 0..sdim-1
+
+  } else if (cell_centered_incompressible==1) {
+   //do nothing
+  } else
+   amrex::Error("cell_centered_incompressible invalid");
+
+  S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+
+  if (divu_outer_sweeps==0) {
+   S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+  } else if ((divu_outer_sweeps>=1)&&
+             (divu_outer_sweeps<num_divu_outer_sweeps)) {
+   //do nothing
+  } else
+   amrex::Error("divu_outer_sweeps invalid");
+
+  for (int im=0;im<num_materials;im++) {
+   if (ns_is_rigid(im)==0) {
+    S_new.setVal(0.0,
+     STATECOMP_STATES+im*num_state_material,
+     num_state_material,1);
+   } else if (ns_is_rigid(im)==1) {
+    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
      S_new.setVal(0.0,
-      STATECOMP_STATES+im*num_state_material,
-      num_state_material,1);
-    } else if (ns_is_rigid(im)==1) {
-     if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-      S_new.setVal(0.0,
-       STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
-     } else if (solidheat_flag==2) { // Neumann
-      // do nothing
-     } else if (solidheat_flag==1) { // dirichlet
-      // do nothing
-     } else
-      amrex::Error("solidheat_flag invalid");
-    } else
-     amrex::Error("ns_is_rigid(im) invalid");
-   } // im=0..num_materials-1
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-
-    if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+      STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
+    } else if (solidheat_flag==2) { // Neumann
+     // do nothing
+    } else if (solidheat_flag==1) { // dirichlet
      // do nothing
     } else
-     amrex::Error("NUM_CELL_ELASTIC invalid");
-
-    if (NUM_CELL_ELASTIC_REFINE==
-        num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
- 
-    if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
-     // do nothing
-    } else
-     amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
- 
-    Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
-
-   } else if (num_materials_viscoelastic==0) {
-
-    if (NUM_CELL_ELASTIC==0) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_ELASTIC invalid");
-
-    if (NUM_CELL_ELASTIC_REFINE==0) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
-
+     amrex::Error("solidheat_flag invalid");
    } else
-    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+    amrex::Error("ns_is_rigid(im) invalid");
+  } // im=0..num_materials-1
 
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
 
-    if (NUM_CELL_REFINE_DENSITY==
-        num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
- 
-    if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
-     // do nothing
-    } else
-     amrex::Error("(Refine_Density_new.nComp()!=NUM_CELL_REFINE_DENSITY)");
-
-    Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
-
-   } else if (num_materials_compressible==0) {
-
-    if (NUM_CELL_REFINE_DENSITY==0) {
-     // do nothing
-    } else
-     amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
-
-   } else
-    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
-   if (dir_absolute_direct_split==0) {
-
-    // initialize the error indicator to be 0.0
-    S_new.setVal(0.0,ncomp_state-1,1,1);
-
-   } else if ((dir_absolute_direct_split==1)||
-              (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
+   if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
     // do nothing
-   } else {
-    amrex::Error("dir_absolute_direct_split invalid");
-   }
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
 
-   clear_interface_vars();
+   if (NUM_CELL_ELASTIC_REFINE==
+       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+   if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+    // do nothing
+   } else
+    amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) failed");
+
+   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC_REFINE,1);
+
+  } else if (num_materials_viscoelastic==0) {
+
+   if (NUM_CELL_ELASTIC==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC invalid");
+
+   if (NUM_CELL_ELASTIC_REFINE==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
+  } else
+   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+
+   if (NUM_CELL_REFINE_DENSITY==
+       num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+   if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
+    // do nothing
+   } else
+    amrex::Error("(Refine_Density_new.nComp()!=NUM_CELL_REFINE_DENSITY)");
+
+   Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
+
+  } else if (num_materials_compressible==0) {
+
+   if (NUM_CELL_REFINE_DENSITY==0) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+  } else
+   amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+
+  if (dir_absolute_direct_split==0) {
+
+   // initialize the error indicator to be 0.0
+   S_new.setVal(0.0,ncomp_state-1,1,1);
+
+  } else if ((dir_absolute_direct_split==1)||
+             (dir_absolute_direct_split==AMREX_SPACEDIM-1)) {
+   // do nothing
+  } else {
+   amrex::Error("dir_absolute_direct_split invalid");
+  }
+
+  clear_interface_vars();
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
 
     const int gridno = mfi.index();
@@ -20480,128 +20476,10 @@ NavierStokes::split_scalar_advection(int im_extension) {
     } else
      amrex::Error("cell_centered_incompressible invalid");
 
-   }  // mfi
+  }  // mfi
 } // omp
 
-   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
-
-  } else if (im_extension==0) {
-
-   clear_interface_vars();
-
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-
-    const Real* xlo = grid_loc[gridno].lo();
-
-      // mask=tag if not covered by level+1 or outside the domain.
-      // mask=1-tag if covered by level+1 and inside the domain.
-      // NavierStokes::maskfiner  (clear_phys_boundary==0)
-    FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
-     // mask_nbr:
-     // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
-     // (2) =1 interior  =0 otherwise
-     // (3) =1 interior+ngrow-1  =0 otherwise
-     // (4) =1 interior+ngrow    =0 otherwise
-    FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
-
-     // velocity * dt
-    FArrayBox& umac_displace=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-    if (umac_displace.nComp()!=1)
-     amrex::Error("umac_displace has invalid ncomp");
-
-      // this is the original data
-    FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
-
-      // this is the slope data
-    FArrayBox& vofslopefab=(*localMF[SLOPE_RECON_MF])[mfi];
-
-    Vector<int> velbc=getBCArray(State_Type,gridno,normdir_here,1);
-
-       // this is the result
-    FArrayBox& destfab=S_new[mfi];
-
-    FArrayBox& LSdestfab=LS_new[mfi];
-
-    prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    if (tid_current==0) {
-     grids_per_proc[amrex::ParallelDescriptor::MyProc()]++;
-    }
-
-    fort_vfrac_split_smooth(
-     &nprocessed[tid_current],
-     &tid_current,
-     velbc.dataPtr(),
-     &divu_outer_sweeps,
-     &num_divu_outer_sweeps,
-     &EILE_flag,
-     &dir_absolute_direct_split,
-     &normdir_here,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     &bfact_f,
-     &dt_slab, // fort_vfrac_split_smooth
-     &prev_time_slab,
-     &cur_time_slab,
-     &prescribed_vel_time_slab,
-       // this is the original data
-     LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
-     ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
-       // slope data
-     vofslopefab.dataPtr(),
-     ARLIM(vofslopefab.loVect()),ARLIM(vofslopefab.hiVect()),
-       // this is the result
-     destfab.dataPtr(),
-     ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
-     LSdestfab.dataPtr(),
-     ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
-      // other vars.
-     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     masknbrfab.dataPtr(),
-     ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
-     umac_displace.dataPtr(),
-     ARLIM(umac_displace.loVect()),
-     ARLIM(umac_displace.hiVect()),
-     xlo,dx,
-     &map_forward_direct_split[normdir_here],
-     &vofrecon_ncomp,
-     &ncomp_state,
-     &nc_bucket, //fort_vfrac_split_smooth
-     &verbose,
-     &gridno,&ngrid,
-     &level,
-     &finest_level,
-     dombc.dataPtr(), 
-     domlo,domhi);
-
-   }  // mfi
-} // omp
-   ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
-  } else
-   amrex::Error("im_extension invalid");
+  ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
   for (int iproc=0;iproc<amrex::ParallelDescriptor::NProcs();iproc++) {
    ParallelDescriptor::ReduceIntSum(grids_per_proc[iproc]);
@@ -20631,52 +20509,43 @@ NavierStokes::split_scalar_advection(int im_extension) {
 
   delete_localMF(LS_RECON_MF,1);
 
-  if (im_extension==-1) {
+  delete conserve;
 
-   delete conserve;
+  if (cell_centered_incompressible==0) {
 
-   if (cell_centered_incompressible==0) {
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    delete side_bucket_mom[dir];
+    delete side_bucket_mass[dir];
+   }
+   delete tensor_bucket_state;
+   delete tensor_bucket_mass;
 
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     delete side_bucket_mom[dir];
-     delete side_bucket_mass[dir];
-    }
-    delete tensor_bucket_state;
-    delete tensor_bucket_mass;
+   delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
 
-    delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
-
-   } else if (cell_centered_incompressible==1) {
-    //do nothing
-   } else
-    amrex::Error("cell_centered_incompressible invalid");
-
-   delete_localMF(VELADVECT_MF,1);
-   delete_localMF(DEN_RECON_MF,1);
-   delete_localMF(MOM_DEN_MF,1);
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    delete_localMF(TENSOR_RECON_MF_local,1);
-   } else if (num_materials_viscoelastic==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
-
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
-    delete_localMF(REFINE_DENSITY_RECON_MF_local,1);
-   } else if (num_materials_compressible==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
-  } else if (im_extension==0) {
-
+  } else if (cell_centered_incompressible==1) {
    //do nothing
-
   } else
-   amrex::Error("im_extension invalid");
+   amrex::Error("cell_centered_incompressible invalid");
+
+  delete_localMF(VELADVECT_MF,1);
+  delete_localMF(DEN_RECON_MF,1);
+  delete_localMF(MOM_DEN_MF,1);
+
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
+   delete_localMF(TENSOR_RECON_MF_local,1);
+  } else if (num_materials_viscoelastic==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   delete_localMF(REFINE_DENSITY_RECON_MF_local,1);
+  } else if (num_materials_compressible==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_compressible invalid:split_scalar_advection");
 
  } else if ((level>=0)&&(level<coarsest_level_CISL)) {
   //do nothing
@@ -20691,50 +20560,41 @@ NavierStokes::split_scalar_advection(int im_extension) {
  } else
   amrex::Error("level invalid23");
 
- if (im_extension==-1) {
+ if ((level>=0)&&(level<finest_level)) {
 
-  if ((level>=0)&&(level<finest_level)) {
-
-   int spectral_override=1; // order derived from "enable_spectral"
-    //Umac_Type
-   avgDownMacState(spectral_override);
+  int spectral_override=1; // order derived from "enable_spectral"
+   //Umac_Type
+  avgDownMacState(spectral_override);
  
-     // velocity and pressure
-   avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
-   avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+    // velocity and pressure
+  avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+  avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
 
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
-         scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
-     avgDown_refine_tensor(scomp);
-    }
-   } else if (num_materials_viscoelastic==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
-
-   if ((num_materials_compressible>=1)&&
-       (num_materials_compressible<=num_materials)) {
-    for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
-     avgDown_refine_density(im_comp);
-    }
-   } else if (num_materials_compressible==0) {
-    // do nothing
-   } else
-    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
-
-  } else if (level==finest_level) {
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=num_materials)) {
+   for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
+        scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
+    avgDown_refine_tensor(scomp);
+   }
+  } else if (num_materials_viscoelastic==0) {
    // do nothing
   } else
-   amrex::Error("level invalid23");
+   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
 
- } else if (im_extension==0) {
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+    avgDown_refine_density(im_comp);
+   }
+  } else if (num_materials_compressible==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_compressible invalid:split_scalar_advection");
 
-  //do nothing
-
+ } else if (level==finest_level) {
+  // do nothing
  } else
-  amrex::Error("im_extension invalid");
+  amrex::Error("level invalid23");
 
 }  // end subroutine split_scalar_advection
 

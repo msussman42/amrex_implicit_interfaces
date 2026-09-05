@@ -18006,7 +18006,7 @@ stop
        im_critical, & ! 1<=im_critical<=num_materials+1
        dir, & !0,1,2
        velbc_in, &
-       time, &
+       time, & !cur_time_slab
        xlo,dx, &
        maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
        levelPC,DIMS(levelPC), &
@@ -18031,7 +18031,7 @@ stop
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
-      real(amrex_real), INTENT(in) :: time
+      real(amrex_real), INTENT(in) :: time !cur_time_slab
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
       integer, INTENT(in) :: DIMDEC(maskcoef)
       integer, INTENT(in) :: DIMDEC(velMAC)
