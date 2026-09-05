@@ -7932,7 +7932,6 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
-       volume_fraction_weight, &
        denconst_interface_min, &
        freezing_model, &
        distribute_from_target, &
@@ -8127,7 +8126,6 @@ stop
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      real(amrex_real), INTENT(in) :: volume_fraction_weight(num_materials)
       real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
 
       integer im1,jm1,km1
@@ -8460,13 +8458,6 @@ stop
       enddo ! im=1..num_interfaces
 
       do im=1,num_materials
-
-       if (volume_fraction_weight(im).ge.one) then
-        !do nothing
-       else
-        print *,"volume_fraction_weight invalid ",volume_fraction_weight
-        stop
-       endif
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -9883,14 +9874,12 @@ stop
          do iside=0,1
          do im=1,num_materials
 
-          voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)* &
-                    volume_fraction_weight(im)
+          voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)
 
           voltotal=voltotal+voldepart
           FFACE(im)=FFACE(im)+voldepart
           mass_total=mass_total+  &
-           local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)* &
-           volume_fraction_weight(im)
+           local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)
           
          enddo ! im=1..num_materials
          enddo ! iside=0..1
@@ -13611,7 +13600,6 @@ stop
        visc_coef, &
        enable_spectral, &
        ncphys, &  ! nflux for advection
-       volume_fraction_weight, &
        constant_density_all_time, &
        presbc_in, &  ! denbc for advection
        velbc_in, &
@@ -13694,7 +13682,6 @@ stop
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: ncphys  ! nflux for advection
-      real(amrex_real), INTENT(in) :: volume_fraction_weight(num_materials)
       integer, INTENT(in) :: constant_density_all_time(num_materials)
       real(amrex_real), INTENT(in) :: dt
       real(amrex_real), INTENT(in) :: time
@@ -14264,13 +14251,6 @@ stop
         ! do nothing
        else
         print *,"fort_denconst invalid: ",im,fort_denconst(im)
-        stop
-       endif
-
-       if (volume_fraction_weight(im).ge.one) then
-        ! do nothing
-       else
-        print *,"volume_fraction_weight invalid: ",volume_fraction_weight
         stop
        endif
 
@@ -15431,11 +15411,9 @@ stop
            vol_local(side)=zero
            do im=1,num_materials
             mass(side)=mass(side)+ &
-             local_face(FACECOMP_MASSFACE+2*(im-1)+side)* &
-             volume_fraction_weight(im)
+             local_face(FACECOMP_MASSFACE+2*(im-1)+side)
             vol_local(side)=vol_local(side)+ &
-             local_face(FACECOMP_VOFFACE+2*(im-1)+side)* &
-             volume_fraction_weight(im)
+             local_face(FACECOMP_VOFFACE+2*(im-1)+side)
            enddo  !im=1,num_materials
 
             ! mass and vol_local can be zero if at r=0 and RZ.
@@ -19597,7 +19575,6 @@ stop
        LS_extrap_iter, &
        num_curv, &
        constant_density_all_time, &
-       volume_fraction_weight, &
        primary_flotsam_tol, &
        secondary_flotsam_tol) &
       bind(c,name='fort_renormalize_prescribe')
@@ -19632,7 +19609,6 @@ stop
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: constant_density_all_time(num_materials)
 
-      real(amrex_real), INTENT(in) :: volume_fraction_weight(num_materials)
 
       integer, INTENT(in) :: DIMDEC(vofnew)
       integer, INTENT(in) :: DIMDEC(solxfab)
@@ -19934,13 +19910,6 @@ stop
       num_materials_lag=0
 
       do im=1,num_materials
-
-       if (volume_fraction_weight(im).ge.one) then
-        !do nothing
-       else
-        print *,"volume_fraction_weight invalid ",volume_fraction_weight
-        stop
-       endif
 
        if (num_state_material.ne. &
            num_state_base+num_species_var) then
@@ -20268,11 +20237,9 @@ stop
           if (is_compressible_mat(im).eq.0) then
 
            temperature_combine_incomp=temperature_combine_incomp+ &
-             test_temperature*F_TESSELLATE_ALL(im)*test_density* &
-             volume_fraction_weight(im) 
+             test_temperature*F_TESSELLATE_ALL(im)*test_density
            temperature_weight_incomp=temperature_weight_incomp+ &
-             F_TESSELLATE_ALL(im)*test_density* &
-             volume_fraction_weight(im) 
+             F_TESSELLATE_ALL(im)*test_density
            F_INCOMP_SUM=F_INCOMP_SUM+F_TESSELLATE_ALL(im)
 
           else if (is_compressible_mat(im).eq.1) then
@@ -20304,11 +20271,9 @@ stop
            endif
 
            temperature_combine_comp=temperature_combine_comp+ &
-             test_temperature*F_TESSELLATE_ALL(im)*test_density*DeDT* & 
-             volume_fraction_weight(im) 
+             test_temperature*F_TESSELLATE_ALL(im)*test_density*DeDT
            temperature_weight_comp=temperature_weight_comp+ &
-             F_TESSELLATE_ALL(im)*test_density*DeDT* & 
-             volume_fraction_weight(im) 
+             F_TESSELLATE_ALL(im)*test_density*DeDT
            F_COMP_SUM=F_COMP_SUM+F_TESSELLATE_ALL(im)
  
           else

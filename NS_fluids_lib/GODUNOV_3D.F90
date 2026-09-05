@@ -13407,7 +13407,6 @@ stop
       subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
-       volume_fraction_weight, &
        sato_model_spec_id, &
        density_floor, &
        density_ceiling, &
@@ -13636,8 +13635,6 @@ stop
 
       real(amrex_real), INTENT(in) :: density_floor(num_materials)
       real(amrex_real), INTENT(in) :: density_ceiling(num_materials)
-
-      real(amrex_real), INTENT(in) :: volume_fraction_weight(num_materials)
 
       real(amrex_real), INTENT(inout), target :: &
          tensorstate(DIMV(tensorstate),NUM_CELL_ELASTIC+1)
@@ -13953,13 +13950,6 @@ stop
       any_elastic=0
 
       do im=1,num_materials
-
-       if (volume_fraction_weight(im).ge.one) then
-        !do nothing
-       else
-        print *,"volume_fraction_weight invalid ",volume_fraction_weight
-        stop
-       endif
 
        if (is_elastic(im).eq.1) then
         any_elastic=1
@@ -15076,8 +15066,6 @@ stop
                 im,is_compressible_mat(im)
                stop
               endif
-
-              donate_mom_density=donate_mom_density*volume_fraction_weight(im)
 
               if (donate_density.gt.zero) then
                ! do nothing
