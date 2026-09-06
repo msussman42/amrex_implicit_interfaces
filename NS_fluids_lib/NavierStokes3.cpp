@@ -562,9 +562,10 @@ void NavierStokes::save_interface_data(
     MultiFab::Copy(Umac_old,*localMF[interface_velocity_hold_MF+dir],0,0,1,0);
    } //dir=0;dir<AMREX_SPACEDIM
 
-    //correct elastic variables
+    //correct elastic variables 
     //with corresponding values derived from the extended velocity 
     //field.
+    //correct_elastic_variables is declared in:NavierStokes.cpp
    correct_elastic_variables();
 
    //delete the hold data

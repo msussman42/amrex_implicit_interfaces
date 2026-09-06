@@ -20600,9 +20600,9 @@ NavierStokes::split_scalar_advection() {
 
 
 void 
-NavierStokes::correct_flotsam() { 
+NavierStokes::correct_elastic_variables() { 
 
- std::string local_caller_string="correct_flotsam";
+ std::string local_caller_string="correct_elastic_variables";
 
  bool use_tiling=ns_tiling;
 
@@ -20630,6 +20630,38 @@ NavierStokes::correct_flotsam() {
  MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new ncomp invalid");
+
+ MultiFab* macnew[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  macnew[dir]=&get_new_data(Umac_Type+dir,project_slab_step+1);
+ }
+
+ int ncomp_interface=localMF[standard_interface_hold_MF]->nComp();
+ int ncomp_interface_test=S_new.nComp()+LS_new.nComp();
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
+  ncomp_interface_test+=Tensor_new.ncomp();
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type_local,project_slab_step+1);
+  ncomp_interface_test+=Refine_Density_new.ncomp();
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
+ if (ncomp_interface_test==ncomp_interface) {
+  //do nothing
+ } else
+  amrex::Error("ncomp_interface invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -20665,30 +20697,52 @@ NavierStokes::correct_flotsam() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   fort_correct_flotsam(
-    material_extend_velocity.dataPtr(),
-    &tid_current,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    improved_fab.dataPtr(), 
-    ARLIM(improved_fab.loVect()),ARLIM(improved_fab.hiVect()),
-    standard_fab.dataPtr(), 
-    ARLIM(standard_fab.loVect()),ARLIM(standard_fab.hiVect()),
-    snewfab.dataPtr(STATECOMP_MOF),
-    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-    lsnewfab.dataPtr(),
-    ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-    xlo,dx,
-    &level,
-    &finest_level);
+   for (int dir=-1;dir<AMREX_SPACEDIM;dir++) {
+    int vel_dir=dir;
+    if (dir==-1) {
+     vel_dir=0;
+    }
+    FArrayBox& macnewfab=(*macnew[vel_dir])[mfi];
+    FArrayBox& improved_vel_fab=
+     (*localMF[improved_interface_velocity_hold_MF+vel_dir])[mfi];
+    FArrayBox& standard_vel_fab=
+     (*localMF[standard_interface_velocity_hold_MF+vel_dir])[mfi];
+
+    fort_correct_elastic(
+     material_extend_velocity.dataPtr(),
+     &tid_current,
+     &dir,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     improved_fab.dataPtr(STATECOMP_MOF), 
+     ARLIM(improved_fab.loVect()),ARLIM(improved_fab.hiVect()),
+     improved_vel_fab.dataPtr(), 
+     ARLIM(improved_vel_fab.loVect()),ARLIM(improved_vel_fab.hiVect()),
+     standard_fab.dataPtr(STATECOMP_MOF), 
+     ARLIM(standard_fab.loVect()),ARLIM(standard_fab.hiVect()),
+     standard_vel_fab.dataPtr(), 
+     ARLIM(standard_vel_fab.loVect()),ARLIM(standard_vel_fab.hiVect()),
+     snewfab.dataPtr(STATECOMP_MOF),
+     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     lsnewfab.dataPtr(),
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     macnewfab.dataPtr(),
+     ARLIM(macnewfab.loVect()),ARLIM(macnewfab.hiVect()),
+     xlo,dx,
+     &level,
+     &finest_level);
+
+   } //dir=-1,0,1,2
 
  }  // mfi
 } // omp
 
- ns_reconcile_d_num(LOOP_CORRECTFLOTSAM,"fort_correct_flotsam");
+ ns_reconcile_d_num(LOOP_CORRECTELASTIC,"fort_correct_elastic");
 
-}  // end subroutine correct_flotsam
+
+ FIX ME HERE
+}  // end subroutine correct_elastic_variables
 
 void
 NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,

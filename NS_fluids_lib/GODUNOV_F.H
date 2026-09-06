@@ -854,18 +854,24 @@ extern "C"
      const int* domlo,const int* domhi);
 
 
-   void fort_correct_flotsam(
+   void fort_correct_elastic(
      int* material_extend_velocity,
      int* tid,
+     int* dir,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,
      Real* improved,
      AMREX_ARLIM_P(improvedlo),AMREX_ARLIM_P(improvedhi),
+     Real* improved_vel,
+     AMREX_ARLIM_P(improved_vello),AMREX_ARLIM_P(improved_velhi),
      Real* standard,
      AMREX_ARLIM_P(standardlo),AMREX_ARLIM_P(standardhi),
+     Real* standard_vel,
+     AMREX_ARLIM_P(standard_vello),AMREX_ARLIM_P(standard_velhi),
      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
      Real* lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi), 
+     Real* macnew,AMREX_ARLIM_P(macnewlo),AMREX_ARLIM_P(macnewhi), 
      const Real* xlo,const Real* dx,
      int* level,
      int* finest_level);

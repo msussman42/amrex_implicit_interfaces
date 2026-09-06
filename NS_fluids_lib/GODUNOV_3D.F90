@@ -17666,20 +17666,24 @@ stop
       return
       end subroutine fort_vfrac_split_smooth
 
-      subroutine fort_correct_flotsam( &
+      subroutine fort_correct_elastic( &
        material_extend_velocity, &
        tid, &
+       dir, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
        improved,DIMS(improved), &  
+       improved_vel,DIMS(improved_vel), &  
        standard,DIMS(standard), &  
+       standard_vel,DIMS(standard_vel), &  
        snew,DIMS(snew), &  
        lsnew,DIMS(lsnew), &
+       macnew,DIMS(macnew), &
        xlo,dx, &
        level, &
        finest_level) &
-      bind(c,name='fort_correct_flotsam')
+      bind(c,name='fort_correct_elastic')
 
       use probf90_module
       use global_utility_module
@@ -17692,6 +17696,8 @@ stop
       integer, PARAMETER :: tessellate=TESSELLATE_FLUIDS
 
       integer, INTENT(in) :: tid
+      integer, INTENT(in) :: dir 
+      integer :: vel_dir 
       integer, INTENT(in) :: material_extend_velocity(num_materials)
       integer :: material_list_by_rank(num_materials)
 
@@ -17700,29 +17706,41 @@ stop
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(improved)
+      integer, INTENT(in) :: DIMDEC(improved_vel)
       integer, INTENT(in) :: DIMDEC(standard)
+      integer, INTENT(in) :: DIMDEC(standard_vel)
       integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(lsnew)
+      integer, INTENT(in) :: DIMDEC(macnew)
 
       real(amrex_real), INTENT(in), target :: &
          improved(DIMV(improved),num_materials*(ngeom_raw+1))
       real(amrex_real), INTENT(in), target :: &
+         improved_vel(DIMV(improved_vel))
+      real(amrex_real), INTENT(in), target :: &
          standard(DIMV(standard),num_materials*(ngeom_raw+1))
+      real(amrex_real), INTENT(in), target :: &
+         standard_vel(DIMV(standard_vel))
       real(amrex_real), pointer :: improved_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: improved_vel_ptr(D_DECL(:,:,:))
       real(amrex_real), pointer :: standard_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: standard_vel_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(inout), target ::  &
          snew(DIMV(snew),num_materials*ngeom_raw)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
          lsnew(DIMV(lsnew),num_materials)
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+         macnew(DIMV(macnew))
+      real(amrex_real), pointer :: macnew_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
       integer i,j,k
-      integer dir,im,im_opp,irank
+      integer dir_local,im,im_opp,irank
       integer worst_rank
       integer num_materials_fluids
       real(amrex_real) dxmin
@@ -17738,14 +17756,26 @@ stop
       real(amrex_real) F_improved(num_materials)
 
       improved_ptr=>improved
+      improved_vel_ptr=>improved_vel
       standard_ptr=>standard
+      standard_vel_ptr=>standard_vel
 
       snew_ptr=>snew
       lsnew_ptr=>lsnew
+      macnew_ptr=>macnew
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
        print *,"tid invalid (correct_flotsam): ",tid
+       stop
+      endif
+
+      if (dir.eq.-1) then
+       vel_dir=0
+      else if ((dir.ge.0).and.(dir.lt.SDIM)) then
+       vel_dir=dir
+      else
+       print *,"dir invalid ",dir
        stop
       endif
 
@@ -17872,81 +17902,169 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,improved_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,improved_vel_ptr,0,vel_dir)
       call checkbound_array(fablo,fabhi,standard_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,standard_vel_ptr,0,vel_dir)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,macvel_ptr,0,vel_dir)
 
-      growlo(3)=0
-      growhi(3)=0
+      if (dir.eq.-1) then
 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
- 
-      do k=growlo(3),growhi(3)
-      do j=growlo(2),growhi(2)
-      do i=growlo(1),growhi(1)
+       growlo(3)=0
+       growhi(3)=0
 
-       call gridsten_level(xsten,i,j,k,level,nhalf)
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+  
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
-       do im=1,num_materials 
-        vofcompraw=(im-1)*ngeom_raw+1
-        vofcomprecon=(im-1)*ngeom_recon+1
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
-        LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
-        F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
-        F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
+        do im=1,num_materials 
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
 
-        if (is_elastic(im).eq.1) then
-         if ((material_extend_velocity(im).ge.1).and. &
-             (material_extend_velocity(im).le.num_materials-1)) then
-          !do nothing
+         LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+         LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+         F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
+         F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
+
+         if (is_elastic(im).eq.1) then
+          if ((material_extend_velocity(im).ge.1).and. &
+              (material_extend_velocity(im).le.num_materials-1)) then
+           !do nothing
+          else
+           print *,"material_extend_velocity invalid ",material_extend_velocity
+           stop
+          endif
+          do dir_local=1,SDIM+1
+           mofnew(vofcomprecon+dir_local-1)= &
+             improved(D_DECL(i,j,k),vofcompraw+dir_local-1)
+          enddo
+          local_LS(im)=LS_improved(im)
+         else if (is_elastic(im).eq.0) then
+          if (material_extend_velocity(im).eq.0) then
+           !do nothing
+          else
+           print *,"material_extend_velocity bad ",material_extend_velocity
+           stop
+          endif
+          do dir_local=1,SDIM+1
+           mofnew(vofcomprecon+dir_local-1)= &
+             standard(D_DECL(i,j,k),vofcompraw+dir_local-1)
+          enddo
+          local_LS(im)=LS_standard(im)
          else
-          print *,"material_extend_velocity invalid ",material_extend_velocity
+          print *,"is_elastic invalid ",im,is_elastic(im)
           stop
          endif
-         do dir=1,SDIM+1
-          mofnew(vofcomprecon+dir-1)=improved(D_DECL(i,j,k),vofcompraw+dir-1)
+        enddo !im=1,num_materials
+
+        call make_vfrac_sum_ok_base( &
+          xsten,nhalf, &
+          bfact,dx, &
+          tessellate, & !TESSELLATE_FLUIDS
+          mofnew, &
+          SDIM)
+
+        do im=1,num_materials
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
+         do dir_local=1,SDIM+1
+          snew(D_DECL(i,j,k),vofcompraw+dir_local-1)= &
+             mofnew(vofcomprecon+dir_local-1)
          enddo
-         local_LS(im)=LS_improved(im)
-        else if (is_elastic(im).eq.0) then
-         if (material_extend_velocity(im).eq.0) then
-          !do nothing
+         lsnew(D_DECL(i,j,k),im)=local_LS(im)
+        enddo !im=1,..,num_materials
+
+       enddo
+       enddo
+       enddo ! i,j,k -> growntilebox(0 ghost cells)
+
+      else if ((dir.ge.0).and.(dir.lt.SDIM)) then
+
+       growlo(3)=0
+       growhi(3)=0
+
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+  
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+
+        FIX ME
+
+        do im=1,num_materials 
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
+
+         LS_standard(im)=standard(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+         LS_improved(im)=improved(D_DECL(i,j,k),num_materials*ngeom_raw+im)
+         F_standard(im)=standard(D_DECL(i,j,k),vofcompraw)
+         F_improved(im)=improved(D_DECL(i,j,k),vofcompraw)
+
+         if (is_elastic(im).eq.1) then
+          if ((material_extend_velocity(im).ge.1).and. &
+              (material_extend_velocity(im).le.num_materials-1)) then
+           !do nothing
+          else
+           print *,"material_extend_velocity invalid ",material_extend_velocity
+           stop
+          endif
+          do dir_local=1,SDIM+1
+           mofnew(vofcomprecon+dir_local-1)= &
+             improved(D_DECL(i,j,k),vofcompraw+dir_local-1)
+          enddo
+          local_LS(im)=LS_improved(im)
+         else if (is_elastic(im).eq.0) then
+          if (material_extend_velocity(im).eq.0) then
+           !do nothing
+          else
+           print *,"material_extend_velocity bad ",material_extend_velocity
+           stop
+          endif
+          do dir_local=1,SDIM+1
+           mofnew(vofcomprecon+dir_local-1)= &
+             standard(D_DECL(i,j,k),vofcompraw+dir_local-1)
+          enddo
+          local_LS(im)=LS_standard(im)
          else
-          print *,"material_extend_velocity invalid ",material_extend_velocity
+          print *,"is_elastic invalid ",im,is_elastic(im)
           stop
          endif
-         do dir=1,SDIM+1
-          mofnew(vofcomprecon+dir-1)=standard(D_DECL(i,j,k),vofcompraw+dir-1)
+        enddo !im=1,num_materials
+
+        call make_vfrac_sum_ok_base( &
+          xsten,nhalf, &
+          bfact,dx, &
+          tessellate, & !TESSELLATE_FLUIDS
+          mofnew, &
+          SDIM)
+
+        do im=1,num_materials
+         vofcompraw=(im-1)*ngeom_raw+1
+         vofcomprecon=(im-1)*ngeom_recon+1
+         do dir_local=1,SDIM+1
+          snew(D_DECL(i,j,k),vofcompraw+dir_local-1)= &
+             mofnew(vofcomprecon+dir_local-1)
          enddo
-         local_LS(im)=LS_standard(im)
-        else
-         print *,"is_elastic invalid ",im,is_elastic(im)
-         stop
-        endif
-       enddo !im=1,num_materials
+         lsnew(D_DECL(i,j,k),im)=local_LS(im)
+        enddo !im=1,..,num_materials
 
-       call make_vfrac_sum_ok_base( &
-         xsten,nhalf, &
-         bfact,dx, &
-         tessellate, & !TESSELLATE_FLUIDS
-         mofnew, &
-         SDIM)
 
-       do im=1,num_materials
-        vofcompraw=(im-1)*ngeom_raw+1
-        vofcomprecon=(im-1)*ngeom_recon+1
-        do dir=1,SDIM+1
-         snew(D_DECL(i,j,k),vofcompraw+dir-1)=mofnew(vofcomprecon+dir-1)
-        enddo
-        lsnew(D_DECL(i,j,k),im)=local_LS(im)
-       enddo !im=1,..,num_materials
 
-      enddo
-      enddo
-      enddo ! i,j,k -> growntilebox(0 ghost cells)
+
+      else
+       print *,"dir invalid in fort_correct_elastic"
+       stop
+      endif
 
       return
-      end subroutine fort_correct_flotsam
+      end subroutine fort_correct_elastic
 
 
 
