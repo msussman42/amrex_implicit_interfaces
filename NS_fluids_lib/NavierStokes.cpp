@@ -20596,6 +20596,7 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("level invalid23");
 
+FIX ME need to interp to MAC grid if Cell centered
 }  // end subroutine split_scalar_advection
 
 
@@ -20639,20 +20640,35 @@ NavierStokes::correct_elastic_variables() {
  int ncomp_interface=localMF[standard_interface_hold_MF]->nComp();
  int ncomp_interface_test=S_new.nComp()+LS_new.nComp();
 
+ int LS_base_comp=S_new.nComp();
+ int elastic_base_comp=ncomp_interface_test;
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-  ncomp_interface_test+=Tensor_new.ncomp();
+  ncomp_interface_test+=Tensor_new.nComp();
+  if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+   //do nothing
+  } else
+   amrex::Error("Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE failed");
+  if (Tensor_new.nComp()==
+      num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+   //do nothing
+  } else
+   amrex::Error("Tensor_new.nComp() invalid");
+
  } else if (num_materials_viscoelastic==0) {
   //do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
+ int compressible_base_comp=ncomp_interface_test;
+
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
   MultiFab& Refine_Density_new=
-    get_new_data(Refine_Density_Type_local,project_slab_step+1);
-  ncomp_interface_test+=Refine_Density_new.ncomp();
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+  ncomp_interface_test+=Refine_Density_new.nComp();
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
@@ -20712,18 +20728,22 @@ NavierStokes::correct_elastic_variables() {
      material_extend_velocity.dataPtr(),
      &tid_current,
      &dir,
+     &ncomp_interface_test,
+     &LS_base_comp,
+     &elastic_base_comp,
+     &compressible_base_comp,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     improved_fab.dataPtr(STATECOMP_MOF), 
+     improved_fab.dataPtr(), 
      ARLIM(improved_fab.loVect()),ARLIM(improved_fab.hiVect()),
      improved_vel_fab.dataPtr(), 
      ARLIM(improved_vel_fab.loVect()),ARLIM(improved_vel_fab.hiVect()),
-     standard_fab.dataPtr(STATECOMP_MOF), 
+     standard_fab.dataPtr(), 
      ARLIM(standard_fab.loVect()),ARLIM(standard_fab.hiVect()),
      standard_vel_fab.dataPtr(), 
      ARLIM(standard_vel_fab.loVect()),ARLIM(standard_vel_fab.hiVect()),
-     snewfab.dataPtr(STATECOMP_MOF),
+     snewfab.dataPtr(),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      lsnewfab.dataPtr(),
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
@@ -20740,8 +20760,70 @@ NavierStokes::correct_elastic_variables() {
 
  ns_reconcile_d_num(LOOP_CORRECTELASTIC,"fort_correct_elastic");
 
+ for (int im=0;im<num_materials;im++) {
+  int imp1=im+1;
 
- FIX ME HERE
+  if (store_elastic_data[im]==1) {
+
+   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
+
+   int partid=0;
+   while ((im_viscoelastic_map[partid]!=im)&&
+          (partid<im_viscoelastic_map.size())) {
+    partid++;
+   }
+   if ((partid>=0)&&
+       (partid<im_viscoelastic_map.size())) {
+    int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
+    int scomp_data=elastic_base_comp+scomp_tensor;
+
+    if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1) {
+     MultiFab::Copy(Tensor_new,*localMF[improved_interface_hold_MF],
+        scomp_data,scomp_tensor,ENUM_NUM_TENSOR_TYPE_REFINE,0); 
+    } else if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0) {
+     MultiFab::Copy(Tensor_new,*localMF[standard_interface_hold_MF],
+        scomp_data,scomp_tensor,ENUM_NUM_TENSOR_TYPE_REFINE,0); 
+    } else
+     amrex::Error("fort_is_elastic_base invalid");
+   } else
+    amrex::Error("partid invalid");
+  } else if (store_elastic_data[im]==0) {
+   //do nothing
+  } else
+   amrex::Error("store_elastic_data invalid");
+
+  if (store_refine_density_data[im]==1) {
+
+   MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+
+   int partid=0;
+   while ((im_refine_density_map[partid]!=im)&&
+          (partid<im_refine_density_map.size())) {
+    partid++;
+   }
+   if ((partid>=0)&&
+       (partid<im_refine_density_map.size())) {
+    int scomp_density=partid*ENUM_NUM_REFINE_DENSITY_TYPE;
+    int scomp_data=compressible_base_comp+scomp_density;
+
+    if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==1) {
+     MultiFab::Copy(Refine_Density_new,*localMF[improved_interface_hold_MF],
+        scomp_data,scomp_density,ENUM_NUM_REFINE_DENSITY_TYPE,0); 
+    } else if (fort_is_elastic_base(&material_extend_velocity[im],&imp1)==0) {
+     MultiFab::Copy(Refine_Density_new,*localMF[standard_interface_hold_MF],
+        scomp_data,scomp_density,ENUM_NUM_REFINE_DENSITY_TYPE,0); 
+    } else
+     amrex::Error("fort_is_elastic_base invalid");
+   } else
+    amrex::Error("partid invalid");
+  } else if (store_refine_density_data[im]==0) {
+   //do nothing
+  } else
+   amrex::Error("store_refine_density_data invalid");
+
+ } // for (int im=0;im<num_materials;im++) 
+
 }  // end subroutine correct_elastic_variables
 
 void

@@ -6681,7 +6681,8 @@ end subroutine print_visual_descriptor
        !        fort_derturbvisc, fort_derconductivity,
        !        fort_combinevel,interpfabFWEIGHT,
        !        interpfabTEMP,fort_convertmaterial,
-       !        get_elasticmask_and_elasticmaskpart
+       !        get_elasticmask_and_elasticmaskpart,
+       !        fort_correct_elastic
       subroutine get_primary_material_VFRAC( &
           VFRAC, &
           im_primary)

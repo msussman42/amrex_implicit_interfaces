@@ -37,7 +37,7 @@ extern void set_x_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
 extern void set_y_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
 extern void set_z_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
 
-// if ncomp_input==-1, then ncomp=S_crse.ncomp()
+// if ncomp_input==-1, then ncomp=S_crse.nComp()
 // spectral_override==LOW_ORDER_AVGDOWN => always do low order average down.
 // grid_type=-1,..,5
 void
@@ -321,16 +321,18 @@ void NavierStokes::finalize_rest_fraction(const std::string& caller_string) {
 void NavierStokes::save_data_worker(int dest_mf,Real source_time,
   int dest_velocity_mf,Real source_velocity_time) {
 
+ std::string local_caller_string="save_data_worker";
+
  int ncomp_interface=0;
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
- ncomp_interface+=S_new.ncomp();
+ ncomp_interface+=S_new.nComp();
  MultiFab& LS_new=get_new_data(LS_Type,project_slab_step+1);
- ncomp_interface+=LS_new.ncomp();
+ ncomp_interface+=LS_new.nComp();
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
-  ncomp_interface+=Tensor_new.ncomp();
+  ncomp_interface+=Tensor_new.nComp();
  } else if (num_materials_viscoelastic==0) {
   //do nothing
  } else
@@ -339,8 +341,8 @@ void NavierStokes::save_data_worker(int dest_mf,Real source_time,
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
   MultiFab& Refine_Density_new=
-    get_new_data(Refine_Density_Type_local,project_slab_step+1);
-  ncomp_interface+=Refine_Density_new.ncomp();
+    get_new_data(Refine_Density_Type,project_slab_step+1);
+  ncomp_interface+=Refine_Density_new.nComp();
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
@@ -414,14 +416,14 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
 
  int ncomp_interface=0;
  MultiFab& S_new=get_new_data(State_Type,dest_step);
- ncomp_interface+=S_new.ncomp();
+ ncomp_interface+=S_new.nComp();
  MultiFab& LS_new=get_new_data(LS_Type,dest_step);
- ncomp_interface+=LS_new.ncomp();
+ ncomp_interface+=LS_new.nComp();
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   MultiFab& Tensor_new = get_new_data(Tensor_Type,dest_step);
-  ncomp_interface+=Tensor_new.ncomp();
+  ncomp_interface+=Tensor_new.nComp();
  } else if (num_materials_viscoelastic==0) {
   //do nothing
  } else
@@ -430,8 +432,8 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
   MultiFab& Refine_Density_new=
-    get_new_data(Refine_Density_Type_local,dest_step);
-  ncomp_interface+=Refine_Density_new.ncomp();
+    get_new_data(Refine_Density_Type,dest_step);
+  ncomp_interface+=Refine_Density_new.nComp();
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
@@ -618,7 +620,7 @@ void NavierStokes::save_interface_data(
 
   //extrapolate the transporting velocity field
   levelset_time_slab=prev_time_slab;
-  input_velocity_time_slab=velocity_time_slab;
+  input_velocity_time_slab=vel_time_slab;
   input_velocity_slab_step=velocity_slab_step;
   extend_FSI_data(
     im_extend,

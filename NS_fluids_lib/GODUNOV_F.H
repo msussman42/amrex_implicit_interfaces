@@ -810,13 +810,20 @@ extern "C"
      int* dombc,
      const int* domlo,const int* domhi);
 
-
-   void fort_vfrac_split_smooth(
+   void fort_vfrac_split_cell_centered(
      int* nprocessed,
      int* tid,
+     int* sato_model_spec_id,
+     Real* density_floor,
+     Real* density_ceiling,
+     int* solidheat_flag,
+     int* freezing_model,
+     int* distribute_from_target,
+     int* constant_density_all_time,
      int* velbc,
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps,
+     int* material_conservation_form,
      int* EILE_flag,
      int* dir_counter,
      int* normdir,
@@ -830,6 +837,10 @@ extern "C"
      Real* passive_veltime,
       // original data
      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+     Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
+     Real* mom_den,AMREX_ARLIM_P(mom_denlo),AMREX_ARLIM_P(mom_denhi),
+      // VELADVECT_MF
+     Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
       // slope data
      Real* vofslope,AMREX_ARLIM_P(vofslopelo),AMREX_ARLIM_P(vofslopehi), 
       // this is the result
@@ -842,8 +853,13 @@ extern "C"
      AMREX_ARLIM_P(umac_displacelo), 
      AMREX_ARLIM_P(umac_displacehi),
      const Real* xlo,const Real* dx,
+      // local variables
+     Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
+     int* stokes_flow,
+     int* nc_conserve,
      int* map_forward,
      int* recon_ncomp,
+     int* den_recon_ncomp,
      int* ncomp_state,
      int* nc_bucket,
      int* verbose,
@@ -858,6 +874,10 @@ extern "C"
      int* material_extend_velocity,
      int* tid,
      int* dir,
+     int* ncomp_interface,
+     int* LS_base_comp,
+     int* elastic_base_comp,
+     int* compressible_base_comp,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,
