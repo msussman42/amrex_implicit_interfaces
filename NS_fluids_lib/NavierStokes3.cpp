@@ -652,6 +652,9 @@ void NavierStokes::save_interface_data(
     input_velocity_time_slab,
     input_velocity_slab_step);
 
+   //in: save_interface_data
+  delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
   //restore the transporting velocity field
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
@@ -670,6 +673,9 @@ void NavierStokes::save_interface_data(
     input_velocity_time_slab,
     input_velocity_slab_step);
 
+   //in: save_interface_data
+  delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
  } else
   amrex::Error("control_flag invalid");
 
@@ -683,9 +689,9 @@ void NavierStokes::save_interface_dataALL(
  } else
   amrex::Error("expecting level==0");
 
+  //traverse levels from coarsest to finest so that coarser level 
+  //extended velocity is already initialized prior to finer level calls.
  int finest_level=parent->finestLevel();
-   //Must go from coarsest to finest since FSI_MAC_VELOCITY_MF 
-   //not initially declared on all the levels
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.save_interface_data(control_flag,im_extension);
@@ -754,11 +760,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    //copy interface_hold_MF, interface_velocity_hold_MF back to
    //state data. (project_slab_step+1)
    //extrapolate the velocity field.
-   //FSI_MAC_VELOCITY_MF is allocated in extend_FSI_data.
   save_interface_dataALL(RESTORE_CONTROL,im_extension);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete_array(FSI_MAC_VELOCITY_MF+dir);
-  }
 
   if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
    //do nothing
@@ -1462,6 +1464,7 @@ void NavierStokes::tensor_advection_updateALL() {
            input_velocity_time_slab,
            input_velocity_slab_step);
        }
+       	//calling from tensor_advection_updateALL
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         delete_array(FSI_MAC_VELOCITY_MF+dir);
        }
@@ -4150,6 +4153,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEVISC,1,0,
            AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 
+	   //calling from do_the_advance
           ns_level.manage_FSI_data(); 
          }
 
@@ -16229,10 +16233,12 @@ void NavierStokes::manage_FSI_data() {
 
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
+      //in: manage_FSI_data
      FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
      if (FSIvelMAC.nComp()!=1)
       amrex::Error("FSIvelMAC.nComp() invalid");
 
+      //in: manage_FSI_data
      if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
       //do nothing
      } else
@@ -16293,6 +16299,7 @@ void NavierStokes::manage_FSI_data() {
 
    } // dir=0..sdim-1
 
+    //in: manage_FSI_data
    delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
    delete_localMF(FSI_CELL_VELOCITY_MF,1);
   } else if (FSI_outer_sweeps==0) {
@@ -16307,6 +16314,7 @@ void NavierStokes::manage_FSI_data() {
 
    new_localMF(FSI_CELL_VELOCITY_MF,AMREX_SPACEDIM,1,-1);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //in: manage_FSI_data
     //ngrow=2
     //Umac_Type+dir
     //getStateMAC_localMF is declared in NavierStokes2.cpp
@@ -16356,10 +16364,12 @@ void NavierStokes::manage_FSI_data() {
 
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
+      //in: manage_FSI_data
      FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
      if (FSIvelMAC.nComp()!=1)
       amrex::Error("FSIvelMAC.nComp() invalid");
 
+      //in: manage_FSI_data
      if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
       //do nothing
      } else
@@ -16494,9 +16504,10 @@ void NavierStokes::extend_FSI_data(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
+    //in: extend_FSI_data
     //Umac_Type+dir
     //getStateMAC_localMF is declared in NavierStokes2.cpp
-    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
+    //localMF[FSI_MAC_VELOCITY_MF+dir] allocated in getStateMAC_localMF.
 
   Real local_time=input_velocity_time_slab;
   int local_slab_step=input_velocity_slab_step;
@@ -16510,7 +16521,9 @@ void NavierStokes::extend_FSI_data(
    
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,local_slab_step);
 
+   //in: extend_FSI_data
    //FSI_MAC_VELOCITY_MF deleted by the caller.
+   //getStateMAC_localMF calls "getStateMAC"
   getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,ngrow_distance,
      dir,local_time);
 
@@ -16543,10 +16556,12 @@ void NavierStokes::extend_FSI_data(
    
    FArrayBox& lsfab=(*levelset_extend)[mfi];
 
+   //in: extend_FSI_data
    FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
    if (FSIvelMAC.nComp()!=1)
     amrex::Error("FSIvelMAC.nComp() invalid");
 
+   //in: extend_FSI_data
    if (localMF[FSI_MAC_VELOCITY_MF+dir]->nGrow()>=0) {
     //do nothing
    } else
@@ -16605,6 +16620,7 @@ void NavierStokes::extend_FSI_data(
 } // omp
   ns_reconcile_d_num(LOOP_EXTEND_VEL,"fort_extend_elastic_velcity");
 
+   //in: extend_FSI_data
   MultiFab::Copy(Umac_new,*localMF[FSI_MAC_VELOCITY_MF+dir],0,0,1,0);
 
   if (tensor_extend==1) {
@@ -16617,6 +16633,7 @@ void NavierStokes::extend_FSI_data(
 
  } // dir=0..sdim-1
 
+ //in: extend_FSI_data
  //FSI_MAC_VELOCITY_MF is deleted by the caller.
  //delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
 
