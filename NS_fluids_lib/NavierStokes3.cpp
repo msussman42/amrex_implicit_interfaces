@@ -365,9 +365,34 @@ void NavierStokes::save_data_worker(int dest_mf,Real source_time,
  ncomp_interface_test+=LS_new.nComp();
  delete lsnewmf;
 
+ if (ncomp_interface_test==STATE_NCOMP+num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("ncomp_interface_test invalid");
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
+
+  if (Tensor_new.nComp()==NUM_CELL_ELASTIC_REFINE) {
+   //do nothing
+  } else
+   amrex::Error("Tensor_new.nComp() invalid");
+  if (NUM_CELL_ELASTIC_REFINE==
+      num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC invalid");
+  if (NUM_CELL_ELASTIC_REFINE==
+      NUM_CELL_ELASTIC*ENUM_NUM_REFINE_DENSITY_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
   MultiFab* tensormf=getStateTensor(1,0,
     NUM_CELL_ELASTIC_REFINE,source_time);
   MultiFab::Copy(*localMF[dest_mf],*tensormf,0,ncomp_interface_test,
@@ -383,6 +408,18 @@ void NavierStokes::save_data_worker(int dest_mf,Real source_time,
      (num_materials_compressible<=num_materials)) {
   MultiFab& Refine_Density_new=
     get_new_data(Refine_Density_Type,project_slab_step+1);
+
+  if (Refine_Density_new.nComp()==
+      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("Refine_Density_new.nComp() invalid");
+
+  if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
+   // do nothing
+  } else
+   amrex::Error("Refine_Density_new.nComp() invalid");
+
   MultiFab* refine_density_mf=getStateRefineDensity(1,0,
     NUM_CELL_REFINE_DENSITY,source_time);
   MultiFab::Copy(*localMF[dest_mf],*refine_density_mf,
@@ -439,6 +476,11 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
  } else
   amrex::Error("num_materials_compressible invalid:initData");
 
+ if (localMF[source_mf]->nComp()==ncomp_interface) {
+  //do nothing
+ } else
+  amrex::Error("ncomp_interfae invalid");
+
  int ncomp_interface_test=0;
 
  MultiFab::Copy(S_new,*localMF[source_mf],ncomp_interface_test,0,
@@ -483,7 +525,6 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
  } //dir=0;dir<AMREX_SPACEDIM
 
 } //end subroutine restore_data_worker
-
 
 
 void NavierStokes::save_interface_data(

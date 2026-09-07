@@ -18547,7 +18547,6 @@ stop
 
 
 
-!STATECOMP_MOF
       subroutine fort_correct_elastic( &
        material_extend_velocity, &
        tid, &
@@ -18662,7 +18661,7 @@ stop
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
-       print *,"tid invalid (correct_flotsam): ",tid
+       print *,"tid invalid (correct_elastic): ",tid
        stop
       endif
 
@@ -18676,19 +18675,19 @@ stop
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid correct_flotsam ",bfact
+       print *,"bfact invalid fort_correct_elastic ",bfact
        stop
       endif
 
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
-       print *,"level invalid fort_correct_flotsam: ",level,finest_level
+       print *,"level invalid fort_correct_elastic: ",level,finest_level
        stop
       endif
 
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
-       print *,"num_state_material invalid (fort_correct_flotsam): ", &
+       print *,"num_state_material invalid (fort_correct_elastic): ", &
          num_state_material
        stop
       endif

@@ -20643,6 +20643,17 @@ NavierStokes::correct_elastic_variables() {
  int LS_base_comp=S_new.nComp();
  int elastic_base_comp=ncomp_interface_test;
 
+ if (LS_base_comp==STATE_NCOMP) {
+  //do nothing
+ } else
+  amrex::Error("LS_base_comp invalid");
+
+ if (elastic_base_comp==STATE_NCOMP+num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("elastic_base_comp invalid");
+
+
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
   MultiFab& Tensor_new = get_new_data(Tensor_Type,project_slab_step+1);
@@ -20663,6 +20674,12 @@ NavierStokes::correct_elastic_variables() {
   amrex::Error("num_materials_viscoelastic invalid");
 
  int compressible_base_comp=ncomp_interface_test;
+
+ if (compressible_base_comp==elastic_base_comp+
+     num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+  //do nothing
+ } else
+  amrex::Error("compressible_base_comp invalid");
 
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
@@ -20724,6 +20741,7 @@ NavierStokes::correct_elastic_variables() {
     FArrayBox& standard_vel_fab=
      (*localMF[standard_interface_velocity_hold_MF+vel_dir])[mfi];
 
+     //fort_correct_elastic is declared in GODUNOV_3D.F90
     fort_correct_elastic(
      material_extend_velocity.dataPtr(),
      &tid_current,
@@ -20774,6 +20792,13 @@ NavierStokes::correct_elastic_variables() {
    }
    if ((partid>=0)&&
        (partid<im_viscoelastic_map.size())) {
+
+    if (NUM_CELL_ELASTIC_REFINE==
+        num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE_REFINE) {
+     // do nothing
+    } else
+     amrex::Error("NUM_CELL_ELASTIC_REFINE invalid");
+
     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE_REFINE;
     int scomp_data=elastic_base_comp+scomp_tensor;
 

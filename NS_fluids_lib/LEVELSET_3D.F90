@@ -5648,11 +5648,28 @@ stop
                       stop
                      endif
                      if (den_mat.gt.zero) then
-                      mdot_relax=half
+                      mdot_correct=blob_mass_target-blob_mass
+                      if (mdot_correct.eq.zero) then
+                       !do nothing
+                      else if (mdot_correct.ne.zero) then
+                       mdot_relax=EPS2*blob_mass/abs(mdot_correct)
+                       if ((mdot_relax.ge.zero).and.(mdot_relax.lt.half)) then
+                        !do nothing
+                       else if (mdot_relax.ge.half) then
+                        mdot_relax=half
+                       else
+                        print *,"mdot_relax invalid ",mdot_relax
+                        stop
+                       endif
+
                        !mdot units: m^3/s^2
-                      mdot_correct=mdot_relax*(blob_mass_target-blob_mass)* &
-                       vol/blob_cellvol_count
-                      mdot_correct=mdot_correct/(den_mat*dt*dt)
+                       mdot_correct=mdot_relax*mdot_correct* &
+                         vol/blob_cellvol_count
+                       mdot_correct=mdot_correct/(den_mat*dt*dt)
+                      else
+                       print *,"mdot_correct invalid ",mdot_correct
+                       stop
+                      endif
 
                       if (repair_mass(im).eq.1) then
                        !do nothing
