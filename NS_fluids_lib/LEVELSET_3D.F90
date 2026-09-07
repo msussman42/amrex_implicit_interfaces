@@ -13587,6 +13587,7 @@ stop
 !   (iii) usolid in solid regions
 
       subroutine fort_cell_to_mac( &
+       cell_centered_incompressible, &
        ncomp_mgoni, &
        ncomp_xp, & !local_MF[AMRSYNC_PRES_MF]->nComp() OP_PRESGRAD_MAC
        ncomp_xgp, &
@@ -13658,6 +13659,7 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(in) :: dir  !0,1,2
+      integer, INTENT(in) :: cell_centered_incompressible
       integer, INTENT(in) :: ncomp_mgoni
       integer :: interface_force_switch
       integer, INTENT(in) :: ncomp_xp
@@ -13925,6 +13927,15 @@ stop
       colorfab_ptr=>colorfab
       levelPC_ptr=>levelPC
 
+      if (cell_centered_incompressible.eq.0) then
+       !do nothing
+      else if (cell_centered_incompressible.eq.1) then
+       !do nothing
+      else
+       print *,"cell_centered_incompressible invalid"
+       stop
+      endif
+
       if (ncomp_xp.lt.1) then
        print *,"ncomp_xp invalid(1) ",ncomp_xp
        stop
@@ -14015,6 +14026,7 @@ stop
        stop
       endif
 
+       !fort_check_operation_flag_MAC declared in GLOBALUTIL.F90
       call fort_check_operation_flag_MAC(operation_flag)
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
@@ -14993,12 +15005,20 @@ stop
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then 
 
-                 velcomp=1
-                  !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
-                 primary_velmaterial=local_vel_MAC
+                 if (cell_centered_incompressible.eq.0) then
+                  velcomp=1
+                   !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
+                  primary_velmaterial=local_vel_MAC
+                 else if (cell_centered_incompressible.eq.1) then
+                  velcomp=dir+1
+                  primary_velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
+                 else
+                  print *,"cell_centered_incompressible invalid"
+                  stop
+                 endif
 
                 else
-                 print *,"operation_flag invalid16"
+                 print *,"operation_flag invalid16 ",operation_flag
                  stop
                 endif
 
@@ -16334,6 +16354,13 @@ stop
                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                 (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
+
+        if (cell_centered_incompressible.eq.0) then
+         !do nothing
+        else
+         print *,"cell_centered_incompressible invalid"
+         stop
+        endif
 
         if (operation_flag.eq.OP_POTGRAD_TO_MAC) then
 

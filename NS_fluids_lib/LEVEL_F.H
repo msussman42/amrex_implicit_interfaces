@@ -265,6 +265,7 @@ namespace amrex{
 
 
       void fort_cell_to_mac(
+        int* cell_centered_incompressible,
         int* ncomp_mgoni,
         int* ncomp_xp,
         int* ncomp_xgp,

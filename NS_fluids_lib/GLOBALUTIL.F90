@@ -8581,7 +8581,7 @@ end subroutine print_visual_descriptor
           (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then
        ! do nothing
       else
-       print *,"operation_flag invalid"
+       print *,"operation_flag invalid ",operation_flag
        stop
       endif
 

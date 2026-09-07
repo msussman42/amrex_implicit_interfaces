@@ -2326,6 +2326,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
     // present routine: init_divup_cell_vel_cell; p^CELL -> p^MAC 
     fort_cell_to_mac(
+     &cell_centered_incompressible,
      &ncomp_mgoni, 
      &ncomp_xp, // =2=NCOMP_PEDGE
      &ncomp_xgp, 
@@ -2768,7 +2769,9 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
 // ucell_new=ucell+old + force_cell
 //
-//called from: post_init_state, advance_MAC_velocity,
+//called from: 
+//  post_init_state, 
+//  advance_MAC_velocity, (OP_U_SEM_CELL_MAC_TO_MAC, idx_velcell==-1,beta=0.0)
 //  do_the_advance, multiphase_project,
 //  INCREMENT_REGISTERS_ALL
 void NavierStokes::increment_face_velocityALL(
@@ -2790,24 +2793,33 @@ void NavierStokes::increment_face_velocityALL(
 
  make_MAC_velocity_consistentALL();
 
+  // if cell_centered_incompressible==0:
   //  unew^{f} = 
   //   (i) unew^{f} in non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions
   //   (iii) usolid in solid regions
+  // if cell_centered_incompressible==1:
+  //   (unew^{c})^{c->f}
  if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) {
 
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
-  
+ 
+   if (cell_centered_incompressible==0) {
+    //do nothing
+   } else
+    amrex::Error("expecting cell_centered_incompressible==0");
+
    //ngrow,scomp,ncomp
    //u^{c,n+1}-u^{c,n}
+   //minusALL(int ngrow,int scomp,int ncomp,int idx_dest,int idx_source) 
    minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
 
   } else
    amrex::Error("enable_spectral invalid");
 
- }
+ } //(operation_flag==OP_U_SEM_CELL_MAC_TO_MAC)
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -2950,15 +2962,23 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("beta invalid");
 
+  // if  cell_centered_incompressible==0:
   // unew^{f} = 
   //   (i) unew^{f} in non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) usolid in solid regions
+  // if  cell_centered_incompressible==1:
+  //   (unew^{c})^{c->f} everywhere
  } else if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) {
 
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
+
+   if (cell_centered_incompressible==0) {
+    //do nothing
+   } else
+    amrex::Error("expecting cell_centered_incompressible==0");
 
     //u^{c,n}
    debug_ngrow(ADVECT_REGISTER_MF,1,local_caller_string);
@@ -3115,10 +3135,20 @@ void NavierStokes::increment_face_velocity(
 
       //u^{mac,n+1}
      Umac_old=&Umac_new;
+     if (Umac_old->boxArray()==Umac_new.boxArray()) {
+      // do nothing
+     } else
+      amrex::Error("Umac_old->boxArray() invalid");
+
       //u^{cell,n+1}
      U_old=localMF[CURRENT_CELL_VEL_MF];
 
     } else if (enable_spectral==1) {
+
+     if (cell_centered_incompressible==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting cell_centered_incompressible==0");
 
       //u^{mac,n}
      Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
@@ -3234,6 +3264,7 @@ void NavierStokes::increment_face_velocity(
       // in increment_face_velocity
       // fort_cell_to_mac is declared in: LEVELSET_3D.F90
       fort_cell_to_mac(
+       &cell_centered_incompressible,
        &ncomp_mgoni,
        &ncomp_xp, //=NCOMP_AMRSYNC_VEL_MF
        &ncomp_xgp,
@@ -5025,6 +5056,7 @@ void NavierStokes::apply_pressure_grad(
     // fort_cell_to_mac called from: apply_pressure_grad
     // fort_cell_to_mac is declared in: LEVELSET_3D.F90
     fort_cell_to_mac(
+     &cell_centered_incompressible,
      &ncomp_mgoni,
      &ncomp_xp,
      &ncomp_xgp,
@@ -6488,6 +6520,7 @@ void NavierStokes::process_potential_force_face(
    //xface,levelPC,pres,den,mgoni,xgp 
    // process_potential_force_face 
    fort_cell_to_mac( 
+    &cell_centered_incompressible,
     &ncomp_mgoni,//ncomp_mgoni==nmat*nstate_mat
     &ncomp_xp,
     &ncomp_xgp,
@@ -6849,10 +6882,10 @@ void NavierStokes::prescribe_solid_geometryALL(
       divu_outer_sweeps);
    std::cout << "time= " << time << '\n';
    std::cout << "output_slab= " << output_slab << '\n';
-   std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE, SOLID_VELOCITY " << 
-	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
-	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << 
-	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_VELOCITY << '\n';
+   std::cout << "RENORMALIZE_ONLY,DEFAULT_ANGLE,CONTACT_ANGLE,SOLID_VELOCITY " 
+    << RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
+    ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << 
+    ' ' << RENORMALIZE_PRESCRIBE_SOLID_VELOCITY << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 
@@ -6873,6 +6906,7 @@ void NavierStokes::prescribe_solid_geometryALL(
   } else if ((renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE)||
              (renormalize_flag==RENORMALIZE_PRESCRIBE_SOLID_VELOCITY)) {
 
+   //makeStateCurvALL declared in NavierStokes.cpp
    makeStateCurvALL(cur_time_slab,local_caller_string);
 
   } else {
@@ -6887,6 +6921,9 @@ void NavierStokes::prescribe_solid_geometryALL(
     amrex::Error("prescribe solid at the new time");
 
     //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
+    //init_FSI_GHOST_MAC_MF_ALL calls volWgtSumALL with fast_mode=1
+    //volWgtSumALL calls init_FSI_GHOST_MAC_MF_ALL_predict
+    //volWgtSumALL calls VOF_Recon_ALL
    init_FSI_GHOST_MAC_MF_ALL(renormalize_flag,local_caller_string);
   
    interface_touch_flag=1; //prescribe_solid_geometryALL
@@ -6919,10 +6956,10 @@ void NavierStokes::prescribe_solid_geometryALL(
       divu_outer_sweeps);
    std::cout << "time= " << time << '\n';
    std::cout << "output_slab= " << output_slab << '\n';
-   std::cout << "RENORMALIZE_ONLY, DEFAULT_ANGLE, CONTACT_ANGLE, SOLID_VELOCITY " << 
-	  RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
-	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << 
-	  ' ' << RENORMALIZE_PRESCRIBE_SOLID_VELOCITY << '\n';
+   std::cout << "RENORMALIZE_ONLY,DEFAULT_ANGLE,CONTACT_ANGLE,SOLID_VELOCITY " 
+    << RENORMALIZE_ONLY << ' ' << RENORMALIZE_PRESCRIBE_DEFAULT_ANGLE <<
+    ' ' << RENORMALIZE_PRESCRIBE_SOLID_AND_ANGLE << 
+    ' ' << RENORMALIZE_PRESCRIBE_SOLID_VELOCITY << '\n';
    std::cout << "renormalize_flag= " << renormalize_flag << '\n';
    std::cout << "caller_string= " << caller_string << '\n';
    std::cout << 

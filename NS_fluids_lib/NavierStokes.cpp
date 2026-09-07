@@ -19311,6 +19311,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      int ncphys_proxy=NFLUXSEM;
 
      fort_cell_to_mac(
+      &cell_centered_incompressible,
       &ncomp_mgoni,
       &ncomp_xp,
       &ncomp_xgp,
@@ -20596,7 +20597,6 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("level invalid23");
 
-FIX ME need to interp to MAC grid if Cell centered
 }  // end subroutine split_scalar_advection
 
 
