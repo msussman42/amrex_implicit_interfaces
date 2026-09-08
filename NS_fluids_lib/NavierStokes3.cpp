@@ -599,7 +599,7 @@ void NavierStokes::save_interface_data(
    } //im=1..num_materials
 
 
-   //restore the Umac_old velocity field
+   //restore the Umac_old (unextended) velocity field
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     MultiFab& Umac_old=get_new_data(Umac_Type+dir,project_slab_step);
     MultiFab::Copy(Umac_old,*localMF[interface_velocity_hold_MF+dir],0,0,1,0);
@@ -630,7 +630,8 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("expecting advect_time_slab==cur_time_slab");
 
-  if (im_extension==0) { //just prior to elastic advection
+   //just prior to elastic advection, right after POST_PROCESS_CONTROL
+  if (im_extension==0) { 
    //do nothing
   } else
    amrex::Error("im_extension invalid (RESTORE_CONTROL)");
@@ -655,26 +656,40 @@ void NavierStokes::save_interface_data(
    //in: save_interface_data
   delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
 
-  //restore the transporting velocity field
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,velocity_slab_step);
-   MultiFab::Copy(Umac_new,*localMF[improved_interface_velocity_hold_MF+dir],
-     0,0,1,0);
-  } //dir=0;dir<AMREX_SPACEDIM
+  //restore the transporting velocity field if at the new time.
+  if (divu_outer_sweeps==0) {
+   //do nothing
+  } else if (divu_outer_sweeps>0) {
 
-  //extrapolate the transporting velocity field
-  levelset_time_slab=prev_time_slab;
-  input_velocity_time_slab=vel_time_slab;
-  input_velocity_slab_step=velocity_slab_step;
-  extend_FSI_data(
+   if (velocity_slab_step==project_slab_step+1) {
+    //do nothing
+   } else
+    amrex::Error("velocity_slab_step invalid");
+
+   if (std::abs(vel_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+    //do nothing
+   } else
+    amrex::Error("expecting vel_time_slab==cur_time_slab");
+
+   restore_data_worker(improved_interface_hold_MF,velocity_slab_step,
+    improved_interface_velocity_hold_MF,velocity_slab_step);
+
+    //extrapolate the transporting velocity field
+   levelset_time_slab=vel_time_slab;
+   input_velocity_time_slab=vel_time_slab;
+   input_velocity_slab_step=velocity_slab_step;
+   extend_FSI_data(
     im_extend,
     local_tensor_extend,
     levelset_time_slab,
     input_velocity_time_slab,
     input_velocity_slab_step);
 
-   //in: save_interface_data
-  delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+    //in: save_interface_data
+   delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
+  } else
+   amrex::Error("divu_outer_sweeps invalid");
 
  } else
   amrex::Error("control_flag invalid");
@@ -752,7 +767,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  if (material_extend_velocity_flag==0) {
   //do nothing
  } else if (material_extend_velocity_flag>0) {
-   //copy VFRAC,CEN,LS to standard_interface_hold_MF
+   //copy S_new, LS_new, Tensor_new, Refine_Density_new, [UVW]mac_new
+   //to standard_interface_hold_MF
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
   im_extension=0; //elastic material advection
