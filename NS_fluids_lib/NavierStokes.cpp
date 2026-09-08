@@ -4662,8 +4662,8 @@ NavierStokes::read_params ()
        Real LL=get_user_latent_heat(iten_local+1,293.0,1);
        if (LL!=0.0) {
 
-        if (ngrow_distance<6)
-         amrex::Error("require ns.ngrow_distance>=6 if latent_heat<>0");
+        if (ngrow_distance<5)
+         amrex::Error("require ns.ngrow_distance>=5 if latent_heat<>0");
 
         int im1=0;
         int im2=0;
