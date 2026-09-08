@@ -19955,7 +19955,7 @@ NavierStokes::split_scalar_advection() {
  } else if (cell_centered_incompressible==1) {
   refine_CISL=1;
  } else
-  amrex::Error("cell_centered_incompressible invalid");
+  amrex::Error("cell_centered_incompressible invalid split_scalar_advection");
 
  int nc_conserve=CISLCOMP_CONS_NCOMP*refine_CISL;
  int nc_bucket=CISLCOMP_NCOMP;
@@ -20015,7 +20015,7 @@ NavierStokes::split_scalar_advection() {
   } else if (cell_centered_incompressible==1) {
    //do nothing
   } else
-   amrex::Error("cell_centered_incompressible invalid");
+   amrex::Error("cell_centered_incompressible invalid(2) split_scalar_adv");
 
   // in: split_scalar_advection
   // ngrow=2
@@ -20099,7 +20099,7 @@ NavierStokes::split_scalar_advection() {
   } else if (cell_centered_incompressible==1) {
    //do nothing
   } else
-   amrex::Error("cell_centered_incompressible invalid");
+   amrex::Error("cell_centered_incompressible invalid(3) split_scalar_adv");
 
   S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
 
@@ -20475,7 +20475,7 @@ NavierStokes::split_scalar_advection() {
       domlo,domhi);
 
     } else
-     amrex::Error("cell_centered_incompressible invalid");
+     amrex::Error("cell_centered_incompressible invalid(4) split_scalar_adv");
 
   }  // mfi
 } // omp
@@ -20526,7 +20526,7 @@ NavierStokes::split_scalar_advection() {
   } else if (cell_centered_incompressible==1) {
    //do nothing
   } else
-   amrex::Error("cell_centered_incompressible invalid");
+   amrex::Error("cell_centered_incompressible invalid(5) split_scalar_adv");
 
   delete_localMF(VELADVECT_MF,1);
   delete_localMF(DEN_RECON_MF,1);

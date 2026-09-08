@@ -13949,7 +13949,8 @@ stop
       else if (cell_centered_incompressible.eq.1) then
        !do nothing
       else
-       print *,"cell_centered_incompressible invalid"
+       print *,"cell_centered_incompressible invalid fort_cell_to_mac"
+       print *,cell_centered_incompressible
        stop
       endif
 
@@ -15030,7 +15031,8 @@ stop
                   velcomp=dir+1
                   primary_velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
                  else
-                  print *,"cell_centered_incompressible invalid"
+                  print *,"cell_centered_incompressible invalid(2)fort_cell_to"
+                  print *,cell_centered_incompressible
                   stop
                  endif
 
@@ -16374,8 +16376,12 @@ stop
 
         if (cell_centered_incompressible.eq.0) then
          !do nothing
+        else if (cell_centered_incompressible.eq.1) then
+         !do nothing
         else
          print *,"cell_centered_incompressible invalid"
+         print *,"tileloop ",tileloop
+         print *,"cell_centered_incompressible ",cell_centered_incompressible
          stop
         endif
 
@@ -16396,6 +16402,15 @@ stop
         endif
 
         if (enable_spectral.eq.1) then
+
+         if (cell_centered_incompressible.eq.0) then
+          !do nothing
+         else
+          print *,"cell_centered_incompressible invalid(enable_spectral.eq.1)"
+          print *,"tileloop ",tileloop
+          print *,"cell_centered_incompressible ",cell_centered_incompressible
+          stop
+         endif
 
          if (bfact.ge.2) then
 
@@ -16588,17 +16603,17 @@ stop
         else if (enable_spectral.eq.0) then
          ! do nothing
         else
-         print *,"enable_spectral invalid"
+         print *,"enable_spectral invalid ",enable_spectral
          stop
         endif
 
        else
-        print *,"operation_flag invalid"
+        print *,"operation_flag invalid ",operation_flag
         stop
        endif
 
       else
-       print *,"tileloop invalid"
+       print *,"tileloop invalid ",tileloop
        stop
       endif
 
