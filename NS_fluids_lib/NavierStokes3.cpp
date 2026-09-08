@@ -658,7 +658,17 @@ void NavierStokes::save_interface_data(
 
   //restore the transporting velocity field if at the new time.
   if (divu_outer_sweeps==0) {
-   //do nothing
+
+   if (velocity_slab_step==project_slab_step) {
+    //do nothing
+   } else
+    amrex::Error("velocity_slab_step invalid");
+
+   if (std::abs(vel_time_slab-prev_time_slab)<=CPP_EPS8*cur_time_slab) {
+    //do nothing
+   } else
+    amrex::Error("expecting vel_time_slab==prev_time_slab");
+
   } else if (divu_outer_sweeps>0) {
 
    if (velocity_slab_step==project_slab_step+1) {
