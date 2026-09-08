@@ -58,7 +58,6 @@ ns.ngrow_elastic=4.0
 
 ns.mof_ordering=2 3 1 1 #liquid, gas, substrate, ice
 ns.material_extend_velocity=0 0 1 1 #EULERIAN FSI
-#ns.material_extend_velocity=0 0 0 1 #RIGID SUBSTRATE
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1
 
@@ -156,7 +155,6 @@ ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
-#ns.material_type=0 0 999 0 # RIGID substrate
 ns.material_type=0 0 0 0 # Eulerian FSI
 ns.material_conservation_form=0 0 0 0
 #ns.material_type=0 0 25 # Compressible Eulerian FSI (elastic)
@@ -168,9 +166,7 @@ ns.material_conservation_form=0 0 0 0
 # 4 CTML
 # 8 EULERIAN FSI
 # 10 EULERIAN FSI ICE
-#ns.FSI_flag=0 0 1 10 #RIGID substrate
 ns.FSI_flag=0 0 8 10 #Eulerian FSI
-#ns.repair_mass=1 0 0 1  #RIGID substrate
 ns.repair_mass=1 0 1 1 
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
@@ -185,9 +181,7 @@ ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0
 #12 13 14 23 24 34
 ns.saturation_temp = 0.0 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 
-#ns.elastic_viscosity=0.0 0.0 0.0 4.0e+4 #RIGID FSI
-ns.elastic_viscosity=0.0 0.0 4.0e+4 4.0e+4
-#ns.elastic_time=0.0 0.0 0.0 1.0e+31 #RIGID FSI
+ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+6
 ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31
 ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #0=FENE-CR
@@ -196,7 +190,6 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-#ns.viscoelastic_model=0 0 0 7 #RIGID FSI
 ns.viscoelastic_model=0 0 7 7
 ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
