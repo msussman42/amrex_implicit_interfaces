@@ -127,6 +127,16 @@ ns.include_viscous_heating=0
 # shock_timestep=2 2 option => never consider sound speed.
 ns.shock_timestep=2 2  
 ns.material_type=0 0 
+# FSI_flag for avaiable phase/material
+# 0 fluid (default)
+# 1 solid (PROB_[23]D.F90)
+# 2 solid (lagrangian)
+# 3 ice
+# 4 CTML
+# 8 EULERIAN FSI
+ns.FSI_flag=0 0 #fluids
+#ns.FSI_flag=8 0 #Eulerian FSI
+ns.repair_mass=0 1
 ns.viscconst=10.0 1.8e-4
 ns.denconst=1.0 1.2e-3
 ns.tempconst=273.0 273.0

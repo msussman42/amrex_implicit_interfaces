@@ -168,7 +168,7 @@ ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.lax_friedrichs=0.0 1.0 1.0 1.0
+ns.lax_friedrichs=0.0 0.0 1.0 1.0
 ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
 ns.heatviscconst=0.0 0.0 0.0
 #ns.elastic_viscosity=0.0 0.0 4.0e+6

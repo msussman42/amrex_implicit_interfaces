@@ -155,6 +155,7 @@ ns.material_conservation_form=1 1 0 0
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 ns.lax_friedrichs=0.0 0.0 1.0 1.0
+ns.lax_friedrichs_energy=0.0 0.0 1.0 1.0
 ns.heatviscconst=0.0 0.0 0.0 0.0
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
