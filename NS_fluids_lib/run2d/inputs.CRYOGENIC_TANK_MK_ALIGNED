@@ -255,9 +255,6 @@ ns.xblob3 = 61.6726637934e+2 # -q dot n=Watts/m^2
 # ----------------------------------------------------------
 ns.continuous_mof=1 # 0=MOF 1=CMOF
 
-#-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
-# 1=EILE (default), 2=always EI, 3=always LE
-ns.EILE_flag        = -1
 
 ns.MOFITERMAX=30
 

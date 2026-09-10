@@ -40,9 +40,6 @@ ns.projection_pressure_scale=1.0e+6
 ns.num_materials=2
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
-# EILE_flag=-1 Weymouth and Yue
-# EILE_flag=1 alternate EI-LE
-ns.EILE_flag=-1
 # 1/c^2  assume mach number 0.01
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3

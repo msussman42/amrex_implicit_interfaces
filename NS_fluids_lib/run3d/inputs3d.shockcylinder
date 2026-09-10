@@ -27,9 +27,6 @@ geometry.is_periodic = 1 0 0
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
 ns.MOFITERMAX=30
-# EILE_flag=-1 Weymouth and Yue
-# EILE_flag=1 alternate EI-LE
-ns.EILE_flag=1
 ns.ns_tiling=false
 
 # May 17: for shockdrop_M=3.0, make this 1.0e+12

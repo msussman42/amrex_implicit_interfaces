@@ -762,21 +762,25 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int im_extension=-1; //regular advection
 
- if (material_extend_velocity_flag==0) {
+ if ((material_extend_velocity_flag==0)||
+     (extrapolate_elastic_velocity==0)) {
   //do nothing
- } else if (material_extend_velocity_flag>0) {
+ } else if ((material_extend_velocity_flag>0)&&
+            (extrapolate_elastic_velocity==1)) {
    //State_Type,LS_Type,Tensor_Type,Refine_Density_Type,[UVW]mac_Type
    //(project_slab_step+1) copied to interface_hold_MF, 
    //interface_velocity_hold_MF
   save_interface_dataALL(SAVE_CONTROL,im_extension);
  } else
-  amrex::Error("material_extend_velocity_flag invalid");
+  amrex::Error("material_extend_velocity_flag or extrap_elas_vel invalid");
 
  sub_nonlinear_advection(local_caller_string,im_extension); //regular advection
 
- if (material_extend_velocity_flag==0) {
+ if ((material_extend_velocity_flag==0)||
+     (extrapolate_elastic_velocity==0)) {
   //do nothing
- } else if (material_extend_velocity_flag>0) {
+ } else if ((material_extend_velocity_flag>0)&&
+            (extrapolate_elastic_velocity==1)) {
    //copy S_new, LS_new, Tensor_new, Refine_Density_new, [UVW]mac_new
    //to standard_interface_hold_MF
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
@@ -837,7 +841,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   }  // ilev=finest_level ... level  
 
  } else
-  amrex::Error("material_extend_velocity_flag invalid");
+  amrex::Error("material_extend_velocity_flag or extrap_elas_vel invalid");
 
 }  // end subroutine nonlinear_advection
 
@@ -853,9 +857,13 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
  if (im_extension==0) {
   do_post_process=1;
- } else if ((im_extension==-1)&&(material_extend_velocity_flag==0)) {
+ } else if ((im_extension==-1)&&
+  	    ((material_extend_velocity_flag==0)||
+	     (extrapolate_elastic_velocity==0))) {
   do_post_process=1;
- } else if ((im_extension==-1)&&(material_extend_velocity_flag>0)) {
+ } else if ((im_extension==-1)&&
+	    (material_extend_velocity_flag>0)&&
+	    (extrapolate_elastic_velocity==1)) {
   do_post_process=0;
  } else
   amrex::Error("im_extension or material_extend_velocity_flag invalid");

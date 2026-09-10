@@ -37,7 +37,6 @@ ns.MOFITERMAX=30
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=0
-ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)
 amr.n_cell    = 256 256
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.max_level = 0

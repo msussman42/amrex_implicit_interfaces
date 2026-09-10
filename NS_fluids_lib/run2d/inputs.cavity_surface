@@ -28,7 +28,6 @@ ns.microlayer_angle=0.872664626 0.0 0.0
 #ns.microlayer_size=4.4661E-09 0.0 0.0
 ns.macrolayer_size=0.0 0.0 0.0
 
-ns.EILE_flag=-1 # weymouth and Yue
 # 0=MOF  1=CMOF
 ns.continuous_mof=1
 ns.vof_height_function=1  #vof height function better than LS height function

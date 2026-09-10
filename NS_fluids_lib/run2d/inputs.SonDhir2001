@@ -81,7 +81,6 @@ ns.distribute_from_target=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 # 1 => mdot distributed in the vapor with cellvol weighting
 ns.distribute_mdot_evenly=1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 
-ns.EILE_flag=-1
 #   continuous_mof=1 CMOF everywhere 
 ns.continuous_mof=1
 ns.MOFITERMAX=30

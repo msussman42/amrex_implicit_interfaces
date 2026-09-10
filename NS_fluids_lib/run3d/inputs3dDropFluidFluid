@@ -37,8 +37,6 @@ ns.projection_pressure_scale=100.0
 #JUNE 28
 
 # JUNE 28
-# OCTOBER 22 - EILE_flag=-1 performs best
-ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 # water is 1st order, gas is 1st order 
 # NOV 4: 3 values required
 # JAN8: 2nd order so that splash is captured.

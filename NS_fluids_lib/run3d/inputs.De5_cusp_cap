@@ -19,9 +19,6 @@ geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 10
 #geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  6.0 60.0    # D* 4 4 10
 
-# 1=EILE (default), -1=Weymouth Yue
-# 2=always EI   3=always LE
-ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1

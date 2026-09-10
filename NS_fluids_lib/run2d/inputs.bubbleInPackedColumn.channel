@@ -38,8 +38,6 @@ ns.num_species_var=0
 
 # OCTOBER 23: projection_pressure_scale=1.0e+2
 ns.projection_pressure_scale=1.0e+2
-# OCTOBER 23: EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
-ns.EILE_flag=-1  
 
 fab.do_initval=0  # default is 1
 

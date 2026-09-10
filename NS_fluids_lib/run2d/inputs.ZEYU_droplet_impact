@@ -41,9 +41,6 @@ ns.num_species_var=0
 ns.continuous_mof=0
 ns.FD_curv_interp=1
 # 0=Sussman and Puckett algorithm 
-# 1=EILE (default), -1=Weymouth Yue
-# 2=always EI   3=always LE
-ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
 ns.MOFITERMAX=30

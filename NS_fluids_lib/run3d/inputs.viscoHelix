@@ -12,8 +12,6 @@ geometry.prob_lo=-3.0 -3.0 2.425
 geometry.prob_hi=3.0 3.0  8.425
 geometry.is_periodic = 0 0 0
 
-# -1=Weymouth Yue
-ns.EILE_flag=-1
 
 #ns.num_divu_outer_sweeps=0
 

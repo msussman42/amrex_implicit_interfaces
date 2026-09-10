@@ -37,8 +37,6 @@ geometry.prob_hi   =  9.0 72.0
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
 
 #Eulerian Implicit Lagrangian Explicit cell integrated semi lagrangian method
-#(Weymouth-Yue algorithm corresponds to EILE_flag=-1)
-ns.EILE_flag=1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 ns.vof_height_function=1

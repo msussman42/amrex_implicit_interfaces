@@ -23,7 +23,6 @@ geometry.prob_lo   =  0.0 0.0
 # 16x8 compare with body fitted
 geometry.prob_hi   =  24.0 6.0
 ns.projection_pressure_scale=1.0
-ns.EILE_flag=1
 ns.continuous_mof=1
 
 ns.MOFITERMAX=30

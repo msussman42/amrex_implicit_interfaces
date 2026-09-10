@@ -17,9 +17,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.0 20.0    # D* 4 4 20
 
 # 0=Sussman and Puckett algorithm 
-# 1=EILE (default), -1=Weymouth Yue
-# 2=always EI   3=always LE
-ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.vof_height_function=1
 

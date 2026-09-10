@@ -20,9 +20,6 @@ geometry.is_periodic = 0 0
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
 ns.MOFITERMAX=30
-# EILE_flag=-1 Weymouth and Yue
-# EILE_flag=1 alternate EI-LE
-ns.EILE_flag=1
 ns.ns_tiling=false
 
 ns.projection_pressure_scale=1.0e+6

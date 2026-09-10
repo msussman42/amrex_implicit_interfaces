@@ -50,7 +50,6 @@ stop_time = 1.0
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  5.0e-3 10.0e-3   # MKS
-ns.EILE_flag=-1
 # OCT 2018  continuous_mof=1 CMOF everywhere 
 ns.continuous_mof=1 
 ns.MOFITERMAX=30

@@ -14,7 +14,6 @@ geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   = 4.0 3.0 3.0
 geometry.is_periodic = 1 1 0
 
-ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 

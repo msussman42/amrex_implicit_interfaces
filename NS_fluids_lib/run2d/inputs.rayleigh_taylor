@@ -15,7 +15,6 @@ geometry.prob_hi   =  8.0  32.0 # lambda=8cm
 geometry.is_periodic=1 0
 ns.show_timings=0
 
-ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 

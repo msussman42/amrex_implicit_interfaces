@@ -46,8 +46,6 @@ ns.explicit_viscous=1
 ns.use_coupling_terms=1  # M.OHTA always choose  this case.
 # OCTOBER 22 - this parameter only used when explicit_viscous=-1
 ns.viscous_relative_tol=1.0e-6
-# OCTOBER 22 - EILE_flag=-1 performs best
-ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
 # water is 1st order, gas is 1st order 
 # JAN18 - make 2 2 if high Reynolds number.
 

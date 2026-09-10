@@ -31,7 +31,6 @@ mg.rtol_b = -0.01
 Lp.harmavg = 0
 godunov.printMinMax=0
 
-ns.EILE_flag=-1
 ns.continuous_mof=1 #CMOF
 ns.num_materials=2
 

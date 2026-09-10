@@ -26,7 +26,6 @@ ns.continuous_mof=0
 ns.num_materials=2
 ns.num_species_var=0
 
-ns.EILE_flag=-1  # Weymouth and Yue
 ns.post_init_pressure_solve=1 
 
 ns.project_solver_type=0 # 0=MGPCG 1=PCG 2=MG

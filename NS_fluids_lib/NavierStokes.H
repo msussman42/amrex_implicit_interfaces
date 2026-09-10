@@ -429,7 +429,8 @@ public:
     static int CTML_max_num_elements_list; 
     static int CTML_FSI_num_scalars;
 
-    static int cell_centered_incompressible;
+    static int cell_centered_incompressible; //def=0
+    static int extrapolate_elastic_velocity; //def=0
 
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_conservation_form; 

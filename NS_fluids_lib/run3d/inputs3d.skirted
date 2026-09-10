@@ -35,9 +35,6 @@ ns.continuous_mof=0
 ns.num_materials=2
 ns.num_species_var=0
 
-# EILE_flag=-1 Weymouth and Yue
-# EILE_flag=1 alternate EI-LE
-ns.EILE_flag=-1  # -1=INCOMP  1=COMP
 ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMP
 
 

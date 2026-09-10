@@ -8,7 +8,6 @@ stop_time = 0.1
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  -0.004  0.0
 geometry.prob_hi   =   0.008  0.012   # MKS
-ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=30
 ns.minimum_relative_error=1.0e-22

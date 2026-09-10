@@ -947,6 +947,7 @@ Vector<Real> NavierStokes::species_molar_mass; // def=1
 int NavierStokes::solidheat_flag=0; 
 
 int NavierStokes::cell_centered_incompressible=0; 
+int NavierStokes::extrapolate_elastic_velocity=0; 
 
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_conservation_form;
@@ -2565,6 +2566,11 @@ NavierStokes::read_params ()
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "cell_centered_incompressible " << 
       cell_centered_incompressible << '\n';
+    }
+    pp.queryAdd("extrapolate_elastic_velocity",extrapolate_elastic_velocity);
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "extrapolate_elastic_velocity " << 
+      extrapolate_elastic_velocity << '\n';
     }
 
     pp.queryAdd("nblocks",nblocks);

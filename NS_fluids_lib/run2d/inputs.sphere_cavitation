@@ -42,7 +42,6 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=1 # CMOF
-ns.EILE_flag=1 # EI-LE  (-1=Weymouth-Yue)
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.mof_ordering=4 1 2 3 #BIOFILM
 ns.mof_ordering=4 1 2 
