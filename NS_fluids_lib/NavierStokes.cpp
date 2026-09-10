@@ -953,8 +953,8 @@ Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_conservation_form;
 //nmat components.
 //values range from 0 to nmat-1
-//0=>do not extend this materials' velocity.
-//1...nmat-1 =>a ranking for extension
+//0=>do not tessellate this material separately.
+//1...nmat-1 =>a ranking for tessellation
 Vector<int> NavierStokes::tessellate_elastic_separately; 
 int NavierStokes::tessellate_elastic_separately_flag;
 
