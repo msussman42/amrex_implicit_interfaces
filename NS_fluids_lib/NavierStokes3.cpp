@@ -533,10 +533,10 @@ void NavierStokes::save_interface_data(
 
  std::string local_caller_string="save_interface_data";
 
- if (material_extend_velocity_flag>0) {
+ if (tessellate_elastic_separately_flag>0) {
   //do nothing
  } else
-  amrex::Error("expecting material_extend_velocity_flag>0");
+  amrex::Error("expecting tessellate_elastic_separately_flag>0");
 
  if (control_flag==SAVE_CONTROL) {
 
@@ -580,9 +580,9 @@ void NavierStokes::save_interface_data(
 
    for (int im=0;im<num_materials;im++) {
 
-    if (material_extend_velocity[im]==0) {
+    if (tessellate_elastic_separately[im]==0) {
      //do nothing
-    } else if (material_extend_velocity[im]>0) {
+    } else if (tessellate_elastic_separately[im]>0) {
 
      if ((FSI_flag[im]==FSI_ICE_PROBF90)||
          (FSI_flag[im]==FSI_ICE_STATIC)||
@@ -595,7 +595,7 @@ void NavierStokes::save_interface_data(
       amrex::Error("expecting ice, elastic, or FSI rigid");
 
     } else
-     amrex::Error("material_extend_velocity invalid");
+     amrex::Error("tessellate_elastic_separately invalid");
    } //im=1..num_materials
 
 
@@ -762,24 +762,24 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int im_extension=-1; //regular advection
 
- if ((material_extend_velocity_flag==0)||
+ if ((tessellate_elastic_separately_flag==0)||
      (extrapolate_elastic_velocity==0)) {
   //do nothing
- } else if ((material_extend_velocity_flag>0)&&
+ } else if ((tessellate_elastic_separately_flag>0)&&
             (extrapolate_elastic_velocity==1)) {
    //State_Type,LS_Type,Tensor_Type,Refine_Density_Type,[UVW]mac_Type
    //(project_slab_step+1) copied to interface_hold_MF, 
    //interface_velocity_hold_MF
   save_interface_dataALL(SAVE_CONTROL,im_extension);
  } else
-  amrex::Error("material_extend_velocity_flag or extrap_elas_vel invalid");
+  amrex::Error("tessellate_elastic_separately_flag or extrap_elas_vel invalid");
 
  sub_nonlinear_advection(local_caller_string,im_extension); //regular advection
 
- if ((material_extend_velocity_flag==0)||
+ if ((tessellate_elastic_separately_flag==0)||
      (extrapolate_elastic_velocity==0)) {
   //do nothing
- } else if ((material_extend_velocity_flag>0)&&
+ } else if ((tessellate_elastic_separately_flag>0)&&
             (extrapolate_elastic_velocity==1)) {
    //copy S_new, LS_new, Tensor_new, Refine_Density_new, [UVW]mac_new
    //to standard_interface_hold_MF
@@ -841,7 +841,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   }  // ilev=finest_level ... level  
 
  } else
-  amrex::Error("material_extend_velocity_flag or extrap_elas_vel invalid");
+  amrex::Error("tessellate_elastic_separately_flag or extrap_elas_vel invalid");
 
 }  // end subroutine nonlinear_advection
 
@@ -858,15 +858,15 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
  if (im_extension==0) {
   do_post_process=1;
  } else if ((im_extension==-1)&&
-  	    ((material_extend_velocity_flag==0)||
+  	    ((tessellate_elastic_separately_flag==0)||
 	     (extrapolate_elastic_velocity==0))) {
   do_post_process=1;
  } else if ((im_extension==-1)&&
-	    (material_extend_velocity_flag>0)&&
+	    (tessellate_elastic_separately_flag>0)&&
 	    (extrapolate_elastic_velocity==1)) {
   do_post_process=0;
  } else
-  amrex::Error("im_extension or material_extend_velocity_flag invalid");
+  amrex::Error("im_extension or tessellate_elastic_separately_flag invalid");
 
  int renormalize_flag=RENORMALIZE_ONLY;
 
@@ -2908,13 +2908,13 @@ void NavierStokes::phase_change_code_segment(
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_ALT_MF);
 
- if (material_extend_velocity_flag==0) {
+ if (tessellate_elastic_separately_flag==0) {
   //do nothing
- } else if (material_extend_velocity_flag>0) {
+ } else if (tessellate_elastic_separately_flag>0) {
   Copy_array(HOLD_LS_DATA_ALT_MF,ELASTIC_FLUID_LEVELSET_MF,0,0,
     num_materials*(AMREX_SPACEDIM+1),ngrow_distance);
  } else
-  amrex::Error("material_extend_velocity_flag invalid");
+  amrex::Error("tessellate_elastic_separately_flag invalid");
 
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("hold_LS_DATA_MF->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
@@ -7683,12 +7683,12 @@ NavierStokes::ColorSum(
  if (sweep_num==0) {
   getStateDist_localMF(LS_COLORSUM_MF,ngrow_distance,
      cur_time_slab,local_caller_string);
-  if (material_extend_velocity_flag==0) {
+  if (tessellate_elastic_separately_flag==0) {
    //do nothing
-  } else if (material_extend_velocity_flag>0) {
+  } else if (tessellate_elastic_separately_flag>0) {
    build_elastic_fluid_levelset(localMF[LS_COLORSUM_MF]);
   } else
-   amrex::Error("material_extend_velocity_flag invalid");
+   amrex::Error("tessellate_elastic_separately_flag invalid");
 
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
@@ -16628,7 +16628,7 @@ void NavierStokes::extend_FSI_data(
     // 3. is_rigid=1
     // 4. the material in question
    fort_extend_elastic_velocity(
-      material_extend_velocity.dataPtr(),
+      tessellate_elastic_separately.dataPtr(),
       &tensor_extend,
       &im_critical, //1<=im_critical<=num_materials+1
       &dir, //dir=0,1,2

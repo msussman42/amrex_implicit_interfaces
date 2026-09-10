@@ -18548,7 +18548,7 @@ stop
 
 
       subroutine fort_correct_elastic( &
-       material_extend_velocity, &
+       tessellate_elastic_separately, &
        tid, &
        dir, &
        ncomp_interface, &
@@ -18587,7 +18587,7 @@ stop
       integer, INTENT(in) :: elastic_base_comp
       integer, INTENT(in) :: compressible_base_comp
       integer :: vel_dir 
-      integer, INTENT(in) :: material_extend_velocity(num_materials)
+      integer, INTENT(in) :: tessellate_elastic_separately(num_materials)
       integer :: material_list_by_rank(num_materials)
 
       integer, INTENT(in) :: level,finest_level
@@ -18742,15 +18742,15 @@ stop
       worst_rank=0
 
       do im=1,num_materials
-       if (material_extend_velocity(im).gt.0) then
+       if (tessellate_elastic_separately(im).gt.0) then
 
         if (is_rigid(im).eq.0) then
          !do nothing
         else
          print *,"expecting is_rigid(im).eq.0"
          print *,"im=",im
-         print *,"material_extend_velocity(im)=", &
-          material_extend_velocity(im)
+         print *,"tessellate_elastic_separately(im)=", &
+          tessellate_elastic_separately(im)
          stop
         endif
 
@@ -18758,30 +18758,30 @@ stop
         do im_opp=1,num_materials
          if (im_opp.ne.im) then
           if (is_rigid(im_opp).eq.0) then
-           if (material_extend_velocity(im_opp).gt.0) then
-            if (material_extend_velocity(im_opp).lt. &
-                material_extend_velocity(im)) then
+           if (tessellate_elastic_separately(im_opp).gt.0) then
+            if (tessellate_elastic_separately(im_opp).lt. &
+                tessellate_elastic_separately(im)) then
              irank=irank+1
-            else if (material_extend_velocity(im_opp).eq. &
-                     material_extend_velocity(im)) then
-             print *,"material_extend_velocity duplicate: ",im,im_opp
+            else if (tessellate_elastic_separately(im_opp).eq. &
+                     tessellate_elastic_separately(im)) then
+             print *,"tessellate_elastic_separately duplicate: ",im,im_opp
              stop
             endif
-           else if (material_extend_velocity(im_opp).eq.0) then
+           else if (tessellate_elastic_separately(im_opp).eq.0) then
             !do nothing
            else
-            print *,"material_extend_velocity(im_opp) invalid"
+            print *,"tessellate_elastic_separately(im_opp) invalid"
             stop
            endif
           endif
          endif
         enddo !im_opp=1,num_materials
-        if (material_extend_velocity(im).ne.irank) then
-         print *,"material_extend_velocity(im).ne.irank"
+        if (tessellate_elastic_separately(im).ne.irank) then
+         print *,"tessellate_elastic_separately(im).ne.irank"
          print *,"im=",im
          print *,"irank=",irank
-         print *,"material_extend_velocity(im)=", &
-          material_extend_velocity(im)
+         print *,"tessellate_elastic_separately(im)=", &
+          tessellate_elastic_separately(im)
          stop
         endif
         material_list_by_rank(irank)=im
@@ -18799,7 +18799,7 @@ stop
       endif
 
       do im=1,num_materials
-       if (material_extend_velocity(im).eq.0) then
+       if (tessellate_elastic_separately(im).eq.0) then
         if (is_rigid(im).eq.0) then
          worst_rank=worst_rank+1
          if (worst_rank.gt.num_materials) then
@@ -18853,11 +18853,11 @@ stop
 
          if ((is_elastic(im).eq.1).or.(is_rigid(im).eq.1)) then
 
-          if ((material_extend_velocity(im).ge.1).and. &
-              (material_extend_velocity(im).le.num_materials-1)) then
+          if ((tessellate_elastic_separately(im).ge.1).and. &
+              (tessellate_elastic_separately(im).le.num_materials-1)) then
            !do nothing
           else
-           print *,"material_extend_velocity invalid ",material_extend_velocity
+           print *,"tessellate_elastic_separately invalid ",tessellate_elastic_separately
            stop
           endif
           do dir_local=1,SDIM+1
@@ -18875,10 +18875,10 @@ stop
  
          else if ((is_elastic(im).eq.0).and.(is_rigid(im).eq.0)) then
 
-          if (material_extend_velocity(im).eq.0) then
+          if (tessellate_elastic_separately(im).eq.0) then
            !do nothing
           else
-           print *,"material_extend_velocity bad ",material_extend_velocity
+           print *,"tessellate_elastic_separately bad ",tessellate_elastic_separately
            stop
           endif
           do dir_local=1,SDIM+1

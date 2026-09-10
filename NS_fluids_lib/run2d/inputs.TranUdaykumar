@@ -52,7 +52,7 @@ ns.continuous_mof=1 # CMOF
 # liquid,backing plate (primary), biofilm (secondary), steel ball (last)
 #ns.mof_ordering=4 1 2 3 #BIOFILM
 ns.mof_ordering=3 1 2 
-ns.material_extend_velocity=0 1 2 #EULERIAN FSI
+ns.tessellate_elastic_separately=0 1 2 #EULERIAN FSI
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1
 ns.ngrow_distance=5

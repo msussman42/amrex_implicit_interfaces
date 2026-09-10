@@ -434,8 +434,8 @@ public:
 
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_conservation_form; 
-    static Vector<int> material_extend_velocity; 
-    static int material_extend_velocity_flag;
+    static Vector<int> tessellate_elastic_separately; 
+    static int tessellate_elastic_separately_flag;
 
     static int num_species_var; 
     static int num_materials;

@@ -252,7 +252,7 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 0 999
-ns.material_extend_velocity=0 0 1 0 #NEW VERSION
+ns.tessellate_elastic_separately=0 0 1 0 #NEW VERSION
 # Latent heat: 1 J/kg = 10^7 erg/kg=10^4 erg/g
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

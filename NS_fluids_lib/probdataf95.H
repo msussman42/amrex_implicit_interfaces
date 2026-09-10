@@ -164,7 +164,7 @@
       integer fort_solidheat_flag
       integer FSI_flag(MAX_NUM_MATERIALS)
       integer fort_adapt_whole_material(MAX_NUM_MATERIALS)
-      integer fort_material_extend_velocity(MAX_NUM_MATERIALS)
+      integer fort_tessellate_elastic_separately(MAX_NUM_MATERIALS)
       integer fort_material_type(MAX_NUM_MATERIALS)
       integer fort_ZEYU_DCA_SELECT
       integer pres_homflag

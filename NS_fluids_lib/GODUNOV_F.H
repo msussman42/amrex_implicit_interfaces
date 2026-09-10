@@ -871,7 +871,7 @@ extern "C"
 
 
    void fort_correct_elastic(
-     int* material_extend_velocity,
+     int* tessellate_elastic_separately,
      int* tid,
      int* dir,
      int* ncomp_interface,

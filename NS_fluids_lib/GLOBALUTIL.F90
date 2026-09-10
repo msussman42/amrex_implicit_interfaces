@@ -15817,14 +15817,14 @@ end subroutine print_visual_descriptor
       end function fort_is_passive_advect_test
 
 
-      function fort_is_elastic_base(material_extend_velocity_local,im) &
+      function fort_is_elastic_base(tessellate_elastic_separately_local,im) &
       bind(c,name='fort_is_elastic_base')
       use probcommon_module
 
       IMPLICIT NONE
 
       integer fort_is_elastic_base
-      integer, INTENT(in) :: material_extend_velocity_local
+      integer, INTENT(in) :: tessellate_elastic_separately_local
       integer, INTENT(in) :: im
       integer dummy_input
 
@@ -15843,15 +15843,15 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if ((material_extend_velocity_local.ge.1).and. &
-          (material_extend_velocity_local.lt.num_materials)) then 
+      if ((tessellate_elastic_separately_local.ge.1).and. &
+          (tessellate_elastic_separately_local.lt.num_materials)) then 
        fort_is_elastic_base=1 
-      else if (material_extend_velocity_local.eq.0) then 
+      else if (tessellate_elastic_separately_local.eq.0) then 
        fort_is_elastic_base=0
       else
-       print *,"material_extend_velocity_local invalid in fort_is_elastic_base"
-       print *,"material_extend_velocity_local=", &
-        material_extend_velocity_local
+       print *,"tessellate_elastic_separately_local invalid in fort_is_elastic_base"
+       print *,"tessellate_elastic_separately_local=", &
+        tessellate_elastic_separately_local
        print *,"im=",im
        stop
        fort_is_elastic_base=0  ! prevent compiler warnings
@@ -15885,7 +15885,7 @@ end subroutine print_visual_descriptor
       endif
 
       is_elastic=fort_is_elastic_base( &
-        fort_material_extend_velocity(im),im)
+        fort_tessellate_elastic_separately(im),im)
 
       return
       end function is_elastic

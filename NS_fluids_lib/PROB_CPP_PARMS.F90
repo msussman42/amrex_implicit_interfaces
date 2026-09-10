@@ -400,7 +400,7 @@ stop
         ccngeom_raw, &
         ccngeom_recon, &
         ccnum_materials, &
-        ccmaterial_extend_velocity, &
+        cctessellate_elastic_separately, &
         ccmaterial_type, &
         ccnten, &
         ccDrhoDT, &
@@ -577,7 +577,7 @@ stop
       integer, INTENT(in) :: ccngeom_raw
       integer, INTENT(in) :: ccngeom_recon
       
-      integer, INTENT(in) :: ccmaterial_extend_velocity(ccnum_materials)
+      integer, INTENT(in) :: cctessellate_elastic_separately(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
@@ -1558,8 +1558,8 @@ stop
 
       do im=1,num_materials
        fort_adapt_whole_material(im)=ccadapt_whole_material(im) 
-       fort_material_extend_velocity(im)= &
-              ccmaterial_extend_velocity(im)
+       fort_tessellate_elastic_separately(im)= &
+              cctessellate_elastic_separately(im)
        fort_material_type(im)=ccmaterial_type(im)
 
        if (fort_material_type(im).eq.0) then
@@ -1896,8 +1896,8 @@ stop
 
        do im=1,num_materials
         print *,"im,fort_adapt_whole_material ",im,fort_adapt_whole_material(im)
-        print *,"im,material_extend_velocity ",im, &
-                fort_material_extend_velocity(im)
+        print *,"im,tessellate_elastic_separately ",im, &
+                fort_tessellate_elastic_separately(im)
         print *,"im,material_type ",im, &
                 fort_material_type(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)

@@ -372,7 +372,7 @@ namespace amrex{
 
 
       void fort_extend_elastic_velocity(
-        int* material_extend_velocity,
+        int* tessellate_elastic_separately,
         int* tensor_extend,
         int* im_critical, // 1<=im_critical<=num_materials+1
         int* dir, //dir=0,1,2

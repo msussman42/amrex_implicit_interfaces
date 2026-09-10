@@ -788,12 +788,12 @@ void NavierStokes::combine_state_variable(
  MultiFab* LEVEL_COMBINE=getStateDist(ngrow_distance,cur_time_slab,
     local_caller_string);
 
- if (material_extend_velocity_flag==0) {
+ if (tessellate_elastic_separately_flag==0) {
   //do nothing
- } else if (material_extend_velocity_flag>0) {
+ } else if (tessellate_elastic_separately_flag>0) {
   build_elastic_fluid_levelset(LEVEL_COMBINE);
  } else
-  amrex::Error("material_extend_velocity_flag invalid");
+  amrex::Error("tessellate_elastic_separately_flag invalid");
 
  MultiFab* STATE_INTERFACE=nullptr;
 

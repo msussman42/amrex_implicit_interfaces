@@ -18060,7 +18060,7 @@ stop
 
        !called from: NavierStokes::extend_FSI_data()
       subroutine fort_extend_elastic_velocity( &
-       material_extend_velocity, &
+       tessellate_elastic_separately, &
        tensor_extend, &
        im_critical, & ! 1<=im_critical<=num_materials+1
        dir, & !0,1,2
@@ -18085,7 +18085,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      integer, INTENT(in) :: material_extend_velocity(num_materials)
+      integer, INTENT(in) :: tessellate_elastic_separately(num_materials)
       integer, INTENT(in) :: tensor_extend
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: level
@@ -18258,14 +18258,14 @@ stop
       endif
       do im=1,num_materials
 
-       if (material_extend_velocity(im).eq. &
-           fort_material_extend_velocity(im)) then
+       if (tessellate_elastic_separately(im).eq. &
+           fort_tessellate_elastic_separately(im)) then
         !do nothing
        else
-        print *,"material_extend_velocity: ", &
-            material_extend_velocity
-        print *,"fort_material_extend_velocity: ", &
-            fort_material_extend_velocity
+        print *,"tessellate_elastic_separately: ", &
+            tessellate_elastic_separately
+        print *,"fort_tessellate_elastic_separately: ", &
+            fort_tessellate_elastic_separately
         print *,"mismatch"
         stop
        endif
@@ -18275,8 +18275,8 @@ stop
          print *,"im_critical invalid: ",im_critical
          stop
         endif
-        if (material_extend_velocity(im).ge.1) then
-         print *,"expecting material_extend_velocity==0"
+        if (tessellate_elastic_separately(im).ge.1) then
+         print *,"expecting tessellate_elastic_separately==0"
          stop
         endif
        else if (is_rigid(im).eq.0) then
@@ -18417,7 +18417,7 @@ stop
            else if (im_critical.eq.num_materials+1) then
             need_to_extend=1
             do im=1,num_materials
-             if (material_extend_velocity(im).ge.1) then
+             if (tessellate_elastic_separately(im).ge.1) then
               if ((LSleft(im).gt.zero).or. & 
                   (LSright(im).gt.zero)) then
                need_to_extend=0
@@ -18428,17 +18428,17 @@ stop
                print *,"LSright,LSleft invalid ",LSleft,LSright
                stop
               endif
-             else if (material_extend_velocity(im).eq.0) then
+             else if (tessellate_elastic_separately(im).eq.0) then
               !do nothing
              else
-              print *,"material_extend_velocity invalid"
+              print *,"tessellate_elastic_separately invalid"
               stop
              endif
             enddo !im=1..num_materials
             if (need_to_extend.eq.1) then
              need_to_extend=0
              do im=1,num_materials
-              if (material_extend_velocity(im).ge.1) then
+              if (tessellate_elastic_separately(im).ge.1) then
                if ((LSleft(im).ge.-extend_offset).and. &
                    (LSright(im).ge.-extend_offset)) then
                 need_to_extend=1
@@ -18449,10 +18449,10 @@ stop
                 print *,"LSright,LSleft invalid ",LSleft,LSright
                 stop
                endif
-              else if (material_extend_velocity(im).eq.0) then
+              else if (tessellate_elastic_separately(im).eq.0) then
                !do nothing
               else
-               print *,"material_extend_velocity invalid"
+               print *,"tessellate_elastic_separately invalid"
                stop
               endif
              enddo !im=1..num_materials
@@ -18556,21 +18556,21 @@ stop
                if ((is_rigid(loc_im_left).eq.1).or. &
                    (loc_im_left.eq.im_critical).or. &
                    ((im_critical.eq.num_materials+1).and. &
-                    (material_extend_velocity(loc_im_left).ge.1)).or. &
+                    (tessellate_elastic_separately(loc_im_left).ge.1)).or. &
                    (is_rigid(loc_im_right).eq.1).or. &
                    (loc_im_right.eq.im_critical).or. &
                    ((im_critical.eq.num_materials+1).and. &
-                    (material_extend_velocity(loc_im_right).ge.1))) then
+                    (tessellate_elastic_separately(loc_im_right).ge.1))) then
                 local_wt=one
                 local_vel=velMAC(D_DECL(i+i1,j+j1,k+k1))
                else if ((is_rigid(loc_im_left).eq.0).and. &
                         (loc_im_left.ne.im_critical).and. &
                         ((im_critical.ne.num_materials+1).or. &
-                         (material_extend_velocity(loc_im_left).eq.0)).and. &
+                         (tessellate_elastic_separately(loc_im_left).eq.0)).and. &
                         (is_rigid(loc_im_right).eq.0).and. &
                         (loc_im_right.ne.im_critical).and. &
                         ((im_critical.ne.num_materials+1).or. &
-                         (material_extend_velocity(loc_im_right).eq.0))) then
+                         (tessellate_elastic_separately(loc_im_right).eq.0))) then
                 !do nothing
                else
                 print *,"is_rigid(s) invalid"
@@ -18753,7 +18753,7 @@ stop
          else if (im_critical.eq.num_materials+1) then
           need_to_extend=1
           do im=1,num_materials
-           if (material_extend_velocity(im).ge.1) then
+           if (tessellate_elastic_separately(im).ge.1) then
             if (localLS(im).gt.zero) then
              need_to_extend=0
             else if (localLS(im).le.zero) then
@@ -18762,17 +18762,17 @@ stop
              print *,"localLS invalid ",localLS
              stop
             endif
-           else if (material_extend_velocity(im).eq.0) then
+           else if (tessellate_elastic_separately(im).eq.0) then
             !do nothing
            else
-            print *,"material_extend_velocity invalid"
+            print *,"tessellate_elastic_separately invalid"
             stop
            endif
           enddo !im=1..num_materials
           if (need_to_extend.eq.1) then
            need_to_extend=0
            do im=1,num_materials
-            if (material_extend_velocity(im).ge.1) then
+            if (tessellate_elastic_separately(im).ge.1) then
              if (localLS(im).ge.-extend_offset) then
               need_to_extend=1
              else if (localLS(im).lt.-extend_offset) then
@@ -18781,10 +18781,10 @@ stop
               print *,"localLS invalid ",localLS
               stop
              endif
-            else if (material_extend_velocity(im).eq.0) then
+            else if (tessellate_elastic_separately(im).eq.0) then
              !do nothing
             else
-             print *,"material_extend_velocity invalid"
+             print *,"tessellate_elastic_separately invalid"
              stop
             endif
            enddo !im=1..num_materials
