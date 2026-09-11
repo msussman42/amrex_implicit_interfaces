@@ -20618,6 +20618,13 @@ NavierStokes::correct_elastic_variables() {
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
+ if ((level>=0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
+
+ std::cout << "CORRECT LEVEL,FINEST_LEVEL = " << 
+  level << ' ' <<finest_level <<'\n';
 
  int bfact=parent->Space_blockingFactor(level);
 

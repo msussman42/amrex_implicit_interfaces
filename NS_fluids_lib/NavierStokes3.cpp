@@ -834,10 +834,38 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
+  for (int ilev=finest_level-1;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.avgDown(LS_Type,0,num_materials,0);
    ns_level.MOFavgDown();
+   int spectral_override=1; // order derived from "enable_spectral"
+    //Umac_Type
+   ns_level.avgDownMacState(spectral_override);
+    // velocity and pressure
+   ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+   ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=num_materials)) {
+    for (int scomp=0;scomp<NUM_CELL_ELASTIC_REFINE;
+         scomp+=ENUM_NUM_REFINE_DENSITY_TYPE) {
+     ns_level.avgDown_refine_tensor(scomp);
+    }
+   } else if (num_materials_viscoelastic==0) {
+    // do nothing
+   } else
+    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+
+   if ((num_materials_compressible>=1)&&
+       (num_materials_compressible<=num_materials)) {
+    for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+     ns_level.avgDown_refine_density(im_comp);
+    }
+   } else if (num_materials_compressible==0) {
+    // do nothing
+   } else
+    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+
   }  // ilev=finest_level ... level  
 
  } else
