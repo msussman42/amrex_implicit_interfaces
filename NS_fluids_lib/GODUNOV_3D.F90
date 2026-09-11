@@ -18853,12 +18853,15 @@ stop
 
          if ((is_elastic(im).eq.1).or.(is_rigid(im).eq.1)) then
 
-          if ((tessellate_elastic_separately(im).ge.1).and. &
-              (tessellate_elastic_separately(im).le.num_materials-1)) then
-           !do nothing
-          else
-           print *,"tessellate_elastic_separately invalid ",tessellate_elastic_separately
-           stop
+          if (is_elastic(im).eq.1) then
+           if ((tessellate_elastic_separately(im).ge.1).and. &
+               (tessellate_elastic_separately(im).le.num_materials-1)) then
+            !do nothing
+           else
+            print *,"tessellate_elastic_separately invalid ", &
+                 tessellate_elastic_separately
+            stop
+           endif
           endif
           do dir_local=1,SDIM+1
            mofnew(vofcomprecon+dir_local-1)= &
@@ -18878,7 +18881,8 @@ stop
           if (tessellate_elastic_separately(im).eq.0) then
            !do nothing
           else
-           print *,"tessellate_elastic_separately bad ",tessellate_elastic_separately
+           print *,"tessellate_elastic_separately bad ", &
+                   tessellate_elastic_separately
            stop
           endif
           do dir_local=1,SDIM+1

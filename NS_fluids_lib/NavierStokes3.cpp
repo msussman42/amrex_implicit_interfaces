@@ -451,6 +451,17 @@ void NavierStokes::save_data_worker(int dest_mf,Real source_time,
 void NavierStokes::restore_data_worker(int source_mf,int dest_step,
   int source_velocity_mf,int dest_velocity_step) {
 
+ if (dest_step==dest_velocity_step) {
+  //do nothing
+ } else
+  amrex::Error("expecting dest_step==dest_velocity_step");
+
+ if ((dest_step==project_slab_step)||
+     (dest_step==projet_slab_step+1)) {
+  //do nothing
+ } else
+  amrex::Error("expecting dest_step==project_slab_step or +1");
+
  int ncomp_interface=0;
  MultiFab& S_new=get_new_data(State_Type,dest_step);
  ncomp_interface+=S_new.nComp();
@@ -832,6 +843,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    std::cin >> n_input;
   }
 
+   //save to improved_interface_hold,improved_interface_velocity_hold
+   //correct_elastic_variables
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
   for (int ilev=finest_level-1;ilev>=level;ilev--) {
@@ -842,8 +855,10 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     //Umac_Type
    ns_level.avgDownMacState(spectral_override);
     // velocity and pressure
-   ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
-   ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+   ns_level.avgDown(State_Type,STATECOMP_VEL,
+	STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+   ns_level.avgDown(State_Type,STATECOMP_STATES,
+	num_state_material*num_materials,1);
 
    if ((num_materials_viscoelastic>=1)&&
        (num_materials_viscoelastic<=num_materials)) {
@@ -854,7 +869,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else if (num_materials_viscoelastic==0) {
     // do nothing
    } else
-    amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
+    amrex::Error("num_materials_viscoelastic invalid:nonlinear_advection");
 
    if ((num_materials_compressible>=1)&&
        (num_materials_compressible<=num_materials)) {
@@ -864,7 +879,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else if (num_materials_compressible==0) {
     // do nothing
    } else
-    amrex::Error("num_materials_compressible invalid:split_scalar_advection");
+    amrex::Error("num_materials_compressible invalid:nonlinear_advection");
 
   }  // ilev=finest_level ... level  
 
@@ -1024,6 +1039,7 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
   advect_time_slab,
   RECON_UPDATE_NULL);
 
+  //prepare_displacement is declared in NavierStokes.cpp
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.prepare_displacement();
@@ -1519,6 +1535,7 @@ void NavierStokes::tensor_advection_updateALL() {
         Real levelset_time_slab=cur_time_slab;
         Real input_velocity_time_slab=cur_time_slab;
         int input_velocity_slab_step=project_slab_step+1;
+	 //im>=0 and im<num_materials
         ns_level.extend_FSI_data(
            im+1,
            local_tensor_extend,
@@ -16573,6 +16590,20 @@ void NavierStokes::extend_FSI_data(
 
   Real local_time=input_velocity_time_slab;
   int local_slab_step=input_velocity_slab_step;
+
+  if (local_time==levelset_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expecting local_time==levelset_time");
+
+  if ((local_time==prev_time_slab)&&
+      (local_slab_step==project_slab_step)) {
+   //do nothing
+  } else if ((local_time==cur_time_slab)&&
+             (local_slab_step==project_slab_step+1)) {
+   //do nothing
+  } else
+   amrex::Error("local_time or local_slab_step invalid");
 
   if (tensor_extend==1) {
    //do nothing

@@ -14622,6 +14622,24 @@ NavierStokes::prepare_displacement() {
 
  fort_overridepbc(&homflag,&local_project_option); 
 
+ if (divu_outer_sweeps==0) {
+
+  if (std::abs(vel_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect vel_time_slab==prev_time_slab prepare_disp");
+
+ } else if ((divu_outer_sweeps>=1)&&
+            (divu_outer_sweeps<num_divu_outer_sweeps)) {
+
+  if (std::abs(vel_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect vel_time_slab==cur_time_slab prepare_disp");
+
+ } else
+  amrex::Error("divu_outer_sweeps invalid");
+
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
   MultiFab* temp_mac_velocity=nullptr;
@@ -19973,11 +19991,19 @@ NavierStokes::split_scalar_advection() {
 
  if (dir_absolute_direct_split==0) {
 
-  // do nothing
+  if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect advect_time_slab==prev_time_slab split_scalar_adv");
 
  } else if ((dir_absolute_direct_split>=1)&&
             (dir_absolute_direct_split<AMREX_SPACEDIM)) {
-  // do nothing
+
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect advect_time_slab==cur_time_slab split_scalar_adv");
+
  } else
   amrex::Error("dir_absolute_direct_split invalid");
 
@@ -20284,7 +20310,6 @@ NavierStokes::split_scalar_advection() {
     FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
-
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
