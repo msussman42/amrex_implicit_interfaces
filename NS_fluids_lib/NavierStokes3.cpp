@@ -457,7 +457,7 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
   amrex::Error("expecting dest_step==dest_velocity_step");
 
  if ((dest_step==project_slab_step)||
-     (dest_step==projet_slab_step+1)) {
+     (dest_step==project_slab_step+1)) {
   //do nothing
  } else
   amrex::Error("expecting dest_step==project_slab_step or +1");
@@ -541,6 +541,13 @@ void NavierStokes::restore_data_worker(int source_mf,int dest_step,
 void NavierStokes::save_interface_data(
   int control_flag,
   int im_extension) { //-1=main advection  0=just elastic interfaces
+
+ int finest_level=parent->finestLevel();
+
+ if ((level>=0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
 
  std::string local_caller_string="save_interface_data";
 
@@ -693,6 +700,17 @@ void NavierStokes::save_interface_data(
 
    //in: save_interface_data
   delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
+  levelset_time_slab=cur_time_slab;
+  input_velocity_time_slab=cur_time_slab;
+  input_velocity_slab_step=project_slab_step+1;
+
+  extend_FSI_data(
+    im_extend,
+    local_tensor_extend,
+    levelset_time_slab,
+    input_velocity_time_slab,
+    input_velocity_slab_step);
 
   //restore the transporting velocity field if at the new time.
   if (divu_outer_sweeps==0) {
@@ -16574,6 +16592,11 @@ void NavierStokes::extend_FSI_data(
   int input_velocity_slab_step) { 
 
  int finest_level=parent->finestLevel();
+
+ if ((level>=0)&&(level<=finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
 
  std::string local_caller_string="extend_FSI_data";
 
