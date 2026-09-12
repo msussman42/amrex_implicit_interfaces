@@ -39,7 +39,8 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
-ns.num_divu_outer_sweeps=2
+ns.num_divu_outer_sweeps=1
+ns.extrapolate_elastic_velocity=1
 ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)
@@ -48,9 +49,9 @@ ns.continuous_mof=1
 ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
-ns.coarsest_level_CISL=3
-amr.n_cell=8 16
-amr.max_level=3
+ns.coarsest_level_CISL=0
+amr.n_cell=64 128
+amr.max_level=0
 ns.ngrow_distance=6
 ns.ngrow_elastic=4.0
 
@@ -82,8 +83,8 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16 16 16
-cg.min_max_grid_size=16
+amr.max_grid_size   = 256
+cg.min_max_grid_size=256
 cg.force_ILU_smoother_single_grid=1
 Lp.smooth_type=1
 Lp.bottom_smooth_type=1

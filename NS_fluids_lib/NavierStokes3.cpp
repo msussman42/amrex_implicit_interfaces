@@ -712,6 +712,9 @@ void NavierStokes::save_interface_data(
     input_velocity_time_slab,
     input_velocity_slab_step);
 
+   //in: save_interface_data
+  delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
+
   //restore the transporting velocity field if at the new time.
   if (divu_outer_sweeps==0) {
 

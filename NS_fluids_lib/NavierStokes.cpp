@@ -20666,8 +20666,10 @@ NavierStokes::correct_elastic_variables() {
  } else
   amrex::Error("level invalid");
 
- std::cout << "CORRECT LEVEL,FINEST_LEVEL = " << 
-  level << ' ' <<finest_level <<'\n';
+ if (1==0) {
+  std::cout << "CORRECT LEVEL,FINEST_LEVEL = " << 
+   level << ' ' <<finest_level <<'\n';
+ }
 
  int bfact=parent->Space_blockingFactor(level);
 
