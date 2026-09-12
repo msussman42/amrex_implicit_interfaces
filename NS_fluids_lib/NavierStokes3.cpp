@@ -581,10 +581,30 @@ void NavierStokes::save_interface_data(
 
   if (im_extension==-1) { //after main advection
 
+   if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+    //do nothing
+   } else
+    amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+   if (advect_slab_step==project_slab_step+1) {
+    //do nothing
+   } else
+    amrex::Error("expecting advect_slab_step==project_slab_step+1");
+
    save_data_worker(standard_interface_hold_MF,cur_time_slab,
     standard_interface_velocity_hold_MF,cur_time_slab);
 
   } else if (im_extension==0) { // after elastic material advection
+
+   if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+    //do nothing
+   } else
+    amrex::Error("expecting advect_time_slab==cur_time_slab");
+
+   if (advect_slab_step==project_slab_step+1) {
+    //do nothing
+   } else
+    amrex::Error("expecting advect_slab_step==project_slab_step+1");
 
    save_data_worker(improved_interface_hold_MF,cur_time_slab,
     improved_interface_velocity_hold_MF,cur_time_slab);
@@ -641,6 +661,11 @@ void NavierStokes::save_interface_data(
   } else
    amrex::Error("expecting advect_time_slab==cur_time_slab");
 
+  if (advect_slab_step==project_slab_step+1) {
+   //do nothing
+  } else
+   amrex::Error("expecting advect_slab_step==project_slab_step+1");
+
    //just prior to elastic advection, right after POST_PROCESS_CONTROL
   if (im_extension==0) { 
    //do nothing
@@ -649,6 +674,8 @@ void NavierStokes::save_interface_data(
 
   restore_data_worker(interface_hold_MF,project_slab_step,
     interface_velocity_hold_MF,project_slab_step);
+  restore_data_worker(interface_hold_MF,project_slab_step+1,
+    interface_velocity_hold_MF,project_slab_step+1);
 
   //extrapolate the velocity field
   int im_extend=num_materials+1;
@@ -744,13 +771,16 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
 
+   //top of nonlinear_advection
   advect_time_slab=prev_time_slab;
   advect_slab_step=project_slab_step;
 
   if (divu_outer_sweeps==0) {
+   //top of nonlinear_advection
    vel_time_slab=prev_time_slab;
    velocity_slab_step=project_slab_step;
   } else if (divu_outer_sweeps>0) {
+   //top of nonlinear_advection
    vel_time_slab=cur_time_slab;
    velocity_slab_step=project_slab_step+1;
   } else
@@ -779,8 +809,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else if ((tessellate_elastic_separately_flag>0)&&
             (extrapolate_elastic_velocity==1)) {
    //State_Type,LS_Type,Tensor_Type,Refine_Density_Type,[UVW]mac_Type
-   //(project_slab_step+1) copied to interface_hold_MF, 
-   //interface_velocity_hold_MF
+   //interface_hold_MF,interface_velocity_hold_MF (advect_time_slab)
+   //standard_interface_hold_MF,
+   //standard_interface_velocity_hold_MF (vel_time_slab)
+   //improved_interface_hold_MF,
+   //improved_interface_velocity_hold_MF (vel_time_slab)
   save_interface_dataALL(SAVE_CONTROL,im_extension);
  } else
   amrex::Error("tessellate_elastic_separately_flag or extrap_elas_vel invalid");
@@ -793,14 +826,20 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else if ((tessellate_elastic_separately_flag>0)&&
             (extrapolate_elastic_velocity==1)) {
    //copy S_new, LS_new, Tensor_new, Refine_Density_new, [UVW]mac_new
-   //to standard_interface_hold_MF
+   //to standard_interface_hold_MF (cur_time_slab)
   save_interface_dataALL(POST_PROCESS_CONTROL,im_extension);
 
   im_extension=0; //elastic material advection
 
    //copy interface_hold_MF, interface_velocity_hold_MF back to
+   //state data. (project_slab_step and project_slab_step+1)
+   //extrapolate the velocity field.
+   //if divu_outer_sweeps>0,
+   //copy improved_interface_hold_MF, 
+   //     improved_interface_velocity_hold_MF back to
    //state data. (project_slab_step+1)
    //extrapolate the velocity field.
+
   save_interface_dataALL(RESTORE_CONTROL,im_extension);
 
   if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
@@ -814,6 +853,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    amrex::Error("expecting advect_slab_step==project_slab_step+1");
 
    //elastic material advection 
+  advect_time_slab=prev_time_slab;
+  advect_slab_step=project_slab_step;
   sub_nonlinear_advection(local_caller_string,im_extension);
 
   if ((step_through_data==1)&&(1==1)) {
@@ -2510,7 +2551,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
    int operation_flag=OP_ISCHEME_MAC;
 
    int SEM_end_spectral_loop=2;
-
+  
+    //SEM_advectALL
    prescribed_vel_time_slab=prev_time_slab;
    vel_time_slab=prev_time_slab;
 
@@ -2521,7 +2563,8 @@ void NavierStokes::SEM_advectALL(int source_term) {
     } else
      amrex::Error("slab_step invalid");
 
-    vel_time_slab=prev_time_slab; //in: SEM_advectALL
+     //in: SEM_advectALL
+    vel_time_slab=prev_time_slab; 
 
    } else if (source_term==SUB_OP_SDC_ISCHEME) {
 
@@ -2530,10 +2573,11 @@ void NavierStokes::SEM_advectALL(int source_term) {
     } else
      amrex::Error("slab_step invalid");
 
-     //in: SEM_advectALL
     if (divu_outer_sweeps==0) 
+      //in: SEM_advectALL
      vel_time_slab=prev_time_slab;
     else if (divu_outer_sweeps>0)
+      //in: SEM_advectALL
      vel_time_slab=cur_time_slab;
     else
      amrex::Error("divu_outer_sweeps invalid SEM_advectALL");
@@ -2560,13 +2604,16 @@ void NavierStokes::SEM_advectALL(int source_term) {
    for (advect_iter=0;advect_iter<advect_iter_max;advect_iter++) {
 
     if (source_term==SUB_OP_SDC_LOW_TIME) { 
+      //SEM_advectALL
      advect_time_slab=prev_time_slab;
      advect_slab_step=project_slab_step;
     } else if (source_term==SUB_OP_SDC_ISCHEME) {
      if (advect_iter==SUB_OP_ISCHEME_PREDICT) {
+      //SEM_advectALL
       advect_time_slab=prev_time_slab;
       advect_slab_step=project_slab_step;
      } else if (advect_iter==SUB_OP_ISCHEME_CORRECT) {
+      //SEM_advectALL
       advect_time_slab=cur_time_slab;
       advect_slab_step=project_slab_step+1;
      } else

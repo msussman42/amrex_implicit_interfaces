@@ -19682,6 +19682,24 @@ NavierStokes::split_scalar_advectionALL() {
   }
  }
 
+ if (dir_absolute_direct_split==0) {
+
+  if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect advect_time_slab==prev_time_slab split_scalar_adv");
+
+ } else if ((dir_absolute_direct_split>=1)&&
+            (dir_absolute_direct_split<AMREX_SPACEDIM)) {
+
+  if (std::abs(advect_time_slab-cur_time_slab)<=CPP_EPS8*cur_time_slab) {
+   //do nothing
+  } else
+   amrex::Error("expect advect_time_slab==cur_time_slab split_scalar_adv");
+
+ } else
+  amrex::Error("dir_absolute_direct_split invalid");
+
   // order_direct_split=base_step mod 2=0 or 1
   // must go from finest level to coarsest.
  for (int ilev=finest_level;ilev>=level;ilev--) {
