@@ -86,6 +86,7 @@ ZBOT_hardwire_vtemp/
 ZBOT_microgravity/
 ZBOT_valgrind/
 flexible_plate/
+flexible_plate_freeze/
 ICE_ON_SUBSTRATE/
 SIMPLE_PALMORE_DESJARDINS/
 PCOPY_DEBUG/

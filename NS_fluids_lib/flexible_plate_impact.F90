@@ -54,12 +54,31 @@ integer, parameter :: im_solid=3
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    !CTML takes care of this.
    Phi=-99999.0
-  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+  else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
+           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
 
-   if (is_elastic(im_solid).eq.1) then
-    !do nothing
+   if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+    if (is_elastic(im_solid).eq.1) then
+     !do nothing
+    else
+     print *,"expecting is_elastic(im_solid)=1"
+     stop
+    endif
+   else if (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90) then
+    if (is_elastic(im_solid).eq.0) then
+     !do nothing
+    else
+     print *,"expecting is_elastic(im_solid)=0"
+     stop
+    endif
+    if (is_rigid(im_solid).eq.1) then
+     !do nothing
+    else
+     print *,"expecting is_rigid(im_solid)=1"
+     stop
+    endif
    else
-    print *,"expecting is_elastic(im_solid)=1"
+    print *,"FSI_flag invalid: ",im_solid,FSI_flag(im_solid)
     stop
    endif
 
@@ -174,16 +193,37 @@ IMPLICIT NONE
 
 if ((num_materials.ge.3).and.(probtype.eq.2000)) then
 
- if (is_elastic(im_solid).eq.1) then
+ if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
+ else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
+          (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
+
+  if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
+  else if (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90) then
+   if (is_elastic(im_solid).eq.0) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=0"
+    stop
+   endif
+   if (is_rigid(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_rigid(im_solid)=1"
+    stop
+   endif
+  else
+   print *,"FSI_flag invalid: ",im_solid,FSI_flag(im_solid)
+   stop
+  endif
  else
-  print *,"expecting is_elastic(im_solid)=1"
-  stop
- endif
- if (is_elastic(num_materials).eq.1) then
-  !do nothing
- else
-  print *,"expecting is_elastic(num_materials)=1"
+  print *,"FSI_flag invalid: ",im_solid,FSI_flag(im_solid)
   stop
  endif
 
@@ -203,6 +243,8 @@ if ((num_materials.ge.3).and.(probtype.eq.2000)) then
  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+  !do nothing
+ else if (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90) then
   !do nothing
  else
   print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag
@@ -293,7 +335,8 @@ if (probtype.eq.2000) then
 
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    LS=-99999.0d0
-  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+  else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
+           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
 
    radeps=radblob2/10.0d0
 

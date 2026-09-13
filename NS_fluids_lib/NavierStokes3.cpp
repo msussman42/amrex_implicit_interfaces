@@ -1117,7 +1117,15 @@ void NavierStokes::sub_nonlinear_advection(const std::string& caller_string,
 
    if (dir_absolute_direct_split==0) {
 
-    //do nothing
+    if (std::abs(advect_time_slab-prev_time_slab)<=CPP_EPS8*prev_time_slab) {
+     //do nothing
+    } else
+     amrex::Error("expecting advect_time_slab==prev_time_slab");
+
+    if (advect_slab_step==project_slab_step) {
+     //do nothing
+    } else
+     amrex::Error("expecting advect_slab_step==project_slab_step");
 
    } else if ((dir_absolute_direct_split>0)&&
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {

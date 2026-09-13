@@ -17,7 +17,7 @@ stop_time=10000.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
 geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  6.0 12.0  #CGS
+geometry.prob_hi   =  0.6 0.6  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -39,7 +39,8 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=4  # 1=drop material 2=gas material 3=substrate 4=ice
-ns.num_divu_outer_sweeps=2
+ns.extrapolate_elastic_velocity=0
+ns.num_divu_outer_sweeps=1
 ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)
@@ -49,13 +50,14 @@ ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
 ns.coarsest_level_CISL=0
-amr.n_cell=32 64
-amr.max_level=1
+amr.n_cell=64 64
+amr.max_level=0
 ns.ngrow_distance=6
 ns.ngrow_elastic=4.0
 
 ns.mof_ordering=2 3 1 1 #liquid, gas, substrate, ice
-ns.tessellate_elastic_separately=0 0 1 1 #EULERIAN FSI
+#ns.tessellate_elastic_separately=0 0 1 1 #EULERIAN FSI
+ns.tessellate_elastic_separately=0 0 0 1 #RIGID PRESCRIBED
 ns.primary_flotsam_tol=1.0e-8
 ns.secondary_flotsam_tol=0.1
 
@@ -82,8 +84,8 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16 16 16
-cg.min_max_grid_size=16
+amr.max_grid_size   = 256
+cg.min_max_grid_size=256
 cg.force_ILU_smoother_single_grid=1
 Lp.smooth_type=1
 Lp.bottom_smooth_type=1
@@ -104,12 +106,14 @@ mac.visc_abs_tol   = 1.0e-12
 ns.gravity=0.0  
 #ns.gravity        = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# 65 degrees=>sigma_{SV}=sigma_{LV}(1+cos(65))=104
+# 10 degrees=>sigma_{SV}=sigma_{LV}(1+cos(10))=145
 # 90 degrees=>sigma_{SV}=sigma_{SL}=sigma_{LV} 
 # 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
 #12 13 14 23 24 34
-ns.tension=73.0 73.0 73.0 0.0 145.0 0.0 #180 deg substrate, 10 deg ice.
+ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice.
 ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0
 
 ns.min_velocity_for_dt=1.0e-5
@@ -134,26 +138,27 @@ ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
-ns.advbot=34.3 # cm/s
+ns.advbot=188.0 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
-ns.yblob=7.2
-ns.zblob=7.2  
+ns.yblob=0.425
+ns.zblob=0.425
 ns.xblob2=0.0  #center of plate
-ns.yblob2=5.8  #center of plate
-ns.radblob2=4.0 # radius in "x" direction of plate
-ns.radblob3=0.2 # radius in "y" direction of plate
-ns.radblob=0.6 
+ns.yblob2=0.15  #center of plate
+ns.radblob2=0.5 # radius in "x" direction of plate
+ns.radblob3=0.1 # radius in "y" direction of plate
+ns.radblob=0.125
 ns.xblob3=0.0 #center of ice
-ns.yblob3=5.4
-ns.radblob4=4.0 # radius in "x" direction of ice
-ns.radblob5=0.2 # radius in "y" direction of ice
+ns.yblob3=0.27
+ns.radblob4=0.5 # radius in "x" direction of ice
+ns.radblob5=0.02 # radius in "y" direction of ice
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
-ns.material_type=0 0 0 0 # Eulerian FSI
+#ns.material_type=0 0 0 0 # Eulerian FSI
+ns.material_type=0 0 999 0 # RIGID prescribed
 ns.material_conservation_form=0 0 0 0
 #ns.material_type=0 0 25 # Compressible Eulerian FSI (elastic)
 # FSI_flag for avaiable phase/material
@@ -164,23 +169,33 @@ ns.material_conservation_form=0 0 0 0
 # 4 CTML
 # 8 EULERIAN FSI
 # 10 EULERIAN FSI ICE
-ns.FSI_flag=0 0 8 10 #Eulerian FSI
-ns.repair_mass=1 0 1 1 
+#ns.FSI_flag=0 0 8 10 #Eulerian FSI
+ns.FSI_flag=0 0 1 10 #RIGID prescribed
+ns.repair_mass=1 0 0 1 
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.lax_friedrichs=0.0 0.0 1.0 1.0
+#ns.lax_friedrichs=0.0 0.0 1.0 1.0 #EULERIAN FSI
+ns.lax_friedrichs=0.0 0.0 0.0 1.0 #RIGID prescribed
 ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
-ns.heatviscconst=0.546e+5 0.026e+5 2.2e+5 2.2e+5 # erg/(s cm K)
+ns.heatviscconst=0.58e+5 0.024e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
+ns.stiffCV = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
 #12 13 14 23 24 34
 ns.latent_heat = 0.0 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0
 #12 13 14 23 24 34
+#ice is the target, and want to distribute mdot to the ice=>
+#distribute_from_target=false
+ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
+#12 13 14 23 24 34
 ns.saturation_temp = 0.0 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 
-ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+6
-ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31
+#shear modulus rubber=3E6 dyne/cm^2
+#ns.elastic_viscosity=0.0 0.0 4.0e+6 4.0e+6 #EULERIAN FSI
+ns.elastic_viscosity=0.0 0.0 0.0 4.0e+6 #RIGID PRESCRIBED
+#ns.elastic_time=0.0 0.0 1.0e+31 1.0e+31 #EULERIAN FSI
+ns.elastic_time=0.0 0.0 0.0 1.0e+31 #RIGID PRESCRIBED
 ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #0=FENE-CR
 #1=Oldroyd B
@@ -188,19 +203,20 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 7
+#ns.viscoelastic_model=0 0 7 7 #EULERIAN FSI
+ns.viscoelastic_model=0 0 0 7 #RIGID PRESCRIBED
 ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.viscconst=0.01 0.000181 1.0e+13 1.0+13 #CGS
+ns.viscconst=0.01 0.000181 1.0 1.0 #CGS
 ns.denconst=1.0 0.001225 1.0 0.917
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=273.0 273.0 267.0 267.0
+ns.tempconst=273.0 273.0 209.0 209.0
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 3
 ns.hi_bc          = 3 2

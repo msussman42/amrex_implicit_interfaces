@@ -7607,7 +7607,7 @@ int NavierStokes::is_singular_coeff(int im) {
   } else if (FSI_flag[im]==FSI_SHOELE_CTML) {  //Wardlaw
    local_is_singular_coeff=1;
   } else
-   amrex::Error("FSI_flag invalid");
+   amrex::Error("NavierStokes::FSI_flag invalid");
  } else
   amrex::Error("im invalid");
 
@@ -8818,7 +8818,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
     ok_to_modify_EUL=1;
     // do nothing
    } else
-    amrex::Error("FSI_flag invalid");
+    amrex::Error("NavierStokes::FSI_flag invalid");
 
    if (ok_to_modify_EUL==1) {
 
@@ -8830,7 +8830,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
     } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) { 
      // do nothing
     } else
-     amrex::Error("FSI_flag invalid");
+     amrex::Error("NavierStokes::FSI_flag invalid");
 
    } else if (ok_to_modify_EUL==0) {
     // do nothing
@@ -9120,7 +9120,7 @@ void NavierStokes::copy_old_FSI_to_new_level() {
    } else if (FSI_flag_valid(im_part)==1) {
     // do nothing
    } else
-    amrex::Error("FSI_flag invalid"); 
+    amrex::Error("NavierStokes::FSI_flag invalid"); 
   } else
    amrex::Error("im_part invalid");
 
@@ -9215,7 +9215,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
     ok_to_modify_EUL=1;
     // do nothing
    } else
-    amrex::Error("FSI_flag invalid");
+    amrex::Error("NavierStokes::FSI_flag invalid");
 
    if (ok_to_modify_EUL==1) {
 
@@ -9247,7 +9247,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
   } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) { 
    // do nothing
   } else
-   amrex::Error("FSI_flag invalid");
+   amrex::Error("NavierStokes::FSI_flag invalid");
 
  } // partid=0..nparts-1
 
@@ -9787,7 +9787,7 @@ void NavierStokes::ns_header_msg_level(
   	          (FSI_flag[im_part]==FSI_SHOELE_CTML)) { 
         ok_to_modify_EUL=1;
        } else
-        amrex::Error("FSI_flag invalid");
+        amrex::Error("NavierStokes::FSI_flag invalid");
 
        if (ok_to_modify_EUL==1) {
 
@@ -9836,7 +9836,7 @@ void NavierStokes::ns_header_msg_level(
       } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) {  
        // do nothing
       } else
-       amrex::Error("FSI_flag invalid");
+       amrex::Error("NavierStokes::FSI_flag invalid");
      } // partid=0..nparts-1
 
      delete S_new_coarse;
