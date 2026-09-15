@@ -7523,6 +7523,8 @@ NavierStokes::ColorSum(
  if (level>finest_level)
   amrex::Error("level invalid ColorSum");
 
+ if (ngrow_make_distance!=ngrow_distance-1)
+  amrex::Error("ngrow_make_distance!=ngrow_distance-1");
  if (ngrow_distance<4)
   amrex::Error("ngrow_distance invalid");
 
@@ -7776,10 +7778,10 @@ NavierStokes::ColorSum(
 
  } // tid=0..thread_class::nthreads-1
 
- resize_metrics(1);
+ resize_metrics(3);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(AREA_MF+dir,1,local_caller_string);
+  debug_ngrow(AREA_MF+dir,3,local_caller_string);
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,project_slab_step+1);
   if (localMF[AREA_MF+dir]->boxArray()!=Umac_new.boxArray())
    amrex::Error("area_mf boxarrays do not match");
@@ -7789,9 +7791,9 @@ NavierStokes::ColorSum(
  if (localMF[MDOT_MF]->nComp()!=1)
   amrex::Error("localMF[MDOT_MF]->nComp() invalid");
 
- debug_ngrow(VOLUME_MF,0,local_caller_string);
- VOF_Recon_resize(1); //output:SLOPE_RECON_MF
- debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
+ debug_ngrow(VOLUME_MF,3,local_caller_string);
+ VOF_Recon_resize(3); //output:SLOPE_RECON_MF
+ debug_ngrow(SLOPE_RECON_MF,3,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
@@ -7811,18 +7813,20 @@ NavierStokes::ColorSum(
   } else
    amrex::Error("tessellate_elastic_separately_flag invalid");
 
-  getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
+  getStateDen_localMF(DEN_COLORSUM_MF,3,cur_time_slab);
    // velocity + pressure
    // ngrow=1
-  getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
+  getState_localMF(VEL_COLORSUM_MF,3,STATECOMP_VEL,
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
    //TESSELLATE_ALL|ALL_RASTER
    //makeFaceFrac declared in: NavierStokes.cpp
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
    //ProcessFaceFrac declared in: NavierStokes.cpp
+   //ngrow_dest=0
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
    //makeCellFrac declared in: NavierStokes.cpp
+   //ngrow=0
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
   // do nothing
@@ -7866,10 +7870,12 @@ NavierStokes::ColorSum(
   amrex::Error("localMF[TYPE_MF]->nGrow()!=ngrow_distance");
  if (localMF[COLOR_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[COLOR_MF]->nGrow()!=ngrow_distance");
+
  if (mdot->nGrow()>=0) {
   // do nothing
  } else
   amrex::Error("mdot->nGrow() invalid");
+
  if (mdot_complement->nGrow()>=0) {
   // do nothing
  } else
@@ -7881,8 +7887,12 @@ NavierStokes::ColorSum(
   amrex::Error("nstate invalid");
 
   // mask=tag if not covered by level+1 and at fine/fine ghost cell.
- int ngrowmask=1;
+ int ngrowmask=3;
  Real tag=1.0;
+// if clear_phys_boundary=2 then
+//  mask=1-tag outside the domain.
+//  mask=1-tag at coarse-fine ghost cell.
+//  mask=tag at fine-fine uncovered ghost cell
  int clear_phys_boundary=2;
  MultiFab* mask=maskfiner(ngrowmask,tag,clear_phys_boundary);  
  const Real* dx = geom.CellSize();

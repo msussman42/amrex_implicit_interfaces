@@ -4069,6 +4069,8 @@ stop
       integer dencomp
       integer base_type
       integer opposite_color(num_materials)
+      real(amrex_real) opposite_dist(num_materials)
+      real(amrex_real) local_dist_stencil
       integer typeside
       integer colorside
       integer ic
@@ -4250,11 +4252,11 @@ stop
       LS_ptr=>LS
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
       VEL_ptr=>VEL
-      call checkbound_array(fablo,fabhi,VEL_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,VEL_ptr,3,-1)
       DEN_ptr=>DEN
-      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,DEN_ptr,3,-1)
       VOF_ptr=>VOF
-      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,VOF_ptr,3,-1)
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
@@ -4270,11 +4272,11 @@ stop
       cellfab_ptr=>cellfab
       call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1)
       typefab_ptr=>typefab
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,3,-1)
       color_ptr=>color
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,color_ptr,3,-1)
       mask_ptr=>mask
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,3,-1)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
@@ -4289,8 +4291,8 @@ stop
       endif
 
       if (SDIM.eq.3) then
-       k1lo=-1
-       k1hi=1
+       k1lo=-3
+       k1hi=3
       else if (SDIM.eq.2) then
        k1lo=0
        k1hi=0
@@ -4476,6 +4478,7 @@ stop
 
         do im=1,num_materials
          opposite_color(im)=0
+         opposite_dist(im)=zero
         enddo
         opposite_color(base_type)=icolor
 
@@ -4499,10 +4502,27 @@ stop
         solid_fraction=zero
 
         do k1=k1lo,k1hi
-        do j1=-1,1
-        do i1=-1,1
+        do j1=-3,3
+        do i1=-3,3
 
          call gridsten_level(xsten_stencil,i+i1,j+j1,k+k1,level,nhalf)
+         do dir=1,SDIM
+          xstencil_point(dir)=xsten_stencil(0,dir)
+         enddo
+
+         local_dist_stencil=zero
+         do dir=1,SDIM
+          local_dist_stencil=local_dist_stencil+(xstencil_point(dir)- &
+            xsten(0,dir))**2
+         enddo
+         local_dist_stencil=sqrt(local_dist_stencil)
+
+         if (local_dist_stencil.ge.zero) then
+          !do nothing
+         else
+          print *,"local_dist_stencil invalid ",local_dist_stencil
+          stop
+         endif
 
          do dir=1,SDIM
           local_VEL(dir)=VEL(D_DECL(i+i1,j+j1,k+k1),dir)
@@ -4530,7 +4550,8 @@ stop
          else if (is_rigid(im_side_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(im_side_majority) invalid"
+          print *,"is_rigid(im_side_majority) invalid ", &
+           im_side_majority,is_rigid(im_side_majority)
           stop
          endif
 
@@ -4574,10 +4595,6 @@ stop
           endif
          enddo !dir=1,sdim
 
-         do dir=1,SDIM
-          xstencil_point(dir)=xsten_stencil(0,dir)
-         enddo
-
          call SUB_clamped_LS(xstencil_point,cur_time_slab,LS_clamped, &
            VEL_clamped,temperature_clamped,prescribed_flag,dx)
 
@@ -4589,20 +4606,59 @@ stop
          else if (LS_clamped.le.zero) then
           ! do nothing
          else
-          print *,"LS_clamped is NaN"
+          print *,"LS_clamped is NaN ",LS_clamped
           stop
          endif
 
          if (typeside.eq.0) then
           ! do nothing
          else if (typeside.eq.base_type) then
+
+          if ((opposite_color(base_type).eq.icolor).and. &
+              (opposite_dist(base_type).eq.zero)) then
            ! do nothing (already opposite_color(base_type)=icolor)
-         else if ((typeside.ge.1).and.(typeside.le.num_materials)) then
+          else
+           print *,"opposite_color or opposite_dist invalid ", &
+            opposite_color,opposite_dist
+           stop
+          endif
+
+         else if ((typeside.ge.1).and. &
+                  (typeside.le.num_materials).and. &
+                  (typeside.ne.base_type)) then
+          
+          if (local_dist_stencil.gt.zero) then
+           !do nothing
+          else
+           print *,"expecting local_dist_stencil>0 ",local_dist_stencil
+           stop
+          endif
+ 
           if (colorside.eq.0) then
            ! do nothing
           else if ((colorside.gt.0).and. &
                    (colorside.le.num_colors)) then
-           opposite_color(typeside)=colorside
+           if (opposite_color(typeside).eq.0) then 
+            opposite_color(typeside)=colorside
+            opposite_dist(typeside)=local_dist_stencil
+           else if (opposite_color(typeside).ne.0) then 
+            if (opposite_dist(typeside).lt.local_dist_stencil) then
+             !do nothing
+            else if (opposite_dist(typeside).ge.local_dist_stencil) then
+             opposite_color(typeside)=colorside
+             opposite_dist(typeside)=local_dist_stencil
+            else
+             print *,"opposite_color or opposite_dist invalid ", &
+               opposite_color,opposite_dist
+             stop
+            endif
+           else
+            print *,"opposite_color invalid"
+            print *,"opposite_color,  opposite_dist ", &
+               opposite_color,opposite_dist
+            stop
+           endif
+
           else
            print *,"colorside invalid in getcolorsum"
            print *,"colorside= ",colorside
@@ -4793,6 +4849,13 @@ stop
 
           if ((opposite_color(im).ge.1).and. &
               (opposite_color(im).le.num_colors)) then
+
+           if (opposite_dist(im).ge.zero) then
+            !do nothing
+           else
+            print *,"opposite_dist invalid ",opposite_dist
+            stop
+           endif
 
            ic_center=(opposite_color(im)-1)*num_elements_blobclass+ &
                    BLB_CEN_ACT+1
@@ -6158,6 +6221,7 @@ stop
            ! do nothing
           else
            print *,"opposite_color invalid ",opposite_color
+           print *,"opposite_dist ",opposite_dist
            stop
           endif
 
