@@ -7823,11 +7823,11 @@ NavierStokes::ColorSum(
    //makeFaceFrac declared in: NavierStokes.cpp
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
    //ProcessFaceFrac declared in: NavierStokes.cpp
-   //ngrow_dest=0
-  ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
+   //ngrow_dest=3
+  ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,3);
    //makeCellFrac declared in: NavierStokes.cpp
-   //ngrow=0
-  makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
+   //ngrow=3
+  makeCellFrac(tessellate,3,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
   // do nothing
  } else if (sweep_num==2) {

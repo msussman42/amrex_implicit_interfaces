@@ -3871,67 +3871,67 @@ stop
       end subroutine fort_gettypefab
 
       subroutine fort_getcolorsum( &
-       tid_current, &
-       operation_flag, &
-       sweep_num, &
-       tessellate, &
-       repair_mass, &
-       distribute_mdot_evenly, &
-       constant_volume_mdot, &
-       distribute_from_target, &
-       constant_density_all_time, & ! 1..num_materials
-       cur_time_slab, &
-       dt, &
-       dx, &
-       xlo, &
-       nstate, &
-       snew,DIMS(snew), &
-       mdot_pres, &
-       DIMS(mdot_pres), &
-       mdot, &
-       DIMS(mdot), &
-       mdot_complement, &
-       DIMS(mdot_complement), &
-       LS,DIMS(LS), &
-       VEL,DIMS(VEL), &
-       DEN,DIMS(DEN), &
-       VOF,DIMS(VOF), &
-       xface,DIMS(xface), &
-       yface,DIMS(yface), &
-       zface,DIMS(zface), &
-       areax,DIMS(areax), &
-       areay,DIMS(areay), &
-       areaz,DIMS(areaz), &
-       cellfab,DIMS(cellfab), &
-       typefab,DIMS(typefab), &
-       color,DIMS(color), &
-       mask,DIMS(mask), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       level, &
-       finest_level, &
-       rzflag, &
-       num_colors, &
-       cum_blobdata, &
-       cum_mdot_data, &
-       cum_mdot_complement_data, &
-       level_blobdata, &
-       level_blobtypedata, &
-       level_mdot_data, &
-       level_mdot_complement_data, &
-       level_mdot_data_redistribute, &
-       level_mdot_complement_data_redistribute, &
-       arraysize, &
-       mdot_arraysize, &
-       ncomp_mdot_alloc, &
-       ncomp_mdot, &
-       levelbc, &
-       velbc, &
-       material_type_lowmach, &
-       material_type_visual, &
-       nface_dst, &
-       ncellfrac) &
+       tid_current, & !int
+       operation_flag, & !int
+       sweep_num, & !int
+       tessellate, & !int
+       repair_mass, & !int
+       distribute_mdot_evenly, & !int
+       constant_volume_mdot, & !int
+       distribute_from_target, & !int
+       constant_density_all_time, & ! 1..num_materials, int
+       cur_time_slab, & !real
+       dt, & !real
+       dx, & !real
+       xlo, & !real
+       nstate, & !int
+       snew,DIMS(snew), & !real
+       mdot_pres, & !real
+       DIMS(mdot_pres), & !int
+       mdot, & !real
+       DIMS(mdot), & !int
+       mdot_complement, & !real
+       DIMS(mdot_complement), & !int
+       LS,DIMS(LS), & !real
+       VEL,DIMS(VEL), & !real
+       DEN,DIMS(DEN), & !real
+       VOF,DIMS(VOF), & !real
+       xface,DIMS(xface), & !real
+       yface,DIMS(yface), & !real
+       zface,DIMS(zface), & !real
+       areax,DIMS(areax), & !real
+       areay,DIMS(areay), & !real
+       areaz,DIMS(areaz), & !real
+       cellfab,DIMS(cellfab), & !real
+       typefab,DIMS(typefab), & !real
+       color,DIMS(color), & !real
+       mask,DIMS(mask), & !real
+       tilelo,tilehi, & !int
+       fablo,fabhi, & !int
+       bfact, & !int
+       level, & !int
+       finest_level, & !int
+       rzflag, & !int
+       num_colors, & !int
+       cum_blobdata, & !real
+       cum_mdot_data, & !real
+       cum_mdot_complement_data, & !real
+       level_blobdata, & !real
+       level_blobtypedata, & !int
+       level_mdot_data, & !real
+       level_mdot_complement_data, & !real
+       level_mdot_data_redistribute, & !real
+       level_mdot_complement_data_redistribute, & !real
+       arraysize, & !int
+       mdot_arraysize, & !int
+       ncomp_mdot_alloc, & !int
+       ncomp_mdot, & !int
+       levelbc, & !int
+       velbc, & !int
+       material_type_lowmach, & !int
+       material_type_visual, & !int
+       nface_dst, & !int
+       ncellfrac) & !int
       bind(c,name='fort_getcolorsum')
 
       use probcommon_module
@@ -3947,7 +3947,8 @@ stop
       integer, INTENT(in) :: sweep_num
       integer, parameter :: tessellate_source=TESSELLATE_FLUIDS
       integer, INTENT(in) :: tessellate
-      integer, INTENT(in) :: nface_dst,ncellfrac
+      integer, INTENT(in) :: nface_dst
+      integer, INTENT(in) :: ncellfrac
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       real(amrex_real), INTENT(in) :: cur_time_slab
@@ -4252,11 +4253,23 @@ stop
       LS_ptr=>LS
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
       VEL_ptr=>VEL
+      if (1.eq.0) then
+       print *,"checkbound VEL_ptr"
+      endif
       call checkbound_array(fablo,fabhi,VEL_ptr,3,-1)
       DEN_ptr=>DEN
+      if (1.eq.0) then
+       print *,"checkbound DEN_ptr"
+      endif
       call checkbound_array(fablo,fabhi,DEN_ptr,3,-1)
       VOF_ptr=>VOF
+      if (1.eq.0) then
+       print *,"checkbound VOF_ptr"
+      endif
       call checkbound_array(fablo,fabhi,VOF_ptr,3,-1)
+      if (1.eq.0) then
+       print *,"after checkbound VOF_ptr"
+      endif
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
@@ -4272,10 +4285,19 @@ stop
       cellfab_ptr=>cellfab
       call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1)
       typefab_ptr=>typefab
+      if (1.eq.0) then
+       print *,"checkbound typefab_ptr"
+      endif
       call checkbound_array1(fablo,fabhi,typefab_ptr,3,-1)
       color_ptr=>color
+      if (1.eq.0) then
+       print *,"checkbound color_ptr"
+      endif
       call checkbound_array1(fablo,fabhi,color_ptr,3,-1)
       mask_ptr=>mask
+      if (1.eq.0) then
+       print *,"checkbound mask_ptr"
+      endif
       call checkbound_array1(fablo,fabhi,mask_ptr,3,-1)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
@@ -5715,7 +5737,7 @@ stop
                       if (mdot_correct.eq.zero) then
                        !do nothing
                       else if (mdot_correct.ne.zero) then
-                       mdot_relax=EPS2*blob_mass/abs(mdot_correct)
+                       mdot_relax=EPS3*blob_mass/abs(mdot_correct)
                        if ((mdot_relax.ge.zero).and.(mdot_relax.lt.half)) then
                         !do nothing
                        else if (mdot_relax.ge.half) then
