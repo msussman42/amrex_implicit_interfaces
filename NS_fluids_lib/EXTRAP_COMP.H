@@ -11,6 +11,7 @@
 #define LSA_N_EXTRA (0)
 #define LSA_NP1_EXTRA (1)
 #define LSA_EVEC_EXTRA (2)
+#define LSA_EXTRA_TOTAL (LSA_EVEC_EXTRA+1)
 
 #define ENUM_XVEL (0)
 #define ENUM_YVEL (1)

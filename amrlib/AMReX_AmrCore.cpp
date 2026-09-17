@@ -239,7 +239,7 @@ AmrCore::InitAmr () {
  //
  dt_AMR=1.0;
  time_blocking_factor = 1;
- MAX_NUM_SLAB=33+3; //3 to account for LSA
+ MAX_NUM_SLAB=33+LSA_EXTRA_TOTAL; 
  slab_dt_type=0; // 0=SEM 1=evenly spaced
 
  //
@@ -294,7 +294,7 @@ AmrCore::InitAmr () {
  if (LSA_nsteps_krylov_subspace_method==0) {
   //do nothing
  } else if (LSA_nsteps_krylov_subspace_method>0) {
-  LSA_extra_data=3;
+  LSA_extra_data=LSA_EXTRA_TOTAL;
  } else
   amrex::Error("expecting LSA_nsteps_krylov_subspace_method>=0");
  
@@ -430,7 +430,7 @@ AmrCore::InitAmr () {
  pp.queryAdd("space_blocking_factor",space_blocking_factor);
  pp.queryAdd("time_blocking_factor",time_blocking_factor);
  pp.queryAdd("MAX_NUM_SLAB",MAX_NUM_SLAB);
- if (time_blocking_factor+1>MAX_NUM_SLAB-3) //3 to account for LSA
+ if (time_blocking_factor+1>MAX_NUM_SLAB-LSA_EXTRA_TOTAL)
   amrex::Error("MAX_NUM_SLAB too small");
  if (time_blocking_factor<1)
   amrex::Error("time_blocking_factor too small");
@@ -529,6 +529,10 @@ AmrCore::InitAmr () {
    amrex::Error("specify just one regrid_int value");
   }
 
+ } else if (max_level==0) {
+  //do nothing
+ } else {
+  amrex::Error("max_level invalid");
  }
 
  if ((LSA_nsteps_krylov_subspace_method==0)||
@@ -593,7 +597,13 @@ AmrCore::InitAmr () {
     amrex::Error("expecting regrid_int>LSA_max_step");
    }
   } else if (max_level==0) {
-   //check nothing
+
+   if (regrid_int==0) {
+    //do nothing
+   } else {
+    amrex::Error("expecting regrid_int==0 if max_level==0");
+   }
+
   } else
    amrex::Error("max_level invalid");
 

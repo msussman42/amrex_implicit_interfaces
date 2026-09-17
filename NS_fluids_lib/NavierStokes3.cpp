@@ -2046,8 +2046,9 @@ Real NavierStokes::advance(Real time,Real dt) {
       null_perturbation=0;
       LSA_perturbations_switch=true; 
 
-      //restore t^n data into "get_new_data"
-      //restore data prior to adding level set perturbations.
+      //LSA_save_state_dataALL declared in: NavierStokes.cpp
+      //copy t^n (base steady) data into "get_new_data"
+      //data copied prior to adding level set perturbations.
       LSA_save_state_dataALL(LSA_N_EXTRA,LSA_RESTORE_CONTROL);
       CopyNewToOldALL();
 

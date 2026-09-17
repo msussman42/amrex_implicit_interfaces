@@ -11172,12 +11172,76 @@ NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
 
+ const int max_level = parent->maxLevel();
+ int local_regrid_int=parent->regridInt();
+
  NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
 
+ if ((NS_LSA_nsteps_krylov_subspace_method==0)||
+     (parent->LSA_activate==0)) {
+
+  if (max_level==0) {
+
+   if (local_regrid_int==0) {
+    //do nothing
+   } else {
+    amrex::Error("expecting local_regrid_int==0 if max_level==0");
+   }
+     
+  } else if (max_level>0) {
+  
+   if (NS_LSA_nsteps_krylov_subspace_method==0) {
+  
+    if (local_regrid_int>=1) {
+     //do nothing
+    } else {
+     amrex::Error("expecting local_regrid_int>=1 if max_level>0");
+    }
+  
+   } else if (NS_LSA_nsteps_krylov_subspace_method>0) {
+
+    if (local_regrid_int>parent->LSA_max_step) {
+     //do nothing
+    } else {
+     amrex::Error("need local_regrid_int>max_step (LSA mode)");
+    }
+
+   } else
+    amrex::Error("NS_LSA_nsteps_krylov_subspace_method invalid");
+
+  } else
+   amrex::Error("max_level invalid");
+
+ } else if ((NS_LSA_nsteps_krylov_subspace_method>=1)&&
+            (parent->LSA_activate==1)) {
+
+  if (max_level>0) {
+
+   if (local_regrid_int>parent->LSA_max_step) {
+    //do nothing
+   } else {
+    std::cout << "local_regrid_int=" << local_regrid_int << '\n';
+    std::cout << "parent->LSA_max_step (max_step)=" << 
+      parent->LSA_max_step << '\n';
+    amrex::Error("expecting local_regrid_int>parent->LSA_max_step");
+   }
+
+  } else if (max_level==0) {
+
+   if (local_regrid_int==0) {
+    //do nothing
+   } else {
+    amrex::Error("expecting local_regrid_int==0 if max_level==0");
+   }
+
+  } else
+   amrex::Error("max_level invalid");
+
+ } else
+  amrex::Error("LSA_nsteps_krylov_subspace_method or LSA_activate invalid");
+ 
  interface_touch_flag=1; //init(old,ba_in,dmap_in)
  
- const int max_level = parent->maxLevel();
-
  NavierStokes* oldns     = (NavierStokes*) &old;
 
  SDC_setup();
@@ -11345,6 +11409,13 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
 
  std::string local_caller_string="LSA_save_state_data";
 
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp out of range");
+
  if (control_flag_in==LSA_SAVE_CONTROL) {
   //do nothing
  } else if (control_flag_in==LSA_RESTORE_CONTROL) {
@@ -11396,6 +11467,13 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
 } // end subroutine LSA_save_state_data
 
 void NavierStokes::LSA_save_state_dataALL(int extra_comp,int control_flag_in) {
+
+ if ((extra_comp==LSA_N_EXTRA)||
+     (extra_comp==LSA_NP1_EXTRA)||
+     (extra_comp==LSA_EVEC_EXTRA)) {
+  //do nothing
+ } else
+  amrex::Error("extra_comp out of range");
 
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -12049,7 +12127,66 @@ NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
 
+ const int max_level = parent->maxLevel();
+ int local_regrid_int=parent->regridInt();
+
  NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
+
+ if ((NS_LSA_nsteps_krylov_subspace_method==0)||
+     (parent->LSA_activate==0)) {
+
+  if (max_level==0) {
+
+   amrex::Error("expecting max_level>0 in init (new level)");
+     
+  } else if (max_level>0) {
+  
+   if (NS_LSA_nsteps_krylov_subspace_method==0) {
+  
+    if (local_regrid_int>=1) {
+     //do nothing
+    } else {
+     amrex::Error("expecting local_regrid_int>=1 if max_level>0");
+    }
+  
+   } else if (NS_LSA_nsteps_krylov_subspace_method>0) {
+
+    if (local_regrid_int>parent->LSA_max_step) {
+     //do nothing
+    } else {
+     amrex::Error("need local_regrid_int>max_step (LSA mode)");
+    }
+
+   } else
+    amrex::Error("NS_LSA_nsteps_krylov_subspace_method invalid");
+
+  } else
+   amrex::Error("max_level invalid");
+
+ } else if ((NS_LSA_nsteps_krylov_subspace_method>=1)&&
+            (parent->LSA_activate==1)) {
+
+  if (max_level>0) {
+
+   if (local_regrid_int>parent->LSA_max_step) {
+    //do nothing
+   } else {
+    std::cout << "local_regrid_int=" << local_regrid_int << '\n';
+    std::cout << "parent->LSA_max_step (max_step)=" << 
+      parent->LSA_max_step << '\n';
+    amrex::Error("expecting local_regrid_int>parent->LSA_max_step");
+   }
+
+  } else if (max_level==0) {
+
+   amrex::Error("expecting max_level>0 in init (new level)");
+
+  } else
+   amrex::Error("max_level invalid");
+
+ } else
+  amrex::Error("LSA_nsteps_krylov_subspace_method or LSA_activate invalid");
+
 
  interface_touch_flag=1; //init(ba_in,dmap_in)
 
@@ -24748,7 +24885,9 @@ NavierStokes::writePlotFile (
   } else
    amrex::Error("level invalid"); 
 
- } else if (LSA_code!=LSA_EVEC_EXTRA) {
+ } else if ((LSA_code<0)||
+            (LSA_code==LSA_N_EXTRA)||
+            (LSA_code==LSA_NP1_EXTRA)) {
 
   // metrics_dataALL
   // MASKCOEF_MF
@@ -24857,8 +24996,10 @@ NavierStokes::writePlotFile (
   } else
    amrex::Error("level invalid");
 
- } else
+ } else {
+  std::cout << "LSA_code = " << LSA_code << '\n';
   amrex::Error("LSA_code corrupted");
+ }
 
   //UtilCreateDirectoryDestructive is declared in
   //amrex-master/Src/Base/AMReX_Utility.cpp

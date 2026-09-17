@@ -41,7 +41,7 @@ StateData::StateData ()
 {
    StateData_level=0;
 
-   StateData_MAX_NUM_SLAB=33+3; // 3 to account for LSA
+   StateData_MAX_NUM_SLAB=33+LSA_EXTRA_TOTAL; 
    StateData_slab_dt_type=0;
 
    desc = 0;
@@ -119,7 +119,7 @@ StateData::define (
     StateData_level=level;
 
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
-    if (StateData_MAX_NUM_SLAB<33+3) //3 to account for LSA
+    if (StateData_MAX_NUM_SLAB<33+LSA_EXTRA_TOTAL) 
      amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;
@@ -130,16 +130,31 @@ StateData::define (
     bfact_time_order=time_order;
     LSA_extra_data=parent->LSA_extra_data;
 
-    if ((bfact_time_order>StateData_MAX_NUM_SLAB-3)||
+    if ((bfact_time_order>StateData_MAX_NUM_SLAB-LSA_EXTRA_TOTAL)||
         (bfact_time_order<1)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
      amrex::Error("bfact_time_order invalid in define");
     }
     if ((LSA_extra_data==0)||
-        (LSA_extra_data==3)) {
+        (LSA_extra_data==LSA_EXTRA_TOTAL)) {
      //do nothing
     } else
      amrex::Error("LSA_extra_data invalid");
+
+    if ((LSA_N_EXTRA>=0)&&(LSA_N_EXTRA<LSA_EXTRA_TOTAL)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_N_EXTRA invalid");
+
+    if ((LSA_NP1_EXTRA>=0)&&(LSA_NP1_EXTRA<LSA_EXTRA_TOTAL)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_NP1_EXTRA invalid");
+
+    if ((LSA_EVEC_EXTRA>=0)&&(LSA_EVEC_EXTRA<LSA_EXTRA_TOTAL)) {
+     //do nothing
+    } else
+     amrex::Error("LSA_EVEC_EXTRA invalid");
 
     time_array.resize(StateData_MAX_NUM_SLAB);
     new_data.resize(StateData_MAX_NUM_SLAB);
@@ -198,7 +213,7 @@ StateData::define (
     int state_holds_data = desc->get_state_holds_data();
 
     if ((parent->LSA_extra_data==0)||
-        (parent->LSA_extra_data==3)) {
+        (parent->LSA_extra_data==LSA_EXTRA_TOTAL)) {
      //do nothing
     } else
      amrex::Error("parent->LSA_extra_data invalid");
@@ -257,7 +272,7 @@ StateData::restart (
      amrex::Error("max_level>=0 violated");
 
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
-    if (StateData_MAX_NUM_SLAB<33+3)  //3 to account for LSA
+    if (StateData_MAX_NUM_SLAB<33+LSA_EXTRA_TOTAL) 
      amrex::Error("StateData_MAX_NUM_SLAB too small");
 
     StateData_slab_dt_type=slab_dt_type;
@@ -272,12 +287,12 @@ StateData::restart (
     LSA_extra_data=parent->LSA_extra_data;
 
     if ((bfact_time_order<1)||
-        (bfact_time_order>StateData_MAX_NUM_SLAB-3)) {
+        (bfact_time_order>StateData_MAX_NUM_SLAB-LSA_EXTRA_TOTAL)) {
      std::cout << "bfact_time_order= " << bfact_time_order << '\n';
      amrex::Error("bfact_time_order invalid in restart");
     }
     if ((LSA_extra_data==0)||
-        (LSA_extra_data==3)) {
+        (LSA_extra_data==LSA_EXTRA_TOTAL)) {
      //do nothing
     } else
      amrex::Error("LSA_extra_data invalid");
@@ -331,7 +346,7 @@ StateData::restart (
     int state_holds_data = desc->get_state_holds_data();
 
     if ((parent->LSA_extra_data==0)||
-        (parent->LSA_extra_data==3)) {
+        (parent->LSA_extra_data==LSA_EXTRA_TOTAL)) {
      //do nothing
     } else
      amrex::Error("parent->LSA_extra_data invalid");
@@ -426,7 +441,7 @@ StateData::~StateData() {
  desc = 0;
  descGHOST = 0;
  if ((LSA_extra_data==0)||
-     (LSA_extra_data==3)) {
+     (LSA_extra_data==LSA_EXTRA_TOTAL)) {
   //do nothing
  } else
   amrex::Error("LSA_extra_data invalid");
