@@ -39,26 +39,33 @@
        dx(dir)=probhi(dir)/n_cell(dir)
       enddo
       ngrow=4
-     
+    
+      if (polar.eq.1) then
+       load_area=my_pi*(n_cell_load(1)*dx(1))**2 
+       probhi(2)=1.0d0
+       n_cell(2)=1
+       n_cell_load(2)=1
+       dx(2)=1.0d0
+      else if (polar.eq.0) then
+       ! solve quarter domain problem
+       load_area=n_cell_load(1)*n_cell_load(2)*dx(1)*dx(2)*4.0d0
+      else
+       print *,"polar invalid"
+       stop
+      endif
+
       allocate(w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
       allocate(Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
       allocate(resid(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
       allocate(load(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
       allocate(diagonal(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
+
       load=0.0d0
       w=0.0d0
       Aw=0.0d0
       resid=0.0d0
       diagonal=0.0d0
       
-      if (polar.eq.1) then
-       load_area=my_pi*(n_cell_load(1)*dx(1))**2 
-      else if (polar.eq.0) then
-       load_area=n_cell_load(1)*n_cell_load(2)*dx(1)*dx(2)
-      else
-       print *,"polar invalid"
-       stop
-      endif
       do i=0,n_cell_load(1)-1
       do j=0,n_cell_load(2)-1
        load(i,j)=force/load_area
