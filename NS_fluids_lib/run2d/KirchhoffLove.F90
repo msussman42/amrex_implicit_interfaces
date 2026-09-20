@@ -54,9 +54,15 @@
         r=(i+0.5d0)*dx(1)
         r_left=r-0.5d0*dx(1)
         r_right=r+0.5d0*dx(1)
+        if (r.gt.0.0d0) then
+         !do nothing
+        else
+         print *,"r invalid"
+         stop
+        endif
         grad_left=(w(i,0)-w(i-1,0))/dx(1)
         grad_right=(w(i+1,0)-w(i,0))/dx(1)
-        lap_w(i,0)=(r_right*grad_right-r_left*grad_left)/r
+        lap_w(i,0)=(r_right*grad_right-r_left*grad_left)/(r*dx(1))
        enddo
       else if (polar.eq.0) then
        do i=0,n_cell(1)-1
@@ -104,7 +110,7 @@
       real*8, dimension(:,:), allocatable :: diagonal
       real*8 x,y
       real*8 my_pi
-      real*8 H,E,gamma,force
+      real*8 H,E,D,gamma,force
       integer polar
       integer i,j
       integer dir
@@ -120,20 +126,56 @@
       real*8 load_area
       real*8 error
       real*8 error_tol
+      real*8 time
+      real*8 density
+      real*8 drop_density
+      real*8 drop_stop_time
+      real*8 drop_initial_velocity
+      real*8 drop_radius
+      real*8 drop_mass
+      real*8 acceleration
+      integer file_unit
+      integer step_number
+      character(len=64) :: filename
 
  
       my_pi=4.0d0*atan(1.0d0)
-      H=1.0D0  !thickness
-      E=1.0D+6  !Young's modulus
+      density=1.03D0 ! density of PDMS
+      H=0.1D0  !thickness=1mm=0.1cm
+       !Shear modulus G=E/(2(1+gamma))
+      E=1.0D+7  !Young's modulus 2.5E+6 Pascal=2.5E+7 dyne/cm^2
       gamma=0.25D0  !Poisson ratio
-      force=1.0d0 !Force
+       !forward momentum of the drop is defeated in about 4ms
+       !drop initial velocity is 72 cm/s
+       !drop mass=density * volume
+      drop_stop_time=4.0D-3
+      drop_initial_velocity=72.0d0
+      drop_density=1.0d0
+      drop_radius=0.28*0.5d0 !2.8 mm diameter
+      drop_mass=drop_density*(4.0d0/3.0d0)*my_pi*(drop_radius**3)
+      acceleration=drop_initial_velocity/drop_stop_time
+      force=drop_mass*acceleration !Force
+      print *,"drop density ",drop_density
+      print *,"drop mass ",drop_mass
+      print *,"drop_radius ",drop_radius
+      print *,"drop_stop_time ",drop_stop_time
+      print *,"drop_initial_velocity ",drop_initial_velocity
+      print *,"acceleration ",acceleration
+
+      D=2.0d0*(H**3)*E/(3.0d0*(1.0d0-gamma**2))
+      force=force/D
+
+      print *,"force ",force
+
       polar=1 !xy? or r?
-      prob_hi(1)=1.0D0
-      prob_hi(2)=1.0D0
-      n_cell(1)=32 
+      print *,"polar=",polar
+
+      prob_hi(1)=0.5d0*4.0D0 !40 mm/2 (symmetry)
+      prob_hi(2)=0.5d0*3.2D0 !32 mm/2 (symmetry)
+      n_cell(1)=40 
       n_cell(2)=32 
-      n_cell_load(1)=2
-      n_cell_load(2)=2
+      n_cell_load(1)=4
+      n_cell_load(2)=4
       do dir=1,2
        dx(dir)=prob_hi(dir)/n_cell(dir)
       enddo
@@ -225,7 +267,7 @@
       error_tol=1.0D-8
       w=0.0d0
       niter=0
-      do while (error.gt.error_tol)
+      do while ((error.gt.error_tol).and.(niter.lt.200000))
        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
        do i=0,n_cell(1)-1
        do j=0,n_cell(2)-1
@@ -237,7 +279,7 @@
        do i=0,n_cell(1)-1
        do j=0,n_cell(2)-1
         if (diagonal(i,j).gt.0.0d0) then
-         w(i,j)=w(i,j)+resid(i,j)/diagonal(i,j)
+         w(i,j)=w(i,j)+0.5d0*resid(i,j)/diagonal(i,j)
         else
          print *,"diagonal invalid"
          stop
@@ -247,30 +289,45 @@
        enddo !j
        enddo !i
        error=sqrt(error/error_count)
-       print *,"niter,error_count,error ",niter,error_count,error
+       if (1000*(niter/1000).eq.niter) then
+        print *,"niter,error_count,error ",niter,error_count,error
+       endif
        niter=niter+1
       enddo !while error>error_tol
 
+      time=0.0d0
+      step_number=0
+      write(filename,'(A,I3.3,A)') 'step_',step_number,'.tec'
+
+      file_unit=10
+        !file="output.txt" is an alternative
+      open(unit=file_unit,file=trim(filename),status="replace",action="write")
+      print *,"filename ",filename
+      print *,"file_unit=",file_unit
+      print *,"time=",time
+
       if (polar.eq.0) then
-       print *,'VARIABLES="x","y","w"'
-       print *,"zone i= ",n_cell(1)+2," j= ",n_cell(2)+2," f=point"
-       print *,"solutiontime= 0.0  strandid=1"
-       do i=-1,n_cell(1)
-       do j=-1,n_cell(2)
-        x=(i+0.5d0)*dx(1)  
-        y=(j+0.5d0)*dx(2) 
-        print *,x,y,w(i,j)
+       write(file_unit,*) 'VARIABLES="x","y","w"'
+       write(file_unit,*) "zone i= ",n_cell(1)+1," j= ",n_cell(2)+1," f=point"
+       write(file_unit,*) "solutiontime=",time,"strandid=1"
+       do j=0,n_cell(2)
+       do i=0,n_cell(1)
+        x=i*dx(1)  
+        y=j*dx(2) 
+        write(file_unit,*) x,y,0.25d0*(w(i,j)+w(i-1,j-1)+w(i-1,j)+w(i,j-1))
        enddo 
        enddo 
       else if (polar.eq.1) then
        do i=-1,n_cell(1)
         x=(i+0.5d0)*dx(1)  
-        print *,x,w(i,0)
+        write(file_unit,*) x,w(i,0)
        enddo 
       else
        print *,"polar invalid"
        stop
       endif
+ 
+      close(file_unit)
 
       deallocate(w)
       deallocate(load)
