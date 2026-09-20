@@ -1,14 +1,113 @@
+
+      subroutine set_ghost(w,n_cell,ngrow,polar)
+      IMPLICIT NONE
+      integer, intent(in) :: n_cell(2)
+      integer, intent(in) :: ngrow
+      integer, intent(in) :: polar
+      real*8, intent(inout) :: &
+             w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      integer ighost,jghost
+
+      if (polar.eq.1) then
+       do ighost=1,ngrow
+        w(-ighost,0)=w(ighost-1,0)
+        w(n_cell(1)+ighost-1,0)=-w(n_cell(1)-ighost,0)
+       enddo
+      else if (polar.eq.0) then
+       do ighost=0,n_cell(1)-1
+       do jghost=1,ngrow
+        w(ighost,n_cell(2)+jghost-1)=w(ighost,n_cell(2)-jghost)
+        w(ighost,-jghost)=w(ighost,jghost-1)
+       enddo !jghost
+       enddo !ighost
+       do jghost=-ngrow,n_cell(2)+ngrow-1
+       do ighost=1,ngrow
+        w(n_cell(1)+ighost-1,jghost)=-w(n_cell(1)-ighost,jghost)
+        w(-ighost,jghost)=w(ighost-1,jghost)
+       enddo !ighost
+       enddo !jghost
+      else
+       print *,"polar invalid"
+       stop
+      endif
+
+      return
+      end subroutine set_ghost
+
+
+      subroutine apply_lap(w,lap_w,n_cell,ngrow,dx,polar)
+      IMPLICIT NONE
+      real*8, intent(in) :: dx(2)
+      integer, intent(in) :: n_cell(2)
+      integer, intent(in) :: ngrow
+      integer, intent(in) :: polar
+      real*8, intent(inout) :: &
+             w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      real*8, intent(out) :: &
+             lap_w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      integer i,j
+      real*8 r,r_left,r_right,grad_left,grad_right
+
+      call set_ghost(w,n_cell,ngrow,polar)
+      if (polar.eq.1) then
+       do i=0,n_cell(1)-1
+        r=(i+0.5d0)*dx(1)
+        r_left=r-0.5d0*dx(1)
+        r_right=r+0.5d0*dx(1)
+        grad_left=(w(i,0)-w(i-1,0))/dx(1)
+        grad_right=(w(i+1,0)-w(i,0))/dx(1)
+        lap_w(i,0)=(r_right*grad_right-r_left*grad_left)/r
+       enddo
+      else if (polar.eq.0) then
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        lap_w(i,j)=(w(i+1,j)+w(i-1,j)-2.0d0*w(i,j))/(dx(1)**2)+ & 
+                   (w(i,j+1)+w(i,j-1)-2.0d0*w(i,j))/(dx(2)**2) 
+       enddo !j
+       enddo !i
+      else
+       print *,"polar invalid"
+       stop
+      endif
+
+      return
+      end subroutine apply_lap
+
+
+      subroutine apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
+      IMPLICIT NONE
+      real*8, intent(in) :: dx(2)
+      integer, intent(in) :: n_cell(2)
+      integer, intent(in) :: ngrow
+      integer, intent(in) :: polar
+      real*8, intent(inout) :: &
+             w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      real*8, intent(out) :: &
+             Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      real*8, intent(out) :: &
+             lap_w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+
+      call set_ghost(w,n_cell,ngrow,polar)
+      call apply_lap(w,lap_w,n_cell,ngrow,dx,polar)
+      call apply_lap(lap_w,Aw,n_cell,ngrow,dx,polar)
+
+      return
+      end subroutine apply
+
       program main
       IMPLICIT NONE
       real*8, dimension(:,:), allocatable :: w
       real*8, dimension(:,:), allocatable :: load
       real*8, dimension(:,:), allocatable :: Aw
+      real*8, dimension(:,:), allocatable :: lap_w
       real*8, dimension(:,:), allocatable :: resid
       real*8, dimension(:,:), allocatable :: diagonal
+      real*8 x,y
       real*8 my_pi
       real*8 H,E,gamma,force
       integer polar
       integer i,j
+      integer dir
       integer istride,jstride
       integer ibase,jbase
       real*8 prob_hi(2)
@@ -29,20 +128,20 @@
       gamma=0.25D0  !Poisson ratio
       force=1.0d0 !Force
       polar=1 !xy? or r?
-      probhi(1)=1.0D0
-      probhi(2)=1.0D0
+      prob_hi(1)=1.0D0
+      prob_hi(2)=1.0D0
       n_cell(1)=32 
       n_cell(2)=32 
       n_cell_load(1)=2
       n_cell_load(2)=2
       do dir=1,2
-       dx(dir)=probhi(dir)/n_cell(dir)
+       dx(dir)=prob_hi(dir)/n_cell(dir)
       enddo
       ngrow=4
     
       if (polar.eq.1) then
        load_area=my_pi*(n_cell_load(1)*dx(1))**2 
-       probhi(2)=1.0d0
+       prob_hi(2)=1.0d0
        n_cell(2)=1
        n_cell_load(2)=1
        dx(2)=1.0d0
@@ -54,17 +153,19 @@
        stop
       endif
 
-      allocate(w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
-      allocate(Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
-      allocate(resid(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
-      allocate(load(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
-      allocate(diagonal(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow))
+      allocate(w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(resid(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(load(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(diagonal(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(lap_w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
 
       load=0.0d0
       w=0.0d0
       Aw=0.0d0
       resid=0.0d0
       diagonal=0.0d0
+      lap_w=0.0d0
       
       do i=0,n_cell_load(1)-1
       do j=0,n_cell_load(2)-1
@@ -81,7 +182,7 @@
           w(i,0)=1.0d0
          endif
         enddo !i
-        call apply(w,Aw,n_cell,dx,polar)
+        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
         do i=0,n_cell(1)-1
          ibase=i/4
          if (i-ibase*4.eq.istride) then
@@ -103,7 +204,7 @@
          endif
         enddo !j
         enddo !i
-        call apply(w,Aw,n_cell,dx,polar)
+        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
         do i=0,n_cell(1)-1
         do j=0,n_cell(2)-1
          ibase=i/4
@@ -125,7 +226,12 @@
       w=0.0d0
       niter=0
       do while (error.gt.error_tol)
-       call residual(w,resid,load,n_cell,dx,polar) !load-Aw
+       call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        resid(i,j)=load(i,j)-Aw(i,j)
+       enddo !j
+       enddo !i
        error=0.0d0
        error_count=0
        do i=0,n_cell(1)-1
@@ -171,6 +277,7 @@
       deallocate(Aw)
       deallocate(resid)
       deallocate(diagonal)
+      deallocate(lap_w)
 
       return
       end
