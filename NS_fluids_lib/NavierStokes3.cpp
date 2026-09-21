@@ -2297,11 +2297,17 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} unperturbed data
+      //In generating Krylog subspace entries, we always
+      //subtract LSA_NP1_EXTRA.
       LSA_save_state_dataALL(LSA_NP1_EXTRA,LSA_SAVE_CONTROL);
       //save t^{n+1} data 
       LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
        //The most dangerous mode should be insensitive to the initial 
        //guess.
+       //LSA_NP1_EXTRA: input (the unperturbed levelset function)
+       //The zero LS in LSA_NP1_EXTRA defines the narrow band at which
+       //the perturbation is applied. intent(IN)
+       //LSA_EVEC_EXTRA: output (the initial perturbation) intent(OUT)
       LSA_default_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 
       NS_LSA_step_count++;
@@ -2321,9 +2327,9 @@ Real NavierStokes::advance(Real time,Real dt) {
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //compute updated eigenvalue and eigenvector
       //LSA_NP1_EXTRA is the t^{n+1} data resulting from unperturbed
-      //initial conditions.
+      //initial conditions. intent(IN)
       //LSA_EVEC_EXTRA is the t^{n+1} data resulting from perturbed
-      //initial conditions.
+      //initial conditions. intent(OUT)
       LSA_save_state_dataALL(LSA_EVEC_EXTRA,LSA_SAVE_CONTROL);
       LSA_eigenvectorALL(LSA_NP1_EXTRA,LSA_EVEC_EXTRA);
 

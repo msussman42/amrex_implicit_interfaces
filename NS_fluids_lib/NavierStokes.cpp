@@ -11610,7 +11610,10 @@ void NavierStokes::LSA_levelset_norminf(
 
 } // end subroutine LSA_levelset_norminf
 
-
+//unperturb_extra_comp: input (the unperturbed levelset function)
+//The zero LS in unperturb_extra_comp defines the narrow band at which
+//the perturbation is applied.
+//extra_comp: output (the initial perturbation)
 void NavierStokes::LSA_default_eigenvector(
  int unperturb_extra_comp,int extra_comp) {
 
@@ -11723,6 +11726,10 @@ void NavierStokes::LSA_default_eigenvector(
 } // end subroutine LSA_default_eigenvector
 
 
+//unperturb_extra_comp: input (the unperturbed levelset function)
+//The zero LS in unperturb_extra_comp defines the narrow band at which
+//the perturbation is applied.
+//extra_comp: output (the initial perturbation)
 void NavierStokes::LSA_default_eigenvectorALL(
  int unperturb_extra_comp,int extra_comp) {
 

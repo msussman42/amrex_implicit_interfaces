@@ -80,8 +80,10 @@
       end subroutine apply_lap
 
 
-      subroutine apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
+      subroutine apply(w,Aw,lap_w,n_cell,ngrow,dx,polar, &
+                      acceleration_coefficient)
       IMPLICIT NONE
+      real*8, intent(in) :: acceleration_coefficient
       real*8, intent(in) :: dx(2)
       integer, intent(in) :: n_cell(2)
       integer, intent(in) :: ngrow
@@ -92,10 +94,25 @@
              Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
       real*8, intent(out) :: &
              lap_w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1)
+      integer i,j
 
       call set_ghost(w,n_cell,ngrow,polar)
       call apply_lap(w,lap_w,n_cell,ngrow,dx,polar)
       call apply_lap(lap_w,Aw,n_cell,ngrow,dx,polar)
+      if (polar.eq.1) then
+       do i=0,n_cell(1)-1
+        Aw(i,0)=Aw(i,0)+acceleration_coefficient*w(i,0)
+       enddo
+      else if (polar.eq.0) then
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        Aw(i,j)=Aw(i,j)+acceleration_coefficient*w(i,j)
+       enddo !j
+       enddo !i
+      else
+       print *,"polar invalid"
+       stop
+      endif
 
       return
       end subroutine apply
@@ -138,6 +155,7 @@
       real*8 acceleration
       real*8 acceleration_coefficient
       real*8 stop_time
+      real*8 dt
       integer number_steps
       integer plot_int
       integer file_unit
@@ -184,7 +202,7 @@
 
       print *,"force ",force
 
-      polar=1 !xy? or r?
+      polar=0 !xy? or r?
       print *,"polar=",polar
 
       prob_hi(1)=0.5d0*4.0D0 !40 mm/2 (symmetry)
@@ -230,125 +248,176 @@
       diagonal=0.0d0
       lap_w=0.0d0
       
-      do i=0,n_cell_load(1)-1
-      do j=0,n_cell_load(2)-1
-       load(i,j)=force/load_area
-      enddo
-      enddo
-
-      if (polar.eq.1) then
-       do istride=0,3
-        w=0.0d0
-        do i=0,n_cell(1)-1
-         ibase=i/4
-         if (i-ibase*4.eq.istride) then
-          w(i,0)=1.0d0
-         endif
-        enddo !i
-        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
-        do i=0,n_cell(1)-1
-         ibase=i/4
-         if (i-ibase*4.eq.istride) then
-          diagonal(i,0)=Aw(i,0)
-         endif
-        enddo !i
-       enddo !istride
-      else if (polar.eq.0) then
-       do istride=0,3
-       do jstride=0,3
-        w=0.0d0
-        do i=0,n_cell(1)-1
-        do j=0,n_cell(2)-1
-         ibase=i/4
-         jbase=j/4
-         if ((i-ibase*4.eq.istride).and. &
-             (j-jbase*4.eq.jstride)) then
-          w(i,j)=1.0d0
-         endif
-        enddo !j
-        enddo !i
-        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
-        do i=0,n_cell(1)-1
-        do j=0,n_cell(2)-1
-         ibase=i/4
-         jbase=j/4
-         if ((i-ibase*4.eq.istride).and. &
-             (j-jbase*4.eq.jstride)) then
-          diagonal(i,j)=Aw(i,j)
-         endif
-        enddo !i
-        enddo !j
-       enddo !jstride
-       enddo !istride
-      else
-       print *,"polar invalid"
-       stop
-      endif
-      error=1.0D+10
-      error_tol=1.0D-8
-      w=0.0d0
-      niter=0
-      do while ((error.gt.error_tol).and.(niter.lt.200000))
-       call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar)
-       do i=0,n_cell(1)-1
-       do j=0,n_cell(2)-1
-        resid(i,j)=load(i,j)-Aw(i,j)
-       enddo !j
-       enddo !i
-       error=0.0d0
-       error_count=0
-       do i=0,n_cell(1)-1
-       do j=0,n_cell(2)-1
-        if (diagonal(i,j).gt.0.0d0) then
-         w(i,j)=w(i,j)+0.5d0*resid(i,j)/diagonal(i,j)
-        else
-         print *,"diagonal invalid"
-         stop
-        endif
-        error_count=error_count+1
-        error=error+resid(i,j)**2
-       enddo !j
-       enddo !i
-       error=sqrt(error/error_count)
-       if (1000*(niter/1000).eq.niter) then
-        print *,"niter,error_count,error ",niter,error_count,error
-       endif
-       niter=niter+1
-      enddo !while error>error_tol
-
       time=0.0d0
       step_number=0
-      write(filename,'(A,I3.3,A)') 'step_',step_number,'.tec'
-
-      file_unit=10
-        !file="output.txt" is an alternative
-      open(unit=file_unit,file=trim(filename),status="replace",action="write")
-      print *,"filename ",filename
-      print *,"file_unit=",file_unit
-      print *,"time=",time
-
-      if (polar.eq.0) then
-       write(file_unit,*) 'VARIABLES="x","y","w"'
-       write(file_unit,*) "zone i= ",n_cell(1)+1," j= ",n_cell(2)+1," f=point"
-       write(file_unit,*) "solutiontime=",time,"strandid=1"
-       do j=0,n_cell(2)
-       do i=0,n_cell(1)
-        x=i*dx(1)  
-        y=j*dx(2) 
-        write(file_unit,*) x,y,0.25d0*(w(i,j)+w(i-1,j-1)+w(i-1,j)+w(i,j-1))
-       enddo 
-       enddo 
-      else if (polar.eq.1) then
-       do i=-1,n_cell(1)
-        x=(i+0.5d0)*dx(1)  
-        write(file_unit,*) x,w(i,0)
-       enddo 
+      dt=stop_time/number_steps
+      if (dt.gt.0.0d0) then
+       !do nothing
       else
-       print *,"polar invalid"
+       print *,"dt invalid"
        stop
       endif
- 
-      close(file_unit)
+      acceleration_coefficient=acceleration_coefficient/(dt*dt)
+
+      do while (step_number.lt.number_steps)
+
+       if (polar.eq.1) then
+        do istride=0,3
+         w=0.0d0
+         do i=0,n_cell(1)-1
+          ibase=i/4
+          if (i-ibase*4.eq.istride) then
+           w(i,0)=1.0d0
+          endif
+         enddo !i
+         call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar,acceleration_coefficient)
+         do i=0,n_cell(1)-1
+          ibase=i/4
+          if (i-ibase*4.eq.istride) then
+           diagonal(i,0)=Aw(i,0)
+          endif
+         enddo !i
+        enddo !istride
+       else if (polar.eq.0) then
+        do istride=0,3
+        do jstride=0,3
+         w=0.0d0
+         do i=0,n_cell(1)-1
+         do j=0,n_cell(2)-1
+          ibase=i/4
+          jbase=j/4
+          if ((i-ibase*4.eq.istride).and. &
+              (j-jbase*4.eq.jstride)) then
+           w(i,j)=1.0d0
+          endif
+         enddo !j
+         enddo !i
+         call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar,acceleration_coefficient)
+         do i=0,n_cell(1)-1
+         do j=0,n_cell(2)-1
+          ibase=i/4
+          jbase=j/4
+          if ((i-ibase*4.eq.istride).and. &
+              (j-jbase*4.eq.jstride)) then
+           diagonal(i,j)=Aw(i,j)
+          endif
+         enddo !i
+         enddo !j
+        enddo !jstride
+        enddo !istride
+       else
+        print *,"polar invalid"
+        stop
+       endif
+       if (polar.eq.1) then
+        if (n_cell(2).eq.1) then
+         !do nothing
+        else
+         print *,"n_cell(2) invalid"
+         stop
+        endif
+       else if (polar.eq.0) then
+        !do nothing
+       else
+        print *,"polar invalid"
+        stop
+       endif
+       load=0.0d0
+       if (time.le.drop_stop_time) then
+        do i=0,n_cell_load(1)-1
+        do j=0,n_cell_load(2)-1
+         load(i,j)=force/load_area
+        enddo
+        enddo
+       endif
+
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        load(i,j)=load(i,j)+acceleration_coefficient* &
+             (2.0d0*w_m1(i,j)-w_m2(i,j))
+       enddo !j
+       enddo !i
+
+       error=1.0D+10
+       error_tol=1.0D-8
+       w=0.0d0
+       niter=0
+       do while ((error.gt.error_tol).and.(niter.lt.200000))
+        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar,acceleration_coefficient)
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         resid(i,j)=load(i,j)-Aw(i,j)
+        enddo !j
+        enddo !i
+
+        error=0.0d0
+        error_count=0
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         if (diagonal(i,j).gt.0.0d0) then
+          w(i,j)=w(i,j)+0.5d0*resid(i,j)/diagonal(i,j)
+         else
+          print *,"diagonal invalid"
+          stop
+         endif
+         error_count=error_count+1
+         error=error+resid(i,j)**2
+        enddo !j
+        enddo !i
+        error=sqrt(error/error_count)
+        if (10000*(niter/10000).eq.niter) then
+         print *,"niter,error_count,error ",niter,error_count,error
+        endif
+        niter=niter+1
+       enddo !while error>error_tol
+
+       if ((step_number/plot_int)*plot_int.eq.step_number) then
+
+        write(filename,'(A,I3.3,A)') 'step_',step_number,'.tec'
+
+        file_unit=10
+        !file="output.txt" is an alternative
+        open(unit=file_unit,file=trim(filename),status="replace",action="write")
+        print *,"filename ",filename
+        print *,"file_unit=",file_unit
+        print *,"time=",time
+
+        if (polar.eq.0) then
+         write(file_unit,*) 'VARIABLES="x","y","w"'
+         write(file_unit,*) "zone i= ",n_cell(1)+1," j= ",n_cell(2)+1," f=point"
+         write(file_unit,*) "solutiontime=",time,"strandid=1"
+         do j=0,n_cell(2)
+         do i=0,n_cell(1)
+          x=i*dx(1)  
+          y=j*dx(2) 
+          write(file_unit,*) x,y,0.25d0*(w(i,j)+w(i-1,j-1)+w(i-1,j)+w(i,j-1))
+         enddo 
+         enddo 
+        else if (polar.eq.1) then
+         do i=-1,n_cell(1)
+          x=(i+0.5d0)*dx(1)  
+          write(file_unit,*) x,w(i,0)
+         enddo 
+        else
+         print *,"polar invalid"
+         stop
+        endif
+   
+        close(file_unit)
+       endif
+
+       step_number=step_number+1
+       time=time+dt
+
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        w_m2(i,j)=w_m1(i,j)
+        w_m1(i,j)=w(i,j)
+       enddo !j
+       enddo !i
+       w=0.0d0
+
+      enddo  ! do while (step_number.lt.number_steps)
 
       deallocate(w)
       deallocate(w_m1)
