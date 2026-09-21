@@ -103,6 +103,8 @@
       program main
       IMPLICIT NONE
       real*8, dimension(:,:), allocatable :: w
+      real*8, dimension(:,:), allocatable :: w_m1
+      real*8, dimension(:,:), allocatable :: w_m2
       real*8, dimension(:,:), allocatable :: load
       real*8, dimension(:,:), allocatable :: Aw
       real*8, dimension(:,:), allocatable :: lap_w
@@ -134,6 +136,10 @@
       real*8 drop_radius
       real*8 drop_mass
       real*8 acceleration
+      real*8 acceleration_coefficient
+      real*8 stop_time
+      integer number_steps
+      integer plot_int
       integer file_unit
       integer step_number
       character(len=64) :: filename
@@ -149,6 +155,9 @@
        !drop initial velocity is 72 cm/s
        !drop mass=density * volume
       drop_stop_time=4.0D-3
+      stop_time=0.03 !30ms
+      number_steps=100
+      plot_int=10
       drop_initial_velocity=72.0d0
       drop_density=1.0d0
       drop_radius=0.28*0.5d0 !2.8 mm diameter
@@ -163,7 +172,15 @@
       print *,"acceleration ",acceleration
 
       D=2.0d0*(H**3)*E/(3.0d0*(1.0d0-gamma**2))
+      if (D.gt.0.0D0) then
+       !do nothing
+      else
+       print *,"D invalid"
+       stop
+      endif
+
       force=force/D
+      acceleration_coefficient=density*H/D
 
       print *,"force ",force
 
@@ -196,6 +213,8 @@
       endif
 
       allocate(w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(w_m1(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(w_m2(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(resid(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(load(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
@@ -204,6 +223,8 @@
 
       load=0.0d0
       w=0.0d0
+      w_m1=0.0d0
+      w_m2=0.0d0
       Aw=0.0d0
       resid=0.0d0
       diagonal=0.0d0
@@ -330,6 +351,8 @@
       close(file_unit)
 
       deallocate(w)
+      deallocate(w_m1)
+      deallocate(w_m2)
       deallocate(load)
       deallocate(Aw)
       deallocate(resid)
