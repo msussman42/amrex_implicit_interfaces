@@ -126,7 +126,11 @@
       real*8, dimension(:,:), allocatable :: Aw
       real*8, dimension(:,:), allocatable :: lap_w
       real*8, dimension(:,:), allocatable :: resid
+      real*8, dimension(:,:), allocatable :: dvec
+      real*8, dimension(:,:), allocatable :: qvec
+      real*8, dimension(:,:), allocatable :: svec
       real*8, dimension(:,:), allocatable :: diagonal
+      real*8 alpha,beta,denom
       real*8 x,y
       real*8 my_pi
       real*8 H,E,D,gamma,force
@@ -141,9 +145,8 @@
       integer n_cell_load(2)
       integer ngrow
       integer niter
-      integer error_count
       real*8 load_area
-      real*8 error
+      real*8 delta_new,delta_not,delta_old
       real*8 error_tol
       real*8 time
       real*8 density
@@ -161,6 +164,8 @@
       integer file_unit
       integer step_number
       character(len=64) :: filename
+      character(len=64) :: filenamex
+      character(len=64) :: filenamey
 
  
       my_pi=4.0d0*atan(1.0d0)
@@ -235,6 +240,9 @@
       allocate(w_m2(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(Aw(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(resid(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(dvec(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(qvec(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
+      allocate(svec(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(load(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(diagonal(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
       allocate(lap_w(-ngrow:n_cell(1)+ngrow-1,-ngrow:n_cell(2)+ngrow-1))
@@ -245,6 +253,9 @@
       w_m2=0.0d0
       Aw=0.0d0
       resid=0.0d0
+      dvec=0.0d0
+      qvec=0.0d0
+      svec=0.0d0
       diagonal=0.0d0
       lap_w=0.0d0
       
@@ -338,38 +349,91 @@
        enddo !j
        enddo !i
 
-       error=1.0D+10
        error_tol=1.0D-8
        w=0.0d0
        niter=0
-       do while ((error.gt.error_tol).and.(niter.lt.200000))
-        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar,acceleration_coefficient)
+
+       call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar,acceleration_coefficient)
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        resid(i,j)=load(i,j)-Aw(i,j)
+       enddo !j
+       enddo !i
+       delta_new=0.0d0
+       do i=0,n_cell(1)-1
+       do j=0,n_cell(2)-1
+        if (diagonal(i,j).gt.0.0d0) then
+         dvec(i,j)=resid(i,j)/diagonal(i,j)
+        else
+         print *,"diagonal invalid"
+         stop
+        endif
+        delta_new=delta_new+resid(i,j)*dvec(i,j)
+       enddo !j
+       enddo !i
+       delta_not=delta_new
+       do while ((delta_new.gt.(error_tol**2)*delta_not).and. &
+                 (niter.lt.20000))
+         !q=Ad
+        call apply(dvec,qvec,lap_w,n_cell,ngrow,dx,polar, &
+                acceleration_coefficient)
+        denom=0.0d0
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         denom=denom+dvec(i,j)*qvec(i,j)
+        enddo !j
+        enddo !i
+        if (denom.gt.0.0) then
+         !do nothing
+        else
+         print *,"denom invalid"
+         stop
+        endif
+        alpha=delta_new/denom
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         w(i,j)=w(i,j)+alpha*dvec(i,j)
+        enddo !j
+        enddo !i
+         
+        call apply(w,Aw,lap_w,n_cell,ngrow,dx,polar, &
+                acceleration_coefficient)
+
         do i=0,n_cell(1)-1
         do j=0,n_cell(2)-1
          resid(i,j)=load(i,j)-Aw(i,j)
-        enddo !j
-        enddo !i
-
-        error=0.0d0
-        error_count=0
-        do i=0,n_cell(1)-1
-        do j=0,n_cell(2)-1
          if (diagonal(i,j).gt.0.0d0) then
-          w(i,j)=w(i,j)+0.5d0*resid(i,j)/diagonal(i,j)
+          svec(i,j)=resid(i,j)/diagonal(i,j)
          else
           print *,"diagonal invalid"
           stop
          endif
-         error_count=error_count+1
-         error=error+resid(i,j)**2
         enddo !j
         enddo !i
-        error=sqrt(error/error_count)
-        if (10000*(niter/10000).eq.niter) then
-         print *,"niter,error_count,error ",niter,error_count,error
+        delta_old=delta_new
+        delta_new=0.0
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         delta_new=delta_new+resid(i,j)*svec(i,j)
+        enddo !j
+        enddo !i
+        if (delta_old.gt.0.0d0) then
+         beta=delta_new/delta_old
+        else
+         print *,"delta_old invalid"
+         stop
+        endif
+        do i=0,n_cell(1)-1
+        do j=0,n_cell(2)-1
+         dvec(i,j)=svec(i,j)+beta*dvec(i,j)
+        enddo !j
+        enddo !i
+
+        if (100*(niter/100).eq.niter) then
+         print *,"niter,delta_new,delta_not ",niter,delta_new,delta_not
         endif
         niter=niter+1
-       enddo !while error>error_tol
+       enddo !while delta_new>error_tol**2 * delta_not
 
        if ((step_number/plot_int)*plot_int.eq.step_number) then
 
@@ -404,7 +468,49 @@
         endif
    
         close(file_unit)
-       endif
+
+        if (polar.eq.0) then
+
+         write(filenamex,'(A,I3.3,A)') 'stepx_',step_number,'.tec'
+
+         file_unit=20
+         !file="output.txt" is an alternative
+         open(unit=file_unit,file=trim(filenamex), &
+                 status="replace",action="write")
+         print *,"filenamex ",filenamex
+         print *,"file_unit=",file_unit
+         print *,"time=",time
+
+         do i=-1,n_cell(1)
+          x=(i+0.5d0)*dx(1)  
+          write(file_unit,*) x,w(i,0)
+         enddo 
+   
+         close(file_unit)
+
+         write(filenamey,'(A,I3.3,A)') 'stepy_',step_number,'.tec'
+
+         file_unit=30
+         !file="output.txt" is an alternative
+         open(unit=file_unit,file=trim(filenamey), &
+                 status="replace",action="write")
+         print *,"filenamey ",filenamey
+         print *,"file_unit=",file_unit
+         print *,"time=",time
+
+         do j=-1,n_cell(2)
+          y=(j+0.5d0)*dx(2)  
+          write(file_unit,*) y,w(0,j)
+         enddo 
+   
+         close(file_unit)
+        else if (polar.eq.1) then
+         !do nothing
+        else
+         print *,"polar invalid"
+         stop
+        endif
+       endif !((step_number/plot_int)*plot_int.eq.step_number) 
 
        step_number=step_number+1
        time=time+dt
@@ -425,6 +531,9 @@
       deallocate(load)
       deallocate(Aw)
       deallocate(resid)
+      deallocate(dvec)
+      deallocate(qvec)
+      deallocate(svec)
       deallocate(diagonal)
       deallocate(lap_w)
 
