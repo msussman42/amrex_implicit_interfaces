@@ -162,7 +162,9 @@
       integer number_steps
       integer plot_int
       integer file_unit
+      integer file_unit_corner
       integer step_number
+      character(len=64) :: filename_corner
       character(len=64) :: filename
       character(len=64) :: filenamex
       character(len=64) :: filenamey
@@ -172,16 +174,20 @@
       density=1.03D0 ! density of PDMS
       H=0.1D0  !thickness=1mm=0.1cm
        !Shear modulus G=E/(2(1+gamma))
-      E=1.0D+7  !Young's modulus 2.5E+6 Pascal=2.5E+7 dyne/cm^2
+      !E=1.0D+7  !Young's modulus 2.5E+6 Pascal=2.5E+7 dyne/cm^2
+      E=0.35D+7  !Young's modulus 2.5E+6 Pascal=2.5E+7 dyne/cm^2
       gamma=0.25D0  !Poisson ratio
        !forward momentum of the drop is defeated in about 4ms
        !drop initial velocity is 72 cm/s
        !drop mass=density * volume
-      drop_stop_time=4.0D-3
+       !We=rho*U^2*D/gamma=1(72^2)*.28/72=20
+       !drop initial velocity is 139 cm/s
+       !We=rho*U^2*D/gamma=1(139^2)*.28/72=74
+      drop_stop_time=4.0D-3 !time of maximum deflection in the experiments
       stop_time=0.03 !30ms
-      number_steps=100
       plot_int=10
       drop_initial_velocity=72.0d0
+!     drop_initial_velocity=139.0d0
       drop_density=1.0d0
       drop_radius=0.28*0.5d0 !2.8 mm diameter
       drop_mass=drop_density*(4.0d0/3.0d0)*my_pi*(drop_radius**3)
@@ -207,21 +213,28 @@
 
       print *,"force ",force
 
-      polar=0 !xy? or r?
+      polar=1 !xy? or r?
       print *,"polar=",polar
 
-      prob_hi(1)=0.5d0*4.0D0 !40 mm/2 (symmetry)
+      prob_hi(1)=0.5d0*2.0D0 !20 mm/2 (symmetry)
+!     prob_hi(1)=0.5d0*4.0D0 !40 mm/2 (symmetry)
       prob_hi(2)=0.5d0*3.2D0 !32 mm/2 (symmetry)
-      n_cell(1)=40 
-      n_cell(2)=32 
-      n_cell_load(1)=4
-      n_cell_load(2)=4
+      number_steps=200
+      n_cell(1)=80
+      n_cell(2)=64
       do dir=1,2
        dx(dir)=prob_hi(dir)/n_cell(dir)
       enddo
+      n_cell_load(1)=NINT(2.0d0*drop_radius/dx(1))
+      n_cell_load(2)=NINT(2.0d0*drop_radius/dx(2))
       ngrow=4
+
+      error_tol=1.0D-8
     
       if (polar.eq.1) then
+       error_tol=error_tol/100000.0D0
+       number_steps=number_steps*2000
+       plot_int=0
        load_area=my_pi*(n_cell_load(1)*dx(1))**2 
        prob_hi(2)=1.0d0
        n_cell(2)=1
@@ -270,7 +283,20 @@
       endif
       acceleration_coefficient=acceleration_coefficient/(dt*dt)
 
+      file_unit_corner=100
+      write(filename_corner,'(A)') 'corner_data'
+      open(unit=file_unit_corner,file=trim(filename_corner), &
+        status="replace",action="write")
+      print *,"filename_corner ",filename_corner
+      print *,"file_unit_corner=",file_unit_corner
+      print *,"time=",time
+      
       do while (step_number.lt.number_steps)
+
+       write(file_unit_corner,*) time,w(0,0),w(n_cell(1)-1,0), &
+        w(0,n_cell(2)-1),w(n_cell(1)-1,n_cell(2)-1)
+
+       w=0.0d0
 
        if (polar.eq.1) then
         do istride=0,3
@@ -349,7 +375,6 @@
        enddo !j
        enddo !i
 
-       error_tol=1.0D-8
        w=0.0d0
        niter=0
 
@@ -386,7 +411,17 @@
         if (denom.gt.0.0) then
          !do nothing
         else
-         print *,"denom invalid"
+         print *,"denom invalid ",denom
+         print *,"delta_new ",delta_new
+         print *,"delta_not ",delta_not
+         print *,"niter= ",niter
+         print *,"dx= ",dx
+         print *,"dt= ",dt
+         print *,"n_cell= ",n_cell
+         print *,"n_cell_load= ",n_cell_load
+         do i=0,n_cell(1)-1
+          print *,"i,diagonal ",i,diagonal(i,0)
+         enddo
          stop
         endif
         alpha=delta_new/denom
@@ -429,88 +464,93 @@
         enddo !j
         enddo !i
 
-        if (100*(niter/100).eq.niter) then
+        if (200*(niter/200).eq.niter) then
          print *,"niter,delta_new,delta_not ",niter,delta_new,delta_not
         endif
         niter=niter+1
        enddo !while delta_new>error_tol**2 * delta_not
+       print *,"niter,delta_new,delta_not ",niter,delta_new,delta_not
 
-       if ((step_number/plot_int)*plot_int.eq.step_number) then
+       if (plot_int.gt.0) then
 
-        write(filename,'(A,I3.3,A)') 'step_',step_number,'.tec'
+        if ((step_number/plot_int)*plot_int.eq.step_number) then
 
-        file_unit=10
-        !file="output.txt" is an alternative
-        open(unit=file_unit,file=trim(filename),status="replace",action="write")
-        print *,"filename ",filename
-        print *,"file_unit=",file_unit
-        print *,"time=",time
+         write(filename,'(A,I3.3,A)') 'step_',step_number,'.tec'
 
-        if (polar.eq.0) then
-         write(file_unit,*) 'VARIABLES="x","y","w"'
-         write(file_unit,*) "zone i= ",n_cell(1)+1," j= ",n_cell(2)+1," f=point"
-         write(file_unit,*) "solutiontime=",time,"strandid=1"
-         do j=0,n_cell(2)
-         do i=0,n_cell(1)
-          x=i*dx(1)  
-          y=j*dx(2) 
-          write(file_unit,*) x,y,0.25d0*(w(i,j)+w(i-1,j-1)+w(i-1,j)+w(i,j-1))
-         enddo 
-         enddo 
-        else if (polar.eq.1) then
-         do i=-1,n_cell(1)
-          x=(i+0.5d0)*dx(1)  
-          write(file_unit,*) x,w(i,0)
-         enddo 
-        else
-         print *,"polar invalid"
-         stop
-        endif
-   
-        close(file_unit)
-
-        if (polar.eq.0) then
-
-         write(filenamex,'(A,I3.3,A)') 'stepx_',step_number,'.tec'
-
-         file_unit=20
+         file_unit=10
          !file="output.txt" is an alternative
-         open(unit=file_unit,file=trim(filenamex), &
-                 status="replace",action="write")
-         print *,"filenamex ",filenamex
+         open(unit=file_unit,file=trim(filename),status="replace",action="write")
+         print *,"filename ",filename
          print *,"file_unit=",file_unit
          print *,"time=",time
 
-         do i=-1,n_cell(1)
-          x=(i+0.5d0)*dx(1)  
-          write(file_unit,*) x,w(i,0)
-         enddo 
-   
+         if (polar.eq.0) then
+          write(file_unit,*) 'VARIABLES="x","y","w"'
+          write(file_unit,*) "zone i= ",n_cell(1)+1," j= ",n_cell(2)+1," f=point"
+          write(file_unit,*) "solutiontime=",time,"strandid=1"
+          do j=0,n_cell(2)
+          do i=0,n_cell(1)
+           x=i*dx(1)  
+           y=j*dx(2) 
+           write(file_unit,*) x,y,0.25d0*(w(i,j)+w(i-1,j-1)+w(i-1,j)+w(i,j-1))
+          enddo 
+          enddo 
+         else if (polar.eq.1) then
+          do i=-1,n_cell(1)
+           x=(i+0.5d0)*dx(1)  
+           write(file_unit,*) x,w(i,0)
+          enddo 
+         else
+          print *,"polar invalid"
+          stop
+         endif
+    
          close(file_unit)
 
-         write(filenamey,'(A,I3.3,A)') 'stepy_',step_number,'.tec'
+         if (polar.eq.0) then
 
-         file_unit=30
-         !file="output.txt" is an alternative
-         open(unit=file_unit,file=trim(filenamey), &
-                 status="replace",action="write")
-         print *,"filenamey ",filenamey
-         print *,"file_unit=",file_unit
-         print *,"time=",time
+          write(filenamex,'(A,I3.3,A)') 'stepx_',step_number,'.tec'
 
-         do j=-1,n_cell(2)
-          y=(j+0.5d0)*dx(2)  
-          write(file_unit,*) y,w(0,j)
-         enddo 
-   
-         close(file_unit)
-        else if (polar.eq.1) then
-         !do nothing
-        else
-         print *,"polar invalid"
-         stop
-        endif
-       endif !((step_number/plot_int)*plot_int.eq.step_number) 
+          file_unit=20
+          !file="output.txt" is an alternative
+          open(unit=file_unit,file=trim(filenamex), &
+                  status="replace",action="write")
+          print *,"filenamex ",filenamex
+          print *,"file_unit=",file_unit
+          print *,"time=",time
+
+          do i=-1,n_cell(1)
+           x=(i+0.5d0)*dx(1)  
+           write(file_unit,*) x,w(i,0)
+          enddo 
+    
+          close(file_unit)
+
+          write(filenamey,'(A,I3.3,A)') 'stepy_',step_number,'.tec'
+
+          file_unit=30
+          !file="output.txt" is an alternative
+          open(unit=file_unit,file=trim(filenamey), &
+                  status="replace",action="write")
+          print *,"filenamey ",filenamey
+          print *,"file_unit=",file_unit
+          print *,"time=",time
+
+          do j=-1,n_cell(2)
+           y=(j+0.5d0)*dx(2)  
+           write(file_unit,*) y,w(0,j)
+          enddo 
+    
+          close(file_unit)
+         else if (polar.eq.1) then
+          !do nothing
+         else
+          print *,"polar invalid"
+          stop
+         endif
+        endif !((step_number/plot_int)*plot_int.eq.step_number) 
+
+       endif !plot_int>0
 
        step_number=step_number+1
        time=time+dt
@@ -521,9 +561,10 @@
         w_m1(i,j)=w(i,j)
        enddo !j
        enddo !i
-       w=0.0d0
 
       enddo  ! do while (step_number.lt.number_steps)
+
+      close(file_unit_corner)
 
       deallocate(w)
       deallocate(w_m1)
