@@ -1,4 +1,4 @@
-# Seungwon Shin, Jalel Chergui, Damir Juric
+# 1. Seungwon Shin, Jalel Chergui, Damir Juric
 # radius=0.6 cm
 # y_c=7.2cm
 # drop_bottom=6.6cm
@@ -11,6 +11,11 @@
 # 0.5 (980)t^2 = .6  t=sqrt(1.2/980)=0.035
 # impact velocity=980 * 0.035=34.3 cm/s
 # scale the elastic tensor: det(B)=I
+# 2. InstantaneousInterfaceFreezing2026.pdf
+#  Puhang Jin, Yuqiao Chen, Jiale Sun, Zhiming Tan, Wanqing Zhao
+#  Applied Thermal Engineering 284 (2026)
+#  Figure 4(C) and Figure 7 Lower Right corner
+#  just above section 2.2: droplet diameter=2.5mm=0.25cm
 max_step  = 999999   # maximum timestep 
 stop_time=10000.0
 
@@ -39,7 +44,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=4  # 1=drop material 2=gas material 3=substrate 4=ice
-ns.extrapolate_elastic_velocity=0
+ns.extrapolate_elastic_velocity=1
 ns.num_divu_outer_sweeps=1
 ns.num_species_var=0
 #0=MOF (moment of fluid)
@@ -75,7 +80,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 8       # block factor in grid generation
+amr.blocking_factor = 8 8 8 8       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50     # 200 for production runs
@@ -84,8 +89,8 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 256
-cg.min_max_grid_size=256
+amr.max_grid_size   = 32
+cg.min_max_grid_size=32
 cg.force_ILU_smoother_single_grid=1
 Lp.smooth_type=1
 Lp.bottom_smooth_type=1
@@ -102,9 +107,9 @@ ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01     
 ns.visc_coef=1.0 
-mac.visc_abs_tol   = 1.0e-12
+mac.visc_abs_tol = 1.0e-12
 ns.gravity=0.0  
-#ns.gravity        = -980.0  
+#ns.gravity = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 65 degrees=>sigma_{SV}=sigma_{LV}(1+cos(65))=104
 # 10 degrees=>sigma_{SV}=sigma_{LV}(1+cos(10))=145
@@ -144,11 +149,11 @@ ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
 ns.yblob=0.425
 ns.zblob=0.425
+ns.radblob=0.125 # cm
 ns.xblob2=0.0  #center of plate
 ns.yblob2=0.15  #center of plate
 ns.radblob2=0.5 # radius in "x" direction of plate
 ns.radblob3=0.1 # radius in "y" direction of plate
-ns.radblob=0.125
 ns.xblob3=0.0 #center of ice
 ns.yblob3=0.27
 ns.radblob4=0.5 # radius in "x" direction of ice
@@ -176,8 +181,8 @@ ns.repair_mass=1 0 0 1
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 #ns.lax_friedrichs=0.0 0.0 1.0 1.0 #EULERIAN FSI
-ns.lax_friedrichs=0.0 0.0 0.0 1.0 #RIGID prescribed
-ns.lax_friedrichs_energy=1.0 1.0 1.0 1.0
+ns.lax_friedrichs=0.0 0.0 0.0 0.0 #RIGID prescribed
+ns.lax_friedrichs_energy=0.0 0.0 0.0 0.0
 ns.heatviscconst=0.58e+5 0.024e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
 ns.stiffCV = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)

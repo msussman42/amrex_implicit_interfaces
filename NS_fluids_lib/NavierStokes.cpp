@@ -5195,6 +5195,7 @@ NavierStokes::read_params ()
     } else if (num_divu_outer_sweeps==1) {
      ncell_mdot_shift=2;
     } else {
+     std::cout << "num_divu_outer_sweeps= " << num_divu_outer_sweeps << '\n';
      amrex::Error("num_divu_outer_sweeps invalid");
     }
 
@@ -5255,8 +5256,10 @@ NavierStokes::read_params ()
       amrex::Error("expecting ncell_mdot_shift=2 if num_divu_outer_sweeps>1");
     } else if (num_divu_outer_sweeps==1) {
      //do nothing
-    } else
+    } else {
+     std::cout << "num_divu_outer_sweeps= " << num_divu_outer_sweeps << '\n';
      amrex::Error("num_divu_outer_sweeps invalid");
+    }
      
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))

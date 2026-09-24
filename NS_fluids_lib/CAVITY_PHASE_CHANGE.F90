@@ -3252,7 +3252,7 @@ if (probtype.eq.710) then
    STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
 
    if (axis_dir.eq.8) then  ! axis_dir is cavity_type
-    if (t.eq.zero) then
+    if (t.ge.zero) then
      if(x(SDIM).lt.zblob2)then   ! (zblob2,xblob2)heater
        STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
      elseif(x(SDIM).le.xblob2)then
@@ -3268,8 +3268,6 @@ if (probtype.eq.710) then
       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
 !      STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
      endif
-    elseif(t.gt.zero)then
-      ! do nothing 
     else
      print *,"t invalid"
      stop

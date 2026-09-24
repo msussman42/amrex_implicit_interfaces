@@ -49,7 +49,8 @@ real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
 real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 integer, parameter :: im_solid=3
 
- if (num_materials.ge.im_solid) then
+ if ((num_materials.eq.im_solid).or. &
+     (num_materials.eq.im_solid+1)) then
 
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    !CTML takes care of this.
@@ -126,7 +127,7 @@ real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
 real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the ice
 integer, parameter :: im_ice=4
 
- if (num_materials.ge.im_ice) then
+ if (num_materials.eq.im_ice) then
 
   if (FSI_flag(im_ice).eq.FSI_ICE_EULERIAN_ELASTIC) then
 
@@ -191,7 +192,9 @@ IMPLICIT NONE
    stop
   endif
 
-if ((num_materials.ge.3).and.(probtype.eq.2000)) then
+if (((num_materials.eq.im_solid).or. &
+     (num_materials.eq.im_solid+1)).and. &
+    (probtype.eq.2000)) then
 
  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
@@ -259,7 +262,12 @@ if ((num_materials.ge.3).and.(probtype.eq.2000)) then
    print *,"FSI_flag(num_materials) invalid"
    stop
   endif
-
+ 
+ else if (num_materials.eq.3) then
+  !do nothing
+ else
+  print *,"num_materials invalid ",num_materials
+  stop
  endif
 
 else
@@ -331,7 +339,8 @@ if (probtype.eq.2000) then
 
  temperature=fort_tempconst(num_materials)
 
- if (num_materials.ge.im_solid) then
+ if ((num_materials.eq.im_solid).or. &
+     (num_materials.eq.im_solid+1)) then
 
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    LS=-99999.0d0
@@ -452,7 +461,13 @@ if (probtype.eq.2000) then
     endif
 
    endif !LS_A<=0 and LS_B<=0 ?
-  endif !num_materials==4?
+
+  else if (num_materials.eq.3) then
+   !do nothing
+  else
+   print *,"num_materials invalid ",num_materials
+   stop
+  endif 
 
  else
   print *,"num_materials invalid: ",num_materials
@@ -661,7 +676,8 @@ else
  stop
 endif
 
-if ((num_materials.ge.3).and. &
+if (((num_materials.eq.3).or. &
+     (num_materials.eq.4)).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.2000)) then
  do im=1,num_materials
@@ -680,7 +696,8 @@ if ((num_materials.ge.3).and. &
   enddo
  enddo ! im=1..num_materials
 else
- print *,"num_materials,num_state_material, or probtype invalid"
+ print *,"num_materials,num_state_material, or probtype invalid ", &
+   num_materials,num_state_material,probtype
  stop
 endif
  
@@ -879,10 +896,12 @@ else
  stop
 endif
 
-if ((num_materials.ge.3).and.(probtype.eq.2000)) then
+if (((num_materials.eq.3).or. &
+     (num_materials.eq.4)).and. &
+    (probtype.eq.2000)) then
  heat_source=zero
 else
- print *,"num_materials or probtype invalid"
+ print *,"num_materials or probtype invalid ",num_materials,probtype
  stop
 endif
 
@@ -935,7 +954,8 @@ else
  stop
 endif
 
-if ((num_materials.ge.3).and. &
+if (((num_materials.eq.3).or. &
+     (num_materials.eq.4)).and. &
     (num_state_material.ge.2).and. & 
     (probtype.eq.2000)) then
 
@@ -1082,7 +1102,8 @@ if ((num_materials.ge.3).and. &
  endif
 
 else
- print *,"num_materials,num_state_material, or probtype invalid"
+ print *,"num_materials,num_state_material, or probtype invalid ", &
+    num_materials,num_state_material,probtype
  stop
 endif
 
@@ -1142,7 +1163,8 @@ do dir=1,SDIM
  endif
 enddo !dir=1..sdim
 
-if ((num_materials.ge.3).and. &
+if (((num_materials.eq.3).or. &
+     (num_materials.eq.4)).and. &
     (probtype.eq.2000)) then
 
  rflag=0.0d0
