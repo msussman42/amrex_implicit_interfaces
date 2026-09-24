@@ -1,4 +1,4 @@
-# Seungwon Shin, Jalel Chergui, Damir Juric
+# 1. Seungwon Shin, Jalel Chergui, Damir Juric
 # radius=0.6 cm
 # y_c=7.2cm
 # drop_bottom=6.6cm
@@ -7,17 +7,26 @@
 # rho_plate=1.5 g/cm^3
 # rho_water=1.0 g/cm^3
 # rho_air=0.001 g/cm^3
-# G=4E+5 PA=4E+6 Barye          1PA=1 N/m^2=1 kg/(m s^2)=10 g/(cm s^2)
+# G=4E+5 PA=4E+6 Barye 1PA=1 N/m^2=1 kg/(m s^2)=10 g/(cm s^2)
 # 0.5 (980)t^2 = .6  t=sqrt(1.2/980)=0.035
 # impact velocity=980 * 0.035=34.3 cm/s
 # scale the elastic tensor: det(B)=I
+# 2. Jeong-Hyun Kim, Jonathan Rothstein, Jessica Shang
+#    Dynamics of a flexible superhydrophobic surface during a
+#    drop impact
+#    Physics of Fluids 2018
+#    Drop_impact_Flexible_Plate2018.pdf
+#    B. Deflection setup: 40mm long, 32 mm wide, 1mm thick, clamped on two
+#       sides.
+#    D. Drop impact setup: D0=2.8mm
 max_step  = 999999   # maximum timestep 
 stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
 geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  6.0 12.0  #CGS
+geometry.prob_hi   =  1.5 1.5  #CGS
+#geometry.prob_hi   =  6.0 12.0  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -45,12 +54,12 @@ ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)
 ns.continuous_mof=1
-# 1=EI - LE
 ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
 ns.coarsest_level_CISL=0
-amr.n_cell=64 128
+amr.n_cell=64 64
+#amr.n_cell=64 128
 amr.max_level=0
 ns.ngrow_distance=6
 ns.ngrow_elastic=4.0
@@ -83,8 +92,8 @@ ns.step_through_data=0
 ns.visual_nddata_format=0 #0=tecplot nodes  1=native or HDF5 2=tecplot cells
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 256
-cg.min_max_grid_size=256
+amr.max_grid_size   = 32
+cg.min_max_grid_size=32
 cg.force_ILU_smoother_single_grid=1
 Lp.smooth_type=1
 Lp.bottom_smooth_type=1
@@ -101,15 +110,18 @@ ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01     
 ns.visc_coef=1.0 
-mac.visc_abs_tol   = 1.0e-12
+mac.visc_abs_tol = 1.0e-12
 ns.gravity=0.0  
 #ns.gravity        = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SV}=sigma_{SL}+sigma_{LV}cos(theta)
 # 90 degrees=>sigma_{SV}=sigma_{SL}=sigma_{LV} 
 # 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
-ns.tension=73.0 73.0 0.0 #180 degrees
+#ns.tension=73.0 73.0 47.4 #110 degrees
+ns.tension=73.0 73.0 9.8 #150 degrees
+#ns.tension=73.0 73.0 0.0 #180 degrees
 ns.density_ratio_relaxation_factor=100.0 100.0 10000.0
 
 ns.min_velocity_for_dt=1.0e-5
@@ -134,17 +146,24 @@ ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
-ns.advbot=34.3 # cm/s
+ns.advbot=72.0 # cm/s (We=20)
+#ns.advbot=34.3 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
-ns.yblob=7.2
-ns.zblob=7.2  
+ns.yblob=0.5
+ns.zblob=0.5
+#ns.yblob=7.2
+#ns.zblob=7.2  
 ns.xblob2=0.0  #center of plate
-ns.yblob2=5.8
-ns.radblob2=4.0 # radius in "x" direction of plate
-ns.radblob3=0.2 # radius in "y" direction of plate
-ns.radblob=0.6 
+ns.yblob2=0.2
+#ns.yblob2=5.8
+ns.radblob=0.14 #D0=2.8mm
+ns.radblob2=1.0 # radius in "x" direction of plate
+ns.radblob3=0.05 # radius in "y" direction of plate (1mm thick)
+#ns.radblob=0.6 
+#ns.radblob2=4.0 # radius in "x" direction of plate
+#ns.radblob3=0.2 # radius in "y" direction of plate
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
@@ -166,10 +185,15 @@ ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.lax_friedrichs=0.0 0.0 1.0 
-ns.lax_friedrichs_energy=1.0 1.0 1.0
+ns.lax_friedrichs=0.0 0.0 0.0 
+ns.lax_friedrichs_energy=0.0 0.0 0.0
 ns.heatviscconst=0.0 0.0 0.0
-ns.elastic_viscosity=0.0 0.0 3.0e+6 #shear modulus of rubber dyne/cm^2
+#E=Young's modulus=2.5MPA=25E+6 Barye
+#G=E/(2(1+nu))=25E+6/(2 * 5/4)=10E+6 Barye (nu=0.25)
+#ns.elastic_viscosity=0.0 0.0 10.0e+6  # shear modulus of PDMS
+#calibration:
+ns.elastic_viscosity=0.0 0.0 1.0e+6  # shear modulus of PDMS
+#ns.elastic_viscosity=0.0 0.0 3.0e+6 #shear modulus of rubber dyne/cm^2
 ns.elastic_time=0.0 0.0 1.0e+31
 ns.polymer_factor=0.0 0.0 0.0 #1/L
 #0=FENE-CR
@@ -184,7 +208,8 @@ ns.rest_fraction=0.0 #prevent CPU overheating?
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 ns.viscconst=0.01 0.000181 0.01 #CGS
-ns.denconst=1.0 0.001225 1.5
+ns.denconst=1.0 0.001225 1.0
+#ns.denconst=1.0 0.001225 1.5
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
