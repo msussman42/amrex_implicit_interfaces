@@ -11624,6 +11624,16 @@ void NavierStokes::LSA_default_eigenvector(
 
  int finest_level=parent->finestLevel();
 
+ if (parent->LSA_current_step==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting parent->LSA_current_step==0");
+
+ if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+  //do nothing
+ } else
+  amrex::Error("expecting parent->levelSteps(0)==parent->LSA_max_step-1");
+
  int local_control_flag=NULL_CONTROL;
  int local_extra_comp=-1;
 
@@ -11736,6 +11746,21 @@ void NavierStokes::LSA_default_eigenvector(
 void NavierStokes::LSA_default_eigenvectorALL(
  int unperturb_extra_comp,int extra_comp) {
 
+ if (parent->LSA_current_step==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting parent->LSA_current_step==0");
+
+ if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+  //do nothing
+ } else
+  amrex::Error("expecting parent->levelSteps(0)==parent->LSA_max_step-1");
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid LSA_default_eigenvectorALL");
+
  int finest_level=parent->finestLevel();
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -11753,6 +11778,18 @@ void NavierStokes::LSA_eigenvector(
  int unperturb_extra_comp,int extra_comp) {
 
  std::string local_caller_string="LSA_eigenvector";
+
+ if ((parent->LSA_current_step>=1)&&
+     (parent->LSA_current_step<=
+      parent->LSA_nsteps_krylov_subspace_method)) {
+  //do nothing
+ } else
+  amrex::Error("parent->LSA_current_step invalid in LSA_eigenvector");
+
+ if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+  //do nothing
+ } else
+  amrex::Error("parent->levelSteps(0)==parent->LSA_max_step-1 failed");
 
  int local_control_flag=NULL_CONTROL;
  int local_extra_comp=-1;
@@ -11820,7 +11857,35 @@ void NavierStokes::LSA_eigenvector(
 void NavierStokes::LSA_eigenvectorALL(
  int unperturb_extra_comp,int extra_comp) {
 
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "LSA_eigenvectorALL\n";
+  std::cout << "parent->LSA_current_step=" << 
+	parent->LSA_current_step << '\n';
+  std::cout << "parent->levelSteps(0) " << 
+	parent->levelSteps(0) << '\n';
+  std::cout << "parent->LSA_max_step " << 
+	parent->LSA_max_step << '\n';
+ }
+
+ if ((parent->LSA_current_step>=1)&&
+     (parent->LSA_current_step<=
+      parent->LSA_nsteps_krylov_subspace_method)) {
+  //do nothing
+ } else
+  amrex::Error("parent->LSA_current_step invalid in LSA_eigenvectorALL");
+
+ if (parent->levelSteps(0)==parent->LSA_max_step-1) {
+  //do nothing
+ } else
+  amrex::Error("parent->levelSteps(0)==parent->LSA_max_step-1 failed");
+
  int finest_level=parent->finestLevel();
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid LSA_eigenvectorALL");
+ 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.LSA_eigenvector(

@@ -1889,7 +1889,7 @@ void NavierStokes::init_delta_SDC() {
  } else
   amrex::Error("ns_time_order or enable_spectral invalid");
 
-}  // subroutine init_delta_SDC
+}  // end subroutine init_delta_SDC
 
 //called from AmrCore::timeStep
 Real NavierStokes::advance(Real time,Real dt) {

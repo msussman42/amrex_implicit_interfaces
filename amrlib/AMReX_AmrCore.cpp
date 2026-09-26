@@ -1377,9 +1377,25 @@ AmrCore::checkPoint ()
 
  const std::string ckfile=ckfileLSA;
 
+ int local_verbose=verbose;
+
+ if ((LSA_activate>0)||
+     (LSA_nsteps_krylov_subspace_method>0)) {
+  if (local_verbose==0) {
+   local_verbose=1;
+  } else if (local_verbose>0) {
+   //do nothing
+  } else
+   amrex::Error("local_verbose invalid");
+ } else if ((LSA_activate==0)&&
+   	    (LSA_nsteps_krylov_subspace_method==0)) {
+  //do nothing
+ } else
+  amrex::Error("LSA_activate or LSA_nsteps_krylov_subspace_method invalid");
+
  std::string FullPathName=ckfile;
 
- if (verbose > 0 && ParallelDescriptor::IOProcessor())
+ if (local_verbose > 0 && ParallelDescriptor::IOProcessor())
      std::cout << "CHECKPOINT: file = " << ckfile << std::endl;
 
  if (record_run_info && ParallelDescriptor::IOProcessor())
@@ -1484,7 +1500,7 @@ AmrCore::checkPoint ()
  //
  FArrayBox::setFormat(thePrevFormat);
 
- if (verbose > 0) {
+ if (local_verbose > 0) {
   double dCheckPointTime = ParallelDescriptor::second() - dCheckPointTime0;
 
   ParallelDescriptor::ReduceRealMax(dCheckPointTime,
@@ -1496,7 +1512,8 @@ AmrCore::checkPoint ()
   }
  }
  ParallelDescriptor::Barrier();
-}
+
+} //end subroutine AmrCore::checkPoint
 
 
 void
