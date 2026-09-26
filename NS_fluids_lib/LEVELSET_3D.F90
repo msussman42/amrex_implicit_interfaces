@@ -5787,6 +5787,8 @@ stop
                     else
                      print *,"blob_mass_target must be non-negative ", &
                           blob_mass_target
+                     print *,"im (1..nmat) = ",im
+                     print *,"opposite_color(im) ",opposite_color(im)
                      stop
                     endif
                    else

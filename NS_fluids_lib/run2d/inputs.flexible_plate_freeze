@@ -22,7 +22,7 @@ stop_time=10000.0
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
 geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  0.6 0.6  #CGS
+geometry.prob_hi   =  0.525 0.525  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -147,15 +147,16 @@ ns.advbot=188.0 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
-ns.yblob=0.425
-ns.zblob=0.425
+ns.yblob=0.325
+ns.zblob=0.325
 ns.radblob=0.125 # cm
+# top of plate at y(or z)=0.15
 ns.xblob2=0.0  #center of plate
-ns.yblob2=0.15  #center of plate
+ns.yblob2=0.1  #center of plate
 ns.radblob2=0.5 # radius in "x" direction of plate
-ns.radblob3=0.1 # radius in "y" direction of plate
+ns.radblob3=0.05 # radius in "y" direction of plate
 ns.xblob3=0.0 #center of ice
-ns.yblob3=0.27
+ns.yblob3=0.17
 ns.radblob4=0.5 # radius in "x" direction of ice
 ns.radblob5=0.02 # radius in "y" direction of ice
 ns.denfact=1.0
@@ -176,12 +177,12 @@ ns.material_conservation_form=0 0 0 0
 # 10 EULERIAN FSI ICE
 #ns.FSI_flag=0 0 8 10 #Eulerian FSI
 ns.FSI_flag=0 0 1 10 #RIGID prescribed
-ns.repair_mass=1 0 0 1 
+ns.repair_mass=1 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
 #ns.lax_friedrichs=0.0 0.0 1.0 1.0 #EULERIAN FSI
-ns.lax_friedrichs=0.0 0.0 0.0 0.0 #RIGID prescribed
+ns.lax_friedrichs=0.0 0.0 0.0 1.0 #RIGID prescribed
 ns.lax_friedrichs_energy=0.0 0.0 0.0 0.0
 ns.heatviscconst=0.58e+5 0.024e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
