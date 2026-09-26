@@ -71,6 +71,7 @@ amr.n_cell    = 32 256
 #amr.max_level = 3
 amr.max_level = 0  #maximum number of AMR levels (0 if just the coarse level)
 ns.projection_pressure_scale=1.0
+ns.ns_tiling=false
 
 #defines the magnitude of the initial perturbation for velocity
 #for the first member of the Krylov Subspace basis v_{1}

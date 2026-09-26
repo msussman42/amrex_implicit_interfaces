@@ -23121,6 +23121,7 @@ stop
        !do nothing
       else
        print *,"ngrow_elastic invalid: ",ngrow_elastic
+       print *,"ngrow_make_distance: ",ngrow_make_distance
        stop
       endif
 

@@ -11746,6 +11746,16 @@ void NavierStokes::LSA_default_eigenvector(
 void NavierStokes::LSA_default_eigenvectorALL(
  int unperturb_extra_comp,int extra_comp) {
 
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "LSA_defaut_eigenvectorALL\n";
+  std::cout << "parent->LSA_current_step=" << 
+	parent->LSA_current_step << '\n';
+  std::cout << "parent->levelSteps(0) " << 
+	parent->levelSteps(0) << '\n';
+  std::cout << "parent->LSA_max_step " << 
+	parent->LSA_max_step << '\n';
+ }
+
  if (parent->LSA_current_step==0) {
   //do nothing
  } else
