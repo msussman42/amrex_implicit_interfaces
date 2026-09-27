@@ -304,6 +304,7 @@ int NavierStokes::visual_compare=0;
 // IntVect visual_fab_hi(visual_ncell); 
 Vector<int> NavierStokes::visual_ncell;
 
+// int nslice=domhi_finest[slice_dir]-domlo_finest[slice_dir]+3;
 // 0..sdim-1
 int NavierStokes::slice_dir=0;
 Vector<Real> NavierStokes::xslice;
@@ -3475,6 +3476,16 @@ NavierStokes::read_params ()
      if (tessellate_elastic_separately[i]>0)
       tessellate_elastic_separately_flag=i+1;
     }
+
+    if (tessellate_elastic_separately_flag==0) {
+     //do nothing
+    } else if (tessellate_elastic_separately_flag>0) {
+     if (extrapolate_elastic_velocity==1) {
+      //do nothing
+     } else 
+      amrex::Error("extrapolate_elastic_velocity invalid");
+    } else
+     amrex::Error("tessellate_elastic_separately_flag invalid");
 
     pp.getarr("material_type",material_type,0,num_materials);
 

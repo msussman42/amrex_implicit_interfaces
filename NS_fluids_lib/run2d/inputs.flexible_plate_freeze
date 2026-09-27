@@ -118,7 +118,8 @@ ns.gravity=0.0
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
 #12 13 14 23 24 34
-ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice.
+#ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice,293
+ns.tension=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
 ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0
 
 ns.min_velocity_for_dt=1.0e-5
@@ -215,7 +216,7 @@ ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.viscconst=0.01 0.000181 1.0 1.0 #CGS
+ns.viscconst=0.17 0.000181 1.0 1.0 #CGS 240
 ns.denconst=1.0 0.001225 1.0 0.917
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # solidheat_flag=0=>diffuse in solid 
