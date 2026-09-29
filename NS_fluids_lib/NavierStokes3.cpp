@@ -1599,6 +1599,7 @@ void NavierStokes::tensor_advection_updateALL() {
         // extend_FSI_data is declared in NavierStokes3.cpp
 	// extend_FSI_data calls fort_extend_elastic_velocity
         // fort_extend_elastic_velocity is declared in: LEVELSET_3D.F90
+        // "closest node extrapolation"
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
         int local_tensor_extend=1;
@@ -1742,6 +1743,9 @@ void NavierStokes::tensor_advection_updateALL() {
 
   } //im=0...nmat-1
 
+   //tensor_extrapolationALL -> tensor_extrapolation (NavierStokes.cpp)
+   //tensor_extrapolation -> fort_extrapolate_tensor (GODUNOV_3D.F90)
+   //weight=1/d^{2}
   tensor_extrapolationALL();
 
  } else if (num_materials_viscoelastic==0) {
