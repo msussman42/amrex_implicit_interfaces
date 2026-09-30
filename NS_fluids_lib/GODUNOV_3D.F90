@@ -24851,6 +24851,7 @@ stop
          !do nothing
         else
          print *,"test_LS ??? ",testLS
+         print *,"dxmax= ",dxmax
          stop
         endif
 
@@ -24862,12 +24863,14 @@ stop
           ! do nothing
          else
           print *,"test_max,local_max? ",test_max,local_max
+          print *,"dxmax ",dxmax
           stop
          endif
         else if (testLS.gt.dxmax) then
          !do nothing
         else
          print *,"testLS invalid: ",testLS
+         print *,"dxmax ",dxmax
          stop
         endif
 

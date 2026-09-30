@@ -2374,6 +2374,8 @@ stop
        ! do nothing
       else
        print *,"num_interfaces<>ccnten"
+       print *,"num_interfaces=",num_interfaces
+       print *,"ccnten= ",ccnten
        stop
       endif
 
@@ -2418,7 +2420,8 @@ stop
       
       num_state_base=ccnum_state_base
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid 60"
+       print *,"num_state_base invalid fort_override_MAIN_GLOBALS ", &
+               num_state_base
        stop
       endif
       num_state_material=num_state_base  ! den,T
@@ -2426,6 +2429,8 @@ stop
       
       if (num_state_material.ne.ccnum_state_material) then
        print *,"ccnum_state_material invalid"
+       print *,"num_state_material=",num_state_material
+       print *,"ccnum_state_material=",ccnum_state_material
        stop
       endif
       
@@ -2447,11 +2452,11 @@ stop
       ngeom_recon=ccngeom_recon
       
       if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid"
+       print *,"ngeom_recon invalid ",ngeom_recon
        stop
       endif
       if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid"
+       print *,"ngeom_raw invalid ",ngeom_raw
        stop
       endif
      
@@ -2495,7 +2500,7 @@ stop
       else if (ioproc.eq.0) then
        ! do nothing
       else
-       print *,"ioproc invalid"
+       print *,"ioproc invalid ",ioproc
        stop
       endif
       

@@ -113,11 +113,12 @@ fork_job(int fork_id) {
  ParmParse ppamr("amr");
  ParmParse ppns("ns");
 
-  // LSA = Linear Stability Analysis
-  // ABEL OKOJUNU
-  // LSA_nsteps_krylov_subspace_method=number of krylov_subspace method iterations.
+// LSA = Linear Stability Analysis
+// ABEL OKOJUNU
+// LSA_nsteps_krylov_subspace_method=number of krylov_subspace method iterations.
  int local_LSA_nsteps_krylov_subspace_method=0;
- ppamr.queryAdd("LSA_nsteps_krylov_subspace_method",local_LSA_nsteps_krylov_subspace_method);
+ ppamr.queryAdd("LSA_nsteps_krylov_subspace_method",
+   local_LSA_nsteps_krylov_subspace_method);
  if (local_LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
  } else
@@ -126,10 +127,11 @@ fork_job(int fork_id) {
  int local_LSA_activate=0;
  ppamr.queryAdd("LSA_activate",local_LSA_activate);
  if ((local_LSA_activate==0)||
-     (local_LSA_activate==1)) {
+     (local_LSA_activate==1)||
+     (local_LSA_activate==2)) {
   //do nothing
  } else
-  amrex::Error("expecting local_LSA_activate=0,1");
+  amrex::Error("expecting local_LSA_activate=0,1,2");
 
  int local_LSA_initial_levelSteps=0;
  ppamr.queryAdd("LSA_initial_levelSteps",local_LSA_initial_levelSteps);
@@ -190,7 +192,22 @@ fork_job(int fork_id) {
   if (!local_restart_file.empty() && local_restart_file != "init") {
    //do nothing
   } else
-   amrex::Error("Power method LSA requires restart from base state");
+   amrex::Error("Krylov Subspace method LSA requires restart from base state");
+
+ } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
+            (local_LSA_activate==2)) {
+
+  if (max_step>=1) {
+   //do nothing
+  } else
+   amrex::Error("expecting 1<=max_step");
+
+  std::string local_restart_file;
+  ppamr.queryAdd("restart",local_restart_file);
+  if (!local_restart_file.empty() && local_restart_file != "init") {
+   //do nothing
+  } else
+   amrex::Error("Krylov Subspace method activate=2 requires restart from V1");
 
  } else {
   std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
@@ -218,6 +235,7 @@ fork_job(int fork_id) {
  }
 
   // NavierStokes.cpp (fortran_parameters) ->
+  // PROB_CPP_PARMS.F90 (fort_override_MAIN_GLOBALS) ->
   // PROB_CPP_PARMS.F90 (fort_override) ->
   // PROB_CPP_PARMS.F90 (SUB_INIT_MODULE) 
  fortran_parameters();
@@ -467,7 +485,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial September 29, 2026, 6:00pm on proc " << 
+	"Multimaterial September 30, 2026, 6:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

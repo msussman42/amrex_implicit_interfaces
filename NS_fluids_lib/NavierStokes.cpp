@@ -1951,6 +1951,7 @@ void fortran_parameters() {
 
  const int cc_int_size=sizeof(int);
 
+  // calling from: "fortran_parameters"
   // declared in PROB_CPP_PARMS.F90
  num_prior_calls=0;
  fort_override_MAIN_GLOBALS(
@@ -2173,6 +2174,7 @@ void fortran_parameters() {
 
  ParallelDescriptor::Barrier();
 
+  // calling from: "fortran_parameters"
   // declared in PROB_CPP_PARMS.F90
  num_prior_calls=1;
  fort_override_MAIN_GLOBALS(
@@ -2195,6 +2197,7 @@ void fortran_parameters() {
 
  double start_initialization = ParallelDescriptor::second();
 
+  // calling from: "fortran_parameters"
   // declared in PROB_CPP_PARMS.F90
  fort_override(
   &cc_int_size,
@@ -11591,6 +11594,8 @@ void NavierStokes::LSA_levelset_norminf(
 
 
    // in: GODUNOV_3D.F90
+   //1. if |LS_unperturbed|>3 dx then LS_perturbed=0
+   //2. if |LS_unperturbed|<dx then LS_max=max(LS_max,LS_perturbed)
   fort_LS_evec_max( 
    &level,
    &finest_level,
@@ -11906,7 +11911,9 @@ void NavierStokes::LSA_eigenvectorALL(
   //do nothing
  } else
   amrex::Error("level invalid LSA_eigenvectorALL");
- 
+
+  //subtract the "unperturbed advanced base state" from the  
+  //"perturbed advanced base state'"
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.LSA_eigenvector(
@@ -11918,10 +11925,13 @@ void NavierStokes::LSA_eigenvectorALL(
 
 } //end subroutine LSA_eigenvectorALL
 
+//isweep==0 => find infinity norms
+//isweep==1 => normalize and scale
 void NavierStokes::LSA_normalize_eigenvector(
-  int unperturb_extra_comp,int extra_comp,
-  Vector<Real>& cell_max,
-  Vector<Real>& LS_cell_max,
+  int unperturb_extra_comp,
+  int extra_comp,
+  Vector<Real>& cell_max, //infinity norm
+  Vector<Real>& LS_cell_max, //infinity norm in narrow band
   int isweep,
   int caller_id) {
 
@@ -11967,6 +11977,7 @@ void NavierStokes::LSA_normalize_eigenvector(
  } else
   amrex::Error("unperturb_extra_comp invalid");
 
+  //destination
  MultiFab& S_extra_comp=get_new_data(State_Type,ns_time_order+extra_comp+1);
  MultiFab& LS_extra_comp=get_new_data(LS_Type,ns_time_order+extra_comp+1);
 
@@ -11974,6 +11985,16 @@ void NavierStokes::LSA_normalize_eigenvector(
   //do nothing
  } else
   amrex::Error("cell_max.size()==S_extra_comp.nComp() failed");
+
+ if (cell_max.size()==STATE_NCOMP) {
+  //do nothing
+ } else
+  amrex::Error("cell_max.size()==STATE_NCOMP failed");
+
+ if (LS_extra_comp.nComp()==num_materials*(1+AMREX_SPACEDIM)) {
+  //do nothing
+ } else
+  amrex::Error("LS_extra_comp.nComp()==nmat*(1+AMREX_SPACEDIM) failed");
 
  if (LS_cell_max.size()==num_materials) {
   //do nothing
@@ -11995,10 +12016,12 @@ void NavierStokes::LSA_normalize_eigenvector(
    //velocity_scale=1.0
   scale_parm[dir]=velocity_scale;
  }
+
  for (int im=0;im<num_materials;im++) {
   scale_parm[STATECOMP_STATES+
     im*num_state_material+ENUM_TEMPERATUREVAR]=1.0;
  } //im=0 .. nmat-1
+
  for (int im=0;im<num_materials;im++) {
   LS_scale_parm[im]=2.0*dx_finest[0];
  }
@@ -12013,6 +12036,7 @@ void NavierStokes::LSA_normalize_eigenvector(
   }
  }
 
+ //isweep==0 => find infinity norms
  if (isweep==0) {
 
   for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
@@ -12037,6 +12061,9 @@ void NavierStokes::LSA_normalize_eigenvector(
   for (int scomp_loop=0;scomp_loop<num_materials;scomp_loop++) {
 
    Real local_max=0.0;
+    //calls fort_LS_evec_max (GODUNOV_3D.F90)
+    //1. if |LS_unperturbed|>3 dx then LS_perturbed=0
+    //2. if |LS_unperturbed|<dx then LS_max=max(LS_max,LS_perturbed)
    LSA_levelset_norminf(scomp_loop,unperturb_extra_comp,extra_comp,local_max);
 
    if (1==1) {
@@ -12047,6 +12074,7 @@ void NavierStokes::LSA_normalize_eigenvector(
 
   } //scomp_loop=0;scomp_loop<num_materials
 
+  //isweep==1: scale velocity, temperature, level set(s)
  } else if (isweep==1) {
 
   for (int scomp_loop=0;scomp_loop<S_extra_comp.nComp();scomp_loop++) {
@@ -12059,14 +12087,16 @@ void NavierStokes::LSA_normalize_eigenvector(
 
     //Peter Schmid
     //"Dynamic mode decomposition of numerical and experimental data"
-    //create "v_{1}" in the Krylov Subspace
-   if (caller_id==FROM_default_eigenvectorALL) {
+    //create "A^{j}v_{1}" in the Krylov Subspace
+   if ((caller_id==FROM_default_eigenvectorALL)||
+       (caller_id==FROM_LSA_eigenvectorALL)) {
 
     if (((scomp_loop>=0)&&(scomp_loop<AMREX_SPACEDIM))||
         (is_temperature==1)) {
 
      Real floating_zero=scale_parm[scomp_loop]*1.0e-10;
      if (cell_max[scomp_loop]>floating_zero) {
+
       Real local_scale=scale_parm[scomp_loop]/cell_max[scomp_loop];
 
       if (is_temperature==1) {
@@ -12084,10 +12114,17 @@ void NavierStokes::LSA_normalize_eigenvector(
       S_extra_comp.mult(0.0,scomp_loop,1);
      } else
       amrex::Error("cell_max invalid");
+
+    } else if ((scomp_loop>=AMREX_SPACEDIM)&&
+	       (scomp_loop<STATE_NCOMP)) {
+     //do nothing
+    } else {
+     amrex::Error("scomp_loop invalid");
     }
 
-    //we do not scale A v_{1}, A*A*v_{1}, etc.
-   } else if (caller_id==FROM_LSA_eigenvectorALL) {
+    //we will scale A v_{1}, A*A*v_{1}, etc.
+   } else if ((caller_id==FROM_LSA_eigenvectorALL)&&
+              (1==0)) {
 
     //do nothing
 
@@ -12100,9 +12137,11 @@ void NavierStokes::LSA_normalize_eigenvector(
 
    Real floating_zero=LS_scale_parm[scomp_loop]*1.0e-10;
 
-   if (caller_id==FROM_default_eigenvectorALL) {
+   if ((caller_id==FROM_default_eigenvectorALL)||
+       (caller_id==FROM_LSA_eigenvectorALL)) {
 
     if (LS_cell_max[scomp_loop]>floating_zero) {
+     //LS_scale_parm=2.0*dx_finest
      //mult(Real val,int comp,int num_comp,int nghost=0)
      LS_extra_comp.mult(LS_scale_parm[scomp_loop]/LS_cell_max[scomp_loop],
         scomp_loop,1);
@@ -12113,7 +12152,8 @@ void NavierStokes::LSA_normalize_eigenvector(
     } else
      amrex::Error("LS_cell_max invalid");
 
-   } else if (caller_id==FROM_LSA_eigenvectorALL) {
+   } else if ((caller_id==FROM_LSA_eigenvectorALL)&&
+              (1==0)) {
 
     //do nothing
 
@@ -12183,6 +12223,11 @@ void NavierStokes::LSA_normalize_eigenvectorALL(
  Vector<Real> cell_max(S_extra_comp.nComp());
  Vector<Real> LS_cell_max(num_materials);
 
+ if (cell_max.size()==STATE_NCOMP) {
+  //do nothing
+ } else
+  amrex::Error("expecting cell_max.size()==STATE_NCOMP");
+
  for (int scomp=0;scomp<cell_max.size();scomp++) {
   cell_max[scomp]=0.0;
  }
@@ -12190,12 +12235,17 @@ void NavierStokes::LSA_normalize_eigenvectorALL(
   LS_cell_max[scomp]=0.0;
  }
 
+ //isweep==0 => find infinity norms
+ //isweep==1 => normalize and scale
  for (int isweep=0;isweep<=1;isweep++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.LSA_normalize_eigenvector(
-     unperturb_extra_comp,extra_comp,
-     cell_max,LS_cell_max,isweep,
+     unperturb_extra_comp,
+     extra_comp,
+     cell_max,
+     LS_cell_max,
+     isweep,
      caller_id);
   } //ilev
   if (1==1) { 

@@ -39,7 +39,7 @@ stop
       integer, INTENT(in) :: cc_finest_level
 
       if ((cc_finest_level.lt.0).or.(cc_finest_level.gt.1000)) then
-       print *,"cc_finest_level invalid"
+       print *,"cc_finest_level invalid ",cc_finest_level
        stop
       endif
 
