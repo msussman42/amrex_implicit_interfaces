@@ -122,8 +122,9 @@ ns.gravity=0.0
 # 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
+ns.tension=73.0 73.0 66.6 #95 degrees
 #ns.tension=73.0 73.0 47.4 #110 degrees
-ns.tension=73.0 73.0 9.8 #150 degrees
+#ns.tension=73.0 73.0 9.8 #150 degrees
 #ns.tension=73.0 73.0 0.0 #180 degrees
 ns.density_ratio_relaxation_factor=100.0 100.0 10000.0
 
