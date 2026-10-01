@@ -71,7 +71,7 @@ ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0
 
 ns.lax_friedrichs=0.0 1.0 1.0
 ns.lax_friedrichs_energy=1.0 1.0 1.0
-ns.repair_mass=0 1 0
+ns.repair_mass=0 0 0
 
 # Thermal conductivity
 ns.heatviscconst=9.7526E+01 3.5568E+00 9.7526E+01
