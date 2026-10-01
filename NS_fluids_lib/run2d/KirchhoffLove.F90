@@ -186,7 +186,7 @@
       drop_stop_time=4.0D-3 !time of maximum deflection in the experiments
       stop_time=0.03 !30ms
       plot_int=10
-      drop_initial_velocity=72.0d0
+      drop_initial_velocity=72.0d0 ! Weber number=20
 !     drop_initial_velocity=139.0d0
       drop_density=1.0d0
       drop_radius=0.28*0.5d0 !2.8 mm diameter
