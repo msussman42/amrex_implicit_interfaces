@@ -41,7 +41,7 @@ public:
     //
     // The constructor.
     //
-    AmrCore ();
+    AmrCore (int checkpoint_override_in);
     //
     // The destructor.
     //
@@ -66,6 +66,7 @@ public:
     Vector<Real> AMR_max_phase_change_rate;
     Vector<Real> AMR_min_phase_change_rate;
 
+    int checkpoint_override;
     int LSA_activate;  // =0 or 1
     int LSA_extra_data;  // =0 or 3
     int LSA_plot_index; // 0,1,2, or 3
@@ -73,7 +74,8 @@ public:
     int LSA_nsteps_krylov_subspace_method;
 
      //LSA_current_step=0 => define q_np1
-     //1<=LSA_current_step<=LSA_nsteps_krylov_subspace_method => krylov_subspace method
+     //1<=LSA_current_step<=LSA_nsteps_krylov_subspace_method => 
+     //  krylov_subspace method
     int LSA_current_step; 
 
     int LSA_initial_levelSteps; 
@@ -114,6 +116,8 @@ public:
        int LSA_initial_levelSteps_in);
     virtual void rewindTimeStep (Real stop_time,int LSA_current_step_in,
       Real initial_cumTime,int LSA_initial_levelSteps_in);
+    virtual void inner_product(const AmrCore* amrptr_second,Real& dot_product);
+
     //
     // Name of the restart file.
     //

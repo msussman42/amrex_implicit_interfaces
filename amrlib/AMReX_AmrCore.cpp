@@ -195,22 +195,24 @@ AmrCore::getAmrLevels () noexcept
 // 2. Initialize()
 // 3. InitAmr()
 //  a. levelbld = getLevelBld();
-AmrCore::AmrCore () : AmrMesh() {
+AmrCore::AmrCore (int checkpoint_override_in) : AmrMesh() {
 
-    // "max_level," needed by 
-    // explicit AmrParGDB (AmrCore* amr) noexcept
-    // is already defined in "AmrMesh()"
-    // similar, but not the same as,
-    // m_gdb=new AmrParGDB(this).
+ checkpoint_override=checkpoint_override_in;
+
+ // "max_level," needed by 
+ // explicit AmrParGDB (AmrCore* amr) noexcept
+ // is already defined in "AmrMesh()"
+ // similar, but not the same as,
+ // m_gdb=new AmrParGDB(this).
 #ifdef AMREX_PARTICLES
-    m_gdb = std::make_unique<AmrParGDB>(this);
+ m_gdb = std::make_unique<AmrParGDB>(this);
 #endif
 
-     // init default values for some parameters.
-    Initialize();
-     // levelbld = getLevelBld();
-     // ...
-    InitAmr();
+  // init default values for some parameters.
+ Initialize();
+  // levelbld = getLevelBld();
+  // ...
+ InitAmr();
 
 } // end subroutine AmrCore::AmrCore () 
 
@@ -1735,6 +1737,11 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
  }
 
 } //end subroutine rewindTimeStep
+
+void 
+AmrCore::inner_product(const AmrCore* amrptr_second,Real& dot_product) {
+
+}
 
 void
 AmrCore::coarseTimeStep (Real stop_time,int LSA_current_step_in,
