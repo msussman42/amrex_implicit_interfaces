@@ -1177,6 +1177,8 @@ stop
        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
        SUB_ASSIMILATE=>flexible_plate_impact_ASSIMILATE
        SUB_OVERRIDE_TAGFLAG=>flexible_plate_impact_OVERRIDE_TAGFLAG
+       SUB_VARIABLE_SURFACE_TENSION=> &
+            flexible_plate_impact_VARIABLE_SURFACE_TENSION
       else if (probtype.eq.710) then
        SUB_INIT_MODULE=>INIT_CAVITY_PHASE_CHANGE_MODULE
        SUB_LS=>CAVITY_PHASE_CHANGE_LS

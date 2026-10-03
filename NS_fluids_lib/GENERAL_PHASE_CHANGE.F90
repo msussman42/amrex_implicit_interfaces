@@ -673,7 +673,7 @@ real(amrex_real) :: diameter_blob
     ! is already frozen.
     seed_thickness=radblob3
 
-    if (fort_tension_init(1).gt.zero) then
+    if (fort_tension_init(1).gt.zero) then !probtype==55
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
        seed_thickness,dist_ice,dist_liquid_subtract_ice)
     else if (fort_tension_init(1).eq.zero) then

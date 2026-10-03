@@ -26186,6 +26186,7 @@ if (probtype.eq.55) then
    do imloop=1,num_materials
     marangoni_temp(imloop)=room_temperature ! 293.0d0 if double precision
    enddo
+    !probtype==55
    call get_user_tension(xvec,time, &
      fort_tension_init,user_tension,marangoni_temp)
      ! find the angle between the "im,im_3" interface and the

@@ -443,7 +443,7 @@ fork_job(int fork_id) {
      local_LSA_nsteps_krylov_subspace_method*
      local_LSA_nsteps_krylov_subspace_method);
 		 
-  k=0; 
+  int k=0; 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
    for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
 
@@ -460,7 +460,7 @@ fork_job(int fork_id) {
     Real local_dot_product=0.0;
 
     amrptr_first->inner_product(amrptr_second,local_dot_product);
-    inner_product_matrix(k)=local_dot_product;
+    inner_product_matrix[k]=local_dot_product;
     k++;
    } //j=0 ... local_nsteps_krylov_subspace_method-1
   } //i=0 ... local_nsteps_krylov_subspace_method-1
@@ -524,7 +524,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 02, 2026, 6:00pm on proc " << 
+	"Multimaterial October 03, 2026, 6:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

@@ -111,15 +111,19 @@ mac.visc_abs_tol = 1.0e-12
 ns.gravity=0.0  
 #ns.gravity = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
-# 65 degrees=>sigma_{SV}=sigma_{LV}(1+cos(65))=104
-# 10 degrees=>sigma_{SV}=sigma_{LV}(1+cos(10))=145
+# 65 degrees=>sigma_{SV}=sigma_{LV}(1+cos(65))=104 (73 room temperature)
+# 10 degrees=>sigma_{SV}=sigma_{LV}(1+cos(10))=145 (73 room temperature)
 # 90 degrees=>sigma_{SV}=sigma_{SL}=sigma_{LV} 
 # 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
 #   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
 #ns.tension=73.0 73.0 73.0 #90 degrees
 #12 13 14 23 24 34
 #ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice,293
-ns.tension=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
+#tension_init  0<t<radblob9
+#tension       2*radblob9<t
+ns.radblob9=0.00333066
+ns.tension=80.0 80.0 80.0 0.0 159.0 0.0 #180 deg substrate, 10 deg ice,240
+ns.tension_init=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
 ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0
 
 ns.min_velocity_for_dt=1.0e-5
