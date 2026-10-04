@@ -284,10 +284,11 @@ AmrCore::InitAmr () {
  pp.queryAdd("LSA_activate",LSA_activate);
 
  if ((LSA_activate==0)||
-     (LSA_activate==1)) {
+     (LSA_activate==1)||
+     (LSA_activate==2)) {
   //do nothing
  } else
-  amrex::Error("expecting LSA_activate==0 or 1");
+  amrex::Error("expecting LSA_activate==0,1, or 2");
 
  LSA_plot_index=0;
  pp.queryAdd("LSA_plot_index",LSA_plot_index);
@@ -582,6 +583,35 @@ AmrCore::InitAmr () {
 
  } else if ((LSA_nsteps_krylov_subspace_method>=1)&&
             (LSA_activate==1)) {
+
+  LSA_max_step=-1;
+  ppmain.queryAdd("max_step",LSA_max_step);
+  if (LSA_max_step>=1) {
+   //do nothing
+  } else
+   amrex::Error("expecting LSA_max_step>=1");
+
+  if (max_level>0) {
+   if (regrid_int>LSA_max_step) {
+    //do nothing
+   } else {
+    std::cout << "regrid_int=" << regrid_int << '\n';
+    std::cout << "LSA_max_step (max_step)=" << LSA_max_step << '\n';
+    amrex::Error("expecting regrid_int>LSA_max_step");
+   }
+  } else if (max_level==0) {
+
+   if (regrid_int==0) {
+    //do nothing
+   } else {
+    amrex::Error("expecting regrid_int==0 if max_level==0");
+   }
+
+  } else
+   amrex::Error("max_level invalid");
+
+ } else if ((LSA_nsteps_krylov_subspace_method>=1)&&
+            (LSA_activate==2)) {
 
   LSA_max_step=-1;
   ppmain.queryAdd("max_step",LSA_max_step);
@@ -1006,7 +1036,34 @@ AmrCore::init (Real strt_time, Real stop_time) {
  std::string local_caller_string="AmrCore::init";
 
  if (!restart_file.empty() && restart_file != "init") {
-  restart(restart_file);
+  std::string local_restart_file=restart_file;
+  if (checkpoint_override==-1) {
+   //do nothing
+  } else if ((checkpoint_override>=0)&&
+ 	     (checkpoint_override<LSA_nsteps_krylov_subspace_method)&&
+	     (LSA_nsteps_krylov_subspace_method>=1)&&
+	     (LSA_activate==2)) {
+
+   if (LSA_max_step>=1) {
+    //do nothing
+   } else
+    amrex::Error("expecting LSA_max_step>=1");
+
+   //AMReX_Utility.[cpp|H]
+   std::string ckfile_temp =  
+   amrex::Concatenate(check_file_root,LSA_max_step,file_name_digits);
+   std::string ckfileLSA;
+   std::stringstream result;
+   result << ckfile_temp << "LSA";
+   int local_LSA_current_step=checkpoint_override+1;
+   ckfileLSA=amrex::Concatenate(result.str(),
+	local_LSA_current_step,file_name_digits);
+   local_restart_file=ckfileLSA;
+
+  } else
+   amrex::Error("checkpoint_override invalid");
+
+  restart(local_restart_file);
  } else {
   initialInit(strt_time,stop_time);
   checkPoint();
