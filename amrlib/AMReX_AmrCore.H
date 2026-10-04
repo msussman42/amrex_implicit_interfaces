@@ -138,6 +138,7 @@ public:
     void print_cells_advanced();
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
+    const AmrLevel& getLevel_const (int lev) const noexcept { return *amr_level[lev]; }
 
     int global_AMR_num_materials; //init in InitAmr
     int global_AMR_num_materials_viscoelastic; //init in InitAmr

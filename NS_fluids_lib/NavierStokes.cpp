@@ -11476,7 +11476,7 @@ void NavierStokes::LSA_save_state_data(int extra_comp,int control_flag_in) {
   amrex::Error("control_flag_in invalid");
 
  init_boundary(
-   control_flag_in,
+   control_flag_in, //LSA_SAVE|RESTORE_CONTROL
    extra_comp,
    ncomp_total,
    scomp,ncomp);
@@ -22270,6 +22270,139 @@ NavierStokes::dotSum(int project_option,
 
  result=sum[0];
 } // end subroutine dotSum
+
+
+void
+NavierStokes::level_inner_product_checkpoint(
+  const AmrCore* amrptr_second,
+  Real& level_dot_product) {
+ 
+ std::string local_caller_string="level_inner_product_checkpoint";
+
+ bool use_tiling=ns_tiling;
+
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
+
+ const NavierStokes& ns_level_second=*(NavierStokes*) 
+   &amrptr_second->getLevel_const(level);
+
+ MultiFab& S_new_first_base=
+   get_new_data(State_Type,ns_time_order+LSA_NP1_EXTRA+1);
+ MultiFab& S_new_first_evec=
+   get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+ const MultiFab& S_new_second_base=
+   ns_level_second.get_new_data(State_Type,ns_time_order+LSA_NP1_EXTRA+1);
+ const MultiFab& S_new_second_evec=
+   ns_level_second.get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+
+ if ((S_new_first_base.nComp()==S_new_second_base.nComp())&&
+     (S_new_first_evec.nComp()==S_new_second_evec.nComp())&&
+     (S_new_first_base.boxArray()==S_new_second_base.boxArray())&&
+     (S_new_first_evec.boxArray()==S_new_second_evec.boxArray())) {
+  //do nothing
+ } else
+  amrex::Error("first and second data structures must agree State_Type");
+
+ MultiFab& LS_new_first_base=
+   get_new_data(LS_Type,ns_time_order+LSA_NP1_EXTRA+1);
+ MultiFab& LS_new_first_evec=
+   get_new_data(LS_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+ const MultiFab& LS_new_second_base=
+   ns_level_second.get_new_data(LS_Type,ns_time_order+LSA_NP1_EXTRA+1);
+ const MultiFab& LS_new_second_evec=
+   ns_level_second.get_new_data(LS_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+
+ if ((LS_new_first_base.nComp()==LS_new_second_base.nComp())&&
+     (LS_new_first_evec.nComp()==LS_new_second_evec.nComp())&&
+     (LS_new_first_base.boxArray()==LS_new_second_base.boxArray())&&
+     (LS_new_first_evec.boxArray()==LS_new_second_evec.boxArray())) {
+  //do nothing
+ } else
+  amrex::Error("first and second data structures must agree LS_Type");
+
+ Vector<Real> sum;
+ sum.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  sum[tid]=0.0;
+ }
+
+ int finest_level=parent->finestLevel();
+ if (level>finest_level)
+  amrex::Error("level too big");
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new_first_base.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel 
+#endif
+{
+ for (MFIter mfi(S_new_first_base,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  FArrayBox& SNEWBASE1 = (S_new_first_base)[mfi];
+  FArrayBox& LSNEWBASE1 = (LS_new_first_base)[mfi];
+  const FArrayBox& SNEWBASE2 = (S_new_second_base)[mfi];
+  const FArrayBox& LSNEWBASE2 = (LS_new_second_base)[mfi];
+
+  FArrayBox& SNEWEVEC1 = (S_new_first_evec)[mfi];
+  FArrayBox& LSNEWEVEC1 = (LS_new_first_evec)[mfi];
+  const FArrayBox& SNEWEVEC2 = (S_new_second_evec)[mfi];
+  const FArrayBox& LSNEWEVEC2 = (LS_new_second_evec)[mfi];
+
+  Real tsum=0.0;
+  FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   // in: NAVIERSTOKES_3D.F90
+  fort_sumdot_checkpoint(&tsum,
+    SNEWBASE1.dataPtr(),
+    ARLIM(SNEWBASE1.loVect()), ARLIM(SNEWBASE1.hiVect()),
+    LSNEWBASE1.dataPtr(),
+    ARLIM(LSNEWBASE1.loVect()), ARLIM(LSNEWBASE1.hiVect()),
+    SNEWBASE2.dataPtr(),
+    ARLIM(SNEWBASE2.loVect()), ARLIM(SNEWBASE2.hiVect()),
+    LSNEWBASE2.dataPtr(),
+    ARLIM(LSNEWBASE2.loVect()), ARLIM(LSNEWBASE2.hiVect()),
+    SNEWEVEC1.dataPtr(),
+    ARLIM(SNEWEVEC1.loVect()), ARLIM(SNEWEVEC1.hiVect()),
+    LSNEWEVEC1.dataPtr(),
+    ARLIM(LSNEWEVEC1.loVect()), ARLIM(LSNEWEVEC1.hiVect()),
+    SNEWEVEC2.dataPtr(),
+    ARLIM(SNEWEVEC2.loVect()), ARLIM(SNEWEVEC2.hiVect()),
+    LSNEWEVEC2.dataPtr(),
+    ARLIM(LSNEWEVEC2.loVect()), ARLIM(LSNEWEVEC2.hiVect()),
+    mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,
+    &level,&gridno);
+  sum[tid_current] += tsum;
+ } // mfi1
+} // omp
+ ns_reconcile_d_num(LOOP_SUMDOT,"fort_sumdot_checkpoint");
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  sum[0]+=sum[tid];
+ }
+ ParallelDescriptor::ReduceRealSum(sum[0]);
+
+ level_dot_product=sum[0];
+
+} // end subroutine level_inner_product_checkpoint
+
+
 
 //called from: NavierStokes::dot_productALL_ones_size
 void

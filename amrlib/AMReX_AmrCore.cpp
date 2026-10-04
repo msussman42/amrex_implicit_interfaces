@@ -1798,6 +1798,9 @@ AmrCore::rewindTimeStep (Real stop_time,int LSA_current_step_in,
 void 
 AmrCore::inner_product(const AmrCore* amrptr_second,Real& dot_product) {
 
+ int level=0;
+ amr_level[level]->amr_level_inner_product(amrptr_second,dot_product);
+
 }
 
 void

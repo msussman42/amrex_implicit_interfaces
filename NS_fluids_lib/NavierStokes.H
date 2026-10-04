@@ -162,6 +162,10 @@ public:
     void dot_productALL(int project_option,int index1_MF,int index2_MF,
      Real& result,int nsolve);
 
+    void level_inner_product_checkpoint(
+      const AmrCore* amrptr_second,
+      Real& level_dot_product);
+
     void dot_productALL_ones(int project_option,int index_MF,
 		    Vector<Real>& result);
     void dot_productALL_ones_size(int project_option);
@@ -250,6 +254,10 @@ public:
                               Real  stop_time);
 
     virtual Real advance (Real time,Real dt);
+
+    virtual void amr_level_inner_product(
+       const AmrCore* amrptr_second,
+       Real& dot_product);
 
     virtual void post_timestep (Real stop_time);
     virtual void post_regrid (int lbase,int start_level,

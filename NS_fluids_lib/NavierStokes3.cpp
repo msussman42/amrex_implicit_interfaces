@@ -1895,6 +1895,74 @@ void NavierStokes::init_delta_SDC() {
 
 }  // end subroutine init_delta_SDC
 
+void NavierStokes::amr_level_inner_product(
+  const AmrCore* amrptr_second,
+  Real& dot_product) {
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==0 in amr_level_inner_product");
+
+ int finest_level = parent->finestLevel();
+ const int max_level = parent->maxLevel();
+ if (finest_level<=max_level) {
+  // do nothing
+ } else
+  amrex::Error("it is required that finest_level<=max_level");
+
+ SDC_outer_sweeps=0;
+ slab_step=ns_time_order-1;
+ project_slab_step=slab_step;
+  //cur_time_slab=state[State_Type].slabTime(slab_step+1) if 
+  //0<=slab_step<ns_time_order
+ SDC_setup_step(); 
+
+  //declared in: NavierStokes2.cpp
+ metrics_dataALL(1);  
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  //mask=tag if not covered by level+1 or outside the domain.
+  Real tag=1.0;
+  int clearbdry=0; 
+  ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
+  ns_level.prepare_mask_nbr(1);
+ }
+
+ build_masksemALL();
+
+ NS_LSA_nsteps_krylov_subspace_method=
+   parent->LSA_nsteps_krylov_subspace_method;
+
+ if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+  //LSA_N_EXTRA holds t^n (base steady)
+  //LSA_NP1_EXTRA holds t^{n+1} unperturbed data
+  //The zero LS in LSA_NP1_EXTRA defines the narrow band at which
+  //the inner product is applied. 
+  //LSA_EVEC_EXTRA: Krylov subspace vector.
+ } else {
+  std::cout << "LSA_nsteps_krylov_subspace_method invalid " <<
+     NS_LSA_nsteps_krylov_subspace_method << '\n';
+  amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
+ }
+
+ dot_product=0.0;
+ Real tempsum=0.0;
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  tempsum=0.0;
+  NavierStokes& ns_level=getLevel(ilev);
+   //level_inner_product_checkpoint is declared in: NavierStokes.cpp
+  ns_level.level_inner_product_checkpoint(
+    amrptr_second,tempsum);
+  dot_product+=tempsum;
+ } 
+   
+ delete_array(MASKCOEF_MF);
+ delete_array(MASK_NBR_MF);
+
+} // end subroutine amr_level_inner_product
+
 //called from AmrCore::timeStep
 Real NavierStokes::advance(Real time,Real dt) {
 
@@ -2301,7 +2369,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (parent->levelSteps(0)==parent->LSA_max_step-1) {
       //save t^{n+1} unperturbed data
-      //In generating Krylog subspace entries, we always
+      //In generating Krylov subspace entries, we always
       //subtract LSA_NP1_EXTRA.
       LSA_save_state_dataALL(LSA_NP1_EXTRA,LSA_SAVE_CONTROL);
       //save t^{n+1} data 

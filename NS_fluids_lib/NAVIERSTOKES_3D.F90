@@ -9653,6 +9653,104 @@ END SUBROUTINE SIMP
        end subroutine fort_sumdot
 
 
+       subroutine fort_sumdot_checkpoint(mass1,  &
+        SB1,DIMS(SB1), &
+        LSB1,DIMS(LSB1), &
+        SB2,DIMS(SB2), &
+        LSB2,DIMS(LSB2), &
+        SE1,DIMS(SE1), &
+        LSE1,DIMS(LSE1), &
+        SE2,DIMS(SE2), &
+        LSE2,DIMS(LSE2), &
+        mask,DIMS(mask), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        levelno,gridno) &
+       bind(c,name='fort_sumdot_checkpoint')
+    
+       use global_utility_module
+       use probf90_module
+ 
+       IMPLICIT NONE
+
+       integer, INTENT(in) :: levelno,gridno
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
+       integer, INTENT(in) :: DIMDEC(SB1)
+       integer, INTENT(in) :: DIMDEC(LSB1)
+       integer, INTENT(in) :: DIMDEC(SB2)
+       integer, INTENT(in) :: DIMDEC(LSB2)
+       integer, INTENT(in) :: DIMDEC(SE1)
+       integer, INTENT(in) :: DIMDEC(LSE1)
+       integer, INTENT(in) :: DIMDEC(SE2)
+       integer, INTENT(in) :: DIMDEC(LSE2)
+       integer, INTENT(in) :: DIMDEC(mask)
+       real(amrex_real), INTENT(out) :: mass1
+       real(amrex_real), INTENT(in), target :: &
+         SB1(DIMV(SB1),STATE_NCOMP)
+       real(amrex_real), INTENT(in), target :: &
+         LSB1(DIMV(LSB1),num_materials)
+       real(amrex_real), INTENT(in), target :: &
+         SB2(DIMV(SB2),STATE_NCOMP)
+       real(amrex_real), INTENT(in), target :: &
+         LSB2(DIMV(LSB2),num_materials)
+       real(amrex_real), INTENT(in), target :: &
+         SE1(DIMV(SE1),STATE_NCOMP)
+       real(amrex_real), INTENT(in), target :: &
+         LSE1(DIMV(LSE1),num_materials)
+       real(amrex_real), INTENT(in), target :: &
+         SE2(DIMV(SE2),STATE_NCOMP)
+       real(amrex_real), INTENT(in), target :: &
+         LSE2(DIMV(LSE2),num_materials)
+
+       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+       real(amrex_real) :: dm
+       integer local_mask
+
+       integer i,j,k,nc
+
+       if ((levelno.lt.0).or.(gridno.lt.0)) then
+        print *,"level or grid invalid"
+        stop
+       endif
+       call checkbound_array1(fablo,fabhi,mask,0,-1) 
+       call checkbound_array(fablo,fabhi,SB1,0,-1) 
+       call checkbound_array(fablo,fabhi,LSB1,0,-1) 
+       call checkbound_array(fablo,fabhi,SB2,0,-1) 
+       call checkbound_array(fablo,fabhi,LSB2,0,-1) 
+       call checkbound_array(fablo,fabhi,SE1,0,-1) 
+       call checkbound_array(fablo,fabhi,LSE1,0,-1) 
+       call checkbound_array(fablo,fabhi,SE2,0,-1) 
+       call checkbound_array(fablo,fabhi,LSE2,0,-1) 
+ 
+       mass1=zero
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+
+        local_mask=NINT(mask(D_DECL(i,j,k)))
+
+        if (local_mask.eq.1) then
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else 
+         print *,"mask invalid"
+         stop
+        endif
+
+       enddo ! k
+       enddo ! j
+       enddo ! i
+
+       return
+       end subroutine fort_sumdot_checkpoint
+
        subroutine fort_sumdot_ones_size( &
         fab_sum,  &
         fab_flag,  &

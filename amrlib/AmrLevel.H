@@ -299,7 +299,12 @@ public:
     // time step.  This is a pure virtual function and hence MUST
     // be implemented by derived classes.
     //
-    virtual Real advance (Real time,Real dt) = 0;
+    virtual Real advance(Real time,Real dt) = 0;
+
+    virtual void amr_level_inner_product(
+       const AmrCore* amrptr_second,
+       Real& dot_product) = 0;
+
     //
     // Contains operations to be done after a timestep.  This is a
     // pure virtual function and hence MUST be implemented by derived

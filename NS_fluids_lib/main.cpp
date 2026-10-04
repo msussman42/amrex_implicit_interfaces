@@ -445,12 +445,13 @@ fork_job(int fork_id) {
 		 
   int k=0; 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
-   for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
 
-    AmrCore* amrptr_first = new AmrCore(i);
-    amrex::ParallelDescriptor::Barrier();
-    amrptr_first->init(strt_time,stop_time);
-    amrex::ParallelDescriptor::Barrier();
+   AmrCore* amrptr_first = new AmrCore(i);
+   amrex::ParallelDescriptor::Barrier();
+   amrptr_first->init(strt_time,stop_time);
+   amrex::ParallelDescriptor::Barrier();
+
+   for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
 
     AmrCore* amrptr_second = new AmrCore(j);
     amrex::ParallelDescriptor::Barrier();
@@ -462,12 +463,14 @@ fork_job(int fork_id) {
     amrptr_first->inner_product(amrptr_second,local_dot_product);
     inner_product_matrix[k]=local_dot_product;
     k++;
+    amrex::ParallelDescriptor::Barrier();
+    delete amrptr_second;
    } //j=0 ... local_nsteps_krylov_subspace_method-1
+   delete amrptr_first;
   } //i=0 ... local_nsteps_krylov_subspace_method-1
 
  } else
   amrex::Error("local_LSA_activate invalid");
-
 
  amrex::ParallelDescriptor::Barrier();
 
@@ -524,7 +527,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 04, 2026, 1:00pm on proc " << 
+	"Multimaterial October 04, 2026, 5:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
