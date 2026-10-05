@@ -401,7 +401,17 @@ AmrCore::InitAmr () {
  int got_check_per = pp.queryAdd("check_per",check_per);
 
  if (got_check_int == 1 && got_check_per == 1) {
-  amrex::Error("Must only specify amr.check_int OR amr.check_per");
+
+  if ((check_int!=-1)&&(check_per!=-1.0)) {
+   std::cout << "got_check_int " << got_check_int << '\n';
+   std::cout << "check_int " << check_int << '\n';
+   std::cout << "got_check_per " << got_check_per << '\n';
+   std::cout << "check_per " << check_per << '\n';
+   amrex::Error("Must only specify amr.check_int OR amr.check_per");
+  } else if ((check_int==-1)||(check_per==-1.0)) {
+   //do nothing
+  } else
+   amrex::Error("check_int or check_per invalid");
  }
 
  plot_file_root = "plt";
@@ -414,15 +424,25 @@ AmrCore::InitAmr () {
  int got_plot_per = pp.queryAdd("plot_per",plot_per);
 
  if (got_plot_int == 1 && got_plot_per == 1) {
-  amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
+  if ((plot_int!=-1)&&(plot_per!=-1.0)) {
+   std::cout << "got_plot_int " << got_plot_int << '\n';
+   std::cout << "plot_int " << plot_int << '\n';
+   std::cout << "got_plot_per " << got_plot_per << '\n';
+   std::cout << "plot_per " << plot_per << '\n';
+   amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
+  } else if ((plot_int==-1)||(plot_per==-1.0)) {
+   //do nothing
+  } else
+   amrex::Error("plot_int or plot_per invalid");
  }
 
  slice_int=-1;
 
- if (got_plot_int==1) {
+ if ((got_plot_int==1)&&(plot_int!=-1)) {
   slice_int=plot_int;
 
   int got_slice_int=pp.queryAdd("slice_int",slice_int);
+
   if ((got_slice_int!=0)&&(got_slice_int!=1))
    amrex::Error("got_slice_int invalid");
 
@@ -713,7 +733,13 @@ AmrCore::InitAmr () {
       ParallelDescriptor::MyProc() << "\n";
  }
  std::fflush(NULL);
- levelbld->variableSetUp();
+
+ if (checkpoint_override==-1) {
+  levelbld->variableSetUp();
+ } else if (checkpoint_override>=0) {
+  //do nothing
+ } else
+  amrex::Error("checkpoint_override invalid");
 
 } // end subroutine InitAmr
 
@@ -1304,8 +1330,13 @@ AmrCore::restart (const std::string& filename)
        // Build any additional data structures.
        //
 
-       for (int lev(0); lev <= finest_level; lev++)
+       if (checkpoint_override==-1) {
+        for (int lev(0); lev <= finest_level; lev++)
            amr_level[lev]->post_restart();
+       } else if (checkpoint_override>=0) {
+        //do nothing
+       } else
+         amrex::Error("checkpoint_override invalid");
 
      // restarting with a coarser mesh (less levels)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
@@ -1365,8 +1396,13 @@ AmrCore::restart (const std::string& filename)
        //
        // Build any additional data structures.
        //
-       for (lev = 0; lev <= finest_level; lev++)
+       if (checkpoint_override==-1) {
+        for (lev = 0; lev <= finest_level; lev++)
            amr_level[lev]->post_restart();
+       } else if (checkpoint_override>=0) {
+        //do nothing
+       } else
+         amrex::Error("checkpoint_override invalid");
 
     } else
      amrex::Error("max_level or mx_lev invalid");

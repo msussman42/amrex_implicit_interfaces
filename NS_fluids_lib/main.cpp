@@ -122,7 +122,7 @@ fork_job(int fork_id) {
  if (local_LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
  } else
-  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0(1)");
 
  int local_LSA_activate=0;
  ppamr.queryAdd("LSA_activate",local_LSA_activate);
@@ -214,7 +214,7 @@ fork_job(int fork_id) {
     local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0 (2)");
   amrex::Error("expecting local_LSA_activate==0,1,2");
  }
 
@@ -333,12 +333,38 @@ fork_job(int fork_id) {
    amrex::Error("LSA: expecting 0<LSA_steps<9999");
   }
 
+
+ } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
+            (local_LSA_activate==2)) {
+
+  if (initial_LSA_current_step>=0) {
+   //do nothing
+  } else
+   amrex::Error("initial_LSA_current_step invalid");
+
+  if (amrptr->cumTime()>=0.0) {
+   //do nothing
+  } else
+   amrex::Error("LSA: expecting amrptr->cumTime()=>0.0");
+ 
+//ABEL OKOJUNO
+//LSA_steps=max_step-local_LSA_initial_levelSteps
+  if ((LSA_steps>0)&&(LSA_steps<9999)) {
+   //do nothing
+  } else {
+   std::cout << "max_step= " << max_step << '\n';
+   std::cout << "local_LSA_initial_levelSteps= " << 
+     local_LSA_initial_levelSteps << '\n';
+   std::cout << "LSA_steps= " << LSA_steps << '\n';
+   amrex::Error("LSA: expecting 0<LSA_steps<9999");
+  }
+
  } else {
   std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
     local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0(3)");
   amrex::Error("expecting local_LSA_activate==0,1");
  }
 
@@ -367,7 +393,7 @@ fork_job(int fork_id) {
     local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
-  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0");
+  amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0(4)");
   amrex::Error("expecting local_LSA_activate==0,1,2");
  }
 
@@ -462,6 +488,8 @@ fork_job(int fork_id) {
 
     amrptr_first->inner_product(amrptr_second,local_dot_product);
     inner_product_matrix[k]=local_dot_product;
+    std::cout << "i,j,dot_product " << i << ' ' << j << ' ' <<
+	    local_dot_product << '\n';
     k++;
     amrex::ParallelDescriptor::Barrier();
     delete amrptr_second;
@@ -527,7 +555,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 05, 2026, 7:00am on proc " << 
+	"Multimaterial October 05, 2026, 5:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

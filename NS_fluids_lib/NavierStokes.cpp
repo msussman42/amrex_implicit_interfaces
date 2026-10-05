@@ -22373,7 +22373,8 @@ NavierStokes::level_inner_product_checkpoint(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: NAVIERSTOKES_3D.F90
-  fort_sumdot_checkpoint(&tsum,
+  fort_sumdot_checkpoint(
+    &tsum,
     volfab.dataPtr(),
     ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     SNEWBASE1.dataPtr(),
