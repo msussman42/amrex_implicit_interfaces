@@ -9713,11 +9713,21 @@ END SUBROUTINE SIMP
          LSE2(DIMV(LSE2),num_materials)
 
        real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
-       real(amrex_real) :: dm
        integer local_mask
+       real(amrex_real) local_dot
        real(amrex_real) DXMAX
+       real(amrex_real) levelset_weight
+       real(amrex_real) velocity_weight
+       real(amrex_real) temperature_weight
+       real(amrex_real) weight_base
+       real(amrex_real) local_LS_data1(num_materials)
+       real(amrex_real) local_LS_data2(num_materials)
 
-       integer i,j,k,nc
+       integer i,j,k
+       integer im
+       integer scomp
+       integer dir
+       integer im_crit
 
        if ((levelno.lt.0).or.(gridno.lt.0)) then
         print *,"level or grid invalid"
@@ -9748,6 +9758,9 @@ END SUBROUTINE SIMP
        call checkbound_array(fablo,fabhi,LSE2,0,-1) 
  
        mass1=zero
+       levelset_weight=1.0d0
+       velocity_weight=1.0d0
+       temperature_weight=1.0d0
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -9759,8 +9772,8 @@ END SUBROUTINE SIMP
 
         if (local_mask.eq.1) then
          do im=1,num_materials
-          local_LS_data1(im)=LSB1(D_DECL(iSEM,jSEM,kSEM),im)
-          local_LS_data2(im)=LSB2(D_DECL(iSEM,jSEM,kSEM),im)
+          local_LS_data1(im)=LSB1(D_DECL(i,j,k),im)
+          local_LS_data2(im)=LSB2(D_DECL(i,j,k),im)
           if (local_LS_data1(im).eq.local_LS_data2(im)) then
            !do nothing
           else
@@ -9768,16 +9781,32 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo ! do im=1,num_materials
-         call get_primary_material(dx,local_LS_data,im_crit)
-         if (abs(local_LS_data(im_crit)).gt.ngrow_distance*DXMAX)
+         call get_primary_material(dx,local_LS_data1,im_crit)
+         if (abs(local_LS_data1(im_crit)).gt.ngrow_distance*DXMAX) then
           weight_base=1.0D-4
-         else if (abs(local_LS_data(im_crit)).le.ngrow_distance*DXMAX)
+         else if (abs(local_LS_data1(im_crit)).le.ngrow_distance*DXMAX) then
           weight_base=one
          else
           print *,"unable to find weight_base"
           stop
          endif
-
+         local_dot=zero
+         do im=1,num_materials
+          local_dot=local_dot+ &
+            levelset_weight*LSE1(D_DECL(i,j,k),im)*LSE2(D_DECL(i,j,k),im) 
+         enddo
+         do dir=1,SDIM
+          local_dot=local_dot+ &
+            velocity_weight*SE1(D_DECL(i,j,k),dir)*SE2(D_DECL(i,j,k),dir) 
+         enddo
+         do im=1,num_materials
+          scomp=STATECOMP_STATES+(im-1)*num_state_material+ &
+                 ENUM_TEMPERATUREVAR+1
+          local_dot=local_dot+ &
+            temperature_weight*SE1(D_DECL(i,j,k),scomp)* &
+            SE2(D_DECL(i,j,k),scomp) 
+         enddo !im=1,num_materials
+         mass1=mass1+volfab(D_DECL(i,j,k))*weight_base*local_dot
         else if (local_mask.eq.0) then
          ! do nothing
         else 
