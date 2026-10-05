@@ -9654,6 +9654,7 @@ END SUBROUTINE SIMP
 
 
        subroutine fort_sumdot_checkpoint(mass1,  &
+        volfab,DIMS(volfab), &
         SB1,DIMS(SB1), &
         LSB1,DIMS(LSB1), &
         SB2,DIMS(SB2), &
@@ -9664,7 +9665,9 @@ END SUBROUTINE SIMP
         LSE2,DIMS(LSE2), &
         mask,DIMS(mask), &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        dx, &
+        bfact, &
         levelno,gridno) &
        bind(c,name='fort_sumdot_checkpoint')
     
@@ -9677,7 +9680,9 @@ END SUBROUTINE SIMP
        integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        integer growlo(3),growhi(3)
+       real(amrex_real), INTENT(in) :: dx(SDIM)
        integer, INTENT(in) :: bfact
+       integer, INTENT(in) :: DIMDEC(volfab)
        integer, INTENT(in) :: DIMDEC(SB1)
        integer, INTENT(in) :: DIMDEC(LSB1)
        integer, INTENT(in) :: DIMDEC(SB2)
@@ -9688,6 +9693,8 @@ END SUBROUTINE SIMP
        integer, INTENT(in) :: DIMDEC(LSE2)
        integer, INTENT(in) :: DIMDEC(mask)
        real(amrex_real), INTENT(out) :: mass1
+       real(amrex_real), INTENT(in), target :: &
+         volfab(DIMV(volfab))
        real(amrex_real), INTENT(in), target :: &
          SB1(DIMV(SB1),STATE_NCOMP)
        real(amrex_real), INTENT(in), target :: &
@@ -9708,6 +9715,7 @@ END SUBROUTINE SIMP
        real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
        real(amrex_real) :: dm
        integer local_mask
+       real(amrex_real) DXMAX
 
        integer i,j,k,nc
 
@@ -9715,6 +9723,20 @@ END SUBROUTINE SIMP
         print *,"level or grid invalid"
         stop
        endif
+       if (ngrow_make_distance.ne.ngrow_distance-1) then
+        print *,"ngrow_make_distance!=ngrow_distance-1 fort_extend_elastic_vel"
+        print *,"ngrow_make_distance: ",ngrow_make_distance
+        stop
+       endif
+       if (ngrow_distance.ge.4) then
+        ! do nothing
+       else
+        print *,"ngrow_distance invalid: ",ngrow_distance
+        stop
+       endif
+       call get_dxmax(dx,bfact,DXMAX)
+
+       call checkbound_array1(fablo,fabhi,volfab,0,-1) 
        call checkbound_array1(fablo,fabhi,mask,0,-1) 
        call checkbound_array(fablo,fabhi,SB1,0,-1) 
        call checkbound_array(fablo,fabhi,LSB1,0,-1) 
@@ -9736,6 +9758,25 @@ END SUBROUTINE SIMP
         local_mask=NINT(mask(D_DECL(i,j,k)))
 
         if (local_mask.eq.1) then
+         do im=1,num_materials
+          local_LS_data1(im)=LSB1(D_DECL(iSEM,jSEM,kSEM),im)
+          local_LS_data2(im)=LSB2(D_DECL(iSEM,jSEM,kSEM),im)
+          if (local_LS_data1(im).eq.local_LS_data2(im)) then
+           !do nothing
+          else
+           print *,"expecting LSB1==LSB2"
+           stop
+          endif
+         enddo ! do im=1,num_materials
+         call get_primary_material(dx,local_LS_data,im_crit)
+         if (abs(local_LS_data(im_crit)).gt.ngrow_distance*DXMAX)
+          weight_base=1.0D-4
+         else if (abs(local_LS_data(im_crit)).le.ngrow_distance*DXMAX)
+          weight_base=one
+         else
+          print *,"unable to find weight_base"
+          stop
+         endif
 
         else if (local_mask.eq.0) then
          ! do nothing

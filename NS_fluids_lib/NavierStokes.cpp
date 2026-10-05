@@ -22282,6 +22282,7 @@ NavierStokes::level_inner_product_checkpoint(
  bool use_tiling=ns_tiling;
 
  debug_ngrow(MASKCOEF_MF,0,local_caller_string);
+ debug_ngrow(VOLUME_MF,0,local_caller_string); 
 
  const NavierStokes& ns_level_second=*(NavierStokes*) 
    &amrptr_second->getLevel_const(level);
@@ -22330,6 +22331,8 @@ NavierStokes::level_inner_product_checkpoint(
  if (level>finest_level)
   amrex::Error("level too big");
 
+ const Real* dx = geom.CellSize();
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(S_new_first_base.boxArray().d_numPts());
@@ -22360,6 +22363,8 @@ NavierStokes::level_inner_product_checkpoint(
   const FArrayBox& SNEWEVEC2 = (S_new_second_evec)[mfi];
   const FArrayBox& LSNEWEVEC2 = (LS_new_second_evec)[mfi];
 
+  FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
+
   Real tsum=0.0;
   FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
   int tid_current=ns_thread();
@@ -22369,6 +22374,8 @@ NavierStokes::level_inner_product_checkpoint(
 
    // in: NAVIERSTOKES_3D.F90
   fort_sumdot_checkpoint(&tsum,
+    volfab.dataPtr(),
+    ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
     SNEWBASE1.dataPtr(),
     ARLIM(SNEWBASE1.loVect()), ARLIM(SNEWBASE1.hiVect()),
     LSNEWBASE1.dataPtr(),
@@ -22387,7 +22394,8 @@ NavierStokes::level_inner_product_checkpoint(
     ARLIM(LSNEWEVEC2.loVect()), ARLIM(LSNEWEVEC2.hiVect()),
     mfab.dataPtr(),ARLIM(mfab.loVect()),ARLIM(mfab.hiVect()),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,dx,
+    &bfact,
     &level,&gridno);
   sum[tid_current] += tsum;
  } // mfi1

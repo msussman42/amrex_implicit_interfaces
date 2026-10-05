@@ -18,7 +18,8 @@ extern "C" {
     void fort_advective_pressure(
      int* level,
      int* finest_level,
-     const Real* xlo,const Real* dx,
+     const Real* xlo,
+     const Real* dx,
      Real* dt,
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
@@ -600,6 +601,8 @@ extern "C" {
 
 
     void fort_sumdot_checkpoint(Real* mass1,
+      Real* vol,
+      AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
       const Real* SNEWBASE1,
       AMREX_ARLIM_P(SNEWBASE1_lo),
       AMREX_ARLIM_P(SNEWBASE1_hi),
@@ -628,6 +631,7 @@ extern "C" {
       AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,
+      const Real* dx,
       int* bfact,
       int* levelno,const int* gridno);
 
