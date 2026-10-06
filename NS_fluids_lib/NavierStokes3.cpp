@@ -2097,7 +2097,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     if (parent->LSA_current_step==0) { 
 
      if (NS_LSA_step_count==0) {
-      LSA_perturbations_switch=true; //null_perturbation=1
+      null_perturbation=1;
+      LSA_perturbations_switch=true; 
      } else if (NS_LSA_step_count>0) {
       LSA_perturbations_switch=false; 
      } else {
@@ -2165,6 +2166,10 @@ Real NavierStokes::advance(Real time,Real dt) {
       //void NavierStokes::add_perturbation() declared in NavierStokes.cpp
       //even if null_perturbation==1, the volume fractions and centroids
       //can change.
+      //level set perturbation added here.
+      //velocity and temperature perturbation added in
+      //Diffusion.cpp: user_defined_momentum_force
+      //NavierStokes.cpp: make_heat_source
      ns_level.add_perturbation(null_perturbation);
     } 
    

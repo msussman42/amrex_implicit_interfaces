@@ -747,24 +747,31 @@ AmrCore::~AmrCore () {
 
     std::string local_caller_string="~AmrCore";
 
-    if (level_steps[0] > last_checkpoint)
+    if (checkpoint_override==-1) {
+
+     if (level_steps[0] > last_checkpoint)
         checkPoint();
 
-    if (level_steps[0] > last_plotfile) {
-     int do_plot=1;
-     int do_slice=((slice_int>0) ? 1 : 0);
-     int SDC_outer_sweeps=0;
-     int slab_step=Time_blockingFactor()-1+LSA_plot_index;
-     int divu_outer_sweeps=0;
-     writePlotFile(
-      local_caller_string,
-      do_plot,do_slice,
-      SDC_outer_sweeps,
-      slab_step,
-      divu_outer_sweeps);
-    }
+     if (level_steps[0] > last_plotfile) {
+      int do_plot=1;
+      int do_slice=((slice_int>0) ? 1 : 0);
+      int SDC_outer_sweeps=0;
+      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
+      int divu_outer_sweeps=0;
+      writePlotFile(
+       local_caller_string,
+       do_plot,do_slice,
+       SDC_outer_sweeps,
+       slab_step,
+       divu_outer_sweeps);
+     }
 
-    levelbld->variableCleanUp();
+     levelbld->variableCleanUp();
+
+    } else if (checkpoint_override>=0) {
+     //do nothing
+    } else
+     amrex::Error("checkpoint_override invalid");
 
     AmrCore::Finalize();
 
@@ -1177,7 +1184,7 @@ AmrCore::restart (const std::string& filename)
 
     int i;
 
-    if (verbose > 0 && ParallelDescriptor::IOProcessor())
+    if (ParallelDescriptor::IOProcessor())
      std::cout << "restarting calculation from file: " << 
        filename << std::endl;
 
@@ -1332,11 +1339,11 @@ AmrCore::restart (const std::string& filename)
 
        if (checkpoint_override==-1) {
         for (int lev(0); lev <= finest_level; lev++)
-           amr_level[lev]->post_restart();
+         amr_level[lev]->post_restart();
        } else if (checkpoint_override>=0) {
         //do nothing
        } else
-         amrex::Error("checkpoint_override invalid");
+        amrex::Error("checkpoint_override invalid");
 
      // restarting with a coarser mesh (less levels)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
@@ -1398,11 +1405,11 @@ AmrCore::restart (const std::string& filename)
        //
        if (checkpoint_override==-1) {
         for (lev = 0; lev <= finest_level; lev++)
-           amr_level[lev]->post_restart();
+         amr_level[lev]->post_restart();
        } else if (checkpoint_override>=0) {
         //do nothing
        } else
-         amrex::Error("checkpoint_override invalid");
+        amrex::Error("checkpoint_override invalid");
 
     } else
      amrex::Error("max_level or mx_lev invalid");

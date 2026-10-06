@@ -9781,6 +9781,17 @@ END SUBROUTINE SIMP
            stop
           endif
          enddo ! do im=1,num_materials
+
+         do dir=1,SDIM
+          if (SB1(D_DECL(i,j,k),dir).eq. &
+              SB2(D_DECL(i,j,k),dir)) then
+           !do nothing
+          else
+           print *,"expecting SB1==SB2"
+           stop
+          endif
+         enddo ! do dir=1,SDIM
+
          call get_primary_material(dx,local_LS_data1,im_crit)
          if (abs(local_LS_data1(im_crit)).gt.ngrow_distance*DXMAX) then
           weight_base=1.0D-4
@@ -9807,6 +9818,31 @@ END SUBROUTINE SIMP
             SE2(D_DECL(i,j,k),scomp) 
          enddo !im=1,num_materials
          mass1=mass1+volfab(D_DECL(i,j,k))*weight_base*local_dot
+
+         if (weight_base.eq.one) then
+          print *,"i,j,k,LSE1,LSE2 ",i,j,k, &
+                LSE1(D_DECL(i,j,k),1), &
+                LSE2(D_DECL(i,j,k),1)
+          print *,"i,j,k,LSB1,LSB2 ",i,j,k, &
+                LSB1(D_DECL(i,j,k),1), &
+                LSB2(D_DECL(i,j,k),1)
+          print *,"i,j,k,SE1,SE2 (xvel)",i,j,k, &
+                SE1(D_DECL(i,j,k),1), &
+                SE2(D_DECL(i,j,k),1)
+          print *,"i,j,k,SB1,SB2 (xvel)",i,j,k, &
+                SB1(D_DECL(i,j,k),1), &
+                SB2(D_DECL(i,j,k),1)
+          im=1
+          scomp=STATECOMP_STATES+(im-1)*num_state_material+ &
+                 ENUM_TEMPERATUREVAR+1
+          print *,"i,j,k,SE1,SE2 (T)",i,j,k, &
+                SE1(D_DECL(i,j,k),scomp), &
+                SE2(D_DECL(i,j,k),scomp)
+          print *,"i,j,k,SB1,SB2 (T)",i,j,k, &
+                SB1(D_DECL(i,j,k),scomp), &
+                SB2(D_DECL(i,j,k),scomp)
+         endif
+
         else if (local_mask.eq.0) then
          ! do nothing
         else 
