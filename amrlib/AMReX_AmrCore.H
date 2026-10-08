@@ -277,6 +277,7 @@ protected:
     // OLD: PArray<std::ofstream> datalog;
     Vector<std::unique_ptr<std::fstream> > datalog;
     std::string      restart_file;
+    std::string      LSA_restart_file;
     LevelBld*        levelbld;
 
 #ifdef AMREX_PARTICLES
@@ -374,7 +375,7 @@ inline
 const std::string&
 AmrCore::theRestartFile () const
 {
-    return restart_file;
+    return LSA_restart_file;
 }
 
 } /* namespace amrex */

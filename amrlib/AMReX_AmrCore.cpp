@@ -368,6 +368,8 @@ AmrCore::InitAmr () {
  // Restart or run from scratch?
  //
  pp.queryAdd("restart", restart_file);
+ LSA_restart_file=restart_file;
+
  int nlev     = max_level+1;
 
  level_cells_advanced.resize(nlev);
@@ -1069,7 +1071,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
  std::string local_caller_string="AmrCore::init";
 
  if (!restart_file.empty() && restart_file != "init") {
-  std::string local_restart_file=restart_file;
+  LSA_restart_file=restart_file;
   if (checkpoint_override==-1) {
    //do nothing
   } else if ((checkpoint_override>=0)&&
@@ -1091,12 +1093,12 @@ AmrCore::init (Real strt_time, Real stop_time) {
    int local_LSA_current_step=checkpoint_override+1;
    ckfileLSA=amrex::Concatenate(result.str(),
 	local_LSA_current_step,file_name_digits);
-   local_restart_file=ckfileLSA;
+   LSA_restart_file=ckfileLSA;
 
   } else
    amrex::Error("checkpoint_override invalid");
 
-  restart(local_restart_file);
+  restart(LSA_restart_file);
  } else {
   initialInit(strt_time,stop_time);
   checkPoint();
@@ -1323,6 +1325,11 @@ AmrCore::restart (const std::string& filename)
             std::cout << "prior to reset lev=" << lev << '\n';
            }
            amr_level[lev].reset((*levelbld)());
+	   if (1==0) {
+            std::cout << "restart lev= " << lev << 
+		" unique_ptr amr_level= " << amr_level[lev].get() << '\n';
+	   }
+
             // internal to amr_level -> restart are the commands:
             // parent->SetBoxArray(level, grids);
             // parent->SetDistributionMap(level, dmap);

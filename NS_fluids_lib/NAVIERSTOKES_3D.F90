@@ -9730,7 +9730,7 @@ END SUBROUTINE SIMP
        integer im_crit
 
        if ((levelno.lt.0).or.(gridno.lt.0)) then
-        print *,"level or grid invalid"
+        print *,"levelno or gridno invalid ",levelno,gridno
         stop
        endif
        if (ngrow_make_distance.ne.ngrow_distance-1) then
@@ -9819,7 +9819,7 @@ END SUBROUTINE SIMP
          enddo !im=1,num_materials
          mass1=mass1+volfab(D_DECL(i,j,k))*weight_base*local_dot
 
-         if (weight_base.eq.one) then
+         if ((weight_base.eq.one).and.(1.eq.0)) then
           print *,"i,j,k,LSE1,LSE2 ",i,j,k, &
                 LSE1(D_DECL(i,j,k),1), &
                 LSE2(D_DECL(i,j,k),1)

@@ -1956,6 +1956,8 @@ void NavierStokes::amr_level_inner_product(
  Real tempsum=0.0;
  for (int ilev=finest_level;ilev>=level;ilev--) {
   tempsum=0.0;
+   //return *(NavierStokes*) &parent->getLevel(lev);
+   //AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
   NavierStokes& ns_level=getLevel(ilev);
    //level_inner_product_checkpoint is declared in: NavierStokes.cpp
   ns_level.level_inner_product_checkpoint(
@@ -2127,7 +2129,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
      if (NS_LSA_step_count==0) {
 
-      if (1==1) {
+      if (1==0) {
        Real dot_product=0.0;
        amr_level_inner_product(parent,dot_product);
        std::cout << "parent->LSA_current_step= " <<
