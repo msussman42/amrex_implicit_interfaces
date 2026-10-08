@@ -477,6 +477,7 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
   Real tag,int clearbdry) {
 
  delete_localMF_if_exist(idx_MF,1);
+
  if ((ngrow<0)||(ngrow>ngrow_distance+1)) {
   std::cout << "ngrow= " << ngrow << '\n';
   std::cout << "ngrow_distance= " << ngrow_distance << '\n';

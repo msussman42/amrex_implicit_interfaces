@@ -1933,11 +1933,9 @@ void NavierStokes::amr_level_inner_product(
   //mask=tag if not covered by level+1 or outside the domain.
   Real tag=1.0;
   int clearbdry=0; 
+    //declared in: NavierStokes2.cpp
   ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
-  ns_level.prepare_mask_nbr(1);
  }
-
- build_masksemALL();
 
  NS_LSA_nsteps_krylov_subspace_method=
    parent->LSA_nsteps_krylov_subspace_method;
@@ -1965,9 +1963,6 @@ void NavierStokes::amr_level_inner_product(
   dot_product+=tempsum;
  } 
    
- delete_array(MASKCOEF_MF);
- delete_array(MASK_NBR_MF);
-
 } // end subroutine amr_level_inner_product
 
 //called from AmrCore::timeStep
