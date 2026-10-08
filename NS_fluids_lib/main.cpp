@@ -486,6 +486,9 @@ fork_job(int fork_id) {
 
     Real local_dot_product=0.0;
 
+     //AMReX_AmrCore.cpp
+     //calls amr_level_inner_product at level==0
+     //amr_level_inner_product is declared in NavierStokes3.cpp
     amrptr_first->inner_product(amrptr_second,local_dot_product);
     inner_product_matrix[k]=local_dot_product;
     std::cout << "i,j,dot_product " << i << ' ' << j << ' ' <<
@@ -555,7 +558,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 06, 2026, 5:00pm on proc " << 
+	"Multimaterial October 08, 2026, 12:10pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

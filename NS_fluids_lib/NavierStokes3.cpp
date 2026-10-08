@@ -1912,6 +1912,13 @@ void NavierStokes::amr_level_inner_product(
   amrex::Error("it is required that finest_level<=max_level");
 
  SDC_outer_sweeps=0;
+ ns_time_order=parent->Time_blockingFactor();
+
+ if ((ns_time_order==1)&&(enable_spectral!=0)) 
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1)) 
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
+
  slab_step=ns_time_order-1;
  project_slab_step=slab_step;
   //cur_time_slab=state[State_Type].slabTime(slab_step+1) if 
@@ -2001,6 +2008,14 @@ Real NavierStokes::advance(Real time,Real dt) {
    interface_touch_flag=1; //advance
 
    SDC_outer_sweeps=0;
+
+   ns_time_order=parent->Time_blockingFactor();
+
+   if ((ns_time_order==1)&&(enable_spectral!=0)) 
+    amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+   if ((ns_time_order>=2)&&(enable_spectral!=1)) 
+    amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
+
    slab_step=ns_time_order-1;
    project_slab_step=slab_step;
      //cur_time_slab=state[State_Type].slabTime(slab_step+1) if 
@@ -2116,6 +2131,15 @@ Real NavierStokes::advance(Real time,Real dt) {
                 parent->LSA_nsteps_krylov_subspace_method)) {
 
      if (NS_LSA_step_count==0) {
+
+      if (1==1) {
+       Real dot_product=0.0;
+       amr_level_inner_product(parent,dot_product);
+       std::cout << "parent->LSA_current_step= " <<
+        parent->LSA_current_step << ' ' <<
+        " dot_product= " << dot_product << '\n';
+      }
+
       null_perturbation=0;
       LSA_perturbations_switch=true; 
 

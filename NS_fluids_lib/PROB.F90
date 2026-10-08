@@ -26105,19 +26105,19 @@ end subroutine initialize2d
 
 
       if (bfact.lt.1) then
-       print *,"bfact invalid200"
+       print *,"bfact invalid fort_addnoise ",bfact
        stop
       endif
       if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
+       print *,"num_state_base invalid fort_addnoise ",num_state_base
        stop
       endif
       if (nstate.ne.STATE_NCOMP) then
-       print *,"nstate invalid"
+       print *,"nstate invalid fort_addnoise ",nstate
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid add noise"
+       print *,"level invalid add noise ",level,finest_level
        stop
       endif
 

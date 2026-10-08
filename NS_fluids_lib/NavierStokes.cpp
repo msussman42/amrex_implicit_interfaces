@@ -13730,12 +13730,27 @@ void NavierStokes::add_perturbation(int null_perturbation) {
 
  int finest_level=parent->finestLevel();
 
+ if ((ns_time_order==1)&&(enable_spectral!=0)) 
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1)) 
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
+
  if (slab_step!=ns_time_order-1)
   amrex::Error("slab_step invalid");
+
+ if (project_slab_step!=ns_time_order-1)
+  amrex::Error("project_slab_step invalid");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
+//AmrLevel.H
+//0<=slab_index<bfact_time_order+LSA_extra_data+1
+//inline
+//MultiFab&
+//AmrLevel::get_new_data (int state_indx,int slab_index) {
+//    return state[state_indx].newData(slab_index); }
+//
  MultiFab& S_new=get_new_data(State_Type,project_slab_step+1);
  MultiFab& LS_new = get_new_data(LS_Type,project_slab_step+1);
  if (LS_new.nComp()==num_materials*(1+AMREX_SPACEDIM)) {
