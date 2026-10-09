@@ -491,6 +491,12 @@ fork_job(int fork_id) {
      //amr_level_inner_product is declared in NavierStokes3.cpp
     amrptr_first->inner_product(amrptr_second,local_dot_product);
     inner_product_matrix[k]=local_dot_product;
+
+    if (k==local_LSA_nsteps_krylov_subspace_method*i+j) {
+     //do nothing
+    } else
+     amrex::Error("expecting k=N*i+j");
+
     std::cout << "i,j,dot_product " << i << ' ' << j << ' ' <<
 	    local_dot_product << '\n';
     k++;
@@ -499,7 +505,22 @@ fork_job(int fork_id) {
    } //j=0 ... local_nsteps_krylov_subspace_method-1
    delete amrptr_first;
   } //i=0 ... local_nsteps_krylov_subspace_method-1
+  for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
+   for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
+    int k=local_LSA_nsteps_krylov_subspace_method*i+j;
+    Real Aij=inner_product_matrix[k];
+    k=local_LSA_nsteps_krylov_subspace_method*j+i;
+    Real Aji=inner_product_matrix[k];
+    Real maxA=max(std::abs(Aij),std::abs(Aji));
+    maxA=max(1.0,maxA);
+    if (std::abs(Aij-Aji)<1.0e-10*maxA) {
+     //do nothing
+    } else
+     amrex::Error("Aij or Aji problem");
+   }
+  }
 
+  //use TNT libraries
  } else
   amrex::Error("local_LSA_activate invalid");
 
@@ -558,7 +579,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 08, 2026, 6:10pm on proc " << 
+	"Multimaterial October 09, 2026, 3:10pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
