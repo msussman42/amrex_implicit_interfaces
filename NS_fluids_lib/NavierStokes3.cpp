@@ -1967,6 +1967,69 @@ void NavierStokes::amr_level_inner_product(
    
 } // end subroutine amr_level_inner_product
 
+
+void NavierStokes::amr_level_most_dangerous(
+  const AmrCore* amrptr_first,
+  Real x_local,int i) {
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting level==0 in amr_level_most_dangerous");
+
+ int finest_level = parent->finestLevel();
+ const int max_level = parent->maxLevel();
+ if (finest_level<=max_level) {
+  // do nothing
+ } else
+  amrex::Error("it is required that finest_level<=max_level");
+
+ SDC_outer_sweeps=0;
+ ns_time_order=parent->Time_blockingFactor();
+
+ if ((ns_time_order==1)&&(enable_spectral!=0)) 
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1)) 
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
+
+ slab_step=ns_time_order-1;
+ project_slab_step=slab_step;
+  //cur_time_slab=state[State_Type].slabTime(slab_step+1) if 
+  //0<=slab_step<ns_time_order
+ SDC_setup_step(); 
+
+ NS_LSA_nsteps_krylov_subspace_method=
+   parent->LSA_nsteps_krylov_subspace_method;
+
+ if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+  //LSA_N_EXTRA holds t^n (base steady)
+  //LSA_NP1_EXTRA holds t^{n+1} unperturbed data
+  //The zero LS in LSA_NP1_EXTRA defines the narrow band at which
+  //the inner product is applied. 
+  //LSA_EVEC_EXTRA: Krylov subspace vector.
+ } else {
+  std::cout << "LSA_nsteps_krylov_subspace_method invalid " <<
+     NS_LSA_nsteps_krylov_subspace_method << '\n';
+  amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
+ }
+
+ if ((i>=0)&&(i<parent->LSA_nsteps_krylov_subspace_method-1)) {
+  //do nothing
+ } else
+  amrex::Error("i invalid in amr_level_most_dangerous");
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+   //return *(NavierStokes*) &parent->getLevel(lev);
+   //AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
+  NavierStokes& ns_level=getLevel(ilev);
+   //level_inner_product_checkpoint is declared in: NavierStokes.cpp
+  ns_level.level_most_dangerous_checkpoint(
+    amrptr_first,x_local,i);
+ } 
+   
+} // end subroutine amr_level_most_dangerous
+
+
 //called from AmrCore::timeStep
 Real NavierStokes::advance(Real time,Real dt) {
 

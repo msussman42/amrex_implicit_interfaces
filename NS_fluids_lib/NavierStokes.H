@@ -166,6 +166,10 @@ public:
       const AmrCore* amrptr_second,
       Real& level_dot_product);
 
+    void level_most_dangerous_checkpoint(
+      const AmrCore* amrptr_first,
+      Real x_local,int i);
+
     void dot_productALL_ones(int project_option,int index_MF,
 		    Vector<Real>& result);
     void dot_productALL_ones_size(int project_option);
@@ -258,6 +262,10 @@ public:
     virtual void amr_level_inner_product(
        const AmrCore* amrptr_second,
        Real& dot_product);
+
+    virtual void amr_level_most_dangerous(
+       const AmrCore* amrptr_first,
+       Real x_local,int i);
 
     virtual void post_timestep (Real stop_time);
     virtual void post_regrid (int lbase,int start_level,

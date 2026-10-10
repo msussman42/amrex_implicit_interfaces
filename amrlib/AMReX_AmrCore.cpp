@@ -751,24 +751,39 @@ AmrCore::~AmrCore () {
 
     if (checkpoint_override==-1) {
 
-     if (level_steps[0] > last_checkpoint)
+     if (((LSA_activate==0)&&
+          (LSA_nsteps_krylov_subspace_method==0))||
+         ((LSA_activate==1)&&
+          (LSA_nsteps_krylov_subspace_method>0))||
+         ((LSA_activate==3)&&
+          (LSA_nsteps_krylov_subspace_method>0))) {
+
+      if (level_steps[0] > last_checkpoint)
         checkPoint();
 
-     if (level_steps[0] > last_plotfile) {
-      int do_plot=1;
-      int do_slice=((slice_int>0) ? 1 : 0);
-      int SDC_outer_sweeps=0;
-      int slab_step=Time_blockingFactor()-1+LSA_plot_index;
-      int divu_outer_sweeps=0;
-      writePlotFile(
-       local_caller_string,
-       do_plot,do_slice,
-       SDC_outer_sweeps,
-       slab_step,
-       divu_outer_sweeps);
-     }
+      if (level_steps[0] > last_plotfile) {
+       int do_plot=1;
+       int do_slice=((slice_int>0) ? 1 : 0);
+       int SDC_outer_sweeps=0;
+       int slab_step=Time_blockingFactor()-1+LSA_plot_index;
+       int divu_outer_sweeps=0;
+       writePlotFile(
+        local_caller_string,
+        do_plot,do_slice,
+        SDC_outer_sweeps,
+        slab_step,
+        divu_outer_sweeps);
+      }
 
-     levelbld->variableCleanUp();
+      levelbld->variableCleanUp();
+     } else if ((LSA_activate==2)&&
+                (LSA_nsteps_krylov_subspace_method>0)) {
+
+      checkPoint();
+      levelbld->variableCleanUp();
+
+     } else
+      amrex::Error("LSA_activate or LSA_nsteps_krylov_subspace_method invalid");
 
     } else if (checkpoint_override>=0) {
      //do nothing
@@ -1481,6 +1496,12 @@ AmrCore::checkPoint ()
   std::stringstream result;
   result << ckfile_temp << "LSA";
   ckfileLSA=amrex::Concatenate(result.str(),LSA_current_step,file_name_digits);
+ } else if ((LSA_activate==2)||
+            (LSA_nsteps_krylov_subspace_method>0)) {
+  LSA_current_step=LSA_nsteps_krylov_subspace_method+1;
+  std::stringstream result;
+  result << ckfile_temp << "LSA";
+  ckfileLSA=amrex::Concatenate(result.str(),LSA_current_step,file_name_digits);
  } else
   amrex::Error("LSA_activate or LSA_nsteps_krylov_subspace_method invalid");
 
@@ -1850,6 +1871,14 @@ AmrCore::inner_product(const AmrCore* amrptr_second,Real& dot_product) {
 
  int level=0;
  amr_level[level]->amr_level_inner_product(amrptr_second,dot_product);
+
+}
+
+void 
+AmrCore::most_dangerous(const AmrCore* amrptr_first,Real x_local,int i) {
+
+ int level=0;
+ amr_level[level]->amr_level_most_dangerous(amrptr_first,x_local,i);
 
 }
 

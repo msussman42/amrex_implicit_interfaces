@@ -468,6 +468,7 @@ fork_job(int fork_id) {
   Vector<Real> inner_product_matrix(
      local_LSA_nsteps_krylov_subspace_method*
      local_LSA_nsteps_krylov_subspace_method);
+  Vector<Real> X_dangerous(local_LSA_nsteps_krylov_subspace_method);
 		 
   int k=0; 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
@@ -505,9 +506,16 @@ fork_job(int fork_id) {
    } //j=0 ... local_nsteps_krylov_subspace_method-1
    delete amrptr_first;
   } //i=0 ... local_nsteps_krylov_subspace_method-1
+
+  int ktest=0;
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
    for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
     int k=local_LSA_nsteps_krylov_subspace_method*i+j;
+    if (ktest==k) {
+     //do nothing
+    } else
+     amrex::Errpr("ktest==k test failed");
+
     Real Aij=inner_product_matrix[k];
     k=local_LSA_nsteps_krylov_subspace_method*j+i;
     Real Aji=inner_product_matrix[k];
@@ -517,10 +525,36 @@ fork_job(int fork_id) {
      //do nothing
     } else
      amrex::Error("Aij or Aji problem");
-   }
-  }
 
-  //use TNT libraries
+    ktest++;
+   } //for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) 
+  } // for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) 
+
+  //use TNT libraries:
+  //N=LSA_nsteps_krylog_substpase_method
+  //B^{T}WB is N-1 x N-1
+  //\vec{a} is N-1 x 1
+  //\vec{b} is N-1 x 1
+  //solve: B^{T}WB\vec{a}=\vec{b} using SVD 
+  //form "S"
+  //S=X\Gamma X^{-1}
+  //X is a N-1 x N-1 matrix
+  //most dangerous mode: \vec{x}_{1}=first column of X which corresponds
+  //to largest eigenvalue of S.
+  //we form: B\vec{x}_{1} and checkpoint it in chk<substeps>LSA<N+1>, replacing
+  //LSA_EVEC_EXTRA with most dangerous mode and replacing LSA_current_step
+  //with LSA_nsteps_krylov_subspace_method + 1.
+  //restart using LSA_activate=3 (regridding will copy default values
+  //into the EXTRA states)
+  
+  for (int i=0;i<local_LSA_nsteps_krylov_subspace_method-1;i++) {
+   AmrCore* amrptr_first = new AmrCore(i);
+   amrex::ParallelDescriptor::Barrier();
+   amrptr_first->init(strt_time,stop_time);
+   amrex::ParallelDescriptor::Barrier();
+   Real x_local=X_dangerous[i];
+   amrptr->most_dangerous(amrptr_first,x_local,i);
+  }
  } else
   amrex::Error("local_LSA_activate invalid");
 
@@ -579,7 +613,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 09, 2026, 3:10pm on proc " << 
+	"Multimaterial October 10, 2026, 11:00am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

@@ -117,6 +117,7 @@ public:
     virtual void rewindTimeStep (Real stop_time,int LSA_current_step_in,
       Real initial_cumTime,int LSA_initial_levelSteps_in);
     virtual void inner_product(const AmrCore* amrptr_second,Real& dot_product);
+    virtual void most_dangerous(const AmrCore* amrptr_first,Real x_local,int i);
 
     //
     // Name of the restart file.
