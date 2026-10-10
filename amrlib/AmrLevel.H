@@ -305,6 +305,10 @@ public:
        const AmrCore* amrptr_second,
        Real& dot_product) = 0;
 
+    virtual void amr_level_most_dangerous(
+       const AmrCore* amrptr_first,
+       Real x_local,int i) = 0;
+
     //
     // Contains operations to be done after a timestep.  This is a
     // pure virtual function and hence MUST be implemented by derived

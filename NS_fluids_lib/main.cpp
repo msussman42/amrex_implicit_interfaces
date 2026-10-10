@@ -148,11 +148,21 @@ fork_job(int fork_id) {
  ppns.queryAdd("fixed_dt",local_fixed_dt);
 
  if (local_LSA_nsteps_krylov_subspace_method>0) {
+
+  if ((local_LSA_activate==1)||
+      (local_LSA_activate==2)) {
+
    //time step must be fixed if LSA.
-  if (local_fixed_dt>0.0) {
+   if (local_fixed_dt>0.0) {
+    //do nothing
+   } else
+    amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
+
+  } else if (local_LSA_activate==0) {
    //do nothing
   } else
-   amrex::Error("expecting ns.fixed_dt>0.0 if LSA");
+   amrex::Error("local_LSA_activate invalid");
+
  } else if (local_LSA_nsteps_krylov_subspace_method==0) {
   //do nothing
  } else
@@ -265,17 +275,31 @@ fork_job(int fork_id) {
 
  if (local_LSA_nsteps_krylov_subspace_method>0) {
 
-  Real test_cumTime=local_fixed_dt*amrptr->levelSteps(0);
-  if (std::abs(test_cumTime-amrptr->cumTime())<=1.0e-2*local_fixed_dt) {
-   //do nothing
-  } else {
-   std::cout << "local_fixed_dt= " << local_fixed_dt << '\n';
-   std::cout << "amrptr->levelSteps(0)= " << amrptr->levelSteps(0) << '\n';
-   std::cout << "test_cumTime= " << test_cumTime << '\n';
-   std::cout << "amrptr->cumTime()= " << amrptr->cumTime() << '\n';
-   amrex::Error("test_cumTime-amrptr->cumTime() not close to zero");
-  }
+  if ((local_LSA_activate==1)||
+      (local_LSA_activate==2)) {
 
+   Real test_cumTime=local_fixed_dt*amrptr->levelSteps(0);
+   if (std::abs(test_cumTime-amrptr->cumTime())<=1.0e-2*local_fixed_dt) {
+    //do nothing
+   } else {
+    std::cout << "local_fixed_dt= " << local_fixed_dt << '\n';
+    std::cout << "amrptr->levelSteps(0)= " << amrptr->levelSteps(0) << '\n';
+    std::cout << "test_cumTime= " << test_cumTime << '\n';
+    std::cout << "amrptr->cumTime()= " << amrptr->cumTime() << '\n';
+    amrex::Error("test_cumTime-amrptr->cumTime() not close to zero");
+   }
+
+  } else if (local_LSA_activate==0) {
+   //do nothing
+  } else
+   amrex::Error("local_LSA_activate invalid");
+
+ } else if (local_LSA_nsteps_krylov_subspace_method==0) {
+
+  //do nothing
+
+ } else {
+  amrex::Error("local_LSA_nsteps_krylov_subspace_method invalid");
  }
 
  if (local_LSA_initial_levelSteps<=amrptr->levelSteps(0)) {
@@ -303,10 +327,17 @@ fork_job(int fork_id) {
  if ((local_LSA_nsteps_krylov_subspace_method==0)||
      (local_LSA_activate==0)) {
 
-  if (initial_LSA_current_step==0) {
+  if (local_LSA_nsteps_krylov_subspace_method==0) {
+
+   if (initial_LSA_current_step==0) {
+    //do nothing
+   } else
+    amrex::Error("initial_LSA_current_step invalid");
+
+  } else if (local_LSA_nsteps_krylov_subspace_method>0) {
    //do nothing
   } else
-   amrex::Error("initial_LSA_current_step invalid");
+   amrex::Error("local_LSA_nsteps_krylov_subspace_method invalid");
 
  } else if ((local_LSA_nsteps_krylov_subspace_method>0)&&
             (local_LSA_activate==1)) {
@@ -359,13 +390,18 @@ fork_job(int fork_id) {
    amrex::Error("LSA: expecting 0<LSA_steps<9999");
   }
 
+  if (max_step==amrptr->levelSteps(0)) {
+   //do nothing
+  } else
+   amrex::Error("expecting max_step==amrptr->levelSteps(0)");
+
  } else {
   std::cout << "local_LSA_nsteps_krylov_subspace_method= " << 
     local_LSA_nsteps_krylov_subspace_method <<'\n';
   std::cout << "local_LSA_activate= " << 
     local_LSA_activate <<'\n';
   amrex::Error("expecting local_LSA_nsteps_krylov_subspace_method>=0(3)");
-  amrex::Error("expecting local_LSA_activate==0,1");
+  amrex::Error("expecting local_LSA_activate==0,1,2");
  }
 
 //ABEL OKOJUNO:
@@ -397,8 +433,46 @@ fork_job(int fork_id) {
   amrex::Error("expecting local_LSA_activate==0,1,2");
  }
 
- if ((local_LSA_activate==0)||
-     (local_LSA_activate==1)) {
+ if ((local_LSA_nsteps_krylov_subspace_method==0)||
+     (local_LSA_activate==0)) {
+
+  int LSA_current_step=0;
+
+  while ((amrptr->okToContinue())          &&
+         (amrptr->levelSteps(0) < max_step || max_step < 0) &&
+         (amrptr->cumTime() < stop_time || stop_time < 0.0) ) {
+
+   amrex::ParallelDescriptor::Barrier();
+   std::fflush(NULL);
+   BL_PROFILE_INITIALIZE();
+   std::fflush(NULL);
+
+   if (end_loop==0) {
+    //do nothing
+   } else
+    amrex::Error("end_loop invalid");
+
+   // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
+   // timeStep is in amrlib/AMReX_AmrCore.cpp
+   amrptr->coarseTimeStep(stop_time,
+     LSA_current_step,local_LSA_initial_levelSteps);//synchronizes internally
+
+   amrex::ParallelDescriptor::Barrier();
+
+   std::fflush(NULL);
+   BL_PROFILE_FINALIZE();
+   std::fflush(NULL);
+   std::cout << "TIME= " << amrptr->cumTime() << " PROC= " <<
+    amrex::ParallelDescriptor::MyProc() << " sleepsec= " << sleepsec << '\n';
+   std::fflush(NULL);
+   amrex::Sleep(sleepsec);
+   amrex::ParallelDescriptor::Barrier();
+
+  } // while ( amrptr->okToContinue() etc. 
+
+  amrex::ParallelDescriptor::Barrier();
+
+ } else if (local_LSA_activate==1) {
 
   for (int LSA_current_step=initial_LSA_current_step;
        LSA_current_step<=end_loop;
@@ -432,9 +506,7 @@ fork_job(int fork_id) {
     BL_PROFILE_INITIALIZE();
     std::fflush(NULL);
 
-    if (end_loop==0) {
-     //do nothing
-    } else if (end_loop>0) {
+    if (end_loop>0) {
      std::fflush(NULL);
      std::cout << "LSA_current_step = " << LSA_current_step << '\n';
      std::cout << "amrptr->levelSteps(0) = " << amrptr->levelSteps(0) << '\n';
@@ -510,15 +582,15 @@ fork_job(int fork_id) {
   int ktest=0;
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
    for (int j=0;j<local_LSA_nsteps_krylov_subspace_method;j++) {
-    int k=local_LSA_nsteps_krylov_subspace_method*i+j;
-    if (ktest==k) {
+    int k_2d=local_LSA_nsteps_krylov_subspace_method*i+j;
+    if (ktest==k_2d) {
      //do nothing
     } else
-     amrex::Errpr("ktest==k test failed");
+     amrex::Error("ktest==k_2d test failed");
 
-    Real Aij=inner_product_matrix[k];
-    k=local_LSA_nsteps_krylov_subspace_method*j+i;
-    Real Aji=inner_product_matrix[k];
+    Real Aij=inner_product_matrix[k_2d];
+    k_2d=local_LSA_nsteps_krylov_subspace_method*j+i;
+    Real Aji=inner_product_matrix[k_2d];
     Real maxA=max(std::abs(Aij),std::abs(Aji));
     maxA=max(1.0,maxA);
     if (std::abs(Aij-Aji)<1.0e-10*maxA) {
@@ -613,7 +685,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 10, 2026, 11:00am on proc " << 
+	"Multimaterial October 10, 2026, 6:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

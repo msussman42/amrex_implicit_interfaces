@@ -1939,6 +1939,7 @@ void NavierStokes::amr_level_inner_product(
 
  NS_LSA_nsteps_krylov_subspace_method=
    parent->LSA_nsteps_krylov_subspace_method;
+ NS_LSA_activate=parent->LSA_activate;
 
  if (parent->LSA_nsteps_krylov_subspace_method>=1) {
   //LSA_N_EXTRA holds t^n (base steady)
@@ -2000,6 +2001,7 @@ void NavierStokes::amr_level_most_dangerous(
 
  NS_LSA_nsteps_krylov_subspace_method=
    parent->LSA_nsteps_krylov_subspace_method;
+ NS_LSA_activate=parent->LSA_activate;
 
  if (parent->LSA_nsteps_krylov_subspace_method>=1) {
   //LSA_N_EXTRA holds t^n (base steady)
@@ -2022,7 +2024,7 @@ void NavierStokes::amr_level_most_dangerous(
    //return *(NavierStokes*) &parent->getLevel(lev);
    //AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
   NavierStokes& ns_level=getLevel(ilev);
-   //level_inner_product_checkpoint is declared in: NavierStokes.cpp
+   //level_most_dangerous_checkpoint is declared in: NavierStokes.cpp
   ns_level.level_most_dangerous_checkpoint(
     amrptr_first,x_local,i);
  } 
@@ -2148,12 +2150,15 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    NS_LSA_nsteps_krylov_subspace_method=
      parent->LSA_nsteps_krylov_subspace_method;
+   NS_LSA_activate=parent->LSA_activate;
 
-   if (parent->LSA_nsteps_krylov_subspace_method==0) {
+   if ((parent->LSA_nsteps_krylov_subspace_method==0)||
+       (parent->LSA_activate==0)) {
 
     LSA_perturbations_switch=false; 
 
-   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+   } else if ((parent->LSA_nsteps_krylov_subspace_method>=1)&&
+              (parent->LSA_activate==1)) {
 
      //parent->LSA_initial_levelSteps=amrptr->levelSteps(0) at the
      //very beginning (main.cpp)
@@ -2163,8 +2168,13 @@ Real NavierStokes::advance(Real time,Real dt) {
     if ((NS_LSA_step_count>=0)&&
         (NS_LSA_step_count<=NS_LSA_max_step_count)) {
      //do nothing
-    } else
+    } else {
+     std::cout << "NS_LSA_step_count = " << NS_LSA_step_count << '\n';
+     std::cout << "NS_LSA_max_step_count= " << NS_LSA_max_step_count << '\n';
+     std::cout << "parent->LSA_initial_levelSteps= " <<
+       parent->LSA_initial_levelSteps << '\n';
      amrex::Error("NS_LSA_step_count invalid");
+    }
 
      //initialize non perturbed state 
      //(the first krylov_subspace method iteration 
@@ -2301,10 +2311,13 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    NS_LSA_nsteps_krylov_subspace_method=
       parent->LSA_nsteps_krylov_subspace_method;
+   NS_LSA_activate=parent->LSA_activate;
 
-   if (parent->LSA_nsteps_krylov_subspace_method==0) {
+   if ((parent->LSA_nsteps_krylov_subspace_method==0)||
+       (parent->LSA_activate==0)) {
     //do nothing
-   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+   } else if ((parent->LSA_nsteps_krylov_subspace_method>=1)&&
+              (parent->LSA_activate==1)) {
 
     NS_LSA_step_count=parent->levelSteps(0)-
                       parent->LSA_initial_levelSteps;
@@ -2410,9 +2423,11 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    } else if (advance_status==0) { // failure
 
-    if (parent->LSA_nsteps_krylov_subspace_method==0) {
+    if ((parent->LSA_nsteps_krylov_subspace_method==0)||
+        (parent->LSA_activate==0)) {
      //do nothing
-    } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+    } else if ((parent->LSA_nsteps_krylov_subspace_method>=1)&&
+               (parent->LSA_activate==1)) {
      std::cout << "parent->LSA_current_step=" <<
         parent->LSA_current_step << '\n';
      std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
@@ -2421,6 +2436,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     } else {
      std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
        parent->LSA_nsteps_krylov_subspace_method << '\n';
+     std::cout << "parent->LSA_activate= " << parent->LSA_activate << '\n';
      amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");
     }
 
@@ -2443,10 +2459,13 @@ Real NavierStokes::advance(Real time,Real dt) {
 
    NS_LSA_nsteps_krylov_subspace_method=
      parent->LSA_nsteps_krylov_subspace_method;
+   NS_LSA_activate=parent->LSA_activate;
 
-   if (parent->LSA_nsteps_krylov_subspace_method==0) {
+   if ((parent->LSA_nsteps_krylov_subspace_method==0)||
+       (parent->LSA_activate==0)) {
     //do nothing (no LSA)
-   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
+   } else if ((parent->LSA_nsteps_krylov_subspace_method>=1)&&
+              (parent->LSA_activate==1)) {
 
     NS_LSA_step_count=parent->levelSteps(0)-parent->LSA_initial_levelSteps;
     NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
@@ -2513,6 +2532,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
 
    } else { 
+    std::cout << "parent->LSA_activate " << parent->LSA_activate << '\n';
     std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
       parent->LSA_nsteps_krylov_subspace_method << '\n';
     amrex::Error("parent->LSA_nsteps_krylov_subspace_method invalid");

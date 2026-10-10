@@ -1081,6 +1081,7 @@ Real NavierStokes::thermal_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::total_advance_time=0.0;
 
 int NavierStokes::NS_LSA_nsteps_krylov_subspace_method=0;
+int NavierStokes::NS_LSA_activate=0;
 int NavierStokes::NS_LSA_max_step_count=0;
 int NavierStokes::NS_LSA_step_count=0;
 
@@ -6778,14 +6779,19 @@ NavierStokes::NavierStokes (AmrCore&        papa,
     AmrLevel(papa,lev,level_geom,bl,dmap_in,time)
 {
     Geometry_setup();
-    NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
+    NS_LSA_nsteps_krylov_subspace_method=
+      parent->LSA_nsteps_krylov_subspace_method;
+    NS_LSA_activate=parent->LSA_activate;
 }
 
 NavierStokes::~NavierStokes () {
 
-   if (NS_LSA_nsteps_krylov_subspace_method==0) {
+   if ((NS_LSA_nsteps_krylov_subspace_method==0)||
+       (NS_LSA_activate==0)) {
     //do nothing
-   } else if (NS_LSA_nsteps_krylov_subspace_method>=1) {
+   } else if ((NS_LSA_nsteps_krylov_subspace_method>=1)&&
+              ((NS_LSA_activate==1)||
+               (NS_LSA_activate==2))) {
 
     std::cout << "deleting NavierStokes() level= " << level << '\n';
     std::cout << "deleting NavierStokes() NS_LSA_step_count= " << 
@@ -6802,8 +6808,13 @@ NavierStokes::~NavierStokes () {
     } else
      amrex::Error("NS_LSA_step_count invalid when deleting NavierStokes()");
 
-   } else
+   } else {
+    std::cout << "NS_LSA_nsteps_krylov_subspace_method= " <<
+     NS_LSA_nsteps_krylov_subspace_method << '\n';
+    std::cout << "NS_LSA_activate= " <<
+     NS_LSA_activate << '\n';
     amrex::Error("NS_LSA_nsteps_krylov_subspace_method invalid");
+   }
 
    Geometry_cleanup();
 
@@ -10456,6 +10467,7 @@ void
 NavierStokes::initData () {
 
  NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
+ NS_LSA_activate=parent->LSA_activate;
 
  interface_touch_flag=1; //initData()
 
@@ -11193,6 +11205,7 @@ NavierStokes::init(
  int local_regrid_int=parent->regridInt();
 
  NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
+ NS_LSA_activate=parent->LSA_activate;
 
  if ((NS_LSA_nsteps_krylov_subspace_method==0)||
      (parent->LSA_activate==0)) {
@@ -11207,7 +11220,8 @@ NavierStokes::init(
      
   } else if (max_level>0) {
   
-   if (NS_LSA_nsteps_krylov_subspace_method==0) {
+   if ((NS_LSA_nsteps_krylov_subspace_method==0)||
+       (parent->LSA_activate==0)) {
   
     if (local_regrid_int>=1) {
      //do nothing
@@ -11215,7 +11229,8 @@ NavierStokes::init(
      amrex::Error("expecting local_regrid_int>=1 if max_level>0");
     }
   
-   } else if (NS_LSA_nsteps_krylov_subspace_method>0) {
+   } else if ((NS_LSA_nsteps_krylov_subspace_method>0)&&
+              (parent->LSA_activate==1)) {
 
     if (local_regrid_int>parent->LSA_max_step) {
      //do nothing
@@ -12277,6 +12292,7 @@ NavierStokes::init(
  int local_regrid_int=parent->regridInt();
 
  NS_LSA_nsteps_krylov_subspace_method=parent->LSA_nsteps_krylov_subspace_method;
+ NS_LSA_activate=parent->LSA_activate;
 
  if ((NS_LSA_nsteps_krylov_subspace_method==0)||
      (parent->LSA_activate==0)) {
@@ -12287,7 +12303,8 @@ NavierStokes::init(
      
   } else if (max_level>0) {
   
-   if (NS_LSA_nsteps_krylov_subspace_method==0) {
+   if ((NS_LSA_nsteps_krylov_subspace_method==0)||
+       (parent->LSA_activate==0)) {
   
     if (local_regrid_int>=1) {
      //do nothing
@@ -12295,7 +12312,8 @@ NavierStokes::init(
      amrex::Error("expecting local_regrid_int>=1 if max_level>0");
     }
   
-   } else if (NS_LSA_nsteps_krylov_subspace_method>0) {
+   } else if ((NS_LSA_nsteps_krylov_subspace_method>0)&&
+              (parent->LSA_activate==1)) {
 
     if (local_regrid_int>parent->LSA_max_step) {
      //do nothing
@@ -13664,6 +13682,7 @@ void NavierStokes::make_heat_source() {
   NS_LSA_max_step_count=parent->LSA_max_step-parent->LSA_initial_levelSteps;
   NS_LSA_nsteps_krylov_subspace_method=
     parent->LSA_nsteps_krylov_subspace_method;
+  NS_LSA_activate=parent->LSA_activate;
 
   if ((NS_LSA_step_count>=0)&&
       (NS_LSA_step_count<=NS_LSA_max_step_count)) {
@@ -22427,6 +22446,86 @@ NavierStokes::level_inner_product_checkpoint(
 } // end subroutine level_inner_product_checkpoint
 
 
+void
+NavierStokes::level_most_dangerous_checkpoint(
+  const AmrCore* amrptr_first,
+  Real x_local,int i) {
+ 
+ std::string local_caller_string="level_most_dangerous_checkpoint";
+
+ const NavierStokes& ns_level_first=*(NavierStokes*) 
+   &amrptr_first->getLevel_const(level);
+
+ MultiFab& S_new_primary_evec=
+   get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+ const MultiFab& S_new_first_evec=
+   ns_level_first.get_new_data(State_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+
+ if ((S_new_first_evec.nComp()==S_new_primary_evec.nComp())&&
+     (S_new_first_evec.boxArray()==S_new_primary_evec.boxArray())) {
+  //do nothing
+ } else
+  amrex::Error("first and primary data structures must agree State_Type");
+
+ MultiFab& LS_new_primary_evec=
+   get_new_data(LS_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+ const MultiFab& LS_new_first_evec=
+   ns_level_first.get_new_data(LS_Type,ns_time_order+LSA_EVEC_EXTRA+1);
+
+ if ((LS_new_first_evec.nComp()==LS_new_primary_evec.nComp())&&
+     (LS_new_first_evec.boxArray()==LS_new_primary_evec.boxArray())) {
+  //do nothing
+ } else
+  amrex::Error("first and primary data structures must agree LS_Type");
+
+ int finest_level=parent->finestLevel();
+ if (level>finest_level)
+  amrex::Error("level too big");
+
+ if ((i>=0)&&(i<parent->LSA_nsteps_krylov_subspace_method-1)) {
+  //do nothing
+ } else
+  amrex::Error("i invalid in level_most_dangerous_checkpoint");
+
+ MultiFab* snew_mf=new MultiFab(grids,dmap,
+  S_new_first_evec.nComp(),1,
+  MFInfo().SetTag("snew_mf"),FArrayBoxFactory());
+
+ MultiFab* lsnew_mf=new MultiFab(grids,dmap,
+  LS_new_first_evec.nComp(),1,
+  MFInfo().SetTag("lsnew_mf"),FArrayBoxFactory());
+
+ MultiFab::Copy(*snew_mf,S_new_first_evec,0,0,
+   snew_mf->nComp(),1);
+
+ MultiFab::Copy(*lsnew_mf,LS_new_first_evec,0,0,
+   lsnew_mf->nComp(),1);
+
+ if (std::abs(x_local)<=1.0+1.0e-10) {
+  //do nothing
+ } else
+  amrex::Error("std::abs(x_local)>1");
+
+ snew_mf->mult(x_local,0,snew_mf->nComp(),0);
+ lsnew_mf->mult(x_local,0,lsnew_mf->nComp(),0);
+
+ if (i==0) {
+  MultiFab::Copy(S_new_primary_evec,*snew_mf,0,0,
+   snew_mf->nComp(),1);
+  MultiFab::Copy(LS_new_primary_evec,*lsnew_mf,0,0,
+   lsnew_mf->nComp(),1);
+ } else if ((i>0)&&(i<parent->LSA_nsteps_krylov_subspace_method-1)) {
+  MultiFab::Add(S_new_primary_evec,*snew_mf,0,0,
+   snew_mf->nComp(),1);
+  MultiFab::Add(LS_new_primary_evec,*lsnew_mf,0,0,
+   lsnew_mf->nComp(),1);
+ } else
+  amrex::Error("i invalid in level_most_dangerous_checkpoint");
+
+ delete snew_mf;
+ delete lsnew_mf;
+
+} // end subroutine level_most_dangerous_checkpoint
 
 //called from: NavierStokes::dot_productALL_ones_size
 void

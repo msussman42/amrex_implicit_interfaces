@@ -273,7 +273,8 @@ AmrCore::InitAmr () {
  }
 
  LSA_nsteps_krylov_subspace_method=0;
- pp.queryAdd("LSA_nsteps_krylov_subspace_method",LSA_nsteps_krylov_subspace_method);
+ pp.queryAdd("LSA_nsteps_krylov_subspace_method",
+  LSA_nsteps_krylov_subspace_method);
 
  if (LSA_nsteps_krylov_subspace_method>=0) {
   //do nothing
@@ -455,8 +456,10 @@ AmrCore::InitAmr () {
  pp.queryAdd("space_blocking_factor",space_blocking_factor);
  pp.queryAdd("time_blocking_factor",time_blocking_factor);
  pp.queryAdd("MAX_NUM_SLAB",MAX_NUM_SLAB);
+
  if (time_blocking_factor+1>MAX_NUM_SLAB-LSA_EXTRA_TOTAL)
   amrex::Error("MAX_NUM_SLAB too small");
+
  if (time_blocking_factor<1)
   amrex::Error("time_blocking_factor too small");
 
@@ -592,11 +595,25 @@ AmrCore::InitAmr () {
 
    } else if (LSA_nsteps_krylov_subspace_method>0) {
 
-    if (regrid_int>LSA_max_step) {
-     //do nothing
-    } else {
-     amrex::Error("expecting regrid_int>max_step if LSA_nsteps_krylov_subspace_method>0");
-    }
+    if ((LSA_activate==1)||(LSA_activate==2)) {
+
+     if (regrid_int>LSA_max_step) {
+      //do nothing
+     } else {
+      amrex::Error("expect regrid_int>max_step if n_krylov_subspace_method>0");
+     }
+
+    } else if (LSA_activate==0) {
+
+     if (regrid_int>=1) {
+      //do nothing
+     } else {
+      amrex::Error("expecting regrid_int>=1 if max_level>0");
+     }
+
+    } else
+     amrex::Error("LSA_activate invalid");
+
    } else
     amrex::Error("LSA_nsteps_krylov_subspace_method invalid");
 
@@ -753,9 +770,9 @@ AmrCore::~AmrCore () {
 
      if (((LSA_activate==0)&&
           (LSA_nsteps_krylov_subspace_method==0))||
-         ((LSA_activate==1)&&
+         ((LSA_activate==0)&&
           (LSA_nsteps_krylov_subspace_method>0))||
-         ((LSA_activate==3)&&
+         ((LSA_activate==1)&&
           (LSA_nsteps_krylov_subspace_method>0))) {
 
       if (level_steps[0] > last_checkpoint)
@@ -776,6 +793,7 @@ AmrCore::~AmrCore () {
       }
 
       levelbld->variableCleanUp();
+
      } else if ((LSA_activate==2)&&
                 (LSA_nsteps_krylov_subspace_method>0)) {
 
@@ -1086,6 +1104,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
  std::string local_caller_string="AmrCore::init";
 
  if (!restart_file.empty() && restart_file != "init") {
+
   LSA_restart_file=restart_file;
   if (checkpoint_override==-1) {
    //do nothing
@@ -1114,6 +1133,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
    amrex::Error("checkpoint_override invalid");
 
   restart(LSA_restart_file);
+
  } else {
   initialInit(strt_time,stop_time);
   checkPoint();
@@ -1488,10 +1508,18 @@ AmrCore::checkPoint ()
    amrex::Concatenate(check_file_root,level_steps[0],file_name_digits);
 
  std::string ckfileLSA;
+
  if ((LSA_activate==0)&&
      (LSA_nsteps_krylov_subspace_method==0)) {
   ckfileLSA=ckfile_temp;
- } else if ((LSA_activate==1)||
+ } else if ((LSA_activate==0)&&
+            (LSA_nsteps_krylov_subspace_method>0)) {
+  int local_LSA_current_step=0;
+  std::stringstream result;
+  result << ckfile_temp << "LSA";
+  ckfileLSA=amrex::Concatenate(result.str(),
+    local_LSA_current_step,file_name_digits);
+ } else if ((LSA_activate==1)&&
             (LSA_nsteps_krylov_subspace_method>0)) {
   std::stringstream result;
   result << ckfile_temp << "LSA";

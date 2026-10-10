@@ -1600,6 +1600,7 @@ protected:
 
     static int interface_touch_flag;
 
+    static int NS_LSA_activate;
     static int NS_LSA_nsteps_krylov_subspace_method;
     static int NS_LSA_max_step_count;
     static int NS_LSA_step_count;
