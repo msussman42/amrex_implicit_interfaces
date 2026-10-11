@@ -2,7 +2,7 @@
       IMPLICIT NONE
 * cd amrex_implicit_interfaces/NS_fluids_lib/BLASLAPACK/LINEAR
 * make
-* copy "liblinear.a" into the same director as svd_experiment.f
+* copy "liblinear.a" into the same directory as svd_experiment.f
 * gfortran svd_experiment.f -L. -llinear
 * ./a.out
       integer M,N

@@ -20970,6 +20970,7 @@ integer                            :: ldvr
 complex*16, dimension(M)           :: alpha1
 complex*16, dimension(M)           :: beta1
 complex*16, dimension(M,M)         :: vr
+complex*16, dimension(M,M)         :: vl
 complex*16, dimension(M,M)         :: A
 complex*16, dimension(M,M)         :: B
 complex*16, dimension(:),allocatable      :: WORK
@@ -20978,6 +20979,8 @@ real(amrex_real),dimension(:),allocatable      :: RWORK
 real(amrex_real)                   :: temp,maxbeta
 real(amrex_real), dimension(0:N1parm)          :: W1bar
 real(amrex_real), dimension(0:N2parm)          :: W2bar
+integer info
+character jobvl,jobvr
 
 LWORK=20*M
 LDA=M
@@ -20993,7 +20996,7 @@ print *,"after initialize"
 allocate(RWORK(20*M))
 allocate(WORK(LWORK))
 
-#ifdef HAS_BLAS
+#ifdef LIBLINEAR
 print *,"before zggev M,LDA,LDB ",M,LDA,LDB
 print *,"norm of A"
 call normcomplexmat(A,M)
@@ -21003,8 +21006,9 @@ call zggev(jobvl,jobvr,M,A,LDA,B,LDB,alpha1,beta1,vl,ldvl,vr,ldvr,WORK, &
           LWORK,RWORK,INFO)
 print *,"after zggev"
 #endif
-#ifndef HAS_BLAS
-print *,"this routine can only be called if USEBLAS=TRUE"
+#ifndef LIBLINEAR
+print *,"this routine can only be called if USE_LIBLINEAR=TRUE"
+print *,"which causes: -DLIBLINEAR"
 stop
 #endif
 
@@ -21739,12 +21743,15 @@ integer                            :: ldvr
 complex*16, dimension(M)           :: alpha1
 complex*16, dimension(M)           :: beta1
 complex*16, dimension(M,M)         :: vr
+complex*16, dimension(M,M)         :: vl
 complex*16, dimension(M,M)         :: A
 complex*16, dimension(M,M)         :: B
 complex*16, dimension(:),allocatable      :: WORK
 real(amrex_real),dimension(:),allocatable      :: RWORK
 
 real(amrex_real)                   :: temp,maxbeta
+integer info
+character jobvl,jobvr
 
 LWORK=20*M
 LDA=M
@@ -21765,7 +21772,7 @@ print *,"after initialize2d"
 allocate(RWORK(20*M))
 allocate(WORK(LWORK))
 
-#ifdef HAS_BLAS
+#ifdef LIBLINEAR
 print *,"before zggev M,LDA,LDB ",M,LDA,LDB
 print *,"norm of A"
 call normcomplexmat(A,M)
@@ -21775,8 +21782,9 @@ call zggev(jobvl,jobvr,M,A,LDA,B,LDB,alpha1,beta1,vl,ldvl,vr,ldvr,WORK, &
           LWORK,RWORK,INFO)
 print *,"after zggev"
 #endif
-#ifndef HAS_BLAS
-print *,"this routine can only be called if USEBLAS=TRUE"
+#ifndef LIBLINEAR
+print *,"this routine can only be called if USE_LIBLINEAR=TRUE"
+print *,"which causes: -DLIBLINEAR"
 stop
 #endif
 

@@ -35,6 +35,13 @@ HDF5_HOME=/home/mark/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #https://www.hdfgroup.org/solutions/hdf5
 #https://www.hdfgroup.org/downloads/hdfview/
 
+
+#cd amrex_implicit_interfaces/NS_fluids_lib/BLASLAPACK/LINEAR
+#make
+#copy "liblinear.a" into amrex_implicit_interfaces/NS_fluids_lib
+#gfortran svd_experiment.f -L. -llinear
+#./a.out
+USE_LIBLINEAR = TRUE
 USE_CUDA = FALSE
 USE_ACC = FALSE
 USE_PARTICLES = FALSE
@@ -198,6 +205,11 @@ include ./Make.package
 include $(MOF_HOME)/amrlib/Make.package
 
 include $(MOF_HOME)/mglib/Make.package
+
+ifeq ($(USE_LIBLINEAR),TRUE)
+    LIBRARIES+= -llinear
+    DEFINES+= -DLIBLINEAR
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

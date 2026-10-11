@@ -692,11 +692,24 @@ main (int   argc,
       std::cout << "PROC= " << amrex::ParallelDescriptor::MyProc() << 
 	    " thread_class::nthreads= " << 
 	    thread_class::nthreads << '\n';
+#ifndef LIBLINEAR
+      std::cout << "liblinear.a is not linked" << '\n';
+#endif
+#ifdef LIBLINEAR
+      std::cout << "liblinear.a is linked" << '\n';
+#endif
       std::fflush(NULL);
      }
     }  // pid=0..NProcs-1
 
     amrex::ParallelDescriptor::Barrier();
+#ifdef LIBLINEAR
+    if (sizeof(amrex::Real)==sizeof(double)) {
+     //do nothing
+    } else
+     amrex::Error("must use double precision if liblinear.a used");
+#endif
+			   
 
     if (amrex::ParallelDescriptor::IOProcessor()) {
      std::cout << "after the barrier on IO processor " << 

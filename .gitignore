@@ -21,6 +21,7 @@ GPU_TUTORIAL_LINEAR/CNS2d*
 GPU_TUTORIAL_LINEAR/CNS3d*
 GPU_TUTORIAL_LINEAR/run*.out
 NS_fluids_lib/tmp_build_dir
+NS_fluids_lib/liblinear.a
 NS_fluids_lib/test
 NS_fluids_lib/amr*
 NS_fluids_lib/run2d/test*
