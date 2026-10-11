@@ -46,6 +46,14 @@ namespace amrex{
        int* FSI_flag_temp);
 
       // called from NavierStokes.cpp: void fortran_parameters()
+     void fort_process_LSA(
+       Real* inner_product_matrix,
+       Real* X_dangerous,
+       int* matrix_size,
+       int* vector_size,
+       int* Nm1);
+
+      // called from NavierStokes.cpp: void fortran_parameters()
      void fort_override(
        const int* cc_int_size,
        const int* max_level,

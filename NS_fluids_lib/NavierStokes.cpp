@@ -1180,6 +1180,17 @@ void fortran_deallocate_parameters() {
 
 } // end subroutine fortran_deallocate_parameters
 
+void fortran_process_LSA(Real* inner_product_matrix,
+  Real* X_dangerous,int matrix_size,int vector_size) {
+
+  // calling from: "fortran_parameters"
+  // declared in PROB_CPP_PARMS.F90
+ int Nm1=vector_size-1;
+ fort_process_LSA(inner_product_matrix,X_dangerous,
+   &matrix_size,&vector_size,&Nm1);
+
+} // end subroutine fortran_process_LSA
+
 // this routine is called from main.cpp prior to:
 //  1. AmrCore* amrptr = new AmrCore();
 //  2. amrptr->init(strt_time,stop_time);

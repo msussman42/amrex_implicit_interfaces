@@ -342,6 +342,239 @@ stop
 
       end subroutine fort_mof_ordering_override
 
+      subroutine fort_process_LSA( &
+        inner_product_matrix, &
+        X_dangerous, &
+        matrix_size, &
+        vector_size, &
+        Nm1) &
+      bind(c,name='fort_process_LSA')
+
+      IMPLICIT NONE
+      integer, INTENT(in) :: matrix_size
+      integer, INTENT(in) :: vector_size
+      integer, INTENT(in) :: Nm1
+      real(amrex_real), INTENT(in) :: inner_product_matrix(matrix_size)
+      real(amrex_real), INTENT(out) :: X_dangerous(vector_size)
+      integer LWMAX
+      integer info,lwork
+      DOUBLE PRECISION A(Nm1,Nm1)
+      DOUBLE PRECISION U(Nm1,Nm1)
+      DOUBLE PRECISION VT(Nm1,Nm1)
+      DOUBLE PRECISION USIGMA(Nm1,Nm1)
+      DOUBLE PRECISION ATEST(Nm1,Nm1)
+      DOUBLE PRECISION frobenius_norm
+      
+      DOUBLE PRECISION S(Nm1)
+      DOUBLE PRECISION B(Nm1)
+      DOUBLE PRECISION WORK(20*Nm1)
+      COMPLEX*16 :: S_COMPLEX(Nm1,Nm1)
+      COMPLEX*16 :: B_COMPLEX(Nm1,Nm1)
+      COMPLEX*16 :: ALPHA(Nm1)
+      COMPLEX*16 :: BETA(Nm1)
+      COMPLEX*16 :: LAMBDA_COMPLEX(Nm1)
+      COMPLEX*16 :: VL(Nm1,Nm1)
+      COMPLEX*16 :: VR(Nm1,Nm1)
+      COMPLEX*16 :: WORK_COMPLEX(20*Nm1)
+      DOUBLE PRECISION RWORK(20*Nm1)
+
+#ifdef LIBLINEAR
+      EXTERNAL DGESVD
+      EXTERNAL ZGGEV
+#endif
+      EXTERNAL PRINT_MATRIX
+      INTRINSIC INT,MIN
+      integer i,j,k
+
+#ifndef LIBLINEAR
+print *,"this routine can only be called if USE_LIBLINEAR=TRUE"
+print *,"which causes: -DLIBLINEAR"
+stop
+#endif
+      if (Nm1.eq.vector_size-1) then
+       !do nothing
+      else
+       print *,"Nm1.eq.vector_size-1 failed"
+       stop
+      endif
+      if (matrix_size.eq.vector_size*vector_size) then
+       !do nothing
+      else
+       print *,"matrix_size.eq.vector_size^2 failed"
+       stop
+      endif
+
+      ktest=0
+      do i=1,Nm1
+       do j=1,Nm1
+        k_2d=vector_size*(i-1)+j-1
+        if (k_2d.eq.ktest) then
+         !do nothing
+        else
+         print *,"k_2d.eq.ktest failed"
+         stop
+        endif
+        A(i,j)=inner_product_matrix(ktest+1)
+        ktest=ktest+1
+       enddo !j=1,Nm1
+       ktest=ktest+1
+       j=vector_size
+       k_2d=vector_size*(i-1)+j-1
+       B(i)=inner_product_matrix(k_2d+1)
+      enddo !i=1,Nm1
+
+      CALL PRINT_MATRIX( 'A', &
+                         Nm1, Nm1, A, Nm1 )
+
+      do i=1,Nm1
+       do j=1,Nm1
+        ACOPY(i,j)=A(i,j)
+       enddo
+      enddo
+*
+*     Query the optimal workspace.
+*
+      LWORK = -1
+#ifdef LIBLINEAR
+      CALL DGESVD( 'All', 'All', Nm1, Nm1, A, Nm1, S, U, Nm1, VT, Nm1, &
+                   WORK, LWORK, INFO )
+      LWMAX=20*Nm1
+      LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
+*
+*     Compute SVD.
+*
+      CALL DGESVD( 'All', 'All', Nm1, Nm1, A, Nm1, S, U, Nm1, VT, Nm1, &
+                   WORK, LWORK, INFO )
+#endif
+*
+*     Check for convergence.
+*
+      IF( INFO.GT.0 ) THEN
+         WRITE(*,*)'The algorithm computing SVD failed to converge.'
+         STOP
+      END IF
+*
+*     Print singular values.
+*
+      CALL PRINT_MATRIX( 'Singular values', 1, Nm1, S, 1 )
+*
+*     Print left singular vectors.
+*
+      CALL PRINT_MATRIX( 'Left singular vectors (stored columnwise)', &
+                         Nm1, Nm1, U, Nm1 )
+*
+*     Print right singular vectors.
+*
+      CALL PRINT_MATRIX( 'Right singular vectors (stored rowwise)', &
+                         Nm1, Nm1, VT, Nm1 )
+
+      do i=1,Nm1
+       do j=1,Nm1
+        USIGMA(i,j)=0.0d0
+        do k=1,Nm1
+         if (k.eq.j) then
+          USIGMA(i,j)=USIGMA(i,j)+U(i,k)*S(k)
+         endif
+        enddo
+       enddo
+      enddo
+      do i=1,Nm1
+       do j=1,Nm1
+        ATEST(i,j)=0.0d0
+        do k=1,Nm1
+         ATEST(i,j)=ATEST(i,j)+USIGMA(i,k)*VT(k,j)
+        enddo
+       enddo
+      enddo
+      CALL PRINT_MATRIX( 'ATEST', &
+                         Nm1, Nm1, ATEST, Nm1 )
+
+      frobenius_norm=0.0d0
+      do i=1,Nm1
+       do j=1,Nm1
+        frobenius_norm=frobenius_norm+(ACOPY(i,j)-ATEST(i,j))**2
+       enddo
+      enddo
+      frobenius_norm=sqrt(frobenius_norm)
+      print *,"frobenius_norm= ",frobenius_norm
+
+      do i=1,Nm1
+       UTB(i)=0.0d0
+       do k=1,Nm1
+        UTB(i)=UTB(i)+U(k,i)*B(k)
+       enddo
+      enddo
+      do i=1,Nm1
+       if (S(i).le.0.0d0) then
+        UTB(i)=0.0d0
+       else if (S(i).gt.0.0d0) then
+        UTB(i)=UTB(i)/S(i)
+       else
+        print *,"S bust ",S(i)
+        stop
+       endif
+      enddo
+      do i=1,Nm1
+       AVEC(i)=0.0d0
+       do k=1,Nm1
+        AVEC(i)=AVEC(i)+VT(k,i)*UTB(k)
+       enddo
+      enddo
+      do i=1,Nm1
+      do j=1,Nm1
+       S_COMPLEX(i,j)=CMPLX(0.0d0,0.0d0)
+       B_COMPLEX(i,j)=CMPLX(0.0d0,0.0d0)
+       if (i.eq.j+1) then
+        S_COMPLEX(i,j)=CMPLX(1.0d0,0.0d0)
+       endif
+       if (j.eq.Nm1) then
+        S_COMPLEX(i,j)=CMPLX(AVEC(i),0.0d0)
+       endif
+       if (i.eq.j) then
+        B_COMPLEX(i,j)=CMPLX(1.0d0,0.0d0)
+       endif
+      enddo
+      enddo
+      LWORK=20*NM1
+#ifdef LIBLINEAR
+      CALL ZGGEV('V','V',Nm1,S_COMPLEX,Nm1,B_COMPLEX,Nm1, &
+        ALPHA,BETA,VL,Nm1,VR,Nm1,WORK_COMPLEX,LWORK, &
+        RWORK,INFO)
+      if (INFO.eq.0) then
+       do i=1,Nm1
+        LAMBDA_COMPLEX(i)=ALPHA(I)/BETA(I)
+        print *,"eigenvalue ",i," = ",LAMBDA_COMPLEX(i)
+        print *,"alpha ",i," = ",ALPHA(I)
+        print *,"beta ",i," = ",BETA(I)
+       enddo
+      else 
+       print *,"ZGGEV failed with info= ",INFO
+       stop
+      endif
+#endif
+
+      return
+      end subroutine fort_process_LSA
+
+
+      SUBROUTINE PRINT_MATRIX( DESC, M, N, A, LDA )
+      CHARACTER*(*)    DESC
+      INTEGER          M, N, LDA
+      DOUBLE PRECISION A( LDA, * )
+*
+      INTEGER          I, J
+*
+      WRITE(*,*)
+      WRITE(*,*) DESC
+      DO I = 1, M
+         WRITE(*,9998) ( A( I, J ), J = 1, N )
+      END DO
+*
+ 9998 FORMAT( 11(:,1X,F6.2) )
+      RETURN
+      END
+
+
        ! fortran_parameters is called from main.cpp prior to:
        !  1. AmrCore* amrptr = new AmrCore();
        !  2. amrptr->init(strt_time,stop_time);

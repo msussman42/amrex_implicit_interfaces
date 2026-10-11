@@ -18,6 +18,8 @@ namespace amrex{
 
 extern void fortran_parameters();
 extern void fortran_deallocate_parameters();
+extern void fortran_process_LSA(Real* inner_product_matrix,
+  Real* X_dangerous,int matrix_size,int vector_size);
 
 }
 
@@ -537,10 +539,12 @@ fork_job(int fork_id) {
 
  } else if (local_LSA_activate==2) {
 
-  Vector<Real> inner_product_matrix(
+  int matrix_size=
      local_LSA_nsteps_krylov_subspace_method*
-     local_LSA_nsteps_krylov_subspace_method);
-  Vector<Real> X_dangerous(local_LSA_nsteps_krylov_subspace_method);
+     local_LSA_nsteps_krylov_subspace_method;
+
+  Real inner_product_matrix[matrix_size];
+  Real X_dangerous[local_LSA_nsteps_krylov_subspace_method];
 		 
   int k=0; 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
@@ -618,7 +622,10 @@ fork_job(int fork_id) {
   //with LSA_nsteps_krylov_subspace_method + 1.
   //restart using LSA_activate=3 (regridding will copy default values
   //into the EXTRA states)
-  
+
+  fortran_process_LSA(inner_product_matrix,X_dangerous,
+    matrix_size,vector_size);
+ 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method-1;i++) {
    AmrCore* amrptr_first = new AmrCore(i);
    amrex::ParallelDescriptor::Barrier();
@@ -685,7 +692,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 10, 2026, 6:00pm on proc " << 
+	"Multimaterial October 11, 2026, 6:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
