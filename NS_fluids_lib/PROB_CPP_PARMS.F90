@@ -342,6 +342,38 @@ stop
 
       end subroutine fort_mof_ordering_override
 
+      SUBROUTINE PRINT_MATRIX( DESC, M, N, A )
+      CHARACTER*(*)    DESC
+      INTEGER          M, N
+      DOUBLE PRECISION A(M,N)
+      INTEGER          I, J
+      WRITE(*,*)
+      WRITE(*,*) DESC
+      DO I = 1, M
+      DO J = 1, N
+       print *,"i,j,A ",i,j,A(I,J)
+      END DO
+      END DO
+ 
+      RETURN
+      END
+
+      SUBROUTINE PRINT_MATRIX_CMPLX( DESC, M, N, A )
+      CHARACTER*(*)    DESC
+      INTEGER          M, N
+      COMPLEX*16 ::  A(M,N)
+      INTEGER          I, J
+      WRITE(*,*)
+      WRITE(*,*) DESC
+      DO I = 1, M
+      DO J = 1, N
+       print *,"i,j,A ",i,j,A(I,J)
+      END DO
+      END DO
+
+      RETURN
+      END
+
       subroutine fort_process_LSA( &
         inner_product_matrix, &
         X_dangerous, &
@@ -363,10 +395,12 @@ stop
       DOUBLE PRECISION VT(Nm1,Nm1)
       DOUBLE PRECISION USIGMA(Nm1,Nm1)
       DOUBLE PRECISION ATEST(Nm1,Nm1)
+      DOUBLE PRECISION ACOPY(Nm1,Nm1)
       DOUBLE PRECISION frobenius_norm
       
       DOUBLE PRECISION S(Nm1)
       DOUBLE PRECISION B(Nm1)
+      DOUBLE PRECISION AA_MINUS_B(Nm1)
       DOUBLE PRECISION UTB(Nm1)
       DOUBLE PRECISION AVEC(Nm1)
       DOUBLE PRECISION WORK(20*Nm1)
@@ -388,10 +422,10 @@ stop
       EXTERNAL DGESVD
       EXTERNAL ZGGEV
 #endif
-      EXTERNAL PRINT_MATRIX
-      EXTERNAL PRINT_MATRIX_CMPLX
+!      EXTERNAL PRINT_MATRIX
+!      EXTERNAL PRINT_MATRIX_CMPLX
       INTRINSIC INT,MIN
-      integer i,j,k
+      integer i,j,k,k_2d,ktest
       integer max_index
 
 #ifndef LIBLINEAR
@@ -419,22 +453,26 @@ stop
         if (k_2d.eq.ktest) then
          !do nothing
         else
-         print *,"k_2d.eq.ktest failed"
+         print *,"k_2d.eq.ktest failed(1) k_2d,ktest ",k_2d,ktest
+         print *,"i,j ",i,j
+         print *,"vector_size,Nm1 ",vector_size,Nm1
          stop
         endif
         A(i,j)=inner_product_matrix(ktest+1)
         ktest=ktest+1
        enddo !j=1,Nm1
-       ktest=ktest+1
        j=vector_size
        k_2d=vector_size*(i-1)+j-1
        if (k_2d.eq.ktest) then
         !do nothing
        else
-        print *,"k_2d.eq.ktest failed"
+        print *,"k_2d.eq.ktest failed(2) k_2d,ktest ",k_2d,ktest
+        print *,"i,j ",i,j
+        print *,"vector_size,Nm1 ",vector_size,Nm1
         stop
        endif
        B(i)=inner_product_matrix(k_2d+1)
+       ktest=ktest+1
       enddo !i=1,Nm1
 
       CALL PRINT_MATRIX( 'A', &
@@ -445,40 +483,22 @@ stop
         ACOPY(i,j)=A(i,j)
        enddo
       enddo
-*
-*     Query the optimal workspace.
-*
       LWORK = -1
 #ifdef LIBLINEAR
       CALL DGESVD( 'All', 'All', Nm1, Nm1, A, Nm1, S, U, Nm1, VT, Nm1, &
                    WORK, LWORK, INFO )
       LWMAX=20*Nm1
       LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
-*
-*     Compute SVD.
-*
       CALL DGESVD( 'All', 'All', Nm1, Nm1, A, Nm1, S, U, Nm1, VT, Nm1, &
                    WORK, LWORK, INFO )
 #endif
-*
-*     Check for convergence.
-*
       IF( INFO.GT.0 ) THEN
          WRITE(*,*)'The algorithm computing SVD failed to converge.'
          STOP
       END IF
-*
-*     Print singular values.
-*
       CALL PRINT_MATRIX( 'Singular values', Nm1, 1, S )
-*
-*     Print left singular vectors.
-*
       CALL PRINT_MATRIX( 'Left singular vectors (stored columnwise)', &
                          Nm1, Nm1, U )
-*
-*     Print right singular vectors.
-*
       CALL PRINT_MATRIX( 'Right singular vectors (stored rowwise)', &
                          Nm1, Nm1, VT )
 
@@ -535,6 +555,15 @@ stop
         AVEC(i)=AVEC(i)+VT(k,i)*UTB(k)
        enddo
       enddo
+
+      do i=1,Nm1
+       AA_MINUS_B(i)=0.0d0
+       do k=1,Nm1
+        AA_MINUS_B(i)=AA_MINUS_B(i)+ACOPY(i,k)*AVEC(k)
+       enddo
+       AA_MINUS_B(i)=AA_MINUS_B(i)-B(i)
+      enddo  
+      CALL PRINT_MATRIX( 'AA_MINUS_B', Nm1, 1, AA_MINUS_B )
       do i=1,Nm1
       do j=1,Nm1
        S_COMPLEX(i,j)=CMPLX(0.0d0,0.0d0)
@@ -560,7 +589,7 @@ stop
        max_index=1
        do i=1,Nm1
         LAMBDA_COMPLEX(i)=ALPHA(I)/BETA(I)
-        if (REAL(LAMBDA_COMPLEX(i)).gt &
+        if (REAL(LAMBDA_COMPLEX(i)).gt. &
             REAL(LAMBDA_COMPLEX(max_index))) then
          max_index=i
         endif
@@ -568,6 +597,8 @@ stop
         print *,"alpha ",i," = ",ALPHA(I)
         print *,"beta ",i," = ",BETA(I)
        enddo !i=1,Nm1
+       print *,"max_index= ",max_index
+
        mag_vr=0.0d0
        do i=1,Nm1
         VRCRIT(i)=VR(i,max_index)
@@ -586,6 +617,7 @@ stop
          enddo
          SVR(i)=SVR(i)-LAMBDA_COMPLEX(max_index)*VRCRIT(i)
         enddo
+        CALL PRINT_MATRIX_CMPLX( 'VRCRIT', Nm1, 1, VRCRIT )
         CALL PRINT_MATRIX_CMPLX( 'SVR - lambda VR', Nm1, 1, SVR )
         CALL PRINT_MATRIX( 'X_dangerous', Nm1, 1, X_dangerous )
        else
@@ -603,41 +635,6 @@ stop
       end subroutine fort_process_LSA
 
 
-      SUBROUTINE PRINT_MATRIX( DESC, M, N, A )
-      CHARACTER*(*)    DESC
-      INTEGER          M, N
-      DOUBLE PRECISION A(M,N)
-*
-      INTEGER          I, J
-*
-      WRITE(*,*)
-      WRITE(*,*) DESC
-      DO I = 1, M
-      DO J = 1, N
-       print *,"i,j,A ",i,j,A(I,J)
-      END DO
-      END DO
- 
-      RETURN
-      END
-
-      SUBROUTINE PRINT_MATRIX_CMPLX( DESC, M, N, A )
-      CHARACTER*(*)    DESC
-      INTEGER          M, N
-      COMPLEX*16 ::  A(M,N)
-*
-      INTEGER          I, J
-*
-      WRITE(*,*)
-      WRITE(*,*) DESC
-      DO I = 1, M
-      DO J = 1, N
-       print *,"i,j,A ",i,j,A(I,J)
-      END DO
-      END DO
-
-      RETURN
-      END
 
        ! fortran_parameters is called from main.cpp prior to:
        !  1. AmrCore* amrptr = new AmrCore();

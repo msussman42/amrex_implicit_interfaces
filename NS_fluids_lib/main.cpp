@@ -542,9 +542,10 @@ fork_job(int fork_id) {
   int matrix_size=
      local_LSA_nsteps_krylov_subspace_method*
      local_LSA_nsteps_krylov_subspace_method;
+  int vector_size=local_LSA_nsteps_krylov_subspace_method;
 
-  Real inner_product_matrix[matrix_size];
-  Real X_dangerous[local_LSA_nsteps_krylov_subspace_method];
+  Real* inner_product_matrix=new Real[matrix_size];
+  Real* X_dangerous=new Real[vector_size];
 		 
   int k=0; 
   for (int i=0;i<local_LSA_nsteps_krylov_subspace_method;i++) {
@@ -634,6 +635,9 @@ fork_job(int fork_id) {
    Real x_local=X_dangerous[i];
    amrptr->most_dangerous(amrptr_first,x_local,i);
   }
+
+  delete inner_product_matrix;
+  delete X_dangerous;
  } else
   amrex::Error("local_LSA_activate invalid");
 
@@ -692,7 +696,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial October 11, 2026, 6:00pm on proc " << 
+	"Multimaterial October 12, 2026, 6:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
