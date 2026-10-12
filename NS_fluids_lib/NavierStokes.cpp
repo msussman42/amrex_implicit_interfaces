@@ -26065,13 +26065,20 @@ void NavierStokes::computeNewDt (int finest_level,
     amrex::Error("nsteps invalid (not LSA) computeNewDt");
    }
   } else if (parent->LSA_nsteps_krylov_subspace_method>=1) {
-   if ((fixed_dt==fixed_dt_init)&&(fixed_dt>0.0)) {
+
+   if (parent->LSA_activate==0) {
     //do nothing
-   } else {
-    std::cout << "fixed_dt= " << fixed_dt << '\n';
-    std::cout << "fixed_dt_init= " << fixed_dt_init << '\n';
-    amrex::Error("expecting fixed_dt > 0.0 (LSA) computeNewDt");
-   }
+   } else if (parent->LSA_activate==1) {
+    if ((fixed_dt==fixed_dt_init)&&(fixed_dt>0.0)) {
+     //do nothing
+    } else {
+     std::cout << "fixed_dt= " << fixed_dt << '\n';
+     std::cout << "fixed_dt_init= " << fixed_dt_init << '\n';
+     amrex::Error("expecting fixed_dt > 0.0 (LSA) computeNewDt");
+    }
+   } else
+    amrex::Error("expecting LSA_activate=0 or 1");
+
   } else {
    std::cout << "parent->LSA_nsteps_krylov_subspace_method=" <<
       parent->LSA_nsteps_krylov_subspace_method << '\n';
