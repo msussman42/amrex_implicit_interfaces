@@ -367,14 +367,20 @@ stop
       
       DOUBLE PRECISION S(Nm1)
       DOUBLE PRECISION B(Nm1)
+      DOUBLE PRECISION UTB(Nm1)
+      DOUBLE PRECISION AVEC(Nm1)
       DOUBLE PRECISION WORK(20*Nm1)
+      DOUBLE PRECISION mag_vr
       COMPLEX*16 :: S_COMPLEX(Nm1,Nm1)
+      COMPLEX*16 :: S_COMPLEX_SAVE(Nm1,Nm1)
       COMPLEX*16 :: B_COMPLEX(Nm1,Nm1)
       COMPLEX*16 :: ALPHA(Nm1)
       COMPLEX*16 :: BETA(Nm1)
       COMPLEX*16 :: LAMBDA_COMPLEX(Nm1)
+      COMPLEX*16 :: SVR(Nm1)
       COMPLEX*16 :: VL(Nm1,Nm1)
       COMPLEX*16 :: VR(Nm1,Nm1)
+      COMPLEX*16 :: VRCRIT(Nm1)
       COMPLEX*16 :: WORK_COMPLEX(20*Nm1)
       DOUBLE PRECISION RWORK(20*Nm1)
 
@@ -383,8 +389,10 @@ stop
       EXTERNAL ZGGEV
 #endif
       EXTERNAL PRINT_MATRIX
+      EXTERNAL PRINT_MATRIX_CMPLX
       INTRINSIC INT,MIN
       integer i,j,k
+      integer max_index
 
 #ifndef LIBLINEAR
 print *,"this routine can only be called if USE_LIBLINEAR=TRUE"
@@ -420,11 +428,17 @@ stop
        ktest=ktest+1
        j=vector_size
        k_2d=vector_size*(i-1)+j-1
+       if (k_2d.eq.ktest) then
+        !do nothing
+       else
+        print *,"k_2d.eq.ktest failed"
+        stop
+       endif
        B(i)=inner_product_matrix(k_2d+1)
       enddo !i=1,Nm1
 
       CALL PRINT_MATRIX( 'A', &
-                         Nm1, Nm1, A, Nm1 )
+                         Nm1, Nm1, A )
 
       do i=1,Nm1
        do j=1,Nm1
@@ -456,17 +470,17 @@ stop
 *
 *     Print singular values.
 *
-      CALL PRINT_MATRIX( 'Singular values', 1, Nm1, S, 1 )
+      CALL PRINT_MATRIX( 'Singular values', Nm1, 1, S )
 *
 *     Print left singular vectors.
 *
       CALL PRINT_MATRIX( 'Left singular vectors (stored columnwise)', &
-                         Nm1, Nm1, U, Nm1 )
+                         Nm1, Nm1, U )
 *
 *     Print right singular vectors.
 *
       CALL PRINT_MATRIX( 'Right singular vectors (stored rowwise)', &
-                         Nm1, Nm1, VT, Nm1 )
+                         Nm1, Nm1, VT )
 
       do i=1,Nm1
        do j=1,Nm1
@@ -487,7 +501,7 @@ stop
        enddo
       enddo
       CALL PRINT_MATRIX( 'ATEST', &
-                         Nm1, Nm1, ATEST, Nm1 )
+                         Nm1, Nm1, ATEST )
 
       frobenius_norm=0.0d0
       do i=1,Nm1
@@ -496,8 +510,9 @@ stop
        enddo
       enddo
       frobenius_norm=sqrt(frobenius_norm)
-      print *,"frobenius_norm= ",frobenius_norm
+      print *,"frobenius_norm(ACOPY-ATEST)= ",frobenius_norm
 
+       !U S VT avec=B
       do i=1,Nm1
        UTB(i)=0.0d0
        do k=1,Nm1
@@ -533,6 +548,7 @@ stop
        if (i.eq.j) then
         B_COMPLEX(i,j)=CMPLX(1.0d0,0.0d0)
        endif
+       S_COMPLEX_SAVE(i,j)=S_COMPLEX(i,j)
       enddo
       enddo
       LWORK=20*NM1
@@ -541,12 +557,42 @@ stop
         ALPHA,BETA,VL,Nm1,VR,Nm1,WORK_COMPLEX,LWORK, &
         RWORK,INFO)
       if (INFO.eq.0) then
+       max_index=1
        do i=1,Nm1
         LAMBDA_COMPLEX(i)=ALPHA(I)/BETA(I)
+        if (REAL(LAMBDA_COMPLEX(i)).gt &
+            REAL(LAMBDA_COMPLEX(max_index))) then
+         max_index=i
+        endif
         print *,"eigenvalue ",i," = ",LAMBDA_COMPLEX(i)
         print *,"alpha ",i," = ",ALPHA(I)
         print *,"beta ",i," = ",BETA(I)
+       enddo !i=1,Nm1
+       mag_vr=0.0d0
+       do i=1,Nm1
+        VRCRIT(i)=VR(i,max_index)
+        mag_vr=mag_vr+REAL(VRCRIT(i))**2
        enddo
+       mag_vr=sqrt(mag_vr)
+       if (mag_vr.gt.0.0d0) then
+        do i=1,Nm1
+         VRCRIT(i)=VRCRIT(i)/mag_vr
+         X_dangerous(i)=REAL(VRCRIT(i))
+        enddo
+        do i=1,Nm1
+         SVR(i)=CMPLX(0.0d0,0.0d0)
+         do k=1,Nm1
+          SVR(i)=SVR(i)+S_COMPLEX_SAVE(i,k)*VRCRIT(k)
+         enddo
+         SVR(i)=SVR(i)-LAMBDA_COMPLEX(max_index)*VRCRIT(i)
+        enddo
+        CALL PRINT_MATRIX_CMPLX( 'SVR - lambda VR', Nm1, 1, SVR )
+        CALL PRINT_MATRIX( 'X_dangerous', Nm1, 1, X_dangerous )
+       else
+        print *,"mag_vr invalid ",mag_vr
+        stop
+       endif
+
       else 
        print *,"ZGGEV failed with info= ",INFO
        stop
@@ -557,23 +603,41 @@ stop
       end subroutine fort_process_LSA
 
 
-      SUBROUTINE PRINT_MATRIX( DESC, M, N, A, LDA )
+      SUBROUTINE PRINT_MATRIX( DESC, M, N, A )
       CHARACTER*(*)    DESC
-      INTEGER          M, N, LDA
-      DOUBLE PRECISION A( LDA, * )
+      INTEGER          M, N
+      DOUBLE PRECISION A(M,N)
 *
       INTEGER          I, J
 *
       WRITE(*,*)
       WRITE(*,*) DESC
       DO I = 1, M
-         WRITE(*,9998) ( A( I, J ), J = 1, N )
+      DO J = 1, N
+       print *,"i,j,A ",i,j,A(I,J)
       END DO
-*
- 9998 FORMAT( 11(:,1X,F6.2) )
+      END DO
+ 
       RETURN
       END
 
+      SUBROUTINE PRINT_MATRIX_CMPLX( DESC, M, N, A )
+      CHARACTER*(*)    DESC
+      INTEGER          M, N
+      COMPLEX*16 ::  A(M,N)
+*
+      INTEGER          I, J
+*
+      WRITE(*,*)
+      WRITE(*,*) DESC
+      DO I = 1, M
+      DO J = 1, N
+       print *,"i,j,A ",i,j,A(I,J)
+      END DO
+      END DO
+
+      RETURN
+      END
 
        ! fortran_parameters is called from main.cpp prior to:
        !  1. AmrCore* amrptr = new AmrCore();
