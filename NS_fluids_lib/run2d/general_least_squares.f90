@@ -2,8 +2,8 @@
 
       IMPLICIT NONE
 
-      integer, PARAMETER :: firstline=1
-      integer, PARAMETER :: lastline=6774
+      integer, PARAMETER :: firstline=96
+      integer, PARAMETER :: lastline=439
       real*8, PARAMETER :: r0=1.0d0
       Real*8 :: AA
       Real*8 :: A(2,2)
@@ -54,6 +54,7 @@
         print *,"log y= log a + b x    y=a e^(bx)"
        else if (fit_type.eq.3) then
         print *,"log (y-r0) = log a + b x    y=r0+a e^(bx)"
+        print *,"r0=",r0
        else
         print *,"fit_type inalid"
         stop
@@ -104,6 +105,10 @@
        X(2)=(-A(2,1)*B(1)+A(1,1)*B(2))/det
        print *,"X1,X2: ",X(1),X(2)
        print *,"fit_type= ",fit_type
+       if ((fit_type.eq.2).or.(fit_type.eq.3)) then
+        print *,"a in a e^{bx} is ",exp(X(1))
+        print *,"b in a e^{bx} is ",X(2)
+       endif
        LS_ERR=0.0
        LS_ERR_raw=0.0
        do i=1,ndata

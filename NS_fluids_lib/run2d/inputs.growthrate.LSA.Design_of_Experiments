@@ -33,7 +33,8 @@ stop_time =  12.00  # maximum problem time perturbation
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  5.0 19.634954 #frequence=0.32,wavelength=2Pi/0.32  
-geometry.prob_hi   =  9.0 72.0
+#geometry.prob_hi   =  9.0 72.0
+geometry.prob_hi   =  4.5 9.0
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
 
 #Eulerian Implicit Lagrangian Explicit cell integrated semi lagrangian method
@@ -70,7 +71,7 @@ ns.initial_cg_cycles=1  # number of MGPCG steps to do in order to get
 #amr.n_cell    = 32 256
 #amr.max_level = 3
 #amr.max_level = 0 #maximum number of AMR levels (0 if just the coarsest lev)
-amr.n_cell=16 128
+amr.n_cell=16 32
 amr.max_level=1
 ns.ns_tiling=false
 
@@ -136,7 +137,7 @@ ns.tension        = 1.0
 #must have u dt < dx where u=max(u_flow_velocity,u_surface_tension)
 #e.g.stop_time=0.3
 #max_step=0.3/.0006=3/.006=30/.06=300/.6=3000/6=500
-ns.fixed_dt	  = 0.0006   # hardwire dt
+#ns.fixed_dt	  = 0.0006   # hardwire dt
 
 #LSA_initial_levelSteps=number of time steps in order to establish the base
 #state (i.e. the steady state solution)
