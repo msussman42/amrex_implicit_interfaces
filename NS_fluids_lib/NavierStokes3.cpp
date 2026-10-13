@@ -691,6 +691,8 @@ void NavierStokes::save_interface_data(
   Real input_velocity_time_slab=prev_time_slab;
   int input_velocity_slab_step=project_slab_step;
 
+   //extend_FSI_data is declared in NavierStokes3.cpp
+   //extend_FSI_data calls fort_extend_elastic_velocity (LEVELSET_3D.F90)
   extend_FSI_data(
     im_extend,
     local_tensor_extend,
