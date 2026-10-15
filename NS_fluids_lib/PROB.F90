@@ -8926,11 +8926,17 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call blob_array_dist(x,y,z,dist)
 
        else if ((probtype.eq.1).and.(axis_dir.eq.11)) then ! vapordist 2d
+
         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 )-radblob
+
        else if ((probtype.eq.1).and.(axis_dir.eq.12)) then ! vapordist 2d
+
         dist=-sqrt( (x-xblob)**2 + (y-yblob)**2 )+radblob
+
        else if ((probtype.eq.1).and.(axis_dir.eq.14)) then
+
         dist=-sqrt( (x-xblob)**2 + (y-yblob)**2 )+radblob
+
        else if ((probtype.eq.1).and.(axis_dir.eq.140)) then
         dist=max(-sqrt( (x-xblob)**2 + (y-yblob)**2 )+radblob, &
                  -sqrt( (x-xblob)**2 + (y-yblob2)**2 )+radblob)
@@ -9311,8 +9317,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          zblob-radblob,zblob+radblob,x,y,z,dist)
        else if ((probtype.eq.1).and.(axis_dir.le.10)) then ! vapordist 3d
         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )-radblob
+
        else if ((probtype.eq.1).and.(axis_dir.eq.11)) then ! vapordist 3d
+
         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )-radblob
+
        else if ((probtype.eq.1).and.(axis_dir.eq.13)) then ! vapordist 3d
         ! dist<0 in the blobs.
         call blob_array_dist(x,y,z,dist)
@@ -15727,10 +15736,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
  
         if (side.eq.1) then
   
-           ! xlo
+           ! xlo, 2d or 3d
          if (dir.eq.1) then
    
-           ! xlo,xvel
+           ! xlo,xvel, 2d or 3d
           if (veldir.eq.1) then
   
            if (adv_dir.eq.1)then
@@ -15739,13 +15748,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             x_vel = zero
            endif
   
-           velcell(veldir)=x_vel  ! xlo, velx
+           velcell(veldir)=x_vel  ! xlo, velx, 2d or 3d
 
            if (probtype.eq.bubbleInPackedColumn) then ! xlo,velx
+
             call Pack_velbc(dir,side,veldir,velcell)
+
            else if (SDIM.eq.2) then
   
-            if ((probtype.eq.1).and.(axis_dir.eq.11)) then
+            if ((probtype.eq.1).and.(axis_dir.eq.11)) then !xlo,velx,2d
              velcell(veldir)=vinletgas*(y/yblob-one) 
             else if (probtype.eq.58) then
              velcell(veldir)=zero
@@ -15903,8 +15914,20 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              velcell(veldir)=adv_vel 
             else if ((probtype.eq.1).and.(axis_dir.eq.13)) then
              velcell(veldir)=zero
+
+             ! ylo, velx, 2D
             else if ((probtype.eq.1).and.(axis_dir.ne.14)) then
-             velcell(veldir)=-vinletgas
+
+             if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then
+              if (xblob10.eq.one) then
+               velcell(veldir)=radblob10
+              else
+               velcell(veldir)=-vinletgas
+              endif
+             else
+              velcell(veldir)=-vinletgas
+             endif
+
             else if (probtype.eq.21) then
              velcell(veldir)=adv_vel
             else if (probtype.eq.58) then
@@ -16047,13 +16070,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            else  
             x_vel = zero
            endif
-           velcell(veldir)=x_vel  ! zlo, velx
+           velcell(veldir)=x_vel  ! zlo, velx, 3D
   
-           if (probtype.eq.bubbleInPackedColumn) then ! zlo,velx
+           if (probtype.eq.bubbleInPackedColumn) then ! zlo,velx, 3D
             call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.1).and.(axis_dir.eq.13)) then
             velcell(veldir)=zero
+
+            ! zlo, velx, 3D
            else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
+
             if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then
              if (xblob10.eq.one) then
               velcell(veldir)=radblob10
@@ -16063,6 +16089,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else
              velcell(veldir)=-vinletgas
             endif
+
 ! zlo face, x velocity
            else if (probtype.eq.530) then
             call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
@@ -16169,11 +16196,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
-              ! xhi,xvel
+              ! xhi,xvel,2d
             if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+
             else if ((probtype.eq.1).and.(axis_dir.eq.11)) then
+
              velcell(veldir)=vinletgas*(y/yblob-one) 
+
             else if (probtype.eq.58) then
              velcell(veldir)=zero
             else if (probtype.eq.59) then ! xvel,xhi,velbc_override 2d
@@ -16301,8 +16331,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              ! yhi, velx, 2D
             if ((probtype.eq.701).and.(axis_dir.eq.2)) then 
              velcell(veldir)=adv_vel
+
+             ! yhi, velx, 2D
             else if ((probtype.eq.1).and.(axis_dir.ne.14)) then
+
              velcell(veldir)=vinletgas
+
             else if (probtype.eq.21) then
              velcell(veldir)=adv_vel
             else if (probtype.eq.58) then
@@ -16439,12 +16473,16 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            else  
             x_vel = zero
            endif
-           velcell(veldir)=x_vel  ! zhi, velx
+           velcell(veldir)=x_vel  ! zhi, velx,3D
   
-           if (probtype.eq.bubbleInPackedColumn) then ! zhi,velx
+           if (probtype.eq.bubbleInPackedColumn) then ! zhi,velx, 3D
             call Pack_velbc(dir,side,veldir,velcell)
+
+             ! zhi, velx, 3D
            else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
+
             velcell(veldir)=vinletgas
+
            else if (probtype.eq.58) then
             velcell(veldir)=zero
            endif
@@ -27129,9 +27167,38 @@ end subroutine initialize2d
          else if (probtype.eq.602) then  ! Rayleigh Taylor and checkerboard
           x_vel=zero
           y_vel=zero
-         else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
+         else if ((probtype.eq.1).and.(axis_dir.lt.150)) then !2D
+
           if (axis_dir.eq.11) then
-           x_vel=vinletgas*(y/yblob-one)
+
+           if (yblob.gt.zero) then
+            x_vel=vinletgas*(y/yblob-one)
+           else if (yblob.eq.zero) then
+            if (probhiy.le.zero) then
+             print *,"probhiy invalid ",probhiy
+             stop
+            endif
+            x_vel=vinletgas*y/probhiy
+           else
+            print *,"parameters invalid for shear problem 2D yblob=",yblob
+            stop
+           endif
+
+           if (xblob10.eq.one) then
+            if (yblob.gt.zero) then
+             x_vel=radblob10+(vinletgas-radblob10)*y/(two*yblob)
+            else
+             if (radblob10.ne.zero) then
+              print *,"zero velocity at axis of symmetry"
+             endif
+             if (yblob10.eq.zero) then
+              print *,"yblob10 should be domain height"
+              stop
+             endif
+             x_vel=vinletgas*y/yblob10
+            endif
+           endif
+
           else if (axis_dir.eq.14) then
            dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
            if (dist.ge.zero) then
@@ -27448,17 +27515,19 @@ end subroutine initialize2d
         else if (SDIM.eq.3) then
 
          if ((probtype.eq.1).and.(axis_dir.lt.150)) then
-          if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then
+
+          if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then !3D
+
            if (zblob.gt.zero) then
             x_vel=vinletgas*(z/zblob-one)
            else if (zblob.eq.zero) then
             if (probhiz.le.zero) then
-             print *,"probhiz invalid"
+             print *,"probhiz invalid ",probhiz
              stop
             endif
             x_vel=vinletgas*z/probhiz
            else
-            print *,"parameters invalid for shear problem"
+            print *,"parameters invalid for shear problem 3D"
             stop
            endif
 
@@ -27476,6 +27545,7 @@ end subroutine initialize2d
              x_vel=vinletgas*z/zblob10
             endif
            endif
+
           else if (axis_dir.eq.14) then
            dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
            if (dist.ge.zero) then
