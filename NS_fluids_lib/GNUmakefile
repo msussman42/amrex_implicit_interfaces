@@ -147,7 +147,7 @@ COMP = gnu
 #USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
-USE_OMP = TRUE
+USE_OMP = FALSE
 
 ifeq ($(USE_HDF5),TRUE)
  USERSuffix+=.HDF5

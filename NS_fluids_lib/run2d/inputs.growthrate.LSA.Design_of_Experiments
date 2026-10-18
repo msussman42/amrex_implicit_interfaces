@@ -19,8 +19,12 @@
 #  "Dynamic mode decomposition of numerical and experimental data"
 #Wang, Simakihina, Sussman Figure 16
 #expected most dangerous mode: space frequency=.7
+#perturbation: exp(ikx)
+#wave length: kx=2 * pi
+#x=2 * pi/k
 #wave length=2 pi/.7=9.0
 #see Popinet 2009, see rayleigh_capillary_growth.F90
+#see for computing growth rate: general_least_squares.f90
 max_step  = 20000   # maximum timestep non-intrusive LSA
 #max_step  = 999999   # maximum timestep perturbation
 #max_step  =  2    # maximum timestep non-intrusive LSA
@@ -34,7 +38,14 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  5.0 19.634954 #frequence=0.32,wavelength=2Pi/0.32  
 #geometry.prob_hi   =  9.0 72.0
-geometry.prob_hi   =  4.5 9.0
+#
+#geometry.prob_hi   =  3.49 6.98 #k=0.9 wavelen=2 pi/k
+#geometry.prob_hi   =  3.925 7.85 #k=0.8 wavelen=2 pi/k
+geometry.prob_hi   =  4.5 9.0 #k=0.7 wavelen=2 pi/k
+#geometry.prob_hi   =  5.25 10.5 #k=0.6 wavelen=2 pi/k
+#geometry.prob_hi   =  6.3 12.6 #k=0.5 wavelen=2 pi/k
+#geometry.prob_hi   =  7.85 15.7 #k=0.4 wavelen=2 pi/k
+#
 geometry.is_periodic = 0  1          # MS 0  1 if periodic, 0  0 if not
 
 #Eulerian Implicit Lagrangian Explicit cell integrated semi lagrangian method
@@ -190,7 +201,14 @@ ns.xblob=1.0                  # base position of gas/liquid interface
 #level set = -|r|+1+radblob * sin(2 pi z/yblob)
 #R-Z cylindrical, axisymmetric coordinate system.
 #ns.yblob=72.0 #yblob=72 if non-intrusive LSA
-ns.yblob=9.0  #yblob=wave length=2 pi/(.7/r0)=2*pi*r0/.7  L=72/NINT(72/lambda)
+#
+#ns.yblob=6.98 #yblob=wave length=2 pi/(.9/r0)=2*pi*r0/.9  
+#ns.yblob=7.85 #yblob=wave length=2 pi/(.8/r0)=2*pi*r0/.8 
+ns.yblob=9.0  #yblob=wave length=2 pi/(.7/r0)=2*pi*r0/.7 
+#ns.yblob=10.5 #yblob=wave length=2 pi/(.6/r0)=2*pi*r0/.6
+#ns.yblob=12.6 #yblob=wave length=2 pi/(.5/r0)=2*pi*r0/.5
+#ns.yblob=15.7 #yblob=wave length=2 pi/(.4/r0)=2*pi*r0/.4
+#
 #ns.yblob=36.0  #yblob=wave length=2 pi/(.174/r0)=2*pi*r0/.174 
 ns.zblob=0.0
 #ns.radblob=0.0 # non-intrusive LSA
