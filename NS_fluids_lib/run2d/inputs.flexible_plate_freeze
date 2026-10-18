@@ -108,8 +108,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01     
 ns.visc_coef=1.0 
 mac.visc_abs_tol = 1.0e-12
-ns.gravity=0.0  
-#ns.gravity = -980.0  
+#ns.gravity=0.0  
+ns.gravity = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 65 degrees=>sigma_{SV}=sigma_{LV}(1+cos(65))=104 (73 room temperature)
 # 10 degrees=>sigma_{SV}=sigma_{LV}(1+cos(10))=145 (73 room temperature)

@@ -182,9 +182,10 @@ c sucking problem has option of cylindrical coordinate systems.
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
 c is_freezing=3 => tstop=1.75 ? (SEE H. Hu and Z. Jin)
-      is_freezing=3
+c is_freezing=4 => tstop=0.025
+      is_freezing=4
 
-c stefan problem
+c 1d stefan problem
       if (testcase.eq.0) then
 c When running this test, we set kliquid=0
        cp=4.1855E+7
@@ -192,6 +193,10 @@ c When running this test, we set kliquid=0
         hlg=-3.34E+9
         if (is_freezing.eq.3) then
          hlg=-65.0E+9
+        endif
+        if (is_freezing.eq.4) then
+         cp=2.03E+7
+         hlg=-3.34E+9
         endif
        else
         hlg=2.26E+10
@@ -203,6 +208,9 @@ c 1W/(m K)=10^5 cgs
        kliquid=58.0E+3
        if (is_freezing.gt.0) then
         kvapor=218.0E+3
+        if (is_freezing.eq.4) then
+         kvapor=220.0E+3
+        endif
        else
         kvapor=2.4E+3
        endif
@@ -210,6 +218,10 @@ c 1W/(m K)=10^5 cgs
         kliquid=54.6E+3
 c ice
         kvapor=220.0E+3
+       endif
+       if (is_freezing.eq.4) then
+        kvapor=220.0E+3
+        kliquid=58.0E+3
        endif
 
        if (is_freezing.gt.0) then
@@ -233,7 +245,19 @@ c ice
          xcalibrate=1.5625e-3
          xcfd_offset=3.125e-3
         endif
-       else
+
+        if (is_freezing.eq.4) then
+         denvapor=0.917d0
+         tsat=273.0
+         deltat=-64.0
+c ice
+         cp=2.03E+7
+         tcalibrate=0.0d0
+         xcalibrate=0.0d0
+         xcfd_offset=0.0d0
+        endif
+
+       else if (is_freezing.eq.0) then
         psat=101.0
         if (psat.eq.101.0) then
          denvapor=denliquid/1605.2
@@ -254,6 +278,10 @@ c ice
  
        a=0.0
        b=2.0
+c 1d stefan
+c transf=x e^{x^{2}}*erf(x)-cp/sqrt(pi)
+c lambda exp(lambda^2)erf(lambda)=
+c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
        fb=transf(b,fact)
        do while (fb.le.0.0) 
         b=2.0*b
