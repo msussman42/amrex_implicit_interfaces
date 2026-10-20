@@ -189,9 +189,14 @@ ns.repair_mass=0 0 0 0
 #ns.lax_friedrichs=0.0 0.0 1.0 1.0 #EULERIAN FSI
 ns.lax_friedrichs=0.0 0.0 0.0 1.0 #RIGID prescribed
 ns.lax_friedrichs_energy=0.0 0.0 0.0 0.0
+#1 J/(s m K)=10^5 erg/(s cm K)
 ns.heatviscconst=0.58e+5 0.024e+5 2.2e+5 2.2e+5 # erg/(s cm K)
+#1 J/(kg K)=10^4 erg/(g K)
 ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
 ns.stiffCV = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
+#1erg=10^{-7}J
+#1J=10^7erg
+#1J/kg=10^7 erg/kg=10^4 erg/g
 #12 13 14 23 24 34
 ns.latent_heat = 0.0 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0

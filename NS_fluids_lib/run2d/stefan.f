@@ -174,9 +174,10 @@ c theta(r'(r,t),t)_t=theta_r' r'_t + theta_t
 c theta_t=V(t)theta_r'+(1/(r'+X(t)))(k (r'+X(t))theta_r')_r'
       RZFLAG=1
       simple_parm=1 
-c testcase=0 1D stefan (analytical solution known, k=0 in source material)
+c k=thermal conductivity
+c testcase=0 1D stefan (analytical solution known, k_{source}=0 )
 c Welch and Wilson, JCP 2000
-c testcase=1 sucking (1d numerical method, k=0 in destination material)
+c testcase=1 sucking (1d numerical method, k_{dest}=0 )
 c sucking problem has option of cylindrical coordinate systems.
       testcase=0
 c is_freezing=1 => tstop=700
@@ -209,6 +210,7 @@ c 1W/(m K)=10^5 cgs
        if (is_freezing.gt.0) then
         kvapor=218.0E+3
         if (is_freezing.eq.4) then
+c this is really the "ice" thermal conductivity
          kvapor=220.0E+3
         endif
        else
@@ -216,10 +218,11 @@ c 1W/(m K)=10^5 cgs
        endif
        if (is_freezing.eq.3) then
         kliquid=54.6E+3
-c ice
+c this is really the "ice" thermal conductivity
         kvapor=220.0E+3
        endif
        if (is_freezing.eq.4) then
+c this is really the "ice" thermal conductivity
         kvapor=220.0E+3
         kliquid=58.0E+3
        endif
@@ -253,8 +256,8 @@ c ice
 c ice
          cp=2.03E+7
          tcalibrate=0.0d0
-         xcalibrate=0.0d0
-         xcfd_offset=0.0d0
+         xcalibrate=0.04d0
+         xcfd_offset=0.19d0-xcalibrate
         endif
 
        else if (is_freezing.eq.0) then
@@ -319,6 +322,11 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
         xlo=xcalibrate
 c See H. Hu and Z. Jin
         tstop=33.0d0  
+        xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
+        xstop=xhi
+       else if (is_freezing.eq.4) then
+        xlo=xcalibrate
+        tstop=0.025d0
         xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
         xstop=xhi
        else
