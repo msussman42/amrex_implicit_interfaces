@@ -9392,7 +9392,7 @@ stop
 ! L units: 1 erg/g=10^{-4} J/kg
 ! 1 erg=1 g(cm/s)^2=10^{-7} kg(m/s)^2 Joules
                      !  
-                     !  in: PROB.F90
+                     !  get_vel_phasechange is declared in: PROB.F90
                     call get_vel_phasechange( &
                       interface_mass_transfer_model( &
                         iten+ireverse*num_interfaces), &
