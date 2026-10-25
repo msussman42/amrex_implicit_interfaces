@@ -143,7 +143,30 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
  
       program main
       IMPLICIT NONE
-      real*8 deltat,cp,hlg,kvapor,denvapor,alpha
+      real*8 deltat
+      real*8 t_nucleate
+      real*8 cp
+      real*8 cpambient
+      real*8 denambient
+      real*8 kambient
+      real*8 cpliquid
+      real*8 flux_left
+      real*8 flux_right
+      real*8 liquid_temp
+      real*8 max_alpha
+      real*8 alpha_liquid
+      real*8 alpha_vapor
+      real*8 alpha_ambient
+      real*8 radblob
+      real*8 radcyl
+      real*8 tnucleate
+      real*8 voldrop
+      real*8 xlo_drop
+      real*8 xhi_drop
+      integer N_liquid
+      real*8 hlg
+      real*8 mass_fraction_instant_freeze
+      real*8 kvapor,denvapor,alpha
       real*8 kliquid,denliquid,psat,tsat
       real*8 transf
       real*8 erfmine
@@ -155,6 +178,11 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       integer itime,ispace
       real*8 l(5000),u(5000),d(5000),f(5000),soln(5000)
       real*8 old_theta(5000)
+      real*8 temp_old(-1:5001)
+      real*8 temp_new(-1:5001)
+      real*8 kfield(-1:5001)
+      real*8 cpfield(-1:5001)
+      real*8 denfield(-1:5001)
       character*12 namestr
       integer is_freezing
       real*8 xint_output,time_output
@@ -163,7 +191,9 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 xcfd_offset
       real*8 xcalibrate
       real*8 tcalibrate
+      real*8 pi
 
+      pi=4.d0*atan(1.d0)
       xcfd_offset=0.0d0
       xcalibrate=0.0d0
       tcalibrate=0.0d0
@@ -179,7 +209,8 @@ c testcase=0 1D stefan (analytical solution known, k_{source}=0 )
 c Welch and Wilson, JCP 2000
 c testcase=1 sucking (1d numerical method, k_{dest}=0 )
 c sucking problem has option of cylindrical coordinate systems.
-      testcase=0
+c testcase=2 1D stefan and include Recalescence
+      testcase=2
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
 c is_freezing=3 => tstop=1.75 ? (SEE H. Hu and Z. Jin)
@@ -187,9 +218,10 @@ c is_freezing=4 => tstop=0.025
       is_freezing=4
 
 c 1d stefan problem
-      if (testcase.eq.0) then
+      if ((testcase.eq.0).or.(testcase.eq.2)) then
 c When running this test, we set kliquid=0
        cp=4.1855E+7
+       cpliquid=4.1855E+7
        if (is_freezing.gt.0) then
         hlg=-3.34E+9
         if (is_freezing.eq.3) then
@@ -207,14 +239,22 @@ c When running this test, we set kliquid=0
 c 1W=10^7 erg/s
 c 1W/(m K)=10^5 cgs
        kliquid=58.0E+3
+       kambient=2.4E-3
+       denambient=0.001225
+       cpambient=1.0E+7
+ 
        if (is_freezing.gt.0) then
+c this is really the "ice" thermal conductivity
         kvapor=218.0E+3
         if (is_freezing.eq.4) then
 c this is really the "ice" thermal conductivity
          kvapor=220.0E+3
         endif
-       else
+       else if (is_freezing.eq.0) then
         kvapor=2.4E+3
+       else
+        print *,"expecting is_freezing>=0"
+        stop
        endif
        if (is_freezing.eq.3) then
         kliquid=54.6E+3
@@ -231,6 +271,7 @@ c this is really the "ice" thermal conductivity
         denvapor=0.934
         tsat=273.0
         deltat=-10.0
+        tnucleate=tsat
         if (is_freezing.eq.3) then
          denvapor=0.917d0
          tsat=273.0
@@ -247,17 +288,23 @@ c ice
          cp=2.03E+7
          xcalibrate=1.5625e-3
          xcfd_offset=3.125e-3
+         tnucleate=tsat
         endif
 
         if (is_freezing.eq.4) then
          denvapor=0.917d0
          tsat=273.0
          deltat=-64.0
+         tnucleate=tsat-50.0d0
 c ice
          cp=2.03E+7
          tcalibrate=0.0d0
+c thickness of ice seed; also interpreted as the thickness of heater.  This
+c parameter is proportional to the "thermal contact gap" between droplet
+c and heater.
          xcalibrate=0.04d0
-         xcfd_offset=0.19d0-xcalibrate
+c        xcfd_offset=0.19d0-xcalibrate
+         xcfd_offset=0.0d0
         endif
 
        else if (is_freezing.eq.0) then
@@ -274,7 +321,115 @@ c ice
         endif
         tsat=373.0
         deltat=25.0
+       else
+        print *,"expecting is_freezing>=0"
+        stop
        endif
+
+! position of heater
+       xlo=0.0d0
+! position of top of domain
+! Neumann boundary condition
+       xhi=0.525 
+       xlo_drop=xcalibrate
+       radblob=0.125d0
+       radcyl=3.0d0*radblob
+       voldrop=4.0d0*pi*(radblob**3)/3.0d0
+c pi r^2 h=voldrop
+       xhi_drop=xlo_drop+voldrop/(pi*radcyl*radcyl)
+       N=256
+       dx=(xhi-xlo)/N
+       time=0.0
+       alpha_ambient=kambient/(denambient*cpambient)
+       alpha_vapor=kvapor/(denvapor*cp)
+       alpha_liquid=kliquid/(denliquid*cpliquid)
+       max_alpha=alpha_vapor
+       if (alpha_liquid.gt.max_alpha) then
+        max_alpha=alpha_liquid
+       endif
+       if (alpha_ambient.gt.max_alpha) then
+        max_alpha=alpha_ambient
+       endif
+       dt=0.0025*dx*dx/max_alpha
+       do ispace=-1,N
+        rcen=xlo+(ispace+0.5d0)*dx
+        if (rcen.le.xlo_drop) then
+         temp_new(ispace)=tsat+deltat
+         kfield(ispace)=kvapor
+         denfield(ispace)=denvapor
+         cpfield(ispace)=cp
+        else if (rcen.le.xhi_drop) then
+         temp_new(ispace)=tsat
+         kfield(ispace)=kliquid
+         denfield(ispace)=denliquid
+         cpfield(ispace)=cpliquid
+        else 
+         temp_new(ispace)=tsat
+         kfield(ispace)=kambient
+         denfield(ispace)=denambient
+         cpfield(ispace)=cpambient
+        endif
+       enddo
+       temp_new(-1)=tsat+deltat
+       temp_new(N)=temp_new(N-1)
+c      temp_new(N)=tsat
+       do ispace=-1,N
+        temp_old(ispace)=temp_new(ispace)
+       enddo 
+       liquid_temp=0.0d0
+       N_liquid=0
+       do ispace=0,N-1
+        rcen=xlo+(ispace+0.5d0)*dx
+        if ((rcen.ge.xlo_drop).and.(rcen.le.xhi_drop)) then
+         liquid_temp=liquid_temp+temp_new(ispace)
+         N_liquid=N_liquid+1
+        endif
+       enddo
+       liquid_temp=liquid_temp/N_liquid
+
+       if (testcase.eq.2) then 
+        mass_fraction_instant_freeze=abs(cpliquid*(tsat-tnucleate)/hlg)
+        print *,"mass_fraction_instant_freeze=",
+     &    mass_fraction_instant_freeze
+        print *,"hlg= ",hlg
+        hlg=hlg*(1.0d0-mass_fraction_instant_freeze)
+        print *,"updated hlg= ",hlg
+       else if (testcase.eq.0) then
+        liquid_temp=tnucleate-1.0d0
+       else
+        print *,"expecting testcase=0 or 2"
+        stop
+       endif
+ 
+       do while (liquid_temp.gt.tnucleate)
+        do ispace=0,N-1
+         flux_right=(temp_old(ispace+1)-temp_old(ispace))*0.5d0*
+     &     (kfield(ispace+1)+kfield(ispace))/dx  
+         flux_left=(temp_old(ispace)-temp_old(ispace-1))*0.5d0*
+     &     (kfield(ispace)+kfield(ispace-1))/dx  
+         temp_new(ispace)=temp_old(ispace)+dt*
+     &     (flux_right-flux_left)/
+     &     (dx*denfield(ispace)*cpfield(ispace))
+        enddo
+        temp_new(-1)=tsat+deltat
+        temp_new(N)=temp_new(N-1)
+c       temp_new(N)=tsat
+        do ispace=-1,N
+         temp_old(ispace)=temp_new(ispace)
+        enddo 
+        liquid_temp=0.0d0
+        N_liquid=0
+        do ispace=0,N-1
+         rcen=xlo+(ispace+0.5d0)*dx
+         if ((rcen.ge.xlo_drop).and.(rcen.le.xhi_drop)) then
+          liquid_temp=liquid_temp+temp_new(ispace)
+          N_liquid=N_liquid+1
+         endif
+        enddo
+        liquid_temp=liquid_temp/N_liquid
+        time=time+dt
+        print *,"time,liquid_temp ",time,liquid_temp
+       enddo
 
        fact=cp*deltat/hlg
        alpha=kvapor/(denvapor*cp)
