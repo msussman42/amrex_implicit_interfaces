@@ -1,3 +1,8 @@
+#one time only: python3 -m venv .venv
+#every time: 
+#bash
+#source .venv/bin/activate
+#which python
 #pytorch.org
 #PyTorch Build Stable (2.14.1)
 #Your OS Linux (HPC)
