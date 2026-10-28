@@ -1,0 +1,12 @@
+pytorch.org
+Stable -> Linux -> LibTorch -> C++ -> CPU
+(IN HOME DIRECTORY)
+wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.15.0%2Bcpu.zip
+unzip libtorch-shared-with-deps-2.15.0%2Bcpu.zip
+module load gnu/13
+mkdir build
+cd build
+cmake -DCMAKE_PREFIX_PATH=/gpfs/home/sussman/libtorch ..
+make
+./pinn_example
+
