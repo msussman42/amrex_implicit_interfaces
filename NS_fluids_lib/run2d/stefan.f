@@ -155,7 +155,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 liquid_temp
       real*8 max_alpha
       real*8 alpha_liquid
-      real*8 alpha_vapor
+      real*8 alpha_vapor_or_ice
       real*8 alpha_ambient
       real*8 radblob
       real*8 radcyl
@@ -166,7 +166,8 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       integer N_liquid
       real*8 hlg
       real*8 mass_fraction_instant_freeze
-      real*8 kvapor,denvapor,alpha
+      real*8 k_vapor_or_ice,den_vapor_or_ice,alpha
+      real*8 k_gap
       real*8 kliquid,denliquid,psat,tsat
       real*8 transf
       real*8 erfmine
@@ -245,13 +246,13 @@ c 1W/(m K)=10^5 cgs
  
        if (is_freezing.gt.0) then
 c this is really the "ice" thermal conductivity
-        kvapor=218.0E+3
+        k_vapor_or_ice=218.0E+3
         if (is_freezing.eq.4) then
 c this is really the "ice" thermal conductivity
-         kvapor=220.0E+3
+         k_vapor_or_ice=220.0E+3
         endif
        else if (is_freezing.eq.0) then
-        kvapor=2.4E+3
+        k_vapor_or_ice=2.4E+3
        else
         print *,"expecting is_freezing>=0"
         stop
@@ -259,21 +260,21 @@ c this is really the "ice" thermal conductivity
        if (is_freezing.eq.3) then
         kliquid=54.6E+3
 c this is really the "ice" thermal conductivity
-        kvapor=220.0E+3
+        k_vapor_or_ice=220.0E+3
        endif
        if (is_freezing.eq.4) then
 c this is really the "ice" thermal conductivity
-        kvapor=220.0E+3
+        k_vapor_or_ice=220.0E+3
         kliquid=58.0E+3
        endif
 
        if (is_freezing.gt.0) then
-        denvapor=0.934
+        den_vapor_or_ice=0.934
         tsat=273.0
         deltat=-10.0
         tnucleate=tsat
         if (is_freezing.eq.3) then
-         denvapor=0.917d0
+         den_vapor_or_ice=0.917d0
          tsat=273.0
 c See H. Hu and Z. Jin
 c Tfreeze=32.4
@@ -292,7 +293,7 @@ c ice
         endif
 
         if (is_freezing.eq.4) then
-         denvapor=0.917d0
+         den_vapor_or_ice=0.917d0
          tsat=273.0
          deltat=-64.0
          tnucleate=tsat-50.0d0
@@ -310,11 +311,11 @@ c        xcfd_offset=0.19d0-xcalibrate
        else if (is_freezing.eq.0) then
         psat=101.0
         if (psat.eq.101.0) then
-         denvapor=denliquid/1605.2
+         den_vapor_or_ice=denliquid/1605.2
         else if (psat.eq.571.0) then
-         denvapor=denliquid/301.4
+         den_vapor_or_ice=denliquid/301.4
         else if (psat.eq.14044.0) then
-         denvapor=denliquid/7.08
+         den_vapor_or_ice=denliquid/7.08
         else
          print *,"psat invalid"
          stop
@@ -325,6 +326,8 @@ c        xcfd_offset=0.19d0-xcalibrate
         print *,"expecting is_freezing>=0"
         stop
        endif
+
+       k_gap=k_vapor_or_ice
 
 ! position of heater
        xlo=0.0d0
@@ -341,9 +344,9 @@ c pi r^2 h=voldrop
        dx=(xhi-xlo)/N
        time=0.0
        alpha_ambient=kambient/(denambient*cpambient)
-       alpha_vapor=kvapor/(denvapor*cp)
+       alpha_vapor_or_ice=k_vapor_or_ice/(den_vapor_or_ice*cp)
        alpha_liquid=kliquid/(denliquid*cpliquid)
-       max_alpha=alpha_vapor
+       max_alpha=alpha_vapor_or_ice
        if (alpha_liquid.gt.max_alpha) then
         max_alpha=alpha_liquid
        endif
@@ -355,8 +358,9 @@ c pi r^2 h=voldrop
         rcen=xlo+(ispace+0.5d0)*dx
         if (rcen.le.xlo_drop) then
          temp_new(ispace)=tsat+deltat
-         kfield(ispace)=kvapor
-         denfield(ispace)=denvapor
+c        kfield(ispace)=k_vapor_or_ice
+         kfield(ispace)=k_gap
+         denfield(ispace)=den_vapor_or_ice
          cpfield(ispace)=cp
         else if (rcen.le.xhi_drop) then
          temp_new(ispace)=tsat
@@ -432,7 +436,7 @@ c       temp_new(N)=tsat
        enddo
 
        fact=cp*deltat/hlg
-       alpha=kvapor/(denvapor*cp)
+       alpha=k_vapor_or_ice/(den_vapor_or_ice*cp)
  
        a=0.0
        b=2.0
@@ -533,7 +537,7 @@ c See H. Hu and Z. Jin
 c sucking problem
       else if (testcase.eq.1) then
 
-c When running this test, we ignore kvapor (the destination material)
+c When running this test, we ignore k_vapor_or_ice (the destination material)
 c 1 WATT=10^7 cm^2 g/s^3= 1 J/s  1 J=1 N M
 c 1 Joule=1 N M = kg m/s^2  m =kg m^2/s^2
        cp=4.1855E+7
@@ -548,22 +552,22 @@ c 0.58 W/(M K)
        kliquid=58.0E+3
 c 0.024 W/(M K)
        if (is_freezing.gt.0) then
-        kvapor=218.0E+3
+        k_vapor_or_ice=218.0E+3
        else
-        kvapor=2.4E+3
+        k_vapor_or_ice=2.4E+3
        endif
        if (is_freezing.gt.0) then
-        denvapor=0.934
+        den_vapor_or_ice=0.934
         tsat=273.0
         deltat=-20.0
        else
         psat=101.0
         if (psat.eq.101.0) then
-         denvapor=denliquid/1605.2
+         den_vapor_or_ice=denliquid/1605.2
         else if (psat.eq.571.0) then
-         denvapor=denliquid/301.4
+         den_vapor_or_ice=denliquid/301.4
         else if (psat.eq.14044.0) then
-         denvapor=denliquid/7.08
+         den_vapor_or_ice=denliquid/7.08
         else
          print *,"psat invalid"
          stop
@@ -589,9 +593,10 @@ c 0.024 W/(M K)
        if (simple_parm.eq.1) then
         cp=1.0
         denliquid=1.0
-        denvapor=1.0
+        den_vapor_or_ice=1.0
         kliquid=1.0
-        kvapor=1.0
+        k_vapor_or_ice=1.0
+        k_gap=k_vapor_or_ice
         hlg=-8.0
         tsat=273.0
         deltat=-1.0 
@@ -599,8 +604,8 @@ c 0.024 W/(M K)
        endif
  
        alpha=kliquid/(denliquid*cp)
-       CC=kliquid/(denvapor*hlg)
-       beta=denvapor/denliquid
+       CC=kliquid/(den_vapor_or_ice*hlg)
+       beta=den_vapor_or_ice/denliquid
 
        print *,"alpha,CC,beta ",alpha,CC,beta
 
