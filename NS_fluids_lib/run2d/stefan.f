@@ -144,7 +144,6 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       program main
       IMPLICIT NONE
       real*8 deltat
-      real*8 t_nucleate
       real*8 cp
       real*8 cpambient
       real*8 denambient
@@ -153,6 +152,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 flux_left
       real*8 flux_right
       real*8 liquid_temp
+      real*8 liquid_temp_substrate
       real*8 max_alpha
       real*8 alpha_liquid
       real*8 alpha_vapor_or_ice
@@ -164,10 +164,10 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 xlo_drop
       real*8 xhi_drop
       integer N_liquid
+      integer N_liquid_substrate
       real*8 hlg
       real*8 mass_fraction_instant_freeze
       real*8 k_vapor_or_ice,den_vapor_or_ice,alpha
-      real*8 k_gap
       real*8 kliquid,denliquid,psat,tsat
       real*8 transf
       real*8 erfmine
@@ -219,7 +219,8 @@ c is_freezing=4 => tstop=0.025
       is_freezing=4
 
 c 1d stefan problem
-      if ((testcase.eq.0).or.(testcase.eq.2)) then
+      if ((testcase.eq.0).or.
+     &    (testcase.eq.2)) then
 c When running this test, we set kliquid=0
        cp=4.1855E+7
        cpliquid=4.1855E+7
@@ -295,15 +296,20 @@ c ice
         if (is_freezing.eq.4) then
          den_vapor_or_ice=0.917d0
          tsat=273.0
-         deltat=-64.0
-         tnucleate=tsat-50.0d0
+         deltat=-28.8
+         tnucleate=tsat-25.0
+c        deltat=-36.3
+c        tnucleate=tsat-33.0
+c        deltat=-43.0
+c        tnucleate=tsat-39.0
+c        tnucleate=tsat-1.0d0
 c ice
          cp=2.03E+7
          tcalibrate=0.0d0
-c thickness of ice seed; also interpreted as the thickness of heater.  This
-c parameter is proportional to the "thermal contact gap" between droplet
-c and heater.
-         xcalibrate=0.04d0
+c thickness of ice seed.  The
+c parameter that is associated with "thermal contact gap" between droplet
+c and heater is k_vapor_or_ice.
+c        xcalibrate=0.04d0
 c        xcfd_offset=0.19d0-xcalibrate
          xcfd_offset=0.0d0
         endif
@@ -327,16 +333,17 @@ c        xcfd_offset=0.19d0-xcalibrate
         stop
        endif
 
-       k_gap=k_vapor_or_ice
-
 ! position of heater
        xlo=0.0d0
 ! position of top of domain
 ! Neumann boundary condition
        xhi=0.525 
        xlo_drop=xcalibrate
+!droplet diameter is D0=0.25 cm see page 3
        radblob=0.125d0
-       radcyl=3.0d0*radblob
+       radcyl=4.0d0*radblob
+!      radcyl=3.96d0*radblob
+!      radcyl=3.92d0*radblob
        voldrop=4.0d0*pi*(radblob**3)/3.0d0
 c pi r^2 h=voldrop
        xhi_drop=xlo_drop+voldrop/(pi*radcyl*radcyl)
@@ -358,8 +365,7 @@ c pi r^2 h=voldrop
         rcen=xlo+(ispace+0.5d0)*dx
         if (rcen.le.xlo_drop) then
          temp_new(ispace)=tsat+deltat
-c        kfield(ispace)=k_vapor_or_ice
-         kfield(ispace)=k_gap
+         kfield(ispace)=k_vapor_or_ice
          denfield(ispace)=den_vapor_or_ice
          cpfield(ispace)=cp
         else if (rcen.le.xhi_drop) then
@@ -422,17 +428,25 @@ c       temp_new(N)=tsat
          temp_old(ispace)=temp_new(ispace)
         enddo 
         liquid_temp=0.0d0
+        liquid_temp_substrate=0.0d0
         N_liquid=0
+        N_liquid_substrate=0
         do ispace=0,N-1
          rcen=xlo+(ispace+0.5d0)*dx
          if ((rcen.ge.xlo_drop).and.(rcen.le.xhi_drop)) then
           liquid_temp=liquid_temp+temp_new(ispace)
           N_liquid=N_liquid+1
          endif
+         if ((rcen.ge.xlo_drop).and.(rcen.le.0.1d0*xhi_drop)) then
+          liquid_temp_substrate=liquid_temp_substrate+temp_new(ispace)
+          N_liquid_substrate=N_liquid_substrate+1
+         endif
         enddo
         liquid_temp=liquid_temp/N_liquid
+        liquid_temp_substrate=liquid_temp_substrate/N_liquid_substrate
         time=time+dt
         print *,"time,liquid_temp ",time,liquid_temp
+        print *,"time,liquid_temp_substrate ",time,liquid_temp_substrate
        enddo
 
        fact=cp*deltat/hlg
@@ -485,9 +499,11 @@ c See H. Hu and Z. Jin
         xstop=xhi
        else if (is_freezing.eq.4) then
         xlo=xcalibrate
-        tstop=0.025d0
+        tstop=1.0d0
         xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
         xstop=xhi
+        xstop=xhi_drop
+        tstop=(xstop/(2.0d0*c))**2/alpha
        else
         xlo=0.0
         xhi=2.0
@@ -516,16 +532,23 @@ c See H. Hu and Z. Jin
        close(11)
        print *,"temperature file is temp_profile"
 
+       print *,"tsat ",tsat
+       print *,"tnucleate ",tnucleate
        print *,"xcfd_offset ",xcfd_offset
        print *,"xcalibrate ",xcalibrate
        print *,"tcalibrate ",tcalibrate
+       print *,"xlo_drop=",xlo_drop
+       print *,"xhi_drop=",xhi_drop
+       print *,"tstop=",tstop
+       print *,"xstop=",xstop
        time=0.0
        open(unit=12,file='interface')
        xint=0.0
        xint=2.0*c*sqrt(alpha*(time+tcalibrate))
        write(12,*) time,xint+xcfd_offset
        itime=0
-       do while (time.lt.tstop)
+       do while ((time.lt.tstop).or. 
+     &           (xint.lt.xstop))
         dt=tstop/256.0
         time=time+dt
         xint=2.0*c*sqrt(alpha*(time+tcalibrate))
@@ -596,7 +619,6 @@ c 0.024 W/(M K)
         den_vapor_or_ice=1.0
         kliquid=1.0
         k_vapor_or_ice=1.0
-        k_gap=k_vapor_or_ice
         hlg=-8.0
         tsat=273.0
         deltat=-1.0 
