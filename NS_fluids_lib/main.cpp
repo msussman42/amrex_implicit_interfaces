@@ -636,8 +636,8 @@ fork_job(int fork_id) {
    amrptr->most_dangerous(amrptr_first,x_local,i);
   }
 
-  delete inner_product_matrix;
-  delete X_dangerous;
+  delete[] inner_product_matrix;
+  delete[] X_dangerous;
  } else
   amrex::Error("local_LSA_activate invalid");
 

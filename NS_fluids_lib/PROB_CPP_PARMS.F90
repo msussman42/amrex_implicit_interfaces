@@ -32,7 +32,8 @@ stop
        blb_rhs_in, &
        blb_vel_in, &
        blb_int_mom_in, &
-       blb_energy_in, &
+       blb_temperature_in, &
+       blb_kinetic_energy_in, &
        blb_mass_vel_in, &
        blb_vol_in, &
        blb_cen_int_in, &
@@ -58,7 +59,8 @@ stop
       integer, INTENT(in) :: blb_rhs_in
       integer, INTENT(in) :: blb_vel_in
       integer, INTENT(in) :: blb_int_mom_in
-      integer, INTENT(in) :: blb_energy_in
+      integer, INTENT(in) :: blb_temperature_in
+      integer, INTENT(in) :: blb_kinetic_energy_in
       integer, INTENT(in) :: blb_mass_vel_in
       integer, INTENT(in) :: blb_vol_in
       integer, INTENT(in) :: blb_cen_int_in
@@ -80,7 +82,8 @@ stop
       BLB_RHS=blb_rhs_in
       BLB_VEL=blb_vel_in
       BLB_INT_MOM=blb_int_mom_in
-      BLB_ENERGY=blb_energy_in
+      BLB_TEMPERATURE=blb_temperature_in
+      BLB_KINETIC_ENERGY=blb_kinetic_energy_in
       BLB_MASS_VEL=blb_mass_vel_in
       BLB_VOL=blb_vol_in
       BLB_CEN_INT=blb_cen_int_in
@@ -103,8 +106,9 @@ stop
              3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)).and. &
           (BLB_VEL.eq.BLB_RHS+3*(2*AMREX_SPACEDIM)).and. &
           (BLB_INT_MOM.eq.BLB_VEL+3*(2*AMREX_SPACEDIM)).and. &
-          (BLB_ENERGY.eq.BLB_INT_MOM+2*(2*AMREX_SPACEDIM)).and. &
-          (BLB_MASS_VEL.eq.BLB_ENERGY+1).and. &
+          (BLB_TEMPERATURE.eq.BLB_INT_MOM+2*(2*AMREX_SPACEDIM)).and. &
+          (BLB_KINETIC_ENERGY.eq.BLB_TEMPERATURE+1).and. &
+          (BLB_MASS_VEL.eq.BLB_KINETIC_ENERGY+1).and. &
           (BLB_VOL.eq.BLB_MASS_VEL+3).and. &
           (BLB_CEN_INT.eq.BLB_VOL+1).and. &
           (BLB_CEN_ACT.eq.BLB_CEN_INT+AMREX_SPACEDIM).and. &
@@ -127,7 +131,8 @@ stop
        print *,"BLB_RHS ",BLB_RHS
        print *,"BLB_VEL ",BLB_VEL
        print *,"BLB_INT_MOM ",BLB_INT_MOM
-       print *,"BLB_ENERGY ",BLB_ENERGY
+       print *,"BLB_TEMPERATURE ",BLB_TEMPERATURE
+       print *,"BLB_KINETIC_ENERGY ",BLB_KINETIC_ENERGY
        print *,"BLB_MASS_VEL ",BLB_MASS_VEL
        print *,"BLB_VOL ",BLB_VOL
        print *,"BLB_CEN_INT ",BLB_CEN_INT

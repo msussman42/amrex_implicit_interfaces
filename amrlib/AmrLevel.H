@@ -203,7 +203,8 @@ public:
    // momentum_ihat=-alphayz sum (zk-z0)^2 + (yk-y0)^2 wmomk=
    //               -alphayz sum phiyz dot phiyz wmomk
   Real blob_integral_momentum[2*(2*AMREX_SPACEDIM)];
-  Real blob_energy;
+  Real blob_temperature;
+  Real blob_kinetic_energy;
    // fluid_interior,fluid,solid
   Real blob_mass_for_velocity[3];
   Real blob_volume;
@@ -225,6 +226,7 @@ public:
    // perimeter of contact line between im, im1, im2
   Vector< Vector<Real> > blob_triple_perim;
   int im;  // 1<=im<=num_materials
+  int supercool_flag;
 
   friend std::ostream& operator << (std::ostream& os,
     const blobclass& local_blobclass);

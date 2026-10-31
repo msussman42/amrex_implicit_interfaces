@@ -41,13 +41,13 @@ HDF5_HOME=/home/mark/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #copy "liblinear.a" into amrex_implicit_interfaces/NS_fluids_lib
 #gfortran svd_experiment.f -L. -llinear
 #./a.out
-USE_LIBLINEAR = TRUE
+USE_LIBLINEAR = FALSE
 USE_CUDA = FALSE
 USE_ACC = FALSE
 USE_PARTICLES = FALSE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
-DEBUG	  = FALSE
+DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE

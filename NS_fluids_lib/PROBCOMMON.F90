@@ -476,7 +476,8 @@ implicit none
       integer :: BLB_RHS=-32767
       integer :: BLB_VEL=-32767
       integer :: BLB_INT_MOM=-32767
-      integer :: BLB_ENERGY=-32767
+      integer :: BLB_TEMPERATURE=-32767
+      integer :: BLB_KINETIC_ENERGY=-32767
       integer :: BLB_MASS_VEL=-32767
       integer :: BLB_VOL=-32767
       integer :: BLB_CEN_INT=-32767

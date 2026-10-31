@@ -217,7 +217,9 @@ void repair_blobclass::checkpoint(int check_id) {
       repair_blobclass_data[istep][iblob].blob_integral_momentum[i] << '\n';
     }
     repair_blob_checkpoint_file << 
-     repair_blobclass_data[istep][iblob].blob_energy << '\n';
+     repair_blobclass_data[istep][iblob].blob_temperature << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].blob_kinetic_energy << '\n';
     for (int i=0;i<3;i++) {
      repair_blob_checkpoint_file << 
       repair_blobclass_data[istep][iblob].blob_mass_for_velocity[i] << '\n';
@@ -276,6 +278,8 @@ void repair_blobclass::checkpoint(int check_id) {
     } //i
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].im << '\n';
+    repair_blob_checkpoint_file << 
+     repair_blobclass_data[istep][iblob].supercool_flag << '\n';
    } // for (int iblob=0;iblob<repair_blobclass_data[istep].size();iblob++) 
 
   } //for (int istep=0;istep<new_old_size;istep++) {
@@ -328,7 +332,9 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
       repair_blobclass_data[istep][iblob].blob_integral_momentum[i];
    }
    is >>
-     repair_blobclass_data[istep][iblob].blob_energy;
+     repair_blobclass_data[istep][iblob].blob_temperature;
+   is >>
+     repair_blobclass_data[istep][iblob].blob_kinetic_energy;
    for (int i=0;i<3;i++) {
     is >>
       repair_blobclass_data[istep][iblob].blob_mass_for_velocity[i];
@@ -388,6 +394,8 @@ void repair_blobclass::restart(int check_id,std::istream& is) {
    } //i
    is >>
      repair_blobclass_data[istep][iblob].im;
+   is >>
+     repair_blobclass_data[istep][iblob].supercool_flag;
   } // for (int iblob=0;iblob<local_repair_size();iblob++) 
 
  } // for (int istep=0;istep<new_old_size;istep++) 
@@ -403,6 +411,7 @@ std::ostream& operator << (std::ostream& os,
    os << "blob_mass_previous=" << local_blobclass.blob_mass_previous << '\n';
    os << "blob_inflow_outflow=" << local_blobclass.blob_inflow_outflow << '\n';
    os << "im (1..num_materials)=" << local_blobclass.im << '\n';
+   os << "supercool_flag (0 or 1)=" << local_blobclass.supercool_flag << '\n';
    return os;
 }
 

@@ -2675,10 +2675,28 @@ NavierStokes::sum_integrated_quantities (
         " im= " << imbase <<
         " dir= " << dir << " " << momstring << " divisor= " << denom << '\n';
       } // dir=0..2 sdim-1
+
+      Real mass_original=blobdata[iblob].blob_mass;
+
+      if (mass_original>0.0) {
+       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+        " im= " << imbase <<
+        " temperature= " <<
+         blobdata[iblob].blob_temperature/mass_original << '\n';
+      } else if (mass_original==0.0) {
+       //do nothing
+      } else
+       amrex::Error("mass_original invalid");
+
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
-       " energy= " <<
-        blobdata[iblob].blob_energy << '\n';
+       " supercool_flag " <<
+        blobdata[iblob].supercool_flag << '\n';
+
+      std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
+       " im= " << imbase <<
+       " kinetic energy= " <<
+        blobdata[iblob].blob_kinetic_energy << '\n';
 
       Real cellvol=blobdata[iblob].blob_cellvol_count;
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
@@ -2696,7 +2714,7 @@ NavierStokes::sum_integrated_quantities (
        amrex::Error("cellvol invalid");
 
       Real mass_target=blobdata[iblob].blob_mass_target;
-      Real mass_original=blobdata[iblob].blob_mass;
+
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase <<
        " blob_mass_target= " <<

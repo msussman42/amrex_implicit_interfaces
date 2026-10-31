@@ -4979,6 +4979,7 @@ stop
 
                dotprod=dotprod*local_interior_wt(veltype)
 
+                !total mass of all materials in cell
                level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
                ic=ic+1
               enddo ! irow=1..2*sdim
@@ -5005,6 +5006,7 @@ stop
                dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
               enddo
               dotprod=dotprod*local_interior_wt(veltype)
+                !total mass of all materials in cell
               level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
               ic=ic+1
              enddo ! irow=1..2 * sdim
@@ -5017,23 +5019,66 @@ stop
                dotprod=dotprod+phi_row(dir)**2
               enddo
               dotprod=dotprod*local_interior_wt(veltype)
+                !total mass of all materials in cell
               level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
               ic=ic+1
              enddo ! irow=1..2 * sdim
 
-             if (ic-ic_base.eq.BLB_ENERGY+1) then
+             if (ic-ic_base.eq.BLB_TEMPERATURE+1) then
               !do nothing
              else
-              print *,"ic-ic_base.eq.BLB_ENERGY+1 failed"
+              print *,"ic-ic_base.eq.BLB_TEMPERATURE+1 failed"
               stop
              endif
 
-              ! blob_energy
+             dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+
+             if (constant_density_all_time(im).eq.1) then
+              den_mat=fort_denconst(im)
+             else if (constant_density_all_time(im).eq.0) then
+              den_mat=DEN(D_DECL(i,j,k),dencomp)
+             else
+              print *,"constant_density_all_time(im) invalid"
+              stop
+             endif
+
+             if (den_mat.gt.zero) then
+              ! do nothing
+             else
+              print *,"den_mat has gone nonpos: ",den_mat
+              stop
+             endif
+
+             TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
+             if (TEMP_mat.gt.zero) then
+              ! do nothing
+             else
+              print *,"TEMP_mat has gone nonpos: ",TEMP_mat
+              stop
+             endif
+
+             vofcomp=(im-1)*ngeom_recon+1
+             vfrac=mofdata(vofcomp)
+
+              ! temperature
+             dotprod=TEMP_mat*den_mat*vfrac
+             level_blobdata(ic)=level_blobdata(ic)+vol*dotprod
+             ic=ic+1
+
+             if (ic-ic_base.eq.BLB_KINETIC_ENERGY+1) then
+              !do nothing
+             else
+              print *,"ic-ic_base.eq.BLB_KINETIC_ENERGY+1 failed"
+              stop
+             endif
+
+              ! blob_kinetic_energy
              dotprod=zero
              do dir=1,SDIM
               dotprod=dotprod+fluid_velocity(dir)**2
              enddo
              dotprod=dotprod*local_interior_wt(veltype)
+                !total mass of all materials in cell
              level_blobdata(ic)=level_blobdata(ic)+half*mass*dotprod
              ic=ic+1
 

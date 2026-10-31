@@ -2010,7 +2010,8 @@ protected:
     static int BLB_RHS;
     static int BLB_VEL;
     static int BLB_INT_MOM;
-    static int BLB_ENERGY;
+    static int BLB_TEMPERATURE;
+    static int BLB_KINETIC_ENERGY;
     static int BLB_MASS_VEL;
     static int BLB_VOL;
     static int BLB_CEN_INT;
