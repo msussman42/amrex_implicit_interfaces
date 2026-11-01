@@ -2,84 +2,111 @@
 #include <iostream>
 #include <vector>
 
-// 1. Define a simple MLP Net for the PINN
-struct PINNNet : torch::nn::Module {
-//    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
-    int nlayers=5;
-    torch::nn::Linear fc_array[nlayers];
+// 1. Define a Dynamic MLP that builds layers based on a dynamic vector configuration
+struct DynamicMLP : torch::nn::Module {
+    torch::nn::Sequential network;
 
-    PINNNet(int input_dim, int hidden_dim, int output_dim) {
-        fc_array[0] = register_module("fc0", torch::nn::Linear(input_dim, hidden_dim));
-	for (int ilayer=1;ilayer<nlayers-1) {
-         fc_array[ilayer] = register_module("fc1", torch::nn::Linear(hidden_dim, hidden_dim));
-	}
-        fc_array[nlayers-1] = register_module("fcn", torch::nn::Linear(hidden_dim,output_dim));
+    DynamicMLP(const std::vector<int64_t>& layers) {
+        for (size_t i = 0; i < layers.size() - 1; ++i) {
+            // Add Linear Layer dynamically
+            network->push_back(torch::nn::Linear(layers[i], layers[i+1]));
+            
+            // Add Tanh activation for hidden layers (important for higher-order derivatives)
+            if (i < layers.size() - 2) {
+                network->push_back(torch::nn::Functional(torch::tanh));
+            }
+        }
+        register_module("network", network);
     }
 
     torch::Tensor forward(torch::Tensor x) {
-        x = torch::tanh(fc_array[0]->forward(x));
-	for (int ilayer=1;ilayer<nlayers-1) {
-         x = torch::tanh(fc_array[ilayer]->forward(x));
-	}
-        x = fc_array[nlayers-1]->forward(x);
-        return x;
+        return network->forward(x);
     }
 };
 
 int main() {
-    // Set device
+    // Check for CUDA availability
     torch::Device device(torch::kCPU);
-    std::cout << "Training on CPU." << std::endl;
+    if (torch::cuda::is_available()) {
+        std::cout << "CUDA available! Training on GPU." << std::endl;
+        device = torch::Device(torch::kCUDA);
+    }
 
-    // Initialize model
-    PINNNet model(1, 32, 1);
-    model.to(device);
+    // Define network topology dynamically: [Input, Hidden1, Hidden2, Output]
+    std::vector<int64_t> layer_config = {1, 16, 32, 16, 1};
+    auto model = std::make_shared<DynamicMLP>(layer_config);
+    model->to(device);
+
+    // Physical parameter: omega_0
+    float omega_0 = 2.0f;
+
+    // Generate Collocation Points (Interior domain points where physics is enforced)
+    // We want to track gradients with respect to inputs to compute physical derivatives.
+    auto t_collocation = torch::linspace(0.0, 4.0, 500, torch::TensorOptions().device(device))
+                              .view({-1, 1})
+                              .set_requires_grad(true);
+
+    // Initial boundary condition tensors (t = 0)
+    auto t_init = torch::zeros({1, 1}, torch::TensorOptions().device(device)).set_requires_grad(true);
+    auto u_init_true = torch::ones({1, 1}, torch::TensorOptions().device(device)); // u(0) = 1
+    auto du_init_true = torch::zeros({1, 1}, torch::TensorOptions().device(device)); // u'(0) = 0
 
     // Optimizer
-    torch::optim::Adam optimizer(model.parameters(), torch::optim::AdamOptions(1e-3));
+    torch::optim::Adam optimizer(model->parameters(), torch::optim::AdamOptions(1e-3));
 
-    // Generate collocation points in 1D (e.g., t or x in [0, 1])
-    torch::Tensor x_collocation = torch::linspace(0.0, 1.0, 100, torch::TensorOptions().dtype(torch::kFloat32).requires_grad(true)).unsqueeze(1);
-    x_collocation = x_collocation.to(device);
-
-    for (int epoch = 0; epoch < 1000; ++epoch) {
+    // Training Loop
+    for (int epoch = 1; epoch <= 3000; ++epoch) {
         optimizer.zero_grad();
 
-        // Forward pass
-        torch::Tensor u = model.forward(x_collocation);
+        // --- 1. Compute Boundary / Initial Condition Loss ---
+        auto u_init_pred = model->forward(t_init);
+        
+        // Compute first derivative at boundary using autograd
+        auto du_init_pred = torch::autograd::grad(
+            {u_init_pred}, {t_init}, 
+            {torch::ones_like(u_init_pred)}, 
+            /*create_graph=*/true, /*retain_graph=*/true, /*allow_unused=*/true
+        )[0];
 
-        // Compute first derivative: du/dx
-        // Note: create_graph=True allows differentiating through the gradient for physics loss
-        std::vector<torch::Tensor> grads = torch::autograd::grad(
-            {u}, {x_collocation}, 
-            /*grad_outputs=*/{torch::ones_like(u)}, 
-            /*create_graph=*/true, 
-            /*retain_graph=*/true
-        );
-        torch::Tensor du_dx = grads[0];
+        auto loss_ic_u = torch::mse_loss(u_init_pred, u_init_true);
+        auto loss_ic_du = torch::mse_loss(du_init_pred, du_init_true);
 
-        // Example Physics Residual: e.g., du/dx + u = 0 (or a custom PDE/ODE residual)
-        torch::Tensor physics_residual = du_dx + u; 
-        torch::Tensor physics_loss = torch::mean(torch::square(physics_residual));
+        // --- 2. Compute Physical Residual Loss (ODE) ---
+        auto u_pred = model->forward(t_collocation);
 
-        // Boundary condition loss (e.g., at x = 0, u(0) = 1.0)
-        torch::Tensor x_bc = torch::zeros({1, 1}, torch::TensorOptions().dtype(torch::kFloat32)).to(device);
-        torch::Tensor u_bc_pred = model.forward(x_bc);
-        torch::Tensor bc_loss = torch::mean(torch::square(u_bc_pred - 1.0));
+        // First derivative: du/dt
+        auto du_dt = torch::autograd::grad(
+            {u_pred}, {t_collocation}, 
+            {torch::ones_like(u_pred)}, 
+            /*create_graph=*/true, /*retain_graph=*/true, /*allow_unused=*/true
+        )[0];
 
-        // Total loss
-        torch::Tensor total_loss = physics_loss + bc_loss;
+        // Second derivative: d^2u/dt^2
+        auto d2u_dt2 = torch::autograd::grad(
+            {du_dt}, {t_collocation}, 
+            {torch::ones_like(du_dt)}, 
+            /*create_graph=*/true, /*retain_graph=*/true, /*allow_unused=*/true
+        )[0];
 
-        // Backward and optimize
+        // Governing Equation Residual: u'' + (omega_0^2)*u = 0
+        auto ode_residual = d2u_dt2 + (omega_0 * omega_0) * u_pred;
+        auto loss_physics = torch::mse_loss(ode_residual, torch::zeros_like(ode_residual));
+
+        // --- 3. Backpropagation ---
+        // Summing the total loss components together
+        auto total_loss = loss_ic_u + loss_ic_du + loss_physics;
         total_loss.backward();
         optimizer.step();
 
-        if (epoch % 100 == 0) {
-            std::cout << "Epoch [" << epoch << "/1000] Loss: " 
-                      << total_loss.item<float>() << std::endl;
+        // Print Progress
+        if (epoch % 500 == 0) {
+            std::cout << "Epoch: " << epoch 
+                      << " | Total Loss: " << total_loss.item<float>() 
+                      << " [IC u: " << loss_ic_u.item<float>() 
+                      << ", Physics: " << loss_physics.item<float>() << "]" << std::endl;
         }
     }
 
+    std::cout << "\nTraining Complete. Model is physics-informed!" << std::endl;
     return 0;
 }
-
