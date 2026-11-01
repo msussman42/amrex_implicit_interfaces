@@ -4,18 +4,24 @@
 
 // 1. Define a simple MLP Net for the PINN
 struct PINNNet : torch::nn::Module {
-    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
+//    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
+    int nlayers=5;
+    torch::nn::Linear fc_array[nlayers];
 
     PINNNet(int input_dim, int hidden_dim, int output_dim) {
-        fc1 = register_module("fc1", torch::nn::Linear(input_dim, hidden_dim));
-        fc2 = register_module("fc2", torch::nn::Linear(hidden_dim, hidden_dim));
-        fc3 = register_module("fc3", torch::nn::Linear(hidden_dim, output_dim));
+        fc_array[0] = register_module("fc0", torch::nn::Linear(input_dim, hidden_dim));
+	for (int ilayer=1;ilayer<nlayers-1) {
+         fc_array[ilayer] = register_module("fc1", torch::nn::Linear(hidden_dim, hidden_dim));
+	}
+        fc_array[nlayers-1] = register_module("fcn", torch::nn::Linear(hidden_dim,output_dim));
     }
 
     torch::Tensor forward(torch::Tensor x) {
-        x = torch::tanh(fc1->forward(x));
-        x = torch::tanh(fc2->forward(x));
-        x = fc3->forward(x);
+        x = torch::tanh(fc_array[0]->forward(x));
+	for (int ilayer=1;ilayer<nlayers-1) {
+         x = torch::tanh(fc_array[ilayer]->forward(x));
+	}
+        x = fc_array[nlayers-1]->forward(x);
         return x;
     }
 };
