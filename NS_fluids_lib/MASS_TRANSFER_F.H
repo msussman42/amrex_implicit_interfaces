@@ -96,6 +96,7 @@ extern "C"
     int* abort_if_T_gamma_unattainable,
     Real* nucleate_pos,
     const int* nucleate_pos_size,
+    int* activation_flag,
     Real* nucleation_temp,
     Real* nucleation_pressure,
     Real* nucleation_pmg,

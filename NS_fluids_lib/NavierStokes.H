@@ -1875,7 +1875,10 @@ protected:
     static Vector<Real> nucleation_pressure; 
     static Vector<Real> nucleation_pmg; 
     static Vector<Real> nucleation_mach; 
-    static Vector<Real> nucleation_temp; 
+
+    static Vector<int> activation_flag; //2*num_interfaces
+     //default: 0.0
+    static Vector<Real> nucleation_temp; //2*num_interfaces
     static Real nucleation_period; 
     static int pos_sites_random_flag; //default=1
     static int n_sites;

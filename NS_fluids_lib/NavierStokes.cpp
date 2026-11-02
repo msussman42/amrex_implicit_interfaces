@@ -689,7 +689,11 @@ Vector<Real> NavierStokes::cavitation_tension;
 Vector<Real> NavierStokes::nucleation_pressure;
 Vector<Real> NavierStokes::nucleation_pmg;
 Vector<Real> NavierStokes::nucleation_mach;
+
+Vector<int> NavierStokes::activation_flag;
+
 Vector<Real> NavierStokes::nucleation_temp;
+
 Real NavierStokes::nucleation_period=0.0;
 Real NavierStokes::nucleation_init_time=0.0;
 int NavierStokes::n_sites=0;
@@ -4046,7 +4050,10 @@ NavierStokes::read_params ()
     saturation_temp_vel.resize(2*num_interfaces);
     saturation_temp_min.resize(2*num_interfaces);
     saturation_temp_max.resize(2*num_interfaces);
+
+    activation_flag.resize(2*num_interfaces);
     nucleation_temp.resize(2*num_interfaces);
+
     nucleation_pressure.resize(2*num_interfaces);
     nucleation_pmg.resize(2*num_interfaces);
     nucleation_mach.resize(2*num_interfaces);
@@ -4134,8 +4141,14 @@ NavierStokes::read_params ()
      saturation_temp_min[i+num_interfaces]=0.0;
      saturation_temp_max[i]=1.0e+20;
      saturation_temp_max[i+num_interfaces]=1.0e+20;
+
+     activation_flag[i]=1;
+     activation_flag[i+num_interfaces]=1;
+
      nucleation_temp[i]=0.0;
      nucleation_temp[i+num_interfaces]=0.0;
+
+
      nucleation_pressure[i]=0.0;
      nucleation_pmg[i]=0.0;
      nucleation_mach[i]=0.0;
@@ -4658,7 +4671,10 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
+    pp.queryAdd("activation_flag",activation_flag,2*num_interfaces);
+
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
+
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
     pp.queryAdd("nucleation_pmg",nucleation_pmg,2*num_interfaces);
     pp.queryAdd("nucleation_mach",nucleation_mach,2*num_interfaces);
@@ -6382,10 +6398,18 @@ NavierStokes::read_params ()
        i+num_interfaces << "  " << 
        saturation_temp_max[i+num_interfaces] << '\n';
 
+
+      std::cout << "activation_flag i=" << i << "  " << 
+        activation_flag[i] << '\n';
+      std::cout << "activation_flag i+num_interfaces=" << 
+	i+num_interfaces << "  " << 
+        activation_flag[i+num_interfaces] << '\n';
+
       std::cout << "nucleation_temp i=" << i << "  " << 
        nucleation_temp[i] << '\n';
-      std::cout << "nucleation_temp i+num_interfaces=" << i+num_interfaces << "  " << 
-       nucleation_temp[i+num_interfaces] << '\n';
+      std::cout << "nucleation_temp i+num_interfaces=" << 
+	i+num_interfaces << "  " << 
+        nucleation_temp[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_pressure i=" << i << "  " << 
        nucleation_pressure[i] << '\n';
@@ -6780,7 +6804,7 @@ NavierStokes::read_params ()
 NavierStokes::NavierStokes ()
 {
     Geometry_setup();
-}
+} // end subroutine NavierStokes()
 
 // constructor
 NavierStokes::NavierStokes (AmrCore&        papa,
@@ -15673,6 +15697,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &abort_if_T_gamma_unattainable,
      nucleate_pos.dataPtr(),
      &nucleate_pos_size, 
+     activation_flag.dataPtr(), 
      nucleation_temp.dataPtr(), 
      nucleation_pressure.dataPtr(), 
      nucleation_pmg.dataPtr(), 
@@ -15771,6 +15796,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &abort_if_T_gamma_unattainable,
      nucleate_pos.dataPtr(),
      &nucleate_pos_size, 
+     activation_flag.dataPtr(), 
      nucleation_temp.dataPtr(), 
      nucleation_pressure.dataPtr(), 
      nucleation_pmg.dataPtr(), 
@@ -16249,12 +16275,21 @@ NavierStokes::level_phase_change_convertALL() {
     amrex::Error("iten invalid");
    Real LL0=get_user_latent_heat(iten,293.0,1);
    Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
-   if ((LL0!=0.0)||(LL1!=0.0)) {
+
+   int act0=activation_flag[iten-1];
+   int act1=activation_flag[iten-1+num_interfaces];
+
+   if ((LL0!=0.0)&&(act0==1)) {
     n_phase_change++;
-   } else if ((LL0==0.0)&&(LL1==0.0)) {
+   } else if ((LL1!=0.0)&&(act1==1)) {
+    n_phase_change++;
+   } else if ((LL0==0.0)||(act0==0)) {
+    // do nothing
+   } else if ((LL1==0.0)||(act1==0)) {
     // do nothing
    } else
-    amrex::Error("LL0 or LL1 invalid");
+    amrex::Error("LL0,LL1,act0, or act1 invalid");
+
   } // im_opp=im+1..num_materials
  } // im=1..num_materials-1
 
@@ -16325,7 +16360,23 @@ NavierStokes::level_phase_change_convertALL() {
      amrex::Error("iten invalid");
     Real LL0=get_user_latent_heat(iten,293.0,1);
     Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
-    if ((LL0!=0.0)||(LL1!=0.0)) {
+    int act0=activation_flag[iten-1];
+    int act1=activation_flag[iten-1+num_interfaces];
+
+    int local_activation=0;
+
+    if ((LL0!=0.0)&&(act0==1)) {
+     local_activation=1;
+    } else if ((LL1!=0.0)&&(act1==1)) {
+     local_activation=1;
+    } else if ((LL0==0.0)||(act0==0)) {
+     // do nothing
+    } else if ((LL1==0.0)||(act1==0)) {
+     // do nothing
+    } else
+     amrex::Error("LL0,LL1,act0, or act1 invalid");
+
+    if (local_activation==1) {
 
      for (int ilev=finest_level;ilev>=level;ilev--) {
       NavierStokes& ns_level=getLevel(ilev);
@@ -16453,10 +16504,11 @@ NavierStokes::level_phase_change_convertALL() {
       amrex::Error("i_phase_change invalid");
      }
      i_phase_change++;
-    } else if ((LL0==0.0)&&(LL1==0.0)) {
+
+    } else if (local_activation==0) {
      // do nothing
     } else
-     amrex::Error("LL0 or LL1 invalid");
+     amrex::Error("local_activation invalid");
    } // im_opp
   } // im
  } // while i_phase_change<n_phase_change
@@ -16494,7 +16546,7 @@ NavierStokes::level_phase_change_convertALL() {
   mdot_comp_data,
   mdot_data_redistribute,
   mdot_comp_data_redistribute 
-  );
+ );
 
  if (color_count!=blobdata.size())
   amrex::Error("color_count!=blobdata.size()");
@@ -16556,10 +16608,27 @@ NavierStokes::level_phase_change_convert(
 
   Real LL0=get_user_latent_heat(iten,293.0,1);
   Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
-  if ((LL0!=0.0)||(LL1!=0.0)) {
+  int act0=activation_flag[iten-1];
+  int act1=activation_flag[iten-1+num_interfaces];
+
+  int local_activation=0;
+  if ((LL0!=0.0)&&(act0==1)) {
+   local_activation=1;
+  } else if ((LL1!=0.0)&&(act1==1)) {
+   local_activation=1;
+  } else if ((LL0==0.0)||(act0==0)) {
+   // do nothing
+  } else if ((LL1==0.0)||(act1==0)) {
    // do nothing
   } else
-   amrex::Error("LL0 or LL1 invalid");
+   amrex::Error("LL0,LL1,act0, or act1 invalid");
+
+
+  if (local_activation==1) {
+   // do nothing
+  } else
+   amrex::Error("local_activation invalid");
+
  } else
   amrex::Error("level_phase_change_convert: invalid parameters");
  
@@ -17415,6 +17484,8 @@ NavierStokes::phase_change_redistributeALL() {
     int indexEXP=iten+ireverse*num_interfaces-1;
 
     Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
+    int local_activation=activation_flag[indexEXP];
+
     int distribute_from_targ=distribute_from_target[indexEXP];
 
     int im_source=-1;
@@ -17423,7 +17494,7 @@ NavierStokes::phase_change_redistributeALL() {
     if ((ns_is_rigid(im-1)==1)||
         (ns_is_rigid(im_opp-1)==1)) { 
      // do nothing
-    } else if (LL!=0.0) {
+    } else if ((LL!=0.0)&&(local_activation==1)) {
 
      if (ireverse==0) {
       im_source=im;im_dest=im_opp;
@@ -17546,7 +17617,7 @@ NavierStokes::phase_change_redistributeALL() {
      delete_array(donorflag_complement_MF);
      delete_array(accept_weight_complement_MF);
 
-    } else if (LL==0.0) {
+    } else if ((LL==0.0)||(local_activation==0)) {
      // do nothing
     } else {
      amrex::Error("LL is NaN");
@@ -17834,6 +17905,7 @@ NavierStokes::level_phase_change_redistribute(
   // 1=> donor  2=> receiver  0=> neither
 
  Real LL=0.0;
+ int local_activation=0;
 
  if ((isweep==0)|| //fort_tagexpansion
      (isweep==1)|| //fort_accept_weight
@@ -17861,6 +17933,7 @@ NavierStokes::level_phase_change_redistribute(
 
   if ((indexEXP>=0)&&(indexEXP<2*num_interfaces)) {
    LL=get_user_latent_heat(indexEXP+1,293.0,1);
+   local_activation=activation_flag[indexEXP];
   } else
    amrex::Error("indexEXP invalid");
 
@@ -17869,6 +17942,7 @@ NavierStokes::level_phase_change_redistribute(
    // indexEXP is a filler when isweep==3.
   if (indexEXP==-1) {
    LL=0.0;
+   local_activation=0;
   } else
    amrex::Error("indexEXP invalid");
 
@@ -17879,9 +17953,9 @@ NavierStokes::level_phase_change_redistribute(
   
  if (isweep==0) { //fort_tagexpansion
 
-  if (LL!=0.0) {
+  if ((LL!=0.0)&&(local_activation==1)) {
    // do nothing
-  } else if (LL==0.0) {
+  } else if ((LL==0.0)||(local_activation==0)) {
    amrex::Error("LL invalid");
   } else
    amrex::Error("LL is NaN");
@@ -18046,9 +18120,9 @@ NavierStokes::level_phase_change_redistribute(
 
    //accept_weights
 
-  if (LL!=0.0) {
+  if ((LL!=0.0)&&(local_activation==1)) {
    // do nothing
-  } else if (LL==0.0) {
+  } else if ((LL==0.0)||(local_activation==0)) {
    amrex::Error("LL invalid");
   } else
    amrex::Error("LL is NaN");
@@ -18154,9 +18228,9 @@ NavierStokes::level_phase_change_redistribute(
 
    // redistribution.
 
-  if (LL!=0.0) {
+  if ((LL!=0.0)&&(local_activation==1)) {
    // do nothing
-  } else if (LL==0.0) {
+  } else if ((LL==0.0)||(local_activation==0)) {
    amrex::Error("LL invalid");
   } else
    amrex::Error("LL is NaN");
@@ -18394,6 +18468,7 @@ NavierStokes::level_phase_change_redistribute(
      &cur_time_slab,
      &level,
      &finest_level,
+     activation_flag.dataPtr(), 
      saturation_temp.dataPtr(),
      freezing_model.dataPtr(),
      distribute_from_target.dataPtr(),
@@ -18674,24 +18749,26 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    face_comp_index=FACECOMP_FACEHEAT;
    for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
-    if (LL!=0.0) {
+    int local_activation=activation_flag[im];
+    if ((LL!=0.0)&&(local_activation==1)) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
      } else if (is_GFM_freezing_model(freezing_model[im])==0) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model bust");
-    } else if (LL==0.0) {
+    } else if ((LL==0.0)||(local_activation==0)) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] (LL) invalid");
+     amrex::Error("latent_heat[im] (LL) or activation_flag invalid");
    } // im=0..2 num_interfaces-1
   } else if ((project_option>=SOLVETYPE_SPEC)&&  
 	     (project_option<SOLVETYPE_SPEC+num_species_var)) { //mass fraction
    face_comp_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
    for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
-    if (LL!=0.0) {
+    int local_activation=activation_flag[im];
+    if ((LL!=0.0)&&(local_activation==1)) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
 
       if (is_multi_component_evap(freezing_model[im],
@@ -18714,10 +18791,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model bust");
-    } else if (LL==0.0) {
+    } else if ((LL==0.0)||(local_activation==0)) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] (LL) invalid");
+     amrex::Error("latent_heat[im] (LL) or activation_flag invalid");
    } // im=0.. 2 num_interfaces -1
   } else
    amrex::Error("project_option invalid 15679");
@@ -18898,6 +18975,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &nstate,
     &ntsat, // num_interfaces*(ncomp_per_tsat+1)
     &nden,  // num_materials*num_state_material
+    activation_flag.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),

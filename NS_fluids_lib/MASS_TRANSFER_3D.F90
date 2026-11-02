@@ -7513,6 +7513,7 @@ stop
        abort_if_T_gamma_unattainable, &
        nucleate_pos, &
        nucleate_pos_size, &
+       activation_flag, &
        nucleation_temp, &
        nucleation_pressure, &
        nucleation_pmg, &
@@ -7608,6 +7609,7 @@ stop
       integer, INTENT(in) :: abort_if_T_gamma_unattainable
       integer, INTENT(in) :: nucleate_pos_size
       real(amrex_real), target, INTENT(in) :: nucleate_pos(nucleate_pos_size)
+      integer, target, INTENT(in) :: activation_flag(2*num_interfaces)
       real(amrex_real), target, INTENT(in) :: nucleation_temp(2*num_interfaces)
       real(amrex_real), target, INTENT(in) :: &
         nucleation_pressure(2*num_interfaces)
@@ -8199,7 +8201,8 @@ stop
               else if (constant_density_all_time(im_dest).eq.0) then
                vapor_den=EOS(D_DECL(i,j,k),dencomp_dest)
               else
-               print *,"constant_density_all_time(im_dest) invalid"
+               print *,"constant_density_all_time(im_dest) invalid: ", &
+                im_dest,constant_density_all_time(im_dest)
                stop
               endif
              else if (LL(ireverse).lt.zero) then
@@ -8257,7 +8260,8 @@ stop
               stop
              endif
 
-             if (LL(ireverse).ne.zero) then
+             if ((LL(ireverse).ne.zero).and. &
+                 (activation_flag(iten+ireverse*num_interfaces).eq.1)) then
             
               if (im_dest.lt.im_source) then
                LSSIGN=one
@@ -8909,7 +8913,7 @@ stop
 
                    if (debug_limiter.eq.1) then
                     print *,"debug_limiter=1 (1) "
-                    print *,"i,j,k,bfact,level,finest_level,im_source,im_dest ",&
+                    print *,"i,j,k,bfct,level,finest_level,im_source,im_dest ",&
                       i,j,k,bfact, &
                       level,finest_level,im_source,im_dest
                     print *,"ireverse, local_probe_constrain ",ireverse, &
@@ -9953,10 +9957,13 @@ stop
                stop
               endif
 
-             else if (LL(ireverse).eq.zero) then
+             else if ((LL(ireverse).eq.zero).or. &
+                      (activation_flag(iten+ireverse*num_interfaces).eq.0)) then
               ! do nothing
              else
-              print *,"LL bust"
+              print *,"LL or activation_flag bust"
+              print *,"LL ",LL
+              print *,"activation_flag ",activation_flag
               stop
              endif
 

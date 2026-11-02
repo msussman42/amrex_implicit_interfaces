@@ -4573,6 +4573,7 @@ stop
        time, &
        level, &
        finest_level, &
+       activation_flag, &
        saturation_temp, &
        freezing_model, &
        distribute_from_target, &
@@ -4604,6 +4605,7 @@ stop
       real(amrex_real), INTENT(inout) :: mdotcount
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: activation_flag(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -4659,6 +4661,7 @@ stop
       real(amrex_real) local_density
 
       real(amrex_real) LL
+      integer local_activation
       real(amrex_real) divu_material
       integer local_mask
       real(amrex_real) F_solid_sum
@@ -4810,13 +4813,14 @@ stop
            iten_shift=iten+ireverse*num_interfaces
 
            LL=get_user_latent_heat(iten_shift,room_temperature,1)
+           local_activation=activation_flag(iten_shift)
 
            jump_strength=JUMPFAB(D_DECL(i,j,k),iten_shift)
   
            if ((is_rigid(im).eq.1).or. &
                (is_rigid(im_opp).eq.1)) then 
             ! do nothing
-           else if (LL.ne.zero) then
+           else if ((LL.ne.zero).and.(local_activation.eq.1)) then
             if (ireverse.eq.0) then
              im_source=im
              im_dest=im_opp
@@ -4893,10 +4897,11 @@ stop
              stop
             endif 
 
-           else if (LL.eq.zero) then
+           else if ((LL.eq.zero).or.(local_activation.eq.0)) then
             ! do nothing
            else
             print *,"LL bust ",LL
+            print *,"or local_activation bust ",local_activation
             stop
            endif  
           enddo ! ireverse=0...1
@@ -9048,6 +9053,7 @@ stop
        nstate, &
        ntsat, &
        nden, &
+       activation_flag, &
        freezing_model, &
        distribute_from_target, &
        saturation_temp, &
@@ -9212,6 +9218,7 @@ stop
       integer distribute_from_targ
       real(amrex_real) TGRAD_MAX,TGRAD_test,TorY_test
       real(amrex_real) LL
+      integer local_activation
       real(amrex_real) Tgamma
       real(amrex_real) TorYgamma_BC
       integer Tgamma_STATUS
@@ -9528,6 +9535,7 @@ stop
             call get_iten(im,im_opp,iten)
             LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
                     room_temperature,1)
+            local_activation=activation_flag(iten+ireverse*num_interfaces)
 
             Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
 
@@ -9543,7 +9551,8 @@ stop
             if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
 
              local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
-             distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+             distribute_from_targ= &
+                  distribute_from_target(iten+ireverse*num_interfaces)
 
              if ((distribute_from_targ.ne.0).and. &
                  (distribute_from_targ.ne.1)) then
@@ -9554,7 +9563,7 @@ stop
              if ((is_rigid(im).eq.0).and. &
                  (is_rigid(im_opp).eq.0)) then
 
-              if (LL.ne.zero) then
+              if ((LL.ne.zero).and.(local_activation.eq.1)) then
 
                if (ireverse.eq.0) then
                 im_source=im
@@ -9587,7 +9596,7 @@ stop
                   if (Tgamma.gt.zero) then
                    ! do nothing
                   else
-                   print *,"Tgamma must be positive1"
+                   print *,"Tgamma must be positive1 ",Tgamma
                    stop
                   endif
                  else
@@ -9606,7 +9615,7 @@ stop
                   if (Tgamma.gt.zero) then
                    ! do nothing
                   else
-                   print *,"Tgamma must be positive22"
+                   print *,"Tgamma must be positive22 ",Tgamma
                    stop
                   endif
                   if ((TorYgamma_BC.ge.zero).and.(TorYgamma_BC.le.one)) then
@@ -9733,7 +9742,7 @@ stop
                       TGRAD_MAX=TGRAD_test
                      endif
                     else
-                     print *,"im_dest_crit invalid"
+                     print *,"im_dest_crit invalid ",im_dest_crit
                      stop
                     endif
 
@@ -9775,10 +9784,11 @@ stop
                 stop
                endif
 
-              else if (LL.eq.zero) then
+              else if ((LL.eq.zero).or.(local_activation.eq.0)) then
                ! do nothing
               else
-               print *,"LL invalid"
+               print *,"LL invalid ",LL
+               print *,"or local_activation invalid ",local_activation
                stop
               endif
 
@@ -10134,7 +10144,7 @@ stop
           endif
 
          else 
-          print *,"im_dest_crit invalid"
+          print *,"im_dest_crit invalid ",im_dest_crit
           stop
          endif
 
