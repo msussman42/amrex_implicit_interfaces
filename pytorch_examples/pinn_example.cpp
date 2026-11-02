@@ -1,3 +1,4 @@
+//#include <torch/torch.act.h>
 #include <torch/torch.h>
 #include <iostream>
 #include <vector>
@@ -28,8 +29,8 @@ int main() {
  
     //gradcheck diagnostic
     // 1. Inputs must be double precision (kDouble) and require gradients
-    auto x = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
-    auto y = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
+    auto x_first = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
+    auto y_first = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
 
     // 2. Define the functional operation to test
     auto func = [](torch::TensorList inputs) -> std::vector<torch::Tensor> {
@@ -37,16 +38,51 @@ int main() {
         return {out};
     };
 
-    // 3. Configure options (optional, defaults are usually sufficient)
-    auto options = torch::autograd::GradcheckOptions()
-        .eps(1e-6)      // Finite difference step size
-        .atol(1e-5)     // Absolute tolerance
-        .rtol(1e-3);    // Relative tolerance
+  // 1. Define an input tensor with requires_grad = true (use float64/double for precision)
+  torch::Tensor x = torch::tensor({2.0, 3.0}, torch::TensorOptions().dtype(torch::kFloat64).requires_grad(true));
 
-    // 4. Run the check
-    bool success = torch::autograd::gradcheck(func, {x, y}, options);
+  // 2. Forward pass via Autograd
+  // Example function: y = sum(2 * x^3 + 5 * x)
+  auto compute_func = [](torch::Tensor input) {
+    return (2.0 * input.pow(3) + 5.0 * input).sum();
+  };
 
-    std::cout << "Gradcheck passed: " << (success ? "YES" : "NO") << std::endl;
+  torch::Tensor y = compute_func(x);
+
+  // 3. Backward pass (Backpropagation)
+  y.backward();
+  torch::Tensor autograd_grad = x.grad();
+
+  std::cout << "Autograd Gradient:\n" << autograd_grad << std::endl;
+
+  // 4. Compute Finite Difference Derivative manually
+  double h = 1e-5;
+  torch::Tensor finite_diff_grad = torch::zeros_like(x);
+
+  for (int i = 0; i < x.numel(); ++i) {
+    // Clone tensor data to perturb index i
+    torch::Tensor x_plus = x.clone().detach();
+    torch::Tensor x_minus = x.clone().detach();
+
+ //   x_plus[i].item<double>() += h;
+ //   x_minus[i].item<double>() -= h;
+    x_plus[i] += h;
+    x_minus[i]-= h;
+
+    // Numerical approximation: f(x + h) - f(x - h) / (2 * h) (central difference)
+    torch::Tensor y_plus = compute_func(x_plus);
+    torch::Tensor y_minus = compute_func(x_minus);
+
+    double diff = (y_plus.item<double>() - y_minus.item<double>()) / (2.0 * h);
+    finite_diff_grad[i] = diff;
+  }
+
+  std::cout << "Finite Difference Gradient:\n" << finite_diff_grad << std::endl;
+
+  // 5. Compare the two gradients
+  double max_diff = torch::max(torch::abs(autograd_grad - finite_diff_grad)).item<double>();
+  std::cout << "Max Absolute Difference: " << max_diff << std::endl;
+
 
     // Check for CUDA availability
     torch::Device device(torch::kCPU);
