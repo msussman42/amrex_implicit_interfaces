@@ -25,6 +25,29 @@ struct DynamicMLP : torch::nn::Module {
 };
 
 int main() {
+ 
+    //gradcheck diagnostic
+    // 1. Inputs must be double precision (kDouble) and require gradients
+    auto x = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
+    auto y = torch::randn({2, 3}, torch::dtype(torch::kDouble).requires_grad(true));
+
+    // 2. Define the functional operation to test
+    auto func = [](torch::TensorList inputs) -> std::vector<torch::Tensor> {
+        auto out = inputs[0] * inputs[1]; // e.g., element-wise multiplication
+        return {out};
+    };
+
+    // 3. Configure options (optional, defaults are usually sufficient)
+    auto options = torch::autograd::GradcheckOptions()
+        .eps(1e-6)      // Finite difference step size
+        .atol(1e-5)     // Absolute tolerance
+        .rtol(1e-3);    // Relative tolerance
+
+    // 4. Run the check
+    bool success = torch::autograd::gradcheck(func, {x, y}, options);
+
+    std::cout << "Gradcheck passed: " << (success ? "YES" : "NO") << std::endl;
+
     // Check for CUDA availability
     torch::Device device(torch::kCPU);
     if (torch::cuda::is_available()) {

@@ -6,7 +6,10 @@ unzip libtorch-shared-with-deps-2.15.0%2Bcpu.zip
 module load gnu/13
 mkdir build
 cd build
-cmake -DCMAKE_PREFIX_PATH=/gpfs/home/sussman/libtorch ..
+cmake -DCMAKE_PREFIX_PATH=/gpfs/home/sussman/libtorch ..  
+   or
+cmake -DCMAKE_PREFIX_PATH=/export/m38/sussman/libtorch ..  
+
 make
 ./pinn_example
 
