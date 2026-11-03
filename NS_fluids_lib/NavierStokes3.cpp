@@ -10610,17 +10610,18 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
   for (int im=0;im<2*num_interfaces;im++) {
    Real LL=get_user_latent_heat(im+1,293.0,1);
-   if (LL!=0.0) {
+   int local_activation=activation_flag[im];
+   if ((LL!=0.0)&&(local_activation==1)) {
     if (is_GFM_freezing_model(freezing_model[im])==1) {
      GFM_flag=1; 
     } else if (is_GFM_freezing_model(freezing_model[im])==0) {
      // do nothing
     } else 
      amrex::Error("is_GFM_freezing_model invalid");
-   } else if (LL==0.0) {
+   } else if ((LL==0.0)||(local_activation==0)) {
     // do nothing
    } else
-    amrex::Error("latent_heat[im] invalid");
+    amrex::Error("latent_heat[im] (LL) or local_activation invalid");
   } // im=0..2 num_interfaces -1
 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
@@ -10628,7 +10629,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
   for (int im=0;im<2*num_interfaces;im++) {
    Real LL=get_user_latent_heat(im+1,293.0,1);
-   if (LL!=0.0) {
+   int local_activation=activation_flag[im];
+   if ((LL!=0.0)&&(local_activation==1)) {
     if (is_GFM_freezing_model(freezing_model[im])==1) {
      if (is_multi_component_evap(freezing_model[im],
           Tanasawa_or_Schrage_or_Kassemi[im],
@@ -10650,10 +10652,10 @@ void NavierStokes::allocate_FACE_WEIGHT(
      // do nothing
     } else 
      amrex::Error("is_GFM_freezing_model invalid");
-   } else if (LL==0.0) {
+   } else if ((LL==0.0)||(local_activation==0)) {
     // do nothing
    } else
-    amrex::Error("latent_heat[im] (LL) invalid");
+    amrex::Error("latent_heat[im] (LL) or local_activation invalid");
 
   } // im=0..2 num_interfaces -1
  } else if (project_option_is_valid(project_option)==1) {
@@ -10977,17 +10979,18 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     //      T_water does not change
    for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
-    if (LL!=0.0) {
+    int local_activation=activation_flag[im];
+    if ((LL!=0.0)&&(local_activation==1)) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
      } else if (is_GFM_freezing_model(freezing_model[im])==0) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (LL==0.0) {
+    } else if ((LL==0.0)||(local_activation==0)) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] (LL) invalid");
+     amrex::Error("latent_heat[im] (LL) or local_activation invalid");
    } // im=0..2 num_interfaces -1
   } else if (is_phasechange==0) {
    // do nothing
@@ -11003,7 +11006,8 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
    for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
-    if (LL!=0.0) {
+    int local_activation=activation_flag[im];
+    if ((LL!=0.0)&&(local_activation==1)) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       if (is_multi_component_evap(freezing_model[im],
            Tanasawa_or_Schrage_or_Kassemi[im],
@@ -11025,10 +11029,10 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (LL==0.0) {
+    } else if ((LL==0.0)||(local_activation==0)) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] (LL) invalid");
+     amrex::Error("latent_heat[im] (LL) or local_activation invalid");
      
    } // im=0.. 2 num_interfaces -1
 

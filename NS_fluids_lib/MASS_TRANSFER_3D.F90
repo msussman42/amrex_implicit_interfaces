@@ -7609,7 +7609,7 @@ stop
       integer, INTENT(in) :: abort_if_T_gamma_unattainable
       integer, INTENT(in) :: nucleate_pos_size
       real(amrex_real), target, INTENT(in) :: nucleate_pos(nucleate_pos_size)
-      integer, target, INTENT(in) :: activation_flag(2*num_interfaces)
+      integer, INTENT(in) :: activation_flag(2*num_interfaces)
       real(amrex_real), target, INTENT(in) :: nucleation_temp(2*num_interfaces)
       real(amrex_real), target, INTENT(in) :: &
         nucleation_pressure(2*num_interfaces)

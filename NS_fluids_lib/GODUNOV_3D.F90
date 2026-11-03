@@ -9105,6 +9105,7 @@ stop
       integer, INTENT(in) :: adjust_temperature
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: activation_flag(2*num_interfaces)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
