@@ -3159,7 +3159,8 @@ NavierStokes::read_params ()
     blob_history_class.start_step=-1;
     blob_history_class.end_step=-1;
 
-     //amrlevel_repair_blobclass is declared in AmrLevel.H
+     //amrlevel_repair_blobclass is declared in AmrLevel.H:
+     //static repair_blobclass amrlevel_repair_blobclass
     int new_old_size=2;
     amrlevel_repair_blobclass.repair_blobclass_data.resize(new_old_size);
     for (int istep=0;istep<new_old_size;istep++) {
@@ -11458,6 +11459,7 @@ NavierStokes::init(
       repair_blobclass_data[num_old_new-1].size();
   for (int i=0;i<num_old_new;i++) {
    amrlevel_repair_blobclass.repair_blobclass_data[i].resize(local_count);
+    //dest,source
    copy_blobdata(
     amrlevel_repair_blobclass.repair_blobclass_data[i],
     oldns->amrlevel_repair_blobclass.repair_blobclass_data[num_old_new-1]);

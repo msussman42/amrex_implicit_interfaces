@@ -2311,6 +2311,82 @@ Real NavierStokes::advance(Real time,Real dt) {
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
 
+   for (int i=0;i<2*num_interfaces;i++)
+    activation_flag[i]=1;
+   
+   int repair_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
+
+   for (int im=0;im<num_materials;im++) {
+    if (is_ice_matC(im)==1) {
+     for (int im_opp=0;im_opp<num_materials;im_opp++) {
+      if (im!=im_opp) {
+       int iten;
+       get_iten_cpp(im+1,im_opp+1,iten);
+       if ((iten<1)||(iten>num_interfaces))
+        amrex::Error("iten invalid");
+       Real LL1=get_user_latent_heat(iten,293.0,1);
+       Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
+       if ((LL1<0.0)||(LL2<0.0)) {
+
+        int local_index;
+        if (LL1<0.0) {
+         local_index=iten-1;
+        } else if (LL2<0.0) {
+         local_index=iten+num_interfaces-1;
+        } else
+         amrex::Error("LL1 or LL2 invalid");
+
+        int current_supercool_flag=-1;
+        for (int i=0;i<repair_count;i++) {
+         int blob_im=amrlevel_repair_blobclass.repair_blobclass_data[1][i].im;
+         int blob_supercool_flag=amrlevel_repair_blobclass.
+           repair_blobclass_data[1][i].supercool_flag;
+
+         if ((blob_im>=1)&&(blob_im<=num_materials)) {
+          //do nothing
+         } else
+          amrex::Error("blob_im invalid");
+
+         if (blob_im==im_opp+1) {
+          if (current_supercool_flag==-1) {
+           current_supercool_flag=blob_supercool_flag;
+          } else if (current_supercool_flag==blob_supercool_flag) {
+           //do nothing
+          } else
+           amrex::Error("blob_supercool_flag invalid");
+         }
+        } //i=0 .. repair_count-1 
+
+        if (repair_count==0) {
+         std::cout << "DEACTIVATED im,repair_count= " << im_opp << ' '
+           << repair_count << '\n';
+         activation_flag[local_index]=0;
+        } else if (repair_count>0) {
+         if (current_supercool_flag==1) {
+          std::cout << "DEACTIVATED im,repair_count= " << im_opp << ' '
+            << repair_count << '\n';
+          activation_flag[local_index]=0;
+         } else if (current_supercool_flag==0) {
+          std::cout << "ACTIVATED im,repair_count= " << im_opp << ' '
+            << repair_count << '\n';
+          activation_flag[local_index]=1;
+         } else
+          amrex::Error("current_supercool_flag invalid");
+        } else
+         amrex::Error("repair_count invalid");
+
+       } else if ((LL1>=0.0)&&(LL2>=0.0)) {
+        //do nothing
+       } else
+        amrex::Error("LL1 or LL2 invalid");
+      } //im!=im_opp
+     } //im_opp=0 ... nmat-1
+    } else if (is_ice_matC(im)==0) {
+     //do nothing
+    } else
+     amrex::Error("is_ice_matC invalid");
+   } //im=0 ... nmat-1
+
    NS_LSA_nsteps_krylov_subspace_method=
       parent->LSA_nsteps_krylov_subspace_method;
    NS_LSA_activate=parent->LSA_activate;
@@ -9632,13 +9708,110 @@ NavierStokes::ColorSumALL(
     copy_blobdata(
       amrlevel_repair_blobclass.repair_blobclass_data[1],
       blobdata);
+
     int repair_count=amrlevel_repair_blobclass.repair_blobclass_data[1].size();
+
     for (int i=0;i<repair_count;i++) {
      amrlevel_repair_blobclass.repair_blobclass_data[1][i].blob_mass_target+=
        blobdata[i].blob_mass_mdot;
      amrlevel_repair_blobclass.repair_blobclass_data[1][i].blob_mass_mdot=
        blobdata[i].blob_mass_mdot;
     }
+
+    for (int im=0;im<num_materials;im++) {
+     if (is_ice_matC(im)==1) {
+      for (int im_opp=0;im_opp<num_materials;im_opp++) {
+       if (im!=im_opp) {
+        int iten;
+        get_iten_cpp(im+1,im_opp+1,iten);
+        if ((iten<1)||(iten>num_interfaces))
+         amrex::Error("iten invalid");
+        Real LL1=get_user_latent_heat(iten,293.0,1);
+        Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
+        if ((LL1<0.0)||(LL2<0.0)) {
+
+         Real local_tsat;
+         Real local_nucleation_temp;
+         if (LL1<0.0) {
+          local_tsat=saturation_temp[iten-1];
+          local_nucleation_temp=nucleation_temp[iten-1];
+         } else if (LL2<0.0) {
+          local_tsat=saturation_temp[iten+num_interfaces-1];
+          local_nucleation_temp=nucleation_temp[iten+num_interfaces-1];
+         } else
+          amrex::Error("LL1 or LL2 invalid");
+
+         int current_supercool_flag=-1;
+         Real temperature_sum=0.0;
+         Real mass_sum=0.0;
+         for (int i=0;i<repair_count;i++) {
+
+          if ((blobdata[i].im>=1)&&(blobdata[i].im<=num_materials)) {
+           //do nothing
+          } else
+           amrex::Error("blobdata[i].im invalid");
+
+          if (blobdata[i].im==im_opp+1) {
+           if (current_supercool_flag==-1) {
+            current_supercool_flag=blobdata[i].supercool_flag;
+           } else if (current_supercool_flag==
+                      blobdata[i].supercool_flag) {
+            //do nothing
+           } else
+            amrex::Error("supercool_flag invalid");
+           temperature_sum+=blobdata[i].blob_temperature;
+           mass_sum+=blobdata[i].blob_mass;
+          }
+         } //i=0 .. repair_count-1 
+
+         if (mass_sum==0.0) {
+          //do nothing
+         } else if (mass_sum>0.0) {
+          temperature_sum/=mass_sum;
+          if (current_supercool_flag==0) {
+           std::cout << "AFTER RECALESCE im,TEMPERATURE= " << im_opp << ' '
+            << temperature_sum << '\n';
+          } else if (current_supercool_flag==1) {
+           if (temperature_sum>=local_nucleation_temp) {
+            std::cout << "TRANSITION RECALESCE im,TEMPERATURE= " << 
+             im_opp << ' ' << temperature_sum << '\n';
+            for (int i=0;i<repair_count;i++) {
+             if (blobdata[i].im==im_opp+1) {
+              blobdata[i].blob_temperature=local_tsat*blobdata[i].blob_mass;
+              blobdata[i].supercool_flag=0;
+              amrlevel_repair_blobclass.repair_blobclass_data[1][i].
+                 blob_temperature=blobdata[i].blob_temperature;
+              amrlevel_repair_blobclass.repair_blobclass_data[1][i].
+                 supercool_flag=0;
+             }
+            }// for (int i=0;i<repair_count;i++) 
+            int scomp=STATECOMP_STATES+im_opp*num_state_material+
+              ENUM_TEMPERATUREVAR; 
+             //ngrow=1 ncomp=1
+            setVal_array(1,scomp,1,local_tsat,State_Type+GET_NEW_DATA_OFFSET);
+           } else if (temperature_sum<local_nucleation_temp) {
+            std::cout << "BEFORE RECALESCE im,TEMPERATURE= " << im_opp << ' '
+             << temperature_sum << '\n';
+           } else
+            amrex::Error("temperature_sum invalid");
+          } else
+           amrex::Error("current_supercool_flag invalid");
+
+         } else
+          amrex::Error("mass_sum invalid");
+ 
+        } else if ((LL1>=0.0)&&(LL2>=0.0)) {
+         //do nothing
+        } else
+         amrex::Error("LL1 or LL2 invalid");
+       } //im!=im_opp
+      } //im_opp=0 ... nmat-1
+     } else if (is_ice_matC(im)==0) {
+      //do nothing
+     } else
+      amrex::Error("is_ice_matC invalid");
+    } //im=0 ... nmat-1
+
    } else
     amrex::Error("update_mdot invalid");
   } else

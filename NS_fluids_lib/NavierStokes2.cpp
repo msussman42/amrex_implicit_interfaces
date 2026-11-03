@@ -8909,7 +8909,8 @@ void NavierStokes::setVal_array(int ngrow,int scomp,int ncomp,Real dataval,
 
     if (get_new_data_Type(idx_localMF)>=0) {
      mfab_dest_ptr=
-      &ns_level.get_new_data(get_new_data_Type(idx_localMF),project_slab_step+1);
+      &ns_level.get_new_data(get_new_data_Type(idx_localMF),
+                             project_slab_step+1);
     } else if (get_new_data_Type(idx_localMF)==-1) {
      mfab_dest_ptr=ns_level.localMF[idx_localMF];
     } else

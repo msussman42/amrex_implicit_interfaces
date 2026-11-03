@@ -1486,6 +1486,7 @@ void apply_pressure_grad(
     void Copy_array(int mfab_dest,int mfab_source,
 		    int scomp,int dcomp,int ncomp,int ngrow);
 
+     //setVal_array is declared in NavierStokes2.cpp
     void setVal_array(int ngrow,int scomp,int ncomp,Real dataval,
       int idx_localMF);
 
