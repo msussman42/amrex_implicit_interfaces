@@ -1,3 +1,27 @@
+# In order to run the code on the HPC
+# 1. From your login home directory: 
+#     git clone https://github.com/msussman42/amrex_implicit_interfaces.git
+# 2. cd amrex_implicit_interfaces/NS_fluids_lib
+# 3. edit GNUmakefile
+#    (i) modify DEBUG=FALSE
+#    (ii) modify USE_MPI=TRUE
+#    (ii) modify USE_OMP=FALSE
+# 4a. module purge
+# 4b. module load gnu/13
+# 4c. module load openmpi
+# 5. cd run2d
+# 6. mkdir CRYOGENIC_TANK_TPCE
+# 7. cd CRYOGENIC_TANK_TPCE
+# 8. cp ../inputs.bubble_ullage .
+# 9. cp ../slurmTPCE .
+# 10. cp ../../amr2d.gnu.MPI.ex .
+# 11. edit slurmTPCE:
+#    (i) modify #SBATCH --mail-user=msussman@fsu.edu
+#    (ii) modify #SBATCH --partition=engineering_q
+#    (iii) modify #SBATCH -t 14-00:00:00
+#    (iv) modify srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/CRYOGENIC_TANK_TPCE/amr2d.gnu.MPI.ex inputs.bubble_ullage
+# 12. sbatch slurmTPCE
+#
 # For more information check
 # NASA_CRYOGENICS_MICROGRAVITY_GITHUB => 
 #   references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
@@ -162,6 +186,7 @@ ns.shock_timestep=2 2 2
 #ns.visual_nddata_format=0 #tecplot
 #ns.visual_nddata_format=1 #visit, amrvis
 #ns.visual_nddata_format=2 #piecewise constant tecplot
+ns.visual_ncell=64 128
 ns.visual_nddata_format=0
 
 #amr.check_int       = 50     # number of timesteps between checkpoints
