@@ -220,10 +220,16 @@ c testcase=2 1D stefan and include Recalescence
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
 c is_freezing=3 => tstop=1.75 ? (SEE H. Hu and Z. Jin)
-c is_freezing=4 => tstop=0.025
+c is_freezing=4 => tstop=determined when drop all ice. (comparison
+c with this paper:
+c Applied Thermal Engineering
+c ARTICLE TITLE:Instantaneous interface freezing induced 
+c   abnormal icing dynamics during droplet impact icing
+c ARTICLE AUTHOR:Puhang Jin, Yuqiao Chen, Jiale Sun, Zhiming Tan, Wc
       is_freezing=4
 
 c 1d stefan problem
+c testcase.eq.2 are the recalesce cases
       if ((testcase.eq.0).or.
      &    (testcase.eq.2)) then
 c When running this test, we set kliquid=0
@@ -246,7 +252,8 @@ c When running this test, we set kliquid=0
 c 1W=10^7 erg/s
 c 1W/(m K)=10^5 cgs
        kliquid=58.0E+3
-       kambient=2.4E-3
+c      kambient=2.4E-3
+       kambient=1.0e-10
        denambient=0.001225
        cpambient=1.0E+7
  
@@ -358,7 +365,7 @@ c        xcfd_offset=0.19d0-xcalibrate
         xlo=0.0d0
 ! position of top of domain
 ! Neumann boundary condition
-        xhi=0.525 
+        xhi=0.625 
         xlo_drop=xcalibrate
 !droplet diameter is D0=0.25 cm see page 3
         radblob=0.125d0

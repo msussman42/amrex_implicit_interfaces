@@ -16,13 +16,17 @@
 #  Applied Thermal Engineering 284 (2026)
 #  Figure 4(C) and Figure 7 Lower Right corner
 #  just above section 2.2: droplet diameter=2.5mm=0.25cm
+#  The most accessible cases: (see stefan.f)
+#  V0=3.13 m/s
+#  deltat=-28.8, -36.3, -43.0
+#  Dm/Do=4.0,3.96,3.92
 max_step  = 999999   # maximum timestep 
 stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
 geometry.prob_lo   =  0.0 0.0  
-geometry.prob_hi   =  0.525 0.525  #CGS
+geometry.prob_hi   =  0.625 0.625  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -121,6 +125,7 @@ ns.gravity = -980.0
 #ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice,293
 #tension_init  0<t<radblob9
 #tension       2*radblob9<t
+#deltat=-28.8 super cool time=0.075  
 ns.radblob9=0.00333066
 ns.tension=80.0 80.0 80.0 0.0 159.0 0.0 #180 deg substrate, 10 deg ice,240
 ns.tension_init=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
