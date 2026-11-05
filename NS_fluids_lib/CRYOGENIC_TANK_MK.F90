@@ -91,10 +91,14 @@ real(amrex_real) :: TANK_MK_INTERFACE_LOCATION
 real(amrex_real) :: TANK_MK_END_RADIUS
 ! Tank spherical end curvature center (0,C_z)
 real(amrex_real) :: TANK_MK_END_CENTER
-! Heater flux A
-real(amrex_real) :: TANK_MK_HEATER_WATTS
-! Heater flux B
-real(amrex_real) :: TANK_MK_HEATER_WATTS_B
+
+! Heater flux A (top) xblob3
+real(amrex_real) :: TANK_MK_HEATER_WATTS_A_TOP
+! Heater flux B (side) xblob9
+real(amrex_real) :: TANK_MK_HEATER_WATTS_B_SIDE
+! Heater flux Band (side) xblob3
+real(amrex_real) :: TANK_MK_HEATER_WATTS_B_BAND
+
 ! Heater location in dim=2 direction
 real(amrex_real) :: TANK_MK_HEATER_WALL_MODEL
 real(amrex_real) :: TANK_MK_HEATER_LOW
@@ -837,17 +841,18 @@ end subroutine interp_parabolic_xyz
   TANK_MK_BUBBLE_Y         = yblob2
   TANK_MK_BUBBLE_Z         = zblob2
 
-  TANK_MK_HEATER_WATTS      = xblob3
-  TANK_MK_HEATER_WATTS_B    = xblob9
+  TANK_MK_HEATER_WATTS_A_TOP  = xblob3 !Heater flux A (top)
+  TANK_MK_HEATER_WATTS_B_SIDE = xblob9 !Heater flux B (side) 
+  TANK_MK_HEATER_WATTS_B_BAND = xblob3 !Heater flux BAND (side)
 
    ! see Barsi and Kassemi 2013, Journal of Thermal Science and Engineering
    ! Applications.
-   ! ZBOT (geometry hardwired)
+   ! ZBOT (geometry hardwired) (band heater)
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
 
    print *,"axis_dir=0, tank geometry prescribed internally (not from file)"
 
-   number_of_source_regions=1 ! side heater
+   number_of_source_regions=1 ! side "band"  heater
 
    TANK_MK_HEATER_WALL_MODEL = 0.1683d0
    TANK_MK_HEATER_LOW       = -0.1683d0
@@ -859,15 +864,25 @@ end subroutine interp_parabolic_xyz
    TANK_MK_INSULATE_THICK = 0.0508
    TANK_MK_INSULATE_R_HIGH = yblob/2.0d0 !yblob is height of cylindrical part
 
-   ! TPCE
+   ! TPCE (top heater)
   else if ((axis_dir.eq.1).or. & !TPCE (tank geometry prescribed internally)
            (axis_dir.eq.2).or. & ! heater on top (use aux, no parabolic flt)
            (axis_dir.eq.4).or. & ! heater on top (parabolic flight)
            (axis_dir.eq.5)) then ! implicit rigid motion
 
-   number_of_source_regions=4 ! heater A, inflow, outflow
 
    if (axis_dir.eq.1) then !TPCE (tank geometry prescribed internally)
+    number_of_source_regions=3 !heater A(top),inflow,outflow
+   else if ((axis_dir.eq.2).or. & ! heater on top (use aux, no parabolic flt)
+            (axis_dir.eq.4).or. & ! heater on top (parabolic flight)
+            (axis_dir.eq.5)) then ! implicit rigid motion
+    number_of_source_regions=4 !heater A(top),inflow,outflow,heater B (side)
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+
+   if (axis_dir.eq.1) then!TPCE(tank geometry prescribed internally top heater)
     num_aux_expect=0
    else if ((axis_dir.eq.2).or. & !heater on top (use aux, no parabolic flt)
             (axis_dir.eq.4).or. & !heater on top (use aux, parabolic flight)
@@ -884,7 +899,7 @@ end subroutine interp_parabolic_xyz
     print *,"TANK_MK_AUX_THICK_WALLS=",TANK_MK_AUX_THICK_WALLS
     print *,"num_aux_expect ",num_aux_expect
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid(line 887): ",axis_dir
     stop
    endif
   
@@ -921,14 +936,16 @@ end subroutine interp_parabolic_xyz
 
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
-   if (axis_dir.eq.2) then !heater on top (use aux, no parabolic flt)
+   if (axis_dir.eq.1) then!TPCE(tank geometry prescribed internally top heat)
+    !do nothing
+   else if (axis_dir.eq.2) then !heater on top (use aux, no parabolic flt)
     !do nothing
    else if (axis_dir.eq.4) then !heater on top (use aux, parabolic flight)
     call read_parabolic_data()
    else if (axis_dir.eq.5) then !implicit rigid motion
     !do nothing
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid(line 931): ",axis_dir
     stop
    endif
 
@@ -991,8 +1008,8 @@ end subroutine interp_parabolic_xyz
   real(amrex_real), INTENT(out) :: LS
   real(amrex_real) :: xlo,xhi,ylo,yhi,xcen
 
-  if ((axis_dir.eq.0).or. & !prescribed,ZBOT
-      (axis_dir.eq.1).or. & !prescribed,TPCE
+  if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+      (axis_dir.eq.1).or. & !prescribed,TPCE (top heater)
       (axis_dir.eq.2).or. & !aux files
       (axis_dir.eq.4).or. & !aux files,parabolic
       (axis_dir.eq.5)) then !implicit rigid motion
@@ -1349,8 +1366,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
    ! Solid
 
-   if ((axis_dir.eq.0).or. & !prescribed,ZBOT
-       (axis_dir.eq.1)) then !prescribed,TPCE
+   if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+       (axis_dir.eq.1)) then !prescribed,TPCE (top heater)
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
@@ -1365,9 +1382,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   !Z=abs(P(2))
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
-    if (axis_dir.eq.0) then !prescribed, ZBOT
+    if (axis_dir.eq.0) then !prescribed, ZBOT (band heater)
      ! do nothing
-    else if (axis_dir.eq.1) then ! prescribed, TPCE
+    else if (axis_dir.eq.1) then ! prescribed, TPCE (top heater)
      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
@@ -1379,7 +1396,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       LS(3)=LS_A
      endif
     else
-     print *,"axis_dir invalid: ",axis_dir
+     print *,"axis_dir invalid(line 1382): ",axis_dir
      stop
     endif
    else if ((axis_dir.eq.2).or. &
@@ -1467,7 +1484,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   return
  end subroutine CRYOGENIC_TANK_MK_LS
 
-   !axis_dir.eq.1 prescribed, TPCE
+   !axis_dir.eq.1 prescribed, TPCE top heater
    !region_id=1
    !LS>0 in heater A region.
    !x(2) is the vertical direction
@@ -1612,8 +1629,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-   if ((axis_dir.eq.0).or. &  !prescribed, ZBOT 
-       (axis_dir.eq.1).or. &  !prescribed, TPCE
+   if ((axis_dir.eq.0).or. &  !prescribed, ZBOT  (band heater)
+       (axis_dir.eq.1).or. &  !prescribed, TPCE (top heater)
        (axis_dir.eq.2).or. &  !aux files read e.g. tpce_geometry.vtk (TPCE)
        (axis_dir.eq.5)) then  !implicit rigid motion 
 
@@ -2229,8 +2246,8 @@ if ((num_materials.eq.3).and. &
 
   ! temperature
 
-  if ((axis_dir.eq.0).or. & !prescribed,ZBOT
-      (axis_dir.eq.1).or. & !prescribed,TPCE
+  if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+      (axis_dir.eq.1).or. & !prescribed,TPCE (top heater)
       (axis_dir.eq.2).or. & !aux files
       (axis_dir.eq.5)) then !implicit rigid motion
 
@@ -2248,7 +2265,7 @@ if ((num_materials.eq.3).and. &
    call interp_parabolic_tinit(x(SDIM), &
      STATE(ibase+ENUM_TEMPERATUREVAR+1))
   else
-   print *,"axis_dir invalid: ",axis_dir
+   print *,"axis_dir invalid(line 2251): ",axis_dir
    stop
   endif
 
@@ -2261,8 +2278,8 @@ if ((num_materials.eq.3).and. &
   if (t.eq.0.0d0) then
    if (im.eq.2) then
     den=STATE(ibase+ENUM_DENVAR+1)
-    if ((axis_dir.eq.0).or. & !prescribed,ZBOT
-        (axis_dir.eq.1).or. & !prescribed,TPCE
+    if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+        (axis_dir.eq.1).or. & !prescribed,TPCE, (top heater)
         (axis_dir.eq.2)) then !aux files
      temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
     else if (axis_dir.eq.5) then !implicit rigid motion
@@ -2316,8 +2333,8 @@ if ((num_materials.eq.3).and. &
         fort_molar_mass(2)) !intent(in)
      if (abs(Pgamma-pressure).le.EPS2*pressure) then
       ! do nothing
-     else if ((axis_dir.eq.0).or. & !prescribed, ZBOT
-              (axis_dir.eq.1).or. & !prescribed, TPCE
+     else if ((axis_dir.eq.0).or. & !prescribed, ZBOT (band heater)
+              (axis_dir.eq.1).or. & !prescribed, TPCE (top heater)
               (axis_dir.eq.2).or. & !aux files
               (axis_dir.eq.3).or. & !prescribed,  parabolic test (cylinder)
               (axis_dir.eq.4).or. & !aux files, parabolic
@@ -2650,8 +2667,8 @@ endif
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
-if ((axis_dir.eq.0).or. & !prescribed ZBOT
-    (axis_dir.eq.1).or. & !prescribed TPCE
+if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
+    (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
     (axis_dir.eq.2).or. & !aux files
     (axis_dir.eq.4).or. & !aux files, parabolic
     (axis_dir.eq.5)) then !implicit rigid motion
@@ -2706,16 +2723,16 @@ if ((axis_dir.eq.0).or. & !prescribed ZBOT
      internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
   support_r=0.0d0
   do dir=1,SDIM
-   if (axis_dir.eq.0) then !prescribed,ZBOT
+   if (axis_dir.eq.0) then !prescribed,ZBOT (band heater)
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
-   else if (axis_dir.eq.1) then !prescribed TPCE
+   else if (axis_dir.eq.1) then !prescribed TPCE (top heater)
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else if ((axis_dir.eq.2).or. & !aux files
             (axis_dir.eq.4).or. & !aux files, parabolic
             (axis_dir.eq.5)) then !implicit rigid motion
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid(line 2718): ",axis_dir
     stop
    endif
   enddo
@@ -2775,7 +2792,7 @@ else if (axis_dir.eq.3) then !prescribed parabolic, cylinder
  endif
 
 else
- print *,"axis_dir invalid: ",axis_dir
+ print *,"axis_dir invalid(line 2778): ",axis_dir
  stop
 endif
 
@@ -2857,15 +2874,17 @@ integer :: im,iregion,dir
    regions_list(iregion,0)%region_energy_after=0.0d0 
   enddo ! iregion=1,number_of_source_regions
 
-  if (axis_dir.eq.0) then  !prescribed ZBOT
+  if (axis_dir.eq.0) then  !prescribed ZBOT (band heater)
    regions_list(1,0)%region_material_id=3 !heater
-   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
-  else if ((axis_dir.eq.1).or. & !prescribed TPCE
+    !xblob3, HEATER_BAND at the side, a band heater..
+   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS_B_BAND !Watts=J/s
+  else if ((axis_dir.eq.1).or. & !prescribed TPCE (top heater)
            (axis_dir.eq.2).or. & !aux files
            (axis_dir.eq.4).or. & !aux files, parabolic
            (axis_dir.eq.5)) then !implicit rigid motion
    regions_list(1,0)%region_material_id=3 ! heater A, top
-   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
+    !xblob3, HEATER_A at the top.
+   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS_A_TOP !Watts=J/s
     ! inflow
    regions_list(2,0)%region_material_id=1
    regions_list(2,0)%region_volume_flux=xblob5
@@ -2886,13 +2905,22 @@ integer :: im,iregion,dir
    regions_list(3,0)%region_volume_flux=-xblob5
    regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)
 
-   regions_list(4,0)%region_material_id=3 ! heater B, side
-   regions_list(4,0)%region_energy_flux=TANK_MK_HEATER_WATTS_B ! Watts=J/s
+   if (axis_dir.eq.1) then
+    !do nothing (prescribed TPCE top heater)
+   else if ((axis_dir.eq.2).or. & !aux files
+            (axis_dir.eq.4).or. & !aux files, parabolic
+            (axis_dir.eq.5)) then !implicit rigid motion
+    regions_list(4,0)%region_material_id=3 ! heater B, side
+    regions_list(4,0)%region_energy_flux=TANK_MK_HEATER_WATTS_B_SIDE !Watts=J/s
+   else
+    print *,"axis_dir invalid(line 2916)"
+    stop
+   endif
 
   else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
    !do nothing
   else
-   print *,"axis_dir invalid: ",axis_dir
+   print *,"axis_dir invalid(line 2895): ",axis_dir
    stop
   endif
 
@@ -2941,7 +2969,7 @@ real(amrex_real) :: LS_tank(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
- if (axis_dir.eq.0) then ! prescribed, ZBOT
+ if (axis_dir.eq.0) then ! prescribed, ZBOT band heater
   TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
   if (TANK_MK_R_WIDTH.gt.0.0d0) then
    if (region_id.eq.1) then
@@ -2960,7 +2988,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      stop
     endif
    else
-    print *,"region_id invalid: ",region_id
+    print *,"region_id invalid(line 2965): ",region_id
     stop
    endif
   else
@@ -2968,7 +2996,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
- else if (axis_dir.eq.1) then !prescribed, TPCE
+ else if (axis_dir.eq.1) then !prescribed, TPCE (top heater)
 
   if (region_id.eq.1) then
    called_from_heater_source=1
@@ -3039,7 +3067,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
 
   else
-   print *,"region_id invalid"
+   print *,"region_id invalid(line 3044) ",region_id
    stop
   endif
 
@@ -3048,6 +3076,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
           (axis_dir.eq.5)) then !implicit rigid motion
 
   if (region_id.eq.1) then ! heater A (top)
+
    auxcomp=1
    call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    if (LS_A.ge.0.0d0) then
@@ -3102,14 +3131,14 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
 
   else
-   print *,"region_id invalid: ",region_id
+   print *,"region_id invalid(line 3107): ",region_id
    stop
   endif
 
  else if (axis_dir.eq.3) then !prescribed, parabolic, cylinder
   !do nothing
  else
-  print *,"axis_dir invalid: ",axis_dir
+  print *,"axis_dir invalid(line 3112): ",axis_dir
   stop
  endif
 
@@ -3207,7 +3236,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   stop
  endif  
 
- if (axis_dir.eq.0) then ! prescribed, ZBOT
+ if (axis_dir.eq.0) then ! prescribed, ZBOT (band heater)
 
   if (im.eq.2) then ! vapor
    ! do nothing
@@ -3325,7 +3354,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
- else if ((axis_dir.eq.1).or. & !prescribed TPCE
+ else if ((axis_dir.eq.1).or. & !prescribed TPCE (top heater)
           (axis_dir.eq.2).or. & !aux files
           (axis_dir.eq.4).or. & !aux files, parabolic, TPCE
           (axis_dir.eq.5)) then !implicit rigid motion
@@ -3333,7 +3362,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    called_from_heater_source=1
-   if (axis_dir.eq.1) then !prescribed, TPCE
+   if (axis_dir.eq.1) then !prescribed, TPCE (top heater)
     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source)
    else if ((axis_dir.eq.2).or. & !aux files
             (axis_dir.eq.4).or. & !aux files parabolic
@@ -3343,7 +3372,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
     auxcomp=2 ! heater B (side)
     call interp_from_aux_grid(auxcomp,xfoot3D,LS_B)
    else
-    print *,"axis_dir invalid: ",axis_dir
+    print *,"axis_dir invalid(line 3346): ",axis_dir
     stop
    endif
 
@@ -3386,7 +3415,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
-  if ((axis_dir.eq.1).or. & !prescribed TPCE
+  if ((axis_dir.eq.1).or. & !prescribed TPCE (top heater)
       (axis_dir.eq.2)) then !aux files
    !do nothing
   else if (axis_dir.eq.5) then !implicit rigid motion
@@ -4032,8 +4061,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   gravity_vector_out(dir)=gravity_vector_in(dir)
  enddo
 
- if ((axis_dir.eq.0).or. & !prescribed ZBOT
-     (axis_dir.eq.1).or. & !prescribed TPCE
+ if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
+     (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
      (axis_dir.eq.2)) then !aux files
   !do nothing
  else if (axis_dir.eq.5) then !implicit rigid motion
@@ -4121,8 +4150,8 @@ if ((num_materials.ge.3).and. &
   stop
  endif
 
- if ((axis_dir.eq.0).or. & !prescribed ZBOT
-     (axis_dir.eq.1).or. & !prescribed TPCE
+ if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
+     (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
      (axis_dir.eq.2).or. & !aux files
      (axis_dir.eq.5)) then !implicit rigid motion
   !do nothing
@@ -4145,7 +4174,7 @@ if ((num_materials.ge.3).and. &
    stop
   endif
  else
-  print *,"axis_dir invalid: ",axis_dir
+  print *,"axis_dir invalid(line 4148): ",axis_dir
   stop
  endif
 

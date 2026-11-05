@@ -17,8 +17,8 @@
 # 10. cp ../../amr2d.gnu.MPI.ex .
 # 11. edit slurmTPCE:
 #    (i) modify #SBATCH --mail-user=msussman@fsu.edu
-#    (ii) modify #SBATCH --partition=engineering_q
-#    (iii) modify #SBATCH -t 14-00:00:00
+#    (ii) modify #SBATCH --partition=backfill
+#    (iii) modify #SBATCH -t 4:00:00
 #    (iv) modify srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/CRYOGENIC_TANK_TPCE/amr2d.gnu.MPI.ex inputs.bubble_ullage
 # 12. sbatch slurmTPCE
 #
@@ -150,7 +150,8 @@ amr.n_cell          = 64 128
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 64   # 128 is optimal for MPI in 2D
+amr.max_grid_size   = 32   # 128 is optimal for MPI in 2D
+cg.min_max_grid_size=32
 
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
@@ -309,6 +310,7 @@ ns.tension=1.2e-2 1.2e-2 1.2e-2
 # 12 13 23 21 31 32
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
+ns.ngrow_distance=6
 ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
 
 # distribution of the expansion term

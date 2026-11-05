@@ -6113,8 +6113,9 @@ stop
                   blob_mass=cum_blobdata(ic+2)
                   blob_mass_target=cum_blobdata(ic+3)
                   blob_mass_mdot=cum_blobdata(ic+4)
-                  blob_pressure=cum_blobdata(ic+5)
-                  ic=ic+5
+                  !blob_inflow_outflow=cum_blobdata(ic+5)
+                  blob_pressure=cum_blobdata(ic+6)
+                  ic=ic+6
 
                   if (ic_base.eq. &
                       (opposite_color(im)-1)*num_elements_blobclass) then
@@ -6128,7 +6129,7 @@ stop
                        BLB_PRES+1) then
                    ! do nothing
                   else
-                   print *,"ic invalid ",ic
+                   print *,"ic invalid (line 6131)",ic
                    stop
                   endif
 
