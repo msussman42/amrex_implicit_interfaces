@@ -161,6 +161,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 radcyl
       real*8 tnucleate
       real*8 voldrop
+      real*8 xgap
       real*8 xlo_drop
       real*8 xhi_drop
       integer N_liquid
@@ -252,8 +253,7 @@ c When running this test, we set kliquid=0
 c 1W=10^7 erg/s
 c 1W/(m K)=10^5 cgs
        kliquid=58.0E+3
-c      kambient=2.4E-3
-       kambient=1.0e-10
+       kambient=2.4E+3
        denambient=0.001225
        cpambient=1.0E+7
  
@@ -352,7 +352,7 @@ c        xcfd_offset=0.19d0-xcalibrate
        else
         max_iter_tnucleate=100
        endif
-
+       
        do iter_tnucleate=0,max_iter_tnucleate-1
 
         if (freezing_time_target.gt.0.0d0) then
@@ -361,11 +361,19 @@ c        xcfd_offset=0.19d0-xcalibrate
          print *,"iter_tnucleate,tnucleate ",iter_tnucleate,tnucleate
         endif
 
+        xgap=0.0d0
+
 ! position of heater
         xlo=0.0d0
 ! position of top of domain
 ! Neumann boundary condition
-        xhi=0.625 
+        xhi=0.625
+
+        N=512
+        dx=(xhi-xlo)/N
+
+        xgap=2.0d0*dx
+
         xlo_drop=xcalibrate
 !droplet diameter is D0=0.25 cm see page 3
         radblob=0.125d0
@@ -375,8 +383,9 @@ c        xcfd_offset=0.19d0-xcalibrate
         voldrop=4.0d0*pi*(radblob**3)/3.0d0
 c pi r^2 h=voldrop
         xhi_drop=xlo_drop+voldrop/(pi*radcyl*radcyl)
-        N=256
-        dx=(xhi-xlo)/N
+        print *,"xhi_drop ",xhi_drop
+        print *,"xgap ",xgap
+        print *,"dx ",dx
         time=0.0
         alpha_ambient=kambient/(denambient*cpambient)
         alpha_vapor_or_ice=k_vapor_or_ice/(den_vapor_or_ice*cp)
@@ -396,7 +405,12 @@ c pi r^2 h=voldrop
           kfield(ispace)=k_vapor_or_ice
           denfield(ispace)=den_vapor_or_ice
           cpfield(ispace)=cp
-         else if (rcen.le.xhi_drop) then
+         else if (rcen.le.xlo_drop+xgap) then
+          temp_new(ispace)=tsat
+          kfield(ispace)=kambient
+          denfield(ispace)=denliquid
+          cpfield(ispace)=cpliquid
+         else if (rcen.le.xhi_drop+xgap) then
           temp_new(ispace)=tsat
           kfield(ispace)=kliquid
           denfield(ispace)=denliquid
@@ -418,7 +432,7 @@ c       temp_new(N)=tsat
         N_liquid=0
         do ispace=0,N-1
          rcen=xlo+(ispace+0.5d0)*dx
-         if ((rcen.ge.xlo_drop).and.(rcen.le.xhi_drop)) then
+         if ((rcen.ge.xlo_drop+xgap).and.(rcen.le.xhi_drop+xgap)) then
           liquid_temp=liquid_temp+temp_new(ispace)
           N_liquid=N_liquid+1
          endif
@@ -442,10 +456,14 @@ c       temp_new(N)=tsat
         time=0.0d0 
         do while (liquid_temp.gt.tnucleate)
          do ispace=0,N-1
-          flux_right=(temp_old(ispace+1)-temp_old(ispace))*0.5d0*
-     &      (kfield(ispace+1)+kfield(ispace))/dx  
-          flux_left=(temp_old(ispace)-temp_old(ispace-1))*0.5d0*
-     &      (kfield(ispace)+kfield(ispace-1))/dx  
+          flux_right=(temp_old(ispace+1)-temp_old(ispace))*2.0d0*
+     &      (1.0d0/dx)*
+     &      (kfield(ispace+1)*kfield(ispace))/
+     &      (kfield(ispace+1)+kfield(ispace))
+          flux_left=(temp_old(ispace)-temp_old(ispace-1))*2.0d0*
+     &      (1.0d0/dx)*
+     &      (kfield(ispace-1)*kfield(ispace))/
+     &      (kfield(ispace)+kfield(ispace-1))
           temp_new(ispace)=temp_old(ispace)+dt*
      &      (flux_right-flux_left)/
      &      (dx*denfield(ispace)*cpfield(ispace))
@@ -462,11 +480,12 @@ c        temp_new(N)=tsat
          N_liquid_substrate=0
          do ispace=0,N-1
           rcen=xlo+(ispace+0.5d0)*dx
-          if ((rcen.ge.xlo_drop).and.(rcen.le.xhi_drop)) then
+          if ((rcen.ge.xlo_drop+xgap).and.(rcen.le.xhi_drop+xgap)) then
            liquid_temp=liquid_temp+temp_new(ispace)
            N_liquid=N_liquid+1
           endif
-          if ((rcen.ge.xlo_drop).and.(rcen.le.0.1d0*xhi_drop)) then
+          if ((rcen.ge.xlo_drop+xgap).and.
+     &        (rcen.le.0.1d0*xhi_drop+xgap)) then
            liquid_temp_substrate=liquid_temp_substrate+temp_new(ispace)
            N_liquid_substrate=N_liquid_substrate+1
           endif
@@ -474,10 +493,10 @@ c        temp_new(N)=tsat
          liquid_temp=liquid_temp/N_liquid
          liquid_temp_substrate=liquid_temp_substrate/N_liquid_substrate
          time=time+dt
-         print *,"time,liquid_temp ",time,liquid_temp
-         print *,"time,liquid_temp_substrate ", 
-     &     time,liquid_temp_substrate
         enddo
+        print *,"time,liquid_temp ",time,liquid_temp
+        print *,"time,liquid_temp_substrate ", 
+     &    time,liquid_temp_substrate
 
         super_cool_time=time
 
@@ -597,6 +616,13 @@ c See H. Hu and Z. Jin
         print *,"iter, total_freezing_time ",
      &   iter_tnucleate,super_cool_time+tstop
         print *,"freezing_time_target ",freezing_time_target
+
+        if (freezing_time_target.gt.0.0d0) then
+         if (super_cool_time+tstop.gt.freezing_time_target) then
+          stop
+         endif
+        endif
+
        enddo
 c do iter_tnucleate=0,max_iter_tnucleate-1
 
