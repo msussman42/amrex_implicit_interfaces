@@ -2,6 +2,8 @@
 #include <torch/torch.h>
 #include <iostream>
 #include <vector>
+#include <ATen/Parallel.h>
+#include <cstdlib>
 
 // 1. Define a Dynamic MLP that builds layers based on a dynamic vector configuration
 struct WavePINN : torch::nn::Module {
@@ -82,6 +84,17 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 
 
 int main() {
+
+    // Set OpenMP and MKL environment variables programmatically (or set them in your shell before running)
+    setenv("OMP_NUM_THREADS", "1", 1);
+    setenv("MKL_NUM_THREADS", "1", 1);
+    setenv("OPENBLAS_NUM_THREADS", "1", 1);
+    setenv("VECLIB_MAXIMUM_THREADS", "1", 1);
+    setenv("NUMEXPR_NUM_THREADS", "1", 1);
+
+    // Set PyTorch / LibTorch thread counts
+    at::set_num_threads(1);
+    at::set_num_interop_threads(1); // Optional: controls inter-op parallelism
 
   torch::manual_seed(42);
  
