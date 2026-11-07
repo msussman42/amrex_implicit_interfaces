@@ -54,7 +54,6 @@ ns.num_species_var=0
 #0=MOF (moment of fluid)
 #1=CMOF(continuous moment of fluid)
 ns.continuous_mof=1
-# 1=EI - LE
 ns.projection_pressure_scale=1.0e+10
 #ns.show_mem=1
 ns.MOFITERMAX=30
@@ -125,8 +124,8 @@ ns.gravity = -980.0
 #ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice,293
 #tension_init  0<t<radblob9
 #tension       2*radblob9<t
-#deltat=-28.8 super cool time=0.075  
-ns.radblob9=0.00333066
+#deltat=-28.8 super cool time=0.058
+ns.radblob9=0.04
 ns.tension=80.0 80.0 80.0 0.0 159.0 0.0 #180 deg substrate, 10 deg ice,240
 ns.tension_init=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
 ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0
@@ -161,15 +160,15 @@ ns.yblob=0.325
 ns.zblob=0.325
 ns.radblob=0.125 # cm
 # top of plate at y(or z)=0.15
-ns.xblob2=0.0  #center of plate
-ns.yblob2=0.1  #center of plate
-ns.zblob2=0.1  #center of plate
-ns.radblob2=0.5 # radius in "x" direction of plate
+ns.xblob2=0.0  #x center of plate
+ns.yblob2=0.1  #y center of plate
+ns.zblob2=0.1  #z center of plate
+ns.radblob2=0.6 # radius in "x" direction of plate
 ns.radblob3=0.05 # radius in "y" direction of plate
 ns.xblob3=0.0 #center of ice
 ns.yblob3=0.17
 ns.zblob3=0.17
-ns.radblob4=0.5 # radius in "x" direction of ice
+ns.radblob4=0.6 # radius in "x" direction of ice
 ns.radblob5=0.02 # radius in "y" direction of ice
 ns.radblob6=0.01953125  #xgap=2 * prob_hi(2)/n_cell(2)
 ns.denfact=1.0
@@ -244,7 +243,8 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
 #liquid,gas,substrate,ice
-ns.tempconst=273.0 273.0 209.0 273.0
+#ns.tempconst=273.0 273.0 209.0 273.0
+ns.tempconst=273.0 273.0 244.2 273.0
 # ----------------  PROBLEM DEPENDENT INPUTS
 ns.lo_bc          = 3 3
 ns.hi_bc          = 3 2

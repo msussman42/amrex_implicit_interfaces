@@ -162,6 +162,8 @@ ns.zblob=0.5
 ns.xblob2=0.0  #center of plate
 ns.yblob2=0.2
 #ns.yblob2=5.8
+ns.zblob2=0.2
+#ns.zblob2=5.8
 ns.radblob=0.14 #D0=2.8mm
 ns.radblob2=1.0 # radius in "x" direction of plate
 ns.radblob3=0.05 # radius in "y" direction of plate (1mm thick)

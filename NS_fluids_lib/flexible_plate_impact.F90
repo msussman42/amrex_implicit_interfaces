@@ -941,6 +941,7 @@ real(amrex_real) :: vfrac_sum
 real(amrex_real) :: centroid_override(SDIM)
 real(amrex_real) :: facearea_temp
 integer :: vfrac_comp
+integer :: tcomp
 
 nstate=assimilate_in%nstate
 
@@ -967,6 +968,59 @@ if (((num_materials.eq.3).or. &
   ! do nothing
  else
   print *,"(assimilate_in%nhalf.ge.2) violated"
+  stop
+ endif
+
+ if (SDIM.eq.2) then
+  if (abs(yblob3-zblob3).le.EPS11) then
+   !do nothing
+  else
+   print *,"expecting yblob3==zblob3"
+   stop
+  endif
+ endif
+
+ if (cell_flag.eq.-1) then
+  if (num_materials.eq.4) then
+
+   if (radblob6.gt.zero) then
+    if (radblob6.gt.assimilate_in%dx(1)) then
+     if ((xcrit(SDIM).le.zblob3+radblob5-radblob6).and. &
+         ((assimilate_out%LS_state(D_DECL(i,j,k),3).ge.zero).or. &
+          (assimilate_out%LS_state(D_DECL(i,j,k),4).ge.zero))) then
+      do im=1,num_materials
+       tcomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+       assimilate_out%state(D_DECL(i,j,k),tcomp)=fort_tempconst(3)
+      enddo
+     else if ((xcrit(SDIM).gt.zblob3+radblob5-radblob6).or. &
+              ((assimilate_out%LS_state(D_DECL(i,j,k),3).lt.zero).and. &
+               (assimilate_out%LS_state(D_DECL(i,j,k),4).lt.zero))) then
+      !do nothing
+     else
+      print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
+      stop
+     endif 
+    else
+     print *,"radblob6 too small ",radblob6
+     stop
+    endif
+   else if (radblob6.eq.zero) then
+    !do nothing
+   else
+    print *,"radblob6 invalid ",radblob6
+    stop
+   endif
+
+  else if (num_materials.eq.3) then
+   ! do nothing
+  else
+   print *,"num_materials invalid ",num_materials
+   stop
+  endif
+ else if ((cell_flag.ge.0).and.(cell_flag.lt.SDIM)) then
+  !do nothing
+ else
+  print *,"cell_flag invalid ",cell_flag
   stop
  endif
 
@@ -1091,13 +1145,14 @@ if (((num_materials.eq.3).or. &
    endif 
 
   else 
-   print *,"cell_flag invalid"
+   print *,"cell_flag invalid ",cell_flag
    stop
   endif
+
  else if (LS_clamped.lt.zero) then
   ! do nothing
  else
-  print *,"LS_clamped invalid"
+  print *,"LS_clamped invalid ",LS_clamped
   stop
  endif
 

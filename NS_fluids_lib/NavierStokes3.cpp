@@ -16248,6 +16248,10 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("FSI_outer_sweeps invalid");
 
+  //NavierStokes::assimilate_state_data declared in NavierStokes.cpp
+  //assimilate_state_data calls fort_assimilate_statedata which is
+  //declared in GODUNOV_3D.F90
+  //fort_assimilate_statedata calls SUB_ASSIMILATE
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.assimilate_state_data();
