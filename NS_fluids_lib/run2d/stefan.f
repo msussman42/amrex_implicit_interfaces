@@ -148,6 +148,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 cpambient
       real*8 denambient
       real*8 kambient
+      real*8 kgap
       real*8 cpliquid
       real*8 flux_left
       real*8 flux_right
@@ -167,6 +168,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       integer N_liquid
       integer N_liquid_substrate
       real*8 hlg
+      real*8 hlg_original
       real*8 mass_fraction_instant_freeze
       real*8 k_vapor_or_ice,den_vapor_or_ice,alpha
       real*8 kliquid,denliquid,psat,tsat
@@ -249,6 +251,7 @@ c When running this test, we set kliquid=0
         hlg=2.26E+10
        endif
        denliquid=1.0
+       hlg_original=hlg
 
 c 1W=10^7 erg/s
 c 1W/(m K)=10^5 cgs
@@ -280,6 +283,8 @@ c this is really the "ice" thermal conductivity
         k_vapor_or_ice=220.0E+3
         kliquid=58.0E+3
        endif
+
+       kgap=k_vapor_or_ice
 
        if (is_freezing.gt.0) then
         den_vapor_or_ice=0.934
@@ -372,7 +377,7 @@ c        xcfd_offset=0.19d0-xcalibrate
         N=512
         dx=(xhi-xlo)/N
 
-        xgap=2.0d0*dx
+        xgap=2.0d0*xhi/64.0
 
         xlo_drop=xcalibrate
 !droplet diameter is D0=0.25 cm see page 3
@@ -407,9 +412,9 @@ c pi r^2 h=voldrop
           cpfield(ispace)=cp
          else if (rcen.le.xlo_drop+xgap) then
           temp_new(ispace)=tsat
-          kfield(ispace)=kambient
-          denfield(ispace)=denliquid
-          cpfield(ispace)=cpliquid
+          kfield(ispace)=kgap
+          denfield(ispace)=den_vapor_or_ice
+          cpfield(ispace)=cp
          else if (rcen.le.xhi_drop+xgap) then
           temp_new(ispace)=tsat
           kfield(ispace)=kliquid
@@ -437,14 +442,20 @@ c       temp_new(N)=tsat
           N_liquid=N_liquid+1
          endif
         enddo
+        if (N_liquid.ge.1) then
+         !do nothing
+        else
+         print *,"N_liquid invalid ",N_liquid
+         stop
+        endif
         liquid_temp=liquid_temp/N_liquid
 
         if (testcase.eq.2) then 
          mass_fraction_instant_freeze=abs(cpliquid*(tsat-tnucleate)/hlg)
          print *,"mass_fraction_instant_freeze=",
      &     mass_fraction_instant_freeze
-         print *,"hlg= ",hlg
-         hlg=hlg*(1.0d0-mass_fraction_instant_freeze)
+         print *,"hlg_original= ",hlg_original
+         hlg=hlg_original*(1.0d0-mass_fraction_instant_freeze)
          print *,"updated hlg= ",hlg
         else if (testcase.eq.0) then
          liquid_temp=tnucleate-1.0d0
@@ -490,7 +501,19 @@ c        temp_new(N)=tsat
            N_liquid_substrate=N_liquid_substrate+1
           endif
          enddo
+         if (N_liquid.ge.1) then
+          !do nothing
+         else
+          print *,"N_liquid invalid ",N_liquid
+          stop
+         endif
          liquid_temp=liquid_temp/N_liquid
+         if (N_liquid_substrate.ge.1) then
+          !do nothing
+         else
+          print *,"N_liquid_substrate invalid ",N_liquid_substrate
+          stop
+         endif
          liquid_temp_substrate=liquid_temp_substrate/N_liquid_substrate
          time=time+dt
         enddo
@@ -590,6 +613,8 @@ c See H. Hu and Z. Jin
         print *,"tcalibrate ",tcalibrate
         print *,"xlo_drop=",xlo_drop
         print *,"xhi_drop=",xhi_drop
+        print *,"xgap=",xgap
+        print *,"kgap=",kgap
         print *,"tstop=",tstop
         print *,"xstop=",xstop
         time=0.0
