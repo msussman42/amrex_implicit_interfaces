@@ -276,10 +276,13 @@ void repair_blobclass::checkpoint(int check_id) {
        repair_blobclass_data[istep][iblob].blob_triple_perim[i][j] << '\n';
      } //j
     } //i
+
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].im << '\n';
+
     repair_blob_checkpoint_file << 
      repair_blobclass_data[istep][iblob].supercool_flag << '\n';
+
    } // for (int iblob=0;iblob<repair_blobclass_data[istep].size();iblob++) 
 
   } //for (int istep=0;istep<new_old_size;istep++) {

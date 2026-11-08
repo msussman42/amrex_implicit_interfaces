@@ -7524,7 +7524,7 @@ NavierStokes::sync_old_new_colors(
  
   for (int i=0;i<updated_count;i++) {
 
-   blobdata[i].supercool_flag=1;
+   blobdata[i].supercool_flag=-1;
 
    blobdata[i].blob_mass_target=0.0;
    blobdata[i].blob_mass_previous=0.0;
@@ -7568,9 +7568,23 @@ NavierStokes::sync_old_new_colors(
 
      if ((mass_frac>0.0)&&(mass_frac<=1.0)) {
       if (blobdata_old[i].supercool_flag==0) {
-       blobdata[k].supercool_flag=0;
+
+       if (blobdata[k].supercool_flag==-1) {
+        blobdata[k].supercool_flag=0;
+       } else if (blobdata[k].supercool_flag==0) {
+        //do nothing
+       } else
+	amrex::Error("supercool_flag collision");
+
       } else if (blobdata_old[i].supercool_flag==1) { 
-       //do nothing
+
+       if (blobdata[k].supercool_flag==-1) {
+        blobdata[k].supercool_flag=1;
+       } else if (blobdata[k].supercool_flag==1) {
+        //do nothing
+       } else
+	amrex::Error("supercool_flag collision");
+
       } else
        amrex::Error("blobdata_old[i].supercool_flag invalid");
      } else if (mass_frac==0.0) {
@@ -7600,6 +7614,47 @@ NavierStokes::sync_old_new_colors(
 
    } //for (int j=0;j<label_intersect_old[i].size();j++) 
   } //for (int i=0;i<repair_count;i++) 
+
+  for (int i=0;i<updated_count;i++) {
+   if (blobdata[i].supercool_flag==-1) {
+    for (int j=0;i<updated_count;i++) {
+     if ((i!=j)&&(blobdata[i].im==blobdata[j].im)) {
+      if (blobdata[j].supercool_flag==1) {
+       if (blobdata[i].supercool_flag==-1) {
+        blobdata[i].supercool_flag=1;
+       } else if (blobdata[i].supercool_flag==1) {
+        //do nothing
+       } else
+        amrex::Error("supercool_flag collision");
+      } else if (blobdata[j].supercool_flag==0) {
+       if (blobdata[i].supercool_flag==-1) {
+        blobdata[i].supercool_flag=0;
+       } else if (blobdata[i].supercool_flag==0) {
+        //do nothing
+       } else
+        amrex::Error("supercool_flag collision");
+      } else if (blobdata[j].supercool_flag==-1) {
+       //do nothing
+      } else
+       amrex::Error("blobdata[j].supercool_flag invalid");
+     }
+    } // for (int j=0;i<updated_count;i++) 
+   } else if (blobdata[i].supercool_flag==1) {
+    //do nothing
+   } else if (blobdata[i].supercool_flag==0) {
+    //do nothing
+   } else
+    amrex::Error("blobdata[i].supercool_flag invalid");
+  } //for (int i=0;i<updated_count;i++) 
+
+  for (int i=0;i<updated_count;i++) {
+   if (blobdata[i].supercool_flag==1) {
+    //do nothing
+   } else if (blobdata[i].supercool_flag==0) {
+    //do nothing
+   } else
+    amrex::Error("blobdata[i].supercool_flag invalid");
+  } // for (int i=0;i<updated_count;i++) 
 
  } else
   amrex::Error("repair_count invalid");
@@ -9764,6 +9819,7 @@ NavierStokes::ColorSumALL(
           }
          } //i=0 .. repair_count-1 
 
+	 FIX ME
          if (mass_sum==0.0) {
           //do nothing
          } else if (mass_sum>0.0) {
