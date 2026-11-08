@@ -235,7 +235,8 @@ ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
 #(s^np1-sn)/dt - (sn_im1-2sn_i+sn_ip1)/(2 dt)
-ns.viscconst=0.17 0.000181 1.0 1.0 #CGS 240
+#ns.viscconst=0.17 0.000181 1.0 1.0 #CGS at 240Kelvin
+ns.viscconst=0.12 0.000181 1.0 1.0 #CGS at 244Kelvin
 ns.denconst=1.0 0.001225 1.0 0.917
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 # solidheat_flag=0=>diffuse in solid 
