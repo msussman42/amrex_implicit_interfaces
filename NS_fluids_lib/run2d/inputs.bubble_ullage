@@ -9,6 +9,7 @@
 # 4a. module purge
 # 4b. module load gnu/13
 # 4c. module load openmpi
+# 4d. make
 # 5. cd run2d
 # 6. mkdir CRYOGENIC_TANK_TPCE
 # 7. cd CRYOGENIC_TANK_TPCE
@@ -21,6 +22,9 @@
 #    (iii) modify #SBATCH -t 4:00:00
 #    (iv) modify srun /gpfs/home/sussman/amrex_implicit_interfaces/NS_fluids_lib/run2d/CRYOGENIC_TANK_TPCE/amr2d.gnu.MPI.ex inputs.bubble_ullage
 # 12. sbatch slurmTPCE
+# 13. Look at the tecplot ascii files, uniform*.tec, either using 
+#    "ViSit" or even just your editor (since they are easy to read, just
+#    ascii)
 #
 # For more information check
 # NASA_CRYOGENICS_MICROGRAVITY_GITHUB => 
