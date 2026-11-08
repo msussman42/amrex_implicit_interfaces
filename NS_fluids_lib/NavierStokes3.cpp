@@ -2328,6 +2328,11 @@ Real NavierStokes::advance(Real time,Real dt) {
        Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
        if ((LL1<0.0)||(LL2<0.0)) {
 
+	if (is_melt_freezing_matC(im_opp)==1) {
+	 //do nothing
+	} else
+	 amrex::Error("is_melt_freezing_matC invalid");
+
         int local_index;
         if (LL1<0.0) {
          local_index=iten-1;
@@ -7652,8 +7657,13 @@ NavierStokes::sync_old_new_colors(
     //do nothing
    } else if (blobdata[i].supercool_flag==0) {
     //do nothing
+   } else if (blobdata[i].supercool_flag==-1) {
+    if (is_melt_freezing_matC(blobdata[i].im-1)==0) {
+     blobdata[i].supercool_flag=1;
+    } else
+     amrex::Error("blobdata[i].supercool_flag invalid part 1");
    } else
-    amrex::Error("blobdata[i].supercool_flag invalid");
+    amrex::Error("blobdata[i].supercool_flag invalid part 2");
   } // for (int i=0;i<updated_count;i++) 
 
  } else
@@ -9785,6 +9795,11 @@ NavierStokes::ColorSumALL(
         Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
         if ((LL1<0.0)||(LL2<0.0)) {
 
+	 if (is_melt_freezing_matC(im_opp)==1) {
+	  //do nothing
+	 } else
+	  amrex::Error("is_melt_freezing_matC invalid");
+
          Real local_tsat;
          Real local_nucleation_temp;
          if (LL1<0.0) {
@@ -9814,23 +9829,31 @@ NavierStokes::ColorSumALL(
             //do nothing
            } else
             amrex::Error("supercool_flag invalid");
+
            temperature_sum+=blobdata[i].blob_temperature;
            mass_sum+=blobdata[i].blob_mass;
           }
          } //i=0 .. repair_count-1 
 
-	 FIX ME
          if (mass_sum==0.0) {
-          //do nothing
+
+          if (temperature_sum==0.0) {
+           //do nothing
+	  } else
+	   amrex::Error("temperature_sum invalid");
+
          } else if (mass_sum>0.0) {
+
           temperature_sum/=mass_sum;
           if (current_supercool_flag==0) {
            std::cout << "AFTER RECALESCE im,TEMPERATURE= " << im_opp << ' '
             << temperature_sum << '\n';
           } else if (current_supercool_flag==1) {
-           if (temperature_sum>=local_nucleation_temp) {
-            std::cout << "TRANSITION RECALESCE im,TEMPERATURE= " << 
-             im_opp << ' ' << temperature_sum << '\n';
+           if (temperature_sum<=local_nucleation_temp) {
+            std::cout << "TRANSITION RECALESCE im,TEMP, T_sat, T_nucleate= " << 
+             im_opp << ' ' << temperature_sum << ' ' <<
+	     local_tsat << ' ' <<
+	     local_nucleation_temp << '\n';
             for (int i=0;i<repair_count;i++) {
              if (blobdata[i].im==im_opp+1) {
               blobdata[i].blob_temperature=local_tsat*blobdata[i].blob_mass;
@@ -9845,9 +9868,11 @@ NavierStokes::ColorSumALL(
               ENUM_TEMPERATUREVAR; 
              //ngrow=1 ncomp=1
             setVal_array(1,scomp,1,local_tsat,State_Type+GET_NEW_DATA_OFFSET);
-           } else if (temperature_sum<local_nucleation_temp) {
-            std::cout << "BEFORE RECALESCE im,TEMPERATURE= " << im_opp << ' '
-             << temperature_sum << '\n';
+           } else if (temperature_sum>local_nucleation_temp) {
+            std::cout << "BEFORE RECALESCE im,TEMP, T_sat, T_nucleate= " << 
+             im_opp << ' ' << temperature_sum << ' ' <<
+	     local_tsat << ' ' <<
+	     local_nucleation_temp << '\n';
            } else
             amrex::Error("temperature_sum invalid");
           } else

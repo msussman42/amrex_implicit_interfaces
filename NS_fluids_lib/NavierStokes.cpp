@@ -7585,6 +7585,43 @@ int NavierStokes::is_ice_matC(int im) {
 
 }  // end subroutine is_ice_matC()
 
+int NavierStokes::is_melt_freezing_matC(int im) {
+
+ if ((im<0)|(im>=num_materials))
+  amrex::Error("im invalid (is_melt_freezing_matC)");
+
+ int local_is_melt=0;
+
+ for (int im_outer=1;im_outer<=num_materials;im_outer++) {
+  if (is_ice_matC(im_outer-1)==1) {
+   if (im==im_outer-1) {
+    //do nothing
+   } else if (im!=im_outer-1) {
+    int im_opp=im+1;
+    int iten=0;
+    get_iten_cpp(im_outer,im_opp,iten); //declared in NavierStokes2.cpp
+    if ((iten<1)||(iten>num_interfaces))
+     amrex::Error("iten invalid");
+    Real LL0=get_user_latent_heat(iten,293.0,1);
+    Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
+    if ((LL0<0.0)||(LL1<0.0)) {
+     local_is_melt=1;
+    } else if ((LL0>=0.0)&&(LL1>=0.0)) {
+     //do nothing
+    } else
+     amrex::Error("LL0 or LL1 invalid");
+   } else
+    amrex::Error("im or im_outer corrupt");
+  } else if (is_ice_matC(im_outer-1)==0) {
+   //do nothing
+  } else
+   amrex::Error("is_ice_matC invalid");
+ } //for (im_outer=1;im_outer<=num_materials;im_outer++)
+
+ return local_is_melt;
+
+}  // end subroutine is_melt_freezing_matC()
+
 int NavierStokes::FSI_material_exists_CTML() {
 
  int local_flag=0;

@@ -1548,7 +1548,10 @@ void apply_pressure_grad(
       const std::string& caller_string);
 
     static int read_from_CAD();
+
     static int is_ice_matC(int im);
+    static int is_melt_freezing_matC(int im);
+
     static int is_singular_coeff(int im);
     static int is_FSI_rigid_matC(int im);
     static int is_FSI_elastic_matC(int im);
