@@ -28,13 +28,13 @@ int main() {
     }
 
     // --- Simulation Parameters ---
-    int Nx = 250;                  // Number of spatial grid points
+    int Nx = 1000;                  // Number of spatial grid points
     double L = 2.0;                // Domain length [0, L]
     double dx = L / (Nx - 1);       // Spatial step size (finite diff)
     
     double c = 1.0;                // Wave propagation speed
     double T = 1.0;                // Total simulation time
-    double dt = 0.002;             // Time step size
+    double dt = 0.0005;             // Time step size
     int Nt = static_cast<int>(T / dt);
 
     // Verify CFL condition

@@ -4,7 +4,7 @@ project(pinn_libtorch)
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(wave_pinnFD ../wave_pinnFD.cpp)
-target_link_libraries(wave_pinnFD "${TORCH_LIBRARIES}")
-set_property(TARGET wave_pinnFD PROPERTY CXX_STANDARD 20)
+add_executable(wave_pinn ../wave_pinn.cpp)
+target_link_libraries(wave_pinn "${TORCH_LIBRARIES}")
+set_property(TARGET wave_pinn PROPERTY CXX_STANDARD 20)
 

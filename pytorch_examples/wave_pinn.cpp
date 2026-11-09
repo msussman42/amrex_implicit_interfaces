@@ -182,6 +182,11 @@ int main() {
 
         optimizer.zero_grad();
 
+	double loss_pde=0.0;
+	double loss_ic=0.0;
+	double loss_ic2=0.0;
+	double loss_bc1=0.0;
+	double loss_bc2=0.0;
 	if (num_collocation>0) {
 
 // 1. Collocation points inside domain (x, t)
@@ -198,7 +203,7 @@ int main() {
 
 // PDE residual: u_tt - c^2 * u_xx = 0
         auto pde_residual = d2u_dt2 - (c * c) * d2u_dx2;
-        auto loss_pde = torch::mean(torch::square(pde_residual));
+        loss_pde = torch::mean(torch::square(pde_residual));
 
         // 2. Initial Conditions (t = 0)
         auto x_ic = torch::rand({200, 1}) * 2.0 - 1.0;
@@ -211,7 +216,7 @@ int main() {
 
 // Example IC: u(x, 0) = sin(pi * x), u_t(x, 0) = 0
         auto u_ic_true = torch::sin(M_PI * x_ic);
-        auto loss_ic = torch::mean(torch::square(u_ic_pred - u_ic_true));
+        loss_ic = torch::mean(torch::square(u_ic_pred - u_ic_true));
 
         auto u_ic2_true = torch::zeros_like(x_ic);
 
@@ -229,7 +234,7 @@ int main() {
         auto du_dt_ic = du_dxt_ic.index({torch::indexing::Slice(), 1}).
           unsqueeze(1);
 
-        auto loss_ic2 = torch::mean(torch::square(du_dt_ic - u_ic2_true));
+        loss_ic2 = torch::mean(torch::square(du_dt_ic - u_ic2_true));
 
 
         auto t_bc = torch::rand({200, 1});
@@ -277,8 +282,8 @@ int main() {
 
         auto bc1_residual=u_bc_left_pred-u_bc_right_pred;
         auto bc2_residual=du_dx_bc_left-du_dx_bc_right;
-        auto loss_bc1 = torch::mean(torch::square(bc1_residual));
-        auto loss_bc2 = torch::mean(torch::square(bc2_residual));
+        loss_bc1 = torch::mean(torch::square(bc1_residual));
+        loss_bc2 = torch::mean(torch::square(bc2_residual));
 	} //if (num_collocation>0) {
 
 	int num_assimilate=0;
