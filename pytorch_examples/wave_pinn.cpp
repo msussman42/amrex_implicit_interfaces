@@ -109,7 +109,7 @@ int main() {
         return {out};
     };
 
-  // 1. Define an input tensor with requires_grad = true (use double64/double for precision)
+  // 1. Define an input tensor with requires_grad = true (use float64/double for precision)
   torch::Tensor x = torch::tensor({2.0, 3.0}, torch::TensorOptions().dtype(torch::kFloat64).requires_grad(true));
 
   // 2. Forward pass via Autograd
@@ -175,19 +175,19 @@ int main() {
 
     double c=1.0;
     int epochs=3000;
-    int num_collocation=1000;
+//    int num_collocation=1000;
+//    int num_ic=200;
+//    int num_bc=200;
+//    int num_assimilate=0;
+    int num_collocation=0;
+    int num_ic=0;
+    int num_bc=0;
+    int num_assimilate=2000;
 
     // Training Loop
     for (int epoch = 1; epoch <= epochs; ++epoch) {
 
         optimizer.zero_grad();
-
-	double loss_pde=0.0;
-	double loss_ic=0.0;
-	double loss_ic2=0.0;
-	double loss_bc1=0.0;
-	double loss_bc2=0.0;
-	if (num_collocation>0) {
 
 // 1. Collocation points inside domain (x, t)
 //   x in [-1,1]
@@ -203,12 +203,14 @@ int main() {
 
 // PDE residual: u_tt - c^2 * u_xx = 0
         auto pde_residual = d2u_dt2 - (c * c) * d2u_dx2;
-        loss_pde = torch::mean(torch::square(pde_residual));
+        auto loss_pde = ( (num_collocation>0) ? 
+	  torch::mean(torch::square(pde_residual)) :
+	  torch::sum(torch::square(pde_residual)) );
 
         // 2. Initial Conditions (t = 0)
-        auto x_ic = torch::rand({200, 1}) * 2.0 - 1.0;
+        auto x_ic = torch::rand({num_ic, 1}) * 2.0 - 1.0;
         auto t_ic = torch::zeros_like(x_ic);
-	 //xt_ic is (200,2)
+	 //xt_ic is (num_ic,2)
         auto xt_ic = torch::cat({x_ic, t_ic},/*dim=*/ 1);
         xt_ic.requires_grad_(true);
 
@@ -216,7 +218,9 @@ int main() {
 
 // Example IC: u(x, 0) = sin(pi * x), u_t(x, 0) = 0
         auto u_ic_true = torch::sin(M_PI * x_ic);
-        loss_ic = torch::mean(torch::square(u_ic_pred - u_ic_true));
+        auto loss_ic = ((num_ic>0) ? 
+	  torch::mean(torch::square(u_ic_pred - u_ic_true)) :
+	  torch::sum(torch::square(u_ic_pred-u_ic_true)));
 
         auto u_ic2_true = torch::zeros_like(x_ic);
 
@@ -234,10 +238,12 @@ int main() {
         auto du_dt_ic = du_dxt_ic.index({torch::indexing::Slice(), 1}).
           unsqueeze(1);
 
-        loss_ic2 = torch::mean(torch::square(du_dt_ic - u_ic2_true));
+        auto loss_ic2 = ((num_ic>0) ?
+	  torch::mean(torch::square(du_dt_ic - u_ic2_true)) :
+	  torch::sum(torch::square(du_dt_ic-u_ic2_true)));
 
 
-        auto t_bc = torch::rand({200, 1});
+        auto t_bc = torch::rand({num_bc, 1});
 
         auto x_bc_left = torch::zeros_like(t_bc)-1.0;
         auto xt_bc_left = torch::cat({x_bc_left, t_bc},/*dim=*/ 1);
@@ -282,11 +288,14 @@ int main() {
 
         auto bc1_residual=u_bc_left_pred-u_bc_right_pred;
         auto bc2_residual=du_dx_bc_left-du_dx_bc_right;
-        loss_bc1 = torch::mean(torch::square(bc1_residual));
-        loss_bc2 = torch::mean(torch::square(bc2_residual));
-	} //if (num_collocation>0) {
+        auto loss_bc1 = ((num_bc>0) ?
+		torch::mean(torch::square(bc1_residual)) :
+		torch::sum(torch::square(bc1_residual)));
 
-	int num_assimilate=0;
+        auto loss_bc2 = ((num_bc>0) ?
+		torch::mean(torch::square(bc2_residual)) :
+		torch::sum(torch::square(bc2_residual)));
+
         auto x_assimilate = 
          torch::rand({num_assimilate, 1}) * 2.0 - 1.0; 
         auto t_assimilate = torch::rand({num_assimilate, 1});
@@ -294,14 +303,15 @@ int main() {
         auto u_assimilate = model->forward(xt_assimilate);
         auto u_exact_assimilate=torch::sin(M_PI*x_assimilate)*
             torch::cos(M_PI*t_assimilate*c);
-        auto abs_error=u_assimilate-u_exact_assimilate;;
-        auto loss_assimilate = torch::mean(torch::square(abs_error));
+        auto abs_error=u_assimilate-u_exact_assimilate;
+
+        auto loss_assimilate = ((num_assimilate>0)?
+	  torch::mean(torch::square(abs_error)) :
+	  torch::sum(torch::square(abs_error)));
 
         // Total Loss
-        auto loss = loss_pde + loss_ic + loss_ic2 + loss_bc1 + loss_bc2;
-	if (num_assimilate>0) {
-	 loss=loss+loss_assimilate;
-	}
+        auto loss = loss_pde + loss_ic + loss_ic2 + loss_bc1 + loss_bc2 +
+		loss_assimilate;
 
         loss.backward();
         optimizer.step();
@@ -309,14 +319,14 @@ int main() {
         // Print Progress
         if (epoch % 200 == 0) {
             std::cout << "Epoch: " << epoch 
-                      << " | Loss: " << loss.item<double>() 
-                      << " | PDE: " << loss_pde.item<double>() 
-                      << " [IC u: " << loss_ic.item<double>() 
-                      << " [IC2 u: " << loss_ic2.item<double>() 
-                      << " [bc1 u: " << loss_bc1.item<double>() 
-                      << " [bc2 u: " << loss_bc2.item<double>() 
+                      << " | Loss: " << loss.item<float>() 
+                      << " | PDE: " << loss_pde.item<float>() 
+                      << " [IC u: " << loss_ic.item<float>() 
+                      << " [IC2 u: " << loss_ic2.item<float>() 
+                      << " [bc1 u: " << loss_bc1.item<float>() 
+                      << " [bc2 u: " << loss_bc2.item<float>() 
                       << " [assimilate u: " << 
-		          loss_assimilate.item<double>() 
+		          loss_assimilate.item<float>() 
                       << "]" << std::endl;
         }
     }// for (int epoch = 1; epoch <= epochs; ++epoch) 
