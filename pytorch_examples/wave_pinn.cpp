@@ -109,7 +109,7 @@ int main() {
         return {out};
     };
 
-  // 1. Define an input tensor with requires_grad = true (use float64/double for precision)
+  // 1. Define an input tensor with requires_grad = true (use double64/double for precision)
   torch::Tensor x = torch::tensor({2.0, 3.0}, torch::TensorOptions().dtype(torch::kFloat64).requires_grad(true));
 
   // 2. Forward pass via Autograd
@@ -181,6 +181,8 @@ int main() {
     for (int epoch = 1; epoch <= epochs; ++epoch) {
 
         optimizer.zero_grad();
+
+	if (num_collocation>0) {
 
 // 1. Collocation points inside domain (x, t)
 //   x in [-1,1]
@@ -277,6 +279,7 @@ int main() {
         auto bc2_residual=du_dx_bc_left-du_dx_bc_right;
         auto loss_bc1 = torch::mean(torch::square(bc1_residual));
         auto loss_bc2 = torch::mean(torch::square(bc2_residual));
+	} //if (num_collocation>0) {
 
 	int num_assimilate=0;
         auto x_assimilate = 
@@ -301,14 +304,14 @@ int main() {
         // Print Progress
         if (epoch % 200 == 0) {
             std::cout << "Epoch: " << epoch 
-                      << " | Loss: " << loss.item<float>() 
-                      << " | PDE: " << loss_pde.item<float>() 
-                      << " [IC u: " << loss_ic.item<float>() 
-                      << " [IC2 u: " << loss_ic2.item<float>() 
-                      << " [bc1 u: " << loss_bc1.item<float>() 
-                      << " [bc2 u: " << loss_bc2.item<float>() 
+                      << " | Loss: " << loss.item<double>() 
+                      << " | PDE: " << loss_pde.item<double>() 
+                      << " [IC u: " << loss_ic.item<double>() 
+                      << " [IC2 u: " << loss_ic2.item<double>() 
+                      << " [bc1 u: " << loss_bc1.item<double>() 
+                      << " [bc2 u: " << loss_bc2.item<double>() 
                       << " [assimilate u: " << 
-		          loss_assimilate.item<float>() 
+		          loss_assimilate.item<double>() 
                       << "]" << std::endl;
         }
     }// for (int epoch = 1; epoch <= epochs; ++epoch) 
