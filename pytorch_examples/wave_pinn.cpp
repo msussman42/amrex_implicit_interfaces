@@ -278,8 +278,22 @@ int main() {
         auto loss_bc1 = torch::mean(torch::square(bc1_residual));
         auto loss_bc2 = torch::mean(torch::square(bc2_residual));
 
+	int num_assimilate=0;
+        auto x_assimilate = 
+         torch::rand({num_assimilate, 1}) * 2.0 - 1.0; 
+        auto t_assimilate = torch::rand({num_assimilate, 1});
+        auto xt_assimilate = torch::cat({x_assimilate,t_assimilate},/*dim=*/ 1);
+        auto u_assimilate = model->forward(xt_assimilate);
+        auto u_exact_assimilate=torch::sin(M_PI*x_assimilate)*
+            torch::cos(M_PI*t_assimilate*c);
+        auto abs_error=u_assimilate-u_exact_assimilate;;
+        auto loss_assimilate = torch::mean(torch::square(abs_error));
+
         // Total Loss
         auto loss = loss_pde + loss_ic + loss_ic2 + loss_bc1 + loss_bc2;
+	if (num_assimilate>0) {
+	 loss=loss+loss_assimilate;
+	}
 
         loss.backward();
         optimizer.step();
@@ -293,6 +307,8 @@ int main() {
                       << " [IC2 u: " << loss_ic2.item<float>() 
                       << " [bc1 u: " << loss_bc1.item<float>() 
                       << " [bc2 u: " << loss_bc2.item<float>() 
+                      << " [assimilate u: " << 
+		          loss_assimilate.item<float>() 
                       << "]" << std::endl;
         }
     }// for (int epoch = 1; epoch <= epochs; ++epoch) 
