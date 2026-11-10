@@ -154,11 +154,11 @@ stop
       real(amrex_real), INTENT(in) :: problo(SDIM)
       real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
       integer crse_growlo(3),crse_growhi(3)
-      integer growlo(3),growhi(3)
+      integer fine_growlo(3),fine_growhi(3)
       integer stenlo(3),stenhi(3)
       real(amrex_real) wt(SDIM)
 
-      integer :: grid_index(SDIM)
+      integer :: crse_grid_index(SDIM)
       integer :: data_needed
 
       integer i,j,k
@@ -240,7 +240,7 @@ stop
       nmax=POLYGON_LIST_MAX
 
       call growntilebox(clo,chi,clo,chi,crse_growlo,crse_growhi,0)
-      call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
+      call growntilebox(flo,fhi,flo,fhi,fine_growlo,fine_growhi,0) 
 
       do dir=1,SDIM
        if ((2*clo(dir).le.flo(dir)).and. &
@@ -256,17 +256,17 @@ stop
       do j=crse_growlo(2),crse_growhi(2)
       do i=crse_growlo(1),crse_growhi(1)
 
-       grid_index(1)=i
-       grid_index(2)=j
+       crse_grid_index(1)=i
+       crse_grid_index(2)=j
        if (SDIM.eq.3) then
-        grid_index(SDIM)=k
+        crse_grid_index(SDIM)=k
        endif
 
         ! coarse cell ic covers 2*ic and 2*ic+1
        data_needed=1
        do dir=1,SDIM
-        if ((2*grid_index(dir)+1.ge.growlo(dir)).and. &
-            (2*grid_index(dir).le.growhi(dir))) then
+        if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
+            (2*crse_grid_index(dir).le.fine_growhi(dir))) then
          !do nothing
         else
          data_needed=0
@@ -343,9 +343,9 @@ stop
       enddo ! i,j,k
 
 
-      do kfine=growlo(3),growhi(3)
-      do jfine=growlo(2),growhi(2)
-      do ifine=growlo(1),growhi(1)
+      do kfine=fine_growlo(3),fine_growhi(3)
+      do jfine=fine_growlo(2),fine_growhi(2)
+      do ifine=fine_growlo(1),fine_growhi(1)
 
        call gridsten(xstenfine,problo,ifine,jfine,kfine, &
          domlo,bfact_fine,dxf,nhalf)
@@ -390,16 +390,16 @@ stop
              endif
              if (testwt.gt.zero) then
 
-              grid_index(1)=ic
-              grid_index(2)=jc
+              crse_grid_index(1)=ic
+              crse_grid_index(2)=jc
               if (SDIM.eq.3) then
-               grid_index(SDIM)=kc
+               crse_grid_index(SDIM)=kc
               endif
 
               data_needed=1
               do dir=1,SDIM
-               if ((2*grid_index(dir)+1.ge.growlo(dir)).and. &
-                   (2*grid_index(dir).le.growhi(dir))) then
+               if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
+                   (2*crse_grid_index(dir).le.fine_growhi(dir))) then
                 !do nothing
                else
                 data_needed=0
@@ -409,15 +409,22 @@ stop
               if (data_needed.eq.1) then
                !do nothing
               else
-               print *,"data_needed bust"
-               print *,"grid_index=",grid_index
+               print *,"data_needed bust ",data_needed
+               print *,"levelc,levelf ",levelc,levelf
+               print *,"bfact_coarse,bfact_fine ",bfact_coarse,bfact_fine
+               print *,"stenlo=",stenlo
+               print *,"stenhi=",stenhi
+               print *,"crse_grid_index=",crse_grid_index
                print *,"ifine,jfine,kfine ",ifine,jfine,kfine
-               print *,"growlo ",growlo
-               print *,"growhi ",growhi
+               print *,"fine_growlo ",fine_growlo
+               print *,"fine_growhi ",fine_growhi
                print *,"crse_growlo ",crse_growlo
                print *,"crse_growhi ",crse_growhi
                print *,"wt=",wt
                print *,"testwt=",testwt
+               print *,"(breakpoint) break point and gdb: "
+               print *,"(1) compile with the -g option"
+               print *,"(2) break INTERP_3D.F90:422"
                stop
               endif
               n_overlap=n_overlap+1
