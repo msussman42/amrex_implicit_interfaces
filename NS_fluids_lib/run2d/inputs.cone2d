@@ -2,13 +2,18 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  1      # maximum timestep
 stop_time = 6.0
+#0=tecplot 1=native AMReX or HDF5  2=tecplot supercells
+#if HDF5 modify GNUmakefile:
+#USE_HDF5=TRUE
+#HDF5_HOME= ....
+ns.visual_nddata_format=0 
+ns.visual_ncell=8 8 #uniform* files (ascii, uniformly spaced)
+ns.step_through_data=0
+ns.num_divu_outer_sweeps=1
 
 # liquid,solid
 ns.num_materials=2
 ns.num_species_var=0
-
-# 0=cell
-# 1=face
 
 ns.post_init_pressure_solve=1
 #ns.slice_dir=1 # 0..sdim-1
@@ -26,7 +31,13 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
+mg.presmooth=2
+mg.postsmooth=2
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
+
 mg.bot_atol = 1.0e-13
 mg.visc_bot_atol = 1.0e-15
 mg.thermal_bot_atol = 1.0e-13
@@ -86,6 +97,7 @@ amr.plot_int        = 30       # 10 for debug, 100 for production run?
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 32
+cg.min_max_grid_size=32
 #amr.restart         = chk00270
 #amr.trace   =1
 
@@ -135,8 +147,9 @@ ns.material_type=0 999 # INCOMPRESSIBLE
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
 # ns.law_of_the_wall=0 0 # make 1 for law of the wall
+# FSI_flag for avaiable phase/material
+# 1 solid (PROB_[23]D.F90)
 ns.FSI_flag=0 1  # 1 (GLOBALDIST), 2 (cas file)
-#ns.FSI_refine_factor=1 0
 #ns.heatviscconst=0.02588 0.02588
 ns.heatviscconst=0.0 0.0 # no thermal diffusion (so that test runs quickly)
 # ns.include_viscous_heating=0
