@@ -122,10 +122,10 @@ ns.gravity = -980.0
 #ns.tension=73.0 73.0 73.0 #90 degrees
 #12 13 14 23 24 34
 #ns.tension=73.0 73.0 73.0 0.0 104.0 0.0 #180 deg substrate, 65 deg ice,293
-#tension_init  0<t<radblob9
-#tension       2*radblob9<t
+#tension_init  t=0
+#tension       radblob9<t
 #deltat=-28.8 super cool time=0.058
-ns.radblob9=0.04
+ns.radblob9=0.01
 ns.tension=80.0 80.0 80.0 0.0 159.0 0.0 #180 deg substrate, 10 deg ice,240
 ns.tension_init=80.0 80.0 80.0 0.0 114.0 0.0 #180 deg substrate, 65 deg ice,240
 ns.density_ratio_relaxation_factor=100.0 100.0 100.0 10000.0 100.0 1000.0

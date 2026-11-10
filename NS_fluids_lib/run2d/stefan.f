@@ -161,6 +161,8 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 radblob
       real*8 radcyl
       real*8 tnucleate
+      real*8 tnucleate_start
+      real*8 tnucleate_end
       real*8 voldrop
       real*8 xgap
       real*8 xlo_drop
@@ -178,6 +180,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 fact,xlo,xhi,xstop,tstop,dx,dx2,xi,theta,dt
       real*8 CC,beta,xint,current_slope
       real*8 time
+      integer iter_time
       real*8 freezing_time_target
       real*8 super_cool_time
       integer iter_tnucleate,max_iter_tnucleate
@@ -357,12 +360,19 @@ c        xcfd_offset=0.19d0-xcalibrate
        else
         max_iter_tnucleate=100
        endif
-       
+       tnucleate_start=tsat
+       tnucleate_end=tsat-abs(deltat)
+      
+       max_iter_tnucleate=1
+       tnucleate_start=260.0d0 
+       tnucleate_end=260.0d0 
+
        do iter_tnucleate=0,max_iter_tnucleate-1
 
         if (freezing_time_target.gt.0.0d0) then
-         tnucleate=tsat-
-     &     iter_tnucleate*abs(deltat)/max_iter_tnucleate
+         tnucleate=tnucleate_start+
+     &    (tnucleate_end-tnucleate_start)*
+     &     iter_tnucleate/max_iter_tnucleate
          print *,"iter_tnucleate,tnucleate ",iter_tnucleate,tnucleate
         endif
 
@@ -465,6 +475,7 @@ c       temp_new(N)=tsat
         endif
  
         time=0.0d0 
+        iter_time=0
         do while (liquid_temp.gt.tnucleate)
          do ispace=0,N-1
           flux_right=(temp_old(ispace+1)-temp_old(ispace))*2.0d0*
@@ -516,7 +527,15 @@ c        temp_new(N)=tsat
          endif
          liquid_temp_substrate=liquid_temp_substrate/N_liquid_substrate
          time=time+dt
+         iter_time=iter_time+1
+         if ((iter_time/100)*100.eq.iter_time) then
+          print *,"time,liquid_temp ",time,liquid_temp
+          print *,"time,liquid_temp_substrate ", 
+     &      time,liquid_temp_substrate
+         endif
+
         enddo
+c do while (liquid_temp.gt.tnucleate)
         print *,"time,liquid_temp ",time,liquid_temp
         print *,"time,liquid_temp_substrate ", 
      &    time,liquid_temp_substrate

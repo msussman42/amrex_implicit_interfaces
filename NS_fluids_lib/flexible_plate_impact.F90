@@ -1295,18 +1295,15 @@ real(amrex_real) :: theta
    else if (radblob9.gt.zero) then
     if (time.eq.zero) then
      tension=fort_tension_init(iten)
+    else if (time.ge.radblob9) then
+     tension=fort_tension(iten)
     else if ((time.ge.zero).and. &
              (time.le.radblob9)) then
-     tension=fort_tension_init(iten)
-    else if (time.ge.two*radblob9) then
-     tension=fort_tension(iten)
-    else if ((time.ge.radblob9).and. &
-             (time.le.two*radblob9)) then
-     theta=(time-radblob9)/radblob9
+     theta=time/radblob9
      tension=(one-theta)*fort_tension_init(iten)+ &
              theta*fort_tension(iten)
     else
-     print *,"time invalid: ",time
+     print *,"time invalid flex_plate_imp_var_surface_tension: ",time
      stop
     endif
    else
