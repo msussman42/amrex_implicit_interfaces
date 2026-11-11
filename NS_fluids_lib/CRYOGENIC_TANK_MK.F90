@@ -34,7 +34,9 @@ implicit none
 integer, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
 ! axis_dir=0 => tank geometry prescribed internally (not from file)  
-!   ZBOT (Vahab created level set function)
+!   ZBOT (Vahab created level set function) STATIONARY FRAME
+! axis_dir=10 => tank geometry prescribed internally (not from file)  
+!   ZBOT (Vahab created level set function) MOVING FRAME
 ! axis_dir=1 => num_aux_expect=0 (no auxiliary file!)
 !   TPCE (tank geometry prescribed internally)
 !
@@ -848,9 +850,11 @@ end subroutine interp_parabolic_xyz
    ! see Barsi and Kassemi 2013, Journal of Thermal Science and Engineering
    ! Applications.
    ! ZBOT (geometry hardwired) (band heater)
-  if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
+  if ((axis_dir.eq.0).or. &
+      (axis_dir.eq.10)) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
 
    print *,"axis_dir=0, tank geometry prescribed internally (not from file)"
+   print *,"or axis_dir=10, tank geometry prescribed internally (not from file)"
 
    number_of_source_regions=1 ! side "band"  heater
 
@@ -1009,6 +1013,7 @@ end subroutine interp_parabolic_xyz
   real(amrex_real) :: xlo,xhi,ylo,yhi,xcen
 
   if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+      (axis_dir.eq.10).or. & !prescribed,ZBOT (band heater) MOVING FRAME
       (axis_dir.eq.1).or. & !prescribed,TPCE (top heater)
       (axis_dir.eq.2).or. & !aux files
       (axis_dir.eq.4).or. & !aux files,parabolic
@@ -1041,7 +1046,7 @@ end subroutine interp_parabolic_xyz
    endif
 
   else
-   print *,"expecting axis_dir=0,1,2, or 4 in LS_NOZZLE"
+   print *,"expecting axis_dir=0,10,1,2, or 4 in LS_NOZZLE"
    stop
   endif
 
@@ -1099,59 +1104,122 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   velphys(dir)=zero
  enddo
 
- if(NINT(radblob7).eq.0) then
+ if (axis_dir.eq.10) then
   !do nothing
- elseif(NINT(radblob7).eq.1) then
-  xdisp_amplitude=xblob7   
-  xdisp_freq=yblob7
+ else if ((axis_dir.ge.0).and.(axis_dir.le.5)) then
 
-  xfoot(1)=xphys(1)-  &
-     xdisp_amplitude*sin(xdisp_freq*t)
+  if(NINT(radblob7).eq.0) then
+   !do nothing
+  elseif(NINT(radblob7).eq.1) then
+   xdisp_amplitude=xblob7   
+   xdisp_freq=yblob7
 
-   !xphys=xfoot+A*sin(wt)
-   !velphys=Aw cos(wt)
-  velphys(1)=  &
-     xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
- elseif(NINT(radblob7).eq.2)then         
-  !angular velocity zblob7 
-  xdisp_angV=zblob7 
+   xfoot(1)=xphys(1)-  &
+      xdisp_amplitude*sin(xdisp_freq*t)
 
-   ! xphys(2) is the vertical direction.
-  rot_dir=NINT(radblob8)
+    !xphys=xfoot+A*sin(wt)
+    !velphys=Aw cos(wt)
+   velphys(1)=  &
+      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
+  elseif(NINT(radblob7).eq.2)then         
+   !angular velocity zblob7 
+   xdisp_angV=zblob7 
 
-  if(SDIM.eq.3)then
-   if(rot_dir.eq.3)then
+    ! xphys(2) is the vertical direction.
+   rot_dir=NINT(radblob8)
+
+   if(SDIM.eq.3)then
+    if(rot_dir.eq.3)then
+     rotx=1
+     roty=2
+     rotz=rot_dir
+    elseif(rot_dir.eq.1)then
+     rotx=2
+     roty=3
+     rotz=rot_dir
+    elseif(rot_dir.eq.2)then !axis is vertical (y) direction.
+     rotx=1
+     roty=3
+     rotz=rot_dir
+    else
+     print *,"rot_dir invalid"
+     stop
+    endif
+
+     !xfoot=Q(t) xphys
+     !xphys=Q(t)^{T} xfoot
+     !velphys=Q'(t)^{T} xfoot = Q'(t)^{T} Q(t) xphys
+     !
+     !Q= cos(wt)              -sign_term sin(wt)
+     !   sign_term*sin(wt)    cos(wt)
+     !
+     !Q'=w ( -sin(wt)          -sign_term cos(wt)
+     !       sign_term*cos(wt) -sin(wt)  )
+     !
+     !Q'^{T}=w ( -sin(wt)           sign_term cos(wt)
+     !           -sign_term*cos(wt) -sin(wt)  )
+     !
+     !Q'^{T}Q=w ( 0           sign_term 
+     !            -sign_term   0 )
+
+    sign_term=(-1.0d0)**(mod(rot_dir,2))
+    Q(1,1)=cos(xdisp_angV*t)
+    Q(1,2)=-sign_term*sin(xdisp_angV*t)
+    Q(2,1)=-Q(1,2)
+    Q(2,2)=Q(1,1)
+
+    xfoot(rotx)=Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
+    xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
+    xfoot(rotz)=xphys(rotz)
+
+    velphys(rotx)=sign_term*xdisp_angV*xphys(roty)
+    velphys(roty)=-sign_term*xdisp_angV*xphys(rotx)
+    velphys(rotz)=0.0d0
+   elseif(SDIM.eq.2)then
     rotx=1
-    roty=2
-    rotz=rot_dir
-   elseif(rot_dir.eq.1)then
-    rotx=2
-    roty=3
-    rotz=rot_dir
-   elseif(rot_dir.eq.2)then !axis is vertical (y) direction.
+    roty=2 ! vertical direction
+
+    Q(1,1)=cos(xdisp_angV*t)
+    Q(1,2)=sin(xdisp_angV*t)
+    Q(2,1)=-Q(1,2)
+    Q(2,2)=Q(1,1)
+
+    xfoot(rotx)= Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
+    xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
+    xfoot(rotz)=xphys(rotz)
+
+    velphys(rotx)=-xdisp_angV*xphys(roty)
+    velphys(roty)=xdisp_angV*xphys(rotx)
+    velphys(rotz)=0.0d0
+   else
+    print *,"SDIM invalid"
+    stop
+   endif
+  elseif(NINT(radblob7).eq.3) then
+   !angular velocity zblob7 
+   xdisp_angV=zblob7 
+   xdisp_amplitude=xblob7   
+   xdisp_freq=yblob7
+   xfoot_translate(1)=xphys(1)-  &
+      xdisp_amplitude*sin(xdisp_freq*t)
+
+    ! xphys(2) is the vertical direction.
+   rot_dir=NINT(radblob8)
+
+   if (SDIM.eq.3) then
+    !do nothing
+   else
+    print *,"expecting 3d"
+    stop
+   endif
+   if (rot_dir.eq.2) then
     rotx=1
     roty=3
     rotz=rot_dir
    else
-    print *,"rot_dir invalid"
+    print *,"expecting rot_dir==2"
     stop
    endif
-
-    !xfoot=Q(t) xphys
-    !xphys=Q(t)^{T} xfoot
-    !velphys=Q'(t)^{T} xfoot = Q'(t)^{T} Q(t) xphys
-    !
-    !Q= cos(wt)              -sign_term sin(wt)
-    !   sign_term*sin(wt)    cos(wt)
-    !
-    !Q'=w ( -sin(wt)          -sign_term cos(wt)
-    !       sign_term*cos(wt) -sin(wt)  )
-    !
-    !Q'^{T}=w ( -sin(wt)           sign_term cos(wt)
-    !           -sign_term*cos(wt) -sin(wt)  )
-    !
-    !Q'^{T}Q=w ( 0           sign_term 
-    !            -sign_term   0 )
 
    sign_term=(-1.0d0)**(mod(rot_dir,2))
    Q(1,1)=cos(xdisp_angV*t)
@@ -1159,80 +1227,26 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    Q(2,1)=-Q(1,2)
    Q(2,2)=Q(1,1)
 
-   xfoot(rotx)=Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
-   xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
-   xfoot(rotz)=xphys(rotz)
+   xfoot(rotx)=Q(1,1)*xfoot_translate(rotx)+Q(1,2)*xfoot_translate(roty)
+   xfoot(roty)=Q(2,1)*xfoot_translate(rotx)+Q(2,2)*xfoot_translate(roty) 
+   xfoot(rotz)=xfoot_translate(rotz)
 
-   velphys(rotx)=sign_term*xdisp_angV*xphys(roty)
-   velphys(roty)=-sign_term*xdisp_angV*xphys(rotx)
+   velphys(rotx)=sign_term*xdisp_angV*xfoot_translate(roty)
+   velphys(roty)=-sign_term*xdisp_angV*xfoot_translate(rotx)
    velphys(rotz)=0.0d0
-  elseif(SDIM.eq.2)then
-   rotx=1
-   roty=2 ! vertical direction
 
-   Q(1,1)=cos(xdisp_angV*t)
-   Q(1,2)=sin(xdisp_angV*t)
-   Q(2,1)=-Q(1,2)
-   Q(2,2)=Q(1,1)
+    !xphys=xfoot+A*sin(wt)
+    !velphys=Aw cos(wt)
+   velphys(1)=velphys(1)+  &
+      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
 
-   xfoot(rotx)= Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
-   xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
-   xfoot(rotz)=xphys(rotz)
-
-   velphys(rotx)=-xdisp_angV*xphys(roty)
-   velphys(roty)=xdisp_angV*xphys(rotx)
-   velphys(rotz)=0.0d0
   else
-   print *,"SDIM invalid"
+   print *,"radblob7 invalid (rigid motion type invalid): ",radblob7
    stop
   endif
- elseif(NINT(radblob7).eq.3) then
-  !angular velocity zblob7 
-  xdisp_angV=zblob7 
-  xdisp_amplitude=xblob7   
-  xdisp_freq=yblob7
-  xfoot_translate(1)=xphys(1)-  &
-     xdisp_amplitude*sin(xdisp_freq*t)
-
-   ! xphys(2) is the vertical direction.
-  rot_dir=NINT(radblob8)
-
-  if (SDIM.eq.3) then
-   !do nothing
-  else
-   print *,"expecting 3d"
-   stop
-  endif
-  if (rot_dir.eq.2) then
-   rotx=1
-   roty=3
-   rotz=rot_dir
-  else
-   print *,"expecting rot_dir==2"
-   stop
-  endif
-
-  sign_term=(-1.0d0)**(mod(rot_dir,2))
-  Q(1,1)=cos(xdisp_angV*t)
-  Q(1,2)=-sign_term*sin(xdisp_angV*t)
-  Q(2,1)=-Q(1,2)
-  Q(2,2)=Q(1,1)
-
-  xfoot(rotx)=Q(1,1)*xfoot_translate(rotx)+Q(1,2)*xfoot_translate(roty)
-  xfoot(roty)=Q(2,1)*xfoot_translate(rotx)+Q(2,2)*xfoot_translate(roty) 
-  xfoot(rotz)=xfoot_translate(rotz)
-
-  velphys(rotx)=sign_term*xdisp_angV*xfoot_translate(roty)
-  velphys(roty)=-sign_term*xdisp_angV*xfoot_translate(rotx)
-  velphys(rotz)=0.0d0
-
-   !xphys=xfoot+A*sin(wt)
-   !velphys=Aw cos(wt)
-  velphys(1)=velphys(1)+  &
-     xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
 
  else
-  print *,"radblob7 invalid (rigid motion type invalid): ",radblob7
+  print *,"axis_dir invalid in rigid_displacement ",axis_dir
   stop
  endif
 
@@ -1367,6 +1381,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    ! Solid
 
    if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+       (axis_dir.eq.10).or. & !prescribed,ZBOT (band heater) MOVING FRAME
        (axis_dir.eq.1)) then !prescribed,TPCE (top heater)
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
@@ -1383,6 +1398,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
     if (axis_dir.eq.0) then !prescribed, ZBOT (band heater)
+     ! do nothing
+    else if (axis_dir.eq.10) then !prescribed, ZBOT (band heater),MOVING FRAME
      ! do nothing
     else if (axis_dir.eq.1) then ! prescribed, TPCE (top heater)
      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
@@ -1630,6 +1647,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
    if ((axis_dir.eq.0).or. &  !prescribed, ZBOT  (band heater)
+       (axis_dir.eq.10).or. &  !prescribed, ZBOT  (band heater) MOVING FRAME
        (axis_dir.eq.1).or. &  !prescribed, TPCE (top heater)
        (axis_dir.eq.2).or. &  !aux files read e.g. tpce_geometry.vtk (TPCE)
        (axis_dir.eq.5)) then  !implicit rigid motion 
@@ -2247,6 +2265,7 @@ if ((num_materials.eq.3).and. &
   ! temperature
 
   if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+      (axis_dir.eq.10).or. & !prescribed,ZBOT (band heater) MOVING FRAME
       (axis_dir.eq.1).or. & !prescribed,TPCE (top heater)
       (axis_dir.eq.2).or. & !aux files
       (axis_dir.eq.5)) then !implicit rigid motion
@@ -2279,6 +2298,7 @@ if ((num_materials.eq.3).and. &
    if (im.eq.2) then
     den=STATE(ibase+ENUM_DENVAR+1)
     if ((axis_dir.eq.0).or. & !prescribed,ZBOT (band heater)
+        (axis_dir.eq.10).or. & !prescribed,ZBOT (band heater) MOVING FRAME
         (axis_dir.eq.1).or. & !prescribed,TPCE, (top heater)
         (axis_dir.eq.2)) then !aux files
      temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
@@ -2334,6 +2354,7 @@ if ((num_materials.eq.3).and. &
      if (abs(Pgamma-pressure).le.EPS2*pressure) then
       ! do nothing
      else if ((axis_dir.eq.0).or. & !prescribed, ZBOT (band heater)
+              (axis_dir.eq.10).or. &!prescribed,ZBOT(band heater)MOVING FRAME
               (axis_dir.eq.1).or. & !prescribed, TPCE (top heater)
               (axis_dir.eq.2).or. & !aux files
               (axis_dir.eq.3).or. & !prescribed,  parabolic test (cylinder)
@@ -2668,6 +2689,7 @@ endif
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
 if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
+    (axis_dir.eq.10).or. & !prescribed ZBOT (band heater) MOVING FRAME
     (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
     (axis_dir.eq.2).or. & !aux files
     (axis_dir.eq.4).or. & !aux files, parabolic
@@ -2724,6 +2746,8 @@ if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
   support_r=0.0d0
   do dir=1,SDIM
    if (axis_dir.eq.0) then !prescribed,ZBOT (band heater)
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
+   else if (axis_dir.eq.10) then !prescribed,ZBOT (band heater) MOVING FRAME
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
    else if (axis_dir.eq.1) then !prescribed TPCE (top heater)
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
@@ -2874,7 +2898,8 @@ integer :: im,iregion,dir
    regions_list(iregion,0)%region_energy_after=0.0d0 
   enddo ! iregion=1,number_of_source_regions
 
-  if (axis_dir.eq.0) then  !prescribed ZBOT (band heater)
+  if ((axis_dir.eq.0).or. &  !prescribed ZBOT (band heater)
+      (axis_dir.eq.10)) then  !prescribed ZBOT (band heater) MOVING FRAME
    regions_list(1,0)%region_material_id=3 !heater
     !xblob3, HEATER_BAND at the side, a band heater..
    regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS_B_BAND !Watts=J/s
@@ -2969,7 +2994,8 @@ real(amrex_real) :: LS_tank(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
- if (axis_dir.eq.0) then ! prescribed, ZBOT band heater
+ if ((axis_dir.eq.0).or. & ! prescribed, ZBOT band heater
+     (axis_dir.eq.10)) then ! prescribed, ZBOT band heater MOVING FRAME
   TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
   if (TANK_MK_R_WIDTH.gt.0.0d0) then
    if (region_id.eq.1) then
@@ -3236,7 +3262,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   stop
  endif  
 
- if (axis_dir.eq.0) then ! prescribed, ZBOT (band heater)
+ if ((axis_dir.eq.0).or. & ! prescribed, ZBOT (band heater)
+     (axis_dir.eq.10)) then ! prescribed, ZBOT (band heater)MOVING FRAME
 
   if (im.eq.2) then ! vapor
    ! do nothing
@@ -4065,6 +4092,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
      (axis_dir.eq.2)) then !aux files
   !do nothing
+ else if (axis_dir.eq.10) then !prescribed ZBOT (band heater) MOVING FRAME
+  
  else if (axis_dir.eq.5) then !implicit rigid motion
   !another option for implicitly defined force via gravity vector
   !define "gravity_vector_out" as needed.
@@ -4151,6 +4180,7 @@ if ((num_materials.ge.3).and. &
  endif
 
  if ((axis_dir.eq.0).or. & !prescribed ZBOT (band heater)
+     (axis_dir.eq.10).or. & !prescribed ZBOT (band heater) MOVING FRAME
      (axis_dir.eq.1).or. & !prescribed TPCE (top heater)
      (axis_dir.eq.2).or. & !aux files
      (axis_dir.eq.5)) then !implicit rigid motion

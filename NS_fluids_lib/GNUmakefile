@@ -52,7 +52,7 @@ USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 2
+DIM       = 3
 
 BL_NO_FORT = FALSE
 
@@ -147,7 +147,7 @@ COMP = gnu
 #USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
-USE_OMP = FALSE
+USE_OMP = TRUE
 
 ifeq ($(USE_HDF5),TRUE)
  USERSuffix+=.HDF5
