@@ -187,6 +187,8 @@ stop
       integer, parameter :: nhalfgrid=1
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine_LL(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine_UR(-nhalf:nhalf,SDIM)
       real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       integer n_overlap
       integer, parameter :: tessellate=TESSELLATE_FLUIDS
@@ -253,21 +255,28 @@ stop
        endif
       enddo !dir=1,sdim
 
+      ifine=fine_growlo(1)
+      jfine=fine_growlo(2)
+      kfine=fine_growlo(3)
+      call gridsten(xstenfine_LL,problo,ifine,jfine,kfine, &
+        domlo,bfact_fine,dxf,nhalf)
+      ifine=fine_growhi(1)
+      jfine=fine_growhi(2)
+      kfine=fine_growhi(3)
+      call gridsten(xstenfine_UR,problo,ifine,jfine,kfine, &
+        domlo,bfact_fine,dxf,nhalf)
+
       do k=crse_growlo(3),crse_growhi(3)
       do j=crse_growlo(2),crse_growhi(2)
       do i=crse_growlo(1),crse_growhi(1)
 
-       crse_grid_index(1)=i
-       crse_grid_index(2)=j
-       if (SDIM.eq.3) then
-        crse_grid_index(SDIM)=k
-       endif
+!      call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
+       call gridsten_level(xsten,i,j,k,levelc,nhalf)
 
-        ! coarse cell ic covers 2*ic and 2*ic+1
        data_needed=1
        do dir=1,SDIM
-        if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
-            (2*crse_grid_index(dir).le.fine_growhi(dir))) then
+        if ((xsten(1,dir).ge.xstenfine_LL(-1,dir)).and. &
+            (xsten(-1,dir).le.xstenfine_UR(1,dir))) then
          !do nothing
         else
          data_needed=0
@@ -291,9 +300,6 @@ stop
          mofdata(vofcomp_new+SDIM+1)=zero
 
         enddo  ! im
-
-!       call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
-        call gridsten_level(xsten,i,j,k,levelc,nhalf)
 
          ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &

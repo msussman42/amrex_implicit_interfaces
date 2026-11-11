@@ -12279,7 +12279,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor
 
        if (ncomp_xgp.ne.AMREX_SPACEDIM_SQR) then
-        print *,"ncomp_xgp invalid1"
+        print *,"ncomp_xgp invalid1 ",ncomp_xgp
         stop
        endif
        if (ncomp_xp.ne.SDIM) then
@@ -12288,7 +12288,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_UGRAD_MAC"
+        print *,"energyflag invalid OP_UGRAD_MAC ",energyflag
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
@@ -12311,19 +12311,19 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        if (scomp.ne.1) then
-        print *,"scomp invalid"
+        print *,"scomp invalid ",scomp
         stop
        endif
        if (ncomp_source.ne.SDIM) then
-        print *,"ncomp_source invalid"
+        print *,"ncomp_source invalid ",ncomp_source
         stop
        endif
        if (ncomp_dest.ne.SDIM) then
-        print *,"ncomp_dest invalid"
+        print *,"ncomp_dest invalid ",ncomp_dest
         stop
        endif
        if (scomp_bc.ne.1) then
-        print *,"scomp_bc invalid"
+        print *,"scomp_bc invalid ",scomp_bc
         stop
        endif
 
@@ -12340,7 +12340,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_ISCHEME_MAC"
+        print *,"energyflag invalid OP_ISCHEME_MAC ",energyflag
         stop
        endif
        if (ncfluxreg.ne.SDIM*NFLUXSEM) then
@@ -12413,8 +12413,15 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       if (energyflag.ne.SUB_OP_FORCE_MASK_BASE+3) then
-        print *,"energyflag invalid OP_POTGRAD_TO_MAC"
+       if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+           POTGRAD_SURFTEN_BASE_GRAV) then
+        ! do nothing 
+       else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                POTGRAD_BASE_GRAV) then
+        ! do nothing 
+       else
+        print *,"spectral method not for incremental formulation "
+        print *,"energyflag invalid OP_POTGRAD_TO_MAC ",energyflag
         stop
        endif
 
@@ -12432,11 +12439,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
        if (ncomp_xgp.ne.1) then
-        print *,"expecting ncomp_xgp=1 OP_UNEW,OP_U_COMP,OP_UMAC"
+        print *,"expecting ncomp_xgp=1 OP_UNEW,OP_U_COMP,OP_UMAC ", &
+          ncomp_xgp
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_U ETC CELL/MAC to MAC"
+        print *,"energyflag invalid OP_U ETC CELL/MAC to MAC ",energyflag
         stop
        endif
 
@@ -12774,16 +12782,17 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (nc.eq.SEM_T+1) then 
              local_data_side(side)=templocal ! temperature
             else
-             print *,"nc invalid"
+             print *,"nc invalid ",nc
              stop
             endif
 
+            !caller: fort_face_gradients in GODUNOV_3D.F90
            else if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
              local_data_side(side)=vel(D_DECL(ic,jc,kc),nc)
             else
-             print *,"nc invalid"
+             print *,"nc invalid ",nc
              stop
             endif
 
@@ -13932,7 +13941,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              shared_face_value=local_grad(isten+1)
 
             else
-             print *,"energyflag invalid OP_PRESGRAD_MAC"
+             print *,"energyflag invalid OP_PRESGRAD_MAC ",energyflag
              stop
             endif
 
@@ -14446,7 +14455,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif 
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_GRADU_MAC_TO_CELL"
+        print *,"energyflag invalid OP_GRADU_MAC_TO_CELL ",energyflag
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
@@ -14549,7 +14558,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_RHS_CELL"
+        print *,"energyflag invalid OP_RHS_CELL ",energyflag
         stop
        endif
        if ((ncomp_xvel.ne.1).and. &
@@ -14598,7 +14607,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_DIV_CELL"
+        print *,"energyflag invalid OP_DIV_CELL ",energyflag
         stop
        endif
        if (ncomp_xvel.ne.1) then
