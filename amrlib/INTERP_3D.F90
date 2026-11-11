@@ -155,7 +155,8 @@ stop
       real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
       integer crse_growlo(3),crse_growhi(3)
       integer fine_growlo(3),fine_growhi(3)
-      integer stenlo(3),stenhi(3)
+      integer crse_stenlo(3),crse_stenhi(3)
+      integer fine_stenlo(3),fine_stenhi(3)
       real(amrex_real) wt(SDIM)
 
       integer :: crse_grid_index(SDIM)
@@ -363,18 +364,28 @@ stop
 
        n_overlap=0
 
-       call coarse_subelement_stencil(ifine,jfine,kfine,stenlo,stenhi, &
+       call coarse_subelement_stencil( &
+         ifine,jfine,kfine, &
+         crse_stenlo,crse_stenhi, &
          bfact_coarse,bfact_fine)
 
-       do ic=stenlo(1),stenhi(1)
+       do dir=1,3
+        fine_stenlo(dir)=0
+        fine_stenhi(dir)=0
+       enddo
+       do dir=1,SDIM
+        fine_stenlo(dir)=2*crse_stenlo(dir)
+        fine_stenhi(dir)=2*crse_stenhi(dir)+1
+       enddo
+       do ic=crse_stenlo(1),crse_stenhi(1)
         call intersect_weight_interp(ic,ifine, &
           bfact_coarse,bfact_fine,wt(1))
         if (wt(1).gt.zero) then
-         do jc=stenlo(2),stenhi(2)
+         do jc=crse_stenlo(2),crse_stenhi(2)
           call intersect_weight_interp(jc,jfine, &
            bfact_coarse,bfact_fine,wt(2))
           if (wt(2).gt.zero) then
-           do kc=stenlo(3),stenhi(3)
+           do kc=crse_stenlo(3),crse_stenhi(3)
             if (SDIM.eq.3) then
              call intersect_weight_interp(kc,kfine, &
               bfact_coarse,bfact_fine,wt(SDIM))
@@ -397,13 +408,37 @@ stop
               endif
 
               data_needed=1
+
               do dir=1,SDIM
-               if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
-                   (2*crse_grid_index(dir).le.fine_growhi(dir))) then
-                !do nothing
+
+               if ((bfact_coarse.eq.1).and.(bfact_fine.eq.1)) then
+                if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
+                    (2*crse_grid_index(dir).le.fine_growhi(dir))) then
+                 !do nothing
+                else
+                 data_needed=0
+                endif
+               else if ((bfact_coarse.gt.1).or.(bfact_fine.gt.1)) then
+
+                if ((testwt.ge.zero).and.(testwt.lt.one)) then
+                 !do nothing
+                else if (testwt.eq.one) then
+                 if ((2*crse_grid_index(dir)+1.ge.fine_growlo(dir)).and. &
+                     (2*crse_grid_index(dir).le.fine_growhi(dir))) then
+                  !do nothing
+                 else
+                  data_needed=0
+                 endif
+                else
+                 print *,"testwt invalid ",testwt
+                 stop
+                endif
+
                else
-                data_needed=0
+                print *,"bfact_coarse or bfact_fine invalid"
+                stop
                endif
+
               enddo !dir=1,SDIM
 
               if (data_needed.eq.1) then
@@ -412,8 +447,10 @@ stop
                print *,"data_needed bust ",data_needed
                print *,"levelc,levelf ",levelc,levelf
                print *,"bfact_coarse,bfact_fine ",bfact_coarse,bfact_fine
-               print *,"stenlo=",stenlo
-               print *,"stenhi=",stenhi
+               print *,"crse_stenlo=",crse_stenlo
+               print *,"crse_stenhi=",crse_stenhi
+               print *,"fine_stenlo=",fine_stenlo
+               print *,"fine_stenhi=",fine_stenhi
                print *,"crse_grid_index=",crse_grid_index
                print *,"ifine,jfine,kfine ",ifine,jfine,kfine
                print *,"fine_growlo ",fine_growlo
@@ -432,6 +469,36 @@ stop
               do dir=1,num_materials*ngeom_recon
                mofdata(dir)=datarecon(D_DECL(ic,jc,kc),dir)
               enddo
+
+              voltemp=zero
+              do im=1,num_materials
+               vofcomp_new=(im-1)*ngeom_recon+1
+               voltemp=voltemp+mofdata(vofcomp_new)
+              enddo
+               
+              if (voltemp.gt.zero) then
+               !do nothing
+              else
+               print *,"voltemp bust ",voltemp
+               print *,"levelc,levelf ",levelc,levelf
+               print *,"bfact_coarse,bfact_fine ",bfact_coarse,bfact_fine
+               print *,"crse_stenlo=",crse_stenlo
+               print *,"crse_stenhi=",crse_stenhi
+               print *,"fine_stenlo=",fine_stenlo
+               print *,"fine_stenhi=",fine_stenhi
+               print *,"crse_grid_index=",crse_grid_index
+               print *,"ifine,jfine,kfine ",ifine,jfine,kfine
+               print *,"fine_growlo ",fine_growlo
+               print *,"fine_growhi ",fine_growhi
+               print *,"crse_growlo ",crse_growlo
+               print *,"crse_growhi ",crse_growhi
+               print *,"wt=",wt
+               print *,"testwt=",testwt
+               print *,"(breakpoint) break point and gdb: "
+               print *,"(1) compile with the -g option"
+               print *,"(2) break INTERP_3D.F90:499"
+               stop
+              endif
 
               call gridsten(xsten,problo,ic,jc,kc, &
                domlo,bfact_coarse,dxc,nhalf)

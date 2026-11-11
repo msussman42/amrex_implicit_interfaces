@@ -16781,6 +16781,7 @@ contains
       else
        print *,"vacuum bust in make_vfrac_sum_ok_copy"
        print *,"put breakpoint here to see the caller"
+       print *,"break MOF.F90:16794 (compile -g option)"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"vfrac_sum_local ",vfrac_sum_local
