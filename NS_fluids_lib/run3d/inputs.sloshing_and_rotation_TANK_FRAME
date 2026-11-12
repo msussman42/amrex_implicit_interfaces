@@ -143,7 +143,7 @@ amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4  # number of buffer cells in error est 
-amr.blocking_factor = 8 4 4  # block factor in grid generation
+amr.blocking_factor = 8 8 8  # block factor in grid generation
 
 amr.grid_eff        = 0.85  # smaller => less boxes
 
@@ -309,6 +309,7 @@ ns.tension=8.94e-3 8.94e-3 11.9796e-3
 # 12 liquid->vapor (boiling)
 # 21 vapor->liquid (condensation)
 ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
+ns.ngrow_distance=6
 
 # distribution of the expansion term
 # For evaporation and Boiling, this should always be 0.
