@@ -2631,6 +2631,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: angular_velocity_vector_custom(3)
       real(amrex_real) :: lever_arm_custom(SDIM)
       real(amrex_real) :: angular_velocity_vector_dot(3)
+      real(amrex_real) :: angular_velocity_vector_dot_custom(3)
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(in) :: dt
@@ -2703,22 +2704,31 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
+       angular_velocity_vector_dot=fort_angular_velocity_vector_dot
        call SUB_angular_velocity_vector(xcell,time, &
          angular_velocity_vector, &
          angular_velocity_vector_custom, &
          angular_velocity_vector_dot, &
+         angular_velocity_vector_dot_custom, &
          lever_arm, &
          lever_arm_custom)
 
        if ((angular_velocity_vector_custom(3).le. &
             angular_velocity_vector(3)).and. &
            (angular_velocity_vector_custom(3).ge.zero).and. &
-           (angular_velocity_vector_dot(3).ge.zero)) then
+           (angular_velocity_vector_dot_custom(3).ge.zero)) then
         !do nothing
        else
         print *,"angular_velocity_vector parameters invalid (PROB.F90)"
         stop
        endif
+
+        !lever_arm is the distance between the center of a satellite and the 
+        !axis of rotation.  e.g. if lever_arm(2)>0, then the "y" direction
+        !is the radial vector between the tank and axis of rotation.  
+        !The "x" and "z" directions are perpendicular to the radial direction.
+        !As the tank orbits the rotation axis, it's local coordinates, x, y,
+        !and z are fixed.
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
 

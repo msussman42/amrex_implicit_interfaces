@@ -259,6 +259,7 @@ implicit none
 ! Johnson_Cook_C added August 21, 2025
 ! adapt_whole_material added October 9, 2025
 ! fort_material_conservation_form passed as parameter now, June 7, 2026
+! fort_angular_velocity_vector_dot, Nov 12, 2026
 
       integer, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
@@ -710,16 +711,18 @@ implicit none
        angular_velocity_vector, &
        angular_velocity_vector_custom, &
        angular_velocity_vector_dot, &
+       angular_velocity_vector_dot_custom, &
        lever_arm_in, &
        lever_arm_custom)
       use amrex_fort_module, only : amrex_real
       real(amrex_real), INTENT(in) :: x(SDIM)
       real(amrex_real), INTENT(in) :: cur_time
       real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+      real(amrex_real), INTENT(in) :: angular_velocity_vector_dot(3)
       real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
       real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
       real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
-      real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
+      real(amrex_real), INTENT(out) :: angular_velocity_vector_dot_custom(3)
       end subroutine TEMPLATE_angular_velocity_vector
 
       subroutine TEMPLATE_gravity_vector(x,cur_time, &

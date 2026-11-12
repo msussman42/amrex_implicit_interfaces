@@ -199,6 +199,7 @@ int NavierStokes::incremental_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 Vector<Real> NavierStokes::angular_velocity_vector;
+Vector<Real> NavierStokes::angular_velocity_vector_dot;
 Vector<Real> NavierStokes::lever_arm;
 
 int  NavierStokes::sum_interval = -1;
@@ -1634,11 +1635,20 @@ void fortran_parameters() {
  pp.get("visc_coef",visc_coef_temp);
 
  Vector<Real> angular_velocity_vector_temp(3);
+ Vector<Real> angular_velocity_vector_dot_temp(3);
  Vector<Real> lever_arm_temp(AMREX_SPACEDIM);
+
  Real angular_velocity_temp=NavierStokes::angular_velocity;
+
  angular_velocity_vector_temp[0]=0.0;
  angular_velocity_vector_temp[1]=0.0;
  angular_velocity_vector_temp[2]=angular_velocity_temp;
+
+ angular_velocity_vector_dot_temp[0]=0.0;
+ angular_velocity_vector_dot_temp[1]=0.0;
+ angular_velocity_vector_dot_temp[2]=0.0;
+ pp.queryarr("angular_velocity_vector_dot",
+   angular_velocity_vector_dot_temp,0,3);
 
  lever_arm_temp[0]=0.0;
  lever_arm_temp[1]=0.0;
@@ -2341,6 +2351,7 @@ void fortran_parameters() {
   etaP_temp.dataPtr(),
   &visc_coef_temp,
   angular_velocity_vector_temp.dataPtr(),
+  angular_velocity_vector_dot_temp.dataPtr(),
   lever_arm_temp.dataPtr(),
   NavierStokes::grid_stretching_parameter.dataPtr(),
   &ioproc);
@@ -4320,6 +4331,13 @@ NavierStokes::read_params ()
     angular_velocity_vector[1]=0.0;
     angular_velocity_vector[2]=angular_velocity;
 
+    angular_velocity_vector_dot.resize(3);
+    angular_velocity_vector_dot[0]=0.0;
+    angular_velocity_vector_dot[1]=0.0;
+    angular_velocity_vector_dot[2]=0.0;
+    pp.queryarr("angular_velocity_vector_dot",
+       angular_velocity_vector_dot,0,3);
+
     lever_arm.resize(AMREX_SPACEDIM);
     lever_arm[0]=0.0;
     lever_arm[1]=0.0;
@@ -6135,6 +6153,11 @@ NavierStokes::read_params ()
        angular_velocity_vector[0] << ' ' <<
        angular_velocity_vector[1] << ' ' <<
        angular_velocity_vector[2] << '\n';
+
+     std::cout << "angular_velocity_vector_dot 0..2: " << 
+       angular_velocity_vector_dot[0] << ' ' <<
+       angular_velocity_vector_dot[1] << ' ' <<
+       angular_velocity_vector_dot[2] << '\n';
 
      std::cout << "lever_arm= 0..sdim-1:" << 
        lever_arm[0] << ' ' <<

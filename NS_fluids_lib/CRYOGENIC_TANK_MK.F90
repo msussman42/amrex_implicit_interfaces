@@ -1110,7 +1110,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   if(NINT(radblob7).eq.0) then
    !do nothing
-  elseif(NINT(radblob7).eq.1) then
+  elseif(NINT(radblob7).eq.1) then !sloshing only
    xdisp_amplitude=xblob7   
    xdisp_freq=yblob7
 
@@ -1121,7 +1121,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     !velphys=Aw cos(wt)
    velphys(1)=  &
       xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
-  elseif(NINT(radblob7).eq.2)then         
+  elseif(NINT(radblob7).eq.2)then !rotation only 
    !angular velocity zblob7 
    xdisp_angV=zblob7 
 
@@ -1195,7 +1195,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     print *,"SDIM invalid"
     stop
    endif
-  elseif(NINT(radblob7).eq.3) then
+  elseif(NINT(radblob7).eq.3) then !sloshing and rotation
    !angular velocity zblob7 
    xdisp_angV=zblob7 
    xdisp_amplitude=xblob7   
@@ -3993,10 +3993,12 @@ end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
 !Direct numerical simulation of a bubble motion in a spherical 
 !tank under external forces and microgravity conditions. 
 !Journal of Fluid Mechanics, 849, 467–497. doi:10.1017/jfm.2018.389
-subroutine CRYOGENIC_TANK_MK_angular_velocity_vector(x,cur_time, &
+subroutine CRYOGENIC_TANK_MK_angular_velocity_vector( &
+   x,cur_time, &
    angular_velocity_vector, &
    angular_velocity_vector_custom, &
    angular_velocity_vector_dot, &
+   angular_velocity_vector_dot_custom, &
    lever_arm_in, &
    lever_arm_custom)
 use probcommon_module
@@ -4006,10 +4008,11 @@ IMPLICIT NONE
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
+real(amrex_real), INTENT(in) :: angular_velocity_vector_dot(3)
 real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
 real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
-real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
+real(amrex_real), INTENT(out) :: angular_velocity_vector_dot_custom(3)
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -4021,32 +4024,37 @@ real(amrex_real), INTENT(out) :: angular_velocity_vector_dot(3)
  if (angular_velocity_vector(3).ge.zero) then
   !do nothing
  else
-  print *,"angular_velocity_vector(3) invalid"
+  print *,"angular_velocity_vector(3) invalid ",angular_velocity_vector
   stop
  endif
 
  if (xblob8.ge.zero) then
   !do nothing
  else
-  print *,"expecting xblob8>=0"
+  print *,"expecting xblob8>=0 ",xblob8
   stop
  endif
 
  angular_velocity_vector_custom=angular_velocity_vector
+ angular_velocity_vector_dot_custom=angular_velocity_vector_dot
  lever_arm_custom=lever_arm_in
- angular_velocity_vector_dot=zero
+ angular_velocity_vector_dot_custom=zero
  lever_arm_custom(2)=radblob8
 
  if (axis_dir.eq.5) then
   !define lever_arm_custom, angular_velocity_vector_custom, and
   !angular_velocity_vector_dot as needed
+ else if (axis_dir.eq.0) then
+  !do nothing
+ else if (axis_dir.eq.10) then
+  !do nothing
  else
 
   if (cur_time.ge.xblob8) then
    !do nothing
   else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
    angular_velocity_vector_custom(3)=angular_velocity_vector(3)*cur_time/xblob8
-   angular_velocity_vector_dot(3)=angular_velocity_vector(3)/xblob8
+   angular_velocity_vector_dot_custom(3)=angular_velocity_vector(3)/xblob8
   else
    print *,"cur_time invalid"
    stop

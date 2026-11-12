@@ -220,6 +220,7 @@ stop
        real(amrex_real) :: angular_velocity_vector_custom(3)
        real(amrex_real) :: lever_arm_custom(SDIM)
        real(amrex_real) :: angular_velocity_vector_dot(3)
+       real(amrex_real) :: angular_velocity_vector_dot_custom(3)
        real(amrex_real), INTENT(in) :: centrifugal_force_factor
        real(amrex_real), INTENT(in) :: visc_coef
        integer, INTENT(in) :: uncoupled_viscosity
@@ -804,17 +805,20 @@ stop
           !     | -Om y  Om x   0     | =
           ! -Omega^2 x ihat - Omega^2 y jhat
 
+         angular_velocity_vector_dot=fort_angular_velocity_vector_dot;
+
          call SUB_angular_velocity_vector(xpoint,cur_time_slab, &
            angular_velocity_vector, &
            angular_velocity_vector_custom, &
            angular_velocity_vector_dot, &
+           angular_velocity_vector_dot_custom, &
            lever_arm, &
            lever_arm_custom)
 
          if ((angular_velocity_vector_custom(3).le. &
               angular_velocity_vector(3)).and. &
              (angular_velocity_vector_custom(3).ge.zero).and. &
-             (angular_velocity_vector_dot(3).ge.zero)) then
+             (angular_velocity_vector_dot_custom(3).ge.zero)) then
           !do nothing
          else
           print *,"angular_velocity_vector parameters bad (DIFFUSION_3D.F90) "
@@ -842,7 +846,7 @@ stop
           do dir=1,SDIM
            x_bias(dir)=xpoint(dir)+lever_arm_custom(dir)
           enddo
-          call crossprod(angular_velocity_vector_dot,x_bias,F_Omega_dot)
+          call crossprod(angular_velocity_vector_dot_custom,x_bias,F_Omega_dot)
 
           call crossprod(angular_velocity_vector_custom,x_bias,Omega_cross_x)
           call crossprod(angular_velocity_vector_custom,Omega_cross_x, &

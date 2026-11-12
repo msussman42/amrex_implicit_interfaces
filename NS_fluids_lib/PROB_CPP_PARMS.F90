@@ -778,6 +778,7 @@ stop
         ccetaP, &
         ccvisc_coef, &
         ccangular_velocity_vector, &
+        ccangular_velocity_vector_dot, &
         cclever_arm, &
         ccgrid_stretching_parameter, &
         ioproc) &
@@ -971,6 +972,7 @@ stop
 
       real(amrex_real), INTENT(in) :: ccvisc_coef
       real(amrex_real), INTENT(in) :: ccangular_velocity_vector(3)
+      real(amrex_real), INTENT(in) :: ccangular_velocity_vector_dot(3)
       real(amrex_real), INTENT(in) :: cclever_arm(SDIM)
 
 
@@ -2071,6 +2073,10 @@ stop
       fort_angular_velocity_vector(2)=ccangular_velocity_vector(2)
       fort_angular_velocity_vector(3)=ccangular_velocity_vector(3)
 
+      fort_angular_velocity_vector_dot(1)=ccangular_velocity_vector_dot(1)
+      fort_angular_velocity_vector_dot(2)=ccangular_velocity_vector_dot(2)
+      fort_angular_velocity_vector_dot(3)=ccangular_velocity_vector_dot(3)
+
       lever_arm(1)=cclever_arm(1)
       lever_arm(2)=cclever_arm(2)
       lever_arm(SDIM)=cclever_arm(SDIM)
@@ -2302,6 +2308,8 @@ stop
        print *,"fort_visc_coef= ",fort_visc_coef
 
        print *,"fort_angular_velocity_vector= ",fort_angular_velocity_vector
+       print *,"fort_angular_velocity_vector_dot= ", &
+               fort_angular_velocity_vector_dot
        print *,"lever_arm= ",lever_arm
 
        do iten=1,num_interfaces
