@@ -2307,9 +2307,10 @@ stop
      
        print *,"fort_visc_coef= ",fort_visc_coef
 
-       print *,"fort_angular_velocity_vector= ",fort_angular_velocity_vector
+       print *,"fort_angular_velocity_vector= ", &
+         fort_angular_velocity_vector
        print *,"fort_angular_velocity_vector_dot= ", &
-               fort_angular_velocity_vector_dot
+         fort_angular_velocity_vector_dot
        print *,"lever_arm= ",lever_arm
 
        do iten=1,num_interfaces

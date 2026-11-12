@@ -392,6 +392,7 @@ public:
     static Real heatvisc_coef; // heatvisc_coef=(1/(Re Pr))
 
     static Real angular_velocity;  //Omega in Lewis and Nagata (Lappa's book)
+
     static Vector<Real> angular_velocity_vector;
     static Vector<Real> angular_velocity_vector_dot;
     static Vector<Real> lever_arm;

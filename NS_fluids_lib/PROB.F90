@@ -2677,7 +2677,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! the force is grad p^hydrostatic/rho^hydrostatic
       rho_hydrostatic=fort_denconst(1) 
-      lever_arm_custom=lever_arm
 
       if (rho_hydrostatic.gt.zero) then !sanity check
 
@@ -2687,14 +2686,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           gravity_vector_out(local_dir)*rho_hydrostatic*xcell(local_dir)
        enddo
     
-       if (angular_velocity_vector(3).ge.zero) then
-        ! do nothing
-       else
-        print *,"angular_velocity_vector(3) expect nonneg(counter-clock): ", &
-           angular_velocity_vector(3)
-        stop
-       endif
-
        if ((centrifugal_force_factor.ge.zero).and. &
            (centrifugal_force_factor.le.one)) then
         ! do nothing
@@ -2705,6 +2696,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        angular_velocity_vector_dot=fort_angular_velocity_vector_dot
+       angular_velocity_vector_dot_custom=fort_angular_velocity_vector_dot
+       lever_arm_custom=lever_arm
+
        call SUB_angular_velocity_vector(xcell,time, &
          angular_velocity_vector, &
          angular_velocity_vector_custom, &
@@ -2712,16 +2706,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          angular_velocity_vector_dot_custom, &
          lever_arm, &
          lever_arm_custom)
-
-       if ((angular_velocity_vector_custom(3).le. &
-            angular_velocity_vector(3)).and. &
-           (angular_velocity_vector_custom(3).ge.zero).and. &
-           (angular_velocity_vector_dot_custom(3).ge.zero)) then
-        !do nothing
-       else
-        print *,"angular_velocity_vector parameters invalid (PROB.F90)"
-        stop
-       endif
 
         !lever_arm is the distance between the center of a satellite and the 
         !axis of rotation.  e.g. if lever_arm(2)>0, then the "y" direction

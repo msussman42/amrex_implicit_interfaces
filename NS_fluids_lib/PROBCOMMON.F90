@@ -721,8 +721,8 @@ implicit none
       real(amrex_real), INTENT(in) :: angular_velocity_vector_dot(3)
       real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
       real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
-      real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
       real(amrex_real), INTENT(out) :: angular_velocity_vector_dot_custom(3)
+      real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
       end subroutine TEMPLATE_angular_velocity_vector
 
       subroutine TEMPLATE_gravity_vector(x,cur_time, &

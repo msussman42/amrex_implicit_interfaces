@@ -1164,14 +1164,7 @@ real(amrex_real), INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
  if (dt.gt.zero) then
   ! do nothing
  else
-  print *,"dt must be positive"
-  stop
- endif
- if (angular_velocity_vector(3).ge.zero) then
-  ! do nothing
- else
-  print *,"angular_velocity_vector should be nonneg (counter clockwise): ", &
-     angular_velocity_vector(3)
+  print *,"dt must be positive ",dt
   stop
  endif
  if ((centrifugal_force_factor.ge.zero).and. &
@@ -2164,7 +2157,8 @@ integer dir
 
 end subroutine STUB_V0_Coriolis
 
-subroutine STUB_angular_velocity_vector(x,cur_time, &
+subroutine STUB_angular_velocity_vector( &
+   x,cur_time, &
    angular_velocity_vector, &
    angular_velocity_vector_custom, &
    angular_velocity_vector_dot, &

@@ -125,15 +125,6 @@ ns.yblob7         = 1.62    # xdisp_freq (omega)
 # if radblob7=3, axis rotation should be radblob8=3.0
 ns.radblob8      = 2.0 #rotation axis: 2 is z (aligned w/tank),3 is y ,1 is x
 ns.zblob7 = 10.0          # rotation angula velocity  zblob7= omega,(rad/s)    omega*t 
-   # xblob8 yblob8 zblob8 defines axis position
-   # for example, rotation with axis parallel to z axis then provide xblob8 and yblob8 (position)
-   #                                             y axis              xblob8 and zblob8
-   #                                             x axis              yblob8 and zblob8
-#ns.xblob8 = 0.15        
-#ns.yblob8 = 0.15
-ns.xblob8 = 0.0
-ns.yblob8 = 0.0
-ns.zblob8 = 0.0
 
 # ----------------------------------------------------------
 # -------- Domain and space/time discretization ------------

@@ -4011,8 +4011,8 @@ real(amrex_real), INTENT(in) :: angular_velocity_vector(3)
 real(amrex_real), INTENT(in) :: angular_velocity_vector_dot(3)
 real(amrex_real), INTENT(in) :: lever_arm_in(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_custom(3)
-real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
 real(amrex_real), INTENT(out) :: angular_velocity_vector_dot_custom(3)
+real(amrex_real), INTENT(out) :: lever_arm_custom(SDIM)
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -4039,27 +4039,15 @@ real(amrex_real), INTENT(out) :: angular_velocity_vector_dot_custom(3)
  angular_velocity_vector_dot_custom=angular_velocity_vector_dot
  lever_arm_custom=lever_arm_in
  angular_velocity_vector_dot_custom=zero
- lever_arm_custom(2)=radblob8
 
- if (axis_dir.eq.5) then
-  !define lever_arm_custom, angular_velocity_vector_custom, and
-  !angular_velocity_vector_dot as needed
- else if (axis_dir.eq.0) then
-  !do nothing
- else if (axis_dir.eq.10) then
-  !do nothing
- else
-
-  if (cur_time.ge.xblob8) then
+ if (cur_time.ge.xblob8) then
    !do nothing
-  else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
+ else if ((cur_time.ge.zero).and.(cur_time.le.xblob8)) then
    angular_velocity_vector_custom(3)=angular_velocity_vector(3)*cur_time/xblob8
    angular_velocity_vector_dot_custom(3)=angular_velocity_vector(3)/xblob8
-  else
-   print *,"cur_time invalid"
-   stop
-  endif
-
+ else
+  print *,"cur_time invalid"
+  stop
  endif
 
 end subroutine CRYOGENIC_TANK_MK_angular_velocity_vector
@@ -4080,6 +4068,8 @@ real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: cur_time
 real(amrex_real), INTENT(in) :: gravity_vector_in(SDIM)
 real(amrex_real), INTENT(out) :: gravity_vector_out(SDIM)
+real(amrex_real) :: xdisp_amplitude   ! xblob7
+real(amrex_real) :: xdisp_freq        ! yblob7
 integer :: dir
 real(amrex_real) :: axyz(3)
 
@@ -4101,7 +4091,26 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
      (axis_dir.eq.2)) then !aux files
   !do nothing
  else if (axis_dir.eq.10) then !prescribed ZBOT (band heater) MOVING FRAME
-  
+
+  if(NINT(radblob7).eq.0) then
+   !do nothing
+  elseif(NINT(radblob7).eq.1) then !sloshing only
+   xdisp_amplitude=xblob7   
+   xdisp_freq=yblob7
+   gravity_vector_out(1)= &
+     -xdisp_amplitude*xdisp_freq*xdisp_freq*sin(xdisp_freq*cur_time)
+  elseif(NINT(radblob7).eq.2)then !rotation only 
+   !do nothing
+  elseif(NINT(radblob7).eq.3) then !sloshing and rotation
+   xdisp_amplitude=xblob7   
+   xdisp_freq=yblob7
+   gravity_vector_out(1)= &
+     -xdisp_amplitude*xdisp_freq*xdisp_freq*sin(xdisp_freq*cur_time)
+  else
+   print *,"radblob7 invalid (rigid motion type invalid): ",radblob7
+   stop
+  endif
+ 
  else if (axis_dir.eq.5) then !implicit rigid motion
   !another option for implicitly defined force via gravity vector
   !define "gravity_vector_out" as needed.

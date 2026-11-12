@@ -426,14 +426,6 @@ stop
         stop
        endif
 
-       if (angular_velocity_vector(3).ge.zero) then
-        ! do nothing
-       else
-        print *,"angular_velocity_vector(3) cannot be negative"
-        print *,"expecting counterclockwise"
-        print *,"angular_velocity_vector(3)=",angular_velocity_vector(3)
-        stop
-       endif
        if ((centrifugal_force_factor.le.one).and. &
            (centrifugal_force_factor.ge.zero)) then
         ! do nothing
@@ -806,24 +798,17 @@ stop
           ! -Omega^2 x ihat - Omega^2 y jhat
 
          angular_velocity_vector_dot=fort_angular_velocity_vector_dot;
+         angular_velocity_vector_dot_custom=fort_angular_velocity_vector_dot;
+         lever_arm_custom=lever_arm
 
-         call SUB_angular_velocity_vector(xpoint,cur_time_slab, &
+         call SUB_angular_velocity_vector( &
+           xpoint,cur_time_slab, &
            angular_velocity_vector, &
            angular_velocity_vector_custom, &
            angular_velocity_vector_dot, &
            angular_velocity_vector_dot_custom, &
            lever_arm, &
            lever_arm_custom)
-
-         if ((angular_velocity_vector_custom(3).le. &
-              angular_velocity_vector(3)).and. &
-             (angular_velocity_vector_custom(3).ge.zero).and. &
-             (angular_velocity_vector_dot_custom(3).ge.zero)) then
-          !do nothing
-         else
-          print *,"angular_velocity_vector parameters bad (DIFFUSION_3D.F90) "
-          stop
-         endif
 
          ! coriolis force:
          ! -2 omega cross v =
@@ -894,6 +879,14 @@ stop
           else
            print *,"angular_velocity_vector(3)<>0 not implemented RZ:", &
             angular_velocity_vector(3)
+           stop
+          endif
+
+          if (angular_velocity_vector_custom(3).eq.zero) then
+           ! do nothing
+          else
+           print *,"angular_velocity_vector_custom(3)<>0 not ready RZ:", &
+            angular_velocity_vector_custom(3)
            stop
           endif
 

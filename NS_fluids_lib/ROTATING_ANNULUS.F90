@@ -712,7 +712,7 @@ real(amrex_real) :: dV_dz
  if (fort_angular_velocity_vector(3).gt.0.0d0) then
   ! do nothing
  else
-  print *,"expecting fort_angular_velocity_vector(3)>0.0d0"
+  print *,"expect fort_angular_velocity_vector(3)>0.0d0 ROTATING_ANNULUS.F90"
   stop
  endif
 
