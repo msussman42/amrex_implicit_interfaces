@@ -45,13 +45,13 @@ int main() {
     }
 
     // --- Simulation Parameters ---
-    int Nx = 1000;                  // Number of spatial grid points
+    int Nx = 200;                  // Number of spatial grid points
     double L = 2.0;                // Domain length [0, L]
     double dx = L / (Nx - 1);       // Spatial step size (finite diff)
     
     double c = 1.0;                // Wave propagation speed
     double T = 1.0;                // Total simulation time
-    double dt = 0.0005;             // Time step size
+    double dt = 0.0025;             // Time step size
     int Nt = static_cast<int>(T / dt);
 
     // Verify CFL condition
@@ -76,28 +76,38 @@ int main() {
     std::vector<torch::Tensor> R_inv;
     for (int n = 0; n < Nt; ++n) {
      auto u_zero=torch::zeros_like(u_true);
+
+     auto sizes=observation_final.sizes();
+     int64_t rows=sizes[0];
+
      if (n<Nt-1) {
       observations.push_back(u_zero);
-      R_inv.push_back(u_zero);
+      R_inv.push_back(torch::zeros({rows,rows},torch::dtype(torch::kFloat64))); 
      } else if (n==Nt-1) {
       observations.push_back(observation_final);
-      auto sizes=observation_final.sizes();
-      int64_t rows=sizes[0];
-      R_inv.push_back(torch::eye(rows)); 
+      std::cout << "sizes= " << sizes << '\n';
+      R_inv.push_back(torch::eye(rows,rows,torch::dtype(torch::kFloat64))); 
      }
     }
 
     auto u_b=torch::zeros_like(u_true);
-    auto B_inv=torch::zeros_like(u_true);
+
+    auto u_true_sizes=u_true.sizes();
+    std::cout << "u_true_sizes= " << u_true_sizes << '\n';
+    int64_t u_true_rows=u_true_sizes[0];
+    auto B_inv=torch::eye(u_true_rows,u_true_rows,
+      torch::dtype(torch::kFloat64)); 
+
     torch::Tensor u0 = u_b.clone().set_requires_grad(true);
     torch::optim::Adam optimizer({u0}, torch::optim::AdamOptions(0.01));
 
     std::cout << "\n--- Starting 4D-Var Minimization ---" << std::endl;
-    for (int epoch = 1; epoch <= 200; ++epoch) {
+    for (int epoch = 1; epoch <= 400; ++epoch) {
       optimizer.zero_grad();
 
       torch::Tensor d_b = u0 - u_b;
-      torch::Tensor J_b = 0.5 * torch::dot(d_b, torch::matmul(B_inv, d_b));
+      torch::Tensor J_b = 
+	   0.5 * 0.0 * torch::dot(d_b, torch::matmul(B_inv, d_b));
       torch::Tensor J_o = torch::zeros({});
       torch::Tensor u_traj = u0;
       auto u_curr = u_traj.clone();
@@ -113,40 +123,35 @@ int main() {
         u_curr.copy_(u_traj);
         u_prev.copy_(u0);
        } else {
-        u_traj=dynamical_model(u_curr,u_prev,alpha);
+        u_traj=dynamical_model_regular(u_curr,u_prev,alpha);
         u_prev.copy_(u_curr);
         u_curr.copy_(u_traj);
        }
+       if ((n % 200 == 0)&&(1==0)) {
+        std::cout << "epoch,Step " << epoch << ' ' << n << "/" << Nt 
+         << " | Max Amplitude: " << u_curr.max().item<double>() << std::endl;
+       }
+       torch::Tensor d_o = observation_operator(u_traj) - observations[n];
+       J_o += 0.5 * torch::dot(d_o, torch::matmul(R_inv[n], d_o));
+      } // for (int n = 0; n < Nt; ++n) 
 
+      // Total 4D-Var Cost Function: J = J_b + J_o
+      torch::Tensor J = J_b + J_o;
+      // Backward pass computes the exact gradient dJ/dx0 via 
+      // automatic differentiation
+      J.backward();
+      optimizer.step();
+      if (epoch % 20 == 0 || epoch == 1) {
+       std::cout << "Epoch " << epoch << 
+	       " | Total Cost J: " << J.item<double>() << '\n';
+      }
 
+      auto abs_error_initial=u0-u_true;
+      auto abs_error_norm = torch::mean(torch::square(abs_error_initial));
+      abs_error_norm=torch::sqrt(abs_error_norm);
+      std::cout << "\n error_initial " << abs_error_norm << '\n';
+      std::cout << "u0 when converged is the analysis (initial) state\n";
+    } // for (int epoch = 1; epoch <= 200; ++epoch) 
 
-    double cur_time=dt;
-
-    // --- Time-Stepping Loop ---
-    for (int n = 1; n < Nt; ++n) {
-        u_next = 2.0*u_curr-u_prev + alpha * (
-	    torch::roll(u_curr,1,0)-  //shift down by 1 row
-	    2.0*u_curr+ 
-	    torch::roll(u_curr,-1,0)); //shift up by 1
-        cur_time+=dt;
-
-        u_prev.copy_(u_curr);
-        u_curr.copy_(u_next);
-
-        // Optional: Print progress
-        if (n % 200 == 0) {
-            std::cout << "Step " << n << "/" << Nt 
-                      << " | Max Amplitude: " << u_curr.max().item<double>() << std::endl;
-        }
-	auto u_exact=torch::sin(2.0 * M_PI * x / L)*cos(M_PI*cur_time*c);
-	auto abs_error=u_exact-u_curr;
-	auto abs_error_norm = torch::mean(torch::square(abs_error));
-        abs_error_norm=torch::sqrt(abs_error_norm);
-
-        std::cout << "\n time,error " << cur_time << ' ' << abs_error_norm <<
-		'\n';
-    }
-
-    std::cout << "Wave simulation finished successfully!" << std::endl;
     return 0;
 }
