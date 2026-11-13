@@ -24,15 +24,17 @@ torch::Tensor observation_operator(const torch::Tensor& u) {
 int main() {
 
     // Set OpenMP and MKL environment variables programmatically (or set them in your shell before running)
-    setenv("OMP_NUM_THREADS", "1", 1);
-    setenv("MKL_NUM_THREADS", "1", 1);
-    setenv("OPENBLAS_NUM_THREADS", "1", 1);
-    setenv("VECLIB_MAXIMUM_THREADS", "1", 1);
-    setenv("NUMEXPR_NUM_THREADS", "1", 1);
+    if (1==0) {
+     setenv("OMP_NUM_THREADS", "1", 1);
+     setenv("MKL_NUM_THREADS", "1", 1);
+     setenv("OPENBLAS_NUM_THREADS", "1", 1);
+     setenv("VECLIB_MAXIMUM_THREADS", "1", 1);
+     setenv("NUMEXPR_NUM_THREADS", "1", 1);
 
-    // Set PyTorch / LibTorch thread counts
-    at::set_num_threads(1);
-    at::set_num_interop_threads(1); // Optional: controls inter-op parallelism
+     // Set PyTorch / LibTorch thread counts
+     at::set_num_threads(1);
+     at::set_num_interop_threads(1); // Optional: controls inter-op parallelism
+    }
 
 
     // Check if CUDA is available for GPU acceleration
@@ -45,13 +47,13 @@ int main() {
     }
 
     // --- Simulation Parameters ---
-    int Nx = 200;                  // Number of spatial grid points
+    int Nx = 500;                  // Number of spatial grid points
     double L = 2.0;                // Domain length [0, L]
     double dx = L / (Nx - 1);       // Spatial step size (finite diff)
     
     double c = 1.0;                // Wave propagation speed
     double T = 1.0;                // Total simulation time
-    double dt = 0.0025;             // Time step size
+    double dt = 0.001;             // Time step size
     int Nt = static_cast<int>(T / dt);
 
     // Verify CFL condition
@@ -149,8 +151,10 @@ int main() {
       auto abs_error_initial=u0-u_true;
       auto abs_error_norm = torch::mean(torch::square(abs_error_initial));
       abs_error_norm=torch::sqrt(abs_error_norm);
-      std::cout << "\n error_initial " << abs_error_norm << '\n';
-      std::cout << "u0 when converged is the analysis (initial) state\n";
+      if (epoch % 20 == 0 || epoch == 1) {
+       std::cout << "\n error_initial " << abs_error_norm << '\n';
+       std::cout << "u0 when converged is the analysis (initial) state\n";
+      }
     } // for (int epoch = 1; epoch <= 200; ++epoch) 
 
     return 0;
