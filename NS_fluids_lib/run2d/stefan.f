@@ -173,7 +173,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 hlg_original
       real*8 mass_fraction_instant_freeze
       real*8 k_vapor_or_ice,den_vapor_or_ice,alpha
-      real*8 kliquid,denliquid,psat,tsat
+      real*8 kliquid,denliquid,psat,tsat,tdrop
       real*8 transf
       real*8 erfmine
       real*8 a,b,fa,fb,c,fc
@@ -210,6 +210,7 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       tcalibrate=0.0d0
       freezing_time_target=0.0d0
 
+      tdrop=273.0+23.0
 c theta_t=(1/r)(kr theta_r)_r
 c r'=r-int_0^t V(s) ds=r-X(t)
 c theta(r'(r,t),t)_t=theta_r' r'_t + theta_t
@@ -259,7 +260,8 @@ c When running this test, we set kliquid=0
 c 1W=10^7 erg/s
 c 1W/(m K)=10^5 cgs
        kliquid=58.0E+3
-       kambient=2.4E+3
+c      kambient=2.4E+3
+       kambient=0.0
        denambient=0.001225
        cpambient=1.0E+7
  
@@ -363,9 +365,9 @@ c        xcfd_offset=0.19d0-xcalibrate
        tnucleate_start=tsat
        tnucleate_end=tsat-abs(deltat)
       
-       max_iter_tnucleate=1
-       tnucleate_start=260.0d0 
-       tnucleate_end=260.0d0 
+       max_iter_tnucleate=10
+       tnucleate_start=273.0d0 
+       tnucleate_end=263.0d0 
 
        do iter_tnucleate=0,max_iter_tnucleate-1
 
@@ -415,23 +417,18 @@ c pi r^2 h=voldrop
         dt=0.0025*dx*dx/max_alpha
         do ispace=-1,N
          rcen=xlo+(ispace+0.5d0)*dx
-         if (rcen.le.xlo_drop) then
+         if (rcen.le.xlo_drop+xgap) then
           temp_new(ispace)=tsat+deltat
-          kfield(ispace)=k_vapor_or_ice
-          denfield(ispace)=den_vapor_or_ice
-          cpfield(ispace)=cp
-         else if (rcen.le.xlo_drop+xgap) then
-          temp_new(ispace)=tsat
           kfield(ispace)=kgap
           denfield(ispace)=den_vapor_or_ice
           cpfield(ispace)=cp
          else if (rcen.le.xhi_drop+xgap) then
-          temp_new(ispace)=tsat
+          temp_new(ispace)=tdrop
           kfield(ispace)=kliquid
           denfield(ispace)=denliquid
           cpfield(ispace)=cpliquid
          else 
-          temp_new(ispace)=tsat
+          temp_new(ispace)=tdrop
           kfield(ispace)=kambient
           denfield(ispace)=denambient
           cpfield(ispace)=cpambient
@@ -478,14 +475,22 @@ c       temp_new(N)=tsat
         iter_time=0
         do while (liquid_temp.gt.tnucleate)
          do ispace=0,N-1
-          flux_right=(temp_old(ispace+1)-temp_old(ispace))*2.0d0*
+          if (kfield(ispace+1)+kfield(ispace).eq.0.0) then
+           flux_right=0.0
+          else
+           flux_right=(temp_old(ispace+1)-temp_old(ispace))*2.0d0*
      &      (1.0d0/dx)*
      &      (kfield(ispace+1)*kfield(ispace))/
      &      (kfield(ispace+1)+kfield(ispace))
-          flux_left=(temp_old(ispace)-temp_old(ispace-1))*2.0d0*
+          endif
+          if (kfield(ispace-1)+kfield(ispace).eq.0.0) then
+           flux_left=0.0
+          else
+           flux_left=(temp_old(ispace)-temp_old(ispace-1))*2.0d0*
      &      (1.0d0/dx)*
      &      (kfield(ispace-1)*kfield(ispace))/
      &      (kfield(ispace)+kfield(ispace-1))
+          endif
           temp_new(ispace)=temp_old(ispace)+dt*
      &      (flux_right-flux_left)/
      &      (dx*denfield(ispace)*cpfield(ispace))
@@ -528,7 +533,7 @@ c        temp_new(N)=tsat
          liquid_temp_substrate=liquid_temp_substrate/N_liquid_substrate
          time=time+dt
          iter_time=iter_time+1
-         if ((iter_time/100)*100.eq.iter_time) then
+         if ((iter_time/1000)*1000.eq.iter_time) then
           print *,"time,liquid_temp ",time,liquid_temp
           print *,"time,liquid_temp_substrate ", 
      &      time,liquid_temp_substrate
@@ -625,6 +630,7 @@ c See H. Hu and Z. Jin
         close(11)
         print *,"temperature file is temp_profile"
 
+        print *,"tdrop ",tdrop
         print *,"tsat ",tsat
         print *,"tnucleate ",tnucleate
         print *,"xcfd_offset ",xcfd_offset
@@ -633,7 +639,12 @@ c See H. Hu and Z. Jin
         print *,"xlo_drop=",xlo_drop
         print *,"xhi_drop=",xhi_drop
         print *,"xgap=",xgap
+        print *,"kambient=",kambient
         print *,"kgap=",kgap
+        print *,"liquid=",kliquid
+        print *,"k_vapor_or_ice ",k_vapor_or_ice
+        print *,"hlg_original ",hlg_original
+        print *,"hlg ",hlg
         print *,"tstop=",tstop
         print *,"xstop=",xstop
         time=0.0
