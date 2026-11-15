@@ -366,8 +366,8 @@ c        xcfd_offset=0.19d0-xcalibrate
        tnucleate_end=tsat-abs(deltat)
       
        max_iter_tnucleate=10
-       tnucleate_start=273.0d0 
-       tnucleate_end=263.0d0 
+       tnucleate_start=264.0d0 
+       tnucleate_end=254.0d0 
 
        do iter_tnucleate=0,max_iter_tnucleate-1
 
@@ -389,7 +389,7 @@ c        xcfd_offset=0.19d0-xcalibrate
         N=512
         dx=(xhi-xlo)/N
 
-        xgap=2.0d0*xhi/64.0
+        xgap=2.0d0*xhi/128.0
 
         xlo_drop=xcalibrate
 !droplet diameter is D0=0.25 cm see page 3
