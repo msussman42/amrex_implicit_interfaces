@@ -78,16 +78,18 @@ int main() {
     double local_variance=0.1*0.1;
     double local_inverse_variance=1.0/local_variance;
 
+    auto options=torch::TensorOptions().dtype(torch::kFloat64);
+
     for (int n = 0; n < Nt; ++n) {
 
      double cur_time=(n+1)*dt;
      auto observation_current = torch::sin(2.0 * M_PI * x / L)*
       cos(M_PI*cur_time*c);
 
-     auto observations_noise=torch::randn_like(observations_current,
-       0.0,std::sqrt(local_variance));
+     auto observation_noise=
+      std::sqrt(local_variance)*torch::randn_like(observation_current,options);
 
-     observations_current+=observations_noise;
+     observation_current+=observation_noise;
 
      auto u_zero=torch::zeros_like(u_true);
 
@@ -95,16 +97,17 @@ int main() {
      int64_t rows=sizes[0];
 
      observations.push_back(observation_current);
-     R_inv.push_back(
+     auto Rinv_local=
        local_inverse_variance*
-       torch::eye(rows,rows,torch::dtype(torch::kFloat64))); 
-
+       torch::eye(rows,rows,torch::dtype(torch::kFloat64)); 
+     Rinv_local.set_requires_grad(true);
+     R_inv.push_back(Rinv_local);
     }
 
     auto u_b = torch::sin(2.0 * M_PI * x / L);
 
-    auto u_b_noise=torch::randn_like(u_b,
-       0.0,std::sqrt(local_variance));
+    auto u_b_noise=
+     std::sqrt(local_variance)*torch::randn_like(u_b,options);
 
     u_b+=u_b_noise;
 
@@ -114,6 +117,7 @@ int main() {
     auto B_inv=local_inverse_variance*
       torch::eye(rows,rows,
       torch::dtype(torch::kFloat64)); 
+    B_inv.set_requires_grad(true);
 
     torch::Tensor u0 = 0.0*u_b.clone().set_requires_grad(true);
     torch::optim::Adam optimizer({u0}, torch::optim::AdamOptions(0.01));
