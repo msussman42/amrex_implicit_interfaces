@@ -47,13 +47,13 @@ int main() {
     }
 
     // --- Simulation Parameters ---
-    int Nx = 500;                  // Number of spatial grid points
+    int Nx = 250;                  // Number of spatial grid points
     double L = 2.0;                // Domain length [0, L]
     double dx = L / (Nx - 1);       // Spatial step size (finite diff)
     
     double c = 1.0;                // Wave propagation speed
     double T = 1.0;                // Total simulation time
-    double dt = 0.001;             // Time step size
+    double dt = 0.002;             // Time step size
     int Nt = static_cast<int>(T / dt);
 
     // Verify CFL condition
@@ -75,7 +75,7 @@ int main() {
     std::vector<torch::Tensor> observations;
     std::vector<torch::Tensor> R_inv;
 
-    double local_variance=0.1*0.1;
+    double local_variance=0.01*0.01;
     double local_inverse_variance=1.0/local_variance;
 
     auto options=torch::TensorOptions().dtype(torch::kFloat64);
@@ -119,7 +119,10 @@ int main() {
       torch::dtype(torch::kFloat64)); 
     B_inv.set_requires_grad(true);
 
-    torch::Tensor u0 = 0.0*u_b.clone().set_requires_grad(true);
+    auto u_b_zeros=torch::zeros_like(u_b);
+
+    torch::Tensor u0 = u_b_zeros.clone().set_requires_grad(true);
+
     torch::optim::Adam optimizer({u0}, torch::optim::AdamOptions(0.01));
 
     std::cout << "\n--- Starting 4D-Var Minimization ---" << std::endl;
