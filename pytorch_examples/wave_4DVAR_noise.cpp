@@ -131,7 +131,7 @@ int main() {
 
       torch::Tensor d_b = u0 - u_b;
       torch::Tensor J_b = 
-	   0.5 * 0.0 * torch::dot(d_b, torch::matmul(B_inv, d_b));
+	   0.5 * torch::dot(d_b, torch::matmul(B_inv, d_b));
       torch::Tensor J_o = torch::zeros({});
       torch::Tensor u_traj = u0;
       auto u_curr = u_traj.clone();
