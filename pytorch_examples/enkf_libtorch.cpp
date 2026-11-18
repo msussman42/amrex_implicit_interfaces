@@ -40,8 +40,10 @@ public:
       torch::Tensor& x0_nm1,
       const torch::Tensor& P0) {
 
+      //P0=L_P0 * L_P0^*
      auto L_P0 = torch::linalg_cholesky(P0.to(device_));
-     auto noise = torch::randn({N_, nx_}, torch::TensorOptions().device(device_));
+     auto noise = torch::randn({N_, nx_}, 
+       torch::TensorOptions().device(device_));
       // Ensemble shape: [N, nx]
      ensemble_ = x0.to(device_).unsqueeze(0) + torch::matmul(noise, L_P0.t());
      ensemble_nm1_ = ensemble_.clone();
@@ -155,16 +157,17 @@ int main() {
 
      torch::Tensor u_next = u.clone();
 
+      // Ensemble shape: [N, nx]
      if (n==0) {
       u_next = u + 0.5 * alpha * (
-	 torch::roll(u,1,0)-  //shift down by 1 row
+	 torch::roll(u,1,1)-  //a(i,j) <- a(i,j-1)
 	 2.0*u+ 
-         torch::roll(u,-1,0)); //shift up by 1
+         torch::roll(u,-1,1)); //a(i,j) <- a(i,j+1)
      } else {
       u_next=2.0*u-unm1 + alpha * (
-       torch::roll(u,1,0)-  //shift down by 1 row
+       torch::roll(u,1,1)-  
        2.0*u+ 
-       torch::roll(u,-1,0)); //shift up by 1
+       torch::roll(u,-1,1)); 
      }
      unm1.copy_(u);
      u.copy_(u_next);
@@ -177,21 +180,28 @@ int main() {
      return x_obs;
     };
 
+    double noise_variance=0.01;
+    double noise_sd=std::sqrt(noise_variance);
+
+    double process_noise_variance=0.5;
+    double process_noise_sd=std::sqrt(process_noise_variance);
+
     // Noise covariances
-    torch::Tensor Q = torch::eye(Nx) * 0.01; // Process noise
-    torch::Tensor R = torch::eye(Nz) * 0.25; // Measurement noise
+    torch::Tensor Q = torch::eye(Nx) * process_noise_variance; // Process noise
+    torch::Tensor R = torch::eye(Nz) * noise_variance; // Measurement noise
 
     // Instantiate filter
-    EnsembleKalmanFilter enkf(N, Nx, Nz, dynamics_model, obs_model, Q, R, device);
+    EnsembleKalmanFilter enkf(N, Nx, Nz, dynamics_model, obs_model, 
+		Q, R, device);
 
     auto u_true = torch::sin(2.0 * M_PI * x / L);
     auto unm1_true=u_true.clone();
 
     auto u0_guess = torch::sin(2.0 * M_PI * x / L)+
-	    torch::randn({Nx},device)*0.5;
+	    torch::randn({Nx},device)*process_noise_sd;  // u0 noise
     auto unm1_guess=u0_guess.clone();
 
-    torch::Tensor P0 = torch::eye(Nx, device) * 2.0;
+    torch::Tensor P0=torch::eye(Nx, device)*process_noise_variance; //P0 noise
 
     enkf.initialize(u0_guess, unm1_guess, P0);
 
@@ -212,7 +222,7 @@ int main() {
      auto u_true_unsqueeze_update=u_true.unsqueeze(0);
 
      torch::Tensor z = obs_model(u_true_unsqueeze_update).squeeze(0) + 
-                          torch::randn({Nz}, device) * 0.5;
+                          torch::randn({Nz}, device) * noise_sd;
 
      enkf.predict(alpha,n);
      enkf.update(z);
@@ -225,6 +235,14 @@ int main() {
 
      std::cout << "n " << n 
             << " | abs_error_norm: " << abs_error_norm << '\n';
+
+     double cur_time=(n+1)*dt;
+     auto u_exact=torch::sin(2.0 * M_PI * x / L)*cos(M_PI*cur_time*c);
+     auto abs_error_truth=u_exact-truth;
+     auto abs_error_norm_truth = torch::mean(torch::square(abs_error_truth));
+     abs_error_norm_truth=torch::sqrt(abs_error_norm_truth);
+     std::cout << "n " << n 
+            << " | abs_error_norm_truth: " << abs_error_norm_truth << '\n';
      
     }
 
