@@ -1,3 +1,6 @@
+#python3 -m venv .venv (just once)
+#bash
+#source .venv/bin/activate
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -105,7 +108,8 @@ if __name__ == "__main__":
     # filtering settings
     # lorenz system
     F = 8
-    n_dim = 1000000
+    #n_dim = 1000000
+    n_dim=1000
     SDE_sigma = 0.1
 
     # filtering setup
@@ -136,8 +140,8 @@ if __name__ == "__main__":
 
     # computation setting
     torch.set_default_dtype(torch.float16) # half precision
-    device = 'cuda'
-    # device = 'cpu'
+    #device = 'cuda'
+    device = 'cpu'
 
 
     # saving result for some dimensions
