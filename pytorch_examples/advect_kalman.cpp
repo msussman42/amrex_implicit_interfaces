@@ -15,22 +15,20 @@ public:
         torch::Tensor Q, // process noise covariance
         torch::Tensor R, // measurement noise covariance
         torch::Tensor P, // Initial estimate error covariance
-        torch::Tensor x0 // Initial state estimate
+        torch::Tensor x0, // Initial state estimate
         torch::Device device = torch::kCPU
     ) : nx_(state_dim),
         nz_(obs_dim),
-        F_(std::move(F)),
-        H_(std::move(H)),
+        F_(F.to(device)),
+        H_(H.to(device)),
         Q_(Q.to(device)),
         R_(R.to(device)),
-        P_(std::move(P)),
-        x_(std::move(x0)),
+        P_(P.to(device)),
+        x_(x0.to(device)),
         device_(device) {
         
-        // Precompute Cholesky factors for sampling Gaussian process & measurement noise
-        L_Q_ = torch::linalg_cholesky(Q_);
-        L_R_ = torch::linalg_cholesky(R_);
         I_ = torch::eye(x_.size(0), x_.options());
+        L_Q_ = torch::linalg_cholesky(Q_);
     }
 
     // Initialize ensemble around an initial state mean and covariance
@@ -40,14 +38,17 @@ public:
 
       //P0=L_P0 * L_P0^*
      auto L_P0 = torch::linalg_cholesky(P0.to(device_));
-     auto noise = torch::randn({nx_}, 
-       torch::TensorOptions().device(device_));
+     auto opts=torch::TensorOptions().dtype(torch::kFloat64).device(device_);
+     auto noise = torch::randn({nx_},opts); 
      x_ = x0.to(device_) + torch::matmul(noise, L_P0.t());
     }
 
     torch::Tensor predict(double alpha,int n) {
 
         x_ = torch::matmul(F_, x_);
+        auto opts=torch::TensorOptions().dtype(torch::kFloat64).device(device_);
+        auto noise = torch::randn({nx_},opts); 
+        x_ = x_ + torch::matmul(noise, L_Q_.t());
         P_ = torch::matmul(torch::matmul(F_, P_), F_.transpose(0, 1)) + Q_;
         return x_;
 
@@ -57,20 +58,20 @@ public:
         torch::Tensor z_dev = z.to(device_); // [nz]
 
         // Innovation (residual): y = z - H * x
-        torch::Tensor y = z - torch::matmul(H_, x_);
+        auto y = z - torch::matmul(H_, x_);
 
         // Innovation covariance: S = H * P * H^T + R
-        torch::Tensor PHt = torch::matmul(P_, H_.transpose(0, 1));
-        torch::Tensor S = torch::matmul(H_, PHt) + R_;
+        auto PHt = torch::matmul(P_, H_.transpose(0, 1));
+        auto S = torch::matmul(H_, PHt) + R_;
 
         // Optimal Kalman Gain: K = P * H^T * S^-1
         // Using linalg_solve (S * K^T = (P * H^T)^T) is 
 	// more numerically stable than matrix inverse
-        torch::Tensor K = torch::linalg_solve(S, PHt.transpose(0, 1)).transpose(0, 1);
+        auto K = torch::linalg_solve(S, PHt.transpose(0, 1)).transpose(0, 1);
 
         x_ = x_ + torch::matmul(K, y);
 
-        torch::Tensor I_KH = I_ - torch::matmul(K, H_);
+        auto I_KH = I_ - torch::matmul(K, H_);
         P_ = torch::matmul(torch::matmul(I_KH, P_), I_KH.transpose(0, 1))
            + torch::matmul(torch::matmul(K, R_), K.transpose(0, 1));
 
@@ -80,7 +81,7 @@ public:
 
 private:
     int nx_, nz_;
-    torch::Tensor F_,H_,Q_, R_, L_Q_, L_R_,P_,x_,I_;
+    torch::Tensor F_,H_,Q_, R_, P_,x_,I_,L_Q_;
     torch::Device device_;
 };
 
@@ -92,8 +93,6 @@ int main() {
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
     std::cout << "Running EnKF on: " << (device.is_cuda() ? "CUDA" : "CPU") << "\n\n";
 
-    // Problem dimensions: 2D constant-velocity tracking [x, y, vx, vy]
-    const int N = 1000;   // Ensemble size
     const int Nx = 400;    // State dimension
     const int Nz = Nx;    // Observation dimension (position only)
     double L = 2.0;      // Domain length [0, L]
@@ -116,69 +115,53 @@ int main() {
     auto x_shift = 
 	torch::linspace(-0.5*L-c*T,0.5*L-c*T,Nx,torch::kFloat64).to(device);
 
-    // Nonlinear/Linear batch dynamics model: x_{k+1} = f(x_k, dt)
-    auto dynamics_model = [](
-      torch::Tensor& u, 
-      double alpha,
-      int n) {
-
-     torch::Tensor u_next = u.clone();
-
-     // Ensemble shape: [N, nx]
-     u_next=(1.0-alpha)*u+alpha*torch::roll(u,-1,1); //shift up by 1
-     u.copy_(u_next);
-     return u_next;
-    };
-
-    // Observation model: z_k = h(x_k) -> observes [x, y]
-    auto obs_model = [](torch::Tensor& x) {
-     torch::Tensor x_obs = x.clone();
-     return x_obs;
-    };
-
     double noise_variance=0.01;
     double noise_sd=std::sqrt(noise_variance);
 
     double process_noise_variance=0.5;
     double process_noise_sd=std::sqrt(process_noise_variance);
 
+    std::cout << "passed code at (1) \n";
+
     // Noise covariances
-    torch::Tensor Q = torch::eye(Nx) * process_noise_variance; // Process noise
-    torch::Tensor R = torch::eye(Nz) * noise_variance; // Measurement noise
+    auto opts=torch::TensorOptions().dtype(torch::kFloat64).device(device);
+    torch::Tensor Q = torch::eye(Nx,opts) * process_noise_variance; // Process noise
+    torch::Tensor R = torch::eye(Nz,opts) * noise_variance; // Measurement noise
+    torch::Tensor H = torch::eye(Nz,opts);
+    torch::Tensor F = torch::eye(Nx,opts);
+    for (int i=0;i<Nx;i++) {
+     F.index_put_({i,i},1.0-alpha);
+     if (i==0) {
+      F.index_put_({i,Nx-2},alpha);
+     } else {
+      F.index_put_({i,i-1},alpha);
+     }
+    }
+    torch::Tensor P0=torch::eye(Nx, opts)*process_noise_variance; //P0 noise
+    auto u0 = torch::sin(2.0 * M_PI * x / L);
+    std::cout << "passed code at (2) \n";
 
     // Instantiate filter
-    EnsembleKalmanFilter enkf(N, Nx, Nz, dynamics_model, obs_model, 
-		Q, R, device);
+    KalmanFilter kf(Nx, Nz, F,H, 
+		Q, R, P0, u0, device);
+    kf.initialize(u0, P0);
+
+    std::cout << "passed code at (3) \n";
 
     auto u_true = torch::sin(2.0 * M_PI * x / L);
-
-    auto u0_guess = torch::sin(2.0 * M_PI * x / L)+
-	    torch::randn({Nx},device)*process_noise_sd;  // u0 noise
-
-    torch::Tensor P0=torch::eye(Nx, device)*process_noise_variance; //P0 noise
-
-    enkf.initialize(u0_guess, P0);
 
     // Run simulation loop
     for (int n = 0; n < Nt; ++n) {
 
-     auto u_true_unsqueeze=u_true.unsqueeze(0);
-     auto u_true_save=u_true.clone();
+     u_true = torch::matmul(F, u_true);
 
-     u_true = dynamics_model(
-	u_true_unsqueeze,
-	alpha,n).squeeze(0);
+     auto opts=torch::TensorOptions().dtype(torch::kFloat64).device(device);
+     auto z = u_true + torch::randn({Nz}, opts) * noise_sd;
 
-     auto u_true_unsqueeze_update=u_true.unsqueeze(0);
+     auto u_pred=kf.predict(alpha,n);
+     auto est=kf.update(z);
 
-     torch::Tensor z = obs_model(u_true_unsqueeze_update).squeeze(0) + 
-                          torch::randn({Nz}, device) * noise_sd;
-
-     enkf.predict(alpha,n);
-     enkf.update(z);
-
-     torch::Tensor est = enkf.get_mean().cpu();
-     torch::Tensor truth = u_true.cpu();
+     auto truth = u_true.cpu();
      auto abs_error=est-truth;
      auto abs_error_norm = torch::mean(torch::square(abs_error));
      abs_error_norm=torch::sqrt(abs_error_norm);
