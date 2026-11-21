@@ -77,8 +77,8 @@ public:
 
         // 4. Compute sample covariances: P_xz and P_zz
         double norm = 1.0 / static_cast<double>(N_ - 1);
-        torch::Tensor P_xz = norm * torch::matmul(A_x.t(), A_z); // [nx, nz]
-        torch::Tensor P_zz = norm * torch::matmul(A_z.t(), A_z) + R_; // [nz, nz]
+        torch::Tensor P_xz = norm * torch::matmul(A_x.t(), A_z);//[nx, nz]
+        torch::Tensor P_zz = norm * torch::matmul(A_z.t(), A_z) + R_;//[nz, nz]
 
         // 5. Compute Kalman Gain: K = P_xz * P_zz^{-1}
         // Using torch::linalg_solve on transposes avoids explicit matrix inversion:
@@ -125,13 +125,13 @@ int main() {
 
     // Problem dimensions: 2D constant-velocity tracking [x, y, vx, vy]
     const int N = 1000;   // Ensemble size
-    const int Nx = 200;    // State dimension
+    const int Nx = 400;    // State dimension
     const int Nz = Nx;    // Observation dimension (position only)
     double L = 2.0;      // Domain length [0, L]
     double dx = L / (Nx - 1);       // Spatial step size (finite diff)
     double c = 1.0;                // Wave propagation speed
     double T = 1.0;                // Total simulation time
-    const double dt = 0.002;
+    const double dt = 0.001;
     int Nt = static_cast<int>(T / dt);
     // Verify CFL condition
     double cfl = c * (dt / dx);
@@ -140,32 +140,23 @@ int main() {
         std::cerr << "Warning: CFL condition violated! Simulation may become unstable." << std::endl;
     }
 
-    double alpha = std::pow(c * dt / dx, 2);
+    double alpha = c * dt / dx;
+
     // --- Grid and Initial Conditions ---
     auto x = torch::linspace(-0.5*L, 0.5*L, Nx, torch::kFloat64).to(device);
+    auto x_shift = 
+	torch::linspace(-0.5*L-c*T,0.5*L-c*T,Nx,torch::kFloat64).to(device);
 
     // Nonlinear/Linear batch dynamics model: x_{k+1} = f(x_k, dt)
     auto dynamics_model = [](
       torch::Tensor& u, 
-      torch::Tensor& unm1,
       double alpha,
       int n) {
 
      torch::Tensor u_next = u.clone();
 
-      // Ensemble shape: [N, nx]
-     if (n==0) {
-      u_next = u + 0.5 * alpha * (
-	 torch::roll(u,1,1)-  //a(i,j) <- a(i,j-1)
-	 2.0*u+ 
-         torch::roll(u,-1,1)); //a(i,j) <- a(i,j+1)
-     } else {
-      u_next=2.0*u-unm1 + alpha * (
-       torch::roll(u,1,1)-  
-       2.0*u+ 
-       torch::roll(u,-1,1)); 
-     }
-     unm1.copy_(u);
+     // Ensemble shape: [N, nx]
+     u_next=(1.0-alpha)*u+alpha*torch::roll(u,-1,1); //shift up by 1
      u.copy_(u_next);
      return u_next;
     };
@@ -191,30 +182,24 @@ int main() {
 		Q, R, device);
 
     auto u_true = torch::sin(2.0 * M_PI * x / L);
-    auto unm1_true=u_true.clone();
 
     auto u0_guess = torch::sin(2.0 * M_PI * x / L)+
 	    torch::randn({Nx},device)*process_noise_sd;  // u0 noise
-    auto unm1_guess=u0_guess.clone();
 
     torch::Tensor P0=torch::eye(Nx, device)*process_noise_variance; //P0 noise
 
-    enkf.initialize(u0_guess, unm1_guess, P0);
+    enkf.initialize(u0_guess, P0);
 
     // Run simulation loop
     for (int n = 0; n < Nt; ++n) {
 
      auto u_true_unsqueeze=u_true.unsqueeze(0);
      auto u_true_save=u_true.clone();
-     auto unm1_true_unsqueeze=unm1_true.unsqueeze(0);
 
      u_true = dynamics_model(
 	u_true_unsqueeze,
-	unm1_true_unsqueeze,
 	alpha,n).squeeze(0);
 
-     unm1_true.copy_(u_true_save);
-        
      auto u_true_unsqueeze_update=u_true.unsqueeze(0);
 
      torch::Tensor z = obs_model(u_true_unsqueeze_update).squeeze(0) + 
@@ -233,7 +218,10 @@ int main() {
             << " | abs_error_norm: " << abs_error_norm << '\n';
 
      double cur_time=(n+1)*dt;
-     auto u_exact=torch::sin(2.0 * M_PI * x / L)*cos(M_PI*cur_time*c);
+     auto x_shift_inner = 
+	torch::linspace(-0.5*L-c*cur_time,0.5*L-c*cur_time, 
+			Nx,torch::kFloat64).to(device);
+     auto u_exact=torch::sin(2.0 * M_PI * x_shift_inner / L);
      auto abs_error_truth=u_exact-truth;
      auto abs_error_norm_truth = torch::mean(torch::square(abs_error_truth));
      abs_error_norm_truth=torch::sqrt(abs_error_norm_truth);
