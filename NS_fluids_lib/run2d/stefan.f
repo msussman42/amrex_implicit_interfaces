@@ -203,12 +203,14 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 xcfd_offset
       real*8 xcalibrate
       real*8 tcalibrate
+      real*8 tgap
       real*8 pi
 
       pi=4.d0*atan(1.d0)
       xcfd_offset=0.0d0
       xcalibrate=0.0d0
       tcalibrate=0.0d0
+      tgap=0.0d0
       freezing_time_target=0.0d0
 
       tdrop=273.0+23.0
@@ -473,8 +475,12 @@ c         do nothing
          liquid_temp=liquid_temp/N_liquid
 
          if (testcase.eq.2) then 
-          mass_fraction_instant_freeze= 
+          if (tnucleate.ge.tsat) then
+           mass_fraction_instant_freeze=0.0d0
+          else
+           mass_fraction_instant_freeze= 
      &      abs(cpliquid*(tsat-tnucleate)/hlg)
+          endif
           print *,"mass_fraction_instant_freeze=",
      &     mass_fraction_instant_freeze
           print *,"hlg_original= ",hlg_original
@@ -602,8 +608,11 @@ c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
          print *,"alpha= ",alpha 
 
          tcalibrate=(xcalibrate/(2.0*c))**2/alpha
+         tgap=(xgap/(2.0*c))**2/alpha
          print *,"xcalibrate ",xcalibrate
          print *,"tcalibrate ",tcalibrate
+         print *,"xgap ",xgap
+         print *,"tgap ",tgap
 
          if (is_freezing.eq.3) then
           xlo=xcalibrate
@@ -616,8 +625,8 @@ c See H. Hu and Z. Jin
           tstop=1.0d0
           xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
           xstop=xhi
-          xstop=xhi_drop
-          tstop=(xstop/(2.0d0*c))**2/alpha
+          xstop=xhi_drop+xgap
+          tstop=(xstop/(2.0d0*c))**2/alpha-tgap
          else
           xlo=0.0
           xhi=2.0
@@ -655,6 +664,7 @@ c See H. Hu and Z. Jin
          print *,"xlo_drop=",xlo_drop
          print *,"xhi_drop=",xhi_drop
          print *,"xgap=",xgap
+         print *,"tgap=",tgap
          print *,"kambient=",kambient
          print *,"kgap=",kgap
          print *,"liquid=",kliquid
@@ -684,6 +694,7 @@ c See H. Hu and Z. Jin
          print *,"tsat+deltat= ",tsat+deltat
          print *,"super_cool_time ",super_cool_time
          print *,"freezing_time ",tstop
+         print *,"xgap,tstop ",xgap,tstop
          print *,"iter, total_freezing_time ",
      &   iter_tnucleate,super_cool_time+tstop
          print *,"freezing_time_target ",freezing_time_target

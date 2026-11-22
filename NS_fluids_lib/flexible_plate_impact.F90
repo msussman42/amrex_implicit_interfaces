@@ -49,16 +49,31 @@ real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
 real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 integer, parameter :: im_solid=3
 
- if ((num_materials.eq.im_solid).or. &
-     (num_materials.eq.im_solid+1)) then
+ if (num_materials.eq.im_solid) then
 
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    !CTML takes care of this.
    Phi=-99999.0
   else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
-           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
+           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90).or. &
+           (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC).or. &
+           (FSI_flag(im_solid).eq.FSI_ICE_STATIC)) then
 
    if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+    if (is_elastic(im_solid).eq.1) then
+     !do nothing
+    else
+     print *,"expecting is_elastic(im_solid)=1"
+     stop
+    endif
+   else if (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC) then
+    if (is_elastic(im_solid).eq.1) then
+     !do nothing
+    else
+     print *,"expecting is_elastic(im_solid)=1"
+     stop
+    endif
+   else if (FSI_flag(im_solid).eq.FSI_ICE_STATIC) then
     if (is_elastic(im_solid).eq.1) then
      !do nothing
     else
@@ -118,61 +133,6 @@ integer, parameter :: im_solid=3
 end subroutine flexible_substrateLS
 
 
-! Phi>0 in the ice
-subroutine flexible_ICE_LS(x,Phi) 
-use probcommon_module
-use global_utility_module
-implicit none
-real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
-real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the ice
-integer, parameter :: im_ice=4
-
- if (num_materials.eq.im_ice) then
-
-  if (FSI_flag(im_ice).eq.FSI_ICE_EULERIAN_ELASTIC) then
-
-   if (is_elastic(im_ice).eq.1) then
-    !do nothing
-   else
-    print *,"expecting is_elastic(im_ice)=1"
-    stop
-   endif
-
-   if (AMREX_SPACEDIM.eq.2) then
-      !squaredist returns Phi<0 in the square.
-    call squaredist(x(1),x(2), &
-      xblob3-radblob4, &
-      xblob3+radblob4, &
-      yblob3-radblob5, &
-      yblob3+radblob5, &
-      Phi)
-    Phi=-Phi
-   else if (AMREX_SPACEDIM.eq.3) then
-      !cylinderdist returns Phi<0 in the cylinder
-    call cylinderdist( &
-      x(1),x(2),x(SDIM), &
-      xblob3,yblob3, &
-      radblob4, &
-      zblob2-radblob5, &
-      zblob2+radblob5, &
-      Phi)
-    Phi=-Phi
-   else
-    print *,"dimension bust"
-    stop
-   endif
-  else
-   print *,"FSI_flag invalid: ",im_ice,FSI_flag(im_ice)
-   stop
-  endif
- else
-  print *,"num_materials invalid: ",num_materials
-  stop
- endif
-
-end subroutine flexible_ICE_LS
-
-
  ! fluids tessellate the domain, solids are immersed. 
 subroutine flexible_plate_impact_LS(x,t,LS,nmat)
 use probcommon_module
@@ -192,16 +152,31 @@ IMPLICIT NONE
    stop
   endif
 
-if (((num_materials.eq.im_solid).or. &
-     (num_materials.eq.im_solid+1)).and. &
+if ((num_materials.eq.im_solid).and. &
     (probtype.eq.2000)) then
 
  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
  else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
-          (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
+          (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90).or. &
+          (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC).or. &
+          (FSI_flag(im_solid).eq.FSI_ICE_STATIC)) then
 
   if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
+  else if (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC) then
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
+  else if (FSI_flag(im_solid).eq.FSI_ICE_STATIC) then
    if (is_elastic(im_solid).eq.1) then
     !do nothing
    else
@@ -249,21 +224,16 @@ if (((num_materials.eq.im_solid).or. &
   !do nothing
  else if (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90) then
   !do nothing
+ else if (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC) then
+  !do nothing
+ else if (FSI_flag(im_solid).eq.FSI_ICE_STATIC) then
+  !do nothing
  else
   print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag
   stop
  endif
 
- if (num_materials.eq.4) then
-
-  if (FSI_flag(num_materials).eq.FSI_ICE_EULERIAN_ELASTIC) then
-   call flexible_ICE_LS(x,LS(num_materials))
-  else
-   print *,"FSI_flag(num_materials) invalid"
-   stop
-  endif
- 
- else if (num_materials.eq.3) then
+ if (num_materials.eq.3) then
   !do nothing
  else
   print *,"num_materials invalid ",num_materials
@@ -339,13 +309,14 @@ if (probtype.eq.2000) then
 
  temperature=fort_tempconst(num_materials)
 
- if ((num_materials.eq.im_solid).or. &
-     (num_materials.eq.im_solid+1)) then
+ if (num_materials.eq.im_solid) then
 
   if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
    LS=-99999.0d0
   else if ((FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC).or. &
-           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90)) then
+           (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90).or. &
+           (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC).or. &
+           (FSI_flag(im_solid).eq.FSI_ICE_STATIC)) then
 
    radeps=radblob2/10.0d0
 
@@ -401,68 +372,7 @@ if (probtype.eq.2000) then
    stop
   endif
 
-  if (num_materials.eq.4) then
-   if ((LS_A.le.zero).and.(LS_B.le.zero)) then
-
-    if (FSI_flag(num_materials).eq.FSI_ICE_EULERIAN_ELASTIC) then
-
-     radeps=radblob4/10.0d0
-
-     if (AMREX_SPACEDIM.eq.2) then
-      !squaredist returns Phi<0 in the square.
-      call squaredist(x(1),x(2), &
-       xblob3-radblob4-radeps, &
-       xblob3-radblob4+radeps, &
-       yblob3-radblob5, &
-       yblob3+radblob5, &
-       LS_A)
-      LS_A=-LS_A
-   
-      !squaredist returns Phi<0 in the square.
-      call squaredist(x(1),x(2), &
-       xblob3+radblob4-radeps, &
-       xblob3+radblob4+radeps, &
-       yblob3-radblob5, &
-       yblob3+radblob5, &
-       LS_B)
-      LS_B=-LS_B
-
-     else if (AMREX_SPACEDIM.eq.3) then
-
-      !annulusdist returns Phi<0 in the annulus
-      call annulusdist( &
-       x(1),x(2),x(SDIM), &
-       xblob3,yblob3, &
-       radblob4, &
-       radeps, & 
-       zblob2-radblob5, &
-       zblob2+radblob5, &
-       LS_A)
-      LS_A=-LS_A
-      LS_B=LS_A
-
-     else
-      print *,"dimension bust"
-      stop
-     endif
-
-     if ((LS_A.ge.zero).or.(LS_B.ge.zero)) then
-      LS=99999.0d0
-     else if ((LS_A.le.zero).and.(LS_B.le.zero)) then
-      LS=-99999.0d0
-     else
-      print *,"LS_A or LS_B invalid: ",LS_A,LS_B
-      stop
-     endif
-
-    else
-     print *,"FSI_flag invalid: ",num_materials,FSI_flag(num_materials)
-     stop
-    endif
-
-   endif !LS_A<=0 and LS_B<=0 ?
-
-  else if (num_materials.eq.3) then
+  if (num_materials.eq.3) then
    !do nothing
   else
    print *,"num_materials invalid ",num_materials
@@ -536,13 +446,7 @@ if (adv_dir.eq.SDIM) then
     VEL(dir)=zero
    enddo
 
-  else if (LS(3).ge.zero) then ! material 3 is the plate
-
-   do dir=1,SDIM
-    VEL(dir)=zero
-   enddo
-
-  else if (LS(num_materials).ge.zero) then ! material 4 is the ice
+  else if (LS(num_materials).ge.zero) then ! material 3 is the ice or rigid
 
    do dir=1,SDIM
     VEL(dir)=zero
@@ -676,8 +580,7 @@ else
  stop
 endif
 
-if (((num_materials.eq.3).or. &
-     (num_materials.eq.4)).and. &
+if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
     (probtype.eq.2000)) then
  do im=1,num_materials
@@ -896,8 +799,7 @@ else
  stop
 endif
 
-if (((num_materials.eq.3).or. &
-     (num_materials.eq.4)).and. &
+if ((num_materials.eq.3).and. &
     (probtype.eq.2000)) then
  heat_source=zero
 else
@@ -955,8 +857,7 @@ else
  stop
 endif
 
-if (((num_materials.eq.3).or. &
-     (num_materials.eq.4)).and. &
+if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. & 
     (probtype.eq.2000)) then
 
@@ -972,29 +873,27 @@ if (((num_materials.eq.3).or. &
  endif
 
  if (SDIM.eq.2) then
-  if (abs(yblob3-zblob3).le.EPS11) then
+  if (abs(yblob2-zblob2).le.EPS11) then
    !do nothing
   else
-   print *,"expecting yblob3==zblob3"
+   print *,"expecting yblob2==zblob2"
    stop
   endif
  endif
 
  if (cell_flag.eq.-1) then
-  if (num_materials.eq.4) then
+  if (num_materials.eq.3) then
 
    if (radblob6.gt.zero) then
     if (radblob6.gt.assimilate_in%dx(1)) then
-     if ((xcrit(SDIM).le.zblob3+radblob5-radblob6).and. &
-         ((assimilate_out%LS_state(D_DECL(i,j,k),3).ge.zero).or. &
-          (assimilate_out%LS_state(D_DECL(i,j,k),4).ge.zero))) then
+     if ((xcrit(SDIM).le.zblob2+radblob3-radblob6).and. &
+         (assimilate_out%LS_state(D_DECL(i,j,k),3).ge.zero)) then
       do im=1,num_materials
        tcomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
        assimilate_out%state(D_DECL(i,j,k),tcomp)=fort_tempconst(3)
       enddo
-     else if ((xcrit(SDIM).gt.zblob3+radblob5-radblob6).or. &
-              ((assimilate_out%LS_state(D_DECL(i,j,k),3).lt.zero).and. &
-               (assimilate_out%LS_state(D_DECL(i,j,k),4).lt.zero))) then
+     else if ((xcrit(SDIM).gt.zblob2+radblob3-radblob6).or. &
+              (assimilate_out%LS_state(D_DECL(i,j,k),3).lt.zero)) then
       !do nothing
      else
       print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
@@ -1011,8 +910,6 @@ if (((num_materials.eq.3).or. &
     stop
    endif
 
-  else if (num_materials.eq.3) then
-   ! do nothing
   else
    print *,"num_materials invalid ",num_materials
    stop
@@ -1218,8 +1115,7 @@ do dir=1,SDIM
  endif
 enddo !dir=1..sdim
 
-if (((num_materials.eq.3).or. &
-     (num_materials.eq.4)).and. &
+if ((num_materials.eq.3).and. &
     (probtype.eq.2000)) then
 
  rflag=0.0d0
