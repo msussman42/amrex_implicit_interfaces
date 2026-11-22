@@ -127,7 +127,7 @@ int main() {
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
     std::cout << "Running EnKF on: " << (device.is_cuda() ? "CUDA" : "CPU") << "\n\n";
 
-    const int N = 1000;   // Ensemble size
+    const int N = 201;   // Ensemble size
     const int Nx = 200;    // State dimension
     const int Nz = Nx;    // Observation dimension (position only)
     double L = 2.0;      // Domain length [0, L]

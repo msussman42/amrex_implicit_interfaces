@@ -251,7 +251,7 @@ int main() {
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
     std::cout << "Running EnKF on: " << (device.is_cuda() ? "CUDA" : "CPU") << "\n\n";
 
-    const int N = 201;   // Ensemble size
+    const int N = 2;   // Ensemble size
     const int Nx = 200;    // State dimension
     const int Nz = Nx;    // Observation dimension (position only)
     double L = 2.0;      // Domain length [0, L]
@@ -294,7 +294,7 @@ int main() {
      return x_obs;
     };
 
-    double noise_variance=0.5;
+    double noise_variance=0.01;
     double noise_sd=std::sqrt(noise_variance);
 
     double process_noise_variance=0.5;
@@ -383,12 +383,13 @@ int main() {
      std::cout << "n " << n 
             << " | abs_error_norm: " << abs_error_norm << '\n';
 
-
-     auto kl_div=kl_divergence_multivariate_gaussian(
+     if (N>Nx) {
+      auto kl_div=kl_divergence_multivariate_gaussian(
        est_kf,est_cov_kf,est,est_cov);
 
-     std::cout << "n " << n 
+      std::cout << "n " << n 
             << " | kl_div: " << kl_div << '\n';
+     }
 
 
      if (1==0) {
