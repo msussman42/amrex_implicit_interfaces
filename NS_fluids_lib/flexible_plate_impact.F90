@@ -221,13 +221,39 @@ if ((num_materials.eq.im_solid).and. &
  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
   !do nothing
  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
-  !do nothing
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
  else if (FSI_flag(im_solid).eq.FSI_PRESCRIBED_PROBF90) then
-  !do nothing
+   if (is_elastic(im_solid).eq.0) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=0"
+    stop
+   endif
+   if (is_rigid(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_rigid(im_solid)=1"
+    stop
+   endif
  else if (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC) then
-  !do nothing
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
  else if (FSI_flag(im_solid).eq.FSI_ICE_STATIC) then
-  !do nothing
+   if (is_elastic(im_solid).eq.1) then
+    !do nothing
+   else
+    print *,"expecting is_elastic(im_solid)=1"
+    stop
+   endif
  else
   print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag
   stop
@@ -409,7 +435,7 @@ integer, INTENT(in) :: velsolid_flag
 if (nmat.eq.num_materials) then
  ! do nothing
 else
- print *,"nmat invalid"
+ print *,"nmat invalid ",nmat
  stop
 endif
 
@@ -417,7 +443,7 @@ if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
  ! do nothing
 else 
- print *,"velsolid_flag invalid"
+ print *,"velsolid_flag invalid ",velsolid_flag
  stop
 endif
 
@@ -453,12 +479,13 @@ if (adv_dir.eq.SDIM) then
    enddo
 
   else
-   print *,"LS bust in flexible_plate_impact_VEL"
+   print *,"LS bust in flexible_plate_impact_VEL LS=",LS
    stop
   endif
 
 else
- print *,"expecting adv_dir = SDIM in flexible_plate_impact_VEL"
+ print *,"expecting adv_dir = SDIM in flexible_plate_impact_VEL adv_dir=", &
+         adv_dir
  stop
 endif
 
@@ -632,7 +659,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
  call flexible_plate_impact_LS(xghost,t,LS,nmat)
 else
- print *,"dir or side invalid"
+ print *,"dir or side invalid ",dir,side
  stop
 endif
 
@@ -673,7 +700,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
  VEL=local_VEL(veldir)
 
 else
- print *,"dir,side, or veldir invalid"
+ print *,"dir,side, or veldir invalid ",dir,side,veldir
  stop
 endif
 
@@ -699,7 +726,7 @@ real(amrex_real), INTENT(in) :: dx(SDIM)
 if (nmat.eq.num_materials) then
  ! do nothing
 else
- print *,"nmat invalid"
+ print *,"nmat invalid ",nmat
  stop
 endif
 
@@ -710,7 +737,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
  call flexible_plate_impact_PRES(xghost,t,LS,PRES,nmat)
 
 else
- print *,"dir or side invalid"
+ print *,"dir or side invalid ",dir,side
  stop
 endif
 
@@ -876,7 +903,7 @@ if ((num_materials.eq.3).and. &
   if (abs(yblob2-zblob2).le.EPS11) then
    !do nothing
   else
-   print *,"expecting yblob2==zblob2"
+   print *,"expecting yblob2==zblob2 ",yblob2,zblob2
    stop
   endif
  endif
@@ -897,6 +924,10 @@ if ((num_materials.eq.3).and. &
       !do nothing
      else
       print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
+      print *,"xcrit=",xcrit
+      print *,"zblob2= ",zblob2
+      print *,"radblob3 ",radblob3
+      print *,"radblob6 ",radblob6
       stop
      endif 
     else

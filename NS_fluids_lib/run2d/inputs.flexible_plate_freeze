@@ -184,7 +184,8 @@ ns.material_conservation_form=0 0 0 0
 # 8 EULERIAN FSI
 # 9 ice static
 # 10 EULERIAN FSI ICE
-ns.FSI_flag=0 0 10 
+#ns.FSI_flag=0 0 10  #ICE ELASTIC
+ns.FSI_flag=0 0 9 #ICE_STATIC 
 ns.repair_mass=0 0 0 0
 #artificial viscosity=lax_friedrichs * rho * cp * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
@@ -219,8 +220,10 @@ ns.saturation_temp = 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.nucleation_temp = 0.0 300.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 
 #shear modulus rubber=3E6 dyne/cm^2
-ns.elastic_viscosity=0.0 0.0 4.0e+6 #RIGID PRESCRIBED
-ns.elastic_time=0.0 0.0 1.0e+31 #RIGID PRESCRIBED
+#ns.elastic_viscosity=0.0 0.0 4.0e+6  #ICE_ELASTIC
+#ns.elastic_time=0.0 0.0 1.0e+31  #ICE_ELASTIC
+ns.elastic_viscosity=0.0 0.0 0.0 #ICE_STATIC
+ns.elastic_time=0.0 0.0 0.0 #ICE_STATIC
 ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #0=FENE-CR
 #1=Oldroyd B
@@ -228,7 +231,8 @@ ns.polymer_factor=0.0 0.0 0.0 0.0 #1/L
 #5=FENE P
 #6=Linear PTT
 #7=Neo-Hookean
-ns.viscoelastic_model=0 0 7 #RIGID PRESCRIBED
+#ns.viscoelastic_model=0 0 7  #ICE ELASTIC
+ns.viscoelastic_model=0 0 0  #ICE STATIC
 ns.rest_fraction=0.0 #prevent CPU overheating?
 #artificial viscosity=lax_friedrichs * rho * dx^2/(2 dt)
 #((s^np1-(sn_im1+sn_ip1)/2)/dt=
