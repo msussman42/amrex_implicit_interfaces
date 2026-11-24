@@ -107,6 +107,8 @@ fork_job(int fork_id) {
 
  const double run_strt = amrex::ParallelDescriptor::second();
 
+ int local_cpu_limit_checkpoint=0;
+
  int  max_step;  // int is 4 bytes
  amrex::Real strt_time;
  amrex::Real stop_time;
@@ -494,7 +496,10 @@ fork_job(int fork_id) {
 
   if (cpu_time_elapsed>=max_cpu_time) {
    amrptr->cpu_limit_checkpoint=1;
+   local_cpu_limit_checkpoint=1;
   }
+
+  amrex::ParallelDescriptor::Barrier();
 
  } else if (local_LSA_activate==1) {
 
@@ -696,6 +701,21 @@ fork_job(int fork_id) {
   // PROB_CPP_PARMS.F90 (fort_deallocate_module) ->
   // PROB_CPP_PARMS.F90 (SUB_DEALLOCATE_MODULE) 
  fortran_deallocate_parameters();
+
+ amrex::ParallelDescriptor::Barrier();
+
+ if (local_cpu_limit_checkpoint==0) {
+  //do nothing
+ } else if (local_cpu_limit_checkpoint==1) {
+
+  if (amrex::ParallelDescriptor::IOProcessor()) {
+   std::cout << "the last checkpoint file name is <check_dump_stop>\n";
+   int ret = std::system("sbatch slurm_restart");
+   amrex::ignore_unused(ret);
+  }
+  amrex::ParallelDescriptor::Barrier();
+ } else
+  amrex::Error("local_cpu_limit_checkpoint invalid");
 
 } //end subroutine fork_job
 

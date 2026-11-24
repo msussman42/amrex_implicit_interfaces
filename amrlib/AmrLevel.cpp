@@ -480,7 +480,7 @@ void FSI_container_class::checkpoint(int check_id) {
   }
  }
 
-} //end subroutine checkpoint
+} //end subroutine FSI_container_class::checkpoint
 
 
 void FSI_container_class::restart(int check_id,std::istream& is) {

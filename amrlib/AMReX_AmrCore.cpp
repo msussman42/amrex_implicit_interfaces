@@ -1127,7 +1127,7 @@ AmrCore::init (Real strt_time, Real stop_time) {
 
    //AMReX_Utility.[cpp|H]
    std::string ckfile_temp =  
-   amrex::Concatenate(check_file_root,LSA_max_step,file_name_digits);
+      amrex::Concatenate(check_file_root,LSA_max_step,file_name_digits);
    std::string ckfileLSA;
    std::stringstream result;
    result << ckfile_temp << "LSA";
@@ -1518,7 +1518,14 @@ AmrCore::checkPoint ()
 
  if ((LSA_activate==0)&&
      (LSA_nsteps_krylov_subspace_method==0)) {
-  ckfileLSA=ckfile_temp;
+
+  if (cpu_limit_checkpoint==1) {
+   ckfileLSA="check_dump_stop";
+  } else if (cpu_limit_checkpoint==0) {
+   ckfileLSA=ckfile_temp;
+  } else
+   amrex::Error("cpu_limit_checkpoint invalid");
+
  } else if ((LSA_activate==0)&&
             (LSA_nsteps_krylov_subspace_method>0)) {
   int local_LSA_current_step=0;
