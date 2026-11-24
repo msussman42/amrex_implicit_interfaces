@@ -197,6 +197,8 @@ AmrCore::getAmrLevels () noexcept
 //  a. levelbld = getLevelBld();
 AmrCore::AmrCore (int checkpoint_override_in) : AmrMesh() {
 
+ cpu_limit_checkpoint=0;
+
  checkpoint_override=checkpoint_override_in;
 
  // "max_level," needed by 
@@ -775,8 +777,13 @@ AmrCore::~AmrCore () {
          ((LSA_activate==1)&&
           (LSA_nsteps_krylov_subspace_method>0))) {
 
-      if (level_steps[0] > last_checkpoint)
+      if (cpu_limit_checkpoint==1) {
+       checkPoint();
+      } else if (cpu_limit_checkpoint==0) {
+       if (level_steps[0] > last_checkpoint)
         checkPoint();
+      } else
+       amrex::Error("cpu_limit_checkpoint invalid");
 
       if (level_steps[0] > last_plotfile) {
        int do_plot=1;

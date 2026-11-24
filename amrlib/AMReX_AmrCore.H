@@ -66,6 +66,8 @@ public:
     Vector<Real> AMR_max_phase_change_rate;
     Vector<Real> AMR_min_phase_change_rate;
 
+    int cpu_limit_checkpoint;
+
     int checkpoint_override;
     int LSA_activate;  // =0, 1, or 2
     int LSA_extra_data;  // =0 or 3

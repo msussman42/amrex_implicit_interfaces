@@ -144,6 +144,14 @@ fork_job(int fork_id) {
 
  double sleepsec=0.0;
 
+ double max_cpu_time=-1.0;
+
+ pp.queryAdd("max_cpu_time",max_cpu_time);
+ if (max_cpu_time>0.0) {
+  std::cout << "max_cpu_time= " << max_cpu_time << '\n';
+  std::cout << "the last checkpoint file name is <check_dump_stop>\n";
+ }
+
  pp.queryAdd("max_step",max_step);
 
  Real local_fixed_dt=0.0;
@@ -440,9 +448,12 @@ fork_job(int fork_id) {
 
   int LSA_current_step=0;
 
+  double cpu_time_elapsed=-2.0;
+
   while ((amrptr->okToContinue())          &&
          (amrptr->levelSteps(0) < max_step || max_step < 0) &&
-         (amrptr->cumTime() < stop_time || stop_time < 0.0) ) {
+         (amrptr->cumTime() < stop_time || stop_time < 0.0) &&
+	 (cpu_time_elapsed<max_cpu_time)) {
 
    amrex::ParallelDescriptor::Barrier();
    std::fflush(NULL);
@@ -470,9 +481,20 @@ fork_job(int fork_id) {
    amrex::Sleep(sleepsec);
    amrex::ParallelDescriptor::Barrier();
 
+   if (max_cpu_time>0.0) {
+    cpu_time_elapsed = amrex::ParallelDescriptor::second() - run_strt;
+   } else if (max_cpu_time<=0.0) {
+    //do nothing
+   } else
+    amrex::Error("max_cpu_time invalid");
+
   } // while ( amrptr->okToContinue() etc. 
 
   amrex::ParallelDescriptor::Barrier();
+
+  if (cpu_time_elapsed>=max_cpu_time) {
+   amrptr->cpu_limit_checkpoint=1;
+  }
 
  } else if (local_LSA_activate==1) {
 
@@ -696,7 +718,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial November 23, 2026, 6:00pm on proc " << 
+	"Multimaterial November 24, 2026, 1:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
