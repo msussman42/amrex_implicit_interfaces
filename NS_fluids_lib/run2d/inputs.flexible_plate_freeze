@@ -22,7 +22,7 @@
 #  Dm/Do=4.0,3.96,3.92
 max_step  = 999999   # maximum timestep 
 stop_time=10000.0
-max_cpu_time=120.0
+max_cpu_time=12600.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
