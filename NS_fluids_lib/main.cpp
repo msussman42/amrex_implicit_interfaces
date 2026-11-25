@@ -78,7 +78,7 @@ void cpp_reduce_real_sum(int n,double sync_data[]) {
 } // end subroutine cpp_reduce_real_sum
 
 void
-fork_job(int fork_id) {
+fork_job(int fork_id,int& local_cpu_limit_checkpoint) {
 
 
  std::fflush(NULL);
@@ -107,7 +107,7 @@ fork_job(int fork_id) {
 
  const double run_strt = amrex::ParallelDescriptor::second();
 
- int local_cpu_limit_checkpoint=0;
+ local_cpu_limit_checkpoint=0;
 
  int  max_step;  // int is 4 bytes
  amrex::Real strt_time;
@@ -704,19 +704,6 @@ fork_job(int fork_id) {
 
  amrex::ParallelDescriptor::Barrier();
 
- if (local_cpu_limit_checkpoint==0) {
-  //do nothing
- } else if (local_cpu_limit_checkpoint==1) {
-
-  if (amrex::ParallelDescriptor::IOProcessor()) {
-   std::cout << "the last checkpoint file name is <check_dump_stop>\n";
-   int ret = std::system("sbatch slurm_restart");
-   amrex::ignore_unused(ret);
-  }
-  amrex::ParallelDescriptor::Barrier();
- } else
-  amrex::Error("local_cpu_limit_checkpoint invalid");
-
 } //end subroutine fork_job
 
 int
@@ -738,7 +725,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial November 24, 2026, 1:00pm on proc " << 
+	"Multimaterial November 24, 2026, 9:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -786,7 +773,14 @@ main (int   argc,
     } //IOProcessor==TRUE
 
     int fork_id=0;
-    fork_job(fork_id);
+    int local_cpu_limit_checkpoint=0;
+    fork_job(fork_id,local_cpu_limit_checkpoint);
+    amrex::ParallelDescriptor::Barrier();
+    int local_io_proc=0;
+    if (amrex::ParallelDescriptor::IOProcessor()) {
+     local_io_proc=1;
+    }
+    amrex::ParallelDescriptor::Barrier();
 
      //amrex::Finalize calls AmrCore::Finalize() since 
      //amrex::ExecOnFinalize(AmrCore::Finalize) is called in 
@@ -795,6 +789,18 @@ main (int   argc,
      // AmrCore::initial_ba.clear();
      //amrex::Finalize() is declared in: AMReX.cpp
     amrex::Finalize();
+
+    if (local_cpu_limit_checkpoint==0) {
+     //do nothing
+    } else if (local_cpu_limit_checkpoint==1) {
+
+     if (local_io_proc==1) {
+      std::cout << "the last checkpoint file name is <check_dump_stop>\n";
+      int ret = std::system("sbatch slurm_restart");
+     }
+
+    } else
+     std::cout << "local_cpu_limit_checkpoint invalid\n";
 
     return 0;
 
