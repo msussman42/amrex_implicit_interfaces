@@ -727,7 +727,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial November 25, 2026, 12:30am on proc " << 
+	"Multimaterial November 25, 2026, 9:45am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -798,7 +798,8 @@ main (int   argc,
 
      if (local_io_proc==1) {
       std::cout << "the last checkpoint file name is <check_dump_stop>\n";
-      int ret = std::system("sbatch slurm_restart");
+//    int ret = std::system("sbatch slurm_restart");
+      int ret = std::system("./slurm_restart_script");
      }
 
     } else

@@ -1,0 +1,7 @@
+#!/bin/bash
+##export SLURM_CPU_BIND= 
+##export SLURM_CPU_BIND_VERBOSE= 
+##export SLURM_CPU_BIND_LIST= 
+##export SLURM_CPU_BIND_TYPE= 
+##unset $(env | grep '^SLURM' | cut -d= -f1)
+env $(env | awk -F= '/^SLURM/ {print "-u " $1}') sbatch slurm_restart
