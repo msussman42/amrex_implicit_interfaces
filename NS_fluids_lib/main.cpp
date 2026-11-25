@@ -485,6 +485,8 @@ fork_job(int fork_id,int& local_cpu_limit_checkpoint) {
 
    if (max_cpu_time>0.0) {
     cpu_time_elapsed = amrex::ParallelDescriptor::second() - run_strt;
+    amrex::ParallelDescriptor::ReduceRealMax(cpu_time_elapsed);
+    amrex::ParallelDescriptor::Barrier();
    } else if (max_cpu_time<=0.0) {
     //do nothing
    } else
@@ -725,7 +727,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial November 24, 2026, 9:00pm on proc " << 
+	"Multimaterial November 25, 2026, 12:30am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
