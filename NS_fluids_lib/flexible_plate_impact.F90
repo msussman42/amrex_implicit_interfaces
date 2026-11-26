@@ -869,8 +869,11 @@ real(amrex_real) :: vfrac_override
 real(amrex_real) :: vfrac_sum
 real(amrex_real) :: centroid_override(SDIM)
 real(amrex_real) :: facearea_temp
+real(amrex_real) :: lateral_dist
+integer :: modify_flag
 integer :: vfrac_comp
 integer :: tcomp
+integer, parameter :: im_solid=3
 
 nstate=assimilate_in%nstate
 
@@ -912,26 +915,104 @@ if ((num_materials.eq.3).and. &
   if (num_materials.eq.3) then
 
    if (radblob6.gt.zero) then
+
+    if (radblob6.ge.radblob3) then
+     print *,"cannot have radblob6>=radblob3 ",radblob3,radblob6
+     stop
+    endif
+
     if (radblob6.gt.assimilate_in%dx(1)) then
-     if ((xcrit(SDIM).le.zblob2+radblob3-radblob6).and. &
-         (assimilate_out%LS_state(D_DECL(i,j,k),3).ge.zero)) then
-      do im=1,num_materials
-       tcomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-       assimilate_out%state(D_DECL(i,j,k),tcomp)=fort_tempconst(3)
-      enddo
-     else if ((xcrit(SDIM).gt.zblob2+radblob3-radblob6).or. &
-              (assimilate_out%LS_state(D_DECL(i,j,k),3).lt.zero)) then
-      !do nothing
+     if (radblob6.le.four*assimilate_in%dx(1)) then
+
+      if (assimilate_out%LS_state(D_DECL(i,j,k),im_solid).ge.zero) then
+
+       if (xcrit(SDIM).le.zblob2+radblob3-radblob6) then
+
+        if (SDIM.eq.2) then
+         lateral_dist=abs(xcrit(1)-xblob2)
+        else if (SDIM.eq.3) then
+         lateral_dist=sqrt((xcrit(1)-xblob2)**2+(xcrit(2)-yblob2)**2)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        if (lateral_dist.le.radblob2) then
+
+         modify_flag=0
+
+         if (xcrit(SDIM).le.zblob2) then
+          modify_flag=1
+         else if (lateral_dist.ge.half*radblob2) then
+          modify_flag=1
+         else if &
+            (assimilate_out%LS_state(D_DECL(i,j,k),im_solid).ge. &
+             (one-EPS2)*radblob6) then
+          modify_flag=1
+         endif
+
+         if (FSI_flag(im_solid).eq.FSI_ICE_STATIC) then
+          if (modify_flag.eq.1) then
+           !do nothing
+          else
+           print *,"expecting modify_flag==1 ",modify_flag
+           print *,"FSI_flag= ",FSI_flag
+           stop
+          endif
+         else if (FSI_flag(im_solid).eq.FSI_ICE_EULERIAN_ELASTIC) then
+          !do nothing
+         else
+          print *,"FSI_flag(im_solid) invalid ",im_solid,FSI_flag(im_solid)
+          stop
+         endif
+
+         if (modify_flag.eq.1) then
+          do im=1,num_materials
+           tcomp= &
+             STATECOMP_STATES+(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+           assimilate_out%state(D_DECL(i,j,k),tcomp)=fort_tempconst(im_solid)
+          enddo
+         else if (modify_flag.eq.0) then
+          !do nothing
+         else
+          print *,"modify_flag invalid ",modify_flag
+          stop
+         endif
+
+        else
+         print *,"lateral_dist too big: ",lateral_dist
+         print *,"radblob2=",radblob2
+         stop
+        endif
+
+       else if (xcrit(SDIM).gt.zblob2+radblob3-radblob6) then
+        !do nothing
+       else
+        print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
+        print *,"xcrit=",xcrit
+        print *,"zblob2= ",zblob2
+        print *,"radblob3 ",radblob3
+        print *,"radblob6 ",radblob6
+        print *,"LS= ",assimilate_out%LS_state(D_DECL(i,j,k),im_solid)
+        stop
+       endif 
+
+      else if (assimilate_out%LS_state(D_DECL(i,j,k),im_solid).lt.zero) then
+       !do nothing
+      else
+       print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
+       print *,"LS= ",assimilate_out%LS_state(D_DECL(i,j,k),im_solid)
+       stop
+      endif
+
      else
-      print *,"parameter bust in flexible_plate_impact_ASSIMILATE"
-      print *,"xcrit=",xcrit
-      print *,"zblob2= ",zblob2
-      print *,"radblob3 ",radblob3
-      print *,"radblob6 ",radblob6
+      print *,"radblob6 too big ",radblob6
+      print *,"dx= ",assimilate_in%dx
       stop
-     endif 
+     endif
     else
      print *,"radblob6 too small ",radblob6
+     print *,"dx= ",assimilate_in%dx
      stop
     endif
    else if (radblob6.eq.zero) then

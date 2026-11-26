@@ -170,7 +170,8 @@ ns.yblob2=0.04  #y center of plate
 ns.zblob2=0.04  #z center of plate
 ns.radblob2=0.6 # radius in "x" direction of plate
 ns.radblob3=0.02 # radius in "y" direction of plate
-ns.radblob6=0.00977  #xgap=2 * prob_hi(2)/n_cell(2)
+#dx_finest=0.625/128=0.0048828125 xgap=2 * dx_finest=0.00977
+ns.radblob6=0.00977 
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
